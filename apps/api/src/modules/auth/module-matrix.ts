@@ -29,24 +29,42 @@ export type ModuleKey =
   | 'permissions';
 
 /**
- * Matriz de modulos -> roles permitidos (design 3.3, specs/10).
+ * Matriz de modulos -> roles permitidos. Reproduce LITERALMENTE la "Matriz de
+ * modulos configurada" de specs/10-roles-permissions.md (una fila por modulo,
+ * una columna por rol). No se "deriva" ni se reinterpreta: es la matriz del SDD
+ * tal cual, porque es la fuente de verdad de paridad funcional.
  *
- * Criterio derivado de specs/10:
- * - `admin`, `team`, `frameworks` son administracion de area: solo JEFE_AREA.
- * - `triage`, `priority`, `review`, `capacity`, `portfolio` son decisiones de
- *   gestion del proceso: jefe y lider.
- * - El resto del trabajo operativo (demanda, seguimiento, activos, docs) lo ven
- *   los tres roles con alcance de proceso.
- * - `permissions` (mis permisos) y `audit` (lectura con alcance) son para todos.
+ * Columnas en specs/10 (Integrante / Lider / Jefe):
+ * - demandOverview: — / ✓ / ✓   (NO integrante)
+ * - dashboard:      ✓ / ✓ / ✓
+ * - requests:       ✓ / ✓ / ✓
+ * - triage:         — / ✓ / ✓
+ * - priority:       — / ✓ / ✓
+ * - plan:           — / ✓ / ✓   (integrante ejecuta tareas via assigned/task, no gestiona el plan)
+ * - portfolio:      ✓ / ✓ / ✓
+ * - project:        ✓ / ✓ / ✓
+ * - assigned:       ✓ / ✓ / ✓
+ * - task:           ✓ / ✓ / ✓
+ * - log:            ✓ / ✓ / ✓
+ * - meeting:        ✓ / ✓ / ✓
+ * - asset:          ✓ / ✓ / ✓
+ * - docs:           ✓ / ✓ / ✓
+ * - capacity:       ✓ / ✓ / ✓
+ * - admin:          — / — / ✓
+ * - frameworks:     ✓ / ✓ / ✓
+ * - review:         — / ✓ / ✓
+ * - audit:          ✓(alcance propio) / ✓ / ✓
+ * - team:           — / — / ✓
+ * - permissions:    ✓ / ✓ / ✓
  */
 export const MODULE_MATRIX: Record<ModuleKey, readonly RoleCode[]> = {
-  demandOverview: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  demandOverview: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
   dashboard: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
   requests: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
   triage: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
   priority: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
-  plan: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
-  portfolio: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
+  plan: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
+  portfolio: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
   project: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
   assigned: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
   task: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
@@ -54,9 +72,9 @@ export const MODULE_MATRIX: Record<ModuleKey, readonly RoleCode[]> = {
   meeting: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
   asset: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
   docs: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
-  capacity: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
+  capacity: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
   admin: [RoleCode.JEFE_AREA],
-  frameworks: [RoleCode.JEFE_AREA],
+  frameworks: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
   review: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
   audit: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
   team: [RoleCode.JEFE_AREA],
