@@ -6,13 +6,18 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import type { CatalogItemModel } from '../../generated/prisma/models/CatalogItem';
+import { AuditService } from '../audit/audit.service';
+import { CurrentActor } from '../auth/current-actor';
 import { CreateCatalogItemDto } from './dto/create-catalog-item.dto';
 import { ListCatalogItemsDto } from './dto/list-catalog-items.dto';
 import { UpdateCatalogItemDto } from './dto/update-catalog-item.dto';
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   /**
    * Normaliza un identificador funcional: recorta espacios y pasa a mayusculas.
@@ -22,20 +27,49 @@ export class CatalogService {
     return value.trim().toUpperCase();
   }
 
-  async create(dto: CreateCatalogItemDto): Promise<CatalogItemModel> {
+  /** Snapshot JSON de un CatalogItem para auditoria (before/after). */
+  private snapshot(item: CatalogItemModel): Prisma.InputJsonValue {
+    return {
+      id: item.id,
+      catalog: item.catalog,
+      code: item.code,
+      label: item.label,
+      active: item.active,
+      sortOrder: item.sortOrder,
+    };
+  }
+
+  async create(
+    actor: CurrentActor,
+    dto: CreateCatalogItemDto,
+  ): Promise<CatalogItemModel> {
     const catalog = this.normalizeKey(dto.catalog);
     const code = this.normalizeKey(dto.code);
 
     try {
-      return await this.prisma.catalogItem.create({
-        data: {
-          catalog,
-          code,
-          label: dto.label,
-          // active y sortOrder usan los defaults del modelo si no se envian.
-          ...(dto.active !== undefined ? { active: dto.active } : {}),
-          ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
-        },
+      return await this.prisma.$transaction(async (tx) => {
+        const created = await tx.catalogItem.create({
+          data: {
+            catalog,
+            code,
+            label: dto.label,
+            // active y sortOrder usan los defaults del modelo si no se envian.
+            ...(dto.active !== undefined ? { active: dto.active } : {}),
+            ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+          },
+        });
+
+        await this.audit.record(tx, {
+          actorUserId: actor.userId,
+          action: 'CREATE',
+          objectType: 'CATALOG_ITEM',
+          objectId: created.id,
+          scopeProcessId: null,
+          before: null,
+          after: this.snapshot(created),
+        });
+
+        return created;
       });
     } catch (error) {
       if (
@@ -74,18 +108,36 @@ export class CatalogService {
     return item;
   }
 
-  async update(id: string, dto: UpdateCatalogItemDto): Promise<CatalogItemModel> {
+  async update(
+    actor: CurrentActor,
+    id: string,
+    dto: UpdateCatalogItemDto,
+  ): Promise<CatalogItemModel> {
     // Garantiza 404 si no existe antes de intentar actualizar.
-    await this.findOne(id);
+    const existing = await this.findOne(id);
 
     // catalog y code son estables: no se actualizan por diseno.
-    return this.prisma.catalogItem.update({
-      where: { id },
-      data: {
-        ...(dto.label !== undefined ? { label: dto.label } : {}),
-        ...(dto.active !== undefined ? { active: dto.active } : {}),
-        ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.catalogItem.update({
+        where: { id },
+        data: {
+          ...(dto.label !== undefined ? { label: dto.label } : {}),
+          ...(dto.active !== undefined ? { active: dto.active } : {}),
+          ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+        },
+      });
+
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'UPDATE',
+        objectType: 'CATALOG_ITEM',
+        objectId: updated.id,
+        scopeProcessId: null,
+        before: this.snapshot(existing),
+        after: this.snapshot(updated),
+      });
+
+      return updated;
     });
   }
 }

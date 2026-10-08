@@ -23,6 +23,111 @@
         ]
       }
     },
+    "/me/permissions": {
+      "get": {
+        "operationId": "MeController_getPermissions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Permisos del actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyPermissionsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          }
+        },
+        "summary": "Permisos del usuario actual (rol, alcance y modulos).",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/dev/actors": {
+      "get": {
+        "operationId": "DevActorsController_listActors",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Usuarios activos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DevActorResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No disponible fuera del modo dev-header."
+          }
+        },
+        "summary": "Lista usuarios activos para el selector de desarrollo.",
+        "tags": [
+          "dev"
+        ]
+      }
+    },
+    "/audit-events": {
+      "get": {
+        "operationId": "AuditController_findMany",
+        "parameters": [
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "description": "Maximo de eventos (acotado a 500).",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "objectType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "PROCESS",
+                "USER",
+                "GRANT",
+                "CATALOG_ITEM"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eventos visibles para el actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEventResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          }
+        },
+        "summary": "Lista eventos de auditoria con alcance por rol.",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
     "/catalog-items": {
       "post": {
         "operationId": "CatalogController_create",
@@ -51,11 +156,14 @@
           "400": {
             "description": "Datos de entrada invalidos."
           },
+          "403": {
+            "description": "Rol insuficiente."
+          },
           "409": {
             "description": "Ya existe (catalog, code)."
           }
         },
-        "summary": "Crea un elemento de catalogo.",
+        "summary": "Crea un elemento de catalogo (solo JEFE_AREA).",
         "tags": [
           "catalog-items"
         ]
@@ -178,13 +286,470 @@
           "400": {
             "description": "Datos de entrada invalidos o id no UUID."
           },
+          "403": {
+            "description": "Rol insuficiente."
+          },
           "404": {
             "description": "Elemento no encontrado."
           }
         },
-        "summary": "Actualiza label, active o sortOrder de un elemento.",
+        "summary": "Actualiza label, active o sortOrder (solo JEFE_AREA).",
         "tags": [
           "catalog-items"
+        ]
+      }
+    },
+    "/processes": {
+      "get": {
+        "operationId": "ProcessController_findMany",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "PROCESS",
+                "COORDINATION"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de procesos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProcessResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          }
+        },
+        "summary": "Lista procesos (jefe: todos; no-jefe: solo su alcance).",
+        "tags": [
+          "processes"
+        ]
+      },
+      "post": {
+        "operationId": "ProcessController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProcessDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Proceso creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "Ya existe el code."
+          }
+        },
+        "summary": "Crea un proceso (solo JEFE_AREA).",
+        "tags": [
+          "processes"
+        ]
+      }
+    },
+    "/processes/{id}": {
+      "get": {
+        "operationId": "ProcessController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proceso encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o esta fuera de alcance."
+          }
+        },
+        "summary": "Obtiene un proceso por id (404 si fuera de alcance).",
+        "tags": [
+          "processes"
+        ]
+      },
+      "patch": {
+        "operationId": "ProcessController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProcessDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Proceso actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos o id no UUID."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Proceso no encontrado."
+          }
+        },
+        "summary": "Edita name/framework/active/sortOrder (solo JEFE_AREA).",
+        "tags": [
+          "processes"
+        ]
+      }
+    },
+    "/users": {
+      "get": {
+        "operationId": "UserController_findMany",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Listado de usuarios.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista todos los usuarios (solo JEFE_AREA).",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "UserController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "Ya existe el identifier."
+          }
+        },
+        "summary": "Crea una identidad funcional (solo JEFE_AREA).",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "operationId": "UserController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuario encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Usuario no encontrado."
+          }
+        },
+        "summary": "Obtiene un usuario con sus grants (solo JEFE_AREA).",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "operationId": "UserController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuario actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos o id no UUID."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Usuario no encontrado."
+          }
+        },
+        "summary": "Edita name/active (solo JEFE_AREA).",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/grants": {
+      "get": {
+        "operationId": "GrantController_findMany",
+        "parameters": [
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de grants.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GrantResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista grants del alcance del jefe (solo JEFE_AREA).",
+        "tags": [
+          "grants"
+        ]
+      },
+      "post": {
+        "operationId": "GrantController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGrantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Grant creado o reactivado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Usuario o proceso inexistente."
+          },
+          "409": {
+            "description": "El grant ya existe y esta activo."
+          }
+        },
+        "summary": "Concede un grant (solo JEFE_AREA).",
+        "tags": [
+          "grants"
+        ]
+      }
+    },
+    "/grants/{id}": {
+      "delete": {
+        "operationId": "GrantController_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Grant revocado (devuelve el actualizado).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Grant no encontrado."
+          }
+        },
+        "summary": "Revoca un grant (soft; solo JEFE_AREA).",
+        "tags": [
+          "grants"
         ]
       }
     }
@@ -222,6 +787,176 @@
           "status",
           "service",
           "timestamp"
+        ]
+      },
+      "MyGrantDto": {
+        "type": "object",
+        "properties": {
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id del proceso del grant."
+          },
+          "processCode": {
+            "type": "string",
+            "description": "Codigo del proceso.",
+            "example": "FIBI"
+          },
+          "processName": {
+            "type": "string",
+            "description": "Nombre del proceso.",
+            "example": "BI"
+          },
+          "roleCode": {
+            "type": "string",
+            "enum": [
+              "JEFE_AREA",
+              "LIDER_PROCESO",
+              "INTEGRANTE"
+            ],
+            "description": "Rol del grant."
+          },
+          "roleName": {
+            "type": "string",
+            "description": "Etiqueta visible del rol.",
+            "example": "Lider de proceso"
+          }
+        },
+        "required": [
+          "processId",
+          "processCode",
+          "processName",
+          "roleCode",
+          "roleName"
+        ]
+      },
+      "MyPermissionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id del usuario actual."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del usuario actual.",
+            "example": "Ana Jefa"
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional.",
+            "example": "jefe@demo.local"
+          },
+          "grants": {
+            "description": "Grants activos del usuario.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyGrantDto"
+            }
+          },
+          "allowedModules": {
+            "description": "Claves de modulo permitidas para el/los rol(es) del actor.",
+            "example": [
+              "permissions",
+              "audit",
+              "admin"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "userId",
+          "name",
+          "identifier",
+          "grants",
+          "allowedModules"
+        ]
+      },
+      "DevActorResponseDto": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional del usuario.",
+            "example": "jefe@demo.local"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible del usuario.",
+            "example": "Ana Jefa"
+          }
+        },
+        "required": [
+          "identifier",
+          "name"
+        ]
+      },
+      "AuditEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador del evento."
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario que origino la mutacion (null si fue el sistema)."
+          },
+          "action": {
+            "type": "string",
+            "description": "Verbo de la mutacion.",
+            "example": "CREATE"
+          },
+          "objectType": {
+            "type": "string",
+            "description": "Tipo de objeto afectado.",
+            "example": "GRANT"
+          },
+          "objectId": {
+            "type": "string",
+            "description": "Id del objeto afectado."
+          },
+          "scopeProcessId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Proceso de alcance del evento (null si no aplica)."
+          },
+          "before": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Estado previo (null en CREATE)."
+          },
+          "after": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Estado posterior (null en DELETE fisico)."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Momento del evento."
+          }
+        },
+        "required": [
+          "id",
+          "actorUserId",
+          "action",
+          "objectType",
+          "objectId",
+          "scopeProcessId",
+          "before",
+          "after",
+          "createdAt"
         ]
       },
       "CreateCatalogItemDto": {
@@ -341,6 +1076,290 @@
             "example": 2
           }
         }
+      },
+      "ProcessResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "code": {
+            "type": "string",
+            "description": "Codigo estable.",
+            "example": "FIBI"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del proceso.",
+            "example": "BI"
+          },
+          "framework": {
+            "type": "string",
+            "nullable": true,
+            "description": "Marco asociado.",
+            "example": "INS-006"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Tipo de proceso.",
+            "example": "PROCESS"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo.",
+            "example": true
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden de presentacion.",
+            "example": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "framework",
+          "kind",
+          "active",
+          "sortOrder",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateProcessDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Codigo estable del proceso (se normaliza a MAYUSCULAS).",
+            "example": "FIBI",
+            "maxLength": 50
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del proceso.",
+            "example": "BI",
+            "maxLength": 255
+          },
+          "framework": {
+            "type": "string",
+            "description": "Marco asociado observado.",
+            "example": "INS-006",
+            "maxLength": 50
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PROCESS",
+              "COORDINATION"
+            ],
+            "description": "Tipo de proceso. Por defecto PROCESS.",
+            "default": "PROCESS"
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden de presentacion. Por defecto 0.",
+            "minimum": 0,
+            "example": 1
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "UpdateProcessDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del proceso.",
+            "maxLength": 255
+          },
+          "framework": {
+            "type": "string",
+            "description": "Marco asociado.",
+            "maxLength": 50
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo del proceso."
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden de presentacion.",
+            "minimum": 0
+          }
+        }
+      },
+      "UserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional.",
+            "example": "persona@demo.local"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible.",
+            "example": "Persona Demo"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo.",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "identifier",
+          "name",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional unico (p. ej. email corporativo).",
+            "example": "persona@demo.local",
+            "maxLength": 255
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible.",
+            "example": "Persona Demo",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "identifier",
+          "name"
+        ]
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre visible.",
+            "maxLength": 255
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo del usuario."
+          }
+        }
+      },
+      "GrantResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Usuario asignado."
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Rol concedido."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso del grant."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo (false = revocado).",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "roleId",
+          "processId",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateGrantDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id del usuario a asignar."
+          },
+          "roleCode": {
+            "type": "string",
+            "enum": [
+              "JEFE_AREA",
+              "LIDER_PROCESO",
+              "INTEGRANTE"
+            ],
+            "description": "Rol a conceder."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id del proceso del grant."
+          }
+        },
+        "required": [
+          "userId",
+          "roleCode",
+          "processId"
+        ]
       }
     }
   }

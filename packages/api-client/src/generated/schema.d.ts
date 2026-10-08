@@ -21,6 +21,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Permisos del usuario actual (rol, alcance y modulos). */
+        get: operations["MeController_getPermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dev/actors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista usuarios activos para el selector de desarrollo. */
+        get: operations["DevActorsController_listActors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista eventos de auditoria con alcance por rol. */
+        get: operations["AuditController_findMany"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/catalog-items": {
         parameters: {
             query?: never;
@@ -31,7 +82,7 @@ export interface paths {
         /** Lista elementos de catalogo, con filtros opcionales. */
         get: operations["CatalogController_findMany"];
         put?: never;
-        /** Crea un elemento de catalogo. */
+        /** Crea un elemento de catalogo (solo JEFE_AREA). */
         post: operations["CatalogController_create"];
         delete?: never;
         options?: never;
@@ -53,8 +104,115 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Actualiza label, active o sortOrder de un elemento. */
+        /** Actualiza label, active o sortOrder (solo JEFE_AREA). */
         patch: operations["CatalogController_update"];
+        trace?: never;
+    };
+    "/processes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista procesos (jefe: todos; no-jefe: solo su alcance). */
+        get: operations["ProcessController_findMany"];
+        put?: never;
+        /** Crea un proceso (solo JEFE_AREA). */
+        post: operations["ProcessController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/processes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtiene un proceso por id (404 si fuera de alcance). */
+        get: operations["ProcessController_findOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita name/framework/active/sortOrder (solo JEFE_AREA). */
+        patch: operations["ProcessController_update"];
+        trace?: never;
+    };
+    "/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista todos los usuarios (solo JEFE_AREA). */
+        get: operations["UserController_findMany"];
+        put?: never;
+        /** Crea una identidad funcional (solo JEFE_AREA). */
+        post: operations["UserController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtiene un usuario con sus grants (solo JEFE_AREA). */
+        get: operations["UserController_findOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita name/active (solo JEFE_AREA). */
+        patch: operations["UserController_update"];
+        trace?: never;
+    };
+    "/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista grants del alcance del jefe (solo JEFE_AREA). */
+        get: operations["GrantController_findMany"];
+        put?: never;
+        /** Concede un grant (solo JEFE_AREA). */
+        post: operations["GrantController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/grants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoca un grant (soft; solo JEFE_AREA). */
+        delete: operations["GrantController_revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -71,6 +229,115 @@ export interface components {
             service: string;
             /** Format: date-time */
             timestamp: string;
+        };
+        MyGrantDto: {
+            /**
+             * Format: uuid
+             * @description Id del proceso del grant.
+             */
+            processId: string;
+            /**
+             * @description Codigo del proceso.
+             * @example FIBI
+             */
+            processCode: string;
+            /**
+             * @description Nombre del proceso.
+             * @example BI
+             */
+            processName: string;
+            /**
+             * @description Rol del grant.
+             * @enum {string}
+             */
+            roleCode: "JEFE_AREA" | "LIDER_PROCESO" | "INTEGRANTE";
+            /**
+             * @description Etiqueta visible del rol.
+             * @example Lider de proceso
+             */
+            roleName: string;
+        };
+        MyPermissionsResponseDto: {
+            /**
+             * Format: uuid
+             * @description Id del usuario actual.
+             */
+            userId: string;
+            /**
+             * @description Nombre del usuario actual.
+             * @example Ana Jefa
+             */
+            name: string;
+            /**
+             * @description Identificador funcional.
+             * @example jefe@demo.local
+             */
+            identifier: string;
+            /** @description Grants activos del usuario. */
+            grants: components["schemas"]["MyGrantDto"][];
+            /**
+             * @description Claves de modulo permitidas para el/los rol(es) del actor.
+             * @example [
+             *       "permissions",
+             *       "audit",
+             *       "admin"
+             *     ]
+             */
+            allowedModules: string[];
+        };
+        DevActorResponseDto: {
+            /**
+             * @description Identificador funcional del usuario.
+             * @example jefe@demo.local
+             */
+            identifier: string;
+            /**
+             * @description Nombre visible del usuario.
+             * @example Ana Jefa
+             */
+            name: string;
+        };
+        AuditEventResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador del evento.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Usuario que origino la mutacion (null si fue el sistema).
+             */
+            actorUserId: string | null;
+            /**
+             * @description Verbo de la mutacion.
+             * @example CREATE
+             */
+            action: string;
+            /**
+             * @description Tipo de objeto afectado.
+             * @example GRANT
+             */
+            objectType: string;
+            /** @description Id del objeto afectado. */
+            objectId: string;
+            /**
+             * Format: uuid
+             * @description Proceso de alcance del evento (null si no aplica).
+             */
+            scopeProcessId: string | null;
+            /** @description Estado previo (null en CREATE). */
+            before: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Estado posterior (null en DELETE fisico). */
+            after: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Format: date-time
+             * @description Momento del evento.
+             */
+            createdAt: string;
         };
         CreateCatalogItemDto: {
             /**
@@ -160,6 +427,195 @@ export interface components {
              */
             sortOrder?: number;
         };
+        ProcessResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * @description Codigo estable.
+             * @example FIBI
+             */
+            code: string;
+            /**
+             * @description Nombre del proceso.
+             * @example BI
+             */
+            name: string;
+            /**
+             * @description Marco asociado.
+             * @example INS-006
+             */
+            framework: string | null;
+            /**
+             * @description Tipo de proceso.
+             * @example PROCESS
+             */
+            kind: string;
+            /**
+             * @description Estado activo.
+             * @example true
+             */
+            active: boolean;
+            /**
+             * @description Orden de presentacion.
+             * @example 1
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ultima actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateProcessDto: {
+            /**
+             * @description Codigo estable del proceso (se normaliza a MAYUSCULAS).
+             * @example FIBI
+             */
+            code: string;
+            /**
+             * @description Nombre del proceso.
+             * @example BI
+             */
+            name: string;
+            /**
+             * @description Marco asociado observado.
+             * @example INS-006
+             */
+            framework?: string;
+            /**
+             * @description Tipo de proceso. Por defecto PROCESS.
+             * @default PROCESS
+             * @enum {string}
+             */
+            kind: "PROCESS" | "COORDINATION";
+            /**
+             * @description Orden de presentacion. Por defecto 0.
+             * @example 1
+             */
+            sortOrder?: number;
+        };
+        UpdateProcessDto: {
+            /** @description Nombre del proceso. */
+            name?: string;
+            /** @description Marco asociado. */
+            framework?: string;
+            /** @description Estado activo del proceso. */
+            active?: boolean;
+            /** @description Orden de presentacion. */
+            sortOrder?: number;
+        };
+        UserResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * @description Identificador funcional.
+             * @example persona@demo.local
+             */
+            identifier: string;
+            /**
+             * @description Nombre visible.
+             * @example Persona Demo
+             */
+            name: string;
+            /**
+             * @description Estado activo.
+             * @example true
+             */
+            active: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ultima actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateUserDto: {
+            /**
+             * @description Identificador funcional unico (p. ej. email corporativo).
+             * @example persona@demo.local
+             */
+            identifier: string;
+            /**
+             * @description Nombre visible.
+             * @example Persona Demo
+             */
+            name: string;
+        };
+        UpdateUserDto: {
+            /** @description Nombre visible. */
+            name?: string;
+            /** @description Estado activo del usuario. */
+            active?: boolean;
+        };
+        GrantResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Usuario asignado.
+             */
+            userId: string;
+            /**
+             * Format: uuid
+             * @description Rol concedido.
+             */
+            roleId: string;
+            /**
+             * Format: uuid
+             * @description Proceso del grant.
+             */
+            processId: string;
+            /**
+             * @description Estado activo (false = revocado).
+             * @example true
+             */
+            active: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ultima actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateGrantDto: {
+            /**
+             * Format: uuid
+             * @description Id del usuario a asignar.
+             */
+            userId: string;
+            /**
+             * @description Rol a conceder.
+             * @enum {string}
+             */
+            roleCode: "JEFE_AREA" | "LIDER_PROCESO" | "INTEGRANTE";
+            /**
+             * Format: uuid
+             * @description Id del proceso del grant.
+             */
+            processId: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -186,6 +642,91 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HealthResponseDto"];
                 };
+            };
+        };
+    };
+    MeController_getPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Permisos del actor. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPermissionsResponseDto"];
+                };
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DevActorsController_listActors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usuarios activos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DevActorResponseDto"][];
+                };
+            };
+            /** @description No disponible fuera del modo dev-header. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuditController_findMany: {
+        parameters: {
+            query?: {
+                /** @description Maximo de eventos (acotado a 500). */
+                take?: number;
+                objectType?: "PROCESS" | "USER" | "GRANT" | "CATALOG_ITEM";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Eventos visibles para el actor. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEventResponseDto"][];
+                };
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -245,6 +786,13 @@ export interface operations {
             };
             /** @description Datos de entrada invalidos. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -328,7 +876,439 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Elemento no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProcessController_findMany: {
+        parameters: {
+            query?: {
+                kind?: "PROCESS" | "COORDINATION";
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Listado de procesos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessResponseDto"][];
+                };
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProcessController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProcessDto"];
+            };
+        };
+        responses: {
+            /** @description Proceso creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe el code. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProcessController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proceso encontrado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessResponseDto"];
+                };
+            };
+            /** @description No existe o esta fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProcessController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProcessDto"];
+            };
+        };
+        responses: {
+            /** @description Proceso actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos o id no UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Proceso no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserController_findMany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Listado de usuarios. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserDto"];
+            };
+        };
+        responses: {
+            /** @description Usuario creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe el identifier. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usuario encontrado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuario no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserDto"];
+            };
+        };
+        responses: {
+            /** @description Usuario actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos o id no UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuario no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrantController_findMany: {
+        parameters: {
+            query?: {
+                active?: boolean;
+                processId?: unknown;
+                userId?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Listado de grants. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrantController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGrantDto"];
+            };
+        };
+        responses: {
+            /** @description Grant creado o reactivado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuario o proceso inexistente. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El grant ya existe y esta activo. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrantController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grant revocado (devuelve el actualizado). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Grant no encontrado. */
             404: {
                 headers: {
                     [name: string]: unknown;

@@ -1,0 +1,80 @@
+import { RoleCode } from './role-code';
+
+/**
+ * Claves EXACTAS de la matriz de modulos de specs/10 (design 3.3). El frontend
+ * usa estas mismas claves para filtrar el menu (una sola fuente de verdad,
+ * compartida con el server-side; no se duplican reglas).
+ */
+export type ModuleKey =
+  | 'demandOverview'
+  | 'dashboard'
+  | 'requests'
+  | 'triage'
+  | 'priority'
+  | 'plan'
+  | 'portfolio'
+  | 'project'
+  | 'assigned'
+  | 'task'
+  | 'log'
+  | 'meeting'
+  | 'asset'
+  | 'docs'
+  | 'capacity'
+  | 'admin'
+  | 'frameworks'
+  | 'review'
+  | 'audit'
+  | 'team'
+  | 'permissions';
+
+/**
+ * Matriz de modulos -> roles permitidos (design 3.3, specs/10).
+ *
+ * Criterio derivado de specs/10:
+ * - `admin`, `team`, `frameworks` son administracion de area: solo JEFE_AREA.
+ * - `triage`, `priority`, `review`, `capacity`, `portfolio` son decisiones de
+ *   gestion del proceso: jefe y lider.
+ * - El resto del trabajo operativo (demanda, seguimiento, activos, docs) lo ven
+ *   los tres roles con alcance de proceso.
+ * - `permissions` (mis permisos) y `audit` (lectura con alcance) son para todos.
+ */
+export const MODULE_MATRIX: Record<ModuleKey, readonly RoleCode[]> = {
+  demandOverview: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  dashboard: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  requests: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  triage: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
+  priority: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
+  plan: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  portfolio: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
+  project: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  assigned: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  task: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  log: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  meeting: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  asset: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  docs: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  capacity: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
+  admin: [RoleCode.JEFE_AREA],
+  frameworks: [RoleCode.JEFE_AREA],
+  review: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO],
+  audit: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  team: [RoleCode.JEFE_AREA],
+  permissions: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+};
+
+/** Todas las claves de modulo, en orden de declaracion. */
+export const MODULE_KEYS = Object.keys(MODULE_MATRIX) as ModuleKey[];
+
+/**
+ * Deriva los modulos permitidos para un conjunto de roles (union): un modulo
+ * es visible si alguno de los roles del actor lo permite.
+ */
+export function allowedModulesFor(
+  roleCodes: Iterable<RoleCode>,
+): ModuleKey[] {
+  const roles = new Set<RoleCode>(roleCodes);
+  return MODULE_KEYS.filter((key) =>
+    MODULE_MATRIX[key].some((allowed) => roles.has(allowed)),
+  );
+}

@@ -1,11 +1,15 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { CurrentActor } from '../auth/current-actor';
+import { RoleCode } from '../auth/role-code';
 import { CatalogService } from './catalog.service';
 
 /**
  * Mock tipado minimo del PrismaService: solo el delegate catalogItem con los
- * metodos que usa CatalogService. No se conecta a PostgreSQL.
+ * metodos que usa CatalogService, mas $transaction (que ejecuta el callback con
+ * el propio mock como tx). No se conecta a PostgreSQL.
  */
 type CatalogItemDelegateMock = {
   create: jest.Mock;
@@ -17,6 +21,8 @@ type CatalogItemDelegateMock = {
 function createPrismaMock(): {
   prisma: PrismaService;
   catalogItem: CatalogItemDelegateMock;
+  audit: AuditService;
+  auditRecord: jest.Mock;
 } {
   const catalogItem: CatalogItemDelegateMock = {
     create: jest.fn(),
@@ -24,10 +30,26 @@ function createPrismaMock(): {
     findUnique: jest.fn(),
     update: jest.fn(),
   };
-  // Cast controlado: el service solo usa prisma.catalogItem.*
-  const prisma = { catalogItem } as unknown as PrismaService;
-  return { prisma, catalogItem };
+  const prismaObj: Record<string, unknown> = { catalogItem };
+  prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
+    cb(prismaObj),
+  );
+  const prisma = prismaObj as unknown as PrismaService;
+  const audit = { record: jest.fn() } as unknown as AuditService;
+  const auditRecord = audit.record as unknown as jest.Mock;
+  return { prisma, catalogItem, audit, auditRecord };
 }
+
+/** Actor jefe de prueba para las mutaciones auditadas. */
+const ACTOR: CurrentActor = {
+  userId: 'uj',
+  name: 'Ana Jefa',
+  identifier: 'jefe@demo.local',
+  grants: [],
+  roleCodes: new Set([RoleCode.JEFE_AREA]),
+  scopedProcessIds: new Set(),
+  isJefeArea: true,
+};
 
 function makeItem(overrides: Partial<Record<string, unknown>> = {}) {
   const now = new Date('2026-01-01T00:00:00.000Z');
@@ -55,18 +77,20 @@ function uniqueViolation(): Prisma.PrismaClientKnownRequestError {
 describe('CatalogService', () => {
   let service: CatalogService;
   let catalogItem: CatalogItemDelegateMock;
+  let auditRecord: jest.Mock;
 
   beforeEach(() => {
     const mock = createPrismaMock();
     catalogItem = mock.catalogItem;
-    service = new CatalogService(mock.prisma);
+    auditRecord = mock.auditRecord;
+    service = new CatalogService(mock.prisma, mock.audit);
   });
 
   describe('normalizacion', () => {
     it('convierte catalog y code a MAYUSCULAS al crear', async () => {
       catalogItem.create.mockResolvedValue(makeItem());
 
-      await service.create({
+      await service.create(ACTOR, {
         catalog: 'priority',
         code: 'high',
         label: 'Alta',
@@ -86,7 +110,7 @@ describe('CatalogService', () => {
       const created = makeItem({ label: 'Alta' });
       catalogItem.create.mockResolvedValue(created);
 
-      const result = await service.create({
+      const result = await service.create(ACTOR, {
         catalog: 'PRIORITY',
         code: 'HIGH',
         label: 'Alta',
@@ -97,10 +121,27 @@ describe('CatalogService', () => {
       expect(result).toBe(created);
     });
 
+    it('audita CREATE con objectType CATALOG_ITEM y scopeProcessId null', async () => {
+      const created = makeItem({ id: 'c-new' });
+      catalogItem.create.mockResolvedValue(created);
+
+      await service.create(ACTOR, { catalog: 'C', code: 'X', label: 'L' });
+
+      expect(auditRecord).toHaveBeenCalledTimes(1);
+      const audited = auditRecord.mock.calls[0][1];
+      expect(audited).toMatchObject({
+        action: 'CREATE',
+        objectType: 'CATALOG_ITEM',
+        objectId: 'c-new',
+        scopeProcessId: null,
+        before: null,
+      });
+    });
+
     it('no envia active ni sortOrder cuando no se proporcionan (usa defaults)', async () => {
       catalogItem.create.mockResolvedValue(makeItem());
 
-      await service.create({ catalog: 'C', code: 'X', label: 'L' });
+      await service.create(ACTOR, { catalog: 'C', code: 'X', label: 'L' });
 
       const arg = catalogItem.create.mock.calls[0][0];
       expect(arg.data).not.toHaveProperty('active');
@@ -111,15 +152,15 @@ describe('CatalogService', () => {
       catalogItem.create.mockRejectedValue(uniqueViolation());
 
       await expect(
-        service.create({ catalog: 'PRIORITY', code: 'HIGH', label: 'Alta' }),
+        service.create(ACTOR, { catalog: 'PRIORITY', code: 'HIGH', label: 'Alta' }),
       ).rejects.toBeInstanceOf(ConflictException);
 
       // El mensaje es de negocio, no contiene detalles internos de Prisma.
       await expect(
-        service.create({ catalog: 'PRIORITY', code: 'HIGH', label: 'Alta' }),
+        service.create(ACTOR, { catalog: 'PRIORITY', code: 'HIGH', label: 'Alta' }),
       ).rejects.toThrow(/Ya existe un elemento/);
       await expect(
-        service.create({ catalog: 'PRIORITY', code: 'HIGH', label: 'Alta' }),
+        service.create(ACTOR, { catalog: 'PRIORITY', code: 'HIGH', label: 'Alta' }),
       ).rejects.not.toThrow(/P2002|Unique constraint/);
     });
 
@@ -127,7 +168,7 @@ describe('CatalogService', () => {
       catalogItem.create.mockRejectedValue(new Error('db caida'));
 
       await expect(
-        service.create({ catalog: 'C', code: 'X', label: 'L' }),
+        service.create(ACTOR, { catalog: 'C', code: 'X', label: 'L' }),
       ).rejects.toThrow('db caida');
     });
   });
@@ -162,7 +203,7 @@ describe('CatalogService', () => {
         makeItem({ label: 'Nueva', active: false, sortOrder: 9 }),
       );
 
-      await service.update(existing.id, {
+      await service.update(ACTOR, existing.id, {
         label: 'Nueva',
         active: false,
         sortOrder: 9,
@@ -175,11 +216,25 @@ describe('CatalogService', () => {
       expect(arg.data).not.toHaveProperty('code');
     });
 
+    it('audita UPDATE con objectType CATALOG_ITEM', async () => {
+      const existing = makeItem();
+      catalogItem.findUnique.mockResolvedValue(existing);
+      catalogItem.update.mockResolvedValue(makeItem({ label: 'Nueva' }));
+
+      await service.update(ACTOR, existing.id, { label: 'Nueva' });
+
+      expect(auditRecord).toHaveBeenCalledTimes(1);
+      const audited = auditRecord.mock.calls[0][1];
+      expect(audited.action).toBe('UPDATE');
+      expect(audited.objectType).toBe('CATALOG_ITEM');
+      expect(audited.scopeProcessId).toBeNull();
+    });
+
     it('lanza NotFoundException si el elemento no existe', async () => {
       catalogItem.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.update('missing-id', { label: 'X' }),
+        service.update(ACTOR, 'missing-id', { label: 'X' }),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(catalogItem.update).not.toHaveBeenCalled();
     });

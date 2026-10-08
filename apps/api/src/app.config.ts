@@ -40,7 +40,7 @@ export function configureApp(app: INestApplication): void {
   if (corsOrigins.length > 0) {
     app.enableCors({
       origin: corsOrigins,
-      methods: ['GET', 'POST', 'PATCH'],
+      methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     });
   }
 }
