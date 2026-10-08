@@ -215,6 +215,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista solicitudes dentro del alcance del actor. */
+        get: operations["RequestController_findMany"];
+        put?: never;
+        /** Crea una solicitud (estado REGISTRADA; BR-001). */
+        post: operations["RequestController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtiene una solicitud por id (404 fuera de alcance). */
+        get: operations["RequestController_findOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita la ficha (no el estado); conserva fechas iniciales (BR-017). */
+        patch: operations["RequestController_update"];
+        trace?: never;
+    };
+    "/requests/{id}/triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Triage de la solicitud (0 o 1 fila en Fase 2). */
+        get: operations["TriageController_findForRequest"];
+        put?: never;
+        /** Registra el triage (solo desde REGISTRADA; 2o POST -> 409). */
+        post: operations["TriageController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/priority": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historico de evaluaciones (vigente = la ultima). */
+        get: operations["PriorityController_findForRequest"];
+        put?: never;
+        /** Guarda una evaluacion (requiere triage=Continuar y estado valido). */
+        post: operations["PriorityController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/pending-approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cola de solicitudes en backlog priorizado del alcance. */
+        get: operations["ApprovalController_pendingApproval"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historico de decisiones de compromiso. */
+        get: operations["ApprovalController_findForRequest"];
+        put?: never;
+        /** Aprueba (-> Comprometida) o devuelve (-> En triage, motivo req.). */
+        post: operations["ApprovalController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -615,6 +722,321 @@ export interface components {
              * @description Id del proceso del grant.
              */
             processId: string;
+        };
+        RequestParticipantResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador del participante.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Proceso participante.
+             */
+            processId: string;
+        };
+        RequestResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /** @description Titulo de la solicitud. */
+            title: string;
+            /**
+             * Format: date-time
+             * @description Fecha de registro.
+             */
+            registeredAt: string;
+            /** @description Area solicitante. */
+            requesterArea: string | null;
+            /** @description Nombre del solicitante. */
+            requesterName: string | null;
+            /** @description Dueno funcional. */
+            functionalOwner: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha objetivo.
+             */
+            targetDate: string | null;
+            /** @description Ficha/enlace de referencia. */
+            referenceUrl: string | null;
+            /** @description Resultado esperado. */
+            expectedResult: string | null;
+            /**
+             * Format: uuid
+             * @description Proceso principal.
+             */
+            mainProcessId: string;
+            /** @description Estado operativo (read-only, derivado). */
+            operationalState: string;
+            /**
+             * Format: date-time
+             * @description Compromiso inicial (se conserva en edicion).
+             */
+            initialCommitmentDate: string | null;
+            /** @description Justificacion del ultimo cambio. */
+            changeJustification: string | null;
+            /** @description Decision del triage vigente (CONTINUAR/DEVOLVER/RECHAZAR) o null. */
+            currentTriageDecision: string | null;
+            /** @description Score de la ultima evaluacion de prioridad (0-100) o null. */
+            currentScore: number | null;
+            /** @description Etiqueta de umbral derivada del score vigente o null. */
+            priorityLabel: string | null;
+            /** @description Procesos participantes (incluye el principal, BR-001). */
+            participants: components["schemas"]["RequestParticipantResponseDto"][];
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ultima actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateRequestDto: {
+            /**
+             * @description Titulo de la solicitud (requerido).
+             * @example Automatizar reporte mensual de BI
+             */
+            title: string;
+            /**
+             * Format: uuid
+             * @description Proceso principal (requerido, participa siempre: BR-001).
+             */
+            mainProcessId: string;
+            /** @description Procesos participantes adicionales. El principal se materializa siempre. */
+            participantProcessIds?: string[];
+            /** @description Area solicitante. */
+            requesterArea?: string;
+            /** @description Nombre del solicitante. */
+            requesterName?: string;
+            /** @description Dueno funcional. */
+            functionalOwner?: string;
+            /** @description Resultado esperado. */
+            expectedResult?: string;
+            /**
+             * Format: date-time
+             * @description Fecha objetivo.
+             */
+            targetDate?: string;
+            /**
+             * Format: date-time
+             * @description Compromiso inicial (se conserva en edicion, BR-017).
+             */
+            initialCommitmentDate?: string;
+            /** @description Ficha/enlace de referencia. */
+            referenceUrl?: string;
+        };
+        UpdateRequestDto: {
+            /** @description Titulo de la solicitud. */
+            title?: string;
+            /** @description Procesos participantes adicionales (el principal se mantiene). */
+            participantProcessIds?: string[];
+            /** @description Area solicitante. */
+            requesterArea?: string;
+            /** @description Nombre del solicitante. */
+            requesterName?: string;
+            /** @description Dueno funcional. */
+            functionalOwner?: string;
+            /** @description Resultado esperado. */
+            expectedResult?: string;
+            /**
+             * Format: date-time
+             * @description Fecha objetivo.
+             */
+            targetDate?: string;
+            /** @description Ficha/enlace de referencia. */
+            referenceUrl?: string;
+            /** @description Justificacion del cambio (BR-017). */
+            changeJustification?: string;
+        };
+        TriageResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Solicitud triada.
+             */
+            requestId: string;
+            /** @description Decision (CONTINUAR/DEVOLVER/RECHAZAR). */
+            decision: string;
+            /** @description Ruta (code maestro). */
+            routeCode: string | null;
+            /** @description Tipo de demanda (code maestro). */
+            demandTypeCode: string | null;
+            /** @description Criticidad (code maestro). */
+            criticalityCode: string | null;
+            /** @description Tamano (code maestro). */
+            sizeCode: string | null;
+            /** @description Disponibilidad de datos (code maestro). */
+            dataAvailabilityCode: string | null;
+            /** @description Esfuerzo total (horas). */
+            totalEffortHours: number | null;
+            /** @description Responsable principal. */
+            mainResponsible: string | null;
+            /** @description Dependencias. */
+            dependencies: string | null;
+            /** @description Observaciones. */
+            notes: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de decision.
+             */
+            decidedAt: string;
+            /**
+             * Format: uuid
+             * @description Usuario que decidio.
+             */
+            decidedByUserId: string;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+        };
+        CreateTriageDto: {
+            /**
+             * @description Decision del triage.
+             * @enum {string}
+             */
+            decision: "CONTINUAR" | "DEVOLVER" | "RECHAZAR";
+            /** @description Ruta (maestra TRIAGE_ROUTE). */
+            routeCode?: string;
+            /** @description Tipo de demanda (maestra DEMAND_TYPE). */
+            demandTypeCode?: string;
+            /** @description Criticidad (maestra CRITICALITY). */
+            criticalityCode?: string;
+            /** @description Tamano (maestra TRIAGE_SIZE). */
+            sizeCode?: string;
+            /** @description Disponibilidad de datos (maestra DATA_AVAILABILITY). */
+            dataAvailabilityCode?: string;
+            /** @description Esfuerzo total (horas). */
+            totalEffortHours?: number;
+            /** @description Responsable principal. */
+            mainResponsible?: string;
+            /** @description Dependencias. */
+            dependencies?: string;
+            /** @description Observaciones. */
+            notes?: string;
+        };
+        PriorityEvaluationResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Solicitud evaluada.
+             */
+            requestId: string;
+            /** @description Impacto (1-5). */
+            impact: number;
+            /** @description Alineacion (1-5). */
+            alignment: number;
+            /** @description Control del riesgo (1-5). */
+            riskControl: number;
+            /** @description Urgencia (1-5). */
+            urgency: number;
+            /** @description Alcance (1-5). */
+            scope: number;
+            /** @description Disponibilidad de datos (1-5). */
+            dataAvailability: number;
+            /** @description Factibilidad (1-5). */
+            feasibility: number;
+            /** @description Reutilizacion (1-5). */
+            reuse: number;
+            /** @description Score calculado en backend (0-100). */
+            score: number;
+            /** @description Etiqueta de umbral derivada del score. */
+            thresholdLabel: string;
+            /** @description Justificacion. */
+            justification: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de evaluacion.
+             */
+            evaluatedAt: string;
+            /**
+             * Format: uuid
+             * @description Usuario que evaluo.
+             */
+            evaluatedByUserId: string;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+        };
+        CreatePriorityEvaluationDto: {
+            /** @description Impacto (peso 25). */
+            impact: number;
+            /** @description Alineacion (peso 15). */
+            alignment: number;
+            /** @description Control del riesgo (peso 15). */
+            riskControl: number;
+            /** @description Urgencia (peso 10). */
+            urgency: number;
+            /** @description Alcance (peso 10). */
+            scope: number;
+            /** @description Disponibilidad de datos (peso 10). */
+            dataAvailability: number;
+            /** @description Factibilidad (peso 10). */
+            feasibility: number;
+            /** @description Reutilizacion (peso 5). */
+            reuse: number;
+            /** @description Justificacion de la evaluacion. */
+            justification?: string;
+        };
+        ApprovalResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Solicitud revisada.
+             */
+            requestId: string;
+            /** @description Decision (APROBAR/DEVOLVER). */
+            decision: string;
+            /** @description Motivo (si DEVOLVER). */
+            reason: string | null;
+            /** @description Estado anterior a la decision. */
+            previousState: string;
+            /** @description Estado resultante. */
+            resultingState: string;
+            /**
+             * Format: date-time
+             * @description Fecha de la decision.
+             */
+            decidedAt: string;
+            /**
+             * Format: uuid
+             * @description Usuario que decidio.
+             */
+            decidedByUserId: string;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+        };
+        CreateApprovalDto: {
+            /**
+             * @description Decision de aprobacion.
+             * @enum {string}
+             */
+            decision: "APROBAR" | "DEVOLVER";
+            /** @description Motivo (obligatorio si DEVOLVER). */
+            reason?: string;
         };
     };
     responses: never;
@@ -1310,6 +1732,440 @@ export interface operations {
             };
             /** @description Grant no encontrado. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RequestController_findMany: {
+        parameters: {
+            query?: {
+                mainProcessId?: unknown;
+                state?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Listado de solicitudes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestResponseDto"][];
+                };
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RequestController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRequestDto"];
+            };
+        };
+        responses: {
+            /** @description Solicitud creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Proceso principal fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RequestController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Solicitud encontrada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestResponseDto"];
+                };
+            };
+            /** @description No existe o esta fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RequestController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRequestDto"];
+            };
+        };
+        responses: {
+            /** @description Solicitud actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos o id no UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud no encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TriageController_findForRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Triage de la solicitud. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TriageController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTriageDto"];
+            };
+        };
+        responses: {
+            /** @description Triage registrado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageResponseDto"];
+                };
+            };
+            /** @description Datos invalidos o code maestro inexistente. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La solicitud no esta en REGISTRADA. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PriorityController_findForRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Evaluaciones de la solicitud. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriorityEvaluationResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PriorityController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePriorityEvaluationDto"];
+            };
+        };
+        responses: {
+            /** @description Evaluacion guardada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriorityEvaluationResponseDto"];
+                };
+            };
+            /** @description Criterios fuera de 1-5 u otros datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin triage=Continuar o estado no admite priorizar. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApprovalController_pendingApproval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cola de aprobacion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApprovalController_findForRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Decisiones de la solicitud. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApprovalController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateApprovalDto"];
+            };
+        };
+        responses: {
+            /** @description Decision registrada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalResponseDto"];
+                };
+            };
+            /** @description Devolver sin motivo u otros datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente (sin review). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La solicitud no esta en backlog priorizado. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

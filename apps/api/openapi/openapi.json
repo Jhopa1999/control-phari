@@ -752,6 +752,465 @@
           "grants"
         ]
       }
+    },
+    "/requests": {
+      "get": {
+        "operationId": "RequestController_findMany",
+        "parameters": [
+          {
+            "name": "mainProcessId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de solicitudes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RequestResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          }
+        },
+        "summary": "Lista solicitudes dentro del alcance del actor.",
+        "tags": [
+          "requests"
+        ]
+      },
+      "post": {
+        "operationId": "RequestController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Solicitud creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos."
+          },
+          "404": {
+            "description": "Proceso principal fuera de alcance."
+          }
+        },
+        "summary": "Crea una solicitud (estado REGISTRADA; BR-001).",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/requests/{id}": {
+      "get": {
+        "operationId": "RequestController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o esta fuera de alcance."
+          }
+        },
+        "summary": "Obtiene una solicitud por id (404 fuera de alcance).",
+        "tags": [
+          "requests"
+        ]
+      },
+      "patch": {
+        "operationId": "RequestController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos o id no UUID."
+          },
+          "404": {
+            "description": "Solicitud no encontrada."
+          }
+        },
+        "summary": "Edita la ficha (no el estado); conserva fechas iniciales (BR-017).",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/requests/{id}/triage": {
+      "get": {
+        "operationId": "TriageController_findForRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Triage de la solicitud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TriageResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          }
+        },
+        "summary": "Triage de la solicitud (0 o 1 fila en Fase 2).",
+        "tags": [
+          "triage"
+        ]
+      },
+      "post": {
+        "operationId": "TriageController_create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTriageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Triage registrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o code maestro inexistente."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          },
+          "409": {
+            "description": "La solicitud no esta en REGISTRADA."
+          }
+        },
+        "summary": "Registra el triage (solo desde REGISTRADA; 2o POST -> 409).",
+        "tags": [
+          "triage"
+        ]
+      }
+    },
+    "/requests/{id}/priority": {
+      "get": {
+        "operationId": "PriorityController_findForRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evaluaciones de la solicitud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PriorityEvaluationResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          }
+        },
+        "summary": "Historico de evaluaciones (vigente = la ultima).",
+        "tags": [
+          "priority"
+        ]
+      },
+      "post": {
+        "operationId": "PriorityController_create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePriorityEvaluationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Evaluacion guardada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriorityEvaluationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Criterios fuera de 1-5 u otros datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          },
+          "409": {
+            "description": "Sin triage=Continuar o estado no admite priorizar."
+          }
+        },
+        "summary": "Guarda una evaluacion (requiere triage=Continuar y estado valido).",
+        "tags": [
+          "priority"
+        ]
+      }
+    },
+    "/requests/pending-approval": {
+      "get": {
+        "operationId": "ApprovalController_pendingApproval",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Cola de aprobacion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RequestResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Cola de solicitudes en backlog priorizado del alcance.",
+        "tags": [
+          "approval"
+        ]
+      }
+    },
+    "/requests/{id}/approval": {
+      "get": {
+        "operationId": "ApprovalController_findForRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decisiones de la solicitud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          }
+        },
+        "summary": "Historico de decisiones de compromiso.",
+        "tags": [
+          "approval"
+        ]
+      },
+      "post": {
+        "operationId": "ApprovalController_create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApprovalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Decision registrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Devolver sin motivo u otros datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente (sin review)."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          },
+          "409": {
+            "description": "La solicitud no esta en backlog priorizado."
+          }
+        },
+        "summary": "Aprueba (-> Comprometida) o devuelve (-> En triage, motivo req.).",
+        "tags": [
+          "approval"
+        ]
+      }
     }
   },
   "info": {
@@ -1359,6 +1818,657 @@
           "userId",
           "roleCode",
           "processId"
+        ]
+      },
+      "RequestParticipantResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador del participante."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso participante."
+          }
+        },
+        "required": [
+          "id",
+          "processId"
+        ]
+      },
+      "RequestResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la solicitud."
+          },
+          "registeredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de registro."
+          },
+          "requesterArea": {
+            "type": "string",
+            "nullable": true,
+            "description": "Area solicitante."
+          },
+          "requesterName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del solicitante."
+          },
+          "functionalOwner": {
+            "type": "string",
+            "nullable": true,
+            "description": "Dueno funcional."
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha objetivo."
+          },
+          "referenceUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ficha/enlace de referencia."
+          },
+          "expectedResult": {
+            "type": "string",
+            "nullable": true,
+            "description": "Resultado esperado."
+          },
+          "mainProcessId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso principal."
+          },
+          "operationalState": {
+            "type": "string",
+            "description": "Estado operativo (read-only, derivado)."
+          },
+          "initialCommitmentDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Compromiso inicial (se conserva en edicion)."
+          },
+          "changeJustification": {
+            "type": "string",
+            "nullable": true,
+            "description": "Justificacion del ultimo cambio."
+          },
+          "currentTriageDecision": {
+            "type": "string",
+            "nullable": true,
+            "description": "Decision del triage vigente (CONTINUAR/DEVOLVER/RECHAZAR) o null."
+          },
+          "currentScore": {
+            "type": "number",
+            "nullable": true,
+            "description": "Score de la ultima evaluacion de prioridad (0-100) o null."
+          },
+          "priorityLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "Etiqueta de umbral derivada del score vigente o null."
+          },
+          "participants": {
+            "description": "Procesos participantes (incluye el principal, BR-001).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestParticipantResponseDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "registeredAt",
+          "requesterArea",
+          "requesterName",
+          "functionalOwner",
+          "targetDate",
+          "referenceUrl",
+          "expectedResult",
+          "mainProcessId",
+          "operationalState",
+          "initialCommitmentDate",
+          "changeJustification",
+          "currentTriageDecision",
+          "currentScore",
+          "priorityLabel",
+          "participants",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateRequestDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titulo de la solicitud (requerido).",
+            "example": "Automatizar reporte mensual de BI",
+            "maxLength": 255
+          },
+          "mainProcessId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso principal (requerido, participa siempre: BR-001)."
+          },
+          "participantProcessIds": {
+            "description": "Procesos participantes adicionales. El principal se materializa siempre.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "requesterArea": {
+            "type": "string",
+            "description": "Area solicitante.",
+            "maxLength": 255
+          },
+          "requesterName": {
+            "type": "string",
+            "description": "Nombre del solicitante.",
+            "maxLength": 255
+          },
+          "functionalOwner": {
+            "type": "string",
+            "description": "Dueno funcional.",
+            "maxLength": 255
+          },
+          "expectedResult": {
+            "type": "string",
+            "description": "Resultado esperado.",
+            "maxLength": 2000
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha objetivo."
+          },
+          "initialCommitmentDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Compromiso inicial (se conserva en edicion, BR-017)."
+          },
+          "referenceUrl": {
+            "type": "string",
+            "description": "Ficha/enlace de referencia.",
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "title",
+          "mainProcessId"
+        ]
+      },
+      "UpdateRequestDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titulo de la solicitud.",
+            "maxLength": 255
+          },
+          "participantProcessIds": {
+            "description": "Procesos participantes adicionales (el principal se mantiene).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "requesterArea": {
+            "type": "string",
+            "description": "Area solicitante.",
+            "maxLength": 255
+          },
+          "requesterName": {
+            "type": "string",
+            "description": "Nombre del solicitante.",
+            "maxLength": 255
+          },
+          "functionalOwner": {
+            "type": "string",
+            "description": "Dueno funcional.",
+            "maxLength": 255
+          },
+          "expectedResult": {
+            "type": "string",
+            "description": "Resultado esperado.",
+            "maxLength": 2000
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha objetivo."
+          },
+          "referenceUrl": {
+            "type": "string",
+            "description": "Ficha/enlace de referencia.",
+            "maxLength": 2048
+          },
+          "changeJustification": {
+            "type": "string",
+            "description": "Justificacion del cambio (BR-017).",
+            "maxLength": 2000
+          }
+        }
+      },
+      "TriageResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud triada."
+          },
+          "decision": {
+            "type": "string",
+            "description": "Decision (CONTINUAR/DEVOLVER/RECHAZAR)."
+          },
+          "routeCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ruta (code maestro)."
+          },
+          "demandTypeCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tipo de demanda (code maestro)."
+          },
+          "criticalityCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Criticidad (code maestro)."
+          },
+          "sizeCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tamano (code maestro)."
+          },
+          "dataAvailabilityCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Disponibilidad de datos (code maestro)."
+          },
+          "totalEffortHours": {
+            "type": "number",
+            "nullable": true,
+            "description": "Esfuerzo total (horas)."
+          },
+          "mainResponsible": {
+            "type": "string",
+            "nullable": true,
+            "description": "Responsable principal."
+          },
+          "dependencies": {
+            "type": "string",
+            "nullable": true,
+            "description": "Dependencias."
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true,
+            "description": "Observaciones."
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de decision."
+          },
+          "decidedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Usuario que decidio."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          }
+        },
+        "required": [
+          "id",
+          "requestId",
+          "decision",
+          "routeCode",
+          "demandTypeCode",
+          "criticalityCode",
+          "sizeCode",
+          "dataAvailabilityCode",
+          "totalEffortHours",
+          "mainResponsible",
+          "dependencies",
+          "notes",
+          "decidedAt",
+          "decidedByUserId",
+          "createdAt"
+        ]
+      },
+      "CreateTriageDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "description": "Decision del triage.",
+            "enum": [
+              "CONTINUAR",
+              "DEVOLVER",
+              "RECHAZAR"
+            ]
+          },
+          "routeCode": {
+            "type": "string",
+            "description": "Ruta (maestra TRIAGE_ROUTE)."
+          },
+          "demandTypeCode": {
+            "type": "string",
+            "description": "Tipo de demanda (maestra DEMAND_TYPE)."
+          },
+          "criticalityCode": {
+            "type": "string",
+            "description": "Criticidad (maestra CRITICALITY)."
+          },
+          "sizeCode": {
+            "type": "string",
+            "description": "Tamano (maestra TRIAGE_SIZE)."
+          },
+          "dataAvailabilityCode": {
+            "type": "string",
+            "description": "Disponibilidad de datos (maestra DATA_AVAILABILITY)."
+          },
+          "totalEffortHours": {
+            "type": "number",
+            "description": "Esfuerzo total (horas).",
+            "minimum": 0
+          },
+          "mainResponsible": {
+            "type": "string",
+            "description": "Responsable principal.",
+            "maxLength": 255
+          },
+          "dependencies": {
+            "type": "string",
+            "description": "Dependencias.",
+            "maxLength": 2000
+          },
+          "notes": {
+            "type": "string",
+            "description": "Observaciones.",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "PriorityEvaluationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud evaluada."
+          },
+          "impact": {
+            "type": "number",
+            "description": "Impacto (1-5)."
+          },
+          "alignment": {
+            "type": "number",
+            "description": "Alineacion (1-5)."
+          },
+          "riskControl": {
+            "type": "number",
+            "description": "Control del riesgo (1-5)."
+          },
+          "urgency": {
+            "type": "number",
+            "description": "Urgencia (1-5)."
+          },
+          "scope": {
+            "type": "number",
+            "description": "Alcance (1-5)."
+          },
+          "dataAvailability": {
+            "type": "number",
+            "description": "Disponibilidad de datos (1-5)."
+          },
+          "feasibility": {
+            "type": "number",
+            "description": "Factibilidad (1-5)."
+          },
+          "reuse": {
+            "type": "number",
+            "description": "Reutilizacion (1-5)."
+          },
+          "score": {
+            "type": "number",
+            "description": "Score calculado en backend (0-100)."
+          },
+          "thresholdLabel": {
+            "type": "string",
+            "description": "Etiqueta de umbral derivada del score."
+          },
+          "justification": {
+            "type": "string",
+            "nullable": true,
+            "description": "Justificacion."
+          },
+          "evaluatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de evaluacion."
+          },
+          "evaluatedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Usuario que evaluo."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          }
+        },
+        "required": [
+          "id",
+          "requestId",
+          "impact",
+          "alignment",
+          "riskControl",
+          "urgency",
+          "scope",
+          "dataAvailability",
+          "feasibility",
+          "reuse",
+          "score",
+          "thresholdLabel",
+          "justification",
+          "evaluatedAt",
+          "evaluatedByUserId",
+          "createdAt"
+        ]
+      },
+      "CreatePriorityEvaluationDto": {
+        "type": "object",
+        "properties": {
+          "impact": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Impacto (peso 25)."
+          },
+          "alignment": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Alineacion (peso 15)."
+          },
+          "riskControl": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Control del riesgo (peso 15)."
+          },
+          "urgency": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Urgencia (peso 10)."
+          },
+          "scope": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Alcance (peso 10)."
+          },
+          "dataAvailability": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Disponibilidad de datos (peso 10)."
+          },
+          "feasibility": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Factibilidad (peso 10)."
+          },
+          "reuse": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Reutilizacion (peso 5)."
+          },
+          "justification": {
+            "type": "string",
+            "description": "Justificacion de la evaluacion.",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "impact",
+          "alignment",
+          "riskControl",
+          "urgency",
+          "scope",
+          "dataAvailability",
+          "feasibility",
+          "reuse"
+        ]
+      },
+      "ApprovalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud revisada."
+          },
+          "decision": {
+            "type": "string",
+            "description": "Decision (APROBAR/DEVOLVER)."
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo (si DEVOLVER)."
+          },
+          "previousState": {
+            "type": "string",
+            "description": "Estado anterior a la decision."
+          },
+          "resultingState": {
+            "type": "string",
+            "description": "Estado resultante."
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de la decision."
+          },
+          "decidedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Usuario que decidio."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          }
+        },
+        "required": [
+          "id",
+          "requestId",
+          "decision",
+          "reason",
+          "previousState",
+          "resultingState",
+          "decidedAt",
+          "decidedByUserId",
+          "createdAt"
+        ]
+      },
+      "CreateApprovalDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "description": "Decision de aprobacion.",
+            "enum": [
+              "APROBAR",
+              "DEVOLVER"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo (obligatorio si DEVOLVER).",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "decision"
         ]
       }
     }
