@@ -33,3 +33,103 @@ model CatalogItem {
   @@index([sortOrder])
   @@map("catalog_items")
 }
+
+/// Proceso de gestion del area (BI, Integraciones, IA) y la coordinacion
+/// multiproceso FMAA. `code` es estable y se almacena en MAYUSCULAS.
+model Process {
+  id         String   @id @default(uuid()) @db.Uuid
+  code       String
+  name       String
+  framework  String?
+  kind       String
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  grants       Grant[]
+  auditEvents  AuditEvent[]
+
+  @@unique([code], name: "process_code_unique")
+  @@index([active])
+  @@index([sortOrder])
+  @@map("processes")
+}
+
+/// Identidad funcional de una persona del area. NO es credencial: no hay
+/// password, token ni sesion (la autenticacion real es una capa separada).
+model User {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  name       String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  grants      Grant[]
+  auditEvents AuditEvent[]
+
+  @@unique([identifier], name: "user_identifier_unique")
+  @@index([active])
+  @@map("users")
+}
+
+/// Catalogo cerrado de 3 perfiles. El `code` gobierna la logica de
+/// autorizacion (enum logico: JEFE_AREA, LIDER_PROCESO, INTEGRANTE).
+model Role {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  grants Grant[]
+
+  @@unique([code], name: "role_code_unique")
+  @@map("roles")
+}
+
+/// Asignacion de un usuario a un rol dentro de un proceso. Es el corazon del
+/// alcance. Revocar = active=false (soft-delete, por trazabilidad).
+model Grant {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  processId String   @map("process_id") @db.Uuid
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role    Role    @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  process Process @relation(fields: [processId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, roleId, processId], name: "grant_user_role_process_unique")
+  @@index([userId])
+  @@index([processId])
+  @@index([roleId])
+  @@index([active])
+  @@map("grants")
+}
+
+/// Registro append-only de cada mutacion. Sin updatedAt (es inmutable).
+model AuditEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String
+  objectType     String   @map("object_type")
+  objectId       String   @map("object_id")
+  scopeProcessId String?  @map("scope_process_id") @db.Uuid
+  before         Json?
+  after          Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  actor        User?    @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  scopeProcess Process? @relation(fields: [scopeProcessId], references: [id], onDelete: Restrict)
+
+  @@index([objectType, objectId])
+  @@index([actorUserId])
+  @@index([scopeProcessId])
+  @@index([createdAt])
+  @@map("audit_events")
+}

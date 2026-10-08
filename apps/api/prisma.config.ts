@@ -21,4 +21,10 @@ export default defineConfig({
   datasource: {
     url: process.env.DATABASE_URL,
   },
+  // Prisma 7 cablea el seed via migrations.seed (NO el campo legado
+  // prisma.seed de package.json, inexistente en v7). Se ejecuta con tsx,
+  // que ya es devDependency.
+  migrations: {
+    seed: 'tsx prisma/seed.ts',
+  },
 });

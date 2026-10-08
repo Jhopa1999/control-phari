@@ -15,7 +15,9 @@
     "prisma:format": "prisma format",
     "prisma:validate": "prisma validate",
     "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:seed": "tsx prisma/seed.ts",
     "openapi:generate": "tsx src/generate-openapi.ts"
   },
   "dependencies": {

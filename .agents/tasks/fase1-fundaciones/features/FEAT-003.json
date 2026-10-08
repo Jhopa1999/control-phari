@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Frontend Next.js de Fase 1 (consume SOLO @plantilla-portales/api-client): middleware que inyecta X-Actor-Id, selector de usuario dev, layout con sidebar agrupado filtrado por allowedModules, y pantallas funcionales (Mis permisos SCR-23, Equipo y permisos SCR-22, Auditoría SCR-21, Configuración/maestras SCR-18) + placeholders claros con menú y gating reales, manteniendo /catalogs operativo y los estados UI loading/vacío/error/éxito con AC-031. Depende de FEAT-002 (endpoints y api-client regenerado).",
+  "status": "pending",
+  "steps": [
+    "Leer design.md §5 completo. En apps/web/src/lib/api-client.ts añadir middleware client.use({ onRequest }) que lee actorId de localStorage y lo inyecta como header X-Actor-Id en cada petición (design §5.3). Mantener createApiClient({baseUrl}) y los tipos derivados del contrato (añadir los nuevos: MyPermissionsResponseDto, ProcessResponseDto, UserResponseDto, GrantResponseDto, AuditEventResponseDto, DevActorResponseDto, y los Create/Update DTOs).",
+    "Crear wrappers tipados siguiendo el patrón de apps/web/src/lib/catalog.ts (clase *Error, messageForStatus para 400/401/403/404/409 sin exponer JSON/Prisma): apps/web/src/lib/me.ts (GET /me/permissions), apps/web/src/lib/dev-actors.ts (GET /dev/actors), apps/web/src/lib/team.ts (GET/POST /users, GET /grants, POST /grants, DELETE /grants/:id), apps/web/src/lib/audit.ts (GET /audit-events).",
+    "Crear un contexto/estado de cliente del actor actual (p. ej. apps/web/src/lib/actor-context o un componente cliente en el layout) que guarda/lee identifier en localStorage ('actorId') y expone el actor seleccionado y allowedModules de GET /me/permissions.",
+    "Reescribir apps/web/src/app/layout.tsx: sidebar con los 6 grupos de design §5.2 (Inicio, Demanda, Seguimiento, Activos, Administración, Gobierno), cada ítem declara su moduleKey (misma clave que MODULE_MATRIX); filtrar los ítems visibles por allowedModules de GET /me/permissions; selector de usuario dev (shadcn Select) poblado desde GET /dev/actors que guarda identifier en localStorage; mantener Toaster. HTML semántico: <nav aria-label>, <ul>/<li>, <a>/Link, aria-current en la ruta activa, Label asociados. El filtrado del menú es cosmético (el control real es server-side).",
+    "Actualizar apps/web/src/app/page.tsx para redirigir a /inicio (hoy redirige a /catalogs).",
+    "Crear placeholders claros 'En construcción' (pero con el ítem de menú y gating reales) para: apps/web/src/app/inicio/page.tsx, mi-trabajo/page.tsx, y las pantallas de los grupos demanda/, seguimiento/, activos/ (una page.tsx por pantalla listada en design §5.1).",
+    "Crear la pantalla funcional Mis permisos SCR-23 en apps/web/src/app/gobierno/mis-permisos/page.tsx (consume GET /me/permissions; muestra rol(es), procesos/alcance y módulos permitidos con texto de acciones no permitidas; estados loading/error/éxito).",
+    "Crear la pantalla funcional Equipo y permisos SCR-22 en apps/web/src/app/gobierno/equipo/page.tsx (grupo Gobierno, NO Administración; solo jefe): lista usuarios y grants (GET /users, GET /grants), crear usuario (POST /users), crear grant user+rol+proceso (POST /grants) y revocar grant (DELETE /grants/:id). Estados loading/vacío/error/éxito. AC-031: los formularios de crear usuario y crear grant conservan los valores ingresados ante error (400/409/500), mantienen el foco y muestran el error; el reset solo ocurre en éxito.",
+    "Crear la pantalla funcional Auditoría SCR-21 en apps/web/src/app/gobierno/auditoria/page.tsx (GET /audit-events; tabla con fecha, actor, proceso, acción, objeto y 'Ver cambio' before/after; integrante ve solo lo propio). Estados loading/vacío/error/éxito.",
+    "Crear apps/web/src/app/administracion/maestras/page.tsx (SCR-18, grupo Administración, solo jefe) que reutiliza la vista existente CatalogsView (import de apps/web/src/app/catalogs/catalogs-view.tsx) sin duplicar código. Mantener apps/web/src/app/catalogs/page.tsx operativo.",
+    "Asegurar que todas las vistas con datos implementan loading (Skeleton)/vacío/error (Reintentar)/éxito (toast sonner) siguiendo catalogs-view.tsx, con aria-live y Label htmlFor, y que ningún formulario de mutación hace reset en el camino de error (AC-031)."
+  ],
+  "acceptance_criteria": [
+    "`npm run typecheck:web` pasa.",
+    "`npm run build:web` compila sin errores.",
+    "El sidebar muestra los 6 grupos y filtra ítems por allowedModules de GET /me/permissions; un integrante no ve Administración/Triage.",
+    "El selector de usuario dev se puebla desde GET /dev/actors sin requerir actor previo y guarda identifier en localStorage; las peticiones posteriores llevan X-Actor-Id.",
+    "Las pantallas Mis permisos, Equipo y permisos, Auditoría y Configuración/maestras son funcionales con estados loading/vacío/error/éxito; el resto son placeholders 'En construcción' con menú y gating reales.",
+    "/catalogs sigue operativo (apps/web/src/app/catalogs/page.tsx intacto y funcional).",
+    "AC-031: ante error de mutación (400/409/500) los formularios de Equipo y permisos y de maestras conservan los valores ingresados (no se limpian ni cierran); el reset solo ocurre en éxito."
+  ],
+  "verification": [
+    "npm run typecheck:web",
+    "npm run build:web"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

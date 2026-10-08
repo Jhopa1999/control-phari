@@ -1,0 +1,7 @@
+{
+  "task_id": "fase1-fundaciones",
+  "task_description": "Implementar la Fase 1 (fundaciones) del portal control-phari a partir del design.md aprobado (rev 3): modelos Prisma Process/User/Role/Grant/AuditEvent + migración versionada + seed sintético idempotente; autorización NestJS por rol y alcance de proceso (dos planos, 403 vs 404); endpoints REST + OpenAPI de processes/users/grants/me/audit/dev; AuditEvent transaccional en toda mutación; catálogo endurecido sin romper /catalogs; frontend con sidebar agrupado filtrado por permisos, selector de usuario dev y pantallas funcionales (mis permisos, equipo, auditoría, maestras) + placeholders.",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

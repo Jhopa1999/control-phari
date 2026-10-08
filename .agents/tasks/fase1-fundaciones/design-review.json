@@ -1,0 +1,38 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "MEDIUM",
+      "title": "\"Equipo y permisos\" (SCR-22) se agrupa bajo Administracion, pero 02-modules.md lo ubica en Gobierno",
+      "location": "design.md §5.1 (ruta administracion/equipo) y §5.2 (afirma reflejar los grupos de 02-modules.md)",
+      "problem": "El diseno declara reflejar los grupos de specs/02-modules.md, pero contradice a ese spec: 02-modules.md ubica 'Equipo y permisos' (SCR-22, modulo team) en el grupo Gobierno, no en Administracion. Produce un menu que no corresponde al mapa de modulos documentado que el propio diseno cita como fuente.",
+      "fix": "Mover la pantalla de equipo a gobierno/equipo/page.tsx (grupo Gobierno) y actualizar la lista de archivos de §9. Alternativamente, declararlo explicitamente como decision de producto y dejar de afirmar que refleja los grupos de 02-modules.md."
+    },
+    {
+      "id": 2,
+      "severity": "MEDIUM",
+      "title": "El seed se declara con 'prisma.seed' en prisma.config.ts, campo inexistente en Prisma 7",
+      "location": "design.md §1.4",
+      "problem": "Verificado contra el repo (prisma y @prisma/client ^7.10.0; prisma.config.ts usa defineConfig de 'prisma/config'). En Prisma 7 el seed se configura con la clave migrations.seed dentro de defineConfig, no con un campo 'prisma.seed' (mecanismo legado de Prisma <=5, package.json#prisma.seed). Tal como se redacta, el seed no quedaria cableado y 'prisma db seed' no lo ejecutaria; el seed es el que garantiza las 3 filas de Role de las que depende §4.2.1.",
+      "fix": "Declarar el seed dentro del defineConfig existente: migrations: { seed: 'tsx prisma/seed.ts' }, y mantener el script npm prisma:seed como atajo. Reescribir §1.4 para citar migrations.seed en vez de prisma.seed."
+    },
+    {
+      "id": 3,
+      "severity": "NIT",
+      "title": "'prisma migrate dev' no es un script del repo; se invoca ad-hoc con npx",
+      "location": "design.md §1.3",
+      "problem": "apps/api/package.json solo declara prisma:migrate:deploy. El diseno invoca 'npx prisma migrate dev' directamente, lo cual es valido y no rompe comandos existentes, pero deja la creacion de migraciones fuera de los scripts versionados a diferencia del resto del flujo.",
+      "fix": "Opcional: anadir 'prisma:migrate:dev': 'prisma migrate dev' a apps/api/package.json y referenciarlo para que el comando quede documentado y reproducible."
+    },
+    {
+      "id": 4,
+      "severity": "NIT",
+      "title": "La politica 403 vs 404 es una decision del diseno, no una regla del spec; conviene marcarla como tal",
+      "location": "design.md §2.4 (Resumen operativo)",
+      "problem": "Ningun spec (10, 11, 18, 28) menciona codigos HTTP 403/404 ni una politica de ocultar existencia. AC-025 y el control negativo 2 de 10 solo exigen 'denegar sin filtrar datos'. El mapeo rol->403 / fuera-de-alcance->404 es una decision razonable y coherente, pero el 'Resumen operativo' la presenta en tono de regla establecida.",
+      "fix": "Anteponer 'Decision de Fase 1:' al resumen 403/404 (como se hace con la cardinalidad multi-grant en §1.2) y citar que deriva de AC-025 / control negativo 2, no de un codigo HTTP del spec."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.worktrees\\fase1-fundaciones\\.agents\\tasks\\fase1-fundaciones\\design-review.md"
+}
