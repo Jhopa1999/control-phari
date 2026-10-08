@@ -215,6 +215,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests/pending-approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cola de solicitudes en backlog priorizado del alcance. */
+        get: operations["ApprovalController_pendingApproval"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historico de decisiones de compromiso. */
+        get: operations["ApprovalController_findForRequest"];
+        put?: never;
+        /** Aprueba (-> Comprometida) o devuelve (-> En triage, motivo req.). */
+        post: operations["ApprovalController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/requests": {
         parameters: {
             query?: never;
@@ -287,15 +322,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/requests/pending-approval": {
+    "/my-work": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Cola de solicitudes en backlog priorizado del alcance. */
-        get: operations["ApprovalController_pendingApproval"];
+        /** Tareas asignadas al usuario actual (dentro de alcance). */
+        get: operations["TaskController_myWork"];
         put?: never;
         post?: never;
         delete?: never;
@@ -304,19 +339,263 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/requests/{id}/approval": {
+    "/plans/{planId}/tasks": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Historico de decisiones de compromiso. */
-        get: operations["ApprovalController_findForRequest"];
+        /** Lista las tareas de un plan (filtros opcionales). */
+        get: operations["TaskController_findForPlan"];
         put?: never;
-        /** Aprueba (-> Comprometida) o devuelve (-> En triage, motivo req.). */
-        post: operations["ApprovalController_create"];
+        post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/phases/{phaseId}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Crea una tarea en una fase (regla hito). */
+        post: operations["TaskController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una tarea con sus predecesoras. */
+        get: operations["TaskController_findOne"];
+        put?: never;
+        post?: never;
+        /** Borra una tarea (409 si es predecesora de otra). */
+        delete: operations["TaskController_remove"];
+        options?: never;
+        head?: never;
+        /** Edita una tarea (no estado/aceptacion; regla hito). */
+        patch: operations["TaskController_update"];
+        trace?: never;
+    };
+    "/tasks/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Cambia el estado de una tarea (gate de predecesoras). */
+        patch: operations["TaskController_changeStatus"];
+        trace?: never;
+    };
+    "/tasks/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Acepta/retira la aceptacion (precondicion TERMINADA). */
+        patch: operations["TaskController_accept"];
+        trace?: never;
+    };
+    "/requests/{requestId}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve el plan de una solicitud. */
+        get: operations["PlanController_findByRequest"];
+        put?: never;
+        /** Crea el plan de una solicitud comprometida (-> En planificacion). */
+        post: operations["PlanController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita datos del plan (no cambia el estado). */
+        patch: operations["PlanController_update"];
+        trace?: never;
+    };
+    "/requests/{requestId}/plan/guide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Guia de pendientes del plan (gate de envio). */
+        get: operations["PlanController_getGuide"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{requestId}/plan/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Envia el plan a autorizacion (409 si hay pendientes). */
+        post: operations["PlanController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{requestId}/plan/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Autoriza el plan (-> Autorizado; Request -> En ejecucion). */
+        post: operations["PlanController_authorize"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{requestId}/plan/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Devuelve el plan con motivo (-> Devuelto). */
+        post: operations["PlanController_return"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plans/{planId}/phases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las fases del plan ordenadas. */
+        get: operations["PhaseController_findForPlan"];
+        put?: never;
+        /** Crea una fase (order al final si falta). */
+        post: operations["PhaseController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plans/{planId}/phases/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Reordena las fases (protege la inicial con tareas). */
+        patch: operations["PhaseController_reorder"];
+        trace?: never;
+    };
+    "/plans/{planId}/phases/{phaseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Borra una fase (409 si tiene tareas). */
+        delete: operations["PhaseController_remove"];
+        options?: never;
+        head?: never;
+        /** Edita nombre/fechas/entregable de una fase. */
+        patch: operations["PhaseController_update"];
+        trace?: never;
+    };
+    "/tasks/{id}/dependencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las predecesoras de una tarea. */
+        get: operations["DependencyController_findForTask"];
+        put?: never;
+        /** Anade una predecesora (valida auto/mismo-plan/ciclo/duplicado). */
+        post: operations["DependencyController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{id}/dependencies/{predecessorTaskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Quita una predecesora de la tarea. */
+        delete: operations["DependencyController_remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -796,6 +1075,50 @@ export interface components {
              */
             updatedAt: string;
         };
+        ApprovalResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Solicitud revisada.
+             */
+            requestId: string;
+            /** @description Decision (APROBAR/DEVOLVER). */
+            decision: string;
+            /** @description Motivo (si DEVOLVER). */
+            reason: string | null;
+            /** @description Estado anterior a la decision. */
+            previousState: string;
+            /** @description Estado resultante. */
+            resultingState: string;
+            /**
+             * Format: date-time
+             * @description Fecha de la decision.
+             */
+            decidedAt: string;
+            /**
+             * Format: uuid
+             * @description Usuario que decidio.
+             */
+            decidedByUserId: string;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+        };
+        CreateApprovalDto: {
+            /**
+             * @description Decision de aprobacion.
+             * @enum {string}
+             */
+            decision: "APROBAR" | "DEVOLVER";
+            /** @description Motivo (obligatorio si DEVOLVER). */
+            reason?: string;
+        };
         CreateRequestDto: {
             /**
              * @description Titulo de la solicitud (requerido).
@@ -994,7 +1317,64 @@ export interface components {
             /** @description Justificacion de la evaluacion. */
             justification?: string;
         };
-        ApprovalResponseDto: {
+        MyWorkItemDto: {
+            /**
+             * Format: uuid
+             * @description Id de la tarea.
+             */
+            taskId: string;
+            /** @description Titulo de la tarea. */
+            title: string;
+            /** @description Estado de la tarea (TaskStatus). */
+            status: string;
+            /** @description Progreso 0-100. */
+            progress: number;
+            /** @description Indica si la tarea es un hito. */
+            isMilestone: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de inicio.
+             */
+            startDate: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de fin/vencimiento.
+             */
+            endDate: string | null;
+            /**
+             * Format: uuid
+             * @description Fase a la que pertenece.
+             */
+            phaseId: string;
+            /** @description Nombre de la fase. */
+            phaseName: string;
+            /**
+             * Format: uuid
+             * @description Plan al que pertenece.
+             */
+            planId: string;
+            /**
+             * Format: uuid
+             * @description Solicitud del plan.
+             */
+            requestId: string;
+            /** @description Titulo de la solicitud. */
+            requestTitle: string;
+        };
+        TaskPredecessorDto: {
+            /**
+             * Format: uuid
+             * @description Id de la tarea predecesora.
+             */
+            id: string;
+            /** @description Titulo de la predecesora. */
+            title: string;
+            /** @description Estado de la predecesora (TaskStatus). */
+            status: string;
+            /** @description Aceptacion de la predecesora. */
+            accepted: boolean;
+        };
+        TaskResponseDto: {
             /**
              * Format: uuid
              * @description Identificador unico.
@@ -1002,41 +1382,405 @@ export interface components {
             id: string;
             /**
              * Format: uuid
-             * @description Solicitud revisada.
+             * @description Fase a la que pertenece.
              */
-            requestId: string;
-            /** @description Decision (APROBAR/DEVOLVER). */
-            decision: string;
-            /** @description Motivo (si DEVOLVER). */
-            reason: string | null;
-            /** @description Estado anterior a la decision. */
-            previousState: string;
-            /** @description Estado resultante. */
-            resultingState: string;
-            /**
-             * Format: date-time
-             * @description Fecha de la decision.
-             */
-            decidedAt: string;
+            phaseId: string;
             /**
              * Format: uuid
-             * @description Usuario que decidio.
+             * @description Proceso de contexto (informativo).
              */
-            decidedByUserId: string;
+            processId: string | null;
+            /** @description Titulo de la tarea. */
+            title: string;
+            /**
+             * Format: uuid
+             * @description Responsable de la tarea.
+             */
+            responsibleUserId: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de inicio.
+             */
+            startDate: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de fin/vencimiento.
+             */
+            endDate: string | null;
+            /** @description Estimacion en horas. */
+            estimateHours: number | null;
+            /** @description Indica si la tarea es un hito. */
+            isMilestone: boolean;
+            /** @description Descripcion/alcance. */
+            description: string | null;
+            /** @description Criterios de aceptacion. */
+            acceptanceCriteria: string | null;
+            /** @description Estado de la tarea (TaskStatus). */
+            status: string;
+            /** @description Progreso 0-100. */
+            progress: number;
+            /** @description Fase de framework requerida (texto informativo). */
+            frameworkPhaseRequired: string | null;
+            /** @description Aceptacion de la tarea. */
+            accepted: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de aceptacion.
+             */
+            acceptedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Usuario que acepto.
+             */
+            acceptedByUserId: string | null;
+            /** @description Evidencia como URL/texto. */
+            evidenceUrl: string | null;
+            /** @description Predecesoras directas de la tarea. */
+            predecessors: components["schemas"]["TaskPredecessorDto"][];
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateTaskDto: {
+            /** @description Titulo de la tarea. */
+            title: string;
+            /**
+             * Format: uuid
+             * @description Responsable de la tarea.
+             */
+            responsibleUserId?: string;
+            /**
+             * Format: uuid
+             * @description Proceso de contexto (informativo).
+             */
+            processId?: string;
+            /**
+             * Format: date-time
+             * @description Fecha de inicio planificada.
+             */
+            startDate?: string;
+            /**
+             * Format: date-time
+             * @description Fecha de fin/vencimiento.
+             */
+            endDate?: string;
+            /** @description Estimacion en horas (hito => 0). */
+            estimateHours?: number;
+            /** @description Indica si la tarea es un hito. */
+            isMilestone?: boolean;
+            /** @description Descripcion/alcance. */
+            description?: string;
+            /** @description Criterios de aceptacion. */
+            acceptanceCriteria?: string;
+            /** @description Fase de framework requerida (texto informativo). */
+            frameworkPhaseRequired?: string;
+            /** @description Evidencia como URL/texto. */
+            evidenceUrl?: string;
+        };
+        UpdateTaskDto: {
+            /** @description Titulo de la tarea. */
+            title?: string;
+            /**
+             * Format: uuid
+             * @description Responsable de la tarea.
+             */
+            responsibleUserId?: string;
+            /**
+             * Format: uuid
+             * @description Proceso de contexto (informativo).
+             */
+            processId?: string;
+            /**
+             * Format: date-time
+             * @description Fecha de inicio planificada.
+             */
+            startDate?: string;
+            /**
+             * Format: date-time
+             * @description Fecha de fin/vencimiento.
+             */
+            endDate?: string;
+            /** @description Estimacion en horas (hito => 0). */
+            estimateHours?: number;
+            /** @description Indica si la tarea es un hito. */
+            isMilestone?: boolean;
+            /** @description Descripcion/alcance. */
+            description?: string;
+            /** @description Criterios de aceptacion. */
+            acceptanceCriteria?: string;
+            /** @description Fase de framework requerida (texto informativo). */
+            frameworkPhaseRequired?: string;
+            /** @description Evidencia como URL/texto. */
+            evidenceUrl?: string;
+        };
+        UpdateTaskStatusDto: {
+            /**
+             * @description Nuevo estado de la tarea.
+             * @enum {string}
+             */
+            status: "POR_HACER" | "EN_CURSO" | "BLOQUEADA" | "EN_REVISION" | "TERMINADA";
+            /** @description Progreso 0-100. */
+            progress?: number;
+            /** @description Evidencia como URL/texto. */
+            evidenceUrl?: string;
+        };
+        AcceptTaskDto: {
+            /** @description true acepta la tarea; false retira la aceptacion. */
+            accepted: boolean;
+        };
+        CreatePlanDto: {
+            /**
+             * Format: date-time
+             * @description Inicio del periodo del plan.
+             */
+            periodStart?: string;
+            /**
+             * Format: date-time
+             * @description Fin del periodo del plan.
+             */
+            periodEnd?: string;
+            /**
+             * Format: date-time
+             * @description Fecha de compromiso del plan.
+             */
+            commitmentDate?: string;
+            /** @description Riesgos del plan. */
+            risks?: string;
+            /** @description Mitigaciones del plan. */
+            mitigations?: string;
+        };
+        PlanResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Solicitud del plan.
+             */
+            requestId: string;
+            /**
+             * Format: date-time
+             * @description Inicio del periodo.
+             */
+            periodStart: string | null;
+            /**
+             * Format: date-time
+             * @description Fin del periodo.
+             */
+            periodEnd: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de compromiso.
+             */
+            commitmentDate: string | null;
+            /** @description Riesgos. */
+            risks: string | null;
+            /** @description Mitigaciones. */
+            mitigations: string | null;
+            /** @description Estado del plan (PlanStatus). */
+            status: string;
+            /**
+             * Format: date-time
+             * @description Fecha de envio a autorizacion.
+             */
+            submittedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Usuario que envio.
+             */
+            submittedByUserId: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de autorizacion.
+             */
+            authorizedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Usuario que autorizo.
+             */
+            authorizedByUserId: string | null;
+            /** @description Motivo de la ultima devolucion. */
+            returnReason: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de actualizacion.
+             */
+            updatedAt: string;
+        };
+        UpdatePlanDto: {
+            /**
+             * Format: date-time
+             * @description Inicio del periodo del plan.
+             */
+            periodStart?: string;
+            /**
+             * Format: date-time
+             * @description Fin del periodo del plan.
+             */
+            periodEnd?: string;
+            /**
+             * Format: date-time
+             * @description Fecha de compromiso del plan.
+             */
+            commitmentDate?: string;
+            /** @description Riesgos del plan. */
+            risks?: string;
+            /** @description Mitigaciones del plan. */
+            mitigations?: string;
+        };
+        PlanGuidePendingDto: {
+            /** @description Categoria del pendiente (datesPhases/tasksResponsibles/...). */
+            category: string;
+            /** @description Codigo estable del tipo de pendiente. */
+            code: string;
+            /** @description Mensaje legible del pendiente. */
+            message: string;
+            /** @description Id del objeto afectado (fase/tarea). */
+            targetId?: string | null;
+        };
+        PlanGuideDto: {
+            /**
+             * Format: uuid
+             * @description Plan evaluado.
+             */
+            planId: string;
+            /** @description true solo si no hay pendientes en categorias implementadas. */
+            canSubmit: boolean;
+            /** @description Pendientes por categoria. */
+            pendings: components["schemas"]["PlanGuidePendingDto"][];
+            /** @description Categorias gancho de fases futuras (siempre 0 pendientes hoy). */
+            futureCategories: string[];
+        };
+        SubmitPlanDto: Record<string, never>;
+        AuthorizePlanDto: Record<string, never>;
+        ReturnPlanDto: {
+            /** @description Motivo de la devolucion (obligatorio). */
+            reason?: string;
+        };
+        PlanPhaseResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Plan al que pertenece.
+             */
+            planId: string;
+            /** @description Nombre de la fase. */
+            name: string;
+            /**
+             * Format: date-time
+             * @description Fecha de inicio.
+             */
+            startDate: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de fin.
+             */
+            endDate: string | null;
+            /** @description Entregable. */
+            deliverable: string | null;
+            /** @description Posicion 0-based dentro del plan. */
+            order: number;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreatePhaseDto: {
+            /** @description Nombre de la fase. */
+            name: string;
+            /**
+             * Format: date-time
+             * @description Fecha de inicio.
+             */
+            startDate?: string;
+            /**
+             * Format: date-time
+             * @description Fecha de fin.
+             */
+            endDate?: string;
+            /** @description Entregable de la fase. */
+            deliverable?: string;
+            /** @description Posicion 0-based (si falta, al final). */
+            order?: number;
+        };
+        ReorderPhasesDto: {
+            /** @description Ids de fases en el orden deseado. */
+            phaseIds: string[];
+        };
+        UpdatePhaseDto: {
+            /** @description Nombre de la fase. */
+            name?: string;
+            /**
+             * Format: date-time
+             * @description Fecha de inicio.
+             */
+            startDate?: string;
+            /**
+             * Format: date-time
+             * @description Fecha de fin.
+             */
+            endDate?: string;
+            /** @description Entregable de la fase. */
+            deliverable?: string;
+        };
+        TaskDependencyResponseDto: {
+            /**
+             * Format: uuid
+             * @description Id de la arista de dependencia.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Tarea dependiente.
+             */
+            dependentTaskId: string;
+            /**
+             * Format: uuid
+             * @description Tarea predecesora.
+             */
+            predecessorTaskId: string;
+            /** @description Titulo de la predecesora. */
+            predecessorTitle: string;
+            /** @description Estado de la predecesora (TaskStatus). */
+            predecessorStatus: string;
+            /** @description Aceptacion de la predecesora. */
+            predecessorAccepted: boolean;
             /**
              * Format: date-time
              * @description Fecha de creacion.
              */
             createdAt: string;
         };
-        CreateApprovalDto: {
+        AddDependencyDto: {
             /**
-             * @description Decision de aprobacion.
-             * @enum {string}
+             * Format: uuid
+             * @description Id de la tarea predecesora.
              */
-            decision: "APROBAR" | "DEVOLVER";
-            /** @description Motivo (obligatorio si DEVOLVER). */
-            reason?: string;
+            predecessorTaskId: string;
         };
     };
     responses: never;
@@ -1739,6 +2483,123 @@ export interface operations {
             };
         };
     };
+    ApprovalController_pendingApproval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cola de aprobacion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApprovalController_findForRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Decisiones de la solicitud. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApprovalController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateApprovalDto"];
+            };
+        };
+        responses: {
+            /** @description Decision registrada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalResponseDto"];
+                };
+            };
+            /** @description Devolver sin motivo u otros datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente (sin review). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La solicitud no esta en backlog priorizado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RequestController_findMany: {
         parameters: {
             query?: {
@@ -2056,7 +2917,7 @@ export interface operations {
             };
         };
     };
-    ApprovalController_pendingApproval: {
+    TaskController_myWork: {
         parameters: {
             query?: never;
             header?: never;
@@ -2065,13 +2926,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Cola de aprobacion. */
+            /** @description Mis tareas. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RequestResponseDto"][];
+                    "application/json": components["schemas"]["MyWorkItemDto"][];
                 };
             };
             /** @description Rol insuficiente. */
@@ -2083,7 +2944,90 @@ export interface operations {
             };
         };
     };
-    ApprovalController_findForRequest: {
+    TaskController_findForPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tareas del plan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                phaseId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTaskDto"];
+            };
+        };
+        responses: {
+            /** @description Tarea creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponseDto"];
+                };
+            };
+            /** @description Datos invalidos o regla hito. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Fase/plan fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskController_findOne: {
         parameters: {
             query?: never;
             header?: never;
@@ -2094,13 +3038,278 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Decisiones de la solicitud. */
+            /** @description Tarea. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApprovalResponseDto"][];
+                    "application/json": components["schemas"]["TaskResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tarea fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tarea borrada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tarea fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La tarea es predecesora de otra. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTaskDto"];
+            };
+        };
+        responses: {
+            /** @description Tarea actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponseDto"];
+                };
+            };
+            /** @description Datos invalidos o regla hito. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tarea fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskController_changeStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTaskStatusDto"];
+            };
+        };
+        responses: {
+            /** @description Estado actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente o tarea ajena (integrante). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tarea fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transicion no permitida o predecesora no satisfecha. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskController_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptTaskDto"];
+            };
+        };
+        responses: {
+            /** @description Aceptacion actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tarea fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La tarea no esta terminada. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_findByRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plan de la solicitud. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlanDto"];
+            };
+        };
+        responses: {
+            /** @description Plan creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanResponseDto"];
                 };
             };
             /** @description Rol insuficiente. */
@@ -2117,33 +3326,210 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description La solicitud no esta comprometida o ya tiene plan. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
-    ApprovalController_create: {
+    PlanController_update: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                requestId: unknown;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateApprovalDto"];
+                "application/json": components["schemas"]["UpdatePlanDto"];
             };
         };
         responses: {
-            /** @description Decision registrada. */
-            201: {
+            /** @description Plan actualizado. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApprovalResponseDto"];
+                    "application/json": components["schemas"]["PlanResponseDto"];
                 };
             };
-            /** @description Devolver sin motivo u otros datos invalidos. */
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_getGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Guia de pendientes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanGuideDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SubmitPlanDto"];
+            };
+        };
+        responses: {
+            /** @description Plan enviado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Guia con pendientes o transicion no permitida. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_authorize: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AuthorizePlanDto"];
+            };
+        };
+        responses: {
+            /** @description Plan autorizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente (sin review). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El plan no esta en autorizacion. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_return: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReturnPlanDto"];
+            };
+        };
+        responses: {
+            /** @description Plan devuelto. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanResponseDto"];
+                };
+            };
+            /** @description Falta el motivo. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2157,14 +3543,359 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Solicitud fuera de alcance. */
+            /** @description Plan inexistente o fuera de alcance. */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description La solicitud no esta en backlog priorizado. */
+            /** @description El plan no esta en autorizacion. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhaseController_findForPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fases del plan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanPhaseResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhaseController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePhaseDto"];
+            };
+        };
+        responses: {
+            /** @description Fase creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanPhaseResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhaseController_reorder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderPhasesDto"];
+            };
+        };
+        responses: {
+            /** @description Fases reordenadas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanPhaseResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Lista invalida o mueve la fase inicial con tareas. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhaseController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                phaseId: unknown;
+                planId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fase borrada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La fase tiene tareas o no pertenece al plan. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhaseController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                phaseId: unknown;
+                planId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePhaseDto"];
+            };
+        };
+        responses: {
+            /** @description Fase actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanPhaseResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La fase no pertenece al plan. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DependencyController_findForTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Predecesoras. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDependencyResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tarea fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DependencyController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddDependencyDto"];
+            };
+        };
+        responses: {
+            /** @description Dependencia creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDependencyResponseDto"];
+                };
+            };
+            /** @description Auto-dependencia, planes distintos o ciclo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tarea fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La dependencia ya existe. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DependencyController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                predecessorTaskId: unknown;
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dependencia quitada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tarea fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La dependencia no existe. */
             409: {
                 headers: {
                     [name: string]: unknown;

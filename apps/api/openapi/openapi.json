@@ -753,6 +753,125 @@
         ]
       }
     },
+    "/requests/pending-approval": {
+      "get": {
+        "operationId": "ApprovalController_pendingApproval",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Cola de aprobacion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RequestResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Cola de solicitudes en backlog priorizado del alcance.",
+        "tags": [
+          "approval"
+        ]
+      }
+    },
+    "/requests/{id}/approval": {
+      "get": {
+        "operationId": "ApprovalController_findForRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decisiones de la solicitud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          }
+        },
+        "summary": "Historico de decisiones de compromiso.",
+        "tags": [
+          "approval"
+        ]
+      },
+      "post": {
+        "operationId": "ApprovalController_create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApprovalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Decision registrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Devolver sin motivo u otros datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente (sin review)."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          },
+          "409": {
+            "description": "La solicitud no esta en backlog priorizado."
+          }
+        },
+        "summary": "Aprueba (-> Comprometida) o devuelve (-> En triage, motivo req.).",
+        "tags": [
+          "approval"
+        ]
+      }
+    },
     "/requests": {
       "get": {
         "operationId": "RequestController_findMany",
@@ -1093,19 +1212,19 @@
         ]
       }
     },
-    "/requests/pending-approval": {
+    "/my-work": {
       "get": {
-        "operationId": "ApprovalController_pendingApproval",
+        "operationId": "TaskController_myWork",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Cola de aprobacion.",
+            "description": "Mis tareas.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/RequestResponseDto"
+                    "$ref": "#/components/schemas/MyWorkItemDto"
                   }
                 }
               }
@@ -1115,15 +1234,105 @@
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Cola de solicitudes en backlog priorizado del alcance.",
+        "summary": "Tareas asignadas al usuario actual (dentro de alcance).",
         "tags": [
-          "approval"
+          "tasks"
         ]
       }
     },
-    "/requests/{id}/approval": {
+    "/plans/{planId}/tasks": {
       "get": {
-        "operationId": "ApprovalController_findForRequest",
+        "operationId": "TaskController_findForPlan",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tareas del plan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan fuera de alcance."
+          }
+        },
+        "summary": "Lista las tareas de un plan (filtros opcionales).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/phases/{phaseId}/tasks": {
+      "post": {
+        "operationId": "TaskController_create",
+        "parameters": [
+          {
+            "name": "phaseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tarea creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla hito."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Fase/plan fuera de alcance."
+          }
+        },
+        "summary": "Crea una tarea en una fase (regla hito).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/tasks/{id}": {
+      "get": {
+        "operationId": "TaskController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -1136,14 +1345,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Decisiones de la solicitud.",
+            "description": "Tarea.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ApprovalResponseDto"
-                  }
+                  "$ref": "#/components/schemas/TaskResponseDto"
                 }
               }
             }
@@ -1152,16 +1358,16 @@
             "description": "Rol insuficiente."
           },
           "404": {
-            "description": "Solicitud fuera de alcance."
+            "description": "Tarea fuera de alcance."
           }
         },
-        "summary": "Historico de decisiones de compromiso.",
+        "summary": "Detalle de una tarea con sus predecesoras.",
         "tags": [
-          "approval"
+          "tasks"
         ]
       },
-      "post": {
-        "operationId": "ApprovalController_create",
+      "patch": {
+        "operationId": "TaskController_update",
         "parameters": [
           {
             "name": "id",
@@ -1177,38 +1383,856 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateApprovalDto"
+                "$ref": "#/components/schemas/UpdateTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tarea actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o regla hito."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Tarea fuera de alcance."
+          }
+        },
+        "summary": "Edita una tarea (no estado/aceptacion; regla hito).",
+        "tags": [
+          "tasks"
+        ]
+      },
+      "delete": {
+        "operationId": "TaskController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Tarea borrada."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Tarea fuera de alcance."
+          },
+          "409": {
+            "description": "La tarea es predecesora de otra."
+          }
+        },
+        "summary": "Borra una tarea (409 si es predecesora de otra).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/tasks/{id}/status": {
+      "patch": {
+        "operationId": "TaskController_changeStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTaskStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente o tarea ajena (integrante)."
+          },
+          "404": {
+            "description": "Tarea fuera de alcance."
+          },
+          "409": {
+            "description": "Transicion no permitida o predecesora no satisfecha."
+          }
+        },
+        "summary": "Cambia el estado de una tarea (gate de predecesoras).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/tasks/{id}/accept": {
+      "patch": {
+        "operationId": "TaskController_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Aceptacion actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Tarea fuera de alcance."
+          },
+          "409": {
+            "description": "La tarea no esta terminada."
+          }
+        },
+        "summary": "Acepta/retira la aceptacion (precondicion TERMINADA).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/requests/{requestId}/plan": {
+      "post": {
+        "operationId": "PlanController_create",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlanDto"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Decision registrada.",
+            "description": "Plan creado.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApprovalResponseDto"
+                  "$ref": "#/components/schemas/PlanResponseDto"
                 }
               }
             }
           },
-          "400": {
-            "description": "Devolver sin motivo u otros datos invalidos."
-          },
           "403": {
-            "description": "Rol insuficiente (sin review)."
+            "description": "Rol insuficiente."
           },
           "404": {
             "description": "Solicitud fuera de alcance."
           },
           "409": {
-            "description": "La solicitud no esta en backlog priorizado."
+            "description": "La solicitud no esta comprometida o ya tiene plan."
           }
         },
-        "summary": "Aprueba (-> Comprometida) o devuelve (-> En triage, motivo req.).",
+        "summary": "Crea el plan de una solicitud comprometida (-> En planificacion).",
         "tags": [
-          "approval"
+          "plan"
+        ]
+      },
+      "get": {
+        "operationId": "PlanController_findByRequest",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plan de la solicitud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          }
+        },
+        "summary": "Devuelve el plan de una solicitud.",
+        "tags": [
+          "plan"
+        ]
+      },
+      "patch": {
+        "operationId": "PlanController_update",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          }
+        },
+        "summary": "Edita datos del plan (no cambia el estado).",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/requests/{requestId}/plan/guide": {
+      "get": {
+        "operationId": "PlanController_getGuide",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Guia de pendientes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanGuideDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          }
+        },
+        "summary": "Guia de pendientes del plan (gate de envio).",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/requests/{requestId}/plan/submit": {
+      "post": {
+        "operationId": "PlanController_submit",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitPlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan enviado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          },
+          "409": {
+            "description": "Guia con pendientes o transicion no permitida."
+          }
+        },
+        "summary": "Envia el plan a autorizacion (409 si hay pendientes).",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/requests/{requestId}/plan/authorize": {
+      "post": {
+        "operationId": "PlanController_authorize",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizePlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan autorizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente (sin review)."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          },
+          "409": {
+            "description": "El plan no esta en autorizacion."
+          }
+        },
+        "summary": "Autoriza el plan (-> Autorizado; Request -> En ejecucion).",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/requests/{requestId}/plan/return": {
+      "post": {
+        "operationId": "PlanController_return",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnPlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan devuelto.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta el motivo."
+          },
+          "403": {
+            "description": "Rol insuficiente (sin review)."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          },
+          "409": {
+            "description": "El plan no esta en autorizacion."
+          }
+        },
+        "summary": "Devuelve el plan con motivo (-> Devuelto).",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/plans/{planId}/phases": {
+      "get": {
+        "operationId": "PhaseController_findForPlan",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fases del plan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanPhaseResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan fuera de alcance."
+          }
+        },
+        "summary": "Lista las fases del plan ordenadas.",
+        "tags": [
+          "plan-phases"
+        ]
+      },
+      "post": {
+        "operationId": "PhaseController_create",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePhaseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Fase creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanPhaseResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan fuera de alcance."
+          }
+        },
+        "summary": "Crea una fase (order al final si falta).",
+        "tags": [
+          "plan-phases"
+        ]
+      }
+    },
+    "/plans/{planId}/phases/reorder": {
+      "patch": {
+        "operationId": "PhaseController_reorder",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderPhasesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fases reordenadas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanPhaseResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan fuera de alcance."
+          },
+          "409": {
+            "description": "Lista invalida o mueve la fase inicial con tareas."
+          }
+        },
+        "summary": "Reordena las fases (protege la inicial con tareas).",
+        "tags": [
+          "plan-phases"
+        ]
+      }
+    },
+    "/plans/{planId}/phases/{phaseId}": {
+      "patch": {
+        "operationId": "PhaseController_update",
+        "parameters": [
+          {
+            "name": "phaseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePhaseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fase actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanPhaseResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan fuera de alcance."
+          },
+          "409": {
+            "description": "La fase no pertenece al plan."
+          }
+        },
+        "summary": "Edita nombre/fechas/entregable de una fase.",
+        "tags": [
+          "plan-phases"
+        ]
+      },
+      "delete": {
+        "operationId": "PhaseController_remove",
+        "parameters": [
+          {
+            "name": "phaseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Fase borrada."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan fuera de alcance."
+          },
+          "409": {
+            "description": "La fase tiene tareas o no pertenece al plan."
+          }
+        },
+        "summary": "Borra una fase (409 si tiene tareas).",
+        "tags": [
+          "plan-phases"
+        ]
+      }
+    },
+    "/tasks/{id}/dependencies": {
+      "get": {
+        "operationId": "DependencyController_findForTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Predecesoras.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskDependencyResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Tarea fuera de alcance."
+          }
+        },
+        "summary": "Lista las predecesoras de una tarea.",
+        "tags": [
+          "task-dependencies"
+        ]
+      },
+      "post": {
+        "operationId": "DependencyController_add",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddDependencyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Dependencia creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDependencyResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Auto-dependencia, planes distintos o ciclo."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Tarea fuera de alcance."
+          },
+          "409": {
+            "description": "La dependencia ya existe."
+          }
+        },
+        "summary": "Anade una predecesora (valida auto/mismo-plan/ciclo/duplicado).",
+        "tags": [
+          "task-dependencies"
+        ]
+      }
+    },
+    "/tasks/{id}/dependencies/{predecessorTaskId}": {
+      "delete": {
+        "operationId": "DependencyController_remove",
+        "parameters": [
+          {
+            "name": "predecessorTaskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Dependencia quitada."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Tarea fuera de alcance."
+          },
+          "409": {
+            "description": "La dependencia no existe."
+          }
+        },
+        "summary": "Quita una predecesora de la tarea.",
+        "tags": [
+          "task-dependencies"
         ]
       }
     }
@@ -1962,6 +2986,85 @@
           "updatedAt"
         ]
       },
+      "ApprovalResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud revisada."
+          },
+          "decision": {
+            "type": "string",
+            "description": "Decision (APROBAR/DEVOLVER)."
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo (si DEVOLVER)."
+          },
+          "previousState": {
+            "type": "string",
+            "description": "Estado anterior a la decision."
+          },
+          "resultingState": {
+            "type": "string",
+            "description": "Estado resultante."
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de la decision."
+          },
+          "decidedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Usuario que decidio."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          }
+        },
+        "required": [
+          "id",
+          "requestId",
+          "decision",
+          "reason",
+          "previousState",
+          "resultingState",
+          "decidedAt",
+          "decidedByUserId",
+          "createdAt"
+        ]
+      },
+      "CreateApprovalDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "description": "Decision de aprobacion.",
+            "enum": [
+              "APROBAR",
+              "DEVOLVER"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo (obligatorio si DEVOLVER).",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
       "CreateRequestDto": {
         "type": "object",
         "properties": {
@@ -2392,7 +3495,439 @@
           "reuse"
         ]
       },
-      "ApprovalResponseDto": {
+      "MyWorkItemDto": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id de la tarea."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la tarea."
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado de la tarea (TaskStatus)."
+          },
+          "progress": {
+            "type": "number",
+            "description": "Progreso 0-100."
+          },
+          "isMilestone": {
+            "type": "boolean",
+            "description": "Indica si la tarea es un hito."
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de inicio."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de fin/vencimiento."
+          },
+          "phaseId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Fase a la que pertenece."
+          },
+          "phaseName": {
+            "type": "string",
+            "description": "Nombre de la fase."
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Plan al que pertenece."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud del plan."
+          },
+          "requestTitle": {
+            "type": "string",
+            "description": "Titulo de la solicitud."
+          }
+        },
+        "required": [
+          "taskId",
+          "title",
+          "status",
+          "progress",
+          "isMilestone",
+          "startDate",
+          "endDate",
+          "phaseId",
+          "phaseName",
+          "planId",
+          "requestId",
+          "requestTitle"
+        ]
+      },
+      "TaskPredecessorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id de la tarea predecesora."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la predecesora."
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado de la predecesora (TaskStatus)."
+          },
+          "accepted": {
+            "type": "boolean",
+            "description": "Aceptacion de la predecesora."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status",
+          "accepted"
+        ]
+      },
+      "TaskResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "phaseId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Fase a la que pertenece."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Proceso de contexto (informativo)."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la tarea."
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Responsable de la tarea."
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de inicio."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de fin/vencimiento."
+          },
+          "estimateHours": {
+            "type": "number",
+            "nullable": true,
+            "description": "Estimacion en horas."
+          },
+          "isMilestone": {
+            "type": "boolean",
+            "description": "Indica si la tarea es un hito."
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Descripcion/alcance."
+          },
+          "acceptanceCriteria": {
+            "type": "string",
+            "nullable": true,
+            "description": "Criterios de aceptacion."
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado de la tarea (TaskStatus)."
+          },
+          "progress": {
+            "type": "number",
+            "description": "Progreso 0-100."
+          },
+          "frameworkPhaseRequired": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fase de framework requerida (texto informativo)."
+          },
+          "accepted": {
+            "type": "boolean",
+            "description": "Aceptacion de la tarea."
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de aceptacion."
+          },
+          "acceptedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario que acepto."
+          },
+          "evidenceUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Evidencia como URL/texto."
+          },
+          "predecessors": {
+            "description": "Predecesoras directas de la tarea.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskPredecessorDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "phaseId",
+          "processId",
+          "title",
+          "responsibleUserId",
+          "startDate",
+          "endDate",
+          "estimateHours",
+          "isMilestone",
+          "description",
+          "acceptanceCriteria",
+          "status",
+          "progress",
+          "frameworkPhaseRequired",
+          "accepted",
+          "acceptedAt",
+          "acceptedByUserId",
+          "evidenceUrl",
+          "predecessors",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateTaskDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titulo de la tarea.",
+            "maxLength": 255
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Responsable de la tarea."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso de contexto (informativo)."
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de inicio planificada."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de fin/vencimiento."
+          },
+          "estimateHours": {
+            "type": "number",
+            "description": "Estimacion en horas (hito => 0).",
+            "minimum": 0
+          },
+          "isMilestone": {
+            "type": "boolean",
+            "description": "Indica si la tarea es un hito."
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripcion/alcance.",
+            "maxLength": 4000
+          },
+          "acceptanceCriteria": {
+            "type": "string",
+            "description": "Criterios de aceptacion.",
+            "maxLength": 4000
+          },
+          "frameworkPhaseRequired": {
+            "type": "string",
+            "description": "Fase de framework requerida (texto informativo).",
+            "maxLength": 255
+          },
+          "evidenceUrl": {
+            "type": "string",
+            "description": "Evidencia como URL/texto.",
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "UpdateTaskDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titulo de la tarea.",
+            "maxLength": 255
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Responsable de la tarea."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso de contexto (informativo)."
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de inicio planificada."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de fin/vencimiento."
+          },
+          "estimateHours": {
+            "type": "number",
+            "description": "Estimacion en horas (hito => 0).",
+            "minimum": 0
+          },
+          "isMilestone": {
+            "type": "boolean",
+            "description": "Indica si la tarea es un hito."
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripcion/alcance.",
+            "maxLength": 4000
+          },
+          "acceptanceCriteria": {
+            "type": "string",
+            "description": "Criterios de aceptacion.",
+            "maxLength": 4000
+          },
+          "frameworkPhaseRequired": {
+            "type": "string",
+            "description": "Fase de framework requerida (texto informativo).",
+            "maxLength": 255
+          },
+          "evidenceUrl": {
+            "type": "string",
+            "description": "Evidencia como URL/texto.",
+            "maxLength": 2048
+          }
+        }
+      },
+      "UpdateTaskStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "POR_HACER",
+              "EN_CURSO",
+              "BLOQUEADA",
+              "EN_REVISION",
+              "TERMINADA"
+            ],
+            "description": "Nuevo estado de la tarea."
+          },
+          "progress": {
+            "type": "number",
+            "description": "Progreso 0-100.",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "evidenceUrl": {
+            "type": "string",
+            "description": "Evidencia como URL/texto.",
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "AcceptTaskDto": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean",
+            "description": "true acepta la tarea; false retira la aceptacion."
+          }
+        },
+        "required": [
+          "accepted"
+        ]
+      },
+      "CreatePlanDto": {
+        "type": "object",
+        "properties": {
+          "periodStart": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Inicio del periodo del plan."
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fin del periodo del plan."
+          },
+          "commitmentDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de compromiso del plan."
+          },
+          "risks": {
+            "type": "string",
+            "description": "Riesgos del plan.",
+            "maxLength": 4000
+          },
+          "mitigations": {
+            "type": "string",
+            "description": "Mitigaciones del plan.",
+            "maxLength": 4000
+          }
+        }
+      },
+      "PlanResponseDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -2403,34 +3938,370 @@
           "requestId": {
             "type": "string",
             "format": "uuid",
-            "description": "Solicitud revisada."
+            "description": "Solicitud del plan."
           },
-          "decision": {
-            "type": "string",
-            "description": "Decision (APROBAR/DEVOLVER)."
-          },
-          "reason": {
-            "type": "string",
-            "nullable": true,
-            "description": "Motivo (si DEVOLVER)."
-          },
-          "previousState": {
-            "type": "string",
-            "description": "Estado anterior a la decision."
-          },
-          "resultingState": {
-            "type": "string",
-            "description": "Estado resultante."
-          },
-          "decidedAt": {
+          "periodStart": {
             "type": "string",
             "format": "date-time",
-            "description": "Fecha de la decision."
+            "nullable": true,
+            "description": "Inicio del periodo."
           },
-          "decidedByUserId": {
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fin del periodo."
+          },
+          "commitmentDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de compromiso."
+          },
+          "risks": {
+            "type": "string",
+            "nullable": true,
+            "description": "Riesgos."
+          },
+          "mitigations": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mitigaciones."
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado del plan (PlanStatus)."
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de envio a autorizacion."
+          },
+          "submittedByUserId": {
             "type": "string",
             "format": "uuid",
-            "description": "Usuario que decidio."
+            "nullable": true,
+            "description": "Usuario que envio."
+          },
+          "authorizedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de autorizacion."
+          },
+          "authorizedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario que autorizo."
+          },
+          "returnReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo de la ultima devolucion."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "requestId",
+          "periodStart",
+          "periodEnd",
+          "commitmentDate",
+          "risks",
+          "mitigations",
+          "status",
+          "submittedAt",
+          "submittedByUserId",
+          "authorizedAt",
+          "authorizedByUserId",
+          "returnReason",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdatePlanDto": {
+        "type": "object",
+        "properties": {
+          "periodStart": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Inicio del periodo del plan."
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fin del periodo del plan."
+          },
+          "commitmentDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de compromiso del plan."
+          },
+          "risks": {
+            "type": "string",
+            "description": "Riesgos del plan.",
+            "maxLength": 4000
+          },
+          "mitigations": {
+            "type": "string",
+            "description": "Mitigaciones del plan.",
+            "maxLength": 4000
+          }
+        }
+      },
+      "PlanGuidePendingDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Categoria del pendiente (datesPhases/tasksResponsibles/...)."
+          },
+          "code": {
+            "type": "string",
+            "description": "Codigo estable del tipo de pendiente."
+          },
+          "message": {
+            "type": "string",
+            "description": "Mensaje legible del pendiente."
+          },
+          "targetId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Id del objeto afectado (fase/tarea)."
+          }
+        },
+        "required": [
+          "category",
+          "code",
+          "message"
+        ]
+      },
+      "PlanGuideDto": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Plan evaluado."
+          },
+          "canSubmit": {
+            "type": "boolean",
+            "description": "true solo si no hay pendientes en categorias implementadas."
+          },
+          "pendings": {
+            "description": "Pendientes por categoria.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanGuidePendingDto"
+            }
+          },
+          "futureCategories": {
+            "description": "Categorias gancho de fases futuras (siempre 0 pendientes hoy).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "planId",
+          "canSubmit",
+          "pendings",
+          "futureCategories"
+        ]
+      },
+      "SubmitPlanDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AuthorizePlanDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ReturnPlanDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Motivo de la devolucion (obligatorio).",
+            "maxLength": 2000
+          }
+        }
+      },
+      "PlanPhaseResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Plan al que pertenece."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la fase."
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de inicio."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de fin."
+          },
+          "deliverable": {
+            "type": "string",
+            "nullable": true,
+            "description": "Entregable."
+          },
+          "order": {
+            "type": "number",
+            "description": "Posicion 0-based dentro del plan."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "planId",
+          "name",
+          "startDate",
+          "endDate",
+          "deliverable",
+          "order",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreatePhaseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre de la fase.",
+            "maxLength": 255
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de inicio."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de fin."
+          },
+          "deliverable": {
+            "type": "string",
+            "description": "Entregable de la fase.",
+            "maxLength": 2000
+          },
+          "order": {
+            "type": "number",
+            "description": "Posicion 0-based (si falta, al final).",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ReorderPhasesDto": {
+        "type": "object",
+        "properties": {
+          "phaseIds": {
+            "description": "Ids de fases en el orden deseado.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "phaseIds"
+        ]
+      },
+      "UpdatePhaseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre de la fase.",
+            "maxLength": 255
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de inicio."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de fin."
+          },
+          "deliverable": {
+            "type": "string",
+            "description": "Entregable de la fase.",
+            "maxLength": 2000
+          }
+        }
+      },
+      "TaskDependencyResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id de la arista de dependencia."
+          },
+          "dependentTaskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Tarea dependiente."
+          },
+          "predecessorTaskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Tarea predecesora."
+          },
+          "predecessorTitle": {
+            "type": "string",
+            "description": "Titulo de la predecesora."
+          },
+          "predecessorStatus": {
+            "type": "string",
+            "description": "Estado de la predecesora (TaskStatus)."
+          },
+          "predecessorAccepted": {
+            "type": "boolean",
+            "description": "Aceptacion de la predecesora."
           },
           "createdAt": {
             "type": "string",
@@ -2440,35 +4311,25 @@
         },
         "required": [
           "id",
-          "requestId",
-          "decision",
-          "reason",
-          "previousState",
-          "resultingState",
-          "decidedAt",
-          "decidedByUserId",
+          "dependentTaskId",
+          "predecessorTaskId",
+          "predecessorTitle",
+          "predecessorStatus",
+          "predecessorAccepted",
           "createdAt"
         ]
       },
-      "CreateApprovalDto": {
+      "AddDependencyDto": {
         "type": "object",
         "properties": {
-          "decision": {
+          "predecessorTaskId": {
             "type": "string",
-            "description": "Decision de aprobacion.",
-            "enum": [
-              "APROBAR",
-              "DEVOLVER"
-            ]
-          },
-          "reason": {
-            "type": "string",
-            "description": "Motivo (obligatorio si DEVOLVER).",
-            "maxLength": 2000
+            "format": "uuid",
+            "description": "Id de la tarea predecesora."
           }
         },
         "required": [
-          "decision"
+          "predecessorTaskId"
         ]
       }
     }
