@@ -3,7 +3,16 @@ import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 
 /** Tipos de objeto filtrables (coinciden con AuditObjectType del service). */
-const OBJECT_TYPES = ['PROCESS', 'USER', 'GRANT', 'CATALOG_ITEM'] as const;
+const OBJECT_TYPES = [
+  'PROCESS',
+  'USER',
+  'GRANT',
+  'CATALOG_ITEM',
+  'REQUEST',
+  'TRIAGE',
+  'PRIORITY_EVALUATION',
+  'APPROVAL',
+] as const;
 
 /**
  * Filtros opcionales para GET /audit-events. `take` lo acota el service a <=

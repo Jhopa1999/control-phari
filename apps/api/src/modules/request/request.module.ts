@@ -1,0 +1,38 @@
+import { Module } from '@nestjs/common';
+import { PrismaModule } from '../../database/prisma.module';
+import { AuthModule } from '../auth/auth.module';
+import { AuditModule } from '../audit/audit.module';
+import { RequestController } from './request.controller';
+import { RequestService } from './request.service';
+import { RequestStateService } from './request-state.service';
+import { TriageController } from './triage/triage.controller';
+import { TriageService } from './triage/triage.service';
+import { PriorityController } from './priority/priority.controller';
+import { PriorityService } from './priority/priority.service';
+import { ApprovalController } from './approval/approval.controller';
+import { ApprovalService } from './approval/approval.service';
+
+/**
+ * Modulo raiz del flujo de demanda (design §3.2): CRUD de Request + submodulos
+ * triage/priority/approval. Comparte RequestStateService (helper de
+ * transiciones y lectura de triage/evaluacion vigentes). Importa PrismaModule,
+ * AuthModule y AuditModule como los modulos de Fase 1.
+ */
+@Module({
+  imports: [PrismaModule, AuthModule, AuditModule],
+  controllers: [
+    RequestController,
+    TriageController,
+    PriorityController,
+    ApprovalController,
+  ],
+  providers: [
+    RequestService,
+    RequestStateService,
+    TriageService,
+    PriorityService,
+    ApprovalService,
+  ],
+  exports: [RequestStateService],
+})
+export class RequestModule {}

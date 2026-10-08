@@ -122,5 +122,18 @@ describe('AuditService', () => {
         'GRANT',
       );
     });
+
+    it('visibilidad de eventos de Fase 2 por alcance (NIT-8): lider A ve REQUEST de p1 por scopeProcessId', async () => {
+      // Los eventos de Fase 2 se escriben con scopeProcessId = mainProcessId,
+      // de modo que la lectura por rol de Fase 1 los filtra por scope: un lider
+      // de p1 ve los eventos REQUEST con scopeProcessId p1 y no los de p2.
+      mocks.auditEvent.findMany.mockResolvedValue([]);
+      await service.findMany(actorWith([RoleCode.LIDER_PROCESO], ['p1']), {
+        objectType: 'REQUEST',
+      });
+      const where = mocks.auditEvent.findMany.mock.calls[0][0].where;
+      expect(where.scopeProcessId).toEqual({ in: ['p1'] });
+      expect(where.objectType).toBe('REQUEST');
+    });
   });
 });
