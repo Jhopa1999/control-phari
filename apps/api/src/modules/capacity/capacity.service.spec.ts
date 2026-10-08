@@ -442,6 +442,122 @@ describe('CapacityService', () => {
     });
   });
 
+  // --- Integrante PURO: su PROPIA asignacion (FINDING HIGH, UC-011/US-007) --
+  // Un integrante sin grant de lider tiene scopedProcessIds vacio; su alcance
+  // de asignaciones es por userId (= el mismo), no por processId IN []. El flujo
+  // crear/leer/editar/borrar/resumen de su propia asignacion debe operar.
+  describe('integrante PURO opera su propia asignacion', () => {
+    it('crea su propia asignacion (processId existente, sin scopedProcessIds -> sin 404)', async () => {
+      (m.prismaObj.process as any).findFirst.mockResolvedValue({ id: 'p1' });
+      (m.prismaObj.assignment as any).create.mockResolvedValue(
+        assignmentRow({ userId: 'ui' }),
+      );
+
+      const res = await service.createAssignment(integrante(), {
+        userId: 'ui',
+        month: '2025-03',
+        processId: 'p1',
+        committedHours: 40,
+      });
+
+      expect(res.userId).toBe('ui');
+      expect(res.processId).toBe('p1');
+      // El filtro de proceso NO restringe a id IN [] para el integrante puro.
+      const processWhere = (m.prismaObj.process as any).findFirst.mock.calls[0][0]
+        .where.AND[1];
+      expect(processWhere).toEqual({});
+      expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
+        action: 'CREATE',
+        objectType: 'ASSIGNMENT',
+        scopeProcessId: 'p1',
+      });
+    });
+
+    it('lista: where acota por su userId y NO por processId IN []', async () => {
+      (m.prismaObj.assignment as any).findMany.mockResolvedValue([
+        assignmentRow({ userId: 'ui' }),
+      ]);
+
+      const rows = await service.listAssignments(integrante(), {
+        month: '2025-03',
+      });
+
+      expect(rows).toHaveLength(1);
+      const where = (m.prismaObj.assignment as any).findMany.mock.calls[0][0]
+        .where;
+      expect(where.userId).toEqual({ in: ['ui'] });
+      expect(where.processId).toBeUndefined();
+    });
+
+    it('edita su propia asignacion resuelta por id (userId en scope, sin processId IN [])', async () => {
+      (m.prismaObj.assignment as any).findFirst.mockResolvedValue(
+        assignmentRow({ userId: 'ui' }),
+      );
+      (m.prismaObj.assignment as any).update.mockResolvedValue(
+        assignmentRow({ userId: 'ui', committedHours: 55 }),
+      );
+
+      const res = await service.updateAssignment(integrante(), 'as1', {
+        committedHours: 55,
+      });
+
+      expect(res.committedHours).toBe(55);
+      const where = (m.prismaObj.assignment as any).findFirst.mock.calls[0][0]
+        .where;
+      // Alcance por persona presente; el filtro de proceso es {} (no id IN []).
+      expect(where.AND).toContainEqual({ userId: { in: ['ui'] } });
+      expect(where.AND).toContainEqual({});
+      expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
+        action: 'UPDATE',
+        objectType: 'ASSIGNMENT',
+      });
+    });
+
+    it('borra su propia asignacion resuelta por id', async () => {
+      (m.prismaObj.assignment as any).findFirst.mockResolvedValue(
+        assignmentRow({ userId: 'ui' }),
+      );
+      (m.prismaObj.assignment as any).delete.mockResolvedValue(
+        assignmentRow({ userId: 'ui' }),
+      );
+
+      await service.removeAssignment(integrante(), 'as1');
+
+      expect((m.prismaObj.assignment as any).delete).toHaveBeenCalledWith({
+        where: { id: 'as1' },
+      });
+      expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
+        action: 'DELETE',
+        objectType: 'ASSIGNMENT',
+        after: null,
+      });
+    });
+
+    it('resumen: comprometido suma su propia carga, cargaParcial false, estado real', async () => {
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
+        availabilityRow({ userId: 'ui', availableHours: 160 }),
+      ]);
+      // Solo UNA llamada a assignment.findMany: la de asignaciones visibles.
+      // El integrante puro NO consulta "fuera de alcance" (no tiene frontera).
+      (m.prismaObj.assignment as any).findMany.mockResolvedValueOnce([
+        assignmentRow({ userId: 'ui', committedHours: 120 }),
+      ]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([
+        { id: 'ui', name: 'Integrante' },
+      ]);
+
+      const [row] = await service.summary(integrante(), { month: '2025-03' });
+
+      expect(row.comprometido).toBe(120);
+      expect(row.cargaParcial).toBe(false);
+      expect(row.utilizacion).toBe(75);
+      expect(row.libre).toBe(40);
+      expect(row.estado).toBe('OK');
+      // No se dispara la consulta de "fuera de alcance" para el integrante puro.
+      expect((m.prismaObj.assignment as any).findMany).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('updateAssignment / removeAssignment', () => {
     it('lider resuelve asignacion de proceso ajeno por id -> 404', async () => {
       (m.prismaObj.assignment as any).findFirst.mockResolvedValue(null);

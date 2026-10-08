@@ -98,13 +98,19 @@ export class CapacityService {
   // --- Helpers de alcance --------------------------------------------------
 
   /**
-   * `where` del proceso para asignaciones (Plano A directo): jefe sin filtro;
-   * no-jefe filtra por `processId ∈ scopedProcessIds`.
+   * `where` del proceso para asignaciones (Plano A directo, design §2.5):
+   * - jefe -> sin filtro (ve el area);
+   * - lider (con `scopedProcessIds`) -> `processId ∈ scopedProcessIds`;
+   * - integrante PURO (`scopedProcessIds` vacio) -> SIN filtro de proceso: su
+   *   alcance de asignaciones es "solo las suyas", acotado por `userId ∈
+   *   scopedUserIds` (que para el integrante es `{ el mismo }`). Filtrar por
+   *   `processId: { in: [] }` NO matchearia ninguna fila (ni la propia), dejando
+   *   inoperante el flujo del integrante (UC-011/US-007/FLOW-007).
    */
   private assignmentProcessWhere(
     actor: CurrentActor,
   ): Prisma.AssignmentWhereInput {
-    if (actor.isJefeArea) {
+    if (actor.isJefeArea || actor.scopedProcessIds.size === 0) {
       return {};
     }
     return { processId: { in: Array.from(actor.scopedProcessIds) } };
@@ -148,16 +154,24 @@ export class CapacityService {
   /**
    * Resuelve el `processId` de una asignacion dentro del alcance del actor o
    * lanza 404 (design §2.2): el proceso "no existe para ti" si esta fuera.
+   * - jefe -> cualquier proceso existente;
+   * - lider (con `scopedProcessIds`) -> solo `processId ∈ scopedProcessIds`;
+   * - integrante PURO (`scopedProcessIds` vacio) -> cualquier proceso
+   *   existente (su acotacion es por `userId`, ya aplicada en
+   *   `requireWritablePerson`); filtrar por `id: { in: [] }` le impediria
+   *   CREAR su propia asignacion.
    */
   private async requireProcessInScope(
     actor: CurrentActor,
     processId: string,
   ): Promise<void> {
+    const noProcessScope =
+      actor.isJefeArea || actor.scopedProcessIds.size === 0;
     const process = await this.prisma.process.findFirst({
       where: {
         AND: [
           { id: processId },
-          actor.isJefeArea
+          noProcessScope
             ? {}
             : { id: { in: Array.from(actor.scopedProcessIds) } },
         ],
@@ -529,18 +543,20 @@ export class CapacityService {
       );
     }
 
-    // Deteccion de carga fuera de alcance (solo lider/integrante, FINDING 4):
-    // existencia de asignaciones de esas personas en procesos NO en alcance.
+    // Deteccion de carga fuera de alcance (FINDING 4): existencia de
+    // asignaciones de esas personas en procesos NO en alcance. Solo aplica al
+    // LIDER (tiene procesos y por tanto una frontera de alcance de proceso). El
+    // JEFE ve el total agregado (sin "fuera de alcance") y el INTEGRANTE PURO ve
+    // TODAS sus propias asignaciones (su alcance es por `userId`, sin frontera
+    // de proceso): para ambos `cargaParcial` siempre es `false`.
     const outOfScopeUsers = new Set<string>();
-    if (!actor.isJefeArea) {
+    if (!actor.isJefeArea && actor.scopedProcessIds.size > 0) {
       const scopedProcessIds = Array.from(actor.scopedProcessIds);
       const outside = await this.prisma.assignment.findMany({
         where: {
           month: monthDate,
           userId: { in: Array.from(userIds) },
-          ...(scopedProcessIds.length > 0
-            ? { processId: { notIn: scopedProcessIds } }
-            : {}),
+          processId: { notIn: scopedProcessIds },
         },
         select: { userId: true },
         distinct: ['userId'],
