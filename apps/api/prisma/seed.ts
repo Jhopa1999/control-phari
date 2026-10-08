@@ -133,6 +133,16 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'ASSET_TYPE', code: 'BASE_DATOS', label: 'Base de datos', sortOrder: 8 },
     { catalog: 'ASSET_TYPE', code: 'REPORTE', label: 'Reporte', sortOrder: 9 },
     { catalog: 'ASSET_TYPE', code: 'OTRO', label: 'Otro', sortOrder: 10 },
+    // TRIAGE_ROUTE (Fase 2) - rutas confirmadas por BR-003.
+    { catalog: 'TRIAGE_ROUTE', code: 'BI', label: 'BI', sortOrder: 1 },
+    { catalog: 'TRIAGE_ROUTE', code: 'INTEGRACIONES', label: 'Integraciones', sortOrder: 2 },
+    { catalog: 'TRIAGE_ROUTE', code: 'IA', label: 'IA', sortOrder: 3 },
+    { catalog: 'TRIAGE_ROUTE', code: 'MULTIPROCESO', label: 'Multiproceso (FMAA)', sortOrder: 4 },
+    // TRIAGE_SIZE (Fase 2) - escala conservadora provisional (D8), a revisar con el Site.
+    { catalog: 'TRIAGE_SIZE', code: 'S', label: 'S', sortOrder: 1 },
+    { catalog: 'TRIAGE_SIZE', code: 'M', label: 'M', sortOrder: 2 },
+    { catalog: 'TRIAGE_SIZE', code: 'L', label: 'L', sortOrder: 3 },
+    { catalog: 'TRIAGE_SIZE', code: 'XL', label: 'XL', sortOrder: 4 },
   ];
 
 // --- Ejecucion idempotente --------------------------------------------------

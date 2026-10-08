@@ -37,18 +37,22 @@ model CatalogItem {
 /// Proceso de gestion del area (BI, Integraciones, IA) y la coordinacion
 /// multiproceso FMAA. `code` es estable y se almacena en MAYUSCULAS.
 model Process {
-  id         String   @id @default(uuid()) @db.Uuid
-  code       String
-  name       String
-  framework  String?
-  kind       String
-  active     Boolean  @default(true)
-  sortOrder  Int      @default(0) @map("sort_order")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String
+  name      String
+  framework String?
+  kind      String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  grants       Grant[]
-  auditEvents  AuditEvent[]
+  grants      Grant[]
+  auditEvents AuditEvent[]
+
+  // Fase 2 (flujo de demanda): proceso principal y participaciones.
+  requests              Request[]            @relation("RequestMainProcess")
+  requestParticipations RequestParticipant[]
 
   @@unique([code], name: "process_code_unique")
   @@index([active])
@@ -68,6 +72,11 @@ model User {
 
   grants      Grant[]
   auditEvents AuditEvent[]
+
+  // Fase 2 (flujo de demanda): actor que registro cada decision.
+  triages             Triage[]
+  priorityEvaluations PriorityEvaluation[]
+  approvals           Approval[]
 
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
@@ -132,4 +141,135 @@ model AuditEvent {
   @@index([scopeProcessId])
   @@index([createdAt])
   @@map("audit_events")
+}
+
+// ============================================================================
+// Fase 2 · Flujo de demanda (Solicitud -> Triage -> Priorizacion -> Aprobacion)
+// Diseno aprobado en .agents/tasks/fase2-demanda/design.md §1.2.
+// ============================================================================
+
+/// Solicitud (ficha de la demanda). Nucleo del flujo FLOW-001 (BR-001/017/022).
+/// `operationalState` es un enum logico derivado/read-only: solo lo escribe el
+/// helper de transicion de RequestStateService, nunca un update/DTO libre.
+model Request {
+  id                    String    @id @default(uuid()) @db.Uuid
+  title                 String
+  registeredAt          DateTime  @default(now()) @map("registered_at")
+  requesterArea         String?   @map("requester_area")
+  requesterName         String?   @map("requester_name")
+  functionalOwner       String?   @map("functional_owner")
+  targetDate            DateTime? @map("target_date")
+  referenceUrl          String?   @map("reference_url")
+  expectedResult        String?   @map("expected_result")
+  mainProcessId         String    @map("main_process_id") @db.Uuid
+  operationalState      String    @default("REGISTRADA") @map("operational_state")
+  initialCommitmentDate DateTime? @map("initial_commitment_date")
+  changeJustification   String?   @map("change_justification")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  mainProcess         Process              @relation("RequestMainProcess", fields: [mainProcessId], references: [id], onDelete: Restrict)
+  participants        RequestParticipant[]
+  triages             Triage[]
+  priorityEvaluations PriorityEvaluation[]
+  approvals           Approval[]
+
+  @@index([mainProcessId])
+  @@index([operationalState])
+  @@index([registeredAt])
+  @@map("requests")
+}
+
+/// Tabla puente N:M Request <-> Process (procesos participantes). El proceso
+/// principal siempre se materializa aqui como invariante de datos (BR-001, D2).
+model RequestParticipant {
+  id        String   @id @default(uuid()) @db.Uuid
+  requestId String   @map("request_id") @db.Uuid
+  processId String   @map("process_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  request Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  process Process @relation(fields: [processId], references: [id], onDelete: Restrict)
+
+  @@unique([requestId, processId], name: "request_participant_unique")
+  @@index([processId])
+  @@map("request_participants")
+}
+
+/// Triage: clasificacion y decision de ruta (BR-004, SCR-04). Tabla 1:N por
+/// extensibilidad futura; en Fase 2 el gate solo admite un Triage por Request.
+model Triage {
+  id                   String   @id @default(uuid()) @db.Uuid
+  requestId            String   @map("request_id") @db.Uuid
+  routeCode            String?  @map("route_code")
+  demandTypeCode       String?  @map("demand_type_code")
+  criticalityCode      String?  @map("criticality_code")
+  sizeCode             String?  @map("size_code")
+  dataAvailabilityCode String?  @map("data_availability_code")
+  totalEffortHours     Int?     @map("total_effort_hours")
+  mainResponsible      String?  @map("main_responsible")
+  decision             String
+  decidedAt            DateTime @default(now()) @map("decided_at")
+  decidedByUserId      String   @map("decided_by_user_id") @db.Uuid
+  dependencies         String?
+  notes                String?
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  decidedBy User    @relation(fields: [decidedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([requestId])
+  @@index([decidedByUserId])
+  @@map("triages")
+}
+
+/// Evaluacion ponderada de 8 criterios (BR-005, SCR-05). 1:N historico; la
+/// vigente es la ultima por `evaluatedAt`. `score` lo calcula el backend.
+model PriorityEvaluation {
+  id                String   @id @default(uuid()) @db.Uuid
+  requestId         String   @map("request_id") @db.Uuid
+  impact            Int
+  alignment         Int
+  riskControl       Int      @map("risk_control")
+  urgency           Int
+  scope             Int
+  dataAvailability  Int      @map("data_availability")
+  feasibility       Int
+  reuse             Int
+  score             Int
+  justification     String?
+  evaluatedAt       DateTime @default(now()) @map("evaluated_at")
+  evaluatedByUserId String   @map("evaluated_by_user_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  request     Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  evaluatedBy User    @relation(fields: [evaluatedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([requestId])
+  @@index([evaluatedByUserId])
+  @@map("priority_evaluations")
+}
+
+/// Decision de autorizacion del compromiso, separada del guardado de la
+/// evaluacion (BR-006, SCR-20, D6). Append-only (sin updatedAt).
+model Approval {
+  id              String   @id @default(uuid()) @db.Uuid
+  requestId       String   @map("request_id") @db.Uuid
+  decision        String
+  reason          String?
+  previousState   String   @map("previous_state")
+  resultingState  String   @map("resulting_state")
+  decidedAt       DateTime @default(now()) @map("decided_at")
+  decidedByUserId String   @map("decided_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  decidedBy User    @relation(fields: [decidedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([requestId])
+  @@index([decidedByUserId])
+  @@index([decidedAt])
+  @@map("approvals")
 }

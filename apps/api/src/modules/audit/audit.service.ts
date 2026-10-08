@@ -6,8 +6,20 @@ import { RoleCode } from '../auth/role-code';
 import { CurrentActor } from '../auth/current-actor';
 import { ListAuditEventsDto } from './dto/list-audit-events.dto';
 
-/** Tipos de objeto auditables en Fase 1 (design 6.2). */
-export type AuditObjectType = 'PROCESS' | 'USER' | 'GRANT' | 'CATALOG_ITEM';
+/**
+ * Tipos de objeto auditables. Fase 1 (design 6.2): PROCESS, USER, GRANT,
+ * CATALOG_ITEM. Fase 2 (flujo de demanda, design §1.7): REQUEST, TRIAGE,
+ * PRIORITY_EVALUATION, APPROVAL.
+ */
+export type AuditObjectType =
+  | 'PROCESS'
+  | 'USER'
+  | 'GRANT'
+  | 'CATALOG_ITEM'
+  | 'REQUEST'
+  | 'TRIAGE'
+  | 'PRIORITY_EVALUATION'
+  | 'APPROVAL';
 
 /** Verbos de mutacion registrados (design 1.2 / 4.2.1). */
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'REVOKE';
