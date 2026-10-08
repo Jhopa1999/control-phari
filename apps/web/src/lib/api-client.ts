@@ -62,6 +62,19 @@ export type MyWorkItem = components['schemas']['MyWorkItemDto'];
 /** Estado de una tarea (TaskStatus del backend, design 1.3). */
 export type TaskStatus = UpdateTaskStatus['status'];
 
+// --- Fase 4 (capacidad y asignaciones): tipos derivados del contrato OpenAPI ---
+export type Availability = components['schemas']['AvailabilityResponseDto'];
+export type CreateAvailability =
+  components['schemas']['CreateAvailabilityDto'];
+export type UpdateAvailability =
+  components['schemas']['UpdateAvailabilityDto'];
+export type Assignment = components['schemas']['AssignmentResponseDto'];
+export type CreateAssignment = components['schemas']['CreateAssignmentDto'];
+export type UpdateAssignment = components['schemas']['UpdateAssignmentDto'];
+export type CapacityPerson = components['schemas']['CapacityPersonDto'];
+export type CapacitySummaryRow =
+  components['schemas']['CapacitySummaryRowDto'];
+
 /**
  * Clave de localStorage donde el selector de usuario (dev) guarda el
  * identifier del actor actual. Mecanismo exclusivo de desarrollo (design 3.2).

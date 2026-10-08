@@ -601,6 +601,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capacity/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resumen de carga por persona para un mes (en alcance). */
+        get: operations["CapacityController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capacity/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Personas en alcance para los selectores de SCR-17. */
+        get: operations["CapacityController_people"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capacity/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Disponibilidades del mes en alcance. */
+        get: operations["CapacityController_listAvailability"];
+        put?: never;
+        /** Registra disponibilidad de una persona para un mes. */
+        post: operations["CapacityController_createAvailability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capacity/availability/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita las horas disponibles de una disponibilidad. */
+        patch: operations["CapacityController_updateAvailability"];
+        trace?: never;
+    };
+    "/capacity/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Asignaciones del mes en alcance (filtros opcionales). */
+        get: operations["CapacityController_listAssignments"];
+        put?: never;
+        /** Crea una asignacion de horas (proceso requerido). */
+        post: operations["CapacityController_createAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capacity/assignments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Borra una asignacion en alcance (204 sin body). */
+        delete: operations["CapacityController_removeAssignment"];
+        options?: never;
+        head?: never;
+        /** Edita una asignacion (proceso/solicitud/horas/descripcion). */
+        patch: operations["CapacityController_updateAssignment"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1781,6 +1886,187 @@ export interface components {
              * @description Id de la tarea predecesora.
              */
             predecessorTaskId: string;
+        };
+        CapacitySummaryRowDto: {
+            /**
+             * Format: uuid
+             * @description Persona del resumen.
+             */
+            userId: string;
+            /** @description Nombre de la persona. */
+            userName: string;
+            /**
+             * @description Mes en formato YYYY-MM.
+             * @example 2025-03
+             */
+            month: string;
+            /** @description Horas disponibles o null si no hay disponibilidad registrada. */
+            disponible: number | null;
+            /** @description Suma de horas comprometidas visibles en el alcance del actor. */
+            comprometido: number;
+            /** @description Porcentaje de utilizacion (round(comprometido/disponible*100)) o null. */
+            utilizacion: number | null;
+            /** @description Horas libres (disponible - comprometido); puede ser negativo o null. */
+            libre: number | null;
+            /**
+             * @description Estado derivado de la fila.
+             * @enum {string}
+             */
+            estado: "OK" | "SOBRECARGA" | "SIN_DISPONIBILIDAD" | "CARGA_PARCIAL";
+            /** @description True cuando libre < 0 (se senala, no bloquea). */
+            sobrecargado: boolean;
+            /** @description True (solo lider/integrante) si la persona tiene asignaciones fuera del alcance del actor. */
+            cargaParcial: boolean;
+        };
+        CapacityPersonDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la persona.
+             */
+            id: string;
+            /** @description Nombre de la persona. */
+            name: string;
+            /** @description Identificador funcional (correo/usuario). */
+            identifier: string;
+        };
+        AvailabilityResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Persona de la disponibilidad.
+             */
+            userId: string;
+            /**
+             * @description Mes en formato YYYY-MM.
+             * @example 2025-03
+             */
+            month: string;
+            /** @description Horas disponibles en el mes. */
+            availableHours: number;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ultima actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateAvailabilityDto: {
+            /**
+             * Format: uuid
+             * @description Persona a la que pertenece la disponibilidad.
+             */
+            userId: string;
+            /**
+             * @description Mes de la disponibilidad en formato YYYY-MM.
+             * @example 2025-03
+             */
+            month: string;
+            /**
+             * @description Horas disponibles en el mes (entero >= 0).
+             * @example 160
+             */
+            availableHours: number;
+        };
+        UpdateAvailabilityDto: {
+            /**
+             * @description Horas disponibles en el mes (entero >= 0).
+             * @example 150
+             */
+            availableHours: number;
+        };
+        AssignmentResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Persona de la asignacion.
+             */
+            userId: string;
+            /**
+             * @description Mes en formato YYYY-MM.
+             * @example 2025-03
+             */
+            month: string;
+            /**
+             * Format: uuid
+             * @description Proceso de la asignacion.
+             */
+            processId: string;
+            /**
+             * Format: uuid
+             * @description Solicitud ligada o null.
+             */
+            requestId: string | null;
+            /** @description Horas comprometidas en el mes. */
+            committedHours: number;
+            /** @description Descripcion informativa o null. */
+            description: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ultima actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateAssignmentDto: {
+            /**
+             * Format: uuid
+             * @description Persona a la que pertenece la asignacion.
+             */
+            userId: string;
+            /**
+             * @description Mes de la asignacion en formato YYYY-MM.
+             * @example 2025-03
+             */
+            month: string;
+            /**
+             * Format: uuid
+             * @description Proceso de la asignacion (requerido).
+             */
+            processId: string;
+            /**
+             * Format: uuid
+             * @description Solicitud opcional ligada a la asignacion.
+             */
+            requestId?: string;
+            /**
+             * @description Horas comprometidas en el mes (entero >= 0).
+             * @example 40
+             */
+            committedHours: number;
+            /** @description Distribucion del esfuerzo por periodo (texto libre). */
+            description?: string;
+        };
+        UpdateAssignmentDto: {
+            /**
+             * Format: uuid
+             * @description Nuevo proceso de la asignacion (revalida alcance).
+             */
+            processId?: string;
+            /**
+             * Format: uuid
+             * @description Nueva solicitud ligada (en alcance).
+             */
+            requestId?: string;
+            /** @description Horas comprometidas (entero >= 0). */
+            committedHours?: number;
+            /** @description Distribucion del esfuerzo por periodo (texto libre). */
+            description?: string;
         };
     };
     responses: never;
@@ -3897,6 +4183,369 @@ export interface operations {
             };
             /** @description La dependencia no existe. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CapacityController_summary: {
+        parameters: {
+            query: {
+                month: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumen de carga. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapacitySummaryRowDto"][];
+                };
+            };
+            /** @description Mes mal formado o ausente. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CapacityController_people: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Personas visibles. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapacityPersonDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CapacityController_listAvailability: {
+        parameters: {
+            query: {
+                month: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disponibilidades. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailabilityResponseDto"][];
+                };
+            };
+            /** @description Mes mal formado o ausente. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CapacityController_createAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAvailabilityDto"];
+            };
+        };
+        responses: {
+            /** @description Disponibilidad creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailabilityResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Integrante registrando capacidad ajena. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Persona fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe disponibilidad para esa persona y mes. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CapacityController_updateAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAvailabilityDto"];
+            };
+        };
+        responses: {
+            /** @description Disponibilidad actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailabilityResponseDto"];
+                };
+            };
+            /** @description Datos invalidos o id no UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Disponibilidad fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CapacityController_listAssignments: {
+        parameters: {
+            query: {
+                requestId?: unknown;
+                userId?: unknown;
+                processId?: unknown;
+                month: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asignaciones. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentResponseDto"][];
+                };
+            };
+            /** @description Mes mal formado o ausente. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CapacityController_createAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAssignmentDto"];
+            };
+        };
+        responses: {
+            /** @description Asignacion creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Integrante asignando capacidad ajena. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Proceso/persona/solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CapacityController_removeAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asignacion borrada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Asignacion fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CapacityController_updateAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAssignmentDto"];
+            };
+        };
+        responses: {
+            /** @description Asignacion actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentResponseDto"];
+                };
+            };
+            /** @description Datos invalidos o id no UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Asignacion/proceso/solicitud fuera de alcance. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

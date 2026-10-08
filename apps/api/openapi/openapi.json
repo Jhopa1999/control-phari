@@ -2235,6 +2235,387 @@
           "task-dependencies"
         ]
       }
+    },
+    "/capacity/summary": {
+      "get": {
+        "operationId": "CapacityController_summary",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2025-03"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen de carga.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CapacitySummaryRowDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mes mal formado o ausente."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Resumen de carga por persona para un mes (en alcance).",
+        "tags": [
+          "capacity"
+        ]
+      }
+    },
+    "/capacity/people": {
+      "get": {
+        "operationId": "CapacityController_people",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Personas visibles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CapacityPersonDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Personas en alcance para los selectores de SCR-17.",
+        "tags": [
+          "capacity"
+        ]
+      }
+    },
+    "/capacity/availability": {
+      "get": {
+        "operationId": "CapacityController_listAvailability",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2025-03"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Disponibilidades.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AvailabilityResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mes mal formado o ausente."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Disponibilidades del mes en alcance.",
+        "tags": [
+          "capacity"
+        ]
+      },
+      "post": {
+        "operationId": "CapacityController_createAvailability",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAvailabilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Disponibilidad creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Integrante registrando capacidad ajena."
+          },
+          "404": {
+            "description": "Persona fuera de alcance."
+          },
+          "409": {
+            "description": "Ya existe disponibilidad para esa persona y mes."
+          }
+        },
+        "summary": "Registra disponibilidad de una persona para un mes.",
+        "tags": [
+          "capacity"
+        ]
+      }
+    },
+    "/capacity/availability/{id}": {
+      "patch": {
+        "operationId": "CapacityController_updateAvailability",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAvailabilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Disponibilidad actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o id no UUID."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Disponibilidad fuera de alcance."
+          }
+        },
+        "summary": "Edita las horas disponibles de una disponibilidad.",
+        "tags": [
+          "capacity"
+        ]
+      }
+    },
+    "/capacity/assignments": {
+      "get": {
+        "operationId": "CapacityController_listAssignments",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "month",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2025-03"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asignaciones.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssignmentResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mes mal formado o ausente."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Asignaciones del mes en alcance (filtros opcionales).",
+        "tags": [
+          "capacity"
+        ]
+      },
+      "post": {
+        "operationId": "CapacityController_createAssignment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Asignacion creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Integrante asignando capacidad ajena."
+          },
+          "404": {
+            "description": "Proceso/persona/solicitud fuera de alcance."
+          }
+        },
+        "summary": "Crea una asignacion de horas (proceso requerido).",
+        "tags": [
+          "capacity"
+        ]
+      }
+    },
+    "/capacity/assignments/{id}": {
+      "patch": {
+        "operationId": "CapacityController_updateAssignment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Asignacion actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o id no UUID."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Asignacion/proceso/solicitud fuera de alcance."
+          }
+        },
+        "summary": "Edita una asignacion (proceso/solicitud/horas/descripcion).",
+        "tags": [
+          "capacity"
+        ]
+      },
+      "delete": {
+        "operationId": "CapacityController_removeAssignment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Asignacion borrada."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Asignacion fuera de alcance."
+          }
+        },
+        "summary": "Borra una asignacion en alcance (204 sin body).",
+        "tags": [
+          "capacity"
+        ]
+      }
     }
   },
   "info": {
@@ -4331,6 +4712,309 @@
         "required": [
           "predecessorTaskId"
         ]
+      },
+      "CapacitySummaryRowDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Persona del resumen."
+          },
+          "userName": {
+            "type": "string",
+            "description": "Nombre de la persona."
+          },
+          "month": {
+            "type": "string",
+            "description": "Mes en formato YYYY-MM.",
+            "example": "2025-03"
+          },
+          "disponible": {
+            "type": "number",
+            "nullable": true,
+            "description": "Horas disponibles o null si no hay disponibilidad registrada."
+          },
+          "comprometido": {
+            "type": "number",
+            "description": "Suma de horas comprometidas visibles en el alcance del actor."
+          },
+          "utilizacion": {
+            "type": "number",
+            "nullable": true,
+            "description": "Porcentaje de utilizacion (round(comprometido/disponible*100)) o null."
+          },
+          "libre": {
+            "type": "number",
+            "nullable": true,
+            "description": "Horas libres (disponible - comprometido); puede ser negativo o null."
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "SOBRECARGA",
+              "SIN_DISPONIBILIDAD",
+              "CARGA_PARCIAL"
+            ],
+            "description": "Estado derivado de la fila."
+          },
+          "sobrecargado": {
+            "type": "boolean",
+            "description": "True cuando libre < 0 (se senala, no bloquea)."
+          },
+          "cargaParcial": {
+            "type": "boolean",
+            "description": "True (solo lider/integrante) si la persona tiene asignaciones fuera del alcance del actor."
+          }
+        },
+        "required": [
+          "userId",
+          "userName",
+          "month",
+          "disponible",
+          "comprometido",
+          "utilizacion",
+          "libre",
+          "estado",
+          "sobrecargado",
+          "cargaParcial"
+        ]
+      },
+      "CapacityPersonDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador de la persona."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la persona."
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional (correo/usuario)."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "identifier"
+        ]
+      },
+      "AvailabilityResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Persona de la disponibilidad."
+          },
+          "month": {
+            "type": "string",
+            "description": "Mes en formato YYYY-MM.",
+            "example": "2025-03"
+          },
+          "availableHours": {
+            "type": "number",
+            "description": "Horas disponibles en el mes."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "month",
+          "availableHours",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Persona a la que pertenece la disponibilidad."
+          },
+          "month": {
+            "type": "string",
+            "description": "Mes de la disponibilidad en formato YYYY-MM.",
+            "example": "2025-03",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "availableHours": {
+            "type": "number",
+            "description": "Horas disponibles en el mes (entero >= 0).",
+            "minimum": 0,
+            "example": 160
+          }
+        },
+        "required": [
+          "userId",
+          "month",
+          "availableHours"
+        ]
+      },
+      "UpdateAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "availableHours": {
+            "type": "number",
+            "description": "Horas disponibles en el mes (entero >= 0).",
+            "minimum": 0,
+            "example": 150
+          }
+        },
+        "required": [
+          "availableHours"
+        ]
+      },
+      "AssignmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Persona de la asignacion."
+          },
+          "month": {
+            "type": "string",
+            "description": "Mes en formato YYYY-MM.",
+            "example": "2025-03"
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso de la asignacion."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Solicitud ligada o null."
+          },
+          "committedHours": {
+            "type": "number",
+            "description": "Horas comprometidas en el mes."
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Descripcion informativa o null."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "month",
+          "processId",
+          "requestId",
+          "committedHours",
+          "description",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Persona a la que pertenece la asignacion."
+          },
+          "month": {
+            "type": "string",
+            "description": "Mes de la asignacion en formato YYYY-MM.",
+            "example": "2025-03",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso de la asignacion (requerido)."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud opcional ligada a la asignacion."
+          },
+          "committedHours": {
+            "type": "number",
+            "description": "Horas comprometidas en el mes (entero >= 0).",
+            "minimum": 0,
+            "example": 40
+          },
+          "description": {
+            "type": "string",
+            "description": "Distribucion del esfuerzo por periodo (texto libre).",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "userId",
+          "month",
+          "processId",
+          "committedHours"
+        ]
+      },
+      "UpdateAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Nuevo proceso de la asignacion (revalida alcance)."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Nueva solicitud ligada (en alcance)."
+          },
+          "committedHours": {
+            "type": "number",
+            "description": "Horas comprometidas (entero >= 0).",
+            "minimum": 0
+          },
+          "description": {
+            "type": "string",
+            "description": "Distribucion del esfuerzo por periodo (texto libre).",
+            "maxLength": 2000
+          }
+        }
       }
     }
   }
