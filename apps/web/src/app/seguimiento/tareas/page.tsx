@@ -1,12 +1,12 @@
-import { UnderConstruction } from '@/components/under-construction';
+import { Suspense } from 'react';
+import { TareasView } from './tareas-view';
 
 export const metadata = { title: 'Tareas | Portal del area' };
 
 export default function TareasPage(): React.ReactElement {
   return (
-    <UnderConstruction
-      title="Tareas"
-      description="Tareas del area y su estado."
-    />
+    <Suspense>
+      <TareasView />
+    </Suspense>
   );
 }

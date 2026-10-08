@@ -37,6 +37,31 @@ export type CreatePriorityEvaluation =
 export type Approval = components['schemas']['ApprovalResponseDto'];
 export type CreateApproval = components['schemas']['CreateApprovalDto'];
 
+// --- Fase 3 (plan y ejecucion): tipos derivados del contrato OpenAPI ---
+export type Plan = components['schemas']['PlanResponseDto'];
+export type CreatePlan = components['schemas']['CreatePlanDto'];
+export type UpdatePlan = components['schemas']['UpdatePlanDto'];
+export type PlanPhase = components['schemas']['PlanPhaseResponseDto'];
+export type CreatePhase = components['schemas']['CreatePhaseDto'];
+export type UpdatePhase = components['schemas']['UpdatePhaseDto'];
+export type ReorderPhases = components['schemas']['ReorderPhasesDto'];
+export type Task = components['schemas']['TaskResponseDto'];
+export type TaskPredecessor = components['schemas']['TaskPredecessorDto'];
+export type CreateTask = components['schemas']['CreateTaskDto'];
+export type UpdateTask = components['schemas']['UpdateTaskDto'];
+export type UpdateTaskStatus = components['schemas']['UpdateTaskStatusDto'];
+export type AcceptTask = components['schemas']['AcceptTaskDto'];
+export type TaskDependency =
+  components['schemas']['TaskDependencyResponseDto'];
+export type AddDependency = components['schemas']['AddDependencyDto'];
+export type PlanGuide = components['schemas']['PlanGuideDto'];
+export type PlanGuidePending = components['schemas']['PlanGuidePendingDto'];
+export type ReturnPlan = components['schemas']['ReturnPlanDto'];
+export type MyWorkItem = components['schemas']['MyWorkItemDto'];
+
+/** Estado de una tarea (TaskStatus del backend, design 1.3). */
+export type TaskStatus = UpdateTaskStatus['status'];
+
 /**
  * Clave de localStorage donde el selector de usuario (dev) guarda el
  * identifier del actor actual. Mecanismo exclusivo de desarrollo (design 3.2).

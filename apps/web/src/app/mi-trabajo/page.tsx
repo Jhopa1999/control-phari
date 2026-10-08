@@ -1,12 +1,7 @@
-import { UnderConstruction } from '@/components/under-construction';
+import { MiTrabajoView } from './mi-trabajo-view';
 
 export const metadata = { title: 'Mi trabajo | Portal del area' };
 
 export default function MiTrabajoPage(): React.ReactElement {
-  return (
-    <UnderConstruction
-      title="Mi trabajo"
-      description="Tus tareas y asignaciones (SCR-02)."
-    />
-  );
+  return <MiTrabajoView />;
 }

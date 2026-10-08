@@ -36,6 +36,7 @@ test-results/
 playwright-report/
 .playwright/
 blob-report/
+e2e/.auth/
 
 # Editor y sistema
 .DS_Store

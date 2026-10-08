@@ -20,7 +20,9 @@ import {
   createApproval,
   listPendingApproval,
 } from '@/lib/approval';
+import { Separator } from '@/components/ui/separator';
 import { DevolverDialog } from './devolver-dialog';
+import { PlanAuthorizationSection } from './plan-authorization-section';
 
 type LoadState = 'loading' | 'success' | 'error';
 
@@ -200,6 +202,12 @@ export function RevisionView(): React.ReactElement {
           </Table>
         )}
       </section>
+
+      <Separator />
+
+      {/* Fase 3: autorizacion de planes (AÑADIDA; no reemplaza la cola de
+          compromiso de arriba). Oculta para quien no tiene capacidad review. */}
+      <PlanAuthorizationSection />
 
       <DevolverDialog
         open={devolver !== null}
