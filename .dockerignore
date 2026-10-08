@@ -1,0 +1,40 @@
+# Control de versiones
+.git
+.gitignore
+
+# Dependencias y artefactos (se instalan/generan dentro del build)
+node_modules
+**/node_modules
+dist
+**/dist
+.next
+**/.next
+apps/api/src/generated
+packages/api-client/dist
+
+# Pruebas y reportes
+test-results
+playwright-report
+coverage
+.playwright
+blob-report
+
+# Secretos y entornos reales (nunca al contexto de build)
+.env
+.env.*
+!.env.example
+!.env.production.example
+apps/web/.env.local
+apps/web/.env
+apps/api/.env
+
+# Kiro / editor
+.kiro
+.vscode
+.idea
+
+# Infra que no necesita el build de las apps
+infra
+docs
+e2e
+*.md

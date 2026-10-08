@@ -1,0 +1,35 @@
+// Prisma schema (Prisma ORM v7).
+// La URL de conexion NO se define aqui: se configura en prisma.config.ts
+// mediante datasource.url = env("DATABASE_URL"), que lee el .env de la raiz.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Elemento generico de una maestra/catalogo reutilizable por los portales.
+/// No representa ninguna maestra de negocio concreta: `catalog` identifica a
+/// que maestra pertenece cada opcion (p. ej. PRIORITY, STATUS, PROJECT_TYPE).
+model CatalogItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  catalog   String
+  code      String
+  label     String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Un codigo es unico dentro de un mismo catalogo, pero puede repetirse en
+  // otros catalogos.
+  @@unique([catalog, code], name: "catalog_code_unique")
+  // Indices para los filtros/orden habituales (catalog, active, sortOrder).
+  @@index([catalog])
+  @@index([active])
+  @@index([sortOrder])
+  @@map("catalog_items")
+}

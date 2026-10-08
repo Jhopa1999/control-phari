@@ -1,0 +1,45 @@
+# Dependencias
+node_modules/
+
+# Builds
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Variables de entorno (no versionar secretos)
+.env
+.env.local
+.env.*.local
+.env.*
+!.env.example
+!.env.production.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Caché y temporales
+.cache/
+.tmp/
+coverage/
+.turbo/
+
+# Prisma Client generado (se regenera con prisma generate)
+apps/api/src/generated/
+
+# Artefactos de pruebas
+coverage/
+test-results/
+playwright-report/
+.playwright/
+blob-report/
+
+# Editor y sistema
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/

@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# Rama principal: el repo usa "master" actualmente; se incluye tambien "main"
+# por si se renombra en el futuro.
+
+jobs:
+  verify:
+    name: Verificacion completa
+    runs-on: ubuntu-latest
+
+    # PostgreSQL para los E2E, con credenciales EXCLUSIVAS de CI.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: plantilla_portales_ci
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_user -d plantilla_portales_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # El runner accede al service container publicado en localhost:5432.
+      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/plantilla_portales_ci
+      # Para los E2E, el navegador llama a la API directamente (sin Nginx).
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+      CORS_ORIGINS: http://localhost:3000
+      CI: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Generar Prisma Client
+        run: npm run prisma:generate
+
+      - name: Regenerar contratos
+        run: npm run contracts:generate
+
+      - name: Verificar que los contratos estan actualizados
+        run: |
+          if ! git diff --exit-code -- apps/api/openapi/openapi.json packages/api-client/src/generated/schema.d.ts; then
+            echo "::error::Los contratos generados no estan actualizados. Ejecute 'npm run contracts:generate' y versione los cambios."
+            exit 1
+          fi
+
+      - name: Construir API Client
+        run: npm run build:api-client
+
+      - name: Pruebas unitarias (Jest)
+        run: npm run test:unit
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Migraciones (deploy)
+        run: npm run prisma:migrate:deploy --workspace apps/api
+
+      - name: Instalar Chromium para Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Pruebas E2E (Playwright)
+        run: npm run test:e2e
+
+      - name: Publicar reporte de Playwright
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

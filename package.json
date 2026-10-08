@@ -1,0 +1,47 @@
+{
+  "name": "plantilla-portales",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plantilla reutilizable para portales internos (monorepo npm workspaces).",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "predev:web": "npm run build:api-client",
+    "dev:web": "npm run dev --workspace apps/web",
+    "dev:api": "npm run start:dev --workspace apps/api",
+    "build": "npm run build:api && npm run build:api-client && npm run build:web",
+    "build:web": "npm run build --workspace apps/web",
+    "build:api": "npm run build --workspace apps/api",
+    "build:api-client": "npm run build --workspace packages/api-client",
+    "typecheck": "npm run typecheck --workspace apps/api && npm run typecheck --workspace packages/api-client && npm run typecheck --workspace apps/web",
+    "typecheck:web": "npm run typecheck --workspace apps/web",
+    "typecheck:api": "npm run typecheck --workspace apps/api",
+    "typecheck:api-client": "npm run typecheck --workspace packages/api-client",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
+    "db:ps": "docker compose ps",
+    "prisma:format": "npm run prisma:format --workspace apps/api",
+    "prisma:validate": "npm run prisma:validate --workspace apps/api",
+    "prisma:generate": "npm run prisma:generate --workspace apps/api",
+    "openapi:generate": "npm run openapi:generate --workspace apps/api",
+    "api-client:generate": "npm run generate --workspace packages/api-client",
+    "contracts:generate": "npm run openapi:generate && npm run api-client:generate",
+    "test:unit": "npm run test --workspace apps/api",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test:unit && npm run test:e2e",
+    "docker:prod:build": "docker compose -f compose.prod.yaml --env-file .env.production build",
+    "docker:prod:up": "docker compose -f compose.prod.yaml --env-file .env.production up -d",
+    "docker:prod:down": "docker compose -f compose.prod.yaml --env-file .env.production down",
+    "docker:prod:migrate": "docker compose -f compose.prod.yaml --env-file .env.production run --rm api npm run prisma:migrate:deploy --workspace apps/api",
+    "docker:prod:logs": "docker compose -f compose.prod.yaml --env-file .env.production logs -f"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

@@ -1,0 +1,347 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "El servicio responde.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chequeo de salud del servicio.",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/catalog-items": {
+      "post": {
+        "operationId": "CatalogController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCatalogItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Elemento creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogItemResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos."
+          },
+          "409": {
+            "description": "Ya existe (catalog, code)."
+          }
+        },
+        "summary": "Crea un elemento de catalogo.",
+        "tags": [
+          "catalog-items"
+        ]
+      },
+      "get": {
+        "operationId": "CatalogController_findMany",
+        "parameters": [
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado activo.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "catalog",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por maestra (se normaliza a MAYUSCULAS).",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de elementos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogItemResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parametros de filtro invalidos."
+          }
+        },
+        "summary": "Lista elementos de catalogo, con filtros opcionales.",
+        "tags": [
+          "catalog-items"
+        ]
+      }
+    },
+    "/catalog-items/{id}": {
+      "get": {
+        "operationId": "CatalogController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identificador UUID del elemento.",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Elemento encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogItemResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El id no es un UUID valido."
+          },
+          "404": {
+            "description": "Elemento no encontrado."
+          }
+        },
+        "summary": "Obtiene un elemento de catalogo por id.",
+        "tags": [
+          "catalog-items"
+        ]
+      },
+      "patch": {
+        "operationId": "CatalogController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identificador UUID del elemento.",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCatalogItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Elemento actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogItemResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos o id no UUID."
+          },
+          "404": {
+            "description": "Elemento no encontrado."
+          }
+        },
+        "summary": "Actualiza label, active o sortOrder de un elemento.",
+        "tags": [
+          "catalog-items"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Plantilla Portales API",
+    "description": "API estandar para portales internos",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "HealthResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ],
+            "example": "ok"
+          },
+          "service": {
+            "type": "string",
+            "example": "plantilla-portales-api"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "service",
+          "timestamp"
+        ]
+      },
+      "CreateCatalogItemDto": {
+        "type": "object",
+        "properties": {
+          "catalog": {
+            "type": "string",
+            "description": "Maestra a la que pertenece la opcion (se normaliza a MAYUSCULAS).",
+            "example": "PRIORITY",
+            "maxLength": 100
+          },
+          "code": {
+            "type": "string",
+            "description": "Codigo estable de la opcion dentro del catalogo (se normaliza a MAYUSCULAS).",
+            "example": "HIGH",
+            "maxLength": 100
+          },
+          "label": {
+            "type": "string",
+            "description": "Texto visible al usuario.",
+            "example": "Alta",
+            "maxLength": 255
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Indica si la opcion esta activa. Por defecto true.",
+            "default": true,
+            "example": true
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden de la opcion dentro del catalogo. Por defecto 0.",
+            "default": 0,
+            "minimum": 0,
+            "example": 1
+          }
+        },
+        "required": [
+          "catalog",
+          "code",
+          "label"
+        ]
+      },
+      "CatalogItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "catalog": {
+            "type": "string",
+            "description": "Maestra a la que pertenece la opcion.",
+            "example": "PRIORITY"
+          },
+          "code": {
+            "type": "string",
+            "description": "Codigo estable de la opcion.",
+            "example": "HIGH"
+          },
+          "label": {
+            "type": "string",
+            "description": "Texto visible al usuario.",
+            "example": "Alta"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Indica si la opcion esta activa.",
+            "example": true
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden dentro del catalogo.",
+            "example": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "catalog",
+          "code",
+          "label",
+          "active",
+          "sortOrder",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateCatalogItemDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Texto visible al usuario.",
+            "example": "Alta",
+            "maxLength": 255
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Indica si la opcion esta activa.",
+            "example": false
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden de la opcion dentro del catalogo.",
+            "minimum": 0,
+            "example": 2
+          }
+        }
+      }
+    }
+  }
+}
