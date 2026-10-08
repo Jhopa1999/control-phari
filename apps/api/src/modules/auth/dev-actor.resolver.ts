@@ -33,7 +33,13 @@ export class DevActorResolver implements ActorResolver {
       return null;
     }
 
-    const user = await this.prisma.user.findUnique({
+    // `identifier` tiene un unique con nombre custom (`user_identifier_unique`)
+    // en schema.prisma. Con Prisma 7 ese unique de un solo campo no es
+    // consultable de forma estable por `findUnique` (el motor exige la clave
+    // compuesta `user_identifier_unique`, que a su vez el runtime rechaza segun
+    // el estado del client generado). Se resuelve por `findFirst`, el mismo
+    // patron que ya usa el seed para estas claves naturales con nombre custom.
+    const user = await this.prisma.user.findFirst({
       where: { identifier },
       include: {
         grants: {
