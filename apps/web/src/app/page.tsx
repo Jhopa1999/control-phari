@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 
 /**
- * No hay dashboard todavia: la raiz redirige a la unica pantalla real.
+ * La raiz redirige a la pantalla de inicio del portal.
  */
 export default function HomePage(): never {
-  redirect('/catalogs');
+  redirect('/inicio');
 }
