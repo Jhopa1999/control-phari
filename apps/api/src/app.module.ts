@@ -8,6 +8,7 @@ import { UserModule } from './modules/user/user.module';
 import { GrantModule } from './modules/grant/grant.module';
 import { RequestModule } from './modules/request/request.module';
 import { PlanModule } from './modules/plan/plan.module';
+import { CapacityModule } from './modules/capacity/capacity.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PlanModule } from './modules/plan/plan.module';
     GrantModule,
     RequestModule,
     PlanModule,
+    CapacityModule,
   ],
 })
 export class AppModule {}

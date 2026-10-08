@@ -1,0 +1,25 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Puente de contrato y acceso tipado del frontend: regenerar OpenAPI + api-client con los endpoints/DTOs de capacity (committear los artefactos generados), anadir los tipos derivados en apps/web/src/lib/api-client.ts y crear el wrapper tipado apps/web/src/lib/capacity.ts (clase CapacityError + messageForStatus + funciones de lectura/mutacion). Depende de FEAT-001 (necesita el contrato REST ya definido). Implementa design.md 3.1/3.6 y 4 (wrapper). No toca ninguna pantalla.",
+  "status": "pending",
+  "steps": [
+    "Desde la raiz del worktree: npm run contracts:generate (= openapi:generate -> apps/api/openapi/openapi.json + api-client:generate -> packages/api-client/src/generated/schema.d.ts). Confirmar que aparecen los schemas nuevos (CreateAvailabilityDto, UpdateAvailabilityDto, AvailabilityResponseDto, CreateAssignmentDto, UpdateAssignmentDto, AssignmentResponseDto, CapacityPersonDto, CapacitySummaryRowDto) y las rutas /capacity/summary, /capacity/people, /capacity/availability, /capacity/availability/{id}, /capacity/assignments, /capacity/assignments/{id}.",
+    "Committear los artefactos generados: apps/api/openapi/openapi.json y packages/api-client/src/generated/schema.d.ts (git -C <worktree> add de esos archivos).",
+    "apps/web/src/lib/api-client.ts: anadir export type derivados de components['schemas'][...] para Availability (AvailabilityResponseDto), CreateAvailability (CreateAvailabilityDto), UpdateAvailability (UpdateAvailabilityDto), Assignment (AssignmentResponseDto), CreateAssignment (CreateAssignmentDto), UpdateAssignment (UpdateAssignmentDto), CapacityPerson (CapacityPersonDto), CapacitySummaryRow (CapacitySummaryRowDto). No declarar interfaces manuales.",
+    "apps/web/src/lib/capacity.ts (patron catalog.ts/team.ts): clase CapacityError (message, status) + messageForStatus(status) que traduce 400 ('Revisa los datos ingresados.'), 403 ('No tienes acceso a esta accion.'), 404 ('No existe o fue removido.'), 409 ('Ya hay disponibilidad para esa persona y mes; editala.') y default, sin exponer JSON/Prisma; funcion toCapacityError. Funciones: listCapacitySummary(month) via GET /capacity/summary; listCapacityPeople() via GET /capacity/people; listAvailability(month) via GET /capacity/availability; createAvailability(input): Promise<Availability> via POST; updateAvailability(id, input): Promise<Availability> via PATCH /capacity/availability/{id}; listAssignments(filters) via GET /capacity/assignments; createAssignment(input): Promise<Assignment> via POST; updateAssignment(id, input): Promise<Assignment> via PATCH /capacity/assignments/{id}; deleteAssignment(id): Promise<void> via DELETE /capacity/assignments/{id} (204 sin body). Cada funcion sigue el patron data/error/response de team.ts y lanza CapacityError."
+  ],
+  "acceptance_criteria": [
+    "npm run contracts:generate corre sin error y apps/api/openapi/openapi.json contiene las rutas /capacity/* y los schemas de capacity; packages/api-client/src/generated/schema.d.ts queda regenerado.",
+    "npm run typecheck:api-client compila con el schema regenerado.",
+    "npm run typecheck:web compila con los nuevos tipos en api-client.ts y el wrapper capacity.ts.",
+    "deleteAssignment esta tipado como Promise<void> (contrato 204); createAvailability/updateAvailability devuelven Availability; createAssignment/updateAssignment devuelven Assignment."
+  ],
+  "verification": [
+    "npm run contracts:generate",
+    "npm run typecheck:api-client",
+    "npm run typecheck:web"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

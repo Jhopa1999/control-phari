@@ -10,7 +10,8 @@ import { ListAuditEventsDto } from './dto/list-audit-events.dto';
  * Tipos de objeto auditables. Fase 1 (design 6.2): PROCESS, USER, GRANT,
  * CATALOG_ITEM. Fase 2 (flujo de demanda, design §1.7): REQUEST, TRIAGE,
  * PRIORITY_EVALUATION, APPROVAL. Fase 3 (plan, design §1.6): PLAN, PLAN_PHASE,
- * TASK, TASK_DEPENDENCY.
+ * TASK, TASK_DEPENDENCY. Fase 4 (capacidad, design §1.5):
+ * MONTHLY_AVAILABILITY, ASSIGNMENT.
  */
 export type AuditObjectType =
   | 'PROCESS'
@@ -24,7 +25,9 @@ export type AuditObjectType =
   | 'PLAN'
   | 'PLAN_PHASE'
   | 'TASK'
-  | 'TASK_DEPENDENCY';
+  | 'TASK_DEPENDENCY'
+  | 'MONTHLY_AVAILABILITY'
+  | 'ASSIGNMENT';
 
 /** Verbos de mutacion registrados (design 1.2 / 4.2.1). */
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'REVOKE';

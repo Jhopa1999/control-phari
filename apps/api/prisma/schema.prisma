@@ -57,6 +57,9 @@ model Process {
   // Fase 3 (plan): tareas que referencian este proceso como contexto (informativo).
   tasks Task[]
 
+  // Fase 4 (capacidad): asignaciones de horas en este proceso.
+  assignments Assignment[]
+
   @@unique([code], name: "process_code_unique")
   @@index([active])
   @@index([sortOrder])
@@ -88,6 +91,10 @@ model User {
   plansAuthorized  Plan[] @relation("PlanAuthorizedBy")
   tasksResponsible Task[] @relation("TaskResponsible")
   tasksAccepted    Task[] @relation("TaskAcceptedBy")
+
+  // Fase 4 (capacidad): disponibilidad mensual y asignaciones de la persona.
+  monthlyAvailabilities MonthlyAvailability[]
+  assignments           Assignment[]          @relation("AssignmentUser")
 
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
@@ -187,6 +194,9 @@ model Request {
 
   // Fase 3 (plan): a lo sumo un plan por Request (1:1 efectivo, D1).
   plan Plan?
+
+  // Fase 4 (capacidad): asignaciones opcionalmente ligadas a esta solicitud.
+  assignments Assignment[]
 
   @@index([mainProcessId])
   @@index([operationalState])
@@ -400,4 +410,56 @@ model TaskDependency {
   @@unique([dependentTaskId, predecessorTaskId], name: "task_dependency_unique")
   @@index([predecessorTaskId])
   @@map("task_dependencies")
+}
+
+// ============================================================================
+// Fase 4 · Capacidad (Disponibilidad mensual + Asignaciones de horas)
+// Diseno aprobado en .agents/tasks/fase4-capacidad/design.md §1.2.
+// ============================================================================
+
+/// Disponibilidad de horas de una persona en un mes (BR-012; FLOW-007; SCR-17).
+/// Una fila por persona/mes (`@@unique` compuesto). NO se captura por proceso:
+/// la disponibilidad es un atributo de la persona en el periodo (D1). `month`
+/// se persiste como la fecha del PRIMER dia del mes en UTC (`@db.Date`, D2); el
+/// contrato externo usa el string `YYYY-MM` (el service convierte en los DTOs).
+model MonthlyAvailability {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  month          DateTime @db.Date
+  availableHours Int      @map("available_hours")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  // Compuesto -> usable como `where` de findUnique/upsert (§1.1, caso favorable).
+  @@unique([userId, month], name: "monthly_availability_user_month_unique")
+  @@index([month])
+  @@map("monthly_availabilities")
+}
+
+/// Horas comprometidas de una persona en un mes, en un proceso (requerido) y
+/// opcionalmente ligadas a una solicitud (BR-012; SCR-17). Las asignaciones se
+/// AGREGAN por periodo/proceso: N filas por persona/mes, SIN `@@unique` estricto
+/// (D3). `month` usa el mismo formato (primer dia del mes, UTC) que la
+/// disponibilidad. `description` es texto libre informativo (FINDING 7).
+model Assignment {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  month          DateTime @db.Date
+  processId      String   @map("process_id") @db.Uuid
+  requestId      String?  @map("request_id") @db.Uuid
+  committedHours Int      @map("committed_hours")
+  description    String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user    User     @relation("AssignmentUser", fields: [userId], references: [id], onDelete: Restrict)
+  process Process  @relation(fields: [processId], references: [id], onDelete: Restrict)
+  request Request? @relation(fields: [requestId], references: [id], onDelete: Restrict)
+
+  @@index([userId, month])
+  @@index([processId])
+  @@index([requestId])
+  @@map("assignments")
 }

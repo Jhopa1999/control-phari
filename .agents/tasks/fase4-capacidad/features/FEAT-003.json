@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Pantalla SCR-17 real en /activos/capacidad reemplazando el placeholder UnderConstruction: selector de mes YYYY-MM, resumen de carga por persona (disponible/comprometido/utilizacion/libre con senal de sobrecarga, sin disponibilidad y carga parcial), formulario de disponibilidad y formulario de asignacion con lista editar/borrar, estados loading/vacio/error/exito, conservacion de entrada ante error (AC-031) y explicacion en lenguaje llano. Consume SOLO via el wrapper capacity.ts (api-client). Depende de FEAT-002. Implementa design.md 4.1/4.2/4.3. Mantiene Fases 1-3 y /catalogs intactas.",
+  "status": "pending",
+  "steps": [
+    "Reemplazar apps/web/src/app/activos/capacidad/page.tsx (hoy UnderConstruction) por SCR-17. Convertir a client component donde haga falta (igual que las pantallas de plan/demanda existentes) para manejar estado y fetch via lib/capacity.ts; conservar metadata/title o moverlo segun el patron de las otras rutas client.",
+    "Selector de mes YYYY-MM: <input type=\"month\"> con <label htmlFor> asociado; al cambiar, recargar summary/availability/assignments del mes via listCapacitySummary/listAvailability/listAssignments.",
+    "Tabla de resumen por persona (accesible, <table> con <th scope>): columnas persona, disponible, comprometido, utilizacion %, libre. Badge accesible 'Sobrecarga' (aria-label) cuando sobrecargado; 'Sin disponibilidad' cuando estado SIN_DISPONIBILIDAD; 'Carga parcial' cuando estado CARGA_PARCIAL mostrando disponible/comprometido como informativos, utilizacion/libre como '—' (son null) y una nota accesible ('Esta persona tiene asignaciones en procesos fuera de tu alcance; la carga total la ve el jefe de area'). Tooltip/nota en lenguaje llano explicando utilizacion y sobrecarga (design 4.2).",
+    "Formulario de disponibilidad: mes (del selector), persona (Select alimentado por listCapacityPeople; fijado al propio y bloqueado para integrante), horas disponibles (requerido, entero >=0). Ante 409 mostrar 'Ya hay disponibilidad para esa persona y mes; editala' y ofrecer cargar la existente para PATCH (updateAvailability).",
+    "Formulario de asignacion: mes (req.), proceso (req., Select de procesos en alcance via el wrapper de procesos existente lib/team.ts listProcesses o equivalente), persona (Select de people), solicitud (opcional, Select de Requests en alcance via lib/requests.ts), horas comprometidas (req., entero >=0), descripcion (opcional). Lista de asignaciones del mes con acciones editar (updateAssignment) y borrar (deleteAssignment); el backend reconfirma el alcance.",
+    "Estados loading/vacio/error/exito (design 4.1, AC-030): Skeleton en carga; bloque de error con boton 'Reintentar'; estado vacio ('Aun no hay disponibilidad/asignaciones este mes') con accion de crear si rol/alcance lo permite; toast (sonner) en exito/error. Usar solo componentes shadcn ya presentes (Select, Input, Table, Badge, Skeleton, toast); anadir solo los que falten.",
+    "AC-031: el reset del formulario solo en el camino de exito (200/201); ante fallo (400/403/404/409/500) el formulario NO se limpia ni se cierra: conserva valores, mantiene foco accesible y muestra el error (toast + mensaje en linea).",
+    "Accesibilidad: HTML semantico (<table> con <th scope>, <form>, <fieldset> donde aplique), <Label htmlFor> en cada control, aria-live en regiones de carga/resultado, aria-label en badges de sobrecarga. No afirmar conformidad WCAG completa (requiere pruebas manuales).",
+    "No tocar ninguna otra ruta ni wrapper: sidebar, selector de usuario dev, /catalogs, /catalog-items, /gobierno/*, /administracion/*, demanda (Fase 2) y plan/tareas/mi-trabajo/revision (Fase 3) siguen operativas; solo cambia el contenido de /activos/capacidad (su moduleKey ya es capacity)."
+  ],
+  "acceptance_criteria": [
+    "npm run typecheck:web compila con la pantalla consumiendo solo lib/capacity.ts (y wrappers existentes para procesos/requests), sin tocar Prisma ni fetch directo a la DB.",
+    "npm run build:web compila sin errores.",
+    "La pantalla cubre SCR-17: selector de mes, resumen con las 4 metricas + senales (sobrecarga/sin disponibilidad/carga parcial), formulario de disponibilidad (409 ofrece editar), formulario de asignacion con editar/borrar, estados loading/vacio/error/exito y conservacion de entrada ante error (AC-031).",
+    "Fases 1-3 y /catalogs siguen operativas (no se modifico ninguna otra ruta ni wrapper)."
+  ],
+  "verification": [
+    "npm run typecheck:web",
+    "npm run build:web"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

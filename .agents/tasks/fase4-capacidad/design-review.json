@@ -1,0 +1,30 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "NIT",
+      "title": "description es String? sin longitud en el modelo mientras el DTO exige @MaxLength(2000)",
+      "location": "design.md §1.2 (modelo Assignment.description) vs §3.4 (CreateAssignmentDto.description)",
+      "problem": "El DTO limita description a 2000 caracteres, pero la columna Prisma es String? sin @db.VarChar(2000), que mapea a text sin tope fisico. No contradice ninguna regla de negocio; el limite se respeta en validacion, pero la columna no refleja el contrato.",
+      "fix": "Declarar la columna como `description String? @db.VarChar(2000)` en schema.prisma, o dejar text y documentar en §1.2 que el tope es solo de aplicacion. Recomendado @db.VarChar(2000) por coherencia con el DTO."
+    },
+    {
+      "id": 2,
+      "severity": "NIT",
+      "title": "Semantica de GET /capacity/assignments?userId= para el lider no explicita",
+      "location": "design.md §2.4, parrafo de lecturas de detalle",
+      "problem": "El where de asignaciones del lider filtra por processId in scopedProcessIds, no por userId. El texto habla de 'intersecar userId?/processId? con el where de alcance' sin aclarar que para asignaciones el alcance es por proceso; un implementador podria dudar si debe cruzar userId? contra scopedUserIds. No hay fuga posible porque el filtro de proceso ya acota.",
+      "fix": "Anadir en §2.4: 'para GET /capacity/assignments el alcance es por processId in scopedProcessIds (jefe sin filtro); userId?/requestId? son filtros adicionales que solo estrechan ese conjunto, nunca lo amplian ni se cruzan con scopedUserIds'."
+    },
+    {
+      "id": 3,
+      "severity": "NIT",
+      "title": "Jefe = User.active=true: incoherencia entre resumen (no filtra active) y selector /capacity/people (solo active)",
+      "location": "design.md §2.6.1 / §12 D12 y §2.6.2",
+      "problem": "El resumen del jefe (scopedUserIds='ALL') no filtra por active, asi que veria filas de personas inactivas con datos del mes; pero GET /capacity/people solo lista active=true. Pequena incoherencia entre quien aparece en el resumen (lectura historica) y quien aparece en el selector (escritura). active existe en el schema (verificado). Caso borde documentado como reversible (D12), no obliga a inventar regla.",
+      "fix": "Fijar en §2.6.1: el resumen del jefe muestra a cualquier persona con datos del mes (incluidas inactivas, lectura historica), mientras /capacity/people solo lista activas para escritura; o alinear ambos a active=true. Dejar la eleccion escrita para que el implementador no decida en silencio."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.worktrees\\fase4-capacidad\\.agents\\tasks\\fase4-capacidad\\design-review.md"
+}

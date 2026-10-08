@@ -1,0 +1,7 @@
+{
+  "task_id": "fase4-capacidad",
+  "task_description": "Fase 4 de control-phari: Capacidad y asignaciones. Modelar MonthlyAvailability y Assignment (Prisma), ampliar AuditObjectType, crear el modulo backend capacity/ (service con alcance en el where, controller fino, DTOs request/response separados, endpoints de disponibilidad/asignacion/consultas por mes/resumen de carga server-side), regenerar OpenAPI + api-client, crear el wrapper tipado apps/web/src/lib/capacity.ts, construir la pantalla SCR-17 en /activos/capacidad, y las pruebas unit. Implementa el diseno APROBADO en .agents/tasks/fase4-capacidad/design.md sin reabrir decisiones ni inventar reglas P.",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}
