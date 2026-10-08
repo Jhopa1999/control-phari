@@ -1,0 +1,24 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "severity": "NIT",
+      "location": "§9 (fila AC-007), §2.1/§2.2, §7",
+      "summary": "La fila AC-007 'parcial' es correcta (difiere la rama 'control pendiente' por ser P, no inventa), pero un implementador podría leerla como cobertura completa.",
+      "fix": "Anteponer marcador inequívoco en la celda AC-007 ('PARCIAL — 2 de 5 categorías; rama control pendiente DIFERIDA a FEATURE-008, NO verificada en Fase 3') y añadir TODO 'encender frameworkControls' en el plan de implementación. No implementar la rama de control (sería inventar P)."
+    },
+    {
+      "severity": "NIT",
+      "location": "§1.5",
+      "summary": "Llama a RequestStateService 'único escritor de operationalState con assertTransition', pero assertTransition solo valida y devuelve el destino; la escritura la hace el service de dominio (verificado en approval.service.ts).",
+      "fix": "Reemplazar por 'assertTransition es el único validador de las transiciones; la escritura (tx.request.update) la hace el service de dominio dentro de su $transaction, como ApprovalService/TriageService'. El comportamiento diseñado ya es correcto; es redacción."
+    },
+    {
+      "severity": "NIT",
+      "location": "§1.1, §1.2 (nota plan_request_unique), §12 D1, §13",
+      "summary": "La 'precaución Prisma 7 / findUnique' (ya suavizada y marcada no verificada) ocupa cuatro bloques del documento, desproporcionado para una premisa que el propio diseño reconoce sin precedente en el repo. Verificado: Prisma ^7.10.0 y 1:1 de Fase 2 usan @@index, no @@unique de un solo campo. La solución (findFirst + @@unique como constraint) es robusta.",
+      "fix": "Condensar a una sola nota en §1.1 y referenciarla desde §1.2/§12 D1 sin repetir el razonamiento. Mantener la prueba unit de §6 que fija el acceso elegido."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.worktrees\\fase3-plan\\.agents\\tasks\\fase3-plan\\design-review.md"
+}

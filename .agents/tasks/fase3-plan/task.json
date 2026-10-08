@@ -1,0 +1,7 @@
+{
+  "task_id": "task-fase3-plan",
+  "task_description": "Implementar la Fase 3 (Plan y Ejecución) de control-phari a partir del diseño aprobado: modelo Prisma (Plan/PlanPhase/Task/TaskDependency) + migración fase3_plan, módulo NestJS plan/ con submódulos phase/task/dependency (gates server-side: guía de pendientes que gatea el envío, detección de ciclos, gate de predecesoras TERMINADA+ACEPTADA, regla hito, protección de fase inicial, autorización/devolución del plan, mi-trabajo, alcance 403/404, auditoría transaccional), extensión de RequestState y AuditObjectType, regeneración de OpenAPI + api-client, pantallas frontend SCR-06/09/02 + autorización de plan vía api-client, pruebas unitarias nuevas con Prisma mockeado, verification.md y docs/fase3-plan.md. Respetar steering: Prisma solo en apps/api; frontend solo vía api-client; TS estricto; auditar en transacción; no duplicar la máquina de estados.",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

@@ -54,6 +54,9 @@ model Process {
   requests              Request[]            @relation("RequestMainProcess")
   requestParticipations RequestParticipant[]
 
+  // Fase 3 (plan): tareas que referencian este proceso como contexto (informativo).
+  tasks Task[]
+
   @@unique([code], name: "process_code_unique")
   @@index([active])
   @@index([sortOrder])
@@ -77,6 +80,14 @@ model User {
   triages             Triage[]
   priorityEvaluations PriorityEvaluation[]
   approvals           Approval[]
+
+  // Fase 3 (plan): planes enviados/autorizados y tareas de las que es
+  // responsable o que acepto. Cada relacion usa un `name` distinto porque hay
+  // mas de una FK User por modelo (Prisma exige nombrarlas).
+  plansSubmitted   Plan[] @relation("PlanSubmittedBy")
+  plansAuthorized  Plan[] @relation("PlanAuthorizedBy")
+  tasksResponsible Task[] @relation("TaskResponsible")
+  tasksAccepted    Task[] @relation("TaskAcceptedBy")
 
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
@@ -173,6 +184,9 @@ model Request {
   triages             Triage[]
   priorityEvaluations PriorityEvaluation[]
   approvals           Approval[]
+
+  // Fase 3 (plan): a lo sumo un plan por Request (1:1 efectivo, D1).
+  plan Plan?
 
   @@index([mainProcessId])
   @@index([operationalState])
@@ -272,4 +286,118 @@ model Approval {
   @@index([decidedByUserId])
   @@index([decidedAt])
   @@map("approvals")
+}
+
+// ============================================================================
+// Fase 3 · Plan y ejecucion (Plan -> Fases -> Tareas -> Dependencias)
+// Diseno aprobado en .agents/tasks/fase3-plan/design.md §1.2.
+// ============================================================================
+
+/// Plan de trabajo de una Request comprometida (design §1.2, D1). 1:1 efectivo
+/// con Request (FK `request_id` unica). `status` es un enum logico PlanStatus
+/// read-only: solo lo escribe el helper de PlanStateService, nunca un DTO libre.
+/// Nota Prisma 7 (§1.1): el plan se resuelve por `request_id` con `findFirst`,
+/// no `findUnique`; el `@@unique` solo garantiza el 1:1 a nivel de BD.
+model Plan {
+  id                 String    @id @default(uuid()) @db.Uuid
+  requestId          String    @map("request_id") @db.Uuid
+  periodStart        DateTime? @map("period_start")
+  periodEnd          DateTime? @map("period_end")
+  commitmentDate     DateTime? @map("commitment_date")
+  risks              String?
+  mitigations        String?
+  status             String    @default("BORRADOR")
+  submittedAt        DateTime? @map("submitted_at")
+  submittedByUserId  String?   @map("submitted_by_user_id") @db.Uuid
+  authorizedAt       DateTime? @map("authorized_at")
+  authorizedByUserId String?   @map("authorized_by_user_id") @db.Uuid
+  returnReason       String?   @map("return_reason")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  request      Request     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  phases       PlanPhase[]
+  submittedBy  User?       @relation("PlanSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: Restrict)
+  authorizedBy User?       @relation("PlanAuthorizedBy", fields: [authorizedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([requestId], name: "plan_request_unique")
+  @@index([status])
+  @@map("plans")
+}
+
+/// Fase del plan (design §1.2, AC-009). Ordenada por `order` 0-based dentro del
+/// plan. La "fase inicial" es la de `order` minimo (propiedad derivada, sin flag).
+model PlanPhase {
+  id          String    @id @default(uuid()) @db.Uuid
+  planId      String    @map("plan_id") @db.Uuid
+  name        String
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  deliverable String?
+  order       Int
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  plan  Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@unique([planId, order], name: "plan_phase_order_unique")
+  @@index([planId])
+  @@map("plan_phases")
+}
+
+/// Tarea del plan (design §1.2, BR-009/010/013; AC-010/011/033). `status` y
+/// `accepted` son enum logico/derivados: solo los escriben los helpers del
+/// modulo plan. El gate de dependientes exige TERMINADA Y accepted.
+model Task {
+  id                     String    @id @default(uuid()) @db.Uuid
+  phaseId                String    @map("phase_id") @db.Uuid
+  processId              String?   @map("process_id") @db.Uuid
+  title                  String
+  responsibleUserId      String?   @map("responsible_user_id") @db.Uuid
+  startDate              DateTime? @map("start_date")
+  endDate                DateTime? @map("end_date")
+  estimateHours          Int?      @map("estimate_hours")
+  isMilestone            Boolean   @default(false) @map("is_milestone")
+  description            String?
+  acceptanceCriteria     String?   @map("acceptance_criteria")
+  status                 String    @default("POR_HACER")
+  progress               Int       @default(0)
+  frameworkPhaseRequired String?   @map("framework_phase_required")
+  accepted               Boolean   @default(false)
+  acceptedAt             DateTime? @map("accepted_at")
+  acceptedByUserId       String?   @map("accepted_by_user_id") @db.Uuid
+  evidenceUrl            String?   @map("evidence_url")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  phase       PlanPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  process     Process?  @relation(fields: [processId], references: [id], onDelete: Restrict)
+  responsible User?     @relation("TaskResponsible", fields: [responsibleUserId], references: [id], onDelete: Restrict)
+  acceptedBy  User?     @relation("TaskAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: Restrict)
+
+  dependenciesAsDependent   TaskDependency[] @relation("DependencyDependent")
+  dependenciesAsPredecessor TaskDependency[] @relation("DependencyPredecessor")
+
+  @@index([phaseId])
+  @@index([responsibleUserId])
+  @@index([status])
+  @@map("tasks")
+}
+
+/// Dependencia dirigida entre dos tareas del mismo plan (design §1.2, BR-009;
+/// AC-010/033). Append-only (sin updatedAt). El `@@unique` compuesto es la clave
+/// de idempotencia/duplicado; se consulta con `findUnique` (compuesto, §1.1).
+model TaskDependency {
+  id                String   @id @default(uuid()) @db.Uuid
+  dependentTaskId   String   @map("dependent_task_id") @db.Uuid
+  predecessorTaskId String   @map("predecessor_task_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  dependent   Task @relation("DependencyDependent", fields: [dependentTaskId], references: [id], onDelete: Cascade)
+  predecessor Task @relation("DependencyPredecessor", fields: [predecessorTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([dependentTaskId, predecessorTaskId], name: "task_dependency_unique")
+  @@index([predecessorTaskId])
+  @@map("task_dependencies")
 }

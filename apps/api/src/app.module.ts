@@ -7,6 +7,7 @@ import { ProcessModule } from './modules/process/process.module';
 import { UserModule } from './modules/user/user.module';
 import { GrantModule } from './modules/grant/grant.module';
 import { RequestModule } from './modules/request/request.module';
+import { PlanModule } from './modules/plan/plan.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { RequestModule } from './modules/request/request.module';
     UserModule,
     GrantModule,
     RequestModule,
+    PlanModule,
   ],
 })
 export class AppModule {}

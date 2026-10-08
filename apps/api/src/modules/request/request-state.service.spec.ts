@@ -102,6 +102,21 @@ describe('RequestStateService', () => {
       ).toBe(RequestState.EN_TRIAGE);
     });
 
+    it('admite las 2 aristas nuevas de Fase 3 (design §1.5)', () => {
+      expect(
+        service.assertTransition(
+          RequestState.COMPROMETIDA,
+          RequestState.EN_PLANIFICACION,
+        ),
+      ).toBe(RequestState.EN_PLANIFICACION);
+      expect(
+        service.assertTransition(
+          RequestState.EN_PLANIFICACION,
+          RequestState.EN_EJECUCION,
+        ),
+      ).toBe(RequestState.EN_EJECUCION);
+    });
+
     it('transicion no implementada -> ConflictException', () => {
       expect(() =>
         service.assertTransition(

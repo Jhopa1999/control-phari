@@ -1,0 +1,25 @@
+{
+  "id": "FEAT-002",
+  "type": "chore",
+  "description": "Regenerar el contrato (OpenAPI + api-client) a partir de los endpoints/DTOs de Fase 3 definidos en FEAT-001 y committear los artefactos generados. Requisito de steering: todo cambio de contrato exige npm run contracts:generate y committear openapi.json + el schema generado del api-client. Depende de FEAT-001 (necesita el PlanModule registrado en app.module.ts para que el generador recorra sus endpoints).",
+  "status": "pending",
+  "steps": [
+    "Confirmar que FEAT-001 dejó PlanModule registrado en apps/api/src/app.module.ts y que npm run typecheck:api compila (el generador de OpenAPI arranca la app Nest vía apps/api/src/generate-openapi.ts).",
+    "Ejecutar npm run contracts:generate desde la raíz del worktree (= npm run openapi:generate + npm run api-client:generate). Esto reescribe apps/api/openapi/openapi.json y packages/api-client/src/generated/schema.d.ts con los nuevos schemas de Fase 3 (PlanResponseDto, PlanPhaseResponseDto, TaskResponseDto, TaskDependencyResponseDto, PlanGuideDto, MyWorkItemDto, Create/Update/Reorder/Submit/Authorize/Return DTOs, etc.).",
+    "Verificar que packages/api-client typecheck pasa (npm run typecheck:api-client) y que los nuevos componentes aparecen en el schema generado (p. ej. buscar PlanResponseDto y PlanGuideDto en packages/api-client/src/generated/schema.d.ts).",
+    "Commit local en la rama feat/fase3-plan incluyendo explícitamente apps/api/openapi/openapi.json y packages/api-client/src/generated/schema.d.ts (no push). No committear artefactos no relacionados.",
+    "Registrar en findings los nombres exactos de los componentes/schemas generados que FEAT-003 debe consumir vía components['schemas'][...] (para evitar que el frontend adivine)."
+  ],
+  "acceptance_criteria": [
+    "npm run contracts:generate termina sin errores y produce diffs en apps/api/openapi/openapi.json y packages/api-client/src/generated/schema.d.ts.",
+    "Los schemas de los DTOs de Fase 3 (al menos PlanResponseDto, TaskResponseDto, PlanGuideDto, MyWorkItemDto) están presentes en packages/api-client/src/generated/schema.d.ts.",
+    "npm run typecheck:api-client compila sin errores.",
+    "Los dos artefactos quedan committeados en la rama feat/fase3-plan."
+  ],
+  "verification": [
+    "npm run contracts:generate",
+    "npm run typecheck:api-client"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

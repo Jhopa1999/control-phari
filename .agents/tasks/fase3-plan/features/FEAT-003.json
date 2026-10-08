@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Frontend de Fase 3 (apps/web, SOLO vía @plantilla-portales/api-client): wrappers tipados nuevos, pantallas SCR-06 (Planificación), SCR-09 (Tareas), SCR-02 (Mi trabajo) y la autorización del plan dentro de /administracion/revision sin romper la cola de aprobaciones de compromiso de Fase 2. Más la verificación integral de cierre y la documentación (verification.md + docs/fase3-plan.md). Depende de FEAT-002 (consume los tipos del contrato regenerado). Nunca usa Prisma ni accede a PostgreSQL directamente.",
+  "status": "pending",
+  "steps": [
+    "Exponer los tipos nuevos en apps/web/src/lib/api-client.ts vía components['schemas'][...] (como los tipos de Fase 2) usando los nombres que FEAT-002 registró en findings. Crear wrappers tipados apps/web/src/lib/plan.ts, plan-phases.ts, tasks.ts, task-dependencies.ts, my-work.ts con clase *Error + messageForStatus (400/403/404/409) y funciones que consumen api (patrón apps/web/src/lib/requests.ts). Verificar con npm run typecheck:web.",
+    "SCR-06 Planificación: reemplazar el placeholder en apps/web/src/app/seguimiento/plan/page.tsx por una vista cliente (plan-view.tsx + diálogos necesarios). Selector de Request COMPROMETIDA/EN_PLANIFICACION/EN_EJECUCION en alcance (GET /requests?state=...); cargar/crear el plan; gestión de fases (crear/editar/reordenar arriba-abajo, fase inicial protegida con tareas deshabilitada con explicación UI-04); crear/editar tareas (al marcar hito la UI fuerza una sola fecha y 0 horas; predecesoras multi-select de tareas del mismo plan sin ofrecer la propia); vista Lista de tareas (columnas tarea/responsable/inicio/vencimiento/esfuerzo/predecesoras/estado-progreso, con búsqueda q, filtro mine y filtros estado/fase); guía 'Resuelve el siguiente paso' (consume GET .../plan/guide, enumera pendings por categoría, futureCategories como 'se evaluarán en una fase posterior', botón Enviar deshabilitado si canSubmit=false y, si el backend devuelve 409, muestra los pendientes). Las vistas Tablero/Cronograma/Carga diferidas (D14). Estados loading/vacío/error/éxito y AC-031 (reset solo en éxito), patrón revision-view.tsx.",
+    "SCR-09 Tareas: reemplazar el placeholder en apps/web/src/app/seguimiento/tareas/page.tsx por detalle/edición de tarea con cambio de estado respetando las transiciones de §1.3; cuando el backend devuelve 409 al pasar a EN_CURSO, mostrar la dependencia que bloquea (AC-010); criterios de aceptación, progreso y evidencia (URL/texto); la acción Aceptar visible solo para jefe/líder. Estados UI y AC-031.",
+    "SCR-02 Mi trabajo: reemplazar el placeholder en apps/web/src/app/mi-trabajo/page.tsx por la lista de tareas asignadas al usuario actual (GET /my-work) con contexto de plan (Request, fase, estado/progreso) y enlace a la tarea en SCR-09. Estados loading/vacío/error.",
+    "Autorización del plan: ampliar apps/web/src/app/administracion/revision/revision-view.tsx con una sección/pestaña de planes en EN_AUTORIZACION dentro del alcance; acciones Autorizar y Devolver (motivo requerido -> 400 conserva valores, patrón devolver-dialog.tsx). AÑADIR, no reemplazar: la cola de aprobaciones de compromiso de Fase 2 debe seguir operativa. Un usuario sin review no ve la sección (filtrado cosmético; control real server-side).",
+    "Verificación integral de cierre: ejecutar npm run typecheck, npm run build, npm run test:unit y npm run test:e2e; con la BD arriba confirmar que la migración fase3_plan está aplicada; confirmar que Fases 1-2, /catalogs y /catalog-items siguen operativas. Reejecutar npm run contracts:generate y confirmar que no quedan diffs sin committear (los artefactos vienen de FEAT-002).",
+    "Documentar: escribir c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.worktrees\\fase3-plan\\.agents\\tasks\\fase3-plan\\verification.md (evidencia de los comandos ejecutados y su resultado) y docs/fase3-plan.md (resumen de la fase: entidades, endpoints, gates, decisiones P y qué queda fuera de alcance). Si no existe docs/ en la raíz, ubicarlo en apps/api/docs/fase3-plan.md.",
+    "Commit local en la rama feat/fase3-plan (no push)."
+  ],
+  "acceptance_criteria": [
+    "npm run typecheck pasa (api + api-client + web) sin any no justificado.",
+    "npm run build completa (incluye build:web con las rutas /seguimiento/plan, /seguimiento/tareas, /mi-trabajo y /administracion/revision).",
+    "npm run test:unit y npm run test:e2e pasan; Fases 1-2, /catalogs y /catalog-items siguen operativas.",
+    "El frontend consume exclusivamente @plantilla-portales/api-client (sin imports de Prisma ni acceso a PostgreSQL).",
+    "La guía deshabilita Enviar mientras canSubmit=false y muestra los pendientes del 409 (AC-007); los formularios conservan valores ante error (AC-031).",
+    "verification.md y docs/fase3-plan.md escritos; npm run contracts:generate no deja diffs sin committear."
+  ],
+  "verification": [
+    "npm run typecheck",
+    "npm run build",
+    "npm run test:unit",
+    "npm run test:e2e"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

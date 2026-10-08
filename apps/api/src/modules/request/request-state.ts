@@ -50,6 +50,10 @@ export const IMPLEMENTED_TRANSITIONS: ReadonlyArray<
   [RequestState.BACKLOG_PRIORIZADO, RequestState.COMPROMETIDA],
   // Devolucion de aprobacion (destino determinista).
   [RequestState.BACKLOG_PRIORIZADO, RequestState.EN_TRIAGE],
+  // Fase 3 (design §1.5): el plan arranca desde una Request COMPROMETIDA.
+  [RequestState.COMPROMETIDA, RequestState.EN_PLANIFICACION],
+  // Fase 3 (design §1.5): plan autorizado -> ejecucion.
+  [RequestState.EN_PLANIFICACION, RequestState.EN_EJECUCION],
 ];
 
 /** Indica si una transicion `from -> to` esta implementada en Fase 2. */
