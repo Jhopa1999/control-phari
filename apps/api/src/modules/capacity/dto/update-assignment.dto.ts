@@ -7,6 +7,7 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
 const trim = ({ value }: { value: unknown }): unknown =>
@@ -30,11 +31,16 @@ export class UpdateAssignmentDto {
   @ApiPropertyOptional({
     type: String,
     format: 'uuid',
-    description: 'Nueva solicitud ligada (en alcance).',
+    nullable: true,
+    description:
+      'Solicitud ligada (en alcance). Enviar null para desligar la solicitud actual.',
   })
   @IsOptional()
+  // Permite UUID para ligar o null para LIMPIAR el vinculo (design §2.2
+  // set/clear): omitir -> sin cambio; null -> desligar; UUID -> ligar/validar.
+  @ValidateIf((_object, value) => value !== null)
   @IsUUID()
-  requestId?: string;
+  requestId?: string | null;
 
   @ApiPropertyOptional({
     type: Number,

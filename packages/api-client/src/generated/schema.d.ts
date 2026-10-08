@@ -2060,9 +2060,9 @@ export interface components {
             processId?: string;
             /**
              * Format: uuid
-             * @description Nueva solicitud ligada (en alcance).
+             * @description Solicitud ligada (en alcance). Enviar null para desligar la solicitud actual.
              */
-            requestId?: string;
+            requestId?: string | null;
             /** @description Horas comprometidas (entero >= 0). */
             committedHours?: number;
             /** @description Distribucion del esfuerzo por periodo (texto libre). */

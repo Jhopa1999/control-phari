@@ -223,7 +223,9 @@ export function CapacidadView(): React.ReactElement {
       if (asigEditing) {
         await updateAssignment(asigEditing.id, {
           processId: values.processId,
-          requestId: trimOrUndefined(values.requestId),
+          // Al editar, "Sin solicitud" (vacio) envia null para DESLIGAR la
+          // solicitud actual (design §2.2 set/clear), no undefined (que se omite).
+          requestId: trimOrUndefined(values.requestId) ?? null,
           committedHours: Number(values.committedHours),
           description: trimOrUndefined(values.description),
         });

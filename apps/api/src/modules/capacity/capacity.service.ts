@@ -373,7 +373,9 @@ export class CapacityService {
     if (dto.processId !== undefined) {
       await this.requireProcessInScope(actor, dto.processId);
     }
-    if (dto.requestId !== undefined) {
+    // requestId set/clear (design §2.2): omitido -> sin cambio; null -> desligar
+    // (no requiere validar alcance); UUID -> ligar validando alcance (404 fuera).
+    if (dto.requestId != null) {
       await this.requireRequestInScope(actor, dto.requestId);
     }
 

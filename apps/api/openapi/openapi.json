@@ -5002,7 +5002,8 @@
           "requestId": {
             "type": "string",
             "format": "uuid",
-            "description": "Nueva solicitud ligada (en alcance)."
+            "nullable": true,
+            "description": "Solicitud ligada (en alcance). Enviar null para desligar la solicitud actual."
           },
           "committedHours": {
             "type": "number",

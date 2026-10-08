@@ -452,6 +452,28 @@ describe('CapacityService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
+    it('requestId null DESLIGA la solicitud (set/clear) sin validar alcance', async () => {
+      (m.prismaObj.assignment as any).findFirst.mockResolvedValue(
+        assignmentRow({ requestId: 'req-previo' }),
+      );
+      (m.prismaObj.assignment as any).update.mockResolvedValue(
+        assignmentRow({ requestId: null }),
+      );
+
+      const res = await service.updateAssignment(jefe(), 'as1', {
+        requestId: null,
+      });
+
+      // No se valida alcance de solicitud al desligar (no hay nada que resolver).
+      expect((m.prismaObj.request as any).findFirst).not.toHaveBeenCalled();
+      // La actualizacion escribe requestId: null (limpia el vinculo).
+      expect((m.prismaObj.assignment as any).update).toHaveBeenCalledWith({
+        where: { id: 'as1' },
+        data: { requestId: null },
+      });
+      expect(res.requestId).toBeNull();
+    });
+
     it('borra en alcance y audita DELETE ASSIGNMENT', async () => {
       (m.prismaObj.assignment as any).findFirst.mockResolvedValue(assignmentRow());
       (m.prismaObj.assignment as any).delete.mockResolvedValue(assignmentRow());
