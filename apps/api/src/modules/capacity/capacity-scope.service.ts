@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { CurrentActor } from '../auth/current-actor';
+import { RoleCode } from '../auth/role-code';
 import { CapacityPersonDto } from './dto/capacity-person.dto';
 
 /**
@@ -40,12 +41,20 @@ export class CapacityScopeService {
     // Cualquier rol con capacity se ve a si mismo.
     ids.add(actor.userId);
 
-    // Lider: ademas, las personas con grant ACTIVO en alguno de sus procesos.
-    if (actor.scopedProcessIds.size > 0) {
+    // La expansion a "personas del proceso" es exclusiva del rol LIDER
+    // (specs/10: "Capacidad: Propia" para el integrante). Un integrante con
+    // grant en un proceso NO ve la capacidad ajena: solo cuentan los procesos
+    // donde el actor es LIDER_PROCESO, no cualquier grant activo. Asi un
+    // integrante (aunque tenga procesos) se queda unicamente consigo mismo.
+    const leaderProcessIds = actor.grants
+      .filter((grant) => grant.roleCode === RoleCode.LIDER_PROCESO)
+      .map((grant) => grant.processId);
+
+    if (leaderProcessIds.length > 0) {
       const grants = await tx.grant.findMany({
         where: {
           active: true,
-          processId: { in: Array.from(actor.scopedProcessIds) },
+          processId: { in: leaderProcessIds },
         },
         select: { userId: true },
         distinct: ['userId'],

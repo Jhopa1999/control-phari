@@ -49,12 +49,25 @@ function jefe(): CurrentActor {
   };
 }
 
+function grantFor(
+  processId: string,
+  roleCode: RoleCode,
+): CurrentActor['grants'][number] {
+  return {
+    processId,
+    processCode: processId.toUpperCase(),
+    processName: processId,
+    roleCode,
+    roleName: roleCode,
+  };
+}
+
 function lider(scoped: string[] = ['p1']): CurrentActor {
   return {
     userId: 'ul',
     name: 'Lider',
     identifier: 'lider@demo.local',
-    grants: [],
+    grants: scoped.map((p) => grantFor(p, RoleCode.LIDER_PROCESO)),
     roleCodes: new Set([RoleCode.LIDER_PROCESO]),
     scopedProcessIds: new Set(scoped),
     isJefeArea: false,
@@ -69,6 +82,23 @@ function integrante(): CurrentActor {
     grants: [],
     roleCodes: new Set([RoleCode.INTEGRANTE]),
     scopedProcessIds: new Set(),
+    isJefeArea: false,
+  };
+}
+
+/**
+ * Integrante CON grant INTEGRANTE en un proceso (p1). Comparte proceso con el
+ * lider, pero per specs/10 "Capacidad: Propia" NO debe ver/escribir la
+ * capacidad de otras personas del proceso: su alcance es solo el mismo.
+ */
+function integranteConProceso(processId = 'p1'): CurrentActor {
+  return {
+    userId: 'ui2',
+    name: 'Integrante con proceso',
+    identifier: 'integrante.p1@demo.local',
+    grants: [grantFor(processId, RoleCode.INTEGRANTE)],
+    roleCodes: new Set([RoleCode.INTEGRANTE]),
+    scopedProcessIds: new Set([processId]),
     isJefeArea: false,
   };
 }
@@ -635,6 +665,58 @@ describe('CapacityService', () => {
       const res = (await m.scope.scopedUserIds(m.prisma, lider(['p1']))) as string[];
       expect(res).toEqual(expect.arrayContaining(['ul', 'uA', 'uB']));
       expect(res).toHaveLength(3);
+    });
+
+    it('integrante CON grant en un proceso -> SOLO el mismo (specs/10 Capacidad: Propia)', async () => {
+      // No debe expandir a personas del proceso: un integrante no es lider.
+      const res = await m.scope.scopedUserIds(
+        m.prisma,
+        integranteConProceso('p1'),
+      );
+      expect(res).toEqual(['ui2']);
+      // Nunca consulta grants del proceso para un integrante.
+      expect((m.prismaObj.grant as any).findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('alcance de escritura del integrante con proceso', () => {
+    it('integrante con grant en p1 crea disponibilidad de otra persona de p1 -> 403', async () => {
+      // Comparte proceso con el objetivo, pero sigue siendo "solo la suya".
+      await expect(
+        service.createAvailability(integranteConProceso('p1'), {
+          userId: 'otro-de-p1',
+          month: '2025-03',
+          availableHours: 100,
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect((m.prismaObj.grant as any).findMany).not.toHaveBeenCalled();
+    });
+
+    it('integrante con grant en p1 ve su carga TOTAL agregada de todos sus procesos, sin CARGA_PARCIAL (AC-013)', async () => {
+      // Tiene asignaciones en p1 (su proceso) y p2 (otro): debe sumar ambas y
+      // NO marcarse parcial, porque su alcance es por userId (todo lo suyo), no
+      // por proceso.
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
+        { userId: 'ui2', availableHours: 160 },
+      ]);
+      // Una sola consulta de asignaciones visibles (sin frontera de proceso):
+      // suma p1 + p2 = 190. No debe haber segunda consulta "fuera de alcance".
+      (m.prismaObj.assignment as any).findMany.mockResolvedValueOnce([
+        assignmentRow({ userId: 'ui2', committedHours: 100 }),
+        assignmentRow({ userId: 'ui2', committedHours: 90 }),
+      ]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([
+        { id: 'ui2', name: 'Integrante con proceso' },
+      ]);
+
+      const [row] = await service.summary(integranteConProceso('p1'), {
+        month: '2025-03',
+      });
+
+      expect(row.comprometido).toBe(190);
+      expect(row.cargaParcial).toBe(false);
+      // No se dispara la consulta de "fuera de alcance" para un integrante.
+      expect((m.prismaObj.assignment as any).findMany).toHaveBeenCalledTimes(1);
     });
   });
 });

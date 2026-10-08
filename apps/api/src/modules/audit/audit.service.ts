@@ -75,9 +75,17 @@ export class AuditService {
   }
 
   /**
-   * Lectura con alcance por rol (design 2.4 "Auditoria"):
-   * - integrante (no lider/jefe): solo sus propios eventos (actorUserId).
-   * - lider/jefe: eventos de sus procesos (scopeProcessId in scopedProcessIds).
+   * Lectura con alcance por rol (design 2.4 "Auditoria"; specs/10 "Auditoria":
+   * integrante = propios eventos, lider = alcance de proceso, jefe = area
+   * completa):
+   * - JEFE_AREA: TODA el area, sin filtro de proceso. Debe ver tambien los
+   *   eventos SIN proceso (scopeProcessId = null): administracion de area como
+   *   USER/GRANT/CATALOG_ITEM (Fase 1) y MONTHLY_AVAILABILITY (Fase 4), que son
+   *   por persona, no por proceso. Filtrar por scopeProcessId los ocultaria.
+   * - LIDER_PROCESO: eventos de sus procesos (scopeProcessId in
+   *   scopedProcessIds) MAS sus propios eventos sin proceso (los que el genero,
+   *   p. ej. su disponibilidad), para no perder su propia actividad de area.
+   * - INTEGRANTE: solo sus propios eventos (actorUserId); nunca auditoria ajena.
    * Orden createdAt desc; take fijado por el service a <= 500.
    */
   async findMany(
@@ -86,12 +94,14 @@ export class AuditService {
   ): Promise<AuditEventModel[]> {
     const where: Prisma.AuditEventWhereInput = {};
 
-    const canReadByProcess =
-      actor.roleCodes.has(RoleCode.JEFE_AREA) ||
-      actor.roleCodes.has(RoleCode.LIDER_PROCESO);
-
-    if (canReadByProcess) {
-      where.scopeProcessId = { in: Array.from(actor.scopedProcessIds) };
+    if (actor.roleCodes.has(RoleCode.JEFE_AREA)) {
+      // Jefe: area completa; sin filtro de alcance (ve eventos con y sin proceso).
+    } else if (actor.roleCodes.has(RoleCode.LIDER_PROCESO)) {
+      // Lider: eventos de sus procesos + sus propios eventos sin proceso.
+      where.OR = [
+        { scopeProcessId: { in: Array.from(actor.scopedProcessIds) } },
+        { scopeProcessId: null, actorUserId: actor.userId },
+      ];
     } else {
       // Integrante: solo su propia actividad; nunca auditoria ajena.
       where.actorUserId = actor.userId;

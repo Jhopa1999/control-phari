@@ -2,7 +2,12 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 
-/** Tipos de objeto filtrables (coinciden con AuditObjectType del service). */
+/**
+ * Tipos de objeto filtrables. DEBE mantenerse sincronizado con AuditObjectType
+ * de audit.service.ts: cada fase que agrega un objectType nuevo tiene que
+ * incluirlo aqui, o el filtro ?objectType= de GET /audit-events lo rechaza con
+ * 400 pese a que el evento si se registra.
+ */
 const OBJECT_TYPES = [
   'PROCESS',
   'USER',
@@ -12,6 +17,12 @@ const OBJECT_TYPES = [
   'TRIAGE',
   'PRIORITY_EVALUATION',
   'APPROVAL',
+  'PLAN',
+  'PLAN_PHASE',
+  'TASK',
+  'TASK_DEPENDENCY',
+  'MONTHLY_AVAILABILITY',
+  'ASSIGNMENT',
 ] as const;
 
 /**

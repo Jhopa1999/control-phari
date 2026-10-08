@@ -69,22 +69,39 @@ describe('AuditService', () => {
       expect(where.scopeProcessId).toBeUndefined();
     });
 
-    it('lider: eventos de sus procesos (scopeProcessId in scopedProcessIds)', async () => {
+    it('lider: eventos de sus procesos MAS sus propios eventos sin proceso (OR)', async () => {
       mocks.auditEvent.findMany.mockResolvedValue([]);
       await service.findMany(
         actorWith([RoleCode.LIDER_PROCESO], ['p1', 'p2']),
         {},
       );
       const where = mocks.auditEvent.findMany.mock.calls[0][0].where;
-      expect(where.scopeProcessId).toEqual({ in: ['p1', 'p2'] });
+      expect(where.OR).toEqual([
+        { scopeProcessId: { in: ['p1', 'p2'] } },
+        { scopeProcessId: null, actorUserId: 'u1' },
+      ]);
       expect(where.actorUserId).toBeUndefined();
     });
 
-    it('jefe: eventos de sus procesos de area', async () => {
+    it('jefe: area completa, SIN filtro de proceso (ve eventos con y sin scopeProcessId)', async () => {
+      // El jefe debe ver tambien MONTHLY_AVAILABILITY/USER/GRANT/CATALOG_ITEM,
+      // que se auditan con scopeProcessId=null; filtrar por proceso los ocultaria.
       mocks.auditEvent.findMany.mockResolvedValue([]);
       await service.findMany(actorWith([RoleCode.JEFE_AREA], ['p1']), {});
       const where = mocks.auditEvent.findMany.mock.calls[0][0].where;
-      expect(where.scopeProcessId).toEqual({ in: ['p1'] });
+      expect(where.scopeProcessId).toBeUndefined();
+      expect(where.OR).toBeUndefined();
+      expect(where.actorUserId).toBeUndefined();
+    });
+
+    it('jefe: con filtro objectType=MONTHLY_AVAILABILITY ve esos eventos (sin proceso)', async () => {
+      mocks.auditEvent.findMany.mockResolvedValue([]);
+      await service.findMany(actorWith([RoleCode.JEFE_AREA], ['p1']), {
+        objectType: 'MONTHLY_AVAILABILITY',
+      });
+      const where = mocks.auditEvent.findMany.mock.calls[0][0].where;
+      expect(where.scopeProcessId).toBeUndefined();
+      expect(where.objectType).toBe('MONTHLY_AVAILABILITY');
     });
   });
 
@@ -126,13 +143,17 @@ describe('AuditService', () => {
     it('visibilidad de eventos de Fase 2 por alcance (NIT-8): lider A ve REQUEST de p1 por scopeProcessId', async () => {
       // Los eventos de Fase 2 se escriben con scopeProcessId = mainProcessId,
       // de modo que la lectura por rol de Fase 1 los filtra por scope: un lider
-      // de p1 ve los eventos REQUEST con scopeProcessId p1 y no los de p2.
+      // de p1 ve los eventos REQUEST con scopeProcessId p1 (primera rama del OR)
+      // y no los de p2.
       mocks.auditEvent.findMany.mockResolvedValue([]);
       await service.findMany(actorWith([RoleCode.LIDER_PROCESO], ['p1']), {
         objectType: 'REQUEST',
       });
       const where = mocks.auditEvent.findMany.mock.calls[0][0].where;
-      expect(where.scopeProcessId).toEqual({ in: ['p1'] });
+      expect(where.OR).toEqual([
+        { scopeProcessId: { in: ['p1'] } },
+        { scopeProcessId: null, actorUserId: 'u1' },
+      ]);
       expect(where.objectType).toBe('REQUEST');
     });
   });

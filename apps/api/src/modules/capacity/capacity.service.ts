@@ -10,6 +10,7 @@ import type { MonthlyAvailabilityModel } from '../../generated/prisma/models/Mon
 import type { AssignmentModel } from '../../generated/prisma/models/Assignment';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
+import { RoleCode } from '../auth/role-code';
 import { CapacityScopeService } from './capacity-scope.service';
 import { dateToMonthString, monthStringToDate } from './month';
 import { CreateAvailabilityDto } from './dto/create-availability.dto';
@@ -110,10 +111,19 @@ export class CapacityService {
   private assignmentProcessWhere(
     actor: CurrentActor,
   ): Prisma.AssignmentWhereInput {
-    if (actor.isJefeArea || actor.scopedProcessIds.size === 0) {
+    // La frontera por proceso es exclusiva del rol LIDER. El jefe no filtra
+    // (area completa) y el integrante tampoco: su alcance es "todas las SUYAS"
+    // (acotado por user 'in scopedUserIds' = el mismo), sin frontera de proceso,
+    // para que su carga personal agregue asignaciones de CUALQUIER proceso
+    // (AC-013). Un integrante con grant en un proceso NO debe quedar limitado a
+    // ese proceso para su propia carga.
+    const leaderProcessIds = actor.grants
+      .filter((grant) => grant.roleCode === RoleCode.LIDER_PROCESO)
+      .map((grant) => grant.processId);
+    if (actor.isJefeArea || leaderProcessIds.length === 0) {
       return {};
     }
-    return { processId: { in: Array.from(actor.scopedProcessIds) } };
+    return { processId: { in: leaderProcessIds } };
   }
 
   /**
@@ -135,12 +145,14 @@ export class CapacityService {
       return;
     }
     if (!scoped.includes(targetUserId)) {
-      // Politica 403 vs 404 (design §2.5 D8/FINDING 6): un integrante PURO (sin
-      // alcance de proceso) que intenta registrar capacidad ajena viola la regla
-      // "solo la suya" -> 403; un lider (con procesos) sobre una persona fuera de
-      // su alcance -> 404 (la persona "no existe para el").
-      const isPureIntegrante = actor.scopedProcessIds.size === 0;
-      if (isPureIntegrante && targetUserId !== actor.userId) {
+      // Politica 403 vs 404 (design §2.5 D8/FINDING 6; specs/10 "Capacidad:
+      // Propia" para el integrante): un actor SIN rol de lider (integrante, aun
+      // con grant en un proceso) que intenta registrar capacidad ajena viola la
+      // regla "solo la suya" -> 403; un lider sobre una persona fuera de su
+      // alcance -> 404 (la persona "no existe para el"). Se mira el ROL, no si
+      // tiene procesos: un integrante nunca gestiona capacidad de otros.
+      const isLeader = actor.roleCodes.has(RoleCode.LIDER_PROCESO);
+      if (!isLeader && targetUserId !== actor.userId) {
         throw new ForbiddenException(
           'Solo puedes registrar tu propia capacidad.',
         );
@@ -545,18 +557,22 @@ export class CapacityService {
 
     // Deteccion de carga fuera de alcance (FINDING 4): existencia de
     // asignaciones de esas personas en procesos NO en alcance. Solo aplica al
-    // LIDER (tiene procesos y por tanto una frontera de alcance de proceso). El
-    // JEFE ve el total agregado (sin "fuera de alcance") y el INTEGRANTE PURO ve
-    // TODAS sus propias asignaciones (su alcance es por `userId`, sin frontera
-    // de proceso): para ambos `cargaParcial` siempre es `false`.
+    // LIDER (tiene una frontera de alcance de proceso por su rol). El JEFE ve el
+    // total agregado (sin "fuera de alcance") y el INTEGRANTE ve TODAS sus
+    // propias asignaciones (su alcance es por `userId`, sin frontera de proceso,
+    // AC-013): para ambos `cargaParcial` siempre es `false`. Se mira el ROL de
+    // lider, no si tiene procesos (un integrante con grant en un proceso NO
+    // tiene frontera para su carga propia).
+    const leaderProcessIds = actor.grants
+      .filter((grant) => grant.roleCode === RoleCode.LIDER_PROCESO)
+      .map((grant) => grant.processId);
     const outOfScopeUsers = new Set<string>();
-    if (!actor.isJefeArea && actor.scopedProcessIds.size > 0) {
-      const scopedProcessIds = Array.from(actor.scopedProcessIds);
+    if (!actor.isJefeArea && leaderProcessIds.length > 0) {
       const outside = await this.prisma.assignment.findMany({
         where: {
           month: monthDate,
           userId: { in: Array.from(userIds) },
-          processId: { notIn: scopedProcessIds },
+          processId: { notIn: leaderProcessIds },
         },
         select: { userId: true },
         distinct: ['userId'],
