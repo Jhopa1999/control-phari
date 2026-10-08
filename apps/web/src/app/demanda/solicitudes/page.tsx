@@ -1,12 +1,7 @@
-import { UnderConstruction } from '@/components/under-construction';
+import { SolicitudesView } from './solicitudes-view';
 
 export const metadata = { title: 'Solicitudes | Portal del area' };
 
 export default function SolicitudesPage(): React.ReactElement {
-  return (
-    <UnderConstruction
-      title="Solicitudes"
-      description="Gestion de solicitudes de la demanda."
-    />
-  );
+  return <SolicitudesView />;
 }

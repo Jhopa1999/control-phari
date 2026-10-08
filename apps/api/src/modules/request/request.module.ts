@@ -20,11 +20,17 @@ import { ApprovalService } from './approval/approval.service';
  */
 @Module({
   imports: [PrismaModule, AuthModule, AuditModule],
+  // ApprovalController va ANTES que RequestController: su ruta estatica
+  // GET /requests/pending-approval debe registrarse antes que la parametrica
+  // GET /requests/:id del RequestController (que comparte el prefijo
+  // 'requests'); de lo contrario ParseUUIDPipe de :id intercepta
+  // 'pending-approval' y responde 400. En NestJS/Express el orden de match
+  // sigue el orden de registro de los controllers.
   controllers: [
+    ApprovalController,
     RequestController,
     TriageController,
     PriorityController,
-    ApprovalController,
   ],
   providers: [
     RequestService,

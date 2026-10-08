@@ -22,6 +22,21 @@ export type Grant = components['schemas']['GrantResponseDto'];
 export type CreateGrant = components['schemas']['CreateGrantDto'];
 export type AuditEvent = components['schemas']['AuditEventResponseDto'];
 
+// --- Fase 2 (flujo de demanda): tipos derivados del contrato OpenAPI ---
+export type Request = components['schemas']['RequestResponseDto'];
+export type RequestParticipant =
+  components['schemas']['RequestParticipantResponseDto'];
+export type CreateRequest = components['schemas']['CreateRequestDto'];
+export type UpdateRequest = components['schemas']['UpdateRequestDto'];
+export type Triage = components['schemas']['TriageResponseDto'];
+export type CreateTriage = components['schemas']['CreateTriageDto'];
+export type PriorityEvaluation =
+  components['schemas']['PriorityEvaluationResponseDto'];
+export type CreatePriorityEvaluation =
+  components['schemas']['CreatePriorityEvaluationDto'];
+export type Approval = components['schemas']['ApprovalResponseDto'];
+export type CreateApproval = components['schemas']['CreateApprovalDto'];
+
 /**
  * Clave de localStorage donde el selector de usuario (dev) guarda el
  * identifier del actor actual. Mecanismo exclusivo de desarrollo (design 3.2).
