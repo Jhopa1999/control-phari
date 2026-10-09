@@ -1,5 +1,16 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder } from '@nestjs/swagger';
+
+/**
+ * Limite del cuerpo de la peticion. El contenido de un documento Markdown
+ * admite hasta 200.000 caracteres (regla de negocio, Fase 6). El default de
+ * Express (100kb) rechazaria con 413 un documento legitimo grande ANTES de que
+ * el ValidationPipe aplique la regla de 200.000. Se eleva a 1mb para que la
+ * validacion de negocio (MaxLength 200000) sea la que gobierne, dejando margen
+ * para el resto del JSON y multibyte UTF-8.
+ */
+const BODY_LIMIT = '1mb';
 
 /**
  * Lee los origenes CORS permitidos desde CORS_ORIGINS (lista separada por
@@ -25,6 +36,18 @@ function parseCorsOrigins(): string[] {
  * la misma configuracion que el runtime.
  */
 export function configureApp(app: INestApplication): void {
+  // Limite de cuerpo coherente con la regla de negocio del contenido Markdown
+  // (200.000 caracteres); ver BODY_LIMIT. Usa la API tipada del adaptador
+  // Express de NestJS (useBodyParser), disponible en el arranque real. El
+  // generador de OpenAPI (generate-openapi.ts) crea la app sin adaptador HTTP
+  // completo; el guard `typeof` evita fallar alli y mantiene una sola fuente de
+  // configuracion.
+  const expressApp = app as NestExpressApplication;
+  if (typeof expressApp.useBodyParser === 'function') {
+    expressApp.useBodyParser('json', { limit: BODY_LIMIT });
+    expressApp.useBodyParser('urlencoded', { limit: BODY_LIMIT, extended: true });
+  }
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
