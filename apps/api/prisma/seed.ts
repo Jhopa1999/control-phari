@@ -143,6 +143,23 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'TRIAGE_SIZE', code: 'M', label: 'M', sortOrder: 2 },
     { catalog: 'TRIAGE_SIZE', code: 'L', label: 'L', sortOrder: 3 },
     { catalog: 'TRIAGE_SIZE', code: 'XL', label: 'XL', sortOrder: 4 },
+    // ACTIVITY_CLASS (Fase 5 · BR-014) - clasificacion de actividad del diario.
+    { catalog: 'ACTIVITY_CLASS', code: 'PLANIFICADA', label: 'Trabajo planificado', sortOrder: 1 },
+    { catalog: 'ACTIVITY_CLASS', code: 'SOPORTE', label: 'Operacion/soporte', sortOrder: 2 },
+    { catalog: 'ACTIVITY_CLASS', code: 'INTERNA', label: 'Gestion interna', sortOrder: 3 },
+    { catalog: 'ACTIVITY_CLASS', code: 'EXTRAORDINARIA', label: 'Extraordinaria', sortOrder: 4 },
+    // ISSUE_TYPE (Fase 5) - BLOQUEO confirmado por `29`; el resto es seed P
+    // reversible (`20` lista la familia pero no enumera estos codigos, §1.7/NIT-2).
+    { catalog: 'ISSUE_TYPE', code: 'BLOQUEO', label: 'Bloqueo', sortOrder: 1 },
+    { catalog: 'ISSUE_TYPE', code: 'INCIDENTE', label: 'Incidente', sortOrder: 2 },
+    { catalog: 'ISSUE_TYPE', code: 'CALIDAD_DATOS', label: 'Calidad de datos', sortOrder: 3 },
+    { catalog: 'ISSUE_TYPE', code: 'SOLICITUD_APOYO', label: 'Solicitud de apoyo', sortOrder: 4 },
+    // RECORD_STATE (Fase 5 · `06`) - estado de registro (novedad/compromiso).
+    { catalog: 'RECORD_STATE', code: 'BORRADOR', label: 'Borrador', sortOrder: 1 },
+    { catalog: 'RECORD_STATE', code: 'EN_CURSO', label: 'En curso', sortOrder: 2 },
+    { catalog: 'RECORD_STATE', code: 'BLOQUEADO', label: 'Bloqueado', sortOrder: 3 },
+    { catalog: 'RECORD_STATE', code: 'COMPLETADO', label: 'Completado', sortOrder: 4 },
+    { catalog: 'RECORD_STATE', code: 'ARCHIVADO', label: 'Archivado', sortOrder: 5 },
   ];
 
 // --- Ejecucion idempotente --------------------------------------------------

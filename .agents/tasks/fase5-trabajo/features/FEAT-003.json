@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Contrato + frontend de Fase 5: regenerar OpenAPI y el api-client desde el backend coordination, crear los wrappers lib/*.ts (solo via api-client), convertir/crear las pantallas SCR-10 (bitacora), SCR-11 (semanal), SCR-12 (novedades), SCR-13 (reuniones), SCR-14 (compromisos) y anadir los items de navegacion. Depende de FEAT-002 (backend compila y expone los endpoints).",
+  "status": "pending",
+  "steps": [
+    "Con el backend verde, desde la raiz regenerar el contrato: `npm run contracts:generate` (= openapi:generate + api-client:generate), luego `npm run build:api-client`. Confirmar que packages/api-client/src/generated incluye los nuevos paths (/worklog/*, /weekly-reports/*, /issues/*, /meetings/*, /commitments/*, /coordination/people) y schemas (Create*/Update*/*ResponseDto). No editar a mano lo generado. No cambiar el contrato de endpoints previos.",
+    "En apps/web/src/lib/api-client.ts anadir los export type derivados de components['schemas'] para las entidades de Fase 5 (DailyLog, DailyLogActivity, WeeklyReport, Issue, Meeting, MeetingParticipant, Commitment, Create*/Update*/Transition/CoordinationPerson, etc.), siguiendo el bloque de Fases 2-3.",
+    "Crear los wrappers apps/web/src/lib/worklog.ts, issues.ts, meetings.ts, commitments.ts siguiendo el patron de capacity.ts: clase *Error extends Error, messageForStatus(status) (400/403/404/409/default), toXError, y funciones tipadas que llaman api.GET/POST/PATCH/DELETE con params/body desde los tipos generados (listar, crear, detalle, editar, submit/transition, borrar segun corresponda). Incluir listCoordinationPeople() (GET /coordination/people).",
+    "Convertir el placeholder apps/web/src/app/seguimiento/bitacora/page.tsx a SCR-10 real (patron activos/capacidad: page.tsx fino + *-view.tsx cliente + *-form-dialog.tsx): lista de diarios + editor de cabecera (proceso/fecha/notas) + lineas de actividad con campos CONDICIONADOS por classificationCode (proyecto/tarea para PLANIFICADA, activo para SOPORTE, solicitante+justificacion para EXTRAORDINARIA), botones Guardar borrador / Enviar a revision, total de horas del dia rotulado 'dedicacion' con nota de que no afecta el avance de la tarea (BR-013). Estados loading/vacio/error/exito y AC-031 (conserva lo tecleado ante error; resetea solo en exito). La validacion autoritativa es el 400 del backend; el condicionado en cliente es solo UX.",
+    "Crear apps/web/src/app/seguimiento/semanal/page.tsx (SCR-11): selector de lunes + proceso, conteos consolidados (solo diarios enviados/revisados; aviso 'sin bitacoras de respaldo' si cero), secciones de texto (resultados/propuestas/bloqueos/compromisos/decisiones), accion enviar. Estados y AC-031.",
+    "Crear apps/web/src/app/seguimiento/novedades/page.tsx (SCR-12): lista + ficha de novedad; tipo por defecto Bloqueo; un registro por incidente (edicion, no filas nuevas); accion de transicion de estado. Estados y AC-031.",
+    "Convertir el placeholder apps/web/src/app/seguimiento/reuniones/page.tsx a SCR-13 real: lista + formulario (titulo, fecha, hora HH:mm, participantes del alcance via listCoordinationPeople, agenda, decisiones, observaciones). Estados y AC-031.",
+    "Crear apps/web/src/app/seguimiento/compromisos/page.tsx (SCR-14): lista + formulario (titulo, vencimiento, asignado, responsable, reunion fuente opcional, resultado esperado, bloqueos); accion de transicion de estado. Estados y AC-031.",
+    "En apps/web/src/lib/navigation.ts anadir al grupo 'Seguimiento' SOLO los items que faltan, sin romper los existentes (Bitacora/Reuniones ya estan): { href:'/seguimiento/semanal', label:'Semanal', moduleKey:'log' }, { href:'/seguimiento/novedades', label:'Novedades', moduleKey:'log' }, { href:'/seguimiento/compromisos', label:'Compromisos', moduleKey:'meeting' }. No agregar claves nuevas a ModuleKey (log/meeting ya existen)."
+  ],
+  "acceptance_criteria": [
+    "`npm run contracts:generate` + `npm run build:api-client` regeneran el api-client con los paths y schemas de Fase 5 y `npm run typecheck:api-client` pasa.",
+    "`npm run typecheck:web` pasa con los wrappers lib/*.ts y los tipos nuevos en api-client.ts.",
+    "Las 5 pantallas (SCR-10/11/12/13/14) existen y consumen SOLO el api-client (nunca Prisma/PostgreSQL), con estados loading/vacio/error/exito y conservacion de entrada ante error (AC-031); el diario condiciona campos por classificationCode y rotula horas como dedicacion.",
+    "navigation.ts tiene los 3 items nuevos en Seguimiento sin romper los existentes; `npm run build:web` compila."
+  ],
+  "verification": [
+    "Desde la raiz: `npm run contracts:generate` y `npm run build:api-client` sin error; `npm run typecheck:api-client` pasa.",
+    "`npm run typecheck:web` pasa.",
+    "`npm run build:web` compila.",
+    "Verificacion integral final: `npm run typecheck` + `npm run test:unit` + `npm run build` en verde."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

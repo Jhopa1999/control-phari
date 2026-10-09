@@ -60,6 +60,13 @@ model Process {
   // Fase 4 (capacidad): asignaciones de horas en este proceso.
   assignments Assignment[]
 
+  // Fase 5 (trabajo y coordinacion): registros de trabajo de este proceso.
+  dailyLogs     DailyLog[]
+  weeklyReports WeeklyReport[]
+  issues        Issue[]
+  meetings      Meeting[]
+  commitments   Commitment[]
+
   @@unique([code], name: "process_code_unique")
   @@index([active])
   @@index([sortOrder])
@@ -95,6 +102,18 @@ model User {
   // Fase 4 (capacidad): disponibilidad mensual y asignaciones de la persona.
   monthlyAvailabilities MonthlyAvailability[]
   assignments           Assignment[]          @relation("AssignmentUser")
+
+  // Fase 5 (trabajo y coordinacion): registros donde la persona es autor,
+  // responsable, asignada o participante. Cada relacion usa `name` propio
+  // porque hay mas de una FK User por modelo (Prisma lo exige).
+  dailyLogs              DailyLog[]           @relation("DailyLogAuthor")
+  weeklyReports          WeeklyReport[]       @relation("WeeklyReportAuthor")
+  issuesReported         Issue[]              @relation("IssueReportedBy")
+  issuesResolved         Issue[]              @relation("IssueResolver")
+  meetingsResponsible    Meeting[]            @relation("MeetingResponsible")
+  meetingParticipations  MeetingParticipant[]
+  commitmentsResponsible Commitment[]         @relation("CommitmentResponsible")
+  commitmentsAssigned    Commitment[]         @relation("CommitmentAssigned")
 
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
@@ -197,6 +216,16 @@ model Request {
 
   // Fase 4 (capacidad): asignaciones opcionalmente ligadas a esta solicitud.
   assignments Assignment[]
+
+  // Fase 5 (trabajo y coordinacion): referencias opcionales a esta solicitud
+  // ("proyecto"=Request, §1.2 D12). Cuando un modelo tiene mas de una FK a
+  // Request se usa `name` propio por relacion.
+  dailyLogActivities   DailyLogActivity[]
+  issues               Issue[]            @relation("IssueRelatedRequest")
+  meetingsRelated      Meeting[]          @relation("MeetingRelatedRequest")
+  meetingsAsProject    Meeting[]          @relation("MeetingRelatedProjectRequest")
+  commitmentsRelated   Commitment[]       @relation("CommitmentRelatedRequest")
+  commitmentsAsProject Commitment[]       @relation("CommitmentRelatedProjectRequest")
 
   @@index([mainProcessId])
   @@index([operationalState])
@@ -389,6 +418,10 @@ model Task {
   dependenciesAsDependent   TaskDependency[] @relation("DependencyDependent")
   dependenciesAsPredecessor TaskDependency[] @relation("DependencyPredecessor")
 
+  // Fase 5 (trabajo y coordinacion): referencias opcionales a esta tarea.
+  dailyLogActivities DailyLogActivity[]
+  issues             Issue[]            @relation("IssueRelatedTask")
+
   @@index([phaseId])
   @@index([responsibleUserId])
   @@index([status])
@@ -462,4 +495,217 @@ model Assignment {
   @@index([processId])
   @@index([requestId])
   @@map("assignments")
+}
+
+// ============================================================================
+// Fase 5 · Trabajo y coordinacion (Bitacora + Novedades + Reuniones + Compromisos)
+// Diseno aprobado en .agents/tasks/fase5-trabajo/design.md §1.2.
+// ============================================================================
+
+/// Registro diario (cabecera por proceso + fecha + autor; SCR-10). Agrupa N
+/// actividades (1:N, §11 D1). `status` es enum logico DailyLogStatus read-only:
+/// solo lo escribe el helper de estado del modulo coordination. `date` se
+/// persiste como fecha UTC (`@db.Date`, §11 D8); contrato externo `YYYY-MM-DD`.
+model DailyLog {
+  id           String    @id @default(uuid()) @db.Uuid
+  authorUserId String    @map("author_user_id") @db.Uuid
+  processId    String    @map("process_id") @db.Uuid
+  date         DateTime  @db.Date
+  status       String    @default("BORRADOR")
+  submittedAt  DateTime? @map("submitted_at")
+  dayNotes     String?   @map("day_notes")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  author     User               @relation("DailyLogAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  process    Process            @relation(fields: [processId], references: [id], onDelete: Restrict)
+  activities DailyLogActivity[]
+
+  // Compuesto -> usable como `where` de findUnique/upsert (§1.1, caso favorable).
+  @@unique([authorUserId, processId, date], name: "daily_log_author_process_date_unique")
+  @@index([processId])
+  @@index([date])
+  @@index([status])
+  @@map("daily_logs")
+}
+
+/// Actividad de un registro diario (SCR-10 · BR-014). Lleva clasificacion
+/// (maestra ACTIVITY_CLASS) y referencias opcionales condicionadas a ella.
+/// `hours` es dedicacion (BR-013); nunca toca Task.estimateHours/progress.
+model DailyLogActivity {
+  id                 String    @id @default(uuid()) @db.Uuid
+  dailyLogId         String    @map("daily_log_id") @db.Uuid
+  classificationCode String    @map("classification_code")
+  projectRequestId   String?   @map("project_request_id") @db.Uuid
+  taskId             String?   @map("task_id") @db.Uuid
+  assetRef           String?   @map("asset_ref")
+  requesterRef       String?   @map("requester_ref")
+  justification      String?
+  description        String?
+  result             String?
+  activityStatus     String?   @map("activity_status")
+  hours              Int       @default(0)
+  evidenceUrl        String?   @map("evidence_url")
+  relatedIssueId     String?   @map("related_issue_id") @db.Uuid
+  nextStep           String?   @map("next_step")
+  nextStepDate       DateTime? @map("next_step_date") @db.Date
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  dailyLog       DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+  projectRequest Request? @relation(fields: [projectRequestId], references: [id], onDelete: Restrict)
+  task           Task?    @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  relatedIssue   Issue?   @relation(fields: [relatedIssueId], references: [id], onDelete: Restrict)
+
+  @@index([dailyLogId])
+  @@index([classificationCode])
+  @@index([taskId])
+  @@index([projectRequestId])
+  @@index([relatedIssueId])
+  @@map("daily_log_activities")
+}
+
+/// Registro semanal (SCR-11 · `08` Semanal). Ancla al lunes de la semana.
+/// Consolida por lectura (no copia) los diarios ENVIADO/REVISADO del proceso.
+/// Las secciones son texto: no mutan prioridad ni crean compromisos (AC-018).
+model WeeklyReport {
+  id              String    @id @default(uuid()) @db.Uuid
+  authorUserId    String    @map("author_user_id") @db.Uuid
+  processId       String    @map("process_id") @db.Uuid
+  weekStart       DateTime  @map("week_start") @db.Date
+  status          String    @default("BORRADOR")
+  submittedAt     DateTime? @map("submitted_at")
+  results         String?
+  proposals       String?
+  blockers        String?
+  commitmentsText String?   @map("commitments_text")
+  decisions       String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  author  User    @relation("WeeklyReportAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  process Process @relation(fields: [processId], references: [id], onDelete: Restrict)
+
+  @@unique([authorUserId, processId, weekStart], name: "weekly_report_author_process_week_unique")
+  @@index([processId])
+  @@index([weekStart])
+  @@map("weekly_reports")
+}
+
+/// Novedad (SCR-12 · `08` Novedad). Un registro por incidente que se edita
+/// hasta resolver (AC-019). `typeCode` maestra ISSUE_TYPE (default BLOQUEO);
+/// `state` maestra RECORD_STATE con maquina minima reversible (default EN_CURSO).
+model Issue {
+  id               String    @id @default(uuid()) @db.Uuid
+  processId        String    @map("process_id") @db.Uuid
+  reportedByUserId String    @map("reported_by_user_id") @db.Uuid
+  date             DateTime  @db.Date
+  typeCode         String    @default("BLOQUEO") @map("type_code")
+  relatedRequestId String?   @map("related_request_id") @db.Uuid
+  relatedTaskId    String?   @map("related_task_id") @db.Uuid
+  relatedAssetRef  String?   @map("related_asset_ref")
+  title            String
+  detail           String?
+  impact           String?
+  resolverUserId   String?   @map("resolver_user_id") @db.Uuid
+  targetDate       DateTime? @map("target_date") @db.Date
+  resolution       String?
+  state            String    @default("EN_CURSO")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  process            Process            @relation(fields: [processId], references: [id], onDelete: Restrict)
+  reportedBy         User               @relation("IssueReportedBy", fields: [reportedByUserId], references: [id], onDelete: Restrict)
+  resolver           User?              @relation("IssueResolver", fields: [resolverUserId], references: [id], onDelete: Restrict)
+  relatedRequest     Request?           @relation("IssueRelatedRequest", fields: [relatedRequestId], references: [id], onDelete: Restrict)
+  relatedTask        Task?              @relation("IssueRelatedTask", fields: [relatedTaskId], references: [id], onDelete: Restrict)
+  dailyLogActivities DailyLogActivity[]
+
+  @@index([processId])
+  @@index([reportedByUserId])
+  @@index([state])
+  @@index([typeCode])
+  @@map("issues")
+}
+
+/// Reunion (SCR-13 · `08` Reunion). Estado inicial BORRADOR; participantes N:M
+/// con User via MeetingParticipant. `meetingTime` es texto HH:mm (no fija zona).
+model Meeting {
+  id                      String   @id @default(uuid()) @db.Uuid
+  processId               String   @map("process_id") @db.Uuid
+  title                   String
+  state                   String   @default("BORRADOR")
+  relatedRequestId        String?  @map("related_request_id") @db.Uuid
+  responsibleUserId       String?  @map("responsible_user_id") @db.Uuid
+  meetingDate             DateTime @map("meeting_date") @db.Date
+  meetingTime             String?  @map("meeting_time")
+  relatedProjectRequestId String?  @map("related_project_request_id") @db.Uuid
+  agenda                  String?
+  decisions               String?
+  notes                   String?
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  process               Process              @relation(fields: [processId], references: [id], onDelete: Restrict)
+  responsible           User?                @relation("MeetingResponsible", fields: [responsibleUserId], references: [id], onDelete: Restrict)
+  relatedRequest        Request?             @relation("MeetingRelatedRequest", fields: [relatedRequestId], references: [id], onDelete: Restrict)
+  relatedProjectRequest Request?             @relation("MeetingRelatedProjectRequest", fields: [relatedProjectRequestId], references: [id], onDelete: Restrict)
+  participants          MeetingParticipant[]
+  commitments           Commitment[]
+
+  @@index([processId])
+  @@index([state])
+  @@index([meetingDate])
+  @@map("meetings")
+}
+
+/// Puente N:M Meeting <-> User (participantes). Append-only (solo created_at).
+model MeetingParticipant {
+  id        String   @id @default(uuid()) @db.Uuid
+  meetingId String   @map("meeting_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([meetingId, userId], name: "meeting_participant_unique")
+  @@index([userId])
+  @@map("meeting_participants")
+}
+
+/// Compromiso (SCR-14 · `08` Compromiso). Vencimiento requerido; reunion fuente
+/// opcional (sin auto-creacion, §11 D7). `state` maestra RECORD_STATE con
+/// maquina minima reversible (default EN_CURSO).
+model Commitment {
+  id                      String   @id @default(uuid()) @db.Uuid
+  processId               String   @map("process_id") @db.Uuid
+  title                   String
+  state                   String   @default("EN_CURSO")
+  relatedRequestId        String?  @map("related_request_id") @db.Uuid
+  responsibleUserId       String?  @map("responsible_user_id") @db.Uuid
+  assignedUserId          String?  @map("assigned_user_id") @db.Uuid
+  dueDate                 DateTime @map("due_date") @db.Date
+  relatedProjectRequestId String?  @map("related_project_request_id") @db.Uuid
+  sourceMeetingId         String?  @map("source_meeting_id") @db.Uuid
+  expectedResult          String?  @map("expected_result")
+  result                  String?
+  blockers                String?
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  process               Process  @relation(fields: [processId], references: [id], onDelete: Restrict)
+  responsible           User?    @relation("CommitmentResponsible", fields: [responsibleUserId], references: [id], onDelete: Restrict)
+  assigned              User?    @relation("CommitmentAssigned", fields: [assignedUserId], references: [id], onDelete: Restrict)
+  relatedRequest        Request? @relation("CommitmentRelatedRequest", fields: [relatedRequestId], references: [id], onDelete: Restrict)
+  relatedProjectRequest Request? @relation("CommitmentRelatedProjectRequest", fields: [relatedProjectRequestId], references: [id], onDelete: Restrict)
+  sourceMeeting         Meeting? @relation(fields: [sourceMeetingId], references: [id], onDelete: Restrict)
+
+  @@index([processId])
+  @@index([state])
+  @@index([assignedUserId])
+  @@index([responsibleUserId])
+  @@index([sourceMeetingId])
+  @@index([dueDate])
+  @@map("commitments")
 }

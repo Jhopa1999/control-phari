@@ -11,7 +11,9 @@ import { ListAuditEventsDto } from './dto/list-audit-events.dto';
  * CATALOG_ITEM. Fase 2 (flujo de demanda, design §1.7): REQUEST, TRIAGE,
  * PRIORITY_EVALUATION, APPROVAL. Fase 3 (plan, design §1.6): PLAN, PLAN_PHASE,
  * TASK, TASK_DEPENDENCY. Fase 4 (capacidad, design §1.5):
- * MONTHLY_AVAILABILITY, ASSIGNMENT.
+ * MONTHLY_AVAILABILITY, ASSIGNMENT. Fase 5 (trabajo y coordinacion, design
+ * §1.6): DAILY_LOG, DAILY_LOG_ACTIVITY, WEEKLY_REPORT, ISSUE, MEETING,
+ * COMMITMENT.
  */
 export type AuditObjectType =
   | 'PROCESS'
@@ -27,7 +29,13 @@ export type AuditObjectType =
   | 'TASK'
   | 'TASK_DEPENDENCY'
   | 'MONTHLY_AVAILABILITY'
-  | 'ASSIGNMENT';
+  | 'ASSIGNMENT'
+  | 'DAILY_LOG'
+  | 'DAILY_LOG_ACTIVITY'
+  | 'WEEKLY_REPORT'
+  | 'ISSUE'
+  | 'MEETING'
+  | 'COMMITMENT';
 
 /** Verbos de mutacion registrados (design 1.2 / 4.2.1). */
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'REVOKE';

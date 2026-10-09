@@ -1,0 +1,7 @@
+{
+  "task_id": "fase5-trabajo",
+  "task_description": "Implementar FASE 5 (Trabajo y coordinacion) de control-phari sobre el diseno APROBADO (design.md 3a iteracion, review APPROVED): migracion Prisma fase5_trabajo + seed de 3 familias de catalogo, modulo backend coordination (worklog/issue/meeting/commitment) con alcance por rol/auditoria/maquinas de estado minimas, ampliacion de AuditObjectType y del filtro, regeneracion OpenAPI + api-client, pantallas SCR-10/11/12/13/14 + navegacion, y pruebas unitarias de reglas de negocio.",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

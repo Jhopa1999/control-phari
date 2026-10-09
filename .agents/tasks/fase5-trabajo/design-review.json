@@ -1,0 +1,27 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": "NIT-1",
+      "severity": "NIT",
+      "location": "§1.2 WeeklyReport / §2.5",
+      "problem": "08 Semanal lista 'compromisos (responsable/fecha)' como contenido estructurado, pero el diseno lo modela como un unico campo de texto commitmentsText sin marcarlo explicitamente como decision P reversible de mapeo.",
+      "fix": "Anadir una nota (p. ej. D14) declarando que commitmentsText mapea 'compromisos (responsable/fecha)' de 08 Semanal como texto libre (P reversible, analogo a D12), con gancho a estructurar o derivar a Commitment si el Site lo confirma, sin cambiar el contrato de secciones."
+    },
+    {
+      "id": "NIT-2",
+      "severity": "NIT",
+      "location": "§2.5 (rango de consolidacion semanal)",
+      "problem": "El rango [weekStart, weekStart+6] no fija el operador de filtro ni la aritmetica UTC; riesgo de off-by-one por zona si no se usa el helper UTC.",
+      "fix": "Precisar el where: date: { gte: weekStart, lte: addDaysUTC(weekStart, 6) } (o lt: addDaysUTC(weekStart, 7)), calculado en UTC con el mismo helper dateStringToDate, y anadir un caso de prueba de borde (domingo incluido, lunes siguiente excluido)."
+    },
+    {
+      "id": "NIT-3",
+      "severity": "NIT",
+      "location": "§1.2 DailyLogActivity (activityStatus) / D9",
+      "problem": "activityStatus se describe como 'texto/maestra RECORD_STATE', dos interpretaciones; el DTO no queda determinado (¿@IsIn(RECORD_STATE) o @IsString libre?).",
+      "fix": "Fijar una sola regla: activityStatus? = @IsOptional @IsIn(RECORD_STATE codes) (coherente con D9 y con no inventar valores) y quitar la opcion 'texto libre' de la fila; o bien declarar explicitamente @IsOptional @IsString y quitar la mencion a RECORD_STATE. Elegir una."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.worktrees\\fase5-trabajo\\.agents\\tasks\\fase5-trabajo\\design-review.md"
+}
