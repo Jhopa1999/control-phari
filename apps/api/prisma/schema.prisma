@@ -67,6 +67,9 @@ model Process {
   meetings      Meeting[]
   commitments   Commitment[]
 
+  // Fase 6 (activos): activos anclados a este proceso.
+  assets Asset[]
+
   @@unique([code], name: "process_code_unique")
   @@index([active])
   @@index([sortOrder])
@@ -114,6 +117,11 @@ model User {
   meetingParticipations  MeetingParticipant[]
   commitmentsResponsible Commitment[]         @relation("CommitmentResponsible")
   commitmentsAssigned    Commitment[]         @relation("CommitmentAssigned")
+
+  // Fase 6 (activos y documentos): activos de los que es dueno/responsable y
+  // versiones de documento de las que es autor.
+  assetsOwned              Asset[]           @relation("AssetOwner")
+  documentVersionsAuthored DocumentVersion[] @relation("DocumentVersionAuthor")
 
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
@@ -226,6 +234,9 @@ model Request {
   meetingsAsProject    Meeting[]          @relation("MeetingRelatedProjectRequest")
   commitmentsRelated   Commitment[]       @relation("CommitmentRelatedRequest")
   commitmentsAsProject Commitment[]       @relation("CommitmentRelatedProjectRequest")
+
+  // Fase 6 (activos): activos cuya solicitud de origen es esta Request.
+  assets Asset[]
 
   @@index([mainProcessId])
   @@index([operationalState])
@@ -549,6 +560,9 @@ model DailyLogActivity {
   relatedIssueId     String?   @map("related_issue_id") @db.Uuid
   nextStep           String?   @map("next_step")
   nextStepDate       DateTime? @map("next_step_date") @db.Date
+  // Fase 6 (gancho): FK opcional NUEVA al activo, convive con assetRef (texto,
+  // Fase 5). NO se cablea desde los flujos de Fase 5 ni toca su validacion.
+  assetId            String?   @map("asset_id") @db.Uuid
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
@@ -556,12 +570,14 @@ model DailyLogActivity {
   projectRequest Request? @relation(fields: [projectRequestId], references: [id], onDelete: Restrict)
   task           Task?    @relation(fields: [taskId], references: [id], onDelete: Restrict)
   relatedIssue   Issue?   @relation(fields: [relatedIssueId], references: [id], onDelete: Restrict)
+  asset          Asset?   @relation(fields: [assetId], references: [id], onDelete: Restrict)
 
   @@index([dailyLogId])
   @@index([classificationCode])
   @@index([taskId])
   @@index([projectRequestId])
   @@index([relatedIssueId])
+  @@index([assetId])
   @@map("daily_log_activities")
 }
 
@@ -611,6 +627,9 @@ model Issue {
   targetDate       DateTime? @map("target_date") @db.Date
   resolution       String?
   state            String    @default("EN_CURSO")
+  // Fase 6 (gancho): FK opcional NUEVA al activo, convive con relatedAssetRef
+  // (texto, Fase 5). NO se cablea desde los flujos de Fase 5.
+  assetId          String?   @map("asset_id") @db.Uuid
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
@@ -619,12 +638,14 @@ model Issue {
   resolver           User?              @relation("IssueResolver", fields: [resolverUserId], references: [id], onDelete: Restrict)
   relatedRequest     Request?           @relation("IssueRelatedRequest", fields: [relatedRequestId], references: [id], onDelete: Restrict)
   relatedTask        Task?              @relation("IssueRelatedTask", fields: [relatedTaskId], references: [id], onDelete: Restrict)
+  relatedAsset       Asset?             @relation(fields: [assetId], references: [id], onDelete: Restrict)
   dailyLogActivities DailyLogActivity[]
 
   @@index([processId])
   @@index([reportedByUserId])
   @@index([state])
   @@index([typeCode])
+  @@index([assetId])
   @@map("issues")
 }
 
@@ -708,4 +729,96 @@ model Commitment {
   @@index([sourceMeetingId])
   @@index([dueDate])
   @@map("commitments")
+}
+
+// ============================================================================
+// Fase 6 · Activos y documentos (Activo + Documento + Version de documento)
+// Diseno aprobado en .agents/tasks/fase6-activos/design.md §1.2.
+// ============================================================================
+
+/// Activo analitico (SCR-15 · `08` Activo). Ficha de inventario anclada a un
+/// proceso (FK requerida = ancla de alcance). `status` es enum logico
+/// AssetStatus read-only (default BORRADOR): solo lo escribe el helper de
+/// AssetStateService, nunca un DTO libre. Los atributos tipo/tecnologia/fuente/
+/// frecuencia se guardan como CODIGO de maestra (String, no FK a CatalogItem),
+/// validados en el service (design §1.2 D2). Sin borrado fisico: retiro =
+/// cambio de estado (design §4.1 D3).
+model Asset {
+  id                    String   @id @default(uuid()) @db.Uuid
+  processId             String   @map("process_id") @db.Uuid
+  requestId             String?  @map("request_id") @db.Uuid
+  ownerUserId           String?  @map("owner_user_id") @db.Uuid
+  name                  String
+  status                String   @default("BORRADOR")
+  typeCode              String?  @map("type_code")
+  technologyCode        String?  @map("technology_code")
+  sourceCode            String?  @map("source_code")
+  frequencyCode         String?  @map("frequency_code")
+  documentationRef      String?  @map("documentation_ref")
+  functionalDescription String?  @map("functional_description")
+  dependencies          String?
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  process Process  @relation(fields: [processId], references: [id], onDelete: Restrict)
+  request Request? @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  owner   User?    @relation("AssetOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+
+  documents          Document[]
+  dailyLogActivities DailyLogActivity[]
+  issues             Issue[]
+
+  @@index([processId])
+  @@index([requestId])
+  @@index([status])
+  @@index([typeCode])
+  @@map("assets")
+}
+
+/// Documento (SCR-16 · `08` Documento). Metadatos de un documento Markdown;
+/// `assetId` FK REQUERIDA al activo. `status` es enum logico DocStatus read-only
+/// (default BORRADOR), movido SOLO por POST /documents/:id/status. El contenido
+/// NO vive aqui: vive en DocumentVersion (design §1.2 D4). `currentVersionId`
+/// apunta a la ultima version de contenido (ortogonal al status).
+model Document {
+  id               String   @id @default(uuid()) @db.Uuid
+  assetId          String   @map("asset_id") @db.Uuid
+  title            String
+  categoryCode     String?  @map("category_code")
+  status           String   @default("BORRADOR")
+  currentVersionId String?  @map("current_version_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  asset          Asset             @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  versions       DocumentVersion[] @relation("DocumentVersions")
+  currentVersion DocumentVersion?  @relation("DocumentCurrentVersion", fields: [currentVersionId], references: [id], onDelete: Restrict)
+
+  @@index([assetId])
+  @@index([status])
+  @@index([categoryCode])
+  @@map("documents")
+}
+
+/// Version de documento (AC-020 · BR-021). N filas INMUTABLES por documento
+/// (append-only: solo created_at, sin updated_at). Editar el contenido crea una
+/// NUEVA version (versionNumber = max+1) y conserva la previa. El contenido
+/// Markdown va en `content` (@db.Text; tope 200.000 validado en el DTO).
+model DocumentVersion {
+  id            String   @id @default(uuid()) @db.Uuid
+  documentId    String   @map("document_id") @db.Uuid
+  versionNumber Int      @map("version_number")
+  content       String   @db.Text
+  authorUserId  String   @map("author_user_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  document  Document   @relation("DocumentVersions", fields: [documentId], references: [id], onDelete: Restrict)
+  author    User       @relation("DocumentVersionAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  currentOf Document[] @relation("DocumentCurrentVersion")
+
+  // Compuesto -> usable como `where` (§1.1); garantiza numeros unicos por documento.
+  @@unique([documentId, versionNumber], name: "document_version_number_unique")
+  @@index([documentId])
+  @@index([authorUserId])
+  @@map("document_versions")
 }

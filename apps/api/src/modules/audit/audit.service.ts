@@ -13,7 +13,8 @@ import { ListAuditEventsDto } from './dto/list-audit-events.dto';
  * TASK, TASK_DEPENDENCY. Fase 4 (capacidad, design §1.5):
  * MONTHLY_AVAILABILITY, ASSIGNMENT. Fase 5 (trabajo y coordinacion, design
  * §1.6): DAILY_LOG, DAILY_LOG_ACTIVITY, WEEKLY_REPORT, ISSUE, MEETING,
- * COMMITMENT.
+ * COMMITMENT. Fase 6 (activos y documentos, design §1.6): ASSET, DOCUMENT,
+ * DOCUMENT_VERSION.
  */
 export type AuditObjectType =
   | 'PROCESS'
@@ -35,7 +36,10 @@ export type AuditObjectType =
   | 'WEEKLY_REPORT'
   | 'ISSUE'
   | 'MEETING'
-  | 'COMMITMENT';
+  | 'COMMITMENT'
+  | 'ASSET'
+  | 'DOCUMENT'
+  | 'DOCUMENT_VERSION';
 
 /** Verbos de mutacion registrados (design 1.2 / 4.2.1). */
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'REVOKE';

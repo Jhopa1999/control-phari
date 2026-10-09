@@ -160,6 +160,36 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'RECORD_STATE', code: 'BLOQUEADO', label: 'Bloqueado', sortOrder: 3 },
     { catalog: 'RECORD_STATE', code: 'COMPLETADO', label: 'Completado', sortOrder: 4 },
     { catalog: 'RECORD_STATE', code: 'ARCHIVADO', label: 'Archivado', sortOrder: 5 },
+    // Fase 6 (activos y documentos · `20`/design §7). ASSET_TYPE y DOC_STATUS
+    // ya se sembraron arriba (Fase 2 / Fase 1): NO se re-siembran. Las familias
+    // TECHNOLOGY/SOURCE/FREQUENCY/DOC_CATEGORY son seed inicial `P` (valores de
+    // ejemplo, lista no exhaustiva; ampliables por gestion de maestras sin
+    // migracion).
+    // TECHNOLOGY (plataforma/tecnologia; valores de ejemplo P).
+    { catalog: 'TECHNOLOGY', code: 'QLIK', label: 'Qlik', sortOrder: 1 },
+    { catalog: 'TECHNOLOGY', code: 'AWS', label: 'AWS', sortOrder: 2 },
+    { catalog: 'TECHNOLOGY', code: 'PYTHON', label: 'Python', sortOrder: 3 },
+    { catalog: 'TECHNOLOGY', code: 'SQL', label: 'SQL', sortOrder: 4 },
+    { catalog: 'TECHNOLOGY', code: 'TALEND', label: 'Talend', sortOrder: 5 },
+    { catalog: 'TECHNOLOGY', code: 'POWER_BI', label: 'Power BI', sortOrder: 6 },
+    // SOURCE (fuente; valores de ejemplo P).
+    { catalog: 'SOURCE', code: 'DATA_LAKE', label: 'Data Lake', sortOrder: 1 },
+    { catalog: 'SOURCE', code: 'API', label: 'API', sortOrder: 2 },
+    { catalog: 'SOURCE', code: 'BASE_DATOS', label: 'Base de datos', sortOrder: 3 },
+    { catalog: 'SOURCE', code: 'ARCHIVO', label: 'Archivo', sortOrder: 4 },
+    { catalog: 'SOURCE', code: 'APLICACION', label: 'Aplicacion', sortOrder: 5 },
+    // FREQUENCY (frecuencia; valores de ejemplo P).
+    { catalog: 'FREQUENCY', code: 'TIEMPO_REAL', label: 'Tiempo real', sortOrder: 1 },
+    { catalog: 'FREQUENCY', code: 'CADA_HORA', label: 'Cada hora', sortOrder: 2 },
+    { catalog: 'FREQUENCY', code: 'DIARIA', label: 'Diaria', sortOrder: 3 },
+    { catalog: 'FREQUENCY', code: 'SEMANAL', label: 'Semanal', sortOrder: 4 },
+    { catalog: 'FREQUENCY', code: 'MENSUAL', label: 'Mensual', sortOrder: 5 },
+    { catalog: 'FREQUENCY', code: 'BAJO_DEMANDA', label: 'Bajo demanda', sortOrder: 6 },
+    // DOC_CATEGORY (categoria de documento; conjunto minimo reversible P).
+    { catalog: 'DOC_CATEGORY', code: 'TECNICA', label: 'Tecnica', sortOrder: 1 },
+    { catalog: 'DOC_CATEGORY', code: 'FUNCIONAL', label: 'Funcional', sortOrder: 2 },
+    { catalog: 'DOC_CATEGORY', code: 'OPERATIVA', label: 'Operativa', sortOrder: 3 },
+    { catalog: 'DOC_CATEGORY', code: 'OTRO', label: 'Otro', sortOrder: 4 },
   ];
 
 // --- Ejecucion idempotente --------------------------------------------------

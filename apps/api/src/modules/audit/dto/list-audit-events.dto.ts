@@ -29,6 +29,9 @@ const OBJECT_TYPES = [
   'ISSUE',
   'MEETING',
   'COMMITMENT',
+  'ASSET',
+  'DOCUMENT',
+  'DOCUMENT_VERSION',
 ] as const;
 
 /**
