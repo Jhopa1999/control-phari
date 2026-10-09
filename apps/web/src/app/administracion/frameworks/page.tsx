@@ -1,12 +1,7 @@
-import { UnderConstruction } from '@/components/under-construction';
+import { FrameworksView } from './frameworks-view';
 
 export const metadata = { title: 'Frameworks | Portal del area' };
 
 export default function FrameworksPage(): React.ReactElement {
-  return (
-    <UnderConstruction
-      title="Frameworks"
-      description="Marcos de trabajo por proceso."
-    />
-  );
+  return <FrameworksView />;
 }
