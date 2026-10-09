@@ -64,22 +64,61 @@ describe('RequestStateService', () => {
     });
   });
 
-  describe('priorityLabel (design §1.4 cortes 80/65/50)', () => {
-    it('>=80 -> Muy alta', () => {
-      expect(service.priorityLabel(80)).toBe('Muy alta');
-      expect(service.priorityLabel(100)).toBe('Muy alta');
+  describe('priorityBand (design §1.1 cortes 80/65/45)', () => {
+    it('>=80 -> P1', () => {
+      expect(service.priorityBand(80)).toBe('P1');
+      expect(service.priorityBand(100)).toBe('P1');
     });
-    it('>=65 -> Alta', () => {
-      expect(service.priorityLabel(65)).toBe('Alta');
-      expect(service.priorityLabel(79)).toBe('Alta');
+    it('>=65 -> P2', () => {
+      expect(service.priorityBand(65)).toBe('P2');
+      expect(service.priorityBand(79)).toBe('P2');
     });
-    it('>=50 -> Media', () => {
-      expect(service.priorityLabel(50)).toBe('Media');
-      expect(service.priorityLabel(64)).toBe('Media');
+    it('>=45 -> P3 (nuevo corte inferior: 45-49 pasa de "Baja" a P3)', () => {
+      expect(service.priorityBand(45)).toBe('P3');
+      expect(service.priorityBand(49)).toBe('P3');
+      expect(service.priorityBand(64)).toBe('P3');
     });
-    it('<50 -> Baja', () => {
-      expect(service.priorityLabel(49)).toBe('Baja');
-      expect(service.priorityLabel(20)).toBe('Baja');
+    it('<45 -> P4', () => {
+      expect(service.priorityBand(44)).toBe('P4');
+      expect(service.priorityBand(20)).toBe('P4');
+    });
+  });
+
+  describe('priorityLabel (design §1.1 cortes 80/65/45)', () => {
+    it('>=80 -> glosa P1', () => {
+      expect(service.priorityLabel(80)).toBe(
+        'P1 · Primera consideracion para compromiso',
+      );
+      expect(service.priorityLabel(100)).toBe(
+        'P1 · Primera consideracion para compromiso',
+      );
+    });
+    it('>=65 -> glosa P2', () => {
+      expect(service.priorityLabel(65)).toBe(
+        'P2 · Programacion en el horizonte cercano',
+      );
+      expect(service.priorityLabel(79)).toBe(
+        'P2 · Programacion en el horizonte cercano',
+      );
+    });
+    it('>=45 -> glosa P3 (el caso 45-49 ya no es "Baja")', () => {
+      expect(service.priorityLabel(45)).toBe(
+        'P3 · Planificacion ordinaria segun capacidad',
+      );
+      expect(service.priorityLabel(49)).toBe(
+        'P3 · Planificacion ordinaria segun capacidad',
+      );
+      expect(service.priorityLabel(64)).toBe(
+        'P3 · Planificacion ordinaria segun capacidad',
+      );
+    });
+    it('<45 -> glosa P4', () => {
+      expect(service.priorityLabel(44)).toBe(
+        'P4 · Reserva de demanda, reformulacion o cierre motivado',
+      );
+      expect(service.priorityLabel(20)).toBe(
+        'P4 · Reserva de demanda, reformulacion o cierre motivado',
+      );
     });
   });
 

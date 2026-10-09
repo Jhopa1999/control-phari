@@ -151,9 +151,10 @@ export class RequestStateService {
   }
 
   /**
-   * Score ponderado 0-100 (design §1.4): round(Σ peso_i·(valor_i/5)). Los 8
+   * Score ponderado 20-100 (design §1.1): round(Σ peso_i·(valor_i/5)). Los 8
    * criterios deben estar presentes y en 1-5 (el DTO ya lo exige). Todos en 5
-   * -> 100; todos en 1 -> 20. Redondeo Math.round.
+   * -> 100; todos en 1 -> 20. Redondeo Math.round. La formula y los pesos no
+   * cambian en Fase 7: solo se realinean los cortes/vocabulario de la etiqueta.
    */
   computeScore(criteria: PriorityCriteria): number {
     let sum = 0;
@@ -166,14 +167,38 @@ export class RequestStateService {
   }
 
   /**
-   * Etiqueta informativa de umbral derivada del score (design §1.4/§11 D7).
-   * Cortes inclusivos 80/65/50; cuarto tramo <50. Solo etiqueta: no dispara
-   * transiciones ni aprobacion.
+   * Banda de prioridad orientadora del marco FCGR §4 (design §1.1), derivada del
+   * score con cortes inclusivos 80/65/45; cuarto tramo <45. Es un codigo estable
+   * (P1..P4) pensado para logica/filtros; la glosa legible la da `priorityLabel`.
+   * Solo clasifica: no dispara transiciones ni aprobacion.
+   */
+  priorityBand(score: number): 'P1' | 'P2' | 'P3' | 'P4' {
+    if (score >= 80) return 'P1';
+    if (score >= 65) return 'P2';
+    if (score >= 45) return 'P3';
+    return 'P4';
+  }
+
+  /**
+   * Etiqueta informativa derivada del score (design §1.1): banda P1-P4 del marco
+   * FCGR §4 con la glosa de la decision de planificacion. Cortes inclusivos
+   * 80/65/45; cuarto tramo <45. Solo etiqueta: no dispara transiciones ni
+   * aprobacion. Se conserva el nombre `priorityLabel` para no romper llamadas
+   * existentes (approval.service.ts, priority.service.ts).
    */
   priorityLabel(score: number): string {
-    if (score >= 80) return 'Muy alta';
-    if (score >= 65) return 'Alta';
-    if (score >= 50) return 'Media';
-    return 'Baja';
+    return PRIORITY_BAND_LABELS[this.priorityBand(score)];
   }
 }
+
+/**
+ * Glosa legible de cada banda de prioridad (marco FCGR §4, design §1.1). Es una
+ * constante de dominio (texto del marco), no configuracion de ambiente; debe
+ * coincidir con los labels sembrados en el catalogo PRIORITY_BAND del seed.
+ */
+const PRIORITY_BAND_LABELS: Record<'P1' | 'P2' | 'P3' | 'P4', string> = {
+  P1: 'P1 · Primera consideracion para compromiso',
+  P2: 'P2 · Programacion en el horizonte cercano',
+  P3: 'P3 · Planificacion ordinaria segun capacidad',
+  P4: 'P4 · Reserva de demanda, reformulacion o cierre motivado',
+};

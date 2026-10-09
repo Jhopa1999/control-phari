@@ -97,7 +97,9 @@ describe('PriorityService', () => {
     // score lo calcula el backend (todos 5 -> 100); no viene del DTO.
     expect((m.prismaObj.priorityEvaluation as any).create.mock.calls[0][0].data.score).toBe(100);
     expect(res.score).toBe(100);
-    expect(res.thresholdLabel).toBe('Muy alta');
+    expect(res.thresholdLabel).toBe(
+      'P1 · Primera consideracion para compromiso',
+    );
     expect((m.prismaObj.request as any).update.mock.calls[0][0].data).toEqual({
       operationalState: RequestState.BACKLOG_PRIORIZADO,
     });

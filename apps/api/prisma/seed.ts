@@ -190,6 +190,79 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'DOC_CATEGORY', code: 'FUNCIONAL', label: 'Funcional', sortOrder: 2 },
     { catalog: 'DOC_CATEGORY', code: 'OPERATIVA', label: 'Operativa', sortOrder: 3 },
     { catalog: 'DOC_CATEGORY', code: 'OTRO', label: 'Otro', sortOrder: 4 },
+    // Fase 7 (gobierno de la demanda · design §2.7). Catalogos nuevos del marco
+    // FCGR §4/§6/§7; seed inicial reversible (ampliable por gestion de maestras
+    // sin migracion). GOVERNANCE_ROUTE = ruta proporcional (distinta de
+    // TRIAGE_ROUTE); PRIORITY_BAND = banda P1-P4 del marco (la familia PRIORITY
+    // orientadora existente NO se toca).
+    // GOVERNANCE_ROUTE (marco §6).
+    { catalog: 'GOVERNANCE_ROUTE', code: 'COMPLETA', label: 'Ruta completa', sortOrder: 1 },
+    { catalog: 'GOVERNANCE_ROUTE', code: 'SIMPLIFICADA', label: 'Ruta simplificada', sortOrder: 2 },
+    { catalog: 'GOVERNANCE_ROUTE', code: 'EXPLORACION', label: 'Ruta de exploracion', sortOrder: 3 },
+    // VALIDATION_TYPE (6 tipos exactos del marco §7).
+    {
+      catalog: 'VALIDATION_TYPE',
+      code: 'FUNCIONAL_ACEPTACION',
+      label: 'Funcional y aceptacion',
+      sortOrder: 1,
+    },
+    {
+      catalog: 'VALIDATION_TYPE',
+      code: 'COMPONENTE_INTEGRACION',
+      label: 'Componente e integracion',
+      sortOrder: 2,
+    },
+    { catalog: 'VALIDATION_TYPE', code: 'REGRESION', label: 'Regresion', sortOrder: 3 },
+    { catalog: 'VALIDATION_TYPE', code: 'INFORMACION', label: 'Informacion', sortOrder: 4 },
+    {
+      catalog: 'VALIDATION_TYPE',
+      code: 'ACCESO_SEGURIDAD',
+      label: 'Acceso y seguridad',
+      sortOrder: 5,
+    },
+    {
+      catalog: 'VALIDATION_TYPE',
+      code: 'RENDIMIENTO_CONTINUIDAD',
+      label: 'Rendimiento y continuidad',
+      sortOrder: 6,
+    },
+    // VALIDATION_RESULT (resultado de una prueba; el flag `blocking` del
+    // registro es ortogonal al resultado).
+    { catalog: 'VALIDATION_RESULT', code: 'APROBADA', label: 'Aprobada', sortOrder: 1 },
+    {
+      catalog: 'VALIDATION_RESULT',
+      code: 'APROBADA_CON_OBSERVACIONES',
+      label: 'Aprobada con observaciones',
+      sortOrder: 2,
+    },
+    { catalog: 'VALIDATION_RESULT', code: 'FALLIDA', label: 'Fallida', sortOrder: 3 },
+    { catalog: 'VALIDATION_RESULT', code: 'BLOQUEADA', label: 'Bloqueada por defecto', sortOrder: 4 },
+    // PRIORITY_BAND (marco §4, D-A4): banda P1-P4 con glosa de la decision de
+    // planificacion. La familia PRIORITY orientadora se conserva aparte.
+    {
+      catalog: 'PRIORITY_BAND',
+      code: 'P1',
+      label: 'P1 · Primera consideracion para compromiso',
+      sortOrder: 1,
+    },
+    {
+      catalog: 'PRIORITY_BAND',
+      code: 'P2',
+      label: 'P2 · Programacion en el horizonte cercano',
+      sortOrder: 2,
+    },
+    {
+      catalog: 'PRIORITY_BAND',
+      code: 'P3',
+      label: 'P3 · Planificacion ordinaria segun capacidad',
+      sortOrder: 3,
+    },
+    {
+      catalog: 'PRIORITY_BAND',
+      code: 'P4',
+      label: 'P4 · Reserva de demanda, reformulacion o cierre motivado',
+      sortOrder: 4,
+    },
   ];
 
 // --- Ejecucion idempotente --------------------------------------------------

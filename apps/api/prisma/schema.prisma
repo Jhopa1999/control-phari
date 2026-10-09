@@ -123,6 +123,16 @@ model User {
   assetsOwned              Asset[]           @relation("AssetOwner")
   documentVersionsAuthored DocumentVersion[] @relation("DocumentVersionAuthor")
 
+  // Fase 7 (gobierno de la demanda): decisiones de gate, faltantes a cargo,
+  // validaciones ejecutadas/resueltas y bloqueos de Request. Cada relacion usa
+  // `name` propio porque hay mas de una FK User por modelo (Prisma lo exige).
+  gateChecksDecided            GateCheck[]        @relation("GateCheckDecider")
+  gatePendingOwned             GatePendingItem[]  @relation("GatePendingOwner")
+  validationsExecuted          ValidationRecord[] @relation("ValidationExecutor")
+  validationsBlockingResolved  ValidationRecord[] @relation("ValidationBlockingResolver")
+  requestsBlocked              Request[]          @relation("RequestBlockedBy")
+  requestsBlockResolved        Request[]          @relation("RequestBlockedResolvedBy")
+
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
   @@map("users")
@@ -210,6 +220,17 @@ model Request {
   operationalState      String    @default("REGISTRADA") @map("operational_state")
   initialCommitmentDate DateTime? @map("initial_commitment_date")
   changeJustification   String?   @map("change_justification")
+  // Fase 7 (gobierno · design §2.5, aditivo): ruta proporcional del marco §6
+  // (catalogo GOVERNANCE_ROUTE, nullable hasta que el lider la elija) y el flag
+  // transversal de bloqueo (D-B7/MEDIUM-1). El bloqueo convive con
+  // `operationalState` (no lo reemplaza) y aplica en cualquier etapa:
+  // "Request bloqueada" = blockedAt != null AND blockedResolvedAt == null.
+  governanceRoute        String?   @map("governance_route")
+  blockedReason          String?   @map("blocked_reason")
+  blockedAt              DateTime? @map("blocked_at")
+  blockedByUserId        String?   @map("blocked_by_user_id") @db.Uuid
+  blockedResolvedAt      DateTime? @map("blocked_resolved_at")
+  blockedResolvedByUserId String?  @map("blocked_resolved_by_user_id") @db.Uuid
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
@@ -238,9 +259,17 @@ model Request {
   // Fase 6 (activos): activos cuya solicitud de origen es esta Request.
   assets Asset[]
 
+  // Fase 7 (gobierno): gates de control, validaciones y FK del flag de bloqueo.
+  gateChecks        GateCheck[]
+  validationRecords ValidationRecord[]
+  blockedBy         User?              @relation("RequestBlockedBy", fields: [blockedByUserId], references: [id], onDelete: Restrict)
+  blockedResolvedBy User?              @relation("RequestBlockedResolvedBy", fields: [blockedResolvedByUserId], references: [id], onDelete: Restrict)
+
   @@index([mainProcessId])
   @@index([operationalState])
   @@index([registeredAt])
+  @@index([governanceRoute])
+  @@index([blockedAt])
   @@map("requests")
 }
 
@@ -794,6 +823,10 @@ model Document {
   versions       DocumentVersion[] @relation("DocumentVersions")
   currentVersion DocumentVersion?  @relation("DocumentCurrentVersion", fields: [currentVersionId], references: [id], onDelete: Restrict)
 
+  // Fase 7 (gobierno): registros de validacion que usan este documento como
+  // evidencia (BR-016).
+  validationEvidences ValidationRecord[] @relation("ValidationEvidenceDocument")
+
   @@index([assetId])
   @@index([status])
   @@index([categoryCode])
@@ -816,9 +849,112 @@ model DocumentVersion {
   author    User       @relation("DocumentVersionAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
   currentOf Document[] @relation("DocumentCurrentVersion")
 
+  // Fase 7 (gobierno): registros de validacion que fijan esta version concreta
+  // como evidencia inmutable (BR-016, §9).
+  validationEvidenceVersions ValidationRecord[] @relation("ValidationEvidenceVersion")
+
   // Compuesto -> usable como `where` (§1.1); garantiza numeros unicos por documento.
   @@unique([documentId, versionNumber], name: "document_version_number_unique")
   @@index([documentId])
   @@index([authorUserId])
   @@map("document_versions")
+}
+
+// ============================================================================
+// Fase 7 · Gobierno de la demanda (GateCheck + GatePendingItem + ValidationRecord)
+// Diseno aprobado en .agents/tasks/fase7-gobierno/design.md §2.2-2.5.
+// ============================================================================
+
+/// Punto de control del ciclo de gobierno (Fase 7 · marco FCGR §5). Una fila por
+/// (requestId, gateCode) para los 5 gates. `status` es enum logico GateStatus
+/// read-only: solo lo escribe el GovernanceStateService dentro de su $transaction.
+model GateCheck {
+  id              String    @id @default(uuid()) @db.Uuid
+  requestId       String    @map("request_id") @db.Uuid
+  gateCode        String    @map("gate_code")
+  status          String    @default("PENDIENTE")
+  conditionText   String    @map("condition_text")
+  authorityText   String    @map("authority_text")
+  waiverReason    String?   @map("waiver_reason")
+  decidedAt       DateTime? @map("decided_at")
+  decidedByUserId String?   @map("decided_by_user_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  request      Request            @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  decidedBy    User?              @relation("GateCheckDecider", fields: [decidedByUserId], references: [id], onDelete: Restrict)
+  pendingItems GatePendingItem[]
+  validations  ValidationRecord[]
+
+  // Compuesto -> usable en findUnique/upsert (Prisma 7, §1.1): materializacion lazy GC1-GC3.
+  @@unique([requestId, gateCode], name: "gate_check_request_gate_unique")
+  @@index([requestId])
+  @@index([status])
+  @@map("gate_checks")
+}
+
+/// Faltante registrado de un gate no cumplido (marco §5 "Controles pendientes"):
+/// que falta, quien lo resuelve y la fecha de revision. Tambien modela el
+/// defecto no bloqueante con riesgo aceptado (marco §7, D-C4). Append-only para
+/// el alta; se cierra con resolvedAt (soft, sin borrado).
+model GatePendingItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  gateCheckId String    @map("gate_check_id") @db.Uuid
+  description String
+  ownerUserId String?   @map("owner_user_id") @db.Uuid
+  reviewDate  DateTime? @map("review_date") @db.Date
+  resolved    Boolean   @default(false)
+  resolvedAt  DateTime? @map("resolved_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  gateCheck GateCheck @relation(fields: [gateCheckId], references: [id], onDelete: Cascade)
+  owner     User?     @relation("GatePendingOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+
+  @@index([gateCheckId])
+  @@index([resolved])
+  @@map("gate_pending_items")
+}
+
+/// Registro de una prueba/validacion (marco §7). Campos minimos exactos del
+/// marco: caso, version, ambiente, ejecutor, fecha, resultado y evidencia.
+/// `blocking` marca defecto bloqueante (impide liberar GC4). La evidencia puede
+/// fijar una VERSION concreta de Fase 6 via `evidenceDocumentVersionId` (BR-016,
+/// evidencia inmutable §9) ademas de apuntar al `Document` padre, o ser texto.
+model ValidationRecord {
+  id                        String    @id @default(uuid()) @db.Uuid
+  requestId                 String    @map("request_id") @db.Uuid
+  gateCheckId               String?   @map("gate_check_id") @db.Uuid
+  validationTypeCode        String    @map("validation_type_code")
+  testCase                  String    @map("test_case")
+  version                   String?
+  environment               String?
+  resultCode                String    @map("result_code")
+  blocking                  Boolean   @default(false)
+  blockingResolved          Boolean   @default(false) @map("blocking_resolved")
+  blockingResolvedAt        DateTime? @map("blocking_resolved_at")
+  blockingResolvedByUserId  String?   @map("blocking_resolved_by_user_id") @db.Uuid
+  evidenceRef               String?   @map("evidence_ref")
+  evidenceDocumentId        String?   @map("evidence_document_id") @db.Uuid
+  evidenceDocumentVersionId String?   @map("evidence_document_version_id") @db.Uuid
+  executedByUserId          String    @map("executed_by_user_id") @db.Uuid
+  executedAt                DateTime  @map("executed_at")
+  notes                     String?
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+
+  request                 Request          @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  gateCheck               GateCheck?       @relation(fields: [gateCheckId], references: [id], onDelete: SetNull)
+  evidenceDocument        Document?        @relation("ValidationEvidenceDocument", fields: [evidenceDocumentId], references: [id], onDelete: Restrict)
+  evidenceDocumentVersion DocumentVersion? @relation("ValidationEvidenceVersion", fields: [evidenceDocumentVersionId], references: [id], onDelete: Restrict)
+  executedBy              User             @relation("ValidationExecutor", fields: [executedByUserId], references: [id], onDelete: Restrict)
+  blockingResolvedBy      User?            @relation("ValidationBlockingResolver", fields: [blockingResolvedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([requestId])
+  @@index([gateCheckId])
+  @@index([validationTypeCode])
+  @@index([resultCode])
+  @@index([blocking])
+  @@index([blockingResolved])
+  @@map("validation_records")
 }

@@ -155,7 +155,9 @@ describe('RequestService', () => {
       const res = await service.findOne(lider(), 'r1');
       expect(res.currentTriageDecision).toBe('CONTINUAR');
       expect(res.currentScore).toBe(72);
-      expect(res.priorityLabel).toBe('Alta');
+      expect(res.priorityLabel).toBe(
+        'P2 · Programacion en el horizonte cercano',
+      );
     });
   });
 
