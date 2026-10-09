@@ -5024,6 +5024,150 @@
           "governance-validations"
         ]
       }
+    },
+    "/area-control/indicators": {
+      "get": {
+        "operationId": "AreaControlController_indicators",
+        "parameters": [
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2025-04-01"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2025-03-01"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Indicadores del area.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AreaIndicatorsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rango de fechas invalido."
+          },
+          "403": {
+            "description": "Rol insuficiente (integrante)."
+          }
+        },
+        "summary": "Indicadores del marco §9 para el periodo (jefe/lider).",
+        "tags": [
+          "area-control"
+        ]
+      }
+    },
+    "/area-control/demand-summary": {
+      "get": {
+        "operationId": "AreaControlController_demandSummary",
+        "parameters": [
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2025-04-01"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2025-03-01"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Panorama de demanda.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemandSummaryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rango de fechas invalido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Panorama de demanda en alcance (3 roles).",
+        "tags": [
+          "area-control"
+        ]
+      }
+    },
+    "/portfolio": {
+      "get": {
+        "operationId": "PortfolioController_list",
+        "parameters": [
+          {
+            "name": "band",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "P1"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "mainProcessId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Iniciativas del portafolio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortfolioItemResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Listado del portafolio en alcance (filtros opcionales).",
+        "tags": [
+          "portfolio"
+        ]
+      }
     }
   },
   "info": {
@@ -9737,6 +9881,451 @@
             "maxLength": 2000
           }
         }
+      },
+      "IndicatorStatusDto": {
+        "type": "object",
+        "properties": {
+          "applicable": {
+            "type": "boolean",
+            "description": "false => \"No aplica\"."
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo legible cuando applicable=false."
+          },
+          "futureDataNote": {
+            "type": "string",
+            "nullable": true,
+            "description": "Que falta capturar (indicadores de dato futuro)."
+          }
+        },
+        "required": [
+          "applicable",
+          "reason",
+          "futureDataNote"
+        ]
+      },
+      "EvaluationTimeIndicatorDto": {
+        "type": "object",
+        "properties": {
+          "medianDays": {
+            "type": "number",
+            "nullable": true,
+            "description": "Mediana de dias o null."
+          },
+          "pendingCount": {
+            "type": "number",
+            "description": "Casos pendientes de decision inicial (0 valido)."
+          },
+          "sampleSize": {
+            "type": "number",
+            "description": "Numero de decisiones en el periodo."
+          },
+          "status": {
+            "$ref": "#/components/schemas/IndicatorStatusDto"
+          }
+        },
+        "required": [
+          "medianDays",
+          "pendingCount",
+          "sampleSize",
+          "status"
+        ]
+      },
+      "MilestoneComplianceIndicatorDto": {
+        "type": "object",
+        "properties": {
+          "percentage": {
+            "type": "number",
+            "nullable": true,
+            "description": "Porcentaje o null si denominador 0."
+          },
+          "met": {
+            "type": "number",
+            "description": "Hitos cumplidos a tiempo (numerador)."
+          },
+          "due": {
+            "type": "number",
+            "description": "Hitos con vencimiento en el periodo (denominador)."
+          },
+          "status": {
+            "$ref": "#/components/schemas/IndicatorStatusDto"
+          }
+        },
+        "required": [
+          "percentage",
+          "met",
+          "due",
+          "status"
+        ]
+      },
+      "DeliveryTimeGroupDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Clave del grupo (ruta o complejidad)."
+          },
+          "label": {
+            "type": "string",
+            "description": "Etiqueta legible del grupo."
+          },
+          "medianDays": {
+            "type": "number",
+            "description": "Mediana de dias del grupo."
+          },
+          "count": {
+            "type": "number",
+            "description": "Numero de cerradas medibles del grupo."
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "medianDays",
+          "count"
+        ]
+      },
+      "DeliveryTimeIndicatorDto": {
+        "type": "object",
+        "properties": {
+          "medianDays": {
+            "type": "number",
+            "nullable": true,
+            "description": "Mediana global de dias o null."
+          },
+          "count": {
+            "type": "number",
+            "description": "Numero de cerradas medibles."
+          },
+          "unmeasurableClosed": {
+            "type": "number",
+            "description": "Cerradas sin compromiso/cierre registrable."
+          },
+          "byRoute": {
+            "description": "Desglose por ruta de gobierno.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryTimeGroupDto"
+            }
+          },
+          "byComplexity": {
+            "description": "Desglose por complejidad (sizeCode).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryTimeGroupDto"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/IndicatorStatusDto"
+          }
+        },
+        "required": [
+          "medianDays",
+          "count",
+          "unmeasurableClosed",
+          "byRoute",
+          "byComplexity",
+          "status"
+        ]
+      },
+      "BlockCauseDto": {
+        "type": "object",
+        "properties": {
+          "cause": {
+            "type": "string",
+            "description": "Causa del bloqueo."
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "REQUEST_FLAG",
+              "ISSUE"
+            ],
+            "description": "Origen de la senal del bloqueo."
+          },
+          "count": {
+            "type": "number",
+            "description": "Numero de bloqueos con esta causa/origen."
+          },
+          "accumulatedDays": {
+            "type": "number",
+            "description": "Dias acumulados de los bloqueos de esta causa/origen."
+          }
+        },
+        "required": [
+          "cause",
+          "origin",
+          "count",
+          "accumulatedDays"
+        ]
+      },
+      "BlocksIndicatorDto": {
+        "type": "object",
+        "properties": {
+          "blockedRequests": {
+            "type": "number",
+            "description": "Solicitudes con bloqueo activo (0 valido)."
+          },
+          "openBlockingIssues": {
+            "type": "number",
+            "description": "Issues BLOQUEO abiertas (0 valido)."
+          },
+          "byCause": {
+            "description": "Desglose por causa fusionando ambas senales.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BlockCauseDto"
+            }
+          },
+          "status": {
+            "description": "applicable=true salvo error; conteos 0 NO son \"No aplica\".",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IndicatorStatusDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "blockedRequests",
+          "openBlockingIssues",
+          "byCause",
+          "status"
+        ]
+      },
+      "FutureIndicatorDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "applicable=false + futureDataNote.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IndicatorStatusDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "AreaIndicatorsResponseDto": {
+        "type": "object",
+        "properties": {
+          "periodFrom": {
+            "type": "string",
+            "description": "Eco del periodo resuelto (YYYY-MM-DD, inclusivo)."
+          },
+          "periodTo": {
+            "type": "string",
+            "description": "Eco del periodo resuelto (YYYY-MM-DD, exclusivo)."
+          },
+          "evaluationTime": {
+            "$ref": "#/components/schemas/EvaluationTimeIndicatorDto"
+          },
+          "milestoneCompliance": {
+            "$ref": "#/components/schemas/MilestoneComplianceIndicatorDto"
+          },
+          "deliveryTime": {
+            "$ref": "#/components/schemas/DeliveryTimeIndicatorDto"
+          },
+          "blocks": {
+            "$ref": "#/components/schemas/BlocksIndicatorDto"
+          },
+          "failedChanges": {
+            "$ref": "#/components/schemas/FutureIndicatorDto"
+          },
+          "recovery": {
+            "$ref": "#/components/schemas/FutureIndicatorDto"
+          },
+          "adoptionValue": {
+            "$ref": "#/components/schemas/FutureIndicatorDto"
+          }
+        },
+        "required": [
+          "periodFrom",
+          "periodTo",
+          "evaluationTime",
+          "milestoneCompliance",
+          "deliveryTime",
+          "blocks",
+          "failedChanges",
+          "recovery",
+          "adoptionValue"
+        ]
+      },
+      "StateCountDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "description": "Estado operativo (RequestState)."
+          },
+          "count": {
+            "type": "number",
+            "description": "Numero de solicitudes en ese estado (0 valido)."
+          }
+        },
+        "required": [
+          "state",
+          "count"
+        ]
+      },
+      "BandCountDto": {
+        "type": "object",
+        "properties": {
+          "band": {
+            "type": "string",
+            "enum": [
+              "P1",
+              "P2",
+              "P3",
+              "P4",
+              "SIN_PRIORIZAR"
+            ],
+            "description": "Banda de prioridad o SIN_PRIORIZAR."
+          },
+          "count": {
+            "type": "number",
+            "description": "Numero de solicitudes en esa banda (0 valido)."
+          }
+        },
+        "required": [
+          "band",
+          "count"
+        ]
+      },
+      "DemandSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total de solicitudes en alcance."
+          },
+          "blockedActive": {
+            "type": "number",
+            "description": "Solicitudes con bloqueo activo."
+          },
+          "byState": {
+            "description": "Conteo por estado (todos los estados, incl. 0).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StateCountDto"
+            }
+          },
+          "byPriorityBand": {
+            "description": "Conteo por banda (incl. SIN_PRIORIZAR).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BandCountDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "blockedActive",
+          "byState",
+          "byPriorityBand"
+        ]
+      },
+      "PortfolioItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id de la solicitud."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la iniciativa."
+          },
+          "mainProcessId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso principal."
+          },
+          "mainProcessCode": {
+            "type": "string",
+            "description": "Code del proceso principal."
+          },
+          "mainProcessName": {
+            "type": "string",
+            "description": "Nombre del proceso principal."
+          },
+          "operationalState": {
+            "type": "string",
+            "description": "Estado operativo explicito (no inferido)."
+          },
+          "priorityBand": {
+            "type": "string",
+            "nullable": true,
+            "description": "'P1'..'P4' si hay evaluacion vigente; null cuando SIN_PRIORIZAR."
+          },
+          "priorityLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "Glosa legible del marco §4 o null."
+          },
+          "currentScore": {
+            "type": "number",
+            "nullable": true,
+            "description": "Score vigente o null."
+          },
+          "governanceRoute": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ruta de gobierno (COMPLETA/SIMPLIFICADA/EXPLORACION) o null."
+          },
+          "responsibleName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Responsable (functionalOwner) o null."
+          },
+          "registeredAt": {
+            "type": "string",
+            "description": "Fecha de registro (YYYY-MM-DD)."
+          },
+          "targetDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fecha objetivo (YYYY-MM-DD) o null."
+          },
+          "initialCommitmentDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Compromiso inicial (YYYY-MM-DD) o null."
+          },
+          "blocked": {
+            "type": "boolean",
+            "description": "Flag transversal de bloqueo activo (Fase 7)."
+          },
+          "blockedReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo del bloqueo o null."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "mainProcessId",
+          "mainProcessCode",
+          "mainProcessName",
+          "operationalState",
+          "priorityBand",
+          "priorityLabel",
+          "currentScore",
+          "governanceRoute",
+          "responsibleName",
+          "registeredAt",
+          "targetDate",
+          "initialCommitmentDate",
+          "blocked",
+          "blockedReason"
+        ]
       }
     }
   }

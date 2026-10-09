@@ -1390,6 +1390,57 @@ export interface paths {
         patch: operations["ValidationController_resolveBlocking"];
         trace?: never;
     };
+    "/area-control/indicators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Indicadores del marco §9 para el periodo (jefe/lider). */
+        get: operations["AreaControlController_indicators"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/area-control/demand-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Panorama de demanda en alcance (3 roles). */
+        get: operations["AreaControlController_demandSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portfolio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listado del portafolio en alcance (filtros opcionales). */
+        get: operations["PortfolioController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3866,6 +3917,160 @@ export interface components {
         ResolveBlockingDto: {
             /** @description Nota de resolucion. */
             resolutionNote?: string;
+        };
+        IndicatorStatusDto: {
+            /** @description false => "No aplica". */
+            applicable: boolean;
+            /** @description Motivo legible cuando applicable=false. */
+            reason: string | null;
+            /** @description Que falta capturar (indicadores de dato futuro). */
+            futureDataNote: string | null;
+        };
+        EvaluationTimeIndicatorDto: {
+            /** @description Mediana de dias o null. */
+            medianDays: number | null;
+            /** @description Casos pendientes de decision inicial (0 valido). */
+            pendingCount: number;
+            /** @description Numero de decisiones en el periodo. */
+            sampleSize: number;
+            status: components["schemas"]["IndicatorStatusDto"];
+        };
+        MilestoneComplianceIndicatorDto: {
+            /** @description Porcentaje o null si denominador 0. */
+            percentage: number | null;
+            /** @description Hitos cumplidos a tiempo (numerador). */
+            met: number;
+            /** @description Hitos con vencimiento en el periodo (denominador). */
+            due: number;
+            status: components["schemas"]["IndicatorStatusDto"];
+        };
+        DeliveryTimeGroupDto: {
+            /** @description Clave del grupo (ruta o complejidad). */
+            key: string;
+            /** @description Etiqueta legible del grupo. */
+            label: string;
+            /** @description Mediana de dias del grupo. */
+            medianDays: number;
+            /** @description Numero de cerradas medibles del grupo. */
+            count: number;
+        };
+        DeliveryTimeIndicatorDto: {
+            /** @description Mediana global de dias o null. */
+            medianDays: number | null;
+            /** @description Numero de cerradas medibles. */
+            count: number;
+            /** @description Cerradas sin compromiso/cierre registrable. */
+            unmeasurableClosed: number;
+            /** @description Desglose por ruta de gobierno. */
+            byRoute: components["schemas"]["DeliveryTimeGroupDto"][];
+            /** @description Desglose por complejidad (sizeCode). */
+            byComplexity: components["schemas"]["DeliveryTimeGroupDto"][];
+            status: components["schemas"]["IndicatorStatusDto"];
+        };
+        BlockCauseDto: {
+            /** @description Causa del bloqueo. */
+            cause: string;
+            /**
+             * @description Origen de la senal del bloqueo.
+             * @enum {string}
+             */
+            origin: "REQUEST_FLAG" | "ISSUE";
+            /** @description Numero de bloqueos con esta causa/origen. */
+            count: number;
+            /** @description Dias acumulados de los bloqueos de esta causa/origen. */
+            accumulatedDays: number;
+        };
+        BlocksIndicatorDto: {
+            /** @description Solicitudes con bloqueo activo (0 valido). */
+            blockedRequests: number;
+            /** @description Issues BLOQUEO abiertas (0 valido). */
+            openBlockingIssues: number;
+            /** @description Desglose por causa fusionando ambas senales. */
+            byCause: components["schemas"]["BlockCauseDto"][];
+            /** @description applicable=true salvo error; conteos 0 NO son "No aplica". */
+            status: components["schemas"]["IndicatorStatusDto"];
+        };
+        FutureIndicatorDto: {
+            /** @description applicable=false + futureDataNote. */
+            status: components["schemas"]["IndicatorStatusDto"];
+        };
+        AreaIndicatorsResponseDto: {
+            /** @description Eco del periodo resuelto (YYYY-MM-DD, inclusivo). */
+            periodFrom: string;
+            /** @description Eco del periodo resuelto (YYYY-MM-DD, exclusivo). */
+            periodTo: string;
+            evaluationTime: components["schemas"]["EvaluationTimeIndicatorDto"];
+            milestoneCompliance: components["schemas"]["MilestoneComplianceIndicatorDto"];
+            deliveryTime: components["schemas"]["DeliveryTimeIndicatorDto"];
+            blocks: components["schemas"]["BlocksIndicatorDto"];
+            failedChanges: components["schemas"]["FutureIndicatorDto"];
+            recovery: components["schemas"]["FutureIndicatorDto"];
+            adoptionValue: components["schemas"]["FutureIndicatorDto"];
+        };
+        StateCountDto: {
+            /** @description Estado operativo (RequestState). */
+            state: string;
+            /** @description Numero de solicitudes en ese estado (0 valido). */
+            count: number;
+        };
+        BandCountDto: {
+            /**
+             * @description Banda de prioridad o SIN_PRIORIZAR.
+             * @enum {string}
+             */
+            band: "P1" | "P2" | "P3" | "P4" | "SIN_PRIORIZAR";
+            /** @description Numero de solicitudes en esa banda (0 valido). */
+            count: number;
+        };
+        DemandSummaryResponseDto: {
+            /** @description Total de solicitudes en alcance. */
+            total: number;
+            /** @description Solicitudes con bloqueo activo. */
+            blockedActive: number;
+            /** @description Conteo por estado (todos los estados, incl. 0). */
+            byState: components["schemas"]["StateCountDto"][];
+            /** @description Conteo por banda (incl. SIN_PRIORIZAR). */
+            byPriorityBand: components["schemas"]["BandCountDto"][];
+        };
+        PortfolioItemResponseDto: {
+            /**
+             * Format: uuid
+             * @description Id de la solicitud.
+             */
+            id: string;
+            /** @description Titulo de la iniciativa. */
+            title: string;
+            /**
+             * Format: uuid
+             * @description Proceso principal.
+             */
+            mainProcessId: string;
+            /** @description Code del proceso principal. */
+            mainProcessCode: string;
+            /** @description Nombre del proceso principal. */
+            mainProcessName: string;
+            /** @description Estado operativo explicito (no inferido). */
+            operationalState: string;
+            /** @description 'P1'..'P4' si hay evaluacion vigente; null cuando SIN_PRIORIZAR. */
+            priorityBand: string | null;
+            /** @description Glosa legible del marco §4 o null. */
+            priorityLabel: string | null;
+            /** @description Score vigente o null. */
+            currentScore: number | null;
+            /** @description Ruta de gobierno (COMPLETA/SIMPLIFICADA/EXPLORACION) o null. */
+            governanceRoute: string | null;
+            /** @description Responsable (functionalOwner) o null. */
+            responsibleName: string | null;
+            /** @description Fecha de registro (YYYY-MM-DD). */
+            registeredAt: string;
+            /** @description Fecha objetivo (YYYY-MM-DD) o null. */
+            targetDate: string | null;
+            /** @description Compromiso inicial (YYYY-MM-DD) o null. */
+            initialCommitmentDate: string | null;
+            /** @description Flag transversal de bloqueo activo (Fase 7). */
+            blocked: boolean;
+            /** @description Motivo del bloqueo o null. */
+            blockedReason: string | null;
         };
     };
     responses: never;
@@ -8566,6 +8771,118 @@ export interface operations {
             };
             /** @description Validacion no encontrada. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AreaControlController_indicators: {
+        parameters: {
+            query?: {
+                to?: unknown;
+                from?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Indicadores del area. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AreaIndicatorsResponseDto"];
+                };
+            };
+            /** @description Rango de fechas invalido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente (integrante). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AreaControlController_demandSummary: {
+        parameters: {
+            query?: {
+                to?: unknown;
+                from?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Panorama de demanda. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemandSummaryResponseDto"];
+                };
+            };
+            /** @description Rango de fechas invalido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PortfolioController_list: {
+        parameters: {
+            query?: {
+                band?: unknown;
+                state?: unknown;
+                mainProcessId?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Iniciativas del portafolio. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioItemResponseDto"][];
+                };
+            };
+            /** @description Filtros invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
