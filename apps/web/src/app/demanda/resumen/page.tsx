@@ -1,12 +1,7 @@
-import { UnderConstruction } from '@/components/under-construction';
+import { DemandOverviewView } from './demand-overview-view';
 
 export const metadata = { title: 'Resumen de demanda | Portal del area' };
 
 export default function DemandaResumenPage(): React.ReactElement {
-  return (
-    <UnderConstruction
-      title="Resumen de demanda"
-      description="Vista general de la demanda del area."
-    />
-  );
+  return <DemandOverviewView />;
 }

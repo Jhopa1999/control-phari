@@ -1,12 +1,7 @@
-import { UnderConstruction } from '@/components/under-construction';
+import { PortafolioView } from './portafolio-view';
 
 export const metadata = { title: 'Portafolio | Portal del area' };
 
 export default function PortafolioPage(): React.ReactElement {
-  return (
-    <UnderConstruction
-      title="Portafolio"
-      description="Portafolio de iniciativas y proyectos."
-    />
-  );
+  return <PortafolioView />;
 }
