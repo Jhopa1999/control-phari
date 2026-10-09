@@ -1,0 +1,425 @@
+﻿
+
+Marco corporativo de gestión de requerimientos y soluciones tecnológicas
+Este marco establece las reglas comunes para recibir, evaluar, priorizar, ejecutar, entregar y operar los requerimientos tecnológicos de Pharitech. Su aplicación permite a los líderes tomar decisiones con información suficiente, coordinar capacidades y asegurar resultados aceptados y sostenibles.
+Es el documento rector del gobierno de la demanda tecnológica. Aplica a todas las áreas que soliciten, construyan, administren o soporten soluciones y servicios de Pharitech, incluidas las que se incorporen posteriormente.
+Control documental
+ | Definición
+ | 
+Código y sigla
+ | INS-008 · FCGR
+ | 
+Versión y fecha de actualización
+ | 2.0 · 08 de octubre de 2026
+ | 
+Estado
+ | Versión para revisión y aprobación de líderes
+ | 
+Propietario
+ | Dirección de Pharitech; administración por el responsable de gobierno de demanda que designe
+ | 
+Aprobación y vigencia
+ | Dirección de Pharitech. Entra en vigor con la aprobación y publicación formal
+ | 
+Revisión
+ | Anual o ante cambios relevantes en la organización, los servicios o los riesgos
+ | 
+
+Decisiones para los líderes
+La adopción requiere designar al responsable de gobierno de demanda, confirmar el canal y registro oficial, asignar las autoridades de aprobación y comunicar los responsables de cada servicio. La aprobación de este marco no autoriza por sí misma presupuestos, proyectos o accesos.
+Intervención
+ | Responsable
+ | Registro
+ | 
+Revisión corporativa
+ | Líderes de las áreas de Pharitech
+ | Nombre, decisión y fecha en registro de aprobación
+ | 
+Aprobación
+ | Dirección de Pharitech
+ | Decisión y fecha de entrada en vigor
+ | 
+Publicación y divulgación
+ | Responsable de gobierno de demanda
+ | Versión publicada y comunicación a las áreas
+ | 
+
+Actualización 2.0: gobierno transversal por roles, criterios comunes de decisión, responsabilidades de operación y controles proporcionales para todas las áreas. La ficha de demanda se actualiza a la versión 1.1.
+1 Propósito alcance y reglas corporativas
+Propósito y alcance
+Toda demanda debe tener un resultado esperado, un responsable de negocio, un responsable de atención y un registro de sus decisiones. El marco comprende nuevos productos o capacidades, mejoras, cambios, parametrizaciones, solicitudes de servicio, incidentes, mantenimiento, exploraciones y retiro de soluciones.
+Incluye aplicaciones, plataformas, automatizaciones, integraciones, productos de información y demás capacidades tecnológicas del catálogo de Pharitech. También aplica al trabajo de proveedores y terceros cuando forme parte de una entrega o de un servicio bajo responsabilidad de Pharitech.
+Las actividades de negocio sin componente tecnológico se remiten al proceso competente. Las decisiones de contratación, presupuesto, seguridad o infraestructura conservan su autoridad correspondiente; registrar una demanda no sustituye esas autorizaciones.
+Reglas de aplicación
+Entrada trazable. Toda solicitud debe quedar en el registro oficial. Un correo o conversación puede originarla, pero no reemplaza su identificación y seguimiento.
+Valor verificable. Se define el problema, el resultado y la forma de comprobarlo antes de comprometer una entrega.
+Responsabilidad explícita. Cada demanda tiene un área líder y un dueño funcional. Cuando participan varias áreas, se asigna un líder integral y responsables por paquete de trabajo.
+Proporcionalidad. El nivel de análisis y evidencia depende del impacto, riesgo y complejidad. Una evidencia suficiente se conserva una sola vez.
+Compromiso realista. La prioridad no equivale a una fecha prometida. Se confirma capacidad, dependencias y autorización antes de comprometer la ejecución.
+Calidad y operación desde el inicio. Se consideran pruebas, seguridad, soporte, recuperación y adopción durante el diseño.
+Decisiones registradas. Las aprobaciones, rechazos, cambios y excepciones incluyen responsable, fecha y fundamento.
+Mejora continua. Los incidentes, resultados y beneficios alimentan las siguientes decisiones del portafolio.
+Autoridad del marco
+Los procedimientos y prácticas de cada área desarrollan estas reglas y deben conservar los controles corporativos. Ninguna instrucción operativa puede eliminar una aprobación obligatoria o trasladar una responsabilidad sin acuerdo registrado. Ante una contradicción, el responsable de gobierno de demanda eleva la decisión a Dirección antes de continuar con el punto afectado.
+El marco no fija herramientas, metodologías de desarrollo ni tecnologías obligatorias. Las áreas eligen sus métodos dentro de los estándares y autorizaciones corporativas.
+2 Roles y responsabilidades
+Los roles se asignan a personas o cargos vigentes y se registran en cada iniciativa o servicio. Una persona puede asumir varios roles cuando exista capacidad y se preserve la independencia de las decisiones críticas.
+Rol
+ | Responsabilidad
+ | 
+Dirección
+ | Aprueba el marco, define prioridades estratégicas y delegaciones; resuelve conflictos de autoridad y decisiones de riesgo, inversión o alcance que superan al comité.
+ | 
+Comité de Portafolio y Cambios
+ | Prioriza la demanda, concilia capacidad, decide reprogramaciones y autoriza cambios mayores dentro de su delegación. Participan Dirección o delegado y líderes de las áreas involucradas.
+ | 
+Responsable de gobierno de demanda
+ | Administra el registro corporativo, coordina evaluación inicial y seguimiento, verifica trazabilidad y consolida decisiones e indicadores.
+ | 
+Solicitante
+ | Describe la necesidad, aporta evidencia y atiende las solicitudes de información.
+ | 
+Dueño funcional
+ | Responde por el resultado de negocio; valida alcance y reglas, define criterios de aceptación, dispone usuarios para pruebas y acepta la entrega. Sigue los beneficios.
+ | 
+Líder del área responsable
+ | Acepta la asignación, estima y confirma capacidad; designa responsables y responde por la calidad de la entrega de su área.
+ | 
+Líder integral
+ | Coordina alcance, hitos, riesgos y dependencias entre áreas. Consolida el resultado sin sustituir las aprobaciones técnicas o funcionales.
+ | 
+Responsable técnico y equipo ejecutor
+ | Diseñan, construyen o configuran, prueban y documentan; controlan versiones y preparan liberación y recuperación.
+ | 
+Responsable de calidad
+ | Verifica pruebas, defectos y evidencia. En cambios críticos, la revisión no queda únicamente en quien ejecutó el cambio.
+ | 
+Responsable operativo y soporte
+ | Recibe el servicio, monitorea, atiende y comunica incidentes; mantiene procedimientos y escala con evidencia.
+ | 
+Infraestructura
+ | Administra los ambientes y recursos a su cargo; valida capacidad, despliegue, respaldo y recuperación en coordinación con el equipo responsable.
+ | 
+Seguridad y otras funciones de control
+ | Evalúan y autorizan asuntos de su competencia cuando exista impacto en accesos, información, cumplimiento, contratación o presupuesto.
+ | 
+
+Separación entre soporte y ejecución especializada
+El equipo de Aplicaciones, en su función operativa, atiende soporte N1 y N2, diagnóstico, monitoreo y parametrización funcional autorizada dentro de capacidades existentes. Los cambios de código, arquitectura o estructuras de datos corresponden al equipo técnico propietario del componente. Soporte conserva la comunicación con el usuario y el vínculo con el incidente hasta su resolución.
+3 Registro clasificación y asignación
+Información mínima de entrada
+Se registra identificador, fecha, solicitante, área o empresa, dueño funcional, necesidad, resultado esperado, producto o proceso afectado, impacto, urgencia y evidencia disponible. La Ficha Única de Demanda o un formulario electrónico equivalente soporta este registro. Los campos internos se completan durante la evaluación y no deben exigirse al solicitante.
+En un incidente urgente basta inicialmente con identificar el servicio, la afectación, la hora conocida y el contacto. La atención comienza de inmediato y el registro se completa en paralelo o tan pronto como la situación esté controlada.
+Tipo de demanda
+ | Tratamiento
+ | 
+Nueva capacidad
+ | Producto, servicio o funcionalidad inexistente; requiere alcance, diseño, pruebas y transición.
+ | 
+Evolución o cambio
+ | Modificación de una solución existente; requiere evaluación de impacto y control de versión.
+ | 
+Parametrización o servicio
+ | Configuración autorizada o atención repetible dentro de capacidades existentes; requiere validación y evidencia.
+ | 
+Incidente
+ | Interrupción o degradación del servicio; se prioriza restablecerlo de forma segura.
+ | 
+Mantenimiento
+ | Actualización, prevención, obsolescencia o deuda técnica; se prioriza por riesgo y sostenibilidad.
+ | 
+Exploración
+ | Validación de una hipótesis con tiempo, costo y criterio de decisión limitados.
+ | 
+Retiro
+ | Desactivación o reemplazo controlado de una solución o servicio.
+ | 
+
+Asignación por resultado y propiedad
+El responsable de gobierno de demanda verifica duplicados, suficiencia y pertenencia al catálogo. Asigna la solicitud al área que responde por el resultado principal y al propietario del producto cuando ya exista. La disciplina técnica se registra como atributo complementario; no reemplaza el tipo de demanda.
+Si participan varias áreas, se mantiene un identificador principal con paquetes vinculados, entregables, responsables y dependencias. Una disputa de asignación se eleva al comité sin devolver repetidamente la solicitud al usuario. El líder receptor confirma la responsabilidad.
+Criticidad y complejidad
+La criticidad mide el impacto de una falla o demora: crítica si compromete una operación esencial, información sensible o una exposición material; alta si afecta procesos relevantes con contingencia limitada; media si el impacto es parcial y controlable; baja si no hay afectación significativa.
+La complejidad mide el esfuerzo de coordinación y transformación: menor para cambios localizados y reversibles; media para varios componentes o reglas; mayor para nuevas soluciones, migraciones, arquitectura o múltiples dependencias. Se evalúa separadamente de la criticidad; cualquiera de las dos puede exigir más controles.
+La evaluación inicial admite, solicita información, redirige, propone exploración o rechaza con causa. Se comunica siempre el responsable, la siguiente acción y la fecha de revisión.
+4 Priorización capacidad y compromiso
+Las solicitudes admitidas se comparan con criterios comunes. Los incidentes se ordenan por severidad y niveles de servicio; su respuesta no espera a la puntuación del portafolio. Una obligación con plazo inamovible o una excepción de Dirección debe registrar su fundamento y el impacto sobre los compromisos vigentes.
+Criterio
+ | Peso
+ | Guía para calificar de 1 a 5
+ | 
+Impacto y valor
+ | 25 %
+ | 1: beneficio limitado. 5: resultado corporativo relevante y verificable.
+ | 
+Alineación estratégica
+ | 15 %
+ | 1: relación indirecta. 5: contribución directa a una prioridad aprobada.
+ | 
+Riesgo y continuidad
+ | 15 %
+ | 1: exposición menor. 5: reducción de un riesgo material.
+ | 
+Urgencia
+ | 10 %
+ | 1: fecha flexible. 5: plazo sustentado con alto costo de demora.
+ | 
+Cobertura del beneficio
+ | 10 %
+ | 1: alcance reducido. 5: beneficio extendido a procesos o clientes clave.
+ | 
+Viabilidad
+ | 10 %
+ | 1: incertidumbres críticas. 5: condiciones y dependencias disponibles.
+ | 
+Relación beneficio esfuerzo
+ | 10 %
+ | 1: esfuerzo alto para el beneficio. 5: relación muy favorable.
+ | 
+Reutilización
+ | 5 %
+ | 1: uso aislado. 5: capacidad reutilizable por varios servicios.
+ | 
+
+Se usan 2 y 4 para condiciones intermedias y 3 para una condición media. Cada calificación requiere una justificación. El puntaje es la suma de peso × calificación ÷ 5, usando los pesos como números enteros. Su rango es de 20 a 100; no se asigna cero para representar información faltante. Si falta información decisiva, la evaluación queda pendiente.
+Puntaje
+ | Prioridad orientadora
+ | Decisión de planificación
+ | 
+80 a 100
+ | P1
+ | Primera consideración para compromiso.
+ | 
+65 a menos de 80
+ | P2
+ | Programación en el horizonte cercano.
+ | 
+45 a menos de 65
+ | P3
+ | Planificación ordinaria según capacidad.
+ | 
+20 a menos de 45
+ | P4
+ | Reserva de demanda, reformulación o cierre motivado.
+ | 
+
+Confirmación de capacidad
+Antes del compromiso, cada área valida estimación, disponibilidad, presupuesto cuando aplique y dependencias. Se reserva capacidad para continuidad, mantenimiento y atención no planificada. El comité resuelve conflictos entre iniciativas; una urgencia nueva identifica qué trabajo desplaza y quién comunica la nueva fecha.
+La fecha requerida expresa una necesidad; la fecha comprometida representa una decisión aprobada. La línea base del alcance y los hitos se conserva. Una reprogramación registra causa, impacto, autoridad y nueva fecha, sin borrar la anterior.
+Se limita el trabajo simultáneo según capacidad real. Todo bloqueo incluye causa, responsable de resolverlo, siguiente acción y fecha. El puntaje orienta la decisión y no autoriza por sí mismo el inicio.
+5 Ciclo de gestión y puntos de control
+El ciclo permite decisiones trazables sin exigir una reunión por cada control. La evidencia puede quedar en el mismo registro de la demanda; su profundidad depende del riesgo y la complejidad.
+Etapa
+ | Resultado obligatorio
+ | 
+1 Registro
+ | Necesidad identificada y contacto responsable.
+ | 
+2 Evaluación inicial
+ | Tipo, área líder, criticidad, complejidad y ruta definidos.
+ | 
+3 Priorización y compromiso
+ | Decisión, capacidad, responsable y horizonte acordados.
+ | 
+4 Definición de alcance
+ | Incluye, excluye, reglas y criterios de aceptación confirmados.
+ | 
+5 Diseño y planificación
+ | Solución, actividades, riesgos, pruebas y operación preparados.
+ | 
+6 Ejecución
+ | Resultado construido o configurado con revisión y trazabilidad.
+ | 
+7 Validación
+ | Pruebas y aceptación funcional documentadas.
+ | 
+8 Liberación
+ | Autorización previa, versión y ejecución controlada.
+ | 
+9 Estabilización
+ | Servicio verificado y recepción operativa confirmada.
+ | 
+10 Cierre y valor
+ | Aceptación, pendientes y medición de beneficios asignados.
+ | 
+
+Control
+ | Condición para avanzar
+ | Autoridad
+ | 
+GC1 Admisión
+ | Información suficiente y asignación aceptada.
+ | Líder del área receptora; comité ante conflicto.
+ | 
+GC2 Compromiso
+ | Prioridad, capacidad, patrocinio y horizonte registrados.
+ | Comité o líder con delegación vigente.
+ | 
+GC3 Ejecución
+ | Alcance aceptado; diseño, riesgos, recursos y pruebas preparados.
+ | Dueño funcional para alcance y líder técnico para solución.
+ | 
+GC4 Liberación
+ | Pruebas, aceptación, recuperación, comunicación y soporte listos antes de producción.
+ | Autoridad de cambios delegada; comité para cambios mayores o críticos.
+ | 
+GC5 Cierre
+ | Estabilidad, transferencia, aceptación y expediente completos.
+ | Dueño funcional y responsable operativo; líder registra el cierre.
+ | 
+
+Controles pendientes y cambios de alcance
+Si un control no se cumple, se registra lo que falta, quién lo resuelve y la fecha de revisión. La demanda permanece en su etapa sin autorizar el avance afectado. Se pueden adelantar tareas independientes si no comprometen producción ni anticipan una decisión pendiente.
+Cualquier cambio material en alcance, plazo, costo, seguridad o criterios de aceptación requiere evaluar impacto y obtener nuevamente las aprobaciones afectadas. Las desviaciones menores se registran dentro de las tolerancias autorizadas. Ninguna aceptación se presume por silencio.
+6 Rutas proporcionales y atención urgente
+Ruta completa
+Aplica a nuevas capacidades, cambios mayores, migraciones, retiros con dependencias o solicitudes de alta criticidad. Requiere los cinco controles, diseño suficiente, validación técnica y funcional, autorización de liberación y transición operativa. Los paquetes de una iniciativa comparten el resultado global y conservan sus aprobaciones técnicas.
+Ruta simplificada
+Aplica a cambios localizados, reversibles y de bajo riesgo que no alteren arquitectura, permisos sensibles ni interfaces críticas. El líder documenta su elección. Registro, análisis de impacto, autorización, prueba y cierre pueden quedar en un ticket. Si aumenta el riesgo, se reclasifica antes de continuar.
+Una parametrización utiliza funciones existentes y permisos autorizados. Cuando exige código, modificación estructural o intervención especializada, pasa al equipo propietario y a la ruta de cambio correspondiente.
+Ruta de exploración
+Se define hipótesis, resultado esperado, duración, límite de recursos y criterios para continuar, reformular o cerrar. Se protegen los datos y se limita el acceso. El resultado de una prueba de concepto no queda autorizado para producción; su industrialización exige compromiso, validación y controles de liberación.
+Incidentes y cambios de emergencia
+La prioridad inicial es contener el impacto y restablecer el servicio. Soporte N1 registra y realiza validaciones básicas; N2 diagnostica y aplica procedimientos autorizados; N3 interviene sobre los componentes que requieren conocimiento especializado. El escalamiento conserva el caso original y vincula la corrección técnica.
+El responsable del incidente registra servicio, impacto, hora, evidencias, acciones y responsables; acuerda la frecuencia de comunicación según severidad.
+La autoridad de emergencia designada autoriza el cambio antes de ejecutarlo. Si no está disponible, se escala a Dirección o su delegado. El procedimiento expedito no equivale a autorización automática.
+Se realiza la prueba mínima segura, se identifica la versión y se dispone de reversión o contingencia. Si una validación habitual no es viable, se registra el riesgo y el control compensatorio.
+Se verifica la recuperación y se comunica el estado. La restauración del servicio y la eliminación de la causa pueden tener momentos diferentes.
+Los registros pendientes se completan a más tardar el siguiente día hábil después de recuperar el servicio. El comité revisa la emergencia y sus acciones en un máximo de cinco días hábiles.
+Excepciones y causas recurrentes
+Toda excepción define motivo, alcance, riesgo, control compensatorio, responsable, vencimiento y autoridad que la acepta. No puede omitir obligaciones legales o contractuales. Los incidentes críticos o repetidos requieren análisis de causa y acciones preventivas con seguimiento; no se cierran esas acciones por el solo hecho de recuperar el servicio.
+7 Calidad seguridad y liberación
+Controles transversales
+Los equipos mantienen versiones identificables de código, configuración y documentación; utilizan ambientes separados según riesgo y restringen accesos a producción. Las credenciales se administran en mecanismos autorizados, nunca en la ficha o en documentos de circulación general. Los datos sensibles se minimizan y protegen, especialmente en pruebas.
+El análisis de impacto considera componentes, usuarios, interfaces, información, proveedores, costos y continuidad. Los cambios críticos requieren un revisor distinto del ejecutor. Seguridad, Infraestructura y otras funciones intervienen cuando el alcance afecta sus responsabilidades.
+Validación
+ | Aplicación y evidencia mínima
+ | 
+Funcional y aceptación
+ | Resultado esperado frente al obtenido; aprobación del dueño funcional o delegado identificado.
+ | 
+Componente e integración
+ | Lógica y comunicación entre componentes; escenarios normales, de error y recuperación.
+ | 
+Regresión
+ | Procesos existentes que pueden verse afectados por el cambio.
+ | 
+Información
+ | Integridad, consistencia, conciliación y actualización cuando se procesan datos.
+ | 
+Acceso y seguridad
+ | Roles, permisos, exposición y protección de información según riesgo.
+ | 
+Rendimiento y continuidad
+ | Volumen, concurrencia, tiempos y recuperación cuando sean relevantes.
+ | 
+
+Cada prueba registra caso, versión, ambiente, ejecutor, fecha, resultado y evidencia. Los defectos bloqueantes impiden liberar. Un defecto no bloqueante solo puede quedar pendiente con riesgo aceptado, responsable y fecha. La aceptación funcional no sustituye la aprobación técnica ni la autorización de producción.
+Condiciones previas a producción
+Alcance y versión definidos; pruebas completadas y aceptación registrada.
+Ventana, ejecutor, validador y autoridad de liberación identificados.
+Respaldo y recuperación comprobados según riesgo. Si la reversión no es posible, contingencia y riesgo residual aprobados.
+Criterios para detener o revertir, tiempos de decisión y responsables definidos.
+Usuarios y soporte informados; documentación, accesos y monitoreo preparados.
+Ejecución y verificación
+La autorización GC4 ocurre antes del despliegue. El ejecutor registra inicio, fin, versión y resultado. Se realizan validaciones inmediatas y se activa recuperación si se superan los criterios acordados. Las notas de versión explican el cambio para usuarios y soporte. Los mecanismos automatizados deben conservar las mismas aprobaciones y evidencias.
+8 Operación transferencia cierre y retiro
+Preparación del servicio
+Todo producto en operación debe tener dueño funcional, propietario técnico, responsable operativo, usuarios identificados, nivel de criticidad y condiciones de soporte. Los tiempos de respuesta y recuperación se acuerdan por servicio y se aprueban antes de comunicarse como compromiso; una prioridad P1 no representa por sí sola un tiempo de solución.
+Transferencia y estabilización
+El equipo productor entrega documentación funcional y técnica, instrucciones de operación, monitoreo, accesos autorizados, recuperación, contactos de escalamiento y defectos conocidos. El receptor confirma que puede operar el servicio. La duración y los criterios de salida de estabilización se acuerdan antes de liberar, según riesgo y frecuencia de uso.
+Durante la estabilización, el equipo ejecutor atiende los defectos atribuibles a la entrega y el responsable operativo monitorea y comunica el comportamiento. La responsabilidad técnica no termina con el despliegue ni se traslada por el simple envío de un documento.
+Condiciones de cierre
+El dueño funcional confirma que los criterios de aceptación se cumplen.
+El responsable operativo acepta la transferencia y se cumple el periodo de estabilización acordado.
+No quedan defectos bloqueantes; los pendientes autorizados tienen responsable, fecha y demanda vinculada cuando corresponda.
+Las pruebas, autorizaciones, versión, comunicación y validación de producción están disponibles.
+El catálogo y el expediente se actualizan, y se asigna responsable y fecha de medición de beneficios.
+El cierre de la entrega no implica que todos los beneficios ya se materializaron. El dueño funcional conserva la responsabilidad de medirlos en el horizonte acordado. Si el resultado no cumple lo aceptado, se registra la reapertura o una corrección vinculada; no se modifica retrospectivamente la evidencia de cierre.
+Evolución y retiro
+Las mejoras y la deuda técnica se registran como nueva demanda vinculada al producto. El retiro identifica usuarios y dependencias, alternativa o migración, conservación o eliminación autorizada de información, revocación de accesos, contratos y costos. El dueño funcional y el propietario técnico validan la viabilidad; la autoridad de cambios autoriza la ejecución según impacto.
+Antes de retirar se comunica la fecha y se comprueba la continuidad de los servicios dependientes. Después se actualizan inventario, documentación, accesos y monitoreo. No se eliminan datos o evidencias sujetos a conservación obligatoria.
+9 Trazabilidad seguimiento e indicadores
+Expediente y catálogo
+Cada demanda mantiene una ubicación identificable que reúne o enlaza solicitud, clasificación, decisiones, alcance, plan, riesgos, versiones, pruebas, liberación, transferencia y cierre. Los registros indican autor y fecha. Los mensajes de aprobación se incorporan al expediente; no permanecen únicamente en cuentas personales.
+El catálogo de servicios identifica propietario, descripción, usuarios, dependencias, criticidad, soporte, niveles de servicio aprobados, versión, documentación y estado de vida útil. La conservación y acceso a evidencias se ajustan a la clasificación de la información y a las obligaciones aplicables.
+Estados comunes
+Registrado → En evaluación → Priorizado → Planificado → En ejecución → En validación → Listo para liberar → En estabilización → Cerrado. “Priorizado” no implica capacidad reservada; “Planificado” exige GC2. “En ejecución” exige GC3 para construir. “Listo para liberar” exige GC4. Las rutas sin despliegue registran la no aplicabilidad y cierran con evidencia de su resultado.
+Suspendido conserva motivo, responsable y fecha de revisión. Cancelado registra decisión y tratamiento del trabajo realizado. “Pendiente de información” y “Bloqueado” son condiciones transversales con acción y fecha; no borran el estado ni detienen por sí mismas el cómputo de tiempos.
+Instancia
+ | Frecuencia y resultado
+ | 
+Evaluación de demanda
+ | Semanal o según volumen; asignaciones y solicitudes de información. Los incidentes se atienden al recibirse.
+ | 
+Seguimiento de entrega
+ | Semanal; avance, capacidad, riesgos, bloqueos y siguientes hitos.
+ | 
+Portafolio y cambios
+ | Mensual y extraordinario según necesidad; compromisos, reprogramaciones y cambios de mayor impacto.
+ | 
+Revisión operativa
+ | Mensual; continuidad, incidentes, capacidad y acciones preventivas.
+ | 
+Revisión de valor
+ | Trimestral; adopción, beneficios, sostenibilidad y evolución.
+ | 
+
+Indicador
+ | Definición común
+ | 
+Tiempo de evaluación
+ | Días desde registro hasta decisión inicial; reportar mediana y casos pendientes.
+ | 
+Cumplimiento de hitos
+ | Hitos cumplidos a tiempo ÷ hitos con vencimiento en el periodo × 100; conservar línea base y revisiones.
+ | 
+Tiempo de entrega
+ | Días desde compromiso hasta cierre; separar ruta y complejidad.
+ | 
+Bloqueos
+ | Número de solicitudes bloqueadas y días acumulados por causa.
+ | 
+Cambios fallidos
+ | Liberaciones que causan incidente o reversión ÷ liberaciones del periodo × 100.
+ | 
+Recuperación
+ | Promedio de tiempo desde inicio conocido de afectación hasta restablecimiento; separar severidad.
+ | 
+Adopción y valor
+ | Resultado observado frente a meta y línea base definida por el dueño funcional.
+ | 
+
+El responsable de gobierno consolida mensualmente los indicadores con los líderes. Se acuerdan metas tras establecer la línea base; si no hay casos o denominador, se reporta “No aplica”.
+10 Adopción y mantenimiento del marco
+Responsabilidad de adopción
+Dirección aprueba el marco y designa a su administrador. Cada líder comunica las reglas a su equipo, asigna responsables y garantiza que la demanda de su ámbito ingrese al registro común. Los cambios organizacionales actualizan las asignaciones sin alterar el ciclo ni dejar servicios sin propietario.
+Periodo desde la aprobación
+ | Acciones y resultado
+ | 
+Primeros 30 días
+ | Designar responsables y delegaciones; publicar canal y ficha; consolidar solicitudes, productos y compromisos; activar evaluación inicial y seguimiento.
+ | 
+Días 31 a 60
+ | Aplicar controles a iniciativas representativas; completar catálogo, niveles de servicio y paquete de transferencia; revisar casos de emergencia y calidad del registro.
+ | 
+Días 61 a 90
+ | Consolidar indicadores, evaluar aplicación, corregir controles y formalizar el plan de mejora.
+ | 
+Continuidad
+ | Revisar portafolio, salud y valor; automatizar registros y controles repetitivos sin perder trazabilidad.
+ | 
+
+Condiciones de entrada en vigor
+Canal de ingreso y registro oficial accesibles, con administrador y mecanismo de identificación.
+Matriz de delegación que indique quién admite, compromete, autoriza cambios y aprueba emergencias. A falta de delegación expresa, decide Dirección o su delegado formal.
+Responsables funcionales, técnicos y operativos identificados por producto o servicio.
+Reglas de acceso, conservación y publicación de evidencias comunicadas.
+Calendario de seguimiento y mecanismos de escalamiento conocidos por los líderes.
+Solicitudes y compromisos en curso
+La adopción no exige reiniciar el trabajo aprobado. El líder registra el estado real, compromisos y evidencia disponible, identifica brechas y acuerda un plan para cubrirlas antes del siguiente control relevante. Los incidentes y servicios en operación mantienen su atención durante la transición.
+Revisión y cambios del marco
+El administrador revisa el marco al menos una vez al año o ante cambios relevantes. Recoge resultados, incidentes, observaciones de líderes y dificultades de aplicación. Toda modificación registra versión, fecha, alcance del cambio, revisión y aprobación. La versión vigente se publica y se comunica; las anteriores se conservan como historial controlado.
+Glosario de aplicación
+Demanda: necesidad registrada que requiere atención. Dueño funcional: responsable de aceptar el resultado de negocio. Portafolio: conjunto de iniciativas y compromisos. Evaluación inicial o triage: clasificación y asignación. Punto de control: decisión sustentada en evidencia. Liberación: puesta en operación de una versión. Estabilización: seguimiento reforzado posterior a la entrega. Nivel de servicio: compromiso aprobado de atención o desempeño. Contingencia: medida que preserva o recupera la operación ante una falla.
+
