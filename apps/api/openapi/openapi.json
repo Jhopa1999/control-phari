@@ -2616,6 +2616,1136 @@
           "capacity"
         ]
       }
+    },
+    "/coordination/people": {
+      "get": {
+        "operationId": "WorklogController_people",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Personas visibles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoordinationPersonDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Personas en alcance para los selectores de Fase 5.",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/daily": {
+      "get": {
+        "operationId": "WorklogController_listDailyLogs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Diarios.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DailyLogResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista diarios en alcance (filtros opcionales).",
+        "tags": [
+          "worklog"
+        ]
+      },
+      "post": {
+        "operationId": "WorklogController_createDailyLog",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDailyLogDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Diario creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyLogResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "404": {
+            "description": "Proceso fuera de alcance."
+          },
+          "409": {
+            "description": "Ya existe un diario para persona/proceso/fecha."
+          }
+        },
+        "summary": "Crea la cabecera de un diario (autor = actor).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/daily/{id}": {
+      "get": {
+        "operationId": "WorklogController_getDailyLog",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Diario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyLogResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Diario fuera de alcance."
+          }
+        },
+        "summary": "Detalle de un diario con sus actividades.",
+        "tags": [
+          "worklog"
+        ]
+      },
+      "patch": {
+        "operationId": "WorklogController_updateDailyLog",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDailyLogDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Diario actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyLogResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Diario fuera de alcance."
+          }
+        },
+        "summary": "Edita la cabecera (notas) de un diario propio.",
+        "tags": [
+          "worklog"
+        ]
+      },
+      "delete": {
+        "operationId": "WorklogController_removeDailyLog",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Diario borrado."
+          },
+          "404": {
+            "description": "Diario fuera de alcance."
+          }
+        },
+        "summary": "Borra un diario propio (cascade de actividades).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/daily/{id}/submit": {
+      "post": {
+        "operationId": "WorklogController_submitDailyLog",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Diario enviado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyLogResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Diario fuera de alcance."
+          },
+          "409": {
+            "description": "El diario ya fue enviado."
+          }
+        },
+        "summary": "Envia un diario a revision (BORRADOR -> ENVIADO).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/daily/{id}/activities": {
+      "post": {
+        "operationId": "WorklogController_addActivity",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateActivityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Actividad creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Clasificacion o datos invalidos."
+          },
+          "404": {
+            "description": "Diario o referencia fuera de alcance."
+          }
+        },
+        "summary": "Agrega una actividad al diario (valida clasificacion).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/activities/{id}": {
+      "patch": {
+        "operationId": "WorklogController_updateActivity",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateActivityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Actividad actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Clasificacion o datos invalidos."
+          },
+          "404": {
+            "description": "Actividad o referencia fuera de alcance."
+          }
+        },
+        "summary": "Edita una actividad del diario.",
+        "tags": [
+          "worklog"
+        ]
+      },
+      "delete": {
+        "operationId": "WorklogController_removeActivity",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Actividad borrada."
+          },
+          "404": {
+            "description": "Actividad fuera de alcance."
+          }
+        },
+        "summary": "Borra una actividad del diario.",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/weekly-reports": {
+      "get": {
+        "operationId": "WorklogController_listWeeklyReports",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Semanales.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WeeklyReportResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista semanales en alcance (filtros opcionales).",
+        "tags": [
+          "worklog"
+        ]
+      },
+      "post": {
+        "operationId": "WorklogController_createWeeklyReport",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWeeklyReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Semanal creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "404": {
+            "description": "Proceso fuera de alcance."
+          },
+          "409": {
+            "description": "Ya existe un semanal para persona/proceso/semana."
+          }
+        },
+        "summary": "Crea un semanal (se ancla al lunes ISO).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/weekly-reports/{id}": {
+      "get": {
+        "operationId": "WorklogController_getWeeklyReport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Semanal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Semanal fuera de alcance."
+          }
+        },
+        "summary": "Detalle de un semanal con conteos de consolidacion.",
+        "tags": [
+          "worklog"
+        ]
+      },
+      "patch": {
+        "operationId": "WorklogController_updateWeeklyReport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWeeklyReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Semanal actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Semanal fuera de alcance."
+          }
+        },
+        "summary": "Edita las secciones de texto de un semanal propio.",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/weekly-reports/{id}/submit": {
+      "post": {
+        "operationId": "WorklogController_submitWeeklyReport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Semanal enviado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Semanal fuera de alcance."
+          },
+          "409": {
+            "description": "El semanal ya fue enviado."
+          }
+        },
+        "summary": "Envia un semanal a revision (BORRADOR -> ENVIADO).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/issues": {
+      "get": {
+        "operationId": "IssueController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Novedades.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IssueResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista novedades en alcance (filtros opcionales).",
+        "tags": [
+          "issues"
+        ]
+      },
+      "post": {
+        "operationId": "IssueController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIssueDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Novedad creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "404": {
+            "description": "Proceso o referencia fuera de alcance."
+          }
+        },
+        "summary": "Crea una novedad (tipo por defecto BLOQUEO).",
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/issues/{id}": {
+      "get": {
+        "operationId": "IssueController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Novedad.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Novedad fuera de alcance."
+          }
+        },
+        "summary": "Detalle de una novedad.",
+        "tags": [
+          "issues"
+        ]
+      },
+      "patch": {
+        "operationId": "IssueController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIssueDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Novedad actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "404": {
+            "description": "Novedad o referencia fuera de alcance."
+          }
+        },
+        "summary": "Edita una novedad (un registro por incidente, AC-019).",
+        "tags": [
+          "issues"
+        ]
+      },
+      "delete": {
+        "operationId": "IssueController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Novedad borrada."
+          },
+          "404": {
+            "description": "Novedad fuera de alcance."
+          }
+        },
+        "summary": "Borra una novedad en alcance (204 sin body).",
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/issues/{id}/transition": {
+      "post": {
+        "operationId": "IssueController_transition",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Transicion no permitida."
+          },
+          "404": {
+            "description": "Novedad fuera de alcance."
+          }
+        },
+        "summary": "Transiciona el estado de una novedad (maquina minima).",
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/meetings": {
+      "get": {
+        "operationId": "MeetingController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Reuniones.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MeetingResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista reuniones en alcance (filtros opcionales).",
+        "tags": [
+          "meetings"
+        ]
+      },
+      "post": {
+        "operationId": "MeetingController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMeetingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reunion creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o participante fuera de alcance."
+          },
+          "404": {
+            "description": "Referencia fuera de alcance."
+          }
+        },
+        "summary": "Crea una reunion (estado inicial BORRADOR).",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
+    "/meetings/{id}": {
+      "get": {
+        "operationId": "MeetingController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reunion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reunion fuera de alcance."
+          }
+        },
+        "summary": "Detalle de una reunion con participantes.",
+        "tags": [
+          "meetings"
+        ]
+      },
+      "patch": {
+        "operationId": "MeetingController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeetingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reunion actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o participante fuera de alcance."
+          },
+          "404": {
+            "description": "Reunion fuera de alcance."
+          }
+        },
+        "summary": "Edita una reunion (incluye set de participantes).",
+        "tags": [
+          "meetings"
+        ]
+      },
+      "delete": {
+        "operationId": "MeetingController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Reunion borrada."
+          },
+          "404": {
+            "description": "Reunion fuera de alcance."
+          }
+        },
+        "summary": "Borra una reunion (cascade de participantes).",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
+    "/commitments": {
+      "get": {
+        "operationId": "CommitmentController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Compromisos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommitmentResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista compromisos en alcance (filtros opcionales).",
+        "tags": [
+          "commitments"
+        ]
+      },
+      "post": {
+        "operationId": "CommitmentController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCommitmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Compromiso creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "404": {
+            "description": "Proceso o referencia fuera de alcance."
+          }
+        },
+        "summary": "Crea un compromiso (vencimiento requerido).",
+        "tags": [
+          "commitments"
+        ]
+      }
+    },
+    "/commitments/{id}": {
+      "get": {
+        "operationId": "CommitmentController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compromiso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitmentResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Compromiso fuera de alcance."
+          }
+        },
+        "summary": "Detalle de un compromiso.",
+        "tags": [
+          "commitments"
+        ]
+      },
+      "patch": {
+        "operationId": "CommitmentController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCommitmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Compromiso actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "404": {
+            "description": "Compromiso o referencia fuera de alcance."
+          }
+        },
+        "summary": "Edita un compromiso.",
+        "tags": [
+          "commitments"
+        ]
+      },
+      "delete": {
+        "operationId": "CommitmentController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Compromiso borrado."
+          },
+          "404": {
+            "description": "Compromiso fuera de alcance."
+          }
+        },
+        "summary": "Borra un compromiso en alcance (204 sin body).",
+        "tags": [
+          "commitments"
+        ]
+      }
+    },
+    "/commitments/{id}/transition": {
+      "post": {
+        "operationId": "CommitmentController_transition",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitmentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Transicion no permitida."
+          },
+          "404": {
+            "description": "Compromiso fuera de alcance."
+          }
+        },
+        "summary": "Transiciona el estado de un compromiso (maquina minima).",
+        "tags": [
+          "commitments"
+        ]
+      }
     }
   },
   "info": {
@@ -5013,6 +6143,1299 @@
           "description": {
             "type": "string",
             "description": "Distribucion del esfuerzo por periodo (texto libre).",
+            "maxLength": 2000
+          }
+        }
+      },
+      "CoordinationPersonDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador de la persona."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la persona."
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional (correo/usuario)."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "identifier"
+        ]
+      },
+      "ActivityResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dailyLogId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Diario al que pertenece."
+          },
+          "classificationCode": {
+            "type": "string",
+            "description": "Clasificacion (maestra ACTIVITY_CLASS)."
+          },
+          "hours": {
+            "type": "number",
+            "description": "Horas de dedicacion (BR-013)."
+          },
+          "projectRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "relatedIssueId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "assetRef": {
+            "type": "string",
+            "nullable": true
+          },
+          "requesterRef": {
+            "type": "string",
+            "nullable": true
+          },
+          "justification": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "result": {
+            "type": "string",
+            "nullable": true
+          },
+          "activityStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "evidenceUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "nextStep": {
+            "type": "string",
+            "nullable": true
+          },
+          "nextStepDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fecha del siguiente paso (YYYY-MM-DD)."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "dailyLogId",
+          "classificationCode",
+          "hours",
+          "projectRequestId",
+          "taskId",
+          "relatedIssueId",
+          "assetRef",
+          "requesterRef",
+          "justification",
+          "description",
+          "result",
+          "activityStatus",
+          "evidenceUrl",
+          "nextStep",
+          "nextStepDate",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "DailyLogResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Autor del diario."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso del diario."
+          },
+          "date": {
+            "type": "string",
+            "description": "Dia del registro (YYYY-MM-DD).",
+            "example": "2025-03-10"
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado (BORRADOR/ENVIADO/REVISADO)."
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "dayNotes": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalHours": {
+            "type": "number",
+            "description": "Suma de horas de las actividades (dedicacion del dia)."
+          },
+          "activities": {
+            "description": "Actividades del dia.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivityResponseDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "authorUserId",
+          "processId",
+          "date",
+          "status",
+          "submittedAt",
+          "dayNotes",
+          "totalHours",
+          "activities",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateDailyLogDto": {
+        "type": "object",
+        "properties": {
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso del diario (requerido)."
+          },
+          "date": {
+            "type": "string",
+            "description": "Dia del registro en formato YYYY-MM-DD.",
+            "example": "2025-03-10",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "dayNotes": {
+            "type": "string",
+            "description": "Notas del dia (texto libre).",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "processId",
+          "date"
+        ]
+      },
+      "UpdateDailyLogDto": {
+        "type": "object",
+        "properties": {
+          "dayNotes": {
+            "type": "string",
+            "description": "Notas del dia (texto libre).",
+            "maxLength": 2000
+          }
+        }
+      },
+      "CreateActivityDto": {
+        "type": "object",
+        "properties": {
+          "classificationCode": {
+            "type": "string",
+            "enum": [
+              "PLANIFICADA",
+              "SOPORTE",
+              "INTERNA",
+              "EXTRAORDINARIA"
+            ],
+            "description": "Clasificacion de la actividad (maestra ACTIVITY_CLASS).",
+            "example": "PLANIFICADA"
+          },
+          "hours": {
+            "type": "number",
+            "description": "Horas de dedicacion (entero >= 0). No afecta el avance de la tarea (BR-013).",
+            "minimum": 0,
+            "example": 4
+          },
+          "projectRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "\"Proyecto\" (Request) planificado."
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Tarea planificada."
+          },
+          "relatedIssueId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Novedad relacionada (del proceso del diario)."
+          },
+          "assetRef": {
+            "type": "string",
+            "description": "Activo (texto, para soporte).",
+            "maxLength": 500
+          },
+          "requesterRef": {
+            "type": "string",
+            "description": "Solicitante (texto, para extraordinaria).",
+            "maxLength": 500
+          },
+          "justification": {
+            "type": "string",
+            "description": "Justificacion (texto, para extraordinaria).",
+            "maxLength": 2000
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripcion del trabajo.",
+            "maxLength": 2000
+          },
+          "result": {
+            "type": "string",
+            "description": "Resultado.",
+            "maxLength": 2000
+          },
+          "nextStep": {
+            "type": "string",
+            "description": "Siguiente paso.",
+            "maxLength": 2000
+          },
+          "nextStepDate": {
+            "type": "string",
+            "description": "Fecha del siguiente paso en formato YYYY-MM-DD.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "evidenceUrl": {
+            "type": "string",
+            "description": "Evidencia como texto libre (URL u otra).",
+            "maxLength": 2000
+          },
+          "activityStatus": {
+            "type": "string",
+            "enum": [
+              "BORRADOR",
+              "EN_CURSO",
+              "BLOQUEADO",
+              "COMPLETADO",
+              "ARCHIVADO"
+            ],
+            "description": "Estado de la actividad (opcional, maestra RECORD_STATE)."
+          }
+        },
+        "required": [
+          "classificationCode"
+        ]
+      },
+      "UpdateActivityDto": {
+        "type": "object",
+        "properties": {
+          "classificationCode": {
+            "type": "string",
+            "enum": [
+              "PLANIFICADA",
+              "SOPORTE",
+              "INTERNA",
+              "EXTRAORDINARIA"
+            ],
+            "description": "Clasificacion de la actividad."
+          },
+          "hours": {
+            "type": "number",
+            "description": "Horas de dedicacion (entero >= 0).",
+            "minimum": 0
+          },
+          "projectRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "\"Proyecto\" (Request) planificado."
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Tarea planificada."
+          },
+          "relatedIssueId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Novedad relacionada."
+          },
+          "assetRef": {
+            "type": "string",
+            "description": "Activo (texto, para soporte).",
+            "maxLength": 500
+          },
+          "requesterRef": {
+            "type": "string",
+            "description": "Solicitante (texto, para extraordinaria).",
+            "maxLength": 500
+          },
+          "justification": {
+            "type": "string",
+            "description": "Justificacion (texto, para extraordinaria).",
+            "maxLength": 2000
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripcion del trabajo.",
+            "maxLength": 2000
+          },
+          "result": {
+            "type": "string",
+            "description": "Resultado.",
+            "maxLength": 2000
+          },
+          "nextStep": {
+            "type": "string",
+            "description": "Siguiente paso.",
+            "maxLength": 2000
+          },
+          "nextStepDate": {
+            "type": "string",
+            "description": "Fecha del siguiente paso (YYYY-MM-DD).",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "evidenceUrl": {
+            "type": "string",
+            "description": "Evidencia como texto libre.",
+            "maxLength": 2000
+          },
+          "activityStatus": {
+            "type": "string",
+            "enum": [
+              "BORRADOR",
+              "EN_CURSO",
+              "BLOQUEADO",
+              "COMPLETADO",
+              "ARCHIVADO"
+            ],
+            "description": "Estado de la actividad (opcional)."
+          }
+        }
+      },
+      "WeeklyConsolidationDto": {
+        "type": "object",
+        "properties": {
+          "dailyLogCount": {
+            "type": "number",
+            "description": "Numero de diarios elegibles (ENVIADO/REVISADO)."
+          },
+          "activityCount": {
+            "type": "number",
+            "description": "Numero de actividades en esos diarios."
+          },
+          "totalHours": {
+            "type": "number",
+            "description": "Suma de horas (dedicacion) de esas actividades."
+          },
+          "extraordinaryCount": {
+            "type": "number",
+            "description": "Numero de actividades EXTRAORDINARIA."
+          },
+          "hasBacking": {
+            "type": "boolean",
+            "description": "true si hay al menos un diario elegible."
+          }
+        },
+        "required": [
+          "dailyLogCount",
+          "activityCount",
+          "totalHours",
+          "extraordinaryCount",
+          "hasBacking"
+        ]
+      },
+      "WeeklyReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Autor del semanal."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso del semanal."
+          },
+          "weekStart": {
+            "type": "string",
+            "description": "Lunes ISO de la semana (YYYY-MM-DD).",
+            "example": "2025-03-10"
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado (BORRADOR/ENVIADO)."
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "results": {
+            "type": "string",
+            "nullable": true
+          },
+          "proposals": {
+            "type": "string",
+            "nullable": true
+          },
+          "blockers": {
+            "type": "string",
+            "nullable": true
+          },
+          "commitmentsText": {
+            "type": "string",
+            "nullable": true
+          },
+          "decisions": {
+            "type": "string",
+            "nullable": true
+          },
+          "consolidation": {
+            "nullable": true,
+            "description": "Conteos de consolidacion (solo en el detalle; null en listados).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WeeklyConsolidationDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "authorUserId",
+          "processId",
+          "weekStart",
+          "status",
+          "submittedAt",
+          "results",
+          "proposals",
+          "blockers",
+          "commitmentsText",
+          "decisions",
+          "consolidation",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateWeeklyReportDto": {
+        "type": "object",
+        "properties": {
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso del semanal (requerido)."
+          },
+          "weekStart": {
+            "type": "string",
+            "description": "Dia de la semana (cualquiera) en formato YYYY-MM-DD; se ancla al lunes.",
+            "example": "2025-03-12",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "results": {
+            "type": "string",
+            "description": "Resultados/entregables.",
+            "maxLength": 5000
+          },
+          "proposals": {
+            "type": "string",
+            "description": "Propuestas (texto; no muta prioridad).",
+            "maxLength": 5000
+          },
+          "blockers": {
+            "type": "string",
+            "description": "Bloqueos/dependencias.",
+            "maxLength": 5000
+          },
+          "commitmentsText": {
+            "type": "string",
+            "description": "Compromisos proxima semana (texto; no crea Commitment).",
+            "maxLength": 5000
+          },
+          "decisions": {
+            "type": "string",
+            "description": "Decisiones para el jefe.",
+            "maxLength": 5000
+          }
+        },
+        "required": [
+          "processId",
+          "weekStart"
+        ]
+      },
+      "UpdateWeeklyReportDto": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "string",
+            "description": "Resultados/entregables.",
+            "maxLength": 5000
+          },
+          "proposals": {
+            "type": "string",
+            "description": "Propuestas (texto; no muta prioridad).",
+            "maxLength": 5000
+          },
+          "blockers": {
+            "type": "string",
+            "description": "Bloqueos/dependencias.",
+            "maxLength": 5000
+          },
+          "commitmentsText": {
+            "type": "string",
+            "description": "Compromisos proxima semana (texto; no crea Commitment).",
+            "maxLength": 5000
+          },
+          "decisions": {
+            "type": "string",
+            "description": "Decisiones para el jefe.",
+            "maxLength": 5000
+          }
+        }
+      },
+      "IssueResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso de la novedad."
+          },
+          "reportedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Autor (quien reporta)."
+          },
+          "date": {
+            "type": "string",
+            "description": "Fecha de alta (YYYY-MM-DD)."
+          },
+          "typeCode": {
+            "type": "string",
+            "description": "Tipo (maestra ISSUE_TYPE)."
+          },
+          "state": {
+            "type": "string",
+            "description": "Estado (maestra RECORD_STATE)."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo."
+          },
+          "relatedRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "relatedTaskId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "relatedAssetRef": {
+            "type": "string",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "impact": {
+            "type": "string",
+            "nullable": true
+          },
+          "resolverUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "targetDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fecha objetivo (YYYY-MM-DD)."
+          },
+          "resolution": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "processId",
+          "reportedByUserId",
+          "date",
+          "typeCode",
+          "state",
+          "title",
+          "relatedRequestId",
+          "relatedTaskId",
+          "relatedAssetRef",
+          "detail",
+          "impact",
+          "resolverUserId",
+          "targetDate",
+          "resolution",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateIssueDto": {
+        "type": "object",
+        "properties": {
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso de la novedad (requerido)."
+          },
+          "date": {
+            "type": "string",
+            "description": "Fecha de alta en formato YYYY-MM-DD.",
+            "example": "2025-03-10",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la novedad (requerido).",
+            "maxLength": 300
+          },
+          "typeCode": {
+            "type": "string",
+            "enum": [
+              "BLOQUEO",
+              "INCIDENTE",
+              "CALIDAD_DATOS",
+              "SOLICITUD_APOYO"
+            ],
+            "description": "Tipo (por defecto BLOQUEO)."
+          },
+          "relatedRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud relacionada."
+          },
+          "relatedTaskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Tarea relacionada."
+          },
+          "relatedAssetRef": {
+            "type": "string",
+            "description": "Activo relacionado (texto).",
+            "maxLength": 500
+          },
+          "detail": {
+            "type": "string",
+            "description": "Detalle.",
+            "maxLength": 2000
+          },
+          "impact": {
+            "type": "string",
+            "description": "Impacto.",
+            "maxLength": 2000
+          },
+          "resolverUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Responsable de resolucion."
+          },
+          "targetDate": {
+            "type": "string",
+            "description": "Fecha objetivo (YYYY-MM-DD).",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "resolution": {
+            "type": "string",
+            "description": "Resolucion/evidencia.",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "processId",
+          "date",
+          "title"
+        ]
+      },
+      "UpdateIssueDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titulo.",
+            "maxLength": 300
+          },
+          "typeCode": {
+            "type": "string",
+            "enum": [
+              "BLOQUEO",
+              "INCIDENTE",
+              "CALIDAD_DATOS",
+              "SOLICITUD_APOYO"
+            ],
+            "description": "Tipo de novedad."
+          },
+          "relatedRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud relacionada."
+          },
+          "relatedTaskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Tarea relacionada."
+          },
+          "relatedAssetRef": {
+            "type": "string",
+            "description": "Activo relacionado (texto).",
+            "maxLength": 500
+          },
+          "detail": {
+            "type": "string",
+            "description": "Detalle.",
+            "maxLength": 2000
+          },
+          "impact": {
+            "type": "string",
+            "description": "Impacto.",
+            "maxLength": 2000
+          },
+          "resolverUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Responsable de resolucion."
+          },
+          "targetDate": {
+            "type": "string",
+            "description": "Fecha objetivo (YYYY-MM-DD).",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "resolution": {
+            "type": "string",
+            "description": "Resolucion/evidencia.",
+            "maxLength": 2000
+          }
+        }
+      },
+      "TransitionDto": {
+        "type": "object",
+        "properties": {
+          "toState": {
+            "type": "string",
+            "enum": [
+              "BORRADOR",
+              "EN_CURSO",
+              "BLOQUEADO",
+              "COMPLETADO",
+              "ARCHIVADO"
+            ],
+            "description": "Estado destino de la transicion.",
+            "example": "COMPLETADO"
+          }
+        },
+        "required": [
+          "toState"
+        ]
+      },
+      "MeetingResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso de la reunion."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo."
+          },
+          "state": {
+            "type": "string",
+            "description": "Estado (maestra RECORD_STATE)."
+          },
+          "meetingDate": {
+            "type": "string",
+            "description": "Fecha de la reunion (YYYY-MM-DD)."
+          },
+          "meetingTime": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hora HH:mm (texto)."
+          },
+          "participantUserIds": {
+            "description": "Participantes.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "relatedRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "relatedProjectRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "agenda": {
+            "type": "string",
+            "nullable": true
+          },
+          "decisions": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "processId",
+          "title",
+          "state",
+          "meetingDate",
+          "meetingTime",
+          "participantUserIds",
+          "responsibleUserId",
+          "relatedRequestId",
+          "relatedProjectRequestId",
+          "agenda",
+          "decisions",
+          "notes",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateMeetingDto": {
+        "type": "object",
+        "properties": {
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso de la reunion (requerido)."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la reunion (requerido).",
+            "maxLength": 300
+          },
+          "meetingDate": {
+            "type": "string",
+            "description": "Fecha de la reunion en formato YYYY-MM-DD.",
+            "example": "2025-03-10",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "meetingTime": {
+            "type": "string",
+            "description": "Hora HH:mm (texto).",
+            "example": "14:30",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "participantUserIds": {
+            "description": "Participantes (en alcance).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Responsable."
+          },
+          "relatedRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud relacionada."
+          },
+          "relatedProjectRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "\"Proyecto\" (Request) relacionado."
+          },
+          "agenda": {
+            "type": "string",
+            "description": "Agenda/temas.",
+            "maxLength": 5000
+          },
+          "decisions": {
+            "type": "string",
+            "description": "Decisiones/acuerdos.",
+            "maxLength": 5000
+          },
+          "notes": {
+            "type": "string",
+            "description": "Observaciones.",
+            "maxLength": 5000
+          }
+        },
+        "required": [
+          "processId",
+          "title",
+          "meetingDate"
+        ]
+      },
+      "UpdateMeetingDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titulo.",
+            "maxLength": 300
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "BORRADOR",
+              "EN_CURSO",
+              "BLOQUEADO",
+              "COMPLETADO",
+              "ARCHIVADO"
+            ],
+            "description": "Estado (PATCH libre, sin grafo)."
+          },
+          "meetingDate": {
+            "type": "string",
+            "description": "Fecha (YYYY-MM-DD).",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "meetingTime": {
+            "type": "string",
+            "description": "Hora HH:mm.",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "participantUserIds": {
+            "description": "Reemplaza participantes (en alcance).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Responsable."
+          },
+          "relatedRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud relacionada."
+          },
+          "relatedProjectRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "\"Proyecto\" (Request) relacionado."
+          },
+          "agenda": {
+            "type": "string",
+            "description": "Agenda/temas.",
+            "maxLength": 5000
+          },
+          "decisions": {
+            "type": "string",
+            "description": "Decisiones/acuerdos.",
+            "maxLength": 5000
+          },
+          "notes": {
+            "type": "string",
+            "description": "Observaciones.",
+            "maxLength": 5000
+          }
+        }
+      },
+      "CommitmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso del compromiso."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo."
+          },
+          "state": {
+            "type": "string",
+            "description": "Estado (maestra RECORD_STATE)."
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Vencimiento (YYYY-MM-DD)."
+          },
+          "sourceMeetingId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "assignedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "relatedRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "relatedProjectRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "expectedResult": {
+            "type": "string",
+            "nullable": true
+          },
+          "result": {
+            "type": "string",
+            "nullable": true
+          },
+          "blockers": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "processId",
+          "title",
+          "state",
+          "dueDate",
+          "sourceMeetingId",
+          "assignedUserId",
+          "responsibleUserId",
+          "relatedRequestId",
+          "relatedProjectRequestId",
+          "expectedResult",
+          "result",
+          "blockers",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateCommitmentDto": {
+        "type": "object",
+        "properties": {
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso del compromiso (requerido)."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo (requerido).",
+            "maxLength": 300
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Vencimiento en formato YYYY-MM-DD.",
+            "example": "2025-03-20",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "sourceMeetingId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Reunion fuente (solo relaciona)."
+          },
+          "assignedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Persona asignada."
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Responsable."
+          },
+          "relatedRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud relacionada."
+          },
+          "relatedProjectRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "\"Proyecto\" (Request) relacionado."
+          },
+          "expectedResult": {
+            "type": "string",
+            "description": "Resultado esperado.",
+            "maxLength": 2000
+          },
+          "result": {
+            "type": "string",
+            "description": "Resultado/evidencia.",
+            "maxLength": 2000
+          },
+          "blockers": {
+            "type": "string",
+            "description": "Bloqueos.",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "processId",
+          "title",
+          "dueDate"
+        ]
+      },
+      "UpdateCommitmentDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titulo.",
+            "maxLength": 300
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Vencimiento (YYYY-MM-DD).",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "sourceMeetingId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Reunion fuente."
+          },
+          "assignedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Persona asignada."
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Responsable."
+          },
+          "relatedRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud relacionada."
+          },
+          "relatedProjectRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "\"Proyecto\" (Request) relacionado."
+          },
+          "expectedResult": {
+            "type": "string",
+            "description": "Resultado esperado.",
+            "maxLength": 2000
+          },
+          "result": {
+            "type": "string",
+            "description": "Resultado/evidencia.",
+            "maxLength": 2000
+          },
+          "blockers": {
+            "type": "string",
+            "description": "Bloqueos.",
             "maxLength": 2000
           }
         }

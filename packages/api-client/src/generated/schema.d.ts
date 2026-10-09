@@ -706,6 +706,310 @@ export interface paths {
         patch: operations["CapacityController_updateAssignment"];
         trace?: never;
     };
+    "/coordination/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Personas en alcance para los selectores de Fase 5. */
+        get: operations["WorklogController_people"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklog/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista diarios en alcance (filtros opcionales). */
+        get: operations["WorklogController_listDailyLogs"];
+        put?: never;
+        /** Crea la cabecera de un diario (autor = actor). */
+        post: operations["WorklogController_createDailyLog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklog/daily/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de un diario con sus actividades. */
+        get: operations["WorklogController_getDailyLog"];
+        put?: never;
+        post?: never;
+        /** Borra un diario propio (cascade de actividades). */
+        delete: operations["WorklogController_removeDailyLog"];
+        options?: never;
+        head?: never;
+        /** Edita la cabecera (notas) de un diario propio. */
+        patch: operations["WorklogController_updateDailyLog"];
+        trace?: never;
+    };
+    "/worklog/daily/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Envia un diario a revision (BORRADOR -> ENVIADO). */
+        post: operations["WorklogController_submitDailyLog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklog/daily/{id}/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Agrega una actividad al diario (valida clasificacion). */
+        post: operations["WorklogController_addActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklog/activities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Borra una actividad del diario. */
+        delete: operations["WorklogController_removeActivity"];
+        options?: never;
+        head?: never;
+        /** Edita una actividad del diario. */
+        patch: operations["WorklogController_updateActivity"];
+        trace?: never;
+    };
+    "/weekly-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista semanales en alcance (filtros opcionales). */
+        get: operations["WorklogController_listWeeklyReports"];
+        put?: never;
+        /** Crea un semanal (se ancla al lunes ISO). */
+        post: operations["WorklogController_createWeeklyReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-reports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de un semanal con conteos de consolidacion. */
+        get: operations["WorklogController_getWeeklyReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita las secciones de texto de un semanal propio. */
+        patch: operations["WorklogController_updateWeeklyReport"];
+        trace?: never;
+    };
+    "/weekly-reports/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Envia un semanal a revision (BORRADOR -> ENVIADO). */
+        post: operations["WorklogController_submitWeeklyReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista novedades en alcance (filtros opcionales). */
+        get: operations["IssueController_list"];
+        put?: never;
+        /** Crea una novedad (tipo por defecto BLOQUEO). */
+        post: operations["IssueController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/issues/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una novedad. */
+        get: operations["IssueController_get"];
+        put?: never;
+        post?: never;
+        /** Borra una novedad en alcance (204 sin body). */
+        delete: operations["IssueController_remove"];
+        options?: never;
+        head?: never;
+        /** Edita una novedad (un registro por incidente, AC-019). */
+        patch: operations["IssueController_update"];
+        trace?: never;
+    };
+    "/issues/{id}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transiciona el estado de una novedad (maquina minima). */
+        post: operations["IssueController_transition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meetings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista reuniones en alcance (filtros opcionales). */
+        get: operations["MeetingController_list"];
+        put?: never;
+        /** Crea una reunion (estado inicial BORRADOR). */
+        post: operations["MeetingController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meetings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una reunion con participantes. */
+        get: operations["MeetingController_get"];
+        put?: never;
+        post?: never;
+        /** Borra una reunion (cascade de participantes). */
+        delete: operations["MeetingController_remove"];
+        options?: never;
+        head?: never;
+        /** Edita una reunion (incluye set de participantes). */
+        patch: operations["MeetingController_update"];
+        trace?: never;
+    };
+    "/commitments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista compromisos en alcance (filtros opcionales). */
+        get: operations["CommitmentController_list"];
+        put?: never;
+        /** Crea un compromiso (vencimiento requerido). */
+        post: operations["CommitmentController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commitments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de un compromiso. */
+        get: operations["CommitmentController_get"];
+        put?: never;
+        post?: never;
+        /** Borra un compromiso en alcance (204 sin body). */
+        delete: operations["CommitmentController_remove"];
+        options?: never;
+        head?: never;
+        /** Edita un compromiso. */
+        patch: operations["CommitmentController_update"];
+        trace?: never;
+    };
+    "/commitments/{id}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transiciona el estado de un compromiso (maquina minima). */
+        post: operations["CommitmentController_transition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2067,6 +2371,622 @@ export interface components {
             committedHours?: number;
             /** @description Distribucion del esfuerzo por periodo (texto libre). */
             description?: string;
+        };
+        CoordinationPersonDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la persona.
+             */
+            id: string;
+            /** @description Nombre de la persona. */
+            name: string;
+            /** @description Identificador funcional (correo/usuario). */
+            identifier: string;
+        };
+        ActivityResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Diario al que pertenece.
+             */
+            dailyLogId: string;
+            /** @description Clasificacion (maestra ACTIVITY_CLASS). */
+            classificationCode: string;
+            /** @description Horas de dedicacion (BR-013). */
+            hours: number;
+            /** Format: uuid */
+            projectRequestId: string | null;
+            /** Format: uuid */
+            taskId: string | null;
+            /** Format: uuid */
+            relatedIssueId: string | null;
+            assetRef: string | null;
+            requesterRef: string | null;
+            justification: string | null;
+            description: string | null;
+            result: string | null;
+            activityStatus: string | null;
+            evidenceUrl: string | null;
+            nextStep: string | null;
+            /** @description Fecha del siguiente paso (YYYY-MM-DD). */
+            nextStepDate: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DailyLogResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Autor del diario.
+             */
+            authorUserId: string;
+            /**
+             * Format: uuid
+             * @description Proceso del diario.
+             */
+            processId: string;
+            /**
+             * @description Dia del registro (YYYY-MM-DD).
+             * @example 2025-03-10
+             */
+            date: string;
+            /** @description Estado (BORRADOR/ENVIADO/REVISADO). */
+            status: string;
+            /** Format: date-time */
+            submittedAt: string | null;
+            dayNotes: string | null;
+            /** @description Suma de horas de las actividades (dedicacion del dia). */
+            totalHours: number;
+            /** @description Actividades del dia. */
+            activities: components["schemas"]["ActivityResponseDto"][];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateDailyLogDto: {
+            /**
+             * Format: uuid
+             * @description Proceso del diario (requerido).
+             */
+            processId: string;
+            /**
+             * @description Dia del registro en formato YYYY-MM-DD.
+             * @example 2025-03-10
+             */
+            date: string;
+            /** @description Notas del dia (texto libre). */
+            dayNotes?: string;
+        };
+        UpdateDailyLogDto: {
+            /** @description Notas del dia (texto libre). */
+            dayNotes?: string;
+        };
+        CreateActivityDto: {
+            /**
+             * @description Clasificacion de la actividad (maestra ACTIVITY_CLASS).
+             * @example PLANIFICADA
+             * @enum {string}
+             */
+            classificationCode: "PLANIFICADA" | "SOPORTE" | "INTERNA" | "EXTRAORDINARIA";
+            /**
+             * @description Horas de dedicacion (entero >= 0). No afecta el avance de la tarea (BR-013).
+             * @example 4
+             */
+            hours?: number;
+            /**
+             * Format: uuid
+             * @description "Proyecto" (Request) planificado.
+             */
+            projectRequestId?: string;
+            /**
+             * Format: uuid
+             * @description Tarea planificada.
+             */
+            taskId?: string;
+            /**
+             * Format: uuid
+             * @description Novedad relacionada (del proceso del diario).
+             */
+            relatedIssueId?: string;
+            /** @description Activo (texto, para soporte). */
+            assetRef?: string;
+            /** @description Solicitante (texto, para extraordinaria). */
+            requesterRef?: string;
+            /** @description Justificacion (texto, para extraordinaria). */
+            justification?: string;
+            /** @description Descripcion del trabajo. */
+            description?: string;
+            /** @description Resultado. */
+            result?: string;
+            /** @description Siguiente paso. */
+            nextStep?: string;
+            /** @description Fecha del siguiente paso en formato YYYY-MM-DD. */
+            nextStepDate?: string;
+            /** @description Evidencia como texto libre (URL u otra). */
+            evidenceUrl?: string;
+            /**
+             * @description Estado de la actividad (opcional, maestra RECORD_STATE).
+             * @enum {string}
+             */
+            activityStatus?: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+        };
+        UpdateActivityDto: {
+            /**
+             * @description Clasificacion de la actividad.
+             * @enum {string}
+             */
+            classificationCode?: "PLANIFICADA" | "SOPORTE" | "INTERNA" | "EXTRAORDINARIA";
+            /** @description Horas de dedicacion (entero >= 0). */
+            hours?: number;
+            /**
+             * Format: uuid
+             * @description "Proyecto" (Request) planificado.
+             */
+            projectRequestId?: string;
+            /**
+             * Format: uuid
+             * @description Tarea planificada.
+             */
+            taskId?: string;
+            /**
+             * Format: uuid
+             * @description Novedad relacionada.
+             */
+            relatedIssueId?: string;
+            /** @description Activo (texto, para soporte). */
+            assetRef?: string;
+            /** @description Solicitante (texto, para extraordinaria). */
+            requesterRef?: string;
+            /** @description Justificacion (texto, para extraordinaria). */
+            justification?: string;
+            /** @description Descripcion del trabajo. */
+            description?: string;
+            /** @description Resultado. */
+            result?: string;
+            /** @description Siguiente paso. */
+            nextStep?: string;
+            /** @description Fecha del siguiente paso (YYYY-MM-DD). */
+            nextStepDate?: string;
+            /** @description Evidencia como texto libre. */
+            evidenceUrl?: string;
+            /**
+             * @description Estado de la actividad (opcional).
+             * @enum {string}
+             */
+            activityStatus?: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+        };
+        WeeklyConsolidationDto: {
+            /** @description Numero de diarios elegibles (ENVIADO/REVISADO). */
+            dailyLogCount: number;
+            /** @description Numero de actividades en esos diarios. */
+            activityCount: number;
+            /** @description Suma de horas (dedicacion) de esas actividades. */
+            totalHours: number;
+            /** @description Numero de actividades EXTRAORDINARIA. */
+            extraordinaryCount: number;
+            /** @description true si hay al menos un diario elegible. */
+            hasBacking: boolean;
+        };
+        WeeklyReportResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Autor del semanal.
+             */
+            authorUserId: string;
+            /**
+             * Format: uuid
+             * @description Proceso del semanal.
+             */
+            processId: string;
+            /**
+             * @description Lunes ISO de la semana (YYYY-MM-DD).
+             * @example 2025-03-10
+             */
+            weekStart: string;
+            /** @description Estado (BORRADOR/ENVIADO). */
+            status: string;
+            /** Format: date-time */
+            submittedAt: string | null;
+            results: string | null;
+            proposals: string | null;
+            blockers: string | null;
+            commitmentsText: string | null;
+            decisions: string | null;
+            /** @description Conteos de consolidacion (solo en el detalle; null en listados). */
+            consolidation: components["schemas"]["WeeklyConsolidationDto"] | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateWeeklyReportDto: {
+            /**
+             * Format: uuid
+             * @description Proceso del semanal (requerido).
+             */
+            processId: string;
+            /**
+             * @description Dia de la semana (cualquiera) en formato YYYY-MM-DD; se ancla al lunes.
+             * @example 2025-03-12
+             */
+            weekStart: string;
+            /** @description Resultados/entregables. */
+            results?: string;
+            /** @description Propuestas (texto; no muta prioridad). */
+            proposals?: string;
+            /** @description Bloqueos/dependencias. */
+            blockers?: string;
+            /** @description Compromisos proxima semana (texto; no crea Commitment). */
+            commitmentsText?: string;
+            /** @description Decisiones para el jefe. */
+            decisions?: string;
+        };
+        UpdateWeeklyReportDto: {
+            /** @description Resultados/entregables. */
+            results?: string;
+            /** @description Propuestas (texto; no muta prioridad). */
+            proposals?: string;
+            /** @description Bloqueos/dependencias. */
+            blockers?: string;
+            /** @description Compromisos proxima semana (texto; no crea Commitment). */
+            commitmentsText?: string;
+            /** @description Decisiones para el jefe. */
+            decisions?: string;
+        };
+        IssueResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Proceso de la novedad.
+             */
+            processId: string;
+            /**
+             * Format: uuid
+             * @description Autor (quien reporta).
+             */
+            reportedByUserId: string;
+            /** @description Fecha de alta (YYYY-MM-DD). */
+            date: string;
+            /** @description Tipo (maestra ISSUE_TYPE). */
+            typeCode: string;
+            /** @description Estado (maestra RECORD_STATE). */
+            state: string;
+            /** @description Titulo. */
+            title: string;
+            /** Format: uuid */
+            relatedRequestId: string | null;
+            /** Format: uuid */
+            relatedTaskId: string | null;
+            relatedAssetRef: string | null;
+            detail: string | null;
+            impact: string | null;
+            /** Format: uuid */
+            resolverUserId: string | null;
+            /** @description Fecha objetivo (YYYY-MM-DD). */
+            targetDate: string | null;
+            resolution: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateIssueDto: {
+            /**
+             * Format: uuid
+             * @description Proceso de la novedad (requerido).
+             */
+            processId: string;
+            /**
+             * @description Fecha de alta en formato YYYY-MM-DD.
+             * @example 2025-03-10
+             */
+            date: string;
+            /** @description Titulo de la novedad (requerido). */
+            title: string;
+            /**
+             * @description Tipo (por defecto BLOQUEO).
+             * @enum {string}
+             */
+            typeCode?: "BLOQUEO" | "INCIDENTE" | "CALIDAD_DATOS" | "SOLICITUD_APOYO";
+            /**
+             * Format: uuid
+             * @description Solicitud relacionada.
+             */
+            relatedRequestId?: string;
+            /**
+             * Format: uuid
+             * @description Tarea relacionada.
+             */
+            relatedTaskId?: string;
+            /** @description Activo relacionado (texto). */
+            relatedAssetRef?: string;
+            /** @description Detalle. */
+            detail?: string;
+            /** @description Impacto. */
+            impact?: string;
+            /**
+             * Format: uuid
+             * @description Responsable de resolucion.
+             */
+            resolverUserId?: string;
+            /** @description Fecha objetivo (YYYY-MM-DD). */
+            targetDate?: string;
+            /** @description Resolucion/evidencia. */
+            resolution?: string;
+        };
+        UpdateIssueDto: {
+            /** @description Titulo. */
+            title?: string;
+            /**
+             * @description Tipo de novedad.
+             * @enum {string}
+             */
+            typeCode?: "BLOQUEO" | "INCIDENTE" | "CALIDAD_DATOS" | "SOLICITUD_APOYO";
+            /**
+             * Format: uuid
+             * @description Solicitud relacionada.
+             */
+            relatedRequestId?: string;
+            /**
+             * Format: uuid
+             * @description Tarea relacionada.
+             */
+            relatedTaskId?: string;
+            /** @description Activo relacionado (texto). */
+            relatedAssetRef?: string;
+            /** @description Detalle. */
+            detail?: string;
+            /** @description Impacto. */
+            impact?: string;
+            /**
+             * Format: uuid
+             * @description Responsable de resolucion.
+             */
+            resolverUserId?: string;
+            /** @description Fecha objetivo (YYYY-MM-DD). */
+            targetDate?: string;
+            /** @description Resolucion/evidencia. */
+            resolution?: string;
+        };
+        TransitionDto: {
+            /**
+             * @description Estado destino de la transicion.
+             * @example COMPLETADO
+             * @enum {string}
+             */
+            toState: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+        };
+        MeetingResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Proceso de la reunion.
+             */
+            processId: string;
+            /** @description Titulo. */
+            title: string;
+            /** @description Estado (maestra RECORD_STATE). */
+            state: string;
+            /** @description Fecha de la reunion (YYYY-MM-DD). */
+            meetingDate: string;
+            /** @description Hora HH:mm (texto). */
+            meetingTime: string | null;
+            /** @description Participantes. */
+            participantUserIds: string[];
+            /** Format: uuid */
+            responsibleUserId: string | null;
+            /** Format: uuid */
+            relatedRequestId: string | null;
+            /** Format: uuid */
+            relatedProjectRequestId: string | null;
+            agenda: string | null;
+            decisions: string | null;
+            notes: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateMeetingDto: {
+            /**
+             * Format: uuid
+             * @description Proceso de la reunion (requerido).
+             */
+            processId: string;
+            /** @description Titulo de la reunion (requerido). */
+            title: string;
+            /**
+             * @description Fecha de la reunion en formato YYYY-MM-DD.
+             * @example 2025-03-10
+             */
+            meetingDate: string;
+            /**
+             * @description Hora HH:mm (texto).
+             * @example 14:30
+             */
+            meetingTime?: string;
+            /** @description Participantes (en alcance). */
+            participantUserIds?: string[];
+            /**
+             * Format: uuid
+             * @description Responsable.
+             */
+            responsibleUserId?: string;
+            /**
+             * Format: uuid
+             * @description Solicitud relacionada.
+             */
+            relatedRequestId?: string;
+            /**
+             * Format: uuid
+             * @description "Proyecto" (Request) relacionado.
+             */
+            relatedProjectRequestId?: string;
+            /** @description Agenda/temas. */
+            agenda?: string;
+            /** @description Decisiones/acuerdos. */
+            decisions?: string;
+            /** @description Observaciones. */
+            notes?: string;
+        };
+        UpdateMeetingDto: {
+            /** @description Titulo. */
+            title?: string;
+            /**
+             * @description Estado (PATCH libre, sin grafo).
+             * @enum {string}
+             */
+            state?: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+            /** @description Fecha (YYYY-MM-DD). */
+            meetingDate?: string;
+            /** @description Hora HH:mm. */
+            meetingTime?: string;
+            /** @description Reemplaza participantes (en alcance). */
+            participantUserIds?: string[];
+            /**
+             * Format: uuid
+             * @description Responsable.
+             */
+            responsibleUserId?: string;
+            /**
+             * Format: uuid
+             * @description Solicitud relacionada.
+             */
+            relatedRequestId?: string;
+            /**
+             * Format: uuid
+             * @description "Proyecto" (Request) relacionado.
+             */
+            relatedProjectRequestId?: string;
+            /** @description Agenda/temas. */
+            agenda?: string;
+            /** @description Decisiones/acuerdos. */
+            decisions?: string;
+            /** @description Observaciones. */
+            notes?: string;
+        };
+        CommitmentResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Proceso del compromiso.
+             */
+            processId: string;
+            /** @description Titulo. */
+            title: string;
+            /** @description Estado (maestra RECORD_STATE). */
+            state: string;
+            /** @description Vencimiento (YYYY-MM-DD). */
+            dueDate: string;
+            /** Format: uuid */
+            sourceMeetingId: string | null;
+            /** Format: uuid */
+            assignedUserId: string | null;
+            /** Format: uuid */
+            responsibleUserId: string | null;
+            /** Format: uuid */
+            relatedRequestId: string | null;
+            /** Format: uuid */
+            relatedProjectRequestId: string | null;
+            expectedResult: string | null;
+            result: string | null;
+            blockers: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateCommitmentDto: {
+            /**
+             * Format: uuid
+             * @description Proceso del compromiso (requerido).
+             */
+            processId: string;
+            /** @description Titulo (requerido). */
+            title: string;
+            /**
+             * @description Vencimiento en formato YYYY-MM-DD.
+             * @example 2025-03-20
+             */
+            dueDate: string;
+            /**
+             * Format: uuid
+             * @description Reunion fuente (solo relaciona).
+             */
+            sourceMeetingId?: string;
+            /**
+             * Format: uuid
+             * @description Persona asignada.
+             */
+            assignedUserId?: string;
+            /**
+             * Format: uuid
+             * @description Responsable.
+             */
+            responsibleUserId?: string;
+            /**
+             * Format: uuid
+             * @description Solicitud relacionada.
+             */
+            relatedRequestId?: string;
+            /**
+             * Format: uuid
+             * @description "Proyecto" (Request) relacionado.
+             */
+            relatedProjectRequestId?: string;
+            /** @description Resultado esperado. */
+            expectedResult?: string;
+            /** @description Resultado/evidencia. */
+            result?: string;
+            /** @description Bloqueos. */
+            blockers?: string;
+        };
+        UpdateCommitmentDto: {
+            /** @description Titulo. */
+            title?: string;
+            /** @description Vencimiento (YYYY-MM-DD). */
+            dueDate?: string;
+            /**
+             * Format: uuid
+             * @description Reunion fuente.
+             */
+            sourceMeetingId?: string;
+            /**
+             * Format: uuid
+             * @description Persona asignada.
+             */
+            assignedUserId?: string;
+            /**
+             * Format: uuid
+             * @description Responsable.
+             */
+            responsibleUserId?: string;
+            /**
+             * Format: uuid
+             * @description Solicitud relacionada.
+             */
+            relatedRequestId?: string;
+            /**
+             * Format: uuid
+             * @description "Proyecto" (Request) relacionado.
+             */
+            relatedProjectRequestId?: string;
+            /** @description Resultado esperado. */
+            expectedResult?: string;
+            /** @description Resultado/evidencia. */
+            result?: string;
+            /** @description Bloqueos. */
+            blockers?: string;
         };
     };
     responses: never;
@@ -4545,6 +5465,1070 @@ export interface operations {
                 content?: never;
             };
             /** @description Asignacion/proceso/solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_people: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Personas visibles. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoordinationPersonDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_listDailyLogs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Diarios. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyLogResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_createDailyLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDailyLogDto"];
+            };
+        };
+        responses: {
+            /** @description Diario creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyLogResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Proceso fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe un diario para persona/proceso/fecha. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_getDailyLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Diario. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyLogResponseDto"];
+                };
+            };
+            /** @description Diario fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_removeDailyLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Diario borrado. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Diario fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_updateDailyLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDailyLogDto"];
+            };
+        };
+        responses: {
+            /** @description Diario actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyLogResponseDto"];
+                };
+            };
+            /** @description Diario fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_submitDailyLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Diario enviado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyLogResponseDto"];
+                };
+            };
+            /** @description Diario fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El diario ya fue enviado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_addActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateActivityDto"];
+            };
+        };
+        responses: {
+            /** @description Actividad creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponseDto"];
+                };
+            };
+            /** @description Clasificacion o datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Diario o referencia fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_removeActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actividad borrada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Actividad fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_updateActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateActivityDto"];
+            };
+        };
+        responses: {
+            /** @description Actividad actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponseDto"];
+                };
+            };
+            /** @description Clasificacion o datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Actividad o referencia fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_listWeeklyReports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Semanales. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReportResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_createWeeklyReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWeeklyReportDto"];
+            };
+        };
+        responses: {
+            /** @description Semanal creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReportResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Proceso fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe un semanal para persona/proceso/semana. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_getWeeklyReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Semanal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReportResponseDto"];
+                };
+            };
+            /** @description Semanal fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_updateWeeklyReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWeeklyReportDto"];
+            };
+        };
+        responses: {
+            /** @description Semanal actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReportResponseDto"];
+                };
+            };
+            /** @description Semanal fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_submitWeeklyReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Semanal enviado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReportResponseDto"];
+                };
+            };
+            /** @description Semanal fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El semanal ya fue enviado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IssueController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Novedades. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IssueController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIssueDto"];
+            };
+        };
+        responses: {
+            /** @description Novedad creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Proceso o referencia fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IssueController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Novedad. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueResponseDto"];
+                };
+            };
+            /** @description Novedad fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IssueController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Novedad borrada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Novedad fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IssueController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIssueDto"];
+            };
+        };
+        responses: {
+            /** @description Novedad actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Novedad o referencia fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IssueController_transition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionDto"];
+            };
+        };
+        responses: {
+            /** @description Estado actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueResponseDto"];
+                };
+            };
+            /** @description Transicion no permitida. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Novedad fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeetingController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reuniones. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeetingController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMeetingDto"];
+            };
+        };
+        responses: {
+            /** @description Reunion creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingResponseDto"];
+                };
+            };
+            /** @description Datos invalidos o participante fuera de alcance. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Referencia fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeetingController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reunion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingResponseDto"];
+                };
+            };
+            /** @description Reunion fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeetingController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reunion borrada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Reunion fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeetingController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMeetingDto"];
+            };
+        };
+        responses: {
+            /** @description Reunion actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingResponseDto"];
+                };
+            };
+            /** @description Datos invalidos o participante fuera de alcance. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Reunion fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommitmentController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Compromisos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommitmentResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommitmentController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCommitmentDto"];
+            };
+        };
+        responses: {
+            /** @description Compromiso creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommitmentResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Proceso o referencia fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommitmentController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Compromiso. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommitmentResponseDto"];
+                };
+            };
+            /** @description Compromiso fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommitmentController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Compromiso borrado. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Compromiso fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommitmentController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCommitmentDto"];
+            };
+        };
+        responses: {
+            /** @description Compromiso actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommitmentResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Compromiso o referencia fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommitmentController_transition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionDto"];
+            };
+        };
+        responses: {
+            /** @description Estado actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommitmentResponseDto"];
+                };
+            };
+            /** @description Transicion no permitida. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Compromiso fuera de alcance. */
             404: {
                 headers: {
                     [name: string]: unknown;

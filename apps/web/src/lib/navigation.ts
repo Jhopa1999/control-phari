@@ -95,8 +95,23 @@ export const NAV_GROUPS: NavGroup[] = [
         moduleKey: 'log',
       },
       {
+        href: '/seguimiento/semanal',
+        label: 'Semanal',
+        moduleKey: 'log',
+      },
+      {
+        href: '/seguimiento/novedades',
+        label: 'Novedades',
+        moduleKey: 'log',
+      },
+      {
         href: '/seguimiento/reuniones',
         label: 'Reuniones',
+        moduleKey: 'meeting',
+      },
+      {
+        href: '/seguimiento/compromisos',
+        label: 'Compromisos',
         moduleKey: 'meeting',
       },
     ],

@@ -1,12 +1,7 @@
-import { UnderConstruction } from '@/components/under-construction';
+import { BitacoraView } from './bitacora-view';
 
 export const metadata = { title: 'Bitacora | Portal del area' };
 
 export default function BitacoraPage(): React.ReactElement {
-  return (
-    <UnderConstruction
-      title="Bitacora"
-      description="Registro de actividad y notas de trabajo."
-    />
-  );
+  return <BitacoraView />;
 }

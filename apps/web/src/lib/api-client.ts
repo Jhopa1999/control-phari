@@ -75,6 +75,46 @@ export type CapacityPerson = components['schemas']['CapacityPersonDto'];
 export type CapacitySummaryRow =
   components['schemas']['CapacitySummaryRowDto'];
 
+// --- Fase 5 (trabajo y coordinacion): tipos derivados del contrato OpenAPI ---
+export type CoordinationPerson =
+  components['schemas']['CoordinationPersonDto'];
+
+export type DailyLog = components['schemas']['DailyLogResponseDto'];
+export type DailyLogActivity = components['schemas']['ActivityResponseDto'];
+export type CreateDailyLog = components['schemas']['CreateDailyLogDto'];
+export type UpdateDailyLog = components['schemas']['UpdateDailyLogDto'];
+export type CreateActivity = components['schemas']['CreateActivityDto'];
+export type UpdateActivity = components['schemas']['UpdateActivityDto'];
+/** Clasificacion de una actividad del diario (maestra ACTIVITY_CLASS). */
+export type ActivityClass = CreateActivity['classificationCode'];
+
+export type WeeklyReport = components['schemas']['WeeklyReportResponseDto'];
+export type WeeklyConsolidation =
+  components['schemas']['WeeklyConsolidationDto'];
+export type CreateWeeklyReport =
+  components['schemas']['CreateWeeklyReportDto'];
+export type UpdateWeeklyReport =
+  components['schemas']['UpdateWeeklyReportDto'];
+
+export type Issue = components['schemas']['IssueResponseDto'];
+export type CreateIssue = components['schemas']['CreateIssueDto'];
+export type UpdateIssue = components['schemas']['UpdateIssueDto'];
+/** Tipo de novedad (maestra ISSUE_TYPE). */
+export type IssueType = CreateIssue['typeCode'];
+
+export type Meeting = components['schemas']['MeetingResponseDto'];
+export type CreateMeeting = components['schemas']['CreateMeetingDto'];
+export type UpdateMeeting = components['schemas']['UpdateMeetingDto'];
+
+export type Commitment = components['schemas']['CommitmentResponseDto'];
+export type CreateCommitment = components['schemas']['CreateCommitmentDto'];
+export type UpdateCommitment = components['schemas']['UpdateCommitmentDto'];
+
+/** Cuerpo de una transicion de estado (Issue/Commitment). */
+export type Transition = components['schemas']['TransitionDto'];
+/** Estado destino valido de una transicion (maestra RECORD_STATE). */
+export type RecordState = Transition['toState'];
+
 /**
  * Clave de localStorage donde el selector de usuario (dev) guarda el
  * identifier del actor actual. Mecanismo exclusivo de desarrollo (design 3.2).
