@@ -22,10 +22,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type {
+  CoordinationPerson,
   Document,
   DocumentContent,
   DocumentVersion,
-  User,
 } from '@/lib/api-client';
 import {
   DocumentError,
@@ -41,7 +41,7 @@ interface HistorialDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Documento cuyo historial se muestra (null cuando esta cerrado). */
   document: Document | null;
-  owners: User[];
+  owners: CoordinationPerson[];
 }
 
 function formatDate(value: string): string {

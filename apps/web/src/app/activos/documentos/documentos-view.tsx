@@ -26,11 +26,11 @@ import {
 import type {
   Asset,
   CatalogItem,
+  CoordinationPerson,
   Document,
   DocumentStatus,
   Process,
   Request,
-  User,
 } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
 import { listAssets } from '@/lib/assets';
@@ -45,7 +45,8 @@ import {
   listDocuments,
   updateDocument,
 } from '@/lib/documents';
-import { listProcesses, listUsers } from '@/lib/team';
+import { listProcesses } from '@/lib/team';
+import { listCoordinationPeople } from '@/lib/worklog';
 import { listRequests } from '@/lib/requests';
 import {
   DocumentoEditorDialog,
@@ -101,7 +102,7 @@ export function DocumentosView(): React.ReactElement {
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [requests, setRequests] = React.useState<Request[]>([]);
-  const [owners, setOwners] = React.useState<User[]>([]);
+  const [owners, setOwners] = React.useState<CoordinationPerson[]>([]);
   const [categoryOptions, setCategoryOptions] = React.useState<CatalogItem[]>(
     [],
   );
@@ -152,7 +153,7 @@ export function DocumentosView(): React.ReactElement {
         listAssets().catch(() => [] as Asset[]),
         listProcesses().catch(() => [] as Process[]),
         listRequests().catch(() => [] as Request[]),
-        listUsers().catch(() => [] as User[]),
+        listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
         listCatalogItems({ catalog: 'DOC_CATEGORY', active: true }).catch(
           () => [] as CatalogItem[],
         ),

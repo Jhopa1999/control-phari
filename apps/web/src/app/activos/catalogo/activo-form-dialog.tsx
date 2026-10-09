@@ -23,9 +23,9 @@ import { Textarea } from '@/components/ui/textarea';
 import type {
   Asset,
   CatalogItem,
+  CoordinationPerson,
   Process,
   Request,
-  User,
 } from '@/lib/api-client';
 
 export interface ActivoFormValues {
@@ -52,7 +52,7 @@ interface ActivoFormDialogProps {
   editing?: Asset | null;
   processes: Process[];
   requests: Request[];
-  owners: User[];
+  owners: CoordinationPerson[];
   typeOptions: CatalogItem[];
   technologyOptions: CatalogItem[];
   sourceOptions: CatalogItem[];

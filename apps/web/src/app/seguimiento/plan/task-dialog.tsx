@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import type { Task, User } from '@/lib/api-client';
+import type { Task, CoordinationPerson } from '@/lib/api-client';
 import { PlanError } from '@/lib/plan';
 import { createTask, updateTask } from '@/lib/tasks';
 import {
@@ -30,7 +30,7 @@ import {
   listDependencies,
   removeDependency,
 } from '@/lib/task-dependencies';
-import { listUsers } from '@/lib/team';
+import { listCoordinationPeople } from '@/lib/worklog';
 
 interface TaskDialogProps {
   open: boolean;
@@ -78,17 +78,20 @@ export function TaskDialog({
   const [clientError, setClientError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
-  const [users, setUsers] = React.useState<User[]>([]);
+  const [users, setUsers] = React.useState<CoordinationPerson[]>([]);
   const [predecessorIds, setPredecessorIds] = React.useState<Set<string>>(
     new Set(),
   );
 
-  // Usuarios para el selector de responsable. Si falla (p. ej. rol sin acceso
-  // a /users), se degrada a un selector vacio sin romper el formulario.
+  // Personas en alcance para el selector de responsable. Usa
+  // /coordination/people (disponible para los 3 roles, filtrado por alcance),
+  // NO /users (que es solo-jefe): quien gestiona el plan es el lider, y debe
+  // poder asignar responsables de su proceso. Si falla, se degrada a un
+  // selector vacio sin romper el formulario.
   React.useEffect(() => {
     if (!open) return;
     let active = true;
-    void listUsers()
+    void listCoordinationPeople()
       .then((data) => {
         if (active) setUsers(data);
       })

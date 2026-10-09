@@ -26,9 +26,9 @@ import type {
   Asset,
   AssetStatus,
   CatalogItem,
+  CoordinationPerson,
   Process,
   Request,
-  User,
 } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
 import {
@@ -39,7 +39,8 @@ import {
   updateAsset,
 } from '@/lib/assets';
 import { listCatalogItems } from '@/lib/catalog';
-import { listProcesses, listUsers } from '@/lib/team';
+import { listProcesses } from '@/lib/team';
+import { listCoordinationPeople } from '@/lib/worklog';
 import { listRequests } from '@/lib/requests';
 import { ActivoFormDialog, type ActivoFormValues } from './activo-form-dialog';
 
@@ -97,7 +98,7 @@ export function ActivosView(): React.ReactElement {
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [requests, setRequests] = React.useState<Request[]>([]);
-  const [owners, setOwners] = React.useState<User[]>([]);
+  const [owners, setOwners] = React.useState<CoordinationPerson[]>([]);
   const [typeOptions, setTypeOptions] = React.useState<CatalogItem[]>([]);
   const [technologyOptions, setTechnologyOptions] = React.useState<
     CatalogItem[]
@@ -128,7 +129,7 @@ export function ActivosView(): React.ReactElement {
           listAssets(),
           listProcesses().catch(() => [] as Process[]),
           listRequests().catch(() => [] as Request[]),
-          listUsers().catch(() => [] as User[]),
+          listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
           listCatalogItems({ catalog: 'ASSET_TYPE', active: true }).catch(
             () => [] as CatalogItem[],
           ),
