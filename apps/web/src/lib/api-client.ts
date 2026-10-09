@@ -115,6 +115,29 @@ export type Transition = components['schemas']['TransitionDto'];
 /** Estado destino valido de una transicion (maestra RECORD_STATE). */
 export type RecordState = Transition['toState'];
 
+// --- Fase 6 (activos y documentos): tipos derivados del contrato OpenAPI ---
+export type Asset = components['schemas']['AssetResponseDto'];
+export type CreateAsset = components['schemas']['CreateAssetDto'];
+export type UpdateAsset = components['schemas']['UpdateAssetDto'];
+export type ChangeAssetStatus =
+  components['schemas']['ChangeAssetStatusDto'];
+/** Estado destino valido de un activo (AssetStatus). */
+export type AssetStatus = ChangeAssetStatus['targetStatus'];
+
+export type Document = components['schemas']['DocumentResponseDto'];
+export type CreateDocument = components['schemas']['CreateDocumentDto'];
+export type UpdateDocument = components['schemas']['UpdateDocumentDto'];
+export type CreateDocumentVersion =
+  components['schemas']['CreateDocumentVersionDto'];
+export type DocumentVersion =
+  components['schemas']['DocumentVersionResponseDto'];
+export type DocumentContent =
+  components['schemas']['DocumentContentResponseDto'];
+export type ChangeDocumentStatus =
+  components['schemas']['ChangeDocumentStatusDto'];
+/** Estado destino valido de un documento (DocStatus). */
+export type DocumentStatus = ChangeDocumentStatus['targetStatus'];
+
 /**
  * Clave de localStorage donde el selector de usuario (dev) guarda el
  * identifier del actor actual. Mecanismo exclusivo de desarrollo (design 3.2).

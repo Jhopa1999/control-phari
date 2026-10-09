@@ -1,12 +1,7 @@
-import { UnderConstruction } from '@/components/under-construction';
+import { ActivosView } from './activos-view';
 
 export const metadata = { title: 'Activos | Portal del area' };
 
 export default function ActivosPage(): React.ReactElement {
-  return (
-    <UnderConstruction
-      title="Activos"
-      description="Inventario de activos analiticos del area."
-    />
-  );
+  return <ActivosView />;
 }
