@@ -17,6 +17,7 @@ import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
+import { hashPassword } from '../src/modules/auth/password-hash';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 loadEnv({ path: path.resolve(here, '../../../.env') });
@@ -30,6 +31,12 @@ if (!connectionString || connectionString.trim() === '') {
 
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
+
+// Contrasena de desarrollo conocida para probar el login JWT en local. NO es
+// un secreto real: solo sirve en el seed sintetico (dominio demo.local) para
+// que, con AUTH_MODE=jwt, POST /auth/login funcione con los usuarios dev. El
+// modo dev-header NO usa esta credencial (sigue resolviendo por X-Actor-Id).
+const DEV_PASSWORD = 'dev1234';
 
 // --- Datos sinteticos -------------------------------------------------------
 
@@ -299,7 +306,10 @@ async function main(): Promise<void> {
     }
   }
 
-  // Usuarios. Idempotente por `identifier` unico (mismo patron que Roles).
+  // Usuarios. Idempotente por `identifier` unico (mismo patron que Roles). Se
+  // siembra `passwordHash` (hash bcrypt de DEV_PASSWORD) para poder probar el
+  // login JWT en local; el modo dev-header no lo usa.
+  const devPasswordHash = await hashPassword(DEV_PASSWORD);
   for (const user of USERS) {
     const existing = await prisma.user.findFirst({
       where: { identifier: user.identifier },
@@ -307,11 +317,15 @@ async function main(): Promise<void> {
     if (existing) {
       await prisma.user.update({
         where: { id: existing.id },
-        data: { name: user.name },
+        data: { name: user.name, passwordHash: devPasswordHash },
       });
     } else {
       await prisma.user.create({
-        data: { identifier: user.identifier, name: user.name },
+        data: {
+          identifier: user.identifier,
+          name: user.name,
+          passwordHash: devPasswordHash,
+        },
       });
     }
   }

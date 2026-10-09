@@ -83,6 +83,10 @@ model User {
   identifier String
   name       String
   active     Boolean  @default(true)
+  // Hash bcrypt de la credencial, usado solo por la autenticacion real (JWT).
+  // Nullable: dev-header no lo usa y las filas existentes no lo tienen; no es
+  // credencial en modo dev. Nunca se expone en DTOs ni respuestas.
+  passwordHash String? @map("password_hash")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 

@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Autentica por identifier y contrasena, devuelve un JWT. */
+        post: operations["AuthLoginController_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit-events": {
         parameters: {
             query?: never;
@@ -1522,6 +1539,34 @@ export interface components {
              * @example Ana Jefa
              */
             name: string;
+        };
+        LoginUserDto: {
+            /**
+             * Format: uuid
+             * @description Id del usuario.
+             */
+            id: string;
+            /**
+             * @description Nombre visible del usuario.
+             * @example Ana Jefa
+             */
+            name: string;
+            /**
+             * @description Identificador funcional.
+             * @example jefe@demo.local
+             */
+            identifier: string;
+        };
+        LoginResponseDto: {
+            /** @description JWT firmado para autenticar peticiones. */
+            accessToken: string;
+            /**
+             * @description Vigencia del token (formato de @nestjs/jwt).
+             * @example 8h
+             */
+            expiresIn: string;
+            /** @description Usuario autenticado. */
+            user: components["schemas"]["LoginUserDto"];
         };
         AuditEventResponseDto: {
             /**
@@ -4148,6 +4193,33 @@ export interface operations {
             };
             /** @description No disponible fuera del modo dev-header. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthLoginController_login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Credenciales validas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponseDto"];
+                };
+            };
+            /** @description Credenciales invalidas. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

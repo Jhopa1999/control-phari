@@ -76,6 +76,31 @@
         ]
       }
     },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthLoginController_login",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Credenciales validas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciales invalidas."
+          }
+        },
+        "summary": "Autentica por identifier y contrasena, devuelve un JWT.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/audit-events": {
       "get": {
         "operationId": "AuditController_findMany",
@@ -5309,6 +5334,58 @@
         "required": [
           "identifier",
           "name"
+        ]
+      },
+      "LoginUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id del usuario."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible del usuario.",
+            "example": "Ana Jefa"
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional.",
+            "example": "jefe@demo.local"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "identifier"
+        ]
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT firmado para autenticar peticiones."
+          },
+          "expiresIn": {
+            "type": "string",
+            "description": "Vigencia del token (formato de @nestjs/jwt).",
+            "example": "8h"
+          },
+          "user": {
+            "description": "Usuario autenticado.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LoginUserDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "user"
         ]
       },
       "AuditEventResponseDto": {

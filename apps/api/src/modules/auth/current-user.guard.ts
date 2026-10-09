@@ -7,9 +7,13 @@ import {
 } from '@nestjs/common';
 import { ACTOR_RESOLVER, ActorResolver } from './actor-resolver';
 import { CurrentActor } from './current-actor';
+import { isJwtMode } from './dev-actor.resolver';
 
 /** Nombre del header de identidad de desarrollo (design 3.1). */
 export const ACTOR_HEADER = 'x-actor-id';
+
+/** Header portador del JWT en modo de autenticacion real. */
+export const AUTHORIZATION_HEADER = 'authorization';
 
 /**
  * Forma minima del request HTTP que necesitan los guards/decorators de auth.
@@ -34,7 +38,16 @@ export class CurrentUserGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithActor>();
-    const rawIdentity = headerValue(request.headers[ACTOR_HEADER]);
+
+    // El guard es el unico punto que ya conoce el request HTTP, asi que es
+    // quien elige QUE header leer segun el modo y pasa su valor crudo al
+    // resolver, manteniendo intacta la firma resolve(string | undefined):
+    // - modo jwt: el header `Authorization` completo ("Bearer <token>").
+    // - cualquier otro modo (dev-header o sin definir): `X-Actor-Id`, igual que
+    //   siempre, por lo que los specs que no definen AUTH_MODE no cambian.
+    const rawIdentity = isJwtMode()
+      ? headerValue(request.headers[AUTHORIZATION_HEADER])
+      : headerValue(request.headers[ACTOR_HEADER]);
 
     const actor = await this.actorResolver.resolve(rawIdentity);
     if (!actor) {
