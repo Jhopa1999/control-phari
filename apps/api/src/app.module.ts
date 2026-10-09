@@ -11,6 +11,7 @@ import { PlanModule } from './modules/plan/plan.module';
 import { CapacityModule } from './modules/capacity/capacity.module';
 import { CoordinationModule } from './modules/coordination/coordination.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
+import { GovernanceModule } from './modules/governance/governance.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { KnowledgeModule } from './modules/knowledge/knowledge.module';
     CapacityModule,
     CoordinationModule,
     KnowledgeModule,
+    GovernanceModule,
   ],
 })
 export class AppModule {}

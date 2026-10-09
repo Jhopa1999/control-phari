@@ -32,6 +32,9 @@ const OBJECT_TYPES = [
   'ASSET',
   'DOCUMENT',
   'DOCUMENT_VERSION',
+  'GATE_CHECK',
+  'GATE_PENDING_ITEM',
+  'VALIDATION_RECORD',
 ] as const;
 
 /**

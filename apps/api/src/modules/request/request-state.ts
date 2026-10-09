@@ -54,6 +54,15 @@ export const IMPLEMENTED_TRANSITIONS: ReadonlyArray<
   [RequestState.COMPROMETIDA, RequestState.EN_PLANIFICACION],
   // Fase 3 (design §1.5): plan autorizado -> ejecucion.
   [RequestState.EN_PLANIFICACION, RequestState.EN_EJECUCION],
+  // Fase 7 (design §1.2 D-B4): ciclo de control GC4/GC5. Preparacion de GC4
+  // (request-validation) y aprobacion/preparacion hasta el cierre por GC5. No
+  // se anade ninguna transicion de/hacia BLOQUEADA: el bloqueo es un flag
+  // transversal (D-B7), no un estado operativo.
+  [RequestState.EN_EJECUCION, RequestState.EN_VALIDACION],
+  [RequestState.EN_VALIDACION, RequestState.LISTA_PARA_LIBERAR],
+  [RequestState.LISTA_PARA_LIBERAR, RequestState.EN_ESTABILIZACION],
+  [RequestState.EN_ESTABILIZACION, RequestState.OPERATIVA],
+  [RequestState.OPERATIVA, RequestState.CERRADA],
 ];
 
 /** Indica si una transicion `from -> to` esta implementada en Fase 2. */

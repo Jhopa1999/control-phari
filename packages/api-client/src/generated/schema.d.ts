@@ -1168,6 +1168,228 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests/{id}/gates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tablero de los 5 gates GC1-GC5 de la solicitud. */
+        get: operations["GateCheckController_getForRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/gates/{gateCode}/pending-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Registrar un faltante de un gate (que/quien/fecha). */
+        post: operations["GateCheckController_addPendingItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/gates/{gateCode}/pending-items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Resolver/editar un faltante de un gate. */
+        patch: operations["GateCheckController_resolvePendingItem"];
+        trace?: never;
+    };
+    "/requests/{id}/gates/GC4/request-validation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preparacion GC4: EN_EJECUCION -> EN_VALIDACION. */
+        post: operations["GateCheckController_requestValidation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/gates/GC4/mark-ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preparacion GC4: EN_VALIDACION -> LISTA_PARA_LIBERAR (recomputa §1.5). */
+        post: operations["GateCheckController_markReady"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/gates/GC5/confirm-stabilization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preparacion GC5: EN_ESTABILIZACION -> OPERATIVA. */
+        post: operations["GateCheckController_confirmStabilization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/gates/{gateCode}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aprobar un gate por la autoridad (solo GC4/GC5; GC1-GC3 => 409). */
+        post: operations["GateCheckController_approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/gates/{gateCode}/waive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marcar un gate NO_APLICA (requiere motivo y ruta compatible). */
+        post: operations["GateCheckController_waive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bloquear la solicitud (flag transversal; NO cambia el estado). */
+        post: operations["GateCheckController_block"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/unblock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Desbloquear la solicitud (flag transversal; NO cambia el estado). */
+        post: operations["GateCheckController_unblock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/governance-route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Fijar/cambiar la ruta proporcional (manual, auditada). */
+        put: operations["GateCheckController_setRoute"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/validations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historial de validaciones de la solicitud. */
+        get: operations["ValidationController_findForRequest"];
+        put?: never;
+        /** Registrar una validacion/evidencia (NO aprueba gate, BR-008). */
+        post: operations["ValidationController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/validations/{validationId}/resolve-blocking": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Resolver un defecto bloqueante (D-C5; NO aprueba gate). */
+        patch: operations["ValidationController_resolveBlocking"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3355,6 +3577,295 @@ export interface components {
             targetStatus: "BORRADOR" | "VIGENTE" | "ARCHIVADA";
             /** @description Motivo del cambio. */
             reason?: string;
+        };
+        GatePendingItemResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description GateCheck al que pertenece.
+             */
+            gateCheckId: string;
+            /** @description Lo que falta. */
+            description: string;
+            /**
+             * Format: uuid
+             * @description Responsable de resolverlo.
+             */
+            ownerUserId: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de revision.
+             */
+            reviewDate: string | null;
+            /** @description Resuelto si/no. */
+            resolved: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de resolucion.
+             */
+            resolvedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de actualizacion.
+             */
+            updatedAt: string;
+        };
+        GateValidationSummaryDto: {
+            /** @description Total de validaciones registradas. */
+            total: number;
+            /** @description Validaciones con defecto bloqueante sin resolver. */
+            blockingUnresolved: number;
+            /** @description Existe validacion obligatoria de la ruta aprobada. */
+            hasMandatoryApproving: boolean;
+            /** @description El gate es aprobable segun el recomputo server-side. */
+            approvable: boolean;
+            /** @description Motivos de bloqueo (vacio si es aprobable). */
+            blockingReasons: string[];
+        };
+        GateCheckResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Solicitud a la que pertenece.
+             */
+            requestId: string;
+            /** @description Codigo del gate (GC1..GC5). */
+            gateCode: string;
+            /** @description Titulo del gate (marco FCGR §5). */
+            title: string;
+            /** @description Estado (PENDIENTE/CUMPLIDO/NO_APLICA). */
+            status: string;
+            /** @description Condicion para avanzar (texto del marco). */
+            conditionText: string;
+            /** @description Autoridad del control (texto del marco). */
+            authorityText: string;
+            /** @description Motivo de NO_APLICA. */
+            waiverReason: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de decision.
+             */
+            decidedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Usuario que decidio.
+             */
+            decidedByUserId: string | null;
+            /** @description Faltantes del gate. */
+            pendingItems: components["schemas"]["GatePendingItemResponseDto"][];
+            /** @description Resumen de validaciones (solo GC4; null en los demas). */
+            validationSummary: components["schemas"]["GateValidationSummaryDto"] | null;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de actualizacion.
+             */
+            updatedAt: string;
+        };
+        GovernanceBoardResponseDto: {
+            /**
+             * Format: uuid
+             * @description Solicitud.
+             */
+            requestId: string;
+            /** @description Estado operativo actual. */
+            operationalState: string;
+            /** @description Ruta proporcional (GOVERNANCE_ROUTE) o null. */
+            governanceRoute: string | null;
+            /** @description Bloqueada (flag transversal) si/no. */
+            blocked: boolean;
+            /** @description Motivo del bloqueo vigente. */
+            blockedReason: string | null;
+            /** @description Los 5 gates GC1-GC5. */
+            gates: components["schemas"]["GateCheckResponseDto"][];
+        };
+        CreatePendingItemDto: {
+            /** @description Lo que falta. */
+            description: string;
+            /**
+             * Format: uuid
+             * @description Responsable de resolverlo.
+             */
+            ownerUserId?: string;
+            /**
+             * Format: date
+             * @description Fecha de revision (ISO).
+             */
+            reviewDate?: string;
+        };
+        ResolvePendingItemDto: {
+            /** @description Marcar como resuelto. */
+            resolved?: boolean;
+            /** @description Nueva descripcion. */
+            description?: string;
+            /**
+             * Format: uuid
+             * @description Responsable.
+             */
+            ownerUserId?: string;
+            /**
+             * Format: date
+             * @description Fecha de revision (ISO).
+             */
+            reviewDate?: string;
+        };
+        AdvanceStageDto: {
+            /** @description Nota opcional. */
+            note?: string;
+        };
+        ApproveGateDto: {
+            /** @description Justificacion de la autoridad. */
+            authorityNote?: string;
+        };
+        WaiveGateDto: {
+            /** @description Motivo documentado del NO_APLICA. */
+            waiverReason: string;
+        };
+        BlockRequestDto: {
+            /** @description Motivo del bloqueo. */
+            blockReason: string;
+        };
+        UnblockRequestDto: {
+            /** @description Nota opcional. */
+            note?: string;
+        };
+        SetRouteDto: {
+            /** @description Code de la ruta proporcional (catalogo GOVERNANCE_ROUTE). */
+            route: string;
+        };
+        ValidationResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Solicitud.
+             */
+            requestId: string;
+            /**
+             * Format: uuid
+             * @description Gate asociado (tipicamente GC4).
+             */
+            gateCheckId: string | null;
+            /** @description Tipo de validacion (VALIDATION_TYPE). */
+            validationTypeCode: string;
+            /** @description Caso de prueba. */
+            testCase: string;
+            /** @description Version de la solucion probada. */
+            version: string | null;
+            /** @description Ambiente. */
+            environment: string | null;
+            /** @description Resultado (VALIDATION_RESULT). */
+            resultCode: string;
+            /** @description Defecto bloqueante. */
+            blocking: boolean;
+            /** @description Bloqueo resuelto. */
+            blockingResolved: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de resolucion del bloqueo.
+             */
+            blockingResolvedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Usuario que resolvio el bloqueo.
+             */
+            blockingResolvedByUserId: string | null;
+            /** @description URL/nota de evidencia. */
+            evidenceRef: string | null;
+            /**
+             * Format: uuid
+             * @description Documento de evidencia.
+             */
+            evidenceDocumentId: string | null;
+            /**
+             * Format: uuid
+             * @description Version del documento de evidencia.
+             */
+            evidenceDocumentVersionId: string | null;
+            /**
+             * Format: uuid
+             * @description Ejecutor.
+             */
+            executedByUserId: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ejecucion.
+             */
+            executedAt: string;
+            /** @description Notas. */
+            notes: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateValidationDto: {
+            /** @description Tipo de validacion (catalogo VALIDATION_TYPE). */
+            validationTypeCode: string;
+            /** @description Caso de prueba. */
+            testCase: string;
+            /** @description Version de la solucion probada. */
+            version?: string;
+            /** @description Ambiente. */
+            environment?: string;
+            /** @description Resultado (catalogo VALIDATION_RESULT). */
+            resultCode: string;
+            /** @description Defecto bloqueante si/no (default false). */
+            blocking?: boolean;
+            /**
+             * Format: uuid
+             * @description Ejecutor de la prueba.
+             */
+            executedByUserId: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ejecucion (ISO).
+             */
+            executedAt: string;
+            /** @description URL/nota de evidencia. */
+            evidenceRef?: string;
+            /**
+             * Format: uuid
+             * @description Documento de evidencia (Fase 6).
+             */
+            evidenceDocumentId?: string;
+            /**
+             * Format: uuid
+             * @description Version concreta del documento de evidencia (inmutable).
+             */
+            evidenceDocumentVersionId?: string;
+            /** @description Notas. */
+            notes?: string;
+        };
+        ResolveBlockingDto: {
+            /** @description Nota de resolucion. */
+            resolutionNote?: string;
         };
     };
     responses: never;
@@ -7485,6 +7996,575 @@ export interface operations {
                 content?: never;
             };
             /** @description Documento fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateCheckController_getForRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceBoardResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateCheckController_addPendingItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description GC1..GC5 */
+                gateCode: unknown;
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePendingItemDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatePendingItemResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud/gate fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateCheckController_resolvePendingItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: unknown;
+                /** @description GC1..GC5 */
+                gateCode: unknown;
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolvePendingItemDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatePendingItemResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Faltante no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateCheckController_requestValidation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdvanceStageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceBoardResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Estado actual no es el origen esperado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateCheckController_markReady: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdvanceStageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceBoardResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validacion bloqueante/obligatoria faltante o estado invalido. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateCheckController_confirmStabilization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdvanceStageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceBoardResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Estado actual no es el origen esperado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateCheckController_approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description GC4 o GC5 */
+                gateCode: unknown;
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveGateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GateCheckResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description GC1-GC3 no aprobable, bloqueo o estado invalido. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateCheckController_waive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description GC1..GC5 */
+                gateCode: unknown;
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaiveGateDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GateCheckResponseDto"];
+                };
+            };
+            /** @description Ruta no admite NO_APLICA o falta motivo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateCheckController_block: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlockRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceBoardResponseDto"];
+                };
+            };
+            /** @description Falta blockReason. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La solicitud ya esta bloqueada. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateCheckController_unblock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnblockRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceBoardResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La solicitud no esta bloqueada. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateCheckController_setRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetRouteDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceBoardResponseDto"];
+                };
+            };
+            /** @description Ruta fuera de catalogo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ValidationController_findForRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ValidationController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateValidationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationResponseDto"];
+                };
+            };
+            /** @description Catalogo invalido o evidencia incoherente. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud/documento fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ValidationController_resolveBlocking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                validationId: unknown;
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveBlockingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationResponseDto"];
+                };
+            };
+            /** @description El registro no es un defecto bloqueante. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validacion no encontrada. */
             404: {
                 headers: {
                     [name: string]: unknown;

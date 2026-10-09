@@ -4332,6 +4332,698 @@
           "documents"
         ]
       }
+    },
+    "/requests/{id}/gates": {
+      "get": {
+        "operationId": "GateCheckController_getForRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceBoardResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          }
+        },
+        "summary": "Tablero de los 5 gates GC1-GC5 de la solicitud.",
+        "tags": [
+          "governance-gates"
+        ]
+      }
+    },
+    "/requests/{id}/gates/{gateCode}/pending-items": {
+      "post": {
+        "operationId": "GateCheckController_addPendingItem",
+        "parameters": [
+          {
+            "name": "gateCode",
+            "required": true,
+            "in": "path",
+            "description": "GC1..GC5",
+            "schema": {}
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePendingItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatePendingItemResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud/gate fuera de alcance."
+          }
+        },
+        "summary": "Registrar un faltante de un gate (que/quien/fecha).",
+        "tags": [
+          "governance-gates"
+        ]
+      }
+    },
+    "/requests/{id}/gates/{gateCode}/pending-items/{itemId}": {
+      "patch": {
+        "operationId": "GateCheckController_resolvePendingItem",
+        "parameters": [
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "gateCode",
+            "required": true,
+            "in": "path",
+            "description": "GC1..GC5",
+            "schema": {}
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolvePendingItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatePendingItemResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Faltante no encontrado."
+          }
+        },
+        "summary": "Resolver/editar un faltante de un gate.",
+        "tags": [
+          "governance-gates"
+        ]
+      }
+    },
+    "/requests/{id}/gates/GC4/request-validation": {
+      "post": {
+        "operationId": "GateCheckController_requestValidation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvanceStageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceBoardResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "Estado actual no es el origen esperado."
+          }
+        },
+        "summary": "Preparacion GC4: EN_EJECUCION -> EN_VALIDACION.",
+        "tags": [
+          "governance-gates"
+        ]
+      }
+    },
+    "/requests/{id}/gates/GC4/mark-ready": {
+      "post": {
+        "operationId": "GateCheckController_markReady",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvanceStageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceBoardResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "Validacion bloqueante/obligatoria faltante o estado invalido."
+          }
+        },
+        "summary": "Preparacion GC4: EN_VALIDACION -> LISTA_PARA_LIBERAR (recomputa §1.5).",
+        "tags": [
+          "governance-gates"
+        ]
+      }
+    },
+    "/requests/{id}/gates/GC5/confirm-stabilization": {
+      "post": {
+        "operationId": "GateCheckController_confirmStabilization",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvanceStageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceBoardResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "Estado actual no es el origen esperado."
+          }
+        },
+        "summary": "Preparacion GC5: EN_ESTABILIZACION -> OPERATIVA.",
+        "tags": [
+          "governance-gates"
+        ]
+      }
+    },
+    "/requests/{id}/gates/{gateCode}/approve": {
+      "post": {
+        "operationId": "GateCheckController_approve",
+        "parameters": [
+          {
+            "name": "gateCode",
+            "required": true,
+            "in": "path",
+            "description": "GC4 o GC5",
+            "schema": {}
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveGateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GateCheckResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "GC1-GC3 no aprobable, bloqueo o estado invalido."
+          }
+        },
+        "summary": "Aprobar un gate por la autoridad (solo GC4/GC5; GC1-GC3 => 409).",
+        "tags": [
+          "governance-gates"
+        ]
+      }
+    },
+    "/requests/{id}/gates/{gateCode}/waive": {
+      "post": {
+        "operationId": "GateCheckController_waive",
+        "parameters": [
+          {
+            "name": "gateCode",
+            "required": true,
+            "in": "path",
+            "description": "GC1..GC5",
+            "schema": {}
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaiveGateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GateCheckResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ruta no admite NO_APLICA o falta motivo."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Marcar un gate NO_APLICA (requiere motivo y ruta compatible).",
+        "tags": [
+          "governance-gates"
+        ]
+      }
+    },
+    "/requests/{id}/block": {
+      "post": {
+        "operationId": "GateCheckController_block",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceBoardResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta blockReason."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "La solicitud ya esta bloqueada."
+          }
+        },
+        "summary": "Bloquear la solicitud (flag transversal; NO cambia el estado).",
+        "tags": [
+          "governance-gates"
+        ]
+      }
+    },
+    "/requests/{id}/unblock": {
+      "post": {
+        "operationId": "GateCheckController_unblock",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnblockRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceBoardResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "La solicitud no esta bloqueada."
+          }
+        },
+        "summary": "Desbloquear la solicitud (flag transversal; NO cambia el estado).",
+        "tags": [
+          "governance-gates"
+        ]
+      }
+    },
+    "/requests/{id}/governance-route": {
+      "put": {
+        "operationId": "GateCheckController_setRoute",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetRouteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceBoardResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ruta fuera de catalogo."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Fijar/cambiar la ruta proporcional (manual, auditada).",
+        "tags": [
+          "governance-gates"
+        ]
+      }
+    },
+    "/requests/{id}/validations": {
+      "get": {
+        "operationId": "ValidationController_findForRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          }
+        },
+        "summary": "Historial de validaciones de la solicitud.",
+        "tags": [
+          "governance-validations"
+        ]
+      },
+      "post": {
+        "operationId": "ValidationController_create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateValidationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Catalogo invalido o evidencia incoherente."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud/documento fuera de alcance."
+          }
+        },
+        "summary": "Registrar una validacion/evidencia (NO aprueba gate, BR-008).",
+        "tags": [
+          "governance-validations"
+        ]
+      }
+    },
+    "/requests/{id}/validations/{validationId}/resolve-blocking": {
+      "patch": {
+        "operationId": "ValidationController_resolveBlocking",
+        "parameters": [
+          {
+            "name": "validationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveBlockingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El registro no es un defecto bloqueante."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Validacion no encontrada."
+          }
+        },
+        "summary": "Resolver un defecto bloqueante (D-C5; NO aprueba gate).",
+        "tags": [
+          "governance-validations"
+        ]
+      }
     }
   },
   "info": {
@@ -8481,6 +9173,570 @@
         "required": [
           "targetStatus"
         ]
+      },
+      "GatePendingItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "gateCheckId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "GateCheck al que pertenece."
+          },
+          "description": {
+            "type": "string",
+            "description": "Lo que falta."
+          },
+          "ownerUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Responsable de resolverlo."
+          },
+          "reviewDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de revision."
+          },
+          "resolved": {
+            "type": "boolean",
+            "description": "Resuelto si/no."
+          },
+          "resolvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de resolucion."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "gateCheckId",
+          "description",
+          "ownerUserId",
+          "reviewDate",
+          "resolved",
+          "resolvedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "GateValidationSummaryDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total de validaciones registradas."
+          },
+          "blockingUnresolved": {
+            "type": "number",
+            "description": "Validaciones con defecto bloqueante sin resolver."
+          },
+          "hasMandatoryApproving": {
+            "type": "boolean",
+            "description": "Existe validacion obligatoria de la ruta aprobada."
+          },
+          "approvable": {
+            "type": "boolean",
+            "description": "El gate es aprobable segun el recomputo server-side."
+          },
+          "blockingReasons": {
+            "description": "Motivos de bloqueo (vacio si es aprobable).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "blockingUnresolved",
+          "hasMandatoryApproving",
+          "approvable",
+          "blockingReasons"
+        ]
+      },
+      "GateCheckResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud a la que pertenece."
+          },
+          "gateCode": {
+            "type": "string",
+            "description": "Codigo del gate (GC1..GC5)."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo del gate (marco FCGR §5)."
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado (PENDIENTE/CUMPLIDO/NO_APLICA)."
+          },
+          "conditionText": {
+            "type": "string",
+            "description": "Condicion para avanzar (texto del marco)."
+          },
+          "authorityText": {
+            "type": "string",
+            "description": "Autoridad del control (texto del marco)."
+          },
+          "waiverReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo de NO_APLICA."
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de decision."
+          },
+          "decidedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario que decidio."
+          },
+          "pendingItems": {
+            "description": "Faltantes del gate.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GatePendingItemResponseDto"
+            }
+          },
+          "validationSummary": {
+            "nullable": true,
+            "description": "Resumen de validaciones (solo GC4; null en los demas).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GateValidationSummaryDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "requestId",
+          "gateCode",
+          "title",
+          "status",
+          "conditionText",
+          "authorityText",
+          "waiverReason",
+          "decidedAt",
+          "decidedByUserId",
+          "pendingItems",
+          "validationSummary",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "GovernanceBoardResponseDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud."
+          },
+          "operationalState": {
+            "type": "string",
+            "description": "Estado operativo actual."
+          },
+          "governanceRoute": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ruta proporcional (GOVERNANCE_ROUTE) o null."
+          },
+          "blocked": {
+            "type": "boolean",
+            "description": "Bloqueada (flag transversal) si/no."
+          },
+          "blockedReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo del bloqueo vigente."
+          },
+          "gates": {
+            "description": "Los 5 gates GC1-GC5.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GateCheckResponseDto"
+            }
+          }
+        },
+        "required": [
+          "requestId",
+          "operationalState",
+          "governanceRoute",
+          "blocked",
+          "blockedReason",
+          "gates"
+        ]
+      },
+      "CreatePendingItemDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Lo que falta.",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "ownerUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Responsable de resolverlo."
+          },
+          "reviewDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Fecha de revision (ISO)."
+          }
+        },
+        "required": [
+          "description"
+        ]
+      },
+      "ResolvePendingItemDto": {
+        "type": "object",
+        "properties": {
+          "resolved": {
+            "type": "boolean",
+            "description": "Marcar como resuelto."
+          },
+          "description": {
+            "type": "string",
+            "description": "Nueva descripcion.",
+            "maxLength": 2000
+          },
+          "ownerUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Responsable."
+          },
+          "reviewDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Fecha de revision (ISO)."
+          }
+        }
+      },
+      "AdvanceStageDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Nota opcional.",
+            "maxLength": 2000
+          }
+        }
+      },
+      "ApproveGateDto": {
+        "type": "object",
+        "properties": {
+          "authorityNote": {
+            "type": "string",
+            "description": "Justificacion de la autoridad.",
+            "maxLength": 2000
+          }
+        }
+      },
+      "WaiveGateDto": {
+        "type": "object",
+        "properties": {
+          "waiverReason": {
+            "type": "string",
+            "description": "Motivo documentado del NO_APLICA.",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "waiverReason"
+        ]
+      },
+      "BlockRequestDto": {
+        "type": "object",
+        "properties": {
+          "blockReason": {
+            "type": "string",
+            "description": "Motivo del bloqueo.",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "blockReason"
+        ]
+      },
+      "UnblockRequestDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Nota opcional.",
+            "maxLength": 2000
+          }
+        }
+      },
+      "SetRouteDto": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "type": "string",
+            "description": "Code de la ruta proporcional (catalogo GOVERNANCE_ROUTE).",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "route"
+        ]
+      },
+      "ValidationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud."
+          },
+          "gateCheckId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Gate asociado (tipicamente GC4)."
+          },
+          "validationTypeCode": {
+            "type": "string",
+            "description": "Tipo de validacion (VALIDATION_TYPE)."
+          },
+          "testCase": {
+            "type": "string",
+            "description": "Caso de prueba."
+          },
+          "version": {
+            "type": "string",
+            "nullable": true,
+            "description": "Version de la solucion probada."
+          },
+          "environment": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ambiente."
+          },
+          "resultCode": {
+            "type": "string",
+            "description": "Resultado (VALIDATION_RESULT)."
+          },
+          "blocking": {
+            "type": "boolean",
+            "description": "Defecto bloqueante."
+          },
+          "blockingResolved": {
+            "type": "boolean",
+            "description": "Bloqueo resuelto."
+          },
+          "blockingResolvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de resolucion del bloqueo."
+          },
+          "blockingResolvedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario que resolvio el bloqueo."
+          },
+          "evidenceRef": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL/nota de evidencia."
+          },
+          "evidenceDocumentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Documento de evidencia."
+          },
+          "evidenceDocumentVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Version del documento de evidencia."
+          },
+          "executedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ejecutor."
+          },
+          "executedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ejecucion."
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true,
+            "description": "Notas."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "requestId",
+          "gateCheckId",
+          "validationTypeCode",
+          "testCase",
+          "version",
+          "environment",
+          "resultCode",
+          "blocking",
+          "blockingResolved",
+          "blockingResolvedAt",
+          "blockingResolvedByUserId",
+          "evidenceRef",
+          "evidenceDocumentId",
+          "evidenceDocumentVersionId",
+          "executedByUserId",
+          "executedAt",
+          "notes",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateValidationDto": {
+        "type": "object",
+        "properties": {
+          "validationTypeCode": {
+            "type": "string",
+            "description": "Tipo de validacion (catalogo VALIDATION_TYPE).",
+            "maxLength": 100
+          },
+          "testCase": {
+            "type": "string",
+            "description": "Caso de prueba.",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "version": {
+            "type": "string",
+            "description": "Version de la solucion probada.",
+            "maxLength": 200
+          },
+          "environment": {
+            "type": "string",
+            "description": "Ambiente.",
+            "maxLength": 200
+          },
+          "resultCode": {
+            "type": "string",
+            "description": "Resultado (catalogo VALIDATION_RESULT).",
+            "maxLength": 100
+          },
+          "blocking": {
+            "type": "boolean",
+            "description": "Defecto bloqueante si/no (default false)."
+          },
+          "executedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ejecutor de la prueba."
+          },
+          "executedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ejecucion (ISO)."
+          },
+          "evidenceRef": {
+            "type": "string",
+            "description": "URL/nota de evidencia.",
+            "maxLength": 2000
+          },
+          "evidenceDocumentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Documento de evidencia (Fase 6)."
+          },
+          "evidenceDocumentVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Version concreta del documento de evidencia (inmutable)."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas.",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "validationTypeCode",
+          "testCase",
+          "resultCode",
+          "executedByUserId",
+          "executedAt"
+        ]
+      },
+      "ResolveBlockingDto": {
+        "type": "object",
+        "properties": {
+          "resolutionNote": {
+            "type": "string",
+            "description": "Nota de resolucion.",
+            "maxLength": 2000
+          }
+        }
       }
     }
   }
