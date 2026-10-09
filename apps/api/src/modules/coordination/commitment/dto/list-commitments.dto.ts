@@ -1,0 +1,21 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsIn, IsOptional, IsUUID } from 'class-validator';
+import { RECORD_STATES } from '../../record-state';
+
+/** Query de listado de compromisos (design §3). Filtros intersectados con alcance. */
+export class ListCommitmentsDto {
+  @ApiPropertyOptional({ enum: RECORD_STATES, description: 'Filtra por estado.' })
+  @IsOptional()
+  @IsIn(RECORD_STATES, { message: 'Estado invalido.' })
+  state?: string;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Filtra por proceso.' })
+  @IsOptional()
+  @IsUUID()
+  processId?: string;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Filtra por asignado.' })
+  @IsOptional()
+  @IsUUID()
+  assignedUserId?: string;
+}

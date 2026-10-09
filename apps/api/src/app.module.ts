@@ -9,6 +9,7 @@ import { GrantModule } from './modules/grant/grant.module';
 import { RequestModule } from './modules/request/request.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { CapacityModule } from './modules/capacity/capacity.module';
+import { CoordinationModule } from './modules/coordination/coordination.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CapacityModule } from './modules/capacity/capacity.module';
     RequestModule,
     PlanModule,
     CapacityModule,
+    CoordinationModule,
   ],
 })
 export class AppModule {}
