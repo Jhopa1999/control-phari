@@ -11,6 +11,14 @@ import { ApiError, getMyPermissions } from './me';
 type PermissionsState = 'loading' | 'success' | 'error' | 'none';
 /** Clave de localStorage donde se guarda el usuario autenticado (modo jwt). */
 const AUTH_USER_STORAGE_KEY = 'authUser';
+/**
+ * Centinela interno de identidad para modo jwt cuando hay token pero el usuario
+ * persistido no es legible (ausente o corrupto en localStorage). Sirve solo para
+ * que el efecto de carga dispare GET /me/permissions y la identidad real quede
+ * resuelta por el backend. NUNCA se envia como cabecera: en jwt onRequest solo
+ * manda Authorization: Bearer <token>, nunca X-Actor-Id. No es un identifier real.
+ */
+const JWT_IDENTITY_SENTINEL = '__jwt__';
 interface ActorContextValue {
   /** Modo de autenticacion efectivo del frontend ('jwt' | 'dev-header'). */
   authMode: AuthMode;
@@ -79,8 +87,10 @@ export function ActorProvider({
           // permisos resolvera la identidad; si falla con 401, se limpia.
         }
       }
-      // Token sin usuario legible: aun asi hay sesion; se dispara la carga.
-      setActorIdState('__jwt__');
+      // Token sin usuario legible: aun asi hay sesion. Se usa el centinela
+      // JWT_IDENTITY_SENTINEL (no un identifier real) solo para disparar la
+      // carga de permisos; ver su definicion arriba.
+      setActorIdState(JWT_IDENTITY_SENTINEL);
       return;
     }
     const stored = window.localStorage.getItem(ACTOR_STORAGE_KEY);
