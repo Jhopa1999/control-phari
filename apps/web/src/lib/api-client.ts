@@ -1,6 +1,6 @@
 import { createApiClient } from '@plantilla-portales/api-client';
 import type { components } from '@plantilla-portales/api-client';
-
+import { getAuthMode } from './auth-mode';
 /**
  * Tipos del dominio derivados del contrato OpenAPI generado.
  * No se declaran interfaces manuales: la fuente es packages/api-client.
@@ -8,7 +8,6 @@ import type { components } from '@plantilla-portales/api-client';
 export type CatalogItem = components['schemas']['CatalogItemResponseDto'];
 export type CreateCatalogItem = components['schemas']['CreateCatalogItemDto'];
 export type UpdateCatalogItem = components['schemas']['UpdateCatalogItemDto'];
-
 export type MyPermissions = components['schemas']['MyPermissionsResponseDto'];
 export type MyGrant = components['schemas']['MyGrantDto'];
 export type DevActor = components['schemas']['DevActorResponseDto'];
@@ -21,7 +20,11 @@ export type UpdateUser = components['schemas']['UpdateUserDto'];
 export type Grant = components['schemas']['GrantResponseDto'];
 export type CreateGrant = components['schemas']['CreateGrantDto'];
 export type AuditEvent = components['schemas']['AuditEventResponseDto'];
-
+// --- Autenticacion (login JWT): tipos derivados del contrato OpenAPI ---
+/** Respuesta de POST /auth/login: { accessToken, expiresIn, user }. */
+export type LoginResponse = components['schemas']['LoginResponseDto'];
+/** Usuario autenticado devuelto por el login. */
+export type AuthUser = components['schemas']['LoginUserDto'];
 // --- Fase 2 (flujo de demanda): tipos derivados del contrato OpenAPI ---
 export type Request = components['schemas']['RequestResponseDto'];
 export type RequestParticipant =
@@ -36,7 +39,6 @@ export type CreatePriorityEvaluation =
   components['schemas']['CreatePriorityEvaluationDto'];
 export type Approval = components['schemas']['ApprovalResponseDto'];
 export type CreateApproval = components['schemas']['CreateApprovalDto'];
-
 // --- Fase 3 (plan y ejecucion): tipos derivados del contrato OpenAPI ---
 export type Plan = components['schemas']['PlanResponseDto'];
 export type CreatePlan = components['schemas']['CreatePlanDto'];
@@ -58,10 +60,8 @@ export type PlanGuide = components['schemas']['PlanGuideDto'];
 export type PlanGuidePending = components['schemas']['PlanGuidePendingDto'];
 export type ReturnPlan = components['schemas']['ReturnPlanDto'];
 export type MyWorkItem = components['schemas']['MyWorkItemDto'];
-
 /** Estado de una tarea (TaskStatus del backend, design 1.3). */
 export type TaskStatus = UpdateTaskStatus['status'];
-
 // --- Fase 4 (capacidad y asignaciones): tipos derivados del contrato OpenAPI ---
 export type Availability = components['schemas']['AvailabilityResponseDto'];
 export type CreateAvailability =
@@ -74,11 +74,9 @@ export type UpdateAssignment = components['schemas']['UpdateAssignmentDto'];
 export type CapacityPerson = components['schemas']['CapacityPersonDto'];
 export type CapacitySummaryRow =
   components['schemas']['CapacitySummaryRowDto'];
-
 // --- Fase 5 (trabajo y coordinacion): tipos derivados del contrato OpenAPI ---
 export type CoordinationPerson =
   components['schemas']['CoordinationPersonDto'];
-
 export type DailyLog = components['schemas']['DailyLogResponseDto'];
 export type DailyLogActivity = components['schemas']['ActivityResponseDto'];
 export type CreateDailyLog = components['schemas']['CreateDailyLogDto'];
@@ -87,7 +85,6 @@ export type CreateActivity = components['schemas']['CreateActivityDto'];
 export type UpdateActivity = components['schemas']['UpdateActivityDto'];
 /** Clasificacion de una actividad del diario (maestra ACTIVITY_CLASS). */
 export type ActivityClass = CreateActivity['classificationCode'];
-
 export type WeeklyReport = components['schemas']['WeeklyReportResponseDto'];
 export type WeeklyConsolidation =
   components['schemas']['WeeklyConsolidationDto'];
@@ -95,26 +92,21 @@ export type CreateWeeklyReport =
   components['schemas']['CreateWeeklyReportDto'];
 export type UpdateWeeklyReport =
   components['schemas']['UpdateWeeklyReportDto'];
-
 export type Issue = components['schemas']['IssueResponseDto'];
 export type CreateIssue = components['schemas']['CreateIssueDto'];
 export type UpdateIssue = components['schemas']['UpdateIssueDto'];
 /** Tipo de novedad (maestra ISSUE_TYPE). */
 export type IssueType = CreateIssue['typeCode'];
-
 export type Meeting = components['schemas']['MeetingResponseDto'];
 export type CreateMeeting = components['schemas']['CreateMeetingDto'];
 export type UpdateMeeting = components['schemas']['UpdateMeetingDto'];
-
 export type Commitment = components['schemas']['CommitmentResponseDto'];
 export type CreateCommitment = components['schemas']['CreateCommitmentDto'];
 export type UpdateCommitment = components['schemas']['UpdateCommitmentDto'];
-
 /** Cuerpo de una transicion de estado (Issue/Commitment). */
 export type Transition = components['schemas']['TransitionDto'];
 /** Estado destino valido de una transicion (maestra RECORD_STATE). */
 export type RecordState = Transition['toState'];
-
 // --- Fase 6 (activos y documentos): tipos derivados del contrato OpenAPI ---
 export type Asset = components['schemas']['AssetResponseDto'];
 export type CreateAsset = components['schemas']['CreateAssetDto'];
@@ -123,7 +115,6 @@ export type ChangeAssetStatus =
   components['schemas']['ChangeAssetStatusDto'];
 /** Estado destino valido de un activo (AssetStatus). */
 export type AssetStatus = ChangeAssetStatus['targetStatus'];
-
 export type Document = components['schemas']['DocumentResponseDto'];
 export type CreateDocument = components['schemas']['CreateDocumentDto'];
 export type UpdateDocument = components['schemas']['UpdateDocumentDto'];
@@ -137,41 +128,54 @@ export type ChangeDocumentStatus =
   components['schemas']['ChangeDocumentStatusDto'];
 /** Estado destino valido de un documento (DocStatus). */
 export type DocumentStatus = ChangeDocumentStatus['targetStatus'];
-
 /**
  * Clave de localStorage donde el selector de usuario (dev) guarda el
  * identifier del actor actual. Mecanismo exclusivo de desarrollo (design 3.2).
  */
 export const ACTOR_STORAGE_KEY = 'actorId';
-
+/**
+ * Clave de localStorage donde se guarda el JWT de la sesion en modo 'jwt'.
+ * No es un secreto de configuracion: es el token emitido por el backend para
+ * la sesion del navegador. Coherente con el patron de ACTOR_STORAGE_KEY.
+ */
+export const TOKEN_STORAGE_KEY = 'authToken';
 /**
  * URL base de la API, leida de la configuracion publica del frontend.
  * No es un secreto (no contiene credenciales). Si falta, se produce un error
  * entendible en lugar de usar un valor hardcodeado.
  */
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
 if (!baseUrl) {
   throw new Error(
     'Falta la configuracion NEXT_PUBLIC_API_BASE_URL. Define la URL de la API ' +
       'en apps/web/.env.local (ver apps/web/.env.example).',
   );
 }
-
 /**
  * Instancia reutilizable del cliente tipado generado desde OpenAPI.
  */
 export const api = createApiClient({ baseUrl });
-
 /**
- * Middleware de request: inyecta la cabecera X-Actor-Id leyendo el identifier
- * del actor seleccionado en localStorage en cada peticion (design 5.3). Usar un
- * middleware evita recrear el cliente al cambiar de usuario. Solo corre en el
- * navegador; en el servidor localStorage no existe y la cabecera se omite.
+ * Middleware de request: inyecta UNA sola cabecera de identidad segun el modo
+ * de autenticacion, nunca ambas. Solo corre en el navegador; en el servidor
+ * localStorage no existe y no se anade cabecera.
+ *
+ * - modo 'jwt': si hay token guardado -> Authorization: Bearer <token>. Sin
+ *   token no se anade cabecera (el backend respondera 401 y el guard de rutas
+ *   lo gestiona).
+ * - modo 'dev-header': se mantiene el comportamiento historico de X-Actor-Id
+ *   leyendo el actor seleccionado en el selector dev (design 5.3).
  */
 api.use({
   onRequest({ request }) {
     if (typeof window === 'undefined') return request;
+    if (getAuthMode() === 'jwt') {
+      const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+      if (token) {
+        request.headers.set('Authorization', `Bearer ${token}`);
+      }
+      return request;
+    }
     const actorId = window.localStorage.getItem(ACTOR_STORAGE_KEY);
     if (actorId) {
       request.headers.set('X-Actor-Id', actorId);

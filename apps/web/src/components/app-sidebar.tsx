@@ -1,9 +1,9 @@
 'use client';
-
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Boxes } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Boxes, LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -17,22 +17,36 @@ import { useActor } from '@/lib/actor-context';
 import { listDevActors } from '@/lib/dev-actors';
 import { NAV_GROUPS, type NavGroup } from '@/lib/navigation';
 import type { DevActor } from '@/lib/api-client';
-
 type ActorsState = 'loading' | 'success' | 'error';
-
 /**
- * Sidebar del portal: selector de usuario (dev) + navegacion agrupada filtrada
- * por allowedModules (design 5.2 / 5.3). El filtrado del menu es cosmetico; el
- * control efectivo es server-side.
+ * Sidebar del portal: navegacion agrupada filtrada por allowedModules
+ * (design 5.2 / 5.3). El filtrado del menu es cosmetico; el control efectivo es
+ * server-side.
+ *
+ * Cabecera de identidad segun el modo:
+ * - 'dev-header': selector de usuario (dev), comportamiento historico intacto.
+ * - 'jwt': usuario autenticado + boton "Cerrar sesion"; el selector dev se
+ *   oculta.
  */
 export function AppSidebar(): React.ReactElement {
   const pathname = usePathname();
-  const { actorId, setActorId, allowedModules, state: permState } = useActor();
-
+  const router = useRouter();
+  const {
+    authMode,
+    actorId,
+    setActorId,
+    allowedModules,
+    state: permState,
+    authUser,
+    logout,
+  } = useActor();
+  const isJwt = authMode === 'jwt';
   const [actors, setActors] = React.useState<DevActor[]>([]);
   const [actorsState, setActorsState] = React.useState<ActorsState>('loading');
-
   React.useEffect(() => {
+    // El selector dev solo existe en dev-header; en jwt no se consulta
+    // /dev/actors (devolveria 404) para no romper nada.
+    if (isJwt) return;
     let cancelled = false;
     void (async () => {
       setActorsState('loading');
@@ -49,8 +63,7 @@ export function AppSidebar(): React.ReactElement {
     return () => {
       cancelled = true;
     };
-  }, []);
-
+  }, [isJwt]);
   // Solo se muestran los grupos con al menos un item permitido. Mientras los
   // permisos cargan o no hay actor, el menu queda vacio (gating real).
   const visibleGroups: NavGroup[] = React.useMemo(() => {
@@ -60,52 +73,80 @@ export function AppSidebar(): React.ReactElement {
       items: group.items.filter((item) => allowedModules.has(item.moduleKey)),
     })).filter((group) => group.items.length > 0);
   }, [permState, allowedModules]);
-
   function isActive(href: string): boolean {
     return pathname === href || pathname.startsWith(`${href}/`);
   }
-
+  function handleLogout(): void {
+    logout();
+    router.replace('/login');
+  }
   return (
     <aside className="flex shrink-0 flex-col border-b bg-card md:w-72 md:border-b-0 md:border-r">
       <div className="flex items-center gap-2 px-6 py-4">
         <Boxes className="size-5 text-primary" aria-hidden="true" />
         <span className="font-semibold">Portal del area</span>
       </div>
-
-      <div className="grid gap-2 px-4 pb-4">
-        <Label htmlFor="actor-select">Usuario actual (dev)</Label>
-        {actorsState === 'loading' ? (
-          <Skeleton className="h-9 w-full" />
-        ) : actorsState === 'error' ? (
-          <p className="text-sm text-muted-foreground" role="alert">
-            No fue posible cargar los usuarios.
+      {isJwt ? (
+        <div className="grid gap-2 px-4 pb-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Sesion
           </p>
-        ) : (
-          <Select
-            value={actorId ?? ''}
-            onValueChange={(value) => setActorId(value)}
+          <p className="text-sm font-medium" aria-label="Usuario autenticado">
+            {authUser?.name ?? 'Usuario'}
+          </p>
+          {authUser?.identifier ? (
+            <p className="text-xs text-muted-foreground">
+              {authUser.identifier}
+            </p>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="mt-1 justify-start"
           >
-            <SelectTrigger id="actor-select" aria-label="Usuario actual">
-              <SelectValue placeholder="Selecciona un usuario" />
-            </SelectTrigger>
-            <SelectContent>
-              {actors.map((actor) => (
-                <SelectItem key={actor.identifier} value={actor.identifier}>
-                  {actor.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-
+            <LogOut aria-hidden="true" />
+            Cerrar sesion
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-2 px-4 pb-4">
+          <Label htmlFor="actor-select">Usuario actual (dev)</Label>
+          {actorsState === 'loading' ? (
+            <Skeleton className="h-9 w-full" />
+          ) : actorsState === 'error' ? (
+            <p className="text-sm text-muted-foreground" role="alert">
+              No fue posible cargar los usuarios.
+            </p>
+          ) : (
+            <Select
+              value={actorId ?? ''}
+              onValueChange={(value) => setActorId(value)}
+            >
+              <SelectTrigger id="actor-select" aria-label="Usuario actual">
+                <SelectValue placeholder="Selecciona un usuario" />
+              </SelectTrigger>
+              <SelectContent>
+                {actors.map((actor) => (
+                  <SelectItem key={actor.identifier} value={actor.identifier}>
+                    {actor.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
       <nav
         aria-label="Navegacion principal"
         className="flex-1 overflow-y-auto px-3 pb-6"
       >
         {!actorId ? (
           <p className="px-3 py-2 text-sm text-muted-foreground">
-            Selecciona un usuario para ver tus modulos.
+            {isJwt
+              ? 'Cargando tu sesion...'
+              : 'Selecciona un usuario para ver tus modulos.'}
           </p>
         ) : permState === 'loading' ? (
           <div className="flex flex-col gap-2 px-1 py-2" aria-live="polite">
