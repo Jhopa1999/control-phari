@@ -6,7 +6,6 @@ import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import { CapacityService } from './capacity.service';
 import { CapacityScopeService } from './capacity-scope.service';
-
 function createMocks() {
   const prismaObj: Record<string, unknown> = {
     monthlyAvailability: {
@@ -22,6 +21,7 @@ function createMocks() {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    task: { findMany: jest.fn() },
     process: { findFirst: jest.fn() },
     request: { findFirst: jest.fn() },
     user: { findMany: jest.fn() },
@@ -36,7 +36,6 @@ function createMocks() {
   const scope = new CapacityScopeService(prisma);
   return { prisma, prismaObj, audit, auditRecord, scope };
 }
-
 function jefe(): CurrentActor {
   return {
     userId: 'uj',
@@ -48,7 +47,6 @@ function jefe(): CurrentActor {
     isJefeArea: true,
   };
 }
-
 function grantFor(
   processId: string,
   roleCode: RoleCode,
@@ -61,7 +59,6 @@ function grantFor(
     roleName: roleCode,
   };
 }
-
 function lider(scoped: string[] = ['p1']): CurrentActor {
   return {
     userId: 'ul',
@@ -73,7 +70,6 @@ function lider(scoped: string[] = ['p1']): CurrentActor {
     isJefeArea: false,
   };
 }
-
 function integrante(): CurrentActor {
   return {
     userId: 'ui',
@@ -85,7 +81,6 @@ function integrante(): CurrentActor {
     isJefeArea: false,
   };
 }
-
 /**
  * Integrante CON grant INTEGRANTE en un proceso (p1). Comparte proceso con el
  * lider, pero per specs/10 "Capacidad: Propia" NO debe ver/escribir la
@@ -102,9 +97,7 @@ function integranteConProceso(processId = 'p1'): CurrentActor {
     isJefeArea: false,
   };
 }
-
 const now = new Date('2025-03-10T00:00:00.000Z');
-
 function availabilityRow(overrides: Record<string, unknown> = {}) {
   return {
     id: 'av1',
@@ -116,7 +109,6 @@ function availabilityRow(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
-
 function assignmentRow(overrides: Record<string, unknown> = {}) {
   return {
     id: 'as1',
@@ -131,19 +123,30 @@ function assignmentRow(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
-
+/**
+ * Fila candidata de Task tal como la devuelve `task.findMany` del service
+ * (solo los campos seleccionados). Por defecto startDate dentro de 2025-03.
+ */
+function taskRow(overrides: Record<string, unknown> = {}) {
+  return {
+    responsibleUserId: 'ui',
+    estimateHours: 10,
+    startDate: new Date(Date.UTC(2025, 2, 5)),
+    endDate: null,
+    ...overrides,
+  };
+}
 describe('CapacityService', () => {
   let service: CapacityService;
   let m: ReturnType<typeof createMocks>;
-
   beforeEach(() => {
     m = createMocks();
     service = new CapacityService(m.prisma, m.audit, m.scope);
     (m.prismaObj.grant as any).findMany.mockResolvedValue([]);
+    // Por defecto no hay tareas de plan: los tests existentes no esperan plan.
+    (m.prismaObj.task as any).findMany.mockResolvedValue([]);
   });
-
-  // --- Resumen (design §1.4/§2.4, AC-012/013) -----------------------------
-
+  // --- Resumen (design Â§1.4/Â§2.4, AC-012/013) -----------------------------
   describe('summary', () => {
     it('disponible 160 / comprometido 120 -> util 75, libre 40, OK, no sobrecargado', async () => {
       (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
@@ -158,7 +161,6 @@ describe('CapacityService', () => {
       (m.prismaObj.user as any).findMany.mockResolvedValue([
         { id: 'ui', name: 'Integrante' },
       ]);
-
       const [row] = await service.summary(jefe(), { month: '2025-03' });
       expect(row.disponible).toBe(160);
       expect(row.comprometido).toBe(120);
@@ -167,8 +169,11 @@ describe('CapacityService', () => {
       expect(row.estado).toBe('OK');
       expect(row.sobrecargado).toBe(false);
       expect(row.cargaParcial).toBe(false);
+      // Sin tareas de plan por defecto: planificado 0, utilizacionPlan 0%.
+      expect(row.planificado).toBe(0);
+      expect(row.utilizacionPlan).toBe(0);
+      expect(row.planSobreDisponible).toBe(false);
     });
-
     it('comprometido > disponible -> libre < 0, SOBRECARGA, sobrecargado true (sin lanzar)', async () => {
       (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
         availabilityRow({ availableHours: 100 }),
@@ -179,13 +184,11 @@ describe('CapacityService', () => {
       (m.prismaObj.user as any).findMany.mockResolvedValue([
         { id: 'ui', name: 'Integrante' },
       ]);
-
       const [row] = await service.summary(jefe(), { month: '2025-03' });
       expect(row.libre).toBe(-30);
       expect(row.sobrecargado).toBe(true);
       expect(row.estado).toBe('SOBRECARGA');
     });
-
     it('disponible 0 -> util null, libre null, SIN_DISPONIBILIDAD (sin division por cero)', async () => {
       (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
         availabilityRow({ availableHours: 0 }),
@@ -196,13 +199,11 @@ describe('CapacityService', () => {
       (m.prismaObj.user as any).findMany.mockResolvedValue([
         { id: 'ui', name: 'Integrante' },
       ]);
-
       const [row] = await service.summary(jefe(), { month: '2025-03' });
       expect(row.utilizacion).toBeNull();
       expect(row.libre).toBeNull();
       expect(row.estado).toBe('SIN_DISPONIBILIDAD');
     });
-
     it('disponibilidad ausente -> SIN_DISPONIBILIDAD con disponible null', async () => {
       (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([]);
       (m.prismaObj.assignment as any).findMany
@@ -211,13 +212,11 @@ describe('CapacityService', () => {
       (m.prismaObj.user as any).findMany.mockResolvedValue([
         { id: 'ui', name: 'Integrante' },
       ]);
-
       const [row] = await service.summary(jefe(), { month: '2025-03' });
       expect(row.disponible).toBeNull();
       expect(row.estado).toBe('SIN_DISPONIBILIDAD');
       expect(row.comprometido).toBe(10);
     });
-
     it('AC-013: jefe suma dos procesos, cargaParcial false, util/libre sobre el total', async () => {
       (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
         availabilityRow({ availableHours: 160 }),
@@ -231,14 +230,12 @@ describe('CapacityService', () => {
       (m.prismaObj.user as any).findMany.mockResolvedValue([
         { id: 'ui', name: 'Integrante' },
       ]);
-
       const [row] = await service.summary(jefe(), { month: '2025-03' });
       expect(row.comprometido).toBe(100);
       expect(row.cargaParcial).toBe(false);
       expect(row.utilizacion).toBe(63);
       expect(row.libre).toBe(60);
     });
-
     it('AC-013 + FINDING 4: lider con carga fuera de su alcance -> CARGA_PARCIAL, util/libre null', async () => {
       (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
         availabilityRow({ availableHours: 160 }),
@@ -249,7 +246,6 @@ describe('CapacityService', () => {
       (m.prismaObj.user as any).findMany.mockResolvedValue([
         { id: 'ui', name: 'Integrante' },
       ]);
-
       const [row] = await service.summary(lider(['p1']), { month: '2025-03' });
       expect(row.estado).toBe('CARGA_PARCIAL');
       expect(row.cargaParcial).toBe(true);
@@ -257,7 +253,6 @@ describe('CapacityService', () => {
       expect(row.libre).toBeNull();
       expect(row.comprometido).toBe(60);
     });
-
     it('lider sin carga fuera de alcance -> cargaParcial false y util/libre normales', async () => {
       (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
         availabilityRow({ availableHours: 100 }),
@@ -268,52 +263,232 @@ describe('CapacityService', () => {
       (m.prismaObj.user as any).findMany.mockResolvedValue([
         { id: 'ui', name: 'Integrante' },
       ]);
-
       const [row] = await service.summary(lider(['p1']), { month: '2025-03' });
       expect(row.cargaParcial).toBe(false);
       expect(row.utilizacion).toBe(40);
       expect(row.libre).toBe(60);
     });
-
     it('jefe: el where de disponibilidad no filtra por userId (scopedUserIds = ALL)', async () => {
       (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([]);
       (m.prismaObj.assignment as any).findMany
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
       (m.prismaObj.user as any).findMany.mockResolvedValue([]);
-
       await service.summary(jefe(), { month: '2025-03' });
       const where = (m.prismaObj.monthlyAvailability as any).findMany.mock.calls[0][0].where;
       expect(where.userId).toBeUndefined();
     });
-
     it('lectura nunca pide filas fuera de scopedUserIds del integrante', async () => {
       (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([]);
       (m.prismaObj.assignment as any).findMany
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
       (m.prismaObj.user as any).findMany.mockResolvedValue([]);
-
       await service.summary(integrante(), { month: '2025-03' });
       const where = (m.prismaObj.monthlyAvailability as any).findMany.mock.calls[0][0].where;
       expect(where.userId).toEqual({ in: ['ui'] });
     });
   });
-
+  // --- Resumen: planificado (vinculacion CAPACIDAD â†” PLAN, ADITIVO) --------
+  describe('summary - planificado', () => {
+    it('(a) suma estimateHours de varias tareas de la persona en el mes; utilizacionPlan = round(plan/disponible*100)', async () => {
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
+        availabilityRow({ userId: 'ui', availableHours: 160 }),
+      ]);
+      (m.prismaObj.assignment as any).findMany
+        .mockResolvedValueOnce([assignmentRow({ userId: 'ui', committedHours: 40 })])
+        .mockResolvedValueOnce([]);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        taskRow({ responsibleUserId: 'ui', estimateHours: 30 }),
+        taskRow({ responsibleUserId: 'ui', estimateHours: 50 }),
+      ]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([
+        { id: 'ui', name: 'Integrante' },
+      ]);
+      const [row] = await service.summary(jefe(), { month: '2025-03' });
+      expect(row.planificado).toBe(80);
+      expect(row.utilizacionPlan).toBe(50); // round(80/160*100)
+      expect(row.planSobreDisponible).toBe(false);
+      // ADITIVO: comprometido sigue reflejando SOLO asignaciones manuales.
+      expect(row.comprometido).toBe(40);
+      expect(row.utilizacion).toBe(25);
+      expect(row.estado).toBe('OK');
+    });
+    it('(b) tarea con startDate null pero endDate dentro del mes -> cuenta por endDate', async () => {
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
+        availabilityRow({ userId: 'ui', availableHours: 100 }),
+      ]);
+      (m.prismaObj.assignment as any).findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        taskRow({
+          responsibleUserId: 'ui',
+          estimateHours: 25,
+          startDate: null,
+          endDate: new Date(Date.UTC(2025, 2, 20)),
+        }),
+      ]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([
+        { id: 'ui', name: 'Integrante' },
+      ]);
+      const [row] = await service.summary(jefe(), { month: '2025-03' });
+      expect(row.planificado).toBe(25);
+    });
+    it('(c) el where filtra TERMINADA, estimateHours > 0 y responsable; tarea sin fecha no suma (mapeo en memoria)', async () => {
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
+        availabilityRow({ userId: 'ui', availableHours: 100 }),
+      ]);
+      (m.prismaObj.assignment as any).findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      // El mock devuelve una tarea con ambas fechas null: aunque el `where` la
+      // excluye en BD, el mapeo en memoria tampoco la cuenta (ref null).
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        taskRow({
+          responsibleUserId: 'ui',
+          estimateHours: 99,
+          startDate: null,
+          endDate: null,
+        }),
+      ]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([
+        { id: 'ui', name: 'Integrante' },
+      ]);
+      const [row] = await service.summary(jefe(), { month: '2025-03' });
+      expect(row.planificado).toBe(0);
+      // El `where` excluye TERMINADA, hitos (estimateHours 0) y responsable null.
+      const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
+      expect(where.status).toEqual({ not: 'TERMINADA' });
+      expect(where.estimateHours).toEqual({ gt: 0 });
+      expect(where.responsibleUserId).toEqual({ not: null });
+    });
+    it('(d) disponible 0 o null -> utilizacionPlan null (sin division por cero), planificado conserva su valor', async () => {
+      // disponible 0
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValueOnce([
+        availabilityRow({ userId: 'ui', availableHours: 0 }),
+      ]);
+      (m.prismaObj.assignment as any).findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      (m.prismaObj.task as any).findMany.mockResolvedValueOnce([
+        taskRow({ responsibleUserId: 'ui', estimateHours: 20 }),
+      ]);
+      (m.prismaObj.user as any).findMany.mockResolvedValueOnce([
+        { id: 'ui', name: 'Integrante' },
+      ]);
+      const [rowZero] = await service.summary(jefe(), { month: '2025-03' });
+      expect(rowZero.planificado).toBe(20);
+      expect(rowZero.utilizacionPlan).toBeNull();
+      expect(rowZero.planSobreDisponible).toBe(false);
+      // disponible null (persona con solo plan, sin disponibilidad)
+      m = createMocks();
+      service = new CapacityService(m.prisma, m.audit, m.scope);
+      (m.prismaObj.grant as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.assignment as any).findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        taskRow({ responsibleUserId: 'ui', estimateHours: 20 }),
+      ]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([
+        { id: 'ui', name: 'Integrante' },
+      ]);
+      const [rowNull] = await service.summary(jefe(), { month: '2025-03' });
+      expect(rowNull.disponible).toBeNull();
+      expect(rowNull.planificado).toBe(20);
+      expect(rowNull.utilizacionPlan).toBeNull();
+      expect(rowNull.planSobreDisponible).toBe(false);
+    });
+    it('(e) planificado > disponible -> planSobreDisponible true; estado/sobrecargado siguen derivando SOLO de comprometido', async () => {
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
+        availabilityRow({ userId: 'ui', availableHours: 100 }),
+      ]);
+      // Comprometido BAJO (10): estado OK, no sobrecargado, aunque el plan exceda.
+      (m.prismaObj.assignment as any).findMany
+        .mockResolvedValueOnce([assignmentRow({ userId: 'ui', committedHours: 10 })])
+        .mockResolvedValueOnce([]);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        taskRow({ responsibleUserId: 'ui', estimateHours: 130 }),
+      ]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([
+        { id: 'ui', name: 'Integrante' },
+      ]);
+      const [row] = await service.summary(jefe(), { month: '2025-03' });
+      expect(row.planificado).toBe(130);
+      expect(row.planSobreDisponible).toBe(true);
+      expect(row.utilizacionPlan).toBe(130);
+      // El estado sigue siendo OK (comprometido 10 < 100) y no sobrecargado.
+      expect(row.comprometido).toBe(10);
+      expect(row.estado).toBe('OK');
+      expect(row.sobrecargado).toBe(false);
+    });
+    it('(f) persona con SOLO plan aparece con planificado>0 y comprometido 0; respeta alcance en el where', async () => {
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.assignment as any).findMany
+        .mockResolvedValueOnce([]) // visibles
+        .mockResolvedValueOnce([]); // fuera de alcance (lider)
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        taskRow({ responsibleUserId: 'ul', estimateHours: 15 }),
+      ]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([
+        { id: 'ul', name: 'Lider' },
+      ]);
+      const [row] = await service.summary(lider(['p1']), { month: '2025-03' });
+      expect(row.userId).toBe('ul');
+      expect(row.planificado).toBe(15);
+      expect(row.comprometido).toBe(0);
+      // Alcance: para lider/integrante el where usa responsibleUserId IN [...].
+      const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
+      expect(where.responsibleUserId).toEqual({ in: ['ul'] });
+    });
+    it('(f-jefe) alcance ALL -> el where usa responsibleUserId { not: null }', async () => {
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.assignment as any).findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([]);
+      await service.summary(jefe(), { month: '2025-03' });
+      const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
+      expect(where.responsibleUserId).toEqual({ not: null });
+    });
+    it('tarea con startDate en otro mes no cuenta (mapeo exacto en memoria)', async () => {
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
+        availabilityRow({ userId: 'ui', availableHours: 100 }),
+      ]);
+      (m.prismaObj.assignment as any).findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      // startDate en abril: la cota de BD la trajo, pero el mapeo la descarta.
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        taskRow({
+          responsibleUserId: 'ui',
+          estimateHours: 40,
+          startDate: new Date(Date.UTC(2025, 3, 2)),
+          endDate: new Date(Date.UTC(2025, 2, 28)),
+        }),
+      ]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([
+        { id: 'ui', name: 'Integrante' },
+      ]);
+      const [row] = await service.summary(jefe(), { month: '2025-03' });
+      // startDate manda sobre endDate; abril != marzo -> no suma.
+      expect(row.planificado).toBe(0);
+    });
+  });
   // --- Disponibilidad: crear/editar, duplicado, validaciones --------------
-
   describe('createAvailability', () => {
     it('crea y audita CREATE MONTHLY_AVAILABILITY con scopeProcessId null', async () => {
       (m.prismaObj.monthlyAvailability as any).create.mockResolvedValue(
         availabilityRow(),
       );
-
       const res = await service.createAvailability(jefe(), {
         userId: 'ui',
         month: '2025-03',
         availableHours: 160,
       });
-
       expect(res.month).toBe('2025-03');
       expect(res.availableHours).toBe(160);
       const data = (m.prismaObj.monthlyAvailability as any).create.mock.calls[0][0].data;
@@ -325,7 +500,6 @@ describe('CapacityService', () => {
         before: null,
       });
     });
-
     it('duplicado persona/mes (P2002) -> 409', async () => {
       (m.prismaObj.monthlyAvailability as any).create.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError('dup', {
@@ -333,7 +507,6 @@ describe('CapacityService', () => {
           clientVersion: 'x',
         }),
       );
-
       await expect(
         service.createAvailability(jefe(), {
           userId: 'ui',
@@ -342,7 +515,6 @@ describe('CapacityService', () => {
         }),
       ).rejects.toBeInstanceOf(ConflictException);
     });
-
     it('integrante crea disponibilidad de otra persona -> 403', async () => {
       await expect(
         service.createAvailability(integrante(), {
@@ -353,7 +525,6 @@ describe('CapacityService', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect((m.prismaObj.monthlyAvailability as any).create).not.toHaveBeenCalled();
     });
-
     it('lider crea disponibilidad de persona fuera de su alcance -> 404', async () => {
       // sus procesos no tienen a 'otro' (grant.findMany devuelve [])
       await expect(
@@ -365,7 +536,6 @@ describe('CapacityService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
-
   describe('updateAvailability', () => {
     it('edita en alcance y audita UPDATE', async () => {
       (m.prismaObj.monthlyAvailability as any).findFirst.mockResolvedValue(
@@ -374,7 +544,6 @@ describe('CapacityService', () => {
       (m.prismaObj.monthlyAvailability as any).update.mockResolvedValue(
         availabilityRow({ availableHours: 150 }),
       );
-
       const res = await service.updateAvailability(jefe(), 'av1', {
         availableHours: 150,
       });
@@ -384,7 +553,6 @@ describe('CapacityService', () => {
         objectType: 'MONTHLY_AVAILABILITY',
       });
     });
-
     it('integrante edita disponibilidad ajena por id -> 404 (findFirst acotado)', async () => {
       (m.prismaObj.monthlyAvailability as any).findFirst.mockResolvedValue(null);
       await expect(
@@ -396,14 +564,11 @@ describe('CapacityService', () => {
       expect(where.AND).toContainEqual({ userId: { in: ['ui'] } });
     });
   });
-
   // --- Asignaciones: crear/editar/borrar, alcance -------------------------
-
   describe('createAssignment', () => {
     it('crea en alcance y audita CREATE ASSIGNMENT con scopeProcessId = processId', async () => {
       (m.prismaObj.process as any).findFirst.mockResolvedValue({ id: 'p1' });
       (m.prismaObj.assignment as any).create.mockResolvedValue(assignmentRow());
-
       const res = await service.createAssignment(jefe(), {
         userId: 'ui',
         month: '2025-03',
@@ -417,13 +582,11 @@ describe('CapacityService', () => {
         scopeProcessId: 'p1',
       });
     });
-
     it('sobreasignacion NO bloquea: crea aunque exceda la disponibilidad', async () => {
       (m.prismaObj.process as any).findFirst.mockResolvedValue({ id: 'p1' });
       (m.prismaObj.assignment as any).create.mockResolvedValue(
         assignmentRow({ committedHours: 9999 }),
       );
-
       const res = await service.createAssignment(jefe(), {
         userId: 'ui',
         month: '2025-03',
@@ -432,7 +595,6 @@ describe('CapacityService', () => {
       });
       expect(res.committedHours).toBe(9999);
     });
-
     it('lider crea asignacion con processId fuera de alcance -> 404', async () => {
       (m.prismaObj.process as any).findFirst.mockResolvedValue(null);
       await expect(
@@ -444,7 +606,6 @@ describe('CapacityService', () => {
         }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
-
     it('integrante crea asignacion de otra persona -> 403', async () => {
       await expect(
         service.createAssignment(integrante(), {
@@ -455,11 +616,9 @@ describe('CapacityService', () => {
         }),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
-
     it('requestId de una Request fuera de alcance -> 404 (no 400)', async () => {
       (m.prismaObj.process as any).findFirst.mockResolvedValue({ id: 'p1' });
       (m.prismaObj.request as any).findFirst.mockResolvedValue(null);
-
       await expect(
         service.createAssignment(lider(['p1']), {
           userId: 'ul',
@@ -471,7 +630,6 @@ describe('CapacityService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
-
   // --- Integrante PURO: su PROPIA asignacion (FINDING HIGH, UC-011/US-007) --
   // Un integrante sin grant de lider tiene scopedProcessIds vacio; su alcance
   // de asignaciones es por userId (= el mismo), no por processId IN []. El flujo
@@ -482,14 +640,12 @@ describe('CapacityService', () => {
       (m.prismaObj.assignment as any).create.mockResolvedValue(
         assignmentRow({ userId: 'ui' }),
       );
-
       const res = await service.createAssignment(integrante(), {
         userId: 'ui',
         month: '2025-03',
         processId: 'p1',
         committedHours: 40,
       });
-
       expect(res.userId).toBe('ui');
       expect(res.processId).toBe('p1');
       // El filtro de proceso NO restringe a id IN [] para el integrante puro.
@@ -502,23 +658,19 @@ describe('CapacityService', () => {
         scopeProcessId: 'p1',
       });
     });
-
     it('lista: where acota por su userId y NO por processId IN []', async () => {
       (m.prismaObj.assignment as any).findMany.mockResolvedValue([
         assignmentRow({ userId: 'ui' }),
       ]);
-
       const rows = await service.listAssignments(integrante(), {
         month: '2025-03',
       });
-
       expect(rows).toHaveLength(1);
       const where = (m.prismaObj.assignment as any).findMany.mock.calls[0][0]
         .where;
       expect(where.userId).toEqual({ in: ['ui'] });
       expect(where.processId).toBeUndefined();
     });
-
     it('edita su propia asignacion resuelta por id (userId en scope, sin processId IN [])', async () => {
       (m.prismaObj.assignment as any).findFirst.mockResolvedValue(
         assignmentRow({ userId: 'ui' }),
@@ -526,11 +678,9 @@ describe('CapacityService', () => {
       (m.prismaObj.assignment as any).update.mockResolvedValue(
         assignmentRow({ userId: 'ui', committedHours: 55 }),
       );
-
       const res = await service.updateAssignment(integrante(), 'as1', {
         committedHours: 55,
       });
-
       expect(res.committedHours).toBe(55);
       const where = (m.prismaObj.assignment as any).findFirst.mock.calls[0][0]
         .where;
@@ -542,7 +692,6 @@ describe('CapacityService', () => {
         objectType: 'ASSIGNMENT',
       });
     });
-
     it('borra su propia asignacion resuelta por id', async () => {
       (m.prismaObj.assignment as any).findFirst.mockResolvedValue(
         assignmentRow({ userId: 'ui' }),
@@ -550,9 +699,7 @@ describe('CapacityService', () => {
       (m.prismaObj.assignment as any).delete.mockResolvedValue(
         assignmentRow({ userId: 'ui' }),
       );
-
       await service.removeAssignment(integrante(), 'as1');
-
       expect((m.prismaObj.assignment as any).delete).toHaveBeenCalledWith({
         where: { id: 'as1' },
       });
@@ -562,7 +709,6 @@ describe('CapacityService', () => {
         after: null,
       });
     });
-
     it('resumen: comprometido suma su propia carga, cargaParcial false, estado real', async () => {
       (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
         availabilityRow({ userId: 'ui', availableHours: 160 }),
@@ -575,9 +721,7 @@ describe('CapacityService', () => {
       (m.prismaObj.user as any).findMany.mockResolvedValue([
         { id: 'ui', name: 'Integrante' },
       ]);
-
       const [row] = await service.summary(integrante(), { month: '2025-03' });
-
       expect(row.comprometido).toBe(120);
       expect(row.cargaParcial).toBe(false);
       expect(row.utilizacion).toBe(75);
@@ -587,7 +731,6 @@ describe('CapacityService', () => {
       expect((m.prismaObj.assignment as any).findMany).toHaveBeenCalledTimes(1);
     });
   });
-
   describe('updateAssignment / removeAssignment', () => {
     it('lider resuelve asignacion de proceso ajeno por id -> 404', async () => {
       (m.prismaObj.assignment as any).findFirst.mockResolvedValue(null);
@@ -597,7 +740,6 @@ describe('CapacityService', () => {
         }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
-
     it('requestId null DESLIGA la solicitud (set/clear) sin validar alcance', async () => {
       (m.prismaObj.assignment as any).findFirst.mockResolvedValue(
         assignmentRow({ requestId: 'req-previo' }),
@@ -605,11 +747,9 @@ describe('CapacityService', () => {
       (m.prismaObj.assignment as any).update.mockResolvedValue(
         assignmentRow({ requestId: null }),
       );
-
       const res = await service.updateAssignment(jefe(), 'as1', {
         requestId: null,
       });
-
       // No se valida alcance de solicitud al desligar (no hay nada que resolver).
       expect((m.prismaObj.request as any).findFirst).not.toHaveBeenCalled();
       // La actualizacion escribe requestId: null (limpia el vinculo).
@@ -619,11 +759,9 @@ describe('CapacityService', () => {
       });
       expect(res.requestId).toBeNull();
     });
-
     it('borra en alcance y audita DELETE ASSIGNMENT', async () => {
       (m.prismaObj.assignment as any).findFirst.mockResolvedValue(assignmentRow());
       (m.prismaObj.assignment as any).delete.mockResolvedValue(assignmentRow());
-
       await service.removeAssignment(jefe(), 'as1');
       expect((m.prismaObj.assignment as any).delete).toHaveBeenCalledWith({
         where: { id: 'as1' },
@@ -635,7 +773,6 @@ describe('CapacityService', () => {
         after: null,
       });
     });
-
     it('integrante borra asignacion ajena por id -> 404', async () => {
       (m.prismaObj.assignment as any).findFirst.mockResolvedValue(null);
       await expect(
@@ -643,20 +780,16 @@ describe('CapacityService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
-
   // --- Alcance por persona (scopedUserIds) --------------------------------
-
   describe('scopedUserIds', () => {
     it('jefe -> ALL', async () => {
       const res = await m.scope.scopedUserIds(m.prisma, jefe());
       expect(res).toBe('ALL');
     });
-
     it('integrante -> solo el mismo', async () => {
       const res = await m.scope.scopedUserIds(m.prisma, integrante());
       expect(res).toEqual(['ui']);
     });
-
     it('lider -> el mismo + personas con grant activo en sus procesos', async () => {
       (m.prismaObj.grant as any).findMany.mockResolvedValue([
         { userId: 'uA' },
@@ -666,7 +799,6 @@ describe('CapacityService', () => {
       expect(res).toEqual(expect.arrayContaining(['ul', 'uA', 'uB']));
       expect(res).toHaveLength(3);
     });
-
     it('integrante CON grant en un proceso -> SOLO el mismo (specs/10 Capacidad: Propia)', async () => {
       // No debe expandir a personas del proceso: un integrante no es lider.
       const res = await m.scope.scopedUserIds(
@@ -678,7 +810,6 @@ describe('CapacityService', () => {
       expect((m.prismaObj.grant as any).findMany).not.toHaveBeenCalled();
     });
   });
-
   describe('alcance de escritura del integrante con proceso', () => {
     it('integrante con grant en p1 crea disponibilidad de otra persona de p1 -> 403', async () => {
       // Comparte proceso con el objetivo, pero sigue siendo "solo la suya".
@@ -691,7 +822,6 @@ describe('CapacityService', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect((m.prismaObj.grant as any).findMany).not.toHaveBeenCalled();
     });
-
     it('integrante con grant en p1 ve su carga TOTAL agregada de todos sus procesos, sin CARGA_PARCIAL (AC-013)', async () => {
       // Tiene asignaciones en p1 (su proceso) y p2 (otro): debe sumar ambas y
       // NO marcarse parcial, porque su alcance es por userId (todo lo suyo), no
@@ -708,11 +838,9 @@ describe('CapacityService', () => {
       (m.prismaObj.user as any).findMany.mockResolvedValue([
         { id: 'ui2', name: 'Integrante con proceso' },
       ]);
-
       const [row] = await service.summary(integranteConProceso('p1'), {
         month: '2025-03',
       });
-
       expect(row.comprometido).toBe(190);
       expect(row.cargaParcial).toBe(false);
       // No se dispara la consulta de "fuera de alcance" para un integrante.

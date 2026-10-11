@@ -7366,7 +7366,7 @@
           },
           "comprometido": {
             "type": "number",
-            "description": "Suma de horas comprometidas visibles en el alcance del actor."
+            "description": "Horas comprometidas: suma de Assignment.committedHours (horas registradas manualmente en asignaciones) visibles en el alcance del actor. Independiente de `planificado`."
           },
           "utilizacion": {
             "type": "number",
@@ -7386,7 +7386,7 @@
               "SIN_DISPONIBILIDAD",
               "CARGA_PARCIAL"
             ],
-            "description": "Estado derivado de la fila."
+            "description": "Estado derivado de la fila (se calcula SOLO sobre `comprometido`)."
           },
           "sobrecargado": {
             "type": "boolean",
@@ -7395,6 +7395,19 @@
           "cargaParcial": {
             "type": "boolean",
             "description": "True (solo lider/integrante) si la persona tiene asignaciones fuera del alcance del actor."
+          },
+          "planificado": {
+            "type": "number",
+            "description": "Horas planificadas: suma de Task.estimateHours de las tareas del plan asignadas a la persona ese mes (estimacion, status != TERMINADA, estimateHours > 0). Dato informativo paralelo a `comprometido`; 0 si ninguna tarea aporta."
+          },
+          "utilizacionPlan": {
+            "type": "number",
+            "nullable": true,
+            "description": "Porcentaje de utilizacion planificada (round(planificado/disponible*100)) o null si no hay disponibilidad (>0). Misma guarda contra division por cero que `utilizacion`."
+          },
+          "planSobreDisponible": {
+            "type": "boolean",
+            "description": "True si planificado > disponible (con disponible > 0). Senal informativa; NO altera `estado` ni `sobrecargado`, que siguen derivando solo de `comprometido`."
           }
         },
         "required": [
@@ -7407,7 +7420,10 @@
           "libre",
           "estado",
           "sobrecargado",
-          "cargaParcial"
+          "cargaParcial",
+          "planificado",
+          "utilizacionPlan",
+          "planSobreDisponible"
         ]
       },
       "CapacityPersonDto": {

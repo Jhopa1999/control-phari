@@ -2682,14 +2682,14 @@ export interface components {
             month: string;
             /** @description Horas disponibles o null si no hay disponibilidad registrada. */
             disponible: number | null;
-            /** @description Suma de horas comprometidas visibles en el alcance del actor. */
+            /** @description Horas comprometidas: suma de Assignment.committedHours (horas registradas manualmente en asignaciones) visibles en el alcance del actor. Independiente de `planificado`. */
             comprometido: number;
             /** @description Porcentaje de utilizacion (round(comprometido/disponible*100)) o null. */
             utilizacion: number | null;
             /** @description Horas libres (disponible - comprometido); puede ser negativo o null. */
             libre: number | null;
             /**
-             * @description Estado derivado de la fila.
+             * @description Estado derivado de la fila (se calcula SOLO sobre `comprometido`).
              * @enum {string}
              */
             estado: "OK" | "SOBRECARGA" | "SIN_DISPONIBILIDAD" | "CARGA_PARCIAL";
@@ -2697,6 +2697,12 @@ export interface components {
             sobrecargado: boolean;
             /** @description True (solo lider/integrante) si la persona tiene asignaciones fuera del alcance del actor. */
             cargaParcial: boolean;
+            /** @description Horas planificadas: suma de Task.estimateHours de las tareas del plan asignadas a la persona ese mes (estimacion, status != TERMINADA, estimateHours > 0). Dato informativo paralelo a `comprometido`; 0 si ninguna tarea aporta. */
+            planificado: number;
+            /** @description Porcentaje de utilizacion planificada (round(planificado/disponible*100)) o null si no hay disponibilidad (>0). Misma guarda contra division por cero que `utilizacion`. */
+            utilizacionPlan: number | null;
+            /** @description True si planificado > disponible (con disponible > 0). Senal informativa; NO altera `estado` ni `sobrecargado`, que siguen derivando solo de `comprometido`. */
+            planSobreDisponible: boolean;
         };
         CapacityPersonDto: {
             /**

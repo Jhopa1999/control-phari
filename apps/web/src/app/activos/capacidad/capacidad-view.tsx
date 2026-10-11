@@ -1,5 +1,4 @@
 'use client';
-
 import * as React from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -47,9 +46,7 @@ import {
   AsignacionFormDialog,
   type AsignacionFormValues,
 } from './asignacion-form-dialog';
-
 type LoadState = 'loading' | 'success' | 'error';
-
 /** Mes actual en formato YYYY-MM (UTC) para el valor inicial del selector. */
 function currentMonth(): string {
   const now = new Date();
@@ -57,25 +54,24 @@ function currentMonth(): string {
   const month = String(now.getUTCMonth() + 1).padStart(2, '0');
   return `${year}-${month}`;
 }
-
 function messageOf(err: unknown): string {
   return err instanceof CapacityError
     ? err.message
     : 'Ocurrio un error inesperado.';
 }
-
 function trimOrUndefined(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
 }
-
 function nullOrNumber(value: number | null): string {
-  return value === null ? '—' : String(value);
+  return value === null ? 'â€”' : String(value);
 }
-
+/** Porcentaje nullable (utilizacion / utilizacion plan): null -> guion. */
+function nullOrPercent(value: number | null): string {
+  return value === null ? 'â€”' : `${value}%`;
+}
 export function CapacidadView(): React.ReactElement {
   const { permissions } = useActor();
-
   // Un integrante "puro" solo tiene grants INTEGRANTE: puede registrar su
   // propia capacidad y nada mas (el backend reconfirma el alcance; design D8).
   const selfUserId = permissions?.userId ?? null;
@@ -84,9 +80,7 @@ export function CapacidadView(): React.ReactElement {
     if (grants.length === 0) return false;
     return grants.every((g) => g.roleCode === 'INTEGRANTE');
   }, [permissions]);
-
   const [month, setMonth] = React.useState<string>(() => currentMonth());
-
   const [summary, setSummary] = React.useState<CapacitySummaryRow[]>([]);
   const [availability, setAvailability] = React.useState<Availability[]>([]);
   const [assignments, setAssignments] = React.useState<Assignment[]>([]);
@@ -94,20 +88,17 @@ export function CapacidadView(): React.ReactElement {
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
-
   // Dialogos de disponibilidad.
   const [dispOpen, setDispOpen] = React.useState(false);
   const [dispEditing, setDispEditing] = React.useState<Availability | null>(null);
   const [dispSubmitting, setDispSubmitting] = React.useState(false);
   const [dispError, setDispError] = React.useState<string | null>(null);
-
   // Dialogos de asignacion.
   const [asigOpen, setAsigOpen] = React.useState(false);
   const [asigEditing, setAsigEditing] = React.useState<Assignment | null>(null);
   const [asigSubmitting, setAsigSubmitting] = React.useState(false);
   const [asigError, setAsigError] = React.useState<string | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
-
   const load = React.useCallback(async (targetMonth: string) => {
     setState('loading');
     try {
@@ -130,11 +121,9 @@ export function CapacidadView(): React.ReactElement {
       setState('error');
     }
   }, []);
-
   React.useEffect(() => {
     void load(month);
   }, [month, load]);
-
   const processName = React.useCallback(
     (id: string) => processes.find((p) => p.id === id)?.name ?? id,
     [processes],
@@ -145,10 +134,9 @@ export function CapacidadView(): React.ReactElement {
   );
   const requestTitle = React.useCallback(
     (id: string | null) =>
-      id ? (requests.find((r) => r.id === id)?.title ?? id) : '—',
+      id ? (requests.find((r) => r.id === id)?.title ?? id) : 'â€”',
     [requests],
   );
-
   // --- Disponibilidad ---
   function openCreateDisp() {
     setDispEditing(null);
@@ -160,7 +148,6 @@ export function CapacidadView(): React.ReactElement {
     setDispError(null);
     setDispOpen(true);
   }
-
   async function handleDispSubmit(values: DisponibilidadFormValues) {
     setDispSubmitting(true);
     setDispError(null);
@@ -203,7 +190,6 @@ export function CapacidadView(): React.ReactElement {
       setDispSubmitting(false);
     }
   }
-
   // --- Asignacion ---
   function openCreateAsig() {
     setAsigEditing(null);
@@ -215,7 +201,6 @@ export function CapacidadView(): React.ReactElement {
     setAsigError(null);
     setAsigOpen(true);
   }
-
   async function handleAsigSubmit(values: AsignacionFormValues) {
     setAsigSubmitting(true);
     setAsigError(null);
@@ -224,7 +209,7 @@ export function CapacidadView(): React.ReactElement {
         await updateAssignment(asigEditing.id, {
           processId: values.processId,
           // Al editar, "Sin solicitud" (vacio) envia null para DESLIGAR la
-          // solicitud actual (design §2.2 set/clear), no undefined (que se omite).
+          // solicitud actual (design Â§2.2 set/clear), no undefined (que se omite).
           requestId: trimOrUndefined(values.requestId) ?? null,
           committedHours: Number(values.committedHours),
           description: trimOrUndefined(values.description),
@@ -254,7 +239,6 @@ export function CapacidadView(): React.ReactElement {
       setAsigSubmitting(false);
     }
   }
-
   async function handleDeleteAsig(row: Assignment) {
     setDeletingId(row.id);
     try {
@@ -267,7 +251,6 @@ export function CapacidadView(): React.ReactElement {
       setDeletingId(null);
     }
   }
-
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -291,7 +274,6 @@ export function CapacidadView(): React.ReactElement {
           />
         </div>
       </header>
-
       {/* Explicacion en lenguaje llano (brief / design 4.2). */}
       <section
         aria-label="Como leer el resumen"
@@ -306,8 +288,14 @@ export function CapacidadView(): React.ReactElement {
           100% significa que hay mas horas asignadas que disponibles
           (sobrecarga). Lo <strong>libre</strong> es lo que queda sin comprometer.
         </p>
+        <p className="mt-2">
+          Lo <strong>planificado</strong> es una estimacion distinta: suma las
+          horas estimadas de las tareas del plan asignadas a la persona ese mes.
+          No es lo mismo que lo <strong>comprometido</strong> (horas que se
+          registran a mano en asignaciones) y no cambia la senal de sobrecarga; es
+          solo una referencia de la carga que proyecta el plan.
+        </p>
       </section>
-
       {/* Resumen de carga por persona */}
       <section aria-labelledby="resumen-heading" className="flex flex-col gap-3">
         <h2 id="resumen-heading" className="text-lg font-semibold tracking-tight">
@@ -343,7 +331,9 @@ export function CapacidadView(): React.ReactElement {
           ) : (
             <Table>
               <caption className="sr-only">
-                Resumen de carga por persona para el mes {month}.
+                Resumen de carga por persona para el mes {month}. Incluye las
+                horas comprometidas (asignaciones registradas a mano) y las horas
+                planificadas (estimacion de las tareas del plan).
               </caption>
               <TableHeader>
                 <TableRow>
@@ -352,6 +342,8 @@ export function CapacidadView(): React.ReactElement {
                   <TableHead scope="col">Comprometido</TableHead>
                   <TableHead scope="col">Utilizacion %</TableHead>
                   <TableHead scope="col">Libre</TableHead>
+                  <TableHead scope="col">Planificado</TableHead>
+                  <TableHead scope="col">Utilizacion plan %</TableHead>
                   <TableHead scope="col">Senal</TableHead>
                 </TableRow>
               </TableHeader>
@@ -361,10 +353,22 @@ export function CapacidadView(): React.ReactElement {
                     <TableCell className="font-medium">{row.userName}</TableCell>
                     <TableCell>{nullOrNumber(row.disponible)}</TableCell>
                     <TableCell>{row.comprometido}</TableCell>
-                    <TableCell>
-                      {row.utilizacion === null ? '—' : `${row.utilizacion}%`}
-                    </TableCell>
+                    <TableCell>{nullOrPercent(row.utilizacion)}</TableCell>
                     <TableCell>{nullOrNumber(row.libre)}</TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-2">
+                        {row.planificado}
+                        {row.planSobreDisponible ? (
+                          <Badge
+                            variant="outline"
+                            aria-label="La carga planificada supera las horas disponibles de esta persona este mes; es informativo y no implica sobrecarga comprometida"
+                          >
+                            Plan &gt; disponible
+                          </Badge>
+                        ) : null}
+                      </span>
+                    </TableCell>
+                    <TableCell>{nullOrPercent(row.utilizacionPlan)}</TableCell>
                     <TableCell>
                       {row.estado === 'SOBRECARGA' ? (
                         <Badge
@@ -406,7 +410,6 @@ export function CapacidadView(): React.ReactElement {
           )}
         </div>
       </section>
-
       {/* Disponibilidad */}
       <section
         aria-labelledby="disponibilidad-heading"
@@ -478,7 +481,6 @@ export function CapacidadView(): React.ReactElement {
           )}
         </div>
       </section>
-
       {/* Asignaciones */}
       <section aria-labelledby="asignaciones-heading" className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -531,7 +533,7 @@ export function CapacidadView(): React.ReactElement {
                     <TableCell>{requestTitle(row.requestId)}</TableCell>
                     <TableCell>{row.committedHours}</TableCell>
                     <TableCell className="max-w-xs truncate text-muted-foreground">
-                      {row.description ?? '—'}
+                      {row.description ?? 'â€”'}
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-2">
@@ -563,7 +565,6 @@ export function CapacidadView(): React.ReactElement {
           )}
         </div>
       </section>
-
       <DisponibilidadFormDialog
         open={dispOpen}
         onOpenChange={(open) => {
@@ -582,7 +583,6 @@ export function CapacidadView(): React.ReactElement {
         errorMessage={dispError}
         onSubmit={handleDispSubmit}
       />
-
       <AsignacionFormDialog
         open={asigOpen}
         onOpenChange={(open) => {
