@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-/** Estados posibles de una fila del resumen de carga (design Â§2.4). */
+/** Estados posibles de una fila del resumen de carga (design §2.4). */
 export type CapacitySummaryEstado =
   | 'OK'
   | 'SOBRECARGA'
@@ -8,13 +8,13 @@ export type CapacitySummaryEstado =
   | 'CARGA_PARCIAL';
 
 /**
- * Fila del resumen de carga por persona/mes (design Â§1.4/Â§2.4), calculada
+ * Fila del resumen de carga por persona/mes (design §1.4/§2.4), calculada
  * server-side (no persistida). `utilizacion`/`libre` son `null` cuando no hay
  * disponibilidad (`SIN_DISPONIBILIDAD`) o cuando la carga es parcial para el
  * actor (`CARGA_PARCIAL`, solo lider/integrante). `disponible` es `null` si la
  * persona no tiene disponibilidad registrada ese mes.
  *
- * Vinculacion CAPACIDAD â†” PLAN (cambio ADITIVO): junto a `comprometido` (horas
+ * Vinculacion CAPACIDAD ↔ PLAN (cambio ADITIVO): junto a `comprometido` (horas
  * registradas manualmente en asignaciones) se expone `planificado` (horas
  * estimadas derivadas de las tareas del plan asignadas a la persona ese mes).
  * Son datos SEPARADOS: `planificado` NO altera `comprometido`, `utilizacion`,

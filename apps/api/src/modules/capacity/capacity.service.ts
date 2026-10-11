@@ -27,12 +27,13 @@ import {
   CapacitySummaryEstado,
   CapacitySummaryRowDto,
 } from './dto/capacity-summary-row.dto';
+
 /**
- * Logica de capacidad (design Â§2): disponibilidad por persona/mes, asignaciones
+ * Logica de capacidad (design §2): disponibilidad por persona/mes, asignaciones
  * de horas y resumen de carga server-side. Sigue el patron de RequestService:
  * alcance en el `where` (404 por findFirst fuera de alcance), mutacion +
  * AuditEvent en la misma `$transaction`, P2002 -> ConflictException. El alcance
- * POR PERSONA lo resuelve siempre `CapacityScopeService.scopedUserIds` (D1/Â§2.6).
+ * POR PERSONA lo resuelve siempre `CapacityScopeService.scopedUserIds` (D1/§2.6).
  */
 @Injectable()
 export class CapacityService {
@@ -41,7 +42,9 @@ export class CapacityService {
     private readonly audit: AuditService,
     private readonly scope: CapacityScopeService,
   ) {}
+
   // --- Snapshots para auditoria -------------------------------------------
+
   private availabilitySnapshot(
     row: MonthlyAvailabilityModel,
   ): Prisma.InputJsonValue {
@@ -52,6 +55,7 @@ export class CapacityService {
       availableHours: row.availableHours,
     };
   }
+
   private assignmentSnapshot(row: AssignmentModel): Prisma.InputJsonValue {
     return {
       id: row.id,
@@ -63,7 +67,9 @@ export class CapacityService {
       description: row.description,
     };
   }
+
   // --- Mapeo a DTOs de respuesta ------------------------------------------
+
   private toAvailabilityResponse(
     row: MonthlyAvailabilityModel,
   ): AvailabilityResponseDto {
@@ -76,6 +82,7 @@ export class CapacityService {
       updatedAt: row.updatedAt,
     };
   }
+
   private toAssignmentResponse(row: AssignmentModel): AssignmentResponseDto {
     return {
       id: row.id,
@@ -89,13 +96,15 @@ export class CapacityService {
       updatedAt: row.updatedAt,
     };
   }
+
   // --- Helpers de alcance --------------------------------------------------
+
   /**
-   * `where` del proceso para asignaciones (Plano A directo, design Â§2.5):
+   * `where` del proceso para asignaciones (Plano A directo, design §2.5):
    * - jefe -> sin filtro (ve el area);
-   * - lider (con `scopedProcessIds`) -> `processId âˆˆ scopedProcessIds`;
+   * - lider (con `scopedProcessIds`) -> `processId ∈ scopedProcessIds`;
    * - integrante PURO (`scopedProcessIds` vacio) -> SIN filtro de proceso: su
-   *   alcance de asignaciones es "solo las suyas", acotado por `userId âˆˆ
+   *   alcance de asignaciones es "solo las suyas", acotado por `userId ∈
    *   scopedUserIds` (que para el integrante es `{ el mismo }`). Filtrar por
    *   `processId: { in: [] }` NO matchearia ninguna fila (ni la propia), dejando
    *   inoperante el flujo del integrante (UC-011/US-007/FLOW-007).
@@ -117,9 +126,10 @@ export class CapacityService {
     }
     return { processId: { in: leaderProcessIds } };
   }
+
   /**
    * Verifica que una persona objetivo este en el alcance del actor para una
-   * ESCRITURA (design Â§2.1/Â§2.5, FINDING 6): el integrante que intenta operar
+   * ESCRITURA (design §2.1/§2.5, FINDING 6): el integrante que intenta operar
    * sobre `userId` ajeno -> 403 (regla "solo la suya"); el lider sobre una
    * persona fuera de `scopedUserIds` -> 404 (no existe para el).
    */
@@ -130,12 +140,13 @@ export class CapacityService {
     if (actor.isJefeArea) {
       return;
     }
+
     const scoped = await this.scope.scopedUserIds(this.prisma, actor);
     if (scoped === 'ALL') {
       return;
     }
     if (!scoped.includes(targetUserId)) {
-      // Politica 403 vs 404 (design Â§2.5 D8/FINDING 6; specs/10 "Capacidad:
+      // Politica 403 vs 404 (design §2.5 D8/FINDING 6; specs/10 "Capacidad:
       // Propia" para el integrante): un actor SIN rol de lider (integrante, aun
       // con grant en un proceso) que intenta registrar capacidad ajena viola la
       // regla "solo la suya" -> 403; un lider sobre una persona fuera de su
@@ -152,11 +163,12 @@ export class CapacityService {
       );
     }
   }
+
   /**
    * Resuelve el `processId` de una asignacion dentro del alcance del actor o
-   * lanza 404 (design Â§2.2): el proceso "no existe para ti" si esta fuera.
+   * lanza 404 (design §2.2): el proceso "no existe para ti" si esta fuera.
    * - jefe -> cualquier proceso existente;
-   * - lider (con `scopedProcessIds`) -> solo `processId âˆˆ scopedProcessIds`;
+   * - lider (con `scopedProcessIds`) -> solo `processId ∈ scopedProcessIds`;
    * - integrante PURO (`scopedProcessIds` vacio) -> cualquier proceso
    *   existente (su acotacion es por `userId`, ya aplicada en
    *   `requireWritablePerson`); filtrar por `id: { in: [] }` le impediria
@@ -183,9 +195,10 @@ export class CapacityService {
       throw new NotFoundException(`Proceso "${processId}" fuera de tu alcance.`);
     }
   }
+
   /**
    * Resuelve una Request por id aplicando el MISMO `scopeWhere` que
-   * request.service.ts (design Â§2.2, FINDING 3): inexistente o fuera de alcance
+   * request.service.ts (design §2.2, FINDING 3): inexistente o fuera de alcance
    * -> 404 (nunca 400). El `requestId` opcional no amplia el alcance.
    */
   private async requireRequestInScope(
@@ -195,6 +208,7 @@ export class CapacityService {
     const scopeWhere: Prisma.RequestWhereInput = actor.isJefeArea
       ? {}
       : { mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+
     const request = await this.prisma.request.findFirst({
       where: { AND: [{ id: requestId }, scopeWhere] },
       select: { id: true },
@@ -205,13 +219,16 @@ export class CapacityService {
       );
     }
   }
+
   // --- Disponibilidad ------------------------------------------------------
+
   async createAvailability(
     actor: CurrentActor,
     dto: CreateAvailabilityDto,
   ): Promise<AvailabilityResponseDto> {
     await this.requireWritablePerson(actor, dto.userId);
     const monthDate = monthStringToDate(dto.month);
+
     try {
       const created = await this.prisma.$transaction(async (tx) => {
         const row = await tx.monthlyAvailability.create({
@@ -221,6 +238,7 @@ export class CapacityService {
             availableHours: dto.availableHours,
           },
         });
+
         await this.audit.record(tx, {
           actorUserId: actor.userId,
           action: 'CREATE',
@@ -230,8 +248,10 @@ export class CapacityService {
           before: null,
           after: this.availabilitySnapshot(row),
         });
+
         return row;
       });
+
       return this.toAvailabilityResponse(created);
     } catch (error) {
       if (
@@ -245,6 +265,7 @@ export class CapacityService {
       throw error;
     }
   }
+
   async updateAvailability(
     actor: CurrentActor,
     id: string,
@@ -262,11 +283,13 @@ export class CapacityService {
     if (!existing) {
       throw new NotFoundException(`Disponibilidad "${id}" no encontrada.`);
     }
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.monthlyAvailability.update({
         where: { id },
         data: { availableHours: dto.availableHours },
       });
+
       await this.audit.record(tx, {
         actorUserId: actor.userId,
         action: 'UPDATE',
@@ -276,10 +299,13 @@ export class CapacityService {
         before: this.availabilitySnapshot(existing),
         after: this.availabilitySnapshot(row),
       });
+
       return row;
     });
+
     return this.toAvailabilityResponse(updated);
   }
+
   async listAvailability(
     actor: CurrentActor,
     filters: ListAvailabilityDto,
@@ -291,13 +317,17 @@ export class CapacityService {
     if (scoped !== 'ALL') {
       where.userId = { in: scoped };
     }
+
     const rows = await this.prisma.monthlyAvailability.findMany({
       where,
       orderBy: { userId: 'asc' },
     });
+
     return rows.map((row) => this.toAvailabilityResponse(row));
   }
+
   // --- Asignaciones --------------------------------------------------------
+
   async createAssignment(
     actor: CurrentActor,
     dto: CreateAssignmentDto,
@@ -307,7 +337,9 @@ export class CapacityService {
     if (dto.requestId !== undefined) {
       await this.requireRequestInScope(actor, dto.requestId);
     }
+
     const monthDate = monthStringToDate(dto.month);
+
     const created = await this.prisma.$transaction(async (tx) => {
       const row = await tx.assignment.create({
         data: {
@@ -321,6 +353,7 @@ export class CapacityService {
             : {}),
         },
       });
+
       await this.audit.record(tx, {
         actorUserId: actor.userId,
         action: 'CREATE',
@@ -330,10 +363,13 @@ export class CapacityService {
         before: null,
         after: this.assignmentSnapshot(row),
       });
+
       return row;
     });
+
     return this.toAssignmentResponse(created);
   }
+
   private async requireAssignmentInScope(
     actor: CurrentActor,
     id: string,
@@ -353,20 +389,23 @@ export class CapacityService {
     }
     return row;
   }
+
   async updateAssignment(
     actor: CurrentActor,
     id: string,
     dto: UpdateAssignmentDto,
   ): Promise<AssignmentResponseDto> {
     const existing = await this.requireAssignmentInScope(actor, id);
+
     if (dto.processId !== undefined) {
       await this.requireProcessInScope(actor, dto.processId);
     }
-    // requestId set/clear (design Â§2.2): omitido -> sin cambio; null -> desligar
+    // requestId set/clear (design §2.2): omitido -> sin cambio; null -> desligar
     // (no requiere validar alcance); UUID -> ligar validando alcance (404 fuera).
     if (dto.requestId != null) {
       await this.requireRequestInScope(actor, dto.requestId);
     }
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.assignment.update({
         where: { id },
@@ -381,6 +420,7 @@ export class CapacityService {
             : {}),
         },
       });
+
       await this.audit.record(tx, {
         actorUserId: actor.userId,
         action: 'UPDATE',
@@ -390,14 +430,19 @@ export class CapacityService {
         before: this.assignmentSnapshot(existing),
         after: this.assignmentSnapshot(row),
       });
+
       return row;
     });
+
     return this.toAssignmentResponse(updated);
   }
+
   async removeAssignment(actor: CurrentActor, id: string): Promise<void> {
     const existing = await this.requireAssignmentInScope(actor, id);
+
     await this.prisma.$transaction(async (tx) => {
       await tx.assignment.delete({ where: { id } });
+
       await this.audit.record(tx, {
         actorUserId: actor.userId,
         action: 'DELETE',
@@ -409,6 +454,7 @@ export class CapacityService {
       });
     });
   }
+
   async listAssignments(
     actor: CurrentActor,
     filters: ListAssignmentsDto,
@@ -443,13 +489,17 @@ export class CapacityService {
     if (filters.requestId !== undefined) {
       where.requestId = filters.requestId;
     }
+
     const rows = await this.prisma.assignment.findMany({
       where,
       orderBy: [{ userId: 'asc' }, { createdAt: 'asc' }],
     });
+
     return rows.map((row) => this.toAssignmentResponse(row));
   }
+
   // --- Resumen de carga ----------------------------------------------------
+
   async summary(
     actor: CurrentActor,
     query: SummaryQueryDto,
@@ -457,7 +507,9 @@ export class CapacityService {
     const monthDate = monthStringToDate(query.month);
     const monthStr = query.month;
     const scoped = await this.scope.scopedUserIds(this.prisma, actor);
+
     const userIn: string[] | null = scoped === 'ALL' ? null : scoped;
+
     // Disponibilidad en alcance (una fila por persona/mes).
     const availabilities = await this.prisma.monthlyAvailability.findMany({
       where: {
@@ -465,6 +517,7 @@ export class CapacityService {
         ...(userIn ? { userId: { in: userIn } } : {}),
       },
     });
+
     // Asignaciones visibles en alcance (processId para no-jefe; userId siempre).
     const visibleAssignments = await this.prisma.assignment.findMany({
       where: {
@@ -473,7 +526,8 @@ export class CapacityService {
         ...(userIn ? { userId: { in: userIn } } : {}),
       },
     });
-    // --- Planificado (vinculacion CAPACIDAD â†” PLAN, cambio ADITIVO) --------
+
+    // --- Planificado (vinculacion CAPACIDAD ↔ PLAN, cambio ADITIVO) --------
     // Horas estimadas de las tareas del plan asignadas a cada persona ese mes.
     // Dato informativo paralelo a `comprometido`: NO altera comprometido,
     // utilizacion, libre, estado, sobrecargado ni cargaParcial.
@@ -512,6 +566,7 @@ export class CapacityService {
         endDate: true,
       },
     });
+
     // Mapeo tarea -> mes (en memoria, NO prorratear): mes de referencia =
     // startDate si no es null; si no, endDate (ambos null ya excluido por el
     // `where`). Suma estimateHours por responsableUserId cuando el mes coincide.
@@ -525,6 +580,7 @@ export class CapacityService {
       const hours = task.estimateHours ?? 0;
       planByUser.set(userId, (planByUser.get(userId) ?? 0) + hours);
     }
+
     // Conjunto de personas con disponibilidad, carga visible o PLAN ese mes.
     // Las personas con solo plan tambien aparecen (planificado se refleja
     // siempre), con comprometido 0.
@@ -532,19 +588,23 @@ export class CapacityService {
     for (const a of availabilities) userIds.add(a.userId);
     for (const a of visibleAssignments) userIds.add(a.userId);
     for (const userId of planByUser.keys()) userIds.add(userId);
+
     if (userIds.size === 0) {
       return [];
     }
+
     // Nombres de las personas involucradas.
     const users = await this.prisma.user.findMany({
       where: { id: { in: Array.from(userIds) } },
       select: { id: true, name: true },
     });
     const nameById = new Map(users.map((u) => [u.id, u.name]));
+
     const availableByUser = new Map<string, number>();
     for (const a of availabilities) {
       availableByUser.set(a.userId, a.availableHours);
     }
+
     const committedByUser = new Map<string, number>();
     for (const a of visibleAssignments) {
       committedByUser.set(
@@ -552,6 +612,7 @@ export class CapacityService {
         (committedByUser.get(a.userId) ?? 0) + a.committedHours,
       );
     }
+
     // Deteccion de carga fuera de alcance (FINDING 4): existencia de
     // asignaciones de esas personas en procesos NO en alcance. Solo aplica al
     // LIDER (tiene una frontera de alcance de proceso por su rol). El JEFE ve el
@@ -576,6 +637,7 @@ export class CapacityService {
       });
       for (const row of outside) outOfScopeUsers.add(row.userId);
     }
+
     const rows: CapacitySummaryRowDto[] = Array.from(userIds).map((userId) => {
       const disponible = availableByUser.has(userId)
         ? availableByUser.get(userId)!
@@ -583,10 +645,12 @@ export class CapacityService {
       const comprometido = committedByUser.get(userId) ?? 0;
       const planificado = planByUser.get(userId) ?? 0;
       const cargaParcial = outOfScopeUsers.has(userId);
+
       let utilizacion: number | null = null;
       let libre: number | null = null;
       let sobrecargado = false;
       let estado: CapacitySummaryEstado;
+
       if (cargaParcial) {
         // Carga parcial: no se mezcla disponible total con comprometido parcial.
         estado = 'CARGA_PARCIAL';
@@ -599,6 +663,7 @@ export class CapacityService {
         sobrecargado = libre < 0;
         estado = sobrecargado ? 'SOBRECARGA' : 'OK';
       }
+
       // Utilizacion planificada: misma guarda contra division por cero que
       // `utilizacion` (null si no hay disponibilidad > 0). Senal informativa
       // `planSobreDisponible` que NO altera estado ni sobrecargado.
@@ -608,6 +673,7 @@ export class CapacityService {
           : null;
       const planSobreDisponible =
         disponible !== null && disponible > 0 && planificado > disponible;
+
       return {
         userId,
         userName: nameById.get(userId) ?? '',
@@ -624,6 +690,7 @@ export class CapacityService {
         planSobreDisponible,
       };
     });
+
     rows.sort((a, b) => a.userName.localeCompare(b.userName));
     return rows;
   }
