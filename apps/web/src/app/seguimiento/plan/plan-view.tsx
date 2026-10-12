@@ -2,11 +2,25 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Lock, Plus, RefreshCw, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, ClipboardList, ListChecks, Lock, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { CellTitle, ResultCount, SortableTableHead } from '@/components/data-table';
+import { DataView, type DataViewState } from '@/components/data-view';
+import { DisabledReason } from '@/components/disabled-reason';
+import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
+import { InlineNotice } from '@/components/inline-notice';
+import { PageHeader } from '@/components/page-header';
+import { PageLayout } from '@/components/page-layout';
+import { RequestContextBar, type RequestPickerGroup } from '@/components/request-context-bar';
+import { RequirementsPanel, type RequirementItem } from '@/components/requirements-panel';
+import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
+import { Section } from '@/components/section';
+import { StatusBadge } from '@/components/status-badge';
+import { SearchInput, Toolbar } from '@/components/toolbar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -25,63 +39,130 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Plan, PlanPhase, Request, Task } from '@/lib/api-client';
+import type {
+  CoordinationPerson,
+  Plan,
+  PlanGuide,
+  PlanPhase,
+  Request,
+  Task,
+} from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
+import { formatDateOnly, formatHours, formatPercent } from '@/lib/format';
 import {
   PlanError,
   createPlan,
   getPlan,
   getPlanGuide,
-  planStatusLabel,
   submitPlan,
 } from '@/lib/plan';
+import { guideCategoryLabel, presentGuidePending } from '@/lib/plan-guide';
 import { deletePhase, listPhases, reorderPhases } from '@/lib/plan-phases';
-import { deleteTask, listPlanTasks, taskStatusLabel } from '@/lib/tasks';
+import { PLANNABLE_STATES } from '@/lib/request-state';
 import { listRequests } from '@/lib/requests';
-import { requestStateLabel } from '@/lib/request-state';
-import type { PlanGuide } from '@/lib/api-client';
+import { compareByOrder, compareDate, type Comparator } from '@/lib/table-sort';
+import { matchesTaskFilters } from '@/lib/task-filters';
+import { TASK_STATUSES, deleteTask, listPlanTasks, taskStatusLabel } from '@/lib/tasks';
+import { useClientTable } from '@/lib/use-client-table';
+import { useRequestIdParam } from '@/lib/use-request-param';
+import { listCoordinationPeople } from '@/lib/worklog';
 import { PhaseDialog } from './phase-dialog';
 import { TaskDialog } from './task-dialog';
 
 type LoadState = 'loading' | 'success' | 'error';
+/** idle: sin solicitud elegida; missing: la solicitud aún no tiene plan (404). */
+type PlanLoadState = 'idle' | 'loading' | 'success' | 'error' | 'missing';
+type MoveDirection = 'up' | 'down';
+type TaskSortKey = 'start' | 'end' | 'status';
 
-/** Estados de Request en los que tiene sentido planificar (design 1.4). */
-const PLANNABLE_STATES = ['COMPROMETIDA', 'EN_PLANIFICACION', 'EN_EJECUCION'];
+const TITLE = 'Planificación';
+/** La misma descripción usa el PageFallback de page.tsx. */
+const PLAN_DESCRIPTION =
+  'Plan por fases y tareas de una solicitud comprometida. La guía indica qué falta para enviarlo a autorización.';
+const NOT_PLANNABLE =
+  'La solicitud indicada no está comprometida, en planificación ni en ejecución.';
+/** Nota y motivo de la fase inicial con tareas (design §10.2, «LOCK»). */
+const LOCK = 'Fase inicial con tareas: no se mueve ni se elimina.';
+const PHASE_HAS_TASKS = 'La fase tiene tareas. Elimínalas antes de eliminar la fase.';
+const SUBMIT_REASON_ID = 'plan-guide-submit-reason';
+const ALL = 'ALL';
+const TASK_NOUN = { one: 'tarea', other: 'tareas' };
+
+const GROUPS: RequestPickerGroup[] = [
+  { label: 'Comprometidas', match: (r) => r.operationalState === 'COMPROMETIDA' },
+  { label: 'En planificación', match: (r) => r.operationalState === 'EN_PLANIFICACION' },
+  { label: 'En ejecución', match: (r) => r.operationalState === 'EN_EJECUCION' },
+];
+
+const compareTaskStatus = compareByOrder(TASK_STATUSES);
+const TASK_COMPARATORS: Record<TaskSortKey, Comparator<Task>> = {
+  start: (a, b, direction) => compareDate(a.startDate, b.startDate, direction),
+  end: (a, b, direction) => compareDate(a.endDate, b.endDate, direction),
+  // Orden del flujo: Por hacer → En curso → Bloqueada → En revisión → Terminada.
+  status: (a, b, direction) => compareTaskStatus(a.status, b.status, direction),
+};
+
+const LIST_FORMAT = new Intl.ListFormat('es', { style: 'long', type: 'conjunction' });
 
 function messageOf(err: unknown): string {
-  return err instanceof PlanError ? err.message : 'Ocurrio un error inesperado.';
+  return err instanceof PlanError ? err.message : 'Ocurrió un error inesperado.';
 }
 
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '-';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat('es', { dateStyle: 'medium' }).format(date);
+function phaseActionId(phaseId: string, action: 'up' | 'down' | 'edit'): string {
+  return `phase-${phaseId}-${action}`;
 }
 
+function taskActionId(taskId: string): string {
+  return `task-${taskId}-edit`;
+}
+
+/** «En autorización» → «en autorización»: el estado dentro de una frase. */
+function planStatePhrase(status: string): string {
+  if (status === 'EN_AUTORIZACION') return 'en autorización';
+  if (status === 'AUTORIZADO') return 'autorizado';
+  return status;
+}
+
+/**
+ * Planificación (design §11.9, patrón C): barra de contexto con las
+ * solicitudes planificables agrupadas por estado, guía de pendientes con el
+ * envío a autorización, fases en tabla y tareas filtrables. La selección se
+ * refleja en ?requestId= (§7.9.1).
+ */
 export function PlanView(): React.ReactElement {
-  const { actorId } = useActor();
+  const { actorId, permissions, allowedModules } = useActor();
+  const { requestId: urlId, setRequestId } = useRequestIdParam();
+  const permissionsLoaded = permissions !== null;
+  const planAllowed = allowedModules.has('plan');
+  // Un 403 del plan lleva al mismo aviso que no tener el módulo.
+  const [planForbidden, setPlanForbidden] = React.useState(false);
+  const forbidden = planForbidden || (permissionsLoaded && !planAllowed);
 
   // --- Selector de solicitud ---
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [requestsState, setRequestsState] = React.useState<LoadState>('loading');
-  const [selectedRequestId, setSelectedRequestId] = React.useState<string>('');
+  const [requestsError, setRequestsError] = React.useState<string | null>(null);
+  const [selectedId, setSelectedId] = React.useState('');
+  const selectedRef = React.useRef(selectedId);
+  selectedRef.current = selectedId;
+  const [notice, setNotice] = React.useState<string | null>(null);
 
   // --- Plan y sus datos ---
   const [plan, setPlan] = React.useState<Plan | null>(null);
   const [phases, setPhases] = React.useState<PlanPhase[]>([]);
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [guide, setGuide] = React.useState<PlanGuide | null>(null);
-  const [planState, setPlanState] = React.useState<LoadState | 'empty'>('empty');
+  const [planState, setPlanState] = React.useState<PlanLoadState>('idle');
   const [busy, setBusy] = React.useState(false);
+  const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
 
   // --- Filtros de la lista de tareas ---
   const [q, setQ] = React.useState('');
   const [mine, setMine] = React.useState(false);
-  const [statusFilter, setStatusFilter] = React.useState<string>('ALL');
-  const [phaseFilter, setPhaseFilter] = React.useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = React.useState<string>(ALL);
+  const [phaseFilter, setPhaseFilter] = React.useState<string>(ALL);
 
-  // --- Dialogos ---
+  // --- Diálogos ---
   const [phaseDialog, setPhaseDialog] = React.useState<{
     open: boolean;
     phase: PlanPhase | null;
@@ -91,29 +172,89 @@ export function PlanView(): React.ReactElement {
     task: Task | null;
     phaseId: string | null;
   }>({ open: false, task: null, phaseId: null });
+  const [submitOpen, setSubmitOpen] = React.useState(false);
+  const [phaseToDelete, setPhaseToDelete] = React.useState<PlanPhase | null>(null);
+  const [phaseConfirmOpen, setPhaseConfirmOpen] = React.useState(false);
+  const [taskToDelete, setTaskToDelete] = React.useState<Task | null>(null);
+  const [taskConfirmOpen, setTaskConfirmOpen] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+
+  // Foco tras reordenar y tras eliminar una fila (§11.9 y NIT 4).
+  const moveFocusRef = React.useRef<{ phaseId: string; dir: MoveDirection } | null>(null);
+  const focusAfterDeleteRef = React.useRef<string | null>(null);
+  const phasesHeadingRef = React.useRef<HTMLHeadingElement>(null);
+  const tasksHeadingRef = React.useRef<HTMLHeadingElement>(null);
+
+  const selectRequest = React.useCallback((id: string) => {
+    setSelectedId(id);
+  }, []);
 
   const loadRequests = React.useCallback(async () => {
     setRequestsState('loading');
     try {
-      const all = await Promise.all(
-        PLANNABLE_STATES.map((state) => listRequests({ state })),
-      );
+      const all = await Promise.all(PLANNABLE_STATES.map((state) => listRequests({ state })));
       const flat = all.flat();
       setRequests(flat);
       setRequestsState('success');
-    } catch {
+      // Regla 3 de §7.9.1: si la solicitud elegida ya no está, se limpia.
+      if (selectedRef.current && !flat.some((r) => r.id === selectedRef.current)) {
+        selectRequest('');
+        setRequestId(null);
+      }
+    } catch (err) {
+      setRequestsError(err instanceof Error ? err.message : null);
       setRequestsState('error');
     }
-  }, []);
+  }, [selectRequest, setRequestId]);
 
+  // Recarga también al cambiar de actor, como hasta ahora. Gating cosmético,
+  // como en Indicadores y Aprobaciones: sin el módulo plan no se llama al
+  // backend (respondería 403) y se muestra el aviso de rol.
   React.useEffect(() => {
+    if (!permissionsLoaded || !planAllowed) return;
+    setPlanForbidden(false);
     void loadRequests();
-  }, [loadRequests, actorId]);
+  }, [loadRequests, actorId, permissionsLoaded, planAllowed]);
+
+  // Personas para la columna Responsable; si falla, la columna muestra «—».
+  React.useEffect(() => {
+    if (!permissionsLoaded || !planAllowed) return;
+    let active = true;
+    void listCoordinationPeople()
+      .then((data) => {
+        if (active) setPeople(data);
+      })
+      .catch(() => {
+        if (active) setPeople([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [actorId, permissionsLoaded, planAllowed]);
+
+  // Regla 1 de §7.9.1: adoptar ?requestId= al terminar la carga y cuando cambia.
+  React.useEffect(() => {
+    if (requestsState !== 'success' || !urlId || urlId === selectedRef.current) return;
+    if (requests.some((r) => r.id === urlId)) {
+      setNotice(null);
+      selectRequest(urlId);
+    } else {
+      setNotice(NOT_PLANNABLE);
+      setRequestId(null);
+    }
+  }, [requestsState, requests, urlId, selectRequest, setRequestId]);
+
+  // Regla 2: primero el estado, después la URL.
+  function handlePick(id: string): void {
+    setNotice(null);
+    selectRequest(id);
+    setRequestId(id);
+  }
 
   const loadPlan = React.useCallback(async (requestId: string) => {
     if (!requestId) {
       setPlan(null);
-      setPlanState('empty');
+      setPlanState('idle');
       return;
     }
     setPlanState('loading');
@@ -131,12 +272,15 @@ export function PlanView(): React.ReactElement {
       setPlanState('success');
     } catch (err) {
       if (err instanceof PlanError && err.status === 404) {
-        // Aun no hay plan para esta solicitud: ofrecer crearlo.
+        // Aún no hay plan para esta solicitud: ofrecer crearlo.
         setPlan(null);
         setPhases([]);
         setTasks([]);
         setGuide(null);
-        setPlanState('empty');
+        setPlanState('missing');
+      } else if (err instanceof PlanError && err.status === 403) {
+        setPlanForbidden(true);
+        setPlanState('error');
       } else {
         setPlanState('error');
       }
@@ -144,17 +288,17 @@ export function PlanView(): React.ReactElement {
   }, []);
 
   React.useEffect(() => {
-    void loadPlan(selectedRequestId);
-  }, [selectedRequestId, loadPlan]);
+    void loadPlan(selectedId);
+  }, [selectedId, loadPlan]);
 
   const refreshPlanData = React.useCallback(async () => {
-    if (!plan || !selectedRequestId) return;
+    if (!plan || !selectedId) return;
     try {
       const [phaseList, taskList, guideData, current] = await Promise.all([
         listPhases(plan.id),
         listPlanTasks(plan.id),
-        getPlanGuide(selectedRequestId),
-        getPlan(selectedRequestId),
+        getPlanGuide(selectedId),
+        getPlan(selectedId),
       ]);
       setPhases(phaseList);
       setTasks(taskList);
@@ -163,15 +307,15 @@ export function PlanView(): React.ReactElement {
     } catch (err) {
       toast.error(messageOf(err));
     }
-  }, [plan, selectedRequestId]);
+  }, [plan, selectedId]);
 
   async function handleCreatePlan() {
-    if (!selectedRequestId) return;
+    if (!selectedId) return;
     setBusy(true);
     try {
-      await createPlan(selectedRequestId, {});
-      toast.success('Plan creado. La solicitud pasa a En planificacion.');
-      await loadPlan(selectedRequestId);
+      await createPlan(selectedId, {});
+      toast.success('Plan creado. La solicitud pasa a En planificación.');
+      await loadPlan(selectedId);
     } catch (err) {
       toast.error(messageOf(err));
     } finally {
@@ -180,14 +324,14 @@ export function PlanView(): React.ReactElement {
   }
 
   async function handleSubmitPlan() {
-    if (!selectedRequestId) return;
+    if (!selectedId) return;
     setBusy(true);
     try {
-      await submitPlan(selectedRequestId);
-      toast.success('Plan enviado a autorizacion.');
+      await submitPlan(selectedId);
+      toast.success('Plan enviado a autorización.');
       await refreshPlanData();
     } catch (err) {
-      // 409: el backend recomputa la guia; mostrar los pendientes vigentes.
+      // 409: el backend recalcula la guía; se muestran los pendientes vigentes.
       toast.error(messageOf(err));
       await refreshPlanData();
     } finally {
@@ -198,6 +342,7 @@ export function PlanView(): React.ReactElement {
   async function handleDeletePhase(phase: PlanPhase) {
     if (!plan) return;
     setBusy(true);
+    setDeletingId(phase.id);
     try {
       await deletePhase(plan.id, phase.id);
       toast.success('Fase eliminada.');
@@ -205,6 +350,7 @@ export function PlanView(): React.ReactElement {
     } catch (err) {
       toast.error(messageOf(err));
     } finally {
+      setDeletingId(null);
       setBusy(false);
     }
   }
@@ -213,6 +359,8 @@ export function PlanView(): React.ReactElement {
     if (!plan) return;
     const target = index + direction;
     if (target < 0 || target >= phases.length) return;
+    // Destino del foco cuando termine la llamada (§11.9); la lógica no cambia.
+    moveFocusRef.current = { phaseId: phases[index].id, dir: direction < 0 ? 'up' : 'down' };
     const reordered = [...phases];
     const [moved] = reordered.splice(index, 1);
     reordered.splice(target, 0, moved);
@@ -229,6 +377,7 @@ export function PlanView(): React.ReactElement {
 
   async function handleDeleteTask(task: Task) {
     setBusy(true);
+    setDeletingId(task.id);
     try {
       await deleteTask(task.id);
       toast.success('Tarea eliminada.');
@@ -236,367 +385,650 @@ export function PlanView(): React.ReactElement {
     } catch (err) {
       toast.error(messageOf(err));
     } finally {
+      setDeletingId(null);
       setBusy(false);
     }
   }
 
+  // Cuando termina el reordenamiento (con éxito o con error), el foco vuelve al
+  // botón pulsado de la fase movida o, si quedó en el límite, al del otro sentido.
+  React.useEffect(() => {
+    const pending = moveFocusRef.current;
+    if (busy || !pending) return;
+    moveFocusRef.current = null;
+    const opposite: MoveDirection = pending.dir === 'up' ? 'down' : 'up';
+    const pressed = document.getElementById(phaseActionId(pending.phaseId, pending.dir));
+    const target =
+      pressed instanceof HTMLButtonElement && pressed.disabled
+        ? document.getElementById(phaseActionId(pending.phaseId, opposite))
+        : pressed;
+    target?.focus();
+  }, [busy, phases]);
+
   const initialPhaseId = React.useMemo(() => {
     if (phases.length === 0) return null;
-    return phases.reduce((min, p) => (p.order < min.order ? p : min), phases[0])
-      .id;
+    return phases.reduce((min, p) => (p.order < min.order ? p : min), phases[0]).id;
   }, [phases]);
 
-  const phaseName = React.useCallback(
-    (phaseId: string) => phases.find((p) => p.id === phaseId)?.name ?? '-',
-    [phases],
+  const phaseNameById = React.useMemo(() => new Map(phases.map((p) => [p.id, p.name])), [phases]);
+  const taskTitleById = React.useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
+  const personNameById = React.useMemo(() => new Map(people.map((p) => [p.id, p.name])), [people]);
+  const taskCountByPhase = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const t of tasks) counts.set(t.phaseId, (counts.get(t.phaseId) ?? 0) + 1);
+    return counts;
+  }, [tasks]);
+
+  // «Solo mis tareas» compara con el userId de GET /me/permissions (corrige §19.13).
+  const mineUserId = mine ? (permissions?.userId ?? null) : null;
+  const taskFilter = React.useCallback(
+    (t: Task) => matchesTaskFilters(t, { q, status: statusFilter, phaseId: phaseFilter, mineUserId }),
+    [q, statusFilter, phaseFilter, mineUserId],
   );
+  // Un plan cabe en una tabla: sin paginación, para no ocultar filas (§24.1).
+  const taskTable = useClientTable({
+    rows: tasks,
+    filter: taskFilter,
+    comparators: TASK_COMPARATORS,
+    defaultSort: null,
+    pageSize: null,
+  });
 
-  const filteredTasks = React.useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return tasks.filter((t) => {
-      if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
-      if (phaseFilter !== 'ALL' && t.phaseId !== phaseFilter) return false;
-      if (mine && t.responsibleUserId !== actorId) return false;
-      if (needle && !t.title.toLowerCase().includes(needle)) return false;
-      return true;
-    });
-  }, [tasks, statusFilter, phaseFilter, mine, q, actorId]);
-
+  const selected = React.useMemo(
+    () => requests.find((r) => r.id === selectedId) ?? null,
+    [requests, selectedId],
+  );
   const canEdit = plan?.status === 'BORRADOR' || plan?.status === 'DEVUELTO';
 
-  return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Planificacion</h1>
-        <p className="text-sm text-muted-foreground">
-          Plan por fases y tareas de una solicitud comprometida. La guia abajo
-          indica que falta para enviarlo a autorizacion.
-        </p>
-      </header>
+  function openNewPhase(): void {
+    setPhaseDialog({ open: true, phase: null });
+  }
 
-      {/* Selector de solicitud */}
-      <section className="flex flex-col gap-2 rounded-lg border bg-card p-4">
-        <Label htmlFor="plan-request">Solicitud</Label>
-        {requestsState === 'loading' ? (
-          <Skeleton className="h-9 w-full max-w-md" />
-        ) : requestsState === 'error' ? (
-          <div className="flex items-center gap-3">
-            <p className="text-sm text-muted-foreground">
-              No fue posible cargar las solicitudes.
-            </p>
-            <Button variant="outline" size="sm" onClick={() => void loadRequests()}>
-              <RefreshCw aria-hidden="true" />
-              Reintentar
-            </Button>
-          </div>
-        ) : requests.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No hay solicitudes comprometidas, en planificacion o en ejecucion en
-            tu alcance.
-          </p>
-        ) : (
-          <Select
-            value={selectedRequestId}
-            onValueChange={(v) => setSelectedRequestId(v)}
-          >
-            <SelectTrigger id="plan-request" className="max-w-md">
-              <SelectValue placeholder="Selecciona una solicitud" />
-            </SelectTrigger>
-            <SelectContent>
-              {requests.map((req) => (
-                <SelectItem key={req.id} value={req.id}>
-                  {req.title} ({requestStateLabel(req.operationalState)})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </section>
+  function openEditPhase(phase: PlanPhase): void {
+    setPhaseDialog({ open: true, phase });
+  }
 
-      {selectedRequestId ? (
-        <PlanPanel
-          planState={planState}
-          plan={plan}
-          busy={busy}
-          onCreatePlan={handleCreatePlan}
-          onRetry={() => void loadPlan(selectedRequestId)}
-        />
-      ) : null}
+  function openNewTask(phaseId: string): void {
+    setTaskDialog({ open: true, task: null, phaseId });
+  }
 
-      {plan && planState === 'success' ? (
-        <>
-          {/* Guia */}
-          {guide ? (
-            <PlanGuidePanel
-              guide={guide}
-              canEdit={canEdit}
-              busy={busy}
-              onSubmit={handleSubmitPlan}
-              phaseName={phaseName}
-              tasks={tasks}
-            />
-          ) : null}
+  function openEditTask(task: Task): void {
+    setTaskDialog({ open: true, task, phaseId: task.phaseId });
+  }
 
-          {/* Fases */}
-          <section className="flex flex-col gap-3 rounded-lg border bg-card p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium">Fases</h2>
-              {canEdit ? (
-                <Button
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => setPhaseDialog({ open: true, phase: null })}
-                >
-                  <Plus aria-hidden="true" />
-                  Nueva fase
-                </Button>
+  function requestDeletePhase(phase: PlanPhase): void {
+    const index = phases.findIndex((p) => p.id === phase.id);
+    const neighbour = phases[index + 1] ?? phases[index - 1] ?? null;
+    focusAfterDeleteRef.current = neighbour ? phaseActionId(neighbour.id, 'edit') : null;
+    setPhaseToDelete(phase);
+    setPhaseConfirmOpen(true);
+  }
+
+  function requestDeleteTask(task: Task): void {
+    const rows = taskTable.pageRows;
+    const index = rows.findIndex((t) => t.id === task.id);
+    const neighbour = rows[index + 1] ?? rows[index - 1] ?? null;
+    focusAfterDeleteRef.current = neighbour ? taskActionId(neighbour.id) : null;
+    setTaskToDelete(task);
+    setTaskConfirmOpen(true);
+  }
+
+  const returnFocusToPhases = React.useCallback((): HTMLElement | null => {
+    const id = focusAfterDeleteRef.current;
+    return (id ? document.getElementById(id) : null) ?? phasesHeadingRef.current;
+  }, []);
+
+  const returnFocusToTasks = React.useCallback((): HTMLElement | null => {
+    const id = focusAfterDeleteRef.current;
+    return (id ? document.getElementById(id) : null) ?? tasksHeadingRef.current;
+  }, []);
+
+  function renderGuide(currentGuide: PlanGuide): React.ReactElement {
+    const seen = new Map<string, number>();
+    const presented = currentGuide.pendings.map((p) => {
+      const item = presentGuidePending(p, {
+        phase: (id) => phaseNameById.get(id) ?? null,
+        task: (id) => taskTitleById.get(id) ?? null,
+      });
+      // Ids únicos aunque la API repita código y destino.
+      const count = seen.get(item.id) ?? 0;
+      seen.set(item.id, count + 1);
+      return count === 0 ? item : { ...item, id: `${item.id}#${count}` };
+    });
+
+    const items: RequirementItem[] = presented.map((item) => {
+      let action: RequirementItem['action'];
+      if (item.action) {
+        const { kind, label, targetId } = item.action;
+        if (kind === 'newPhase') {
+          action = { label, onClick: openNewPhase, disabled: busy };
+        } else if (kind === 'newTask') {
+          action = initialPhaseId
+            ? { label, onClick: () => openNewTask(initialPhaseId), disabled: busy }
+            : { label, disabled: true, disabledReason: 'Primero crea una fase.' };
+        } else if (kind === 'editPhase') {
+          const phase = phases.find((p) => p.id === targetId);
+          action = phase ? { label, onClick: () => openEditPhase(phase), disabled: busy } : undefined;
+        } else {
+          const task = tasks.find((t) => t.id === targetId);
+          action = task ? { label, onClick: () => openEditTask(task), disabled: busy } : undefined;
+        }
+      }
+      return { id: item.id, label: item.label, status: 'pending', action };
+    });
+
+    const groupOrder: string[] = [];
+    const groupItems = new Map<string, string[]>();
+    for (const item of presented) {
+      if (!groupItems.has(item.category)) {
+        groupOrder.push(item.category);
+        groupItems.set(item.category, []);
+      }
+      groupItems.get(item.category)?.push(item.id);
+    }
+    const groups = groupOrder.map((category) => ({
+      id: category,
+      label: guideCategoryLabel(category),
+      itemIds: groupItems.get(category) ?? [],
+    }));
+
+    const future = currentGuide.futureCategories.map(guideCategoryLabel);
+    const canSubmit = currentGuide.canSubmit;
+
+    return (
+      <RequirementsPanel
+        id="plan-guide"
+        liveUpdates
+        title="Aún no puedes enviar el plan a autorización"
+        description="Resuelve cada pendiente desde su acción; la lista se actualiza al guardar."
+        doneTitle="El plan está listo para enviar"
+        doneDescription="No hay pendientes en las categorías evaluadas."
+        items={items}
+        groups={groups}
+        footer={
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col items-start gap-1">
+              <Button
+                type="button"
+                unavailable={!canSubmit}
+                disabled={canSubmit && busy}
+                aria-describedby={canSubmit ? 'plan-guide-summary' : `plan-guide-summary ${SUBMIT_REASON_ID}`}
+                onClick={() => setSubmitOpen(true)}
+              >
+                Enviar a autorización
+              </Button>
+              {!canSubmit ? (
+                <DisabledReason id={SUBMIT_REASON_ID}>
+                  Resuelve los pendientes de la lista para enviar el plan.
+                </DisabledReason>
               ) : null}
             </div>
-            {phases.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Aun no hay fases. Crea la primera para empezar a planificar.
+            {future.length > 0 ? (
+              <p className="text-meta text-muted-foreground">
+                {`Se evaluarán más adelante: ${LIST_FORMAT.format(future)}.`}
               </p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {phases.map((phase, index) => {
-                  const isInitial = phase.id === initialPhaseId;
-                  const hasTasks = tasks.some((t) => t.phaseId === phase.id);
-                  const lockedInitial = isInitial && hasTasks;
-                  return (
-                    <li
-                      key={phase.id}
-                      className="flex flex-col gap-1 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="flex items-center gap-2 font-medium">
-                          {phase.name}
-                          {isInitial ? (
-                            <Badge variant="secondary">Fase inicial</Badge>
-                          ) : null}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(phase.startDate)} -{' '}
-                          {formatDate(phase.endDate)}
-                        </span>
-                      </div>
-                      {canEdit ? (
-                        <div className="flex flex-wrap items-center gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={busy || index === 0 || lockedInitial}
-                            onClick={() => void handleMovePhase(index, -1)}
-                            aria-label="Subir fase"
-                          >
-                            ↑
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={
-                              busy ||
-                              index === phases.length - 1 ||
-                              lockedInitial
-                            }
-                            onClick={() => void handleMovePhase(index, 1)}
-                            aria-label="Bajar fase"
-                          >
-                            ↓
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={busy}
-                            onClick={() =>
-                              setPhaseDialog({ open: true, phase })
-                            }
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            disabled={busy || hasTasks}
-                            onClick={() => void handleTaskNew(phase.id)}
-                          >
-                            <Plus aria-hidden="true" />
-                            Tarea
-                          </Button>
-                          {lockedInitial ? (
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Lock aria-hidden="true" className="size-3" />
-                              Fase inicial con tareas: no se mueve ni se borra.
-                            </span>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={busy || hasTasks}
-                              onClick={() => void handleDeletePhase(phase)}
-                            >
-                              Eliminar
-                            </Button>
-                          )}
-                        </div>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
+            ) : null}
+          </div>
+        }
+      />
+    );
+  }
 
-          {/* Lista de tareas */}
-          <section className="flex flex-col gap-3 rounded-lg border bg-card p-4">
-            <h2 className="text-lg font-medium">Tareas</h2>
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="task-q">Buscar</Label>
-                <div className="relative">
-                  <Search
-                    aria-hidden="true"
-                    className="absolute left-2 top-2.5 size-4 text-muted-foreground"
-                  />
-                  <Input
-                    id="task-q"
-                    className="pl-8"
-                    placeholder="Titulo de tarea"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="task-status">Estado</Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger id="task-status" className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todos</SelectItem>
-                    <SelectItem value="POR_HACER">Por hacer</SelectItem>
-                    <SelectItem value="EN_CURSO">En curso</SelectItem>
-                    <SelectItem value="BLOQUEADA">Bloqueada</SelectItem>
-                    <SelectItem value="EN_REVISION">En revision</SelectItem>
-                    <SelectItem value="TERMINADA">Terminada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="task-phase">Fase</Label>
-                <Select value={phaseFilter} onValueChange={setPhaseFilter}>
-                  <SelectTrigger id="task-phase" className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todas</SelectItem>
-                    {phases.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <Switch checked={mine} onCheckedChange={setMine} />
-                Solo mis tareas
-              </label>
-            </div>
+  function phaseActions(phase: PlanPhase, index: number): RowAction[] {
+    const isInitial = phase.id === initialPhaseId;
+    const hasTasks = (taskCountByPhase.get(phase.id) ?? 0) > 0;
+    const lockedInitial = isInitial && hasTasks;
+    const atTop = index === 0;
+    const atBottom = index === phases.length - 1;
+    // Cálculo por fila de §10.2: el límite natural manda sobre el bloqueo (§10.3).
+    const move = (dir: MoveDirection, atLimit: boolean): RowAction => ({
+      key: dir,
+      id: phaseActionId(phase.id, dir),
+      label: dir === 'up' ? 'Subir fase' : 'Bajar fase',
+      icon: dir === 'up' ? ArrowUp : ArrowDown,
+      iconOnly: true,
+      placement: 'inline',
+      onSelect: () => void handleMovePhase(index, dir === 'up' ? -1 : 1),
+      ...(atLimit
+        ? { disabled: true }
+        : lockedInitial
+          ? { disabled: true, disabledReason: LOCK }
+          : { disabled: busy }),
+    });
+    return [
+      move('up', atTop),
+      move('down', atBottom),
+      {
+        key: 'edit',
+        id: phaseActionId(phase.id, 'edit'),
+        label: 'Editar',
+        placement: 'inline',
+        disabled: busy,
+        onSelect: () => openEditPhase(phase),
+      },
+      {
+        key: 'add-task',
+        label: 'Agregar tarea',
+        placement: 'inline',
+        // Solo transitorio: una fase admite varias tareas (corrige §19.1).
+        disabled: busy,
+        onSelect: () => openNewTask(phase.id),
+      },
+      {
+        key: 'delete',
+        label: 'Eliminar fase',
+        placement: 'menu',
+        tone: 'danger',
+        busy: deletingId === phase.id,
+        busyLabel: 'Eliminando…',
+        onSelect: () => requestDeletePhase(phase),
+        ...(hasTasks
+          ? { disabled: true, disabledReason: isInitial ? LOCK : PHASE_HAS_TASKS }
+          : { disabled: busy }),
+      },
+    ];
+  }
 
-            {tasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Aun no hay tareas. Agrega tareas desde cada fase.
-              </p>
-            ) : filteredTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Ninguna tarea coincide con los filtros.
-              </p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tarea</TableHead>
-                    <TableHead>Fase</TableHead>
-                    <TableHead>Inicio</TableHead>
-                    <TableHead>Vence</TableHead>
-                    <TableHead>Esfuerzo</TableHead>
-                    <TableHead>Predecesoras</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTasks.map((task) => (
-                    <TableRow key={task.id}>
-                      <TableCell className="font-medium">
-                        {task.title}
-                        {task.isMilestone ? (
-                          <Badge variant="outline" className="ml-2">
-                            Hito
-                          </Badge>
+  function renderPhases(): React.ReactElement {
+    return (
+      <Section
+        title="Fases"
+        count={phases.length}
+        headingRef={phasesHeadingRef}
+        actions={
+          canEdit ? (
+            <Button type="button" size="sm" disabled={busy} onClick={openNewPhase}>
+              <Plus aria-hidden="true" />
+              Nueva fase
+            </Button>
+          ) : undefined
+        }
+      >
+        <DataView
+          state={phases.length === 0 ? 'empty' : 'ready'}
+          empty={{
+            icon: ClipboardList,
+            title: 'Aún no hay fases.',
+            description: canEdit
+              ? 'Crea la primera con «Nueva fase» para empezar a planificar.'
+              : 'Este plan no tiene fases.',
+            size: 'compact',
+          }}
+        >
+          <Table density="compact" scrollLabel="Tabla de fases">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10 text-right">#</TableHead>
+                <TableHead>Fase</TableHead>
+                <TableHead>Fechas</TableHead>
+                <TableHead>Entregable</TableHead>
+                <TableHead className="text-right">Tareas</TableHead>
+                {canEdit ? <TableHead className="text-right">Acciones</TableHead> : null}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {phases.map((phase, index) => {
+                const isInitial = phase.id === initialPhaseId;
+                const count = taskCountByPhase.get(phase.id) ?? 0;
+                const lockedInitial = isInitial && count > 0;
+                return (
+                  <TableRow key={phase.id}>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell className="min-w-48 max-w-[22rem]">
+                      <div className="flex flex-col gap-0.5 py-0.5">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium wrap-break-word">{phase.name}</span>
+                          {isInitial ? <Badge variant="neutral">Fase inicial</Badge> : null}
+                        </span>
+                        {lockedInitial ? (
+                          <span className="flex items-start gap-1 text-meta text-muted-foreground">
+                            <Lock className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+                            {LOCK}
+                          </span>
                         ) : null}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {phaseName(task.phaseId)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {formatDate(task.startDate)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {formatDate(task.endDate)}
-                      </TableCell>
-                      <TableCell>
-                        {task.isMilestone ? '-' : `${task.estimateHours ?? 0} h`}
-                      </TableCell>
-                      <TableCell>{task.predecessors.length}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {taskStatusLabel(task.status)} ({task.progress}%)
+                      </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      {phase.startDate || phase.endDate
+                        ? `${formatDateOnly(phase.startDate)} – ${formatDateOnly(phase.endDate)}`
+                        : '—'}
+                    </TableCell>
+                    <TableCell className="min-w-40 max-w-[20rem] text-muted-foreground">
+                      {phase.deliverable ? (
+                        <span className="line-clamp-2 wrap-break-word" title={phase.deliverable}>
+                          {phase.deliverable}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{count}</TableCell>
+                    {canEdit ? (
+                      <RowActionsCell>
+                        <RowActions rowLabel={phase.name} actions={phaseActions(phase, index)} />
+                      </RowActionsCell>
+                    ) : null}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </DataView>
+      </Section>
+    );
+  }
+
+  function renderTasks(): React.ReactElement {
+    let viewState: DataViewState;
+    if (taskTable.total === 0) viewState = 'empty';
+    else if (taskTable.filtered === 0) viewState = 'no-results';
+    else viewState = 'ready';
+
+    return (
+      <Section title="Tareas" headingRef={tasksHeadingRef}>
+        <Toolbar
+          label="Filtros de tareas"
+          end={<ResultCount loading={false} total={taskTable.total} filtered={taskTable.filtered} noun={TASK_NOUN} />}
+        >
+          <SearchInput
+            id="task-q"
+            placeholder="Título de la tarea"
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+          />
+          <div className="grid w-full gap-1.5 sm:w-auto">
+            <Label htmlFor="task-status">Estado</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger id="task-status" className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Todos</SelectItem>
+                {TASK_STATUSES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {taskStatusLabel(value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid w-full gap-1.5 sm:w-auto">
+            <Label htmlFor="task-phase">Fase</Label>
+            <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+              <SelectTrigger id="task-phase" className="w-full sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Todas</SelectItem>
+                {phases.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex h-9 w-full items-center gap-2 sm:w-auto">
+            <Switch
+              id="task-mine"
+              checked={mine}
+              onCheckedChange={setMine}
+              disabled={permissions === null}
+            />
+            <Label htmlFor="task-mine" className="font-normal">
+              Solo mis tareas
+            </Label>
+          </div>
+        </Toolbar>
+
+        <DataView
+          state={viewState}
+          empty={{
+            icon: ListChecks,
+            title: 'Aún no hay tareas.',
+            description: canEdit
+              ? 'Agrega tareas desde cada fase con «Agregar tarea».'
+              : 'Este plan no tiene tareas.',
+            size: 'compact',
+          }}
+        >
+          <Table scrollLabel="Tabla de tareas del plan">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tarea</TableHead>
+                <TableHead>Fase</TableHead>
+                <TableHead>Responsable</TableHead>
+                <SortableTableHead label="Inicio" sortKey="start" sort={taskTable.sort} onSort={taskTable.toggleSort} />
+                <SortableTableHead label="Vence" sortKey="end" sort={taskTable.sort} onSort={taskTable.toggleSort} />
+                <TableHead className="text-right">Esfuerzo</TableHead>
+                <TableHead className="text-right">Predecesoras</TableHead>
+                <SortableTableHead label="Estado" sortKey="status" sort={taskTable.sort} onSort={taskTable.toggleSort} />
+                {canEdit ? <TableHead className="text-right">Acciones</TableHead> : null}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {taskTable.pageRows.map((task) => (
+                <TableRow key={task.id}>
+                  <TableCell className="min-w-56 max-w-[28rem]">
+                    <div className="flex items-center gap-2">
+                      <CellTitle href={`/seguimiento/tareas?taskId=${encodeURIComponent(task.id)}`}>
+                        {task.title}
+                      </CellTitle>
+                      {task.isMilestone ? (
+                        <Badge variant="outline" className="shrink-0">
+                          Hito
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-1">
-                          <Button asChild variant="outline" size="sm">
-                            <Link href={`/seguimiento/tareas?taskId=${task.id}`}>
-                              Abrir
-                            </Link>
-                          </Button>
-                          {canEdit ? (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={busy}
-                                onClick={() =>
-                                  setTaskDialog({
-                                    open: true,
-                                    task,
-                                    phaseId: task.phaseId,
-                                  })
-                                }
-                              >
-                                Editar
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={busy}
-                                onClick={() => void handleDeleteTask(task)}
-                              >
-                                Eliminar
-                              </Button>
-                            </>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </section>
-        </>
-      ) : null}
+                      ) : null}
+                    </div>
+                  </TableCell>
+                  <TableCell className="min-w-32 text-muted-foreground">
+                    {phaseNameById.get(task.phaseId) ?? '—'}
+                  </TableCell>
+                  <TableCell className="min-w-36">
+                    {task.responsibleUserId === null ? (
+                      <span className="text-warning">Sin asignar</span>
+                    ) : (
+                      (personNameById.get(task.responsibleUserId) ?? '—')
+                    )}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap tabular-nums">{formatDateOnly(task.startDate)}</TableCell>
+                  <TableCell className="whitespace-nowrap tabular-nums">{formatDateOnly(task.endDate)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-right tabular-nums">
+                    {task.isMilestone || task.estimateHours === null ? '—' : formatHours(task.estimateHours)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{task.predecessors.length}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <span className="inline-flex items-center gap-2">
+                      <StatusBadge kind="task" value={task.status} />
+                      <span className="text-meta tabular-nums text-muted-foreground">
+                        <span className="sr-only">avance </span>
+                        {formatPercent(task.progress)}
+                      </span>
+                    </span>
+                  </TableCell>
+                  {canEdit ? (
+                    <RowActionsCell>
+                      <RowActions
+                        rowLabel={task.title}
+                        actions={[
+                          {
+                            key: 'edit',
+                            id: taskActionId(task.id),
+                            label: 'Editar',
+                            disabled: busy,
+                            onSelect: () => openEditTask(task),
+                          },
+                          {
+                            key: 'delete',
+                            label: 'Eliminar tarea',
+                            placement: 'menu',
+                            tone: 'danger',
+                            busy: deletingId === task.id,
+                            busyLabel: 'Eliminando…',
+                            disabled: busy,
+                            onSelect: () => requestDeleteTask(task),
+                          },
+                        ]}
+                      />
+                    </RowActionsCell>
+                  ) : null}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DataView>
+      </Section>
+    );
+  }
+
+  function renderPlan(): React.ReactNode {
+    if (planState === 'loading' || planState === 'idle') {
+      return (
+        <div aria-busy="true" className="flex flex-col gap-6">
+          <Skeleton className="h-28 rounded-lg" />
+          <Skeleton className="h-48 rounded-lg" />
+        </div>
+      );
+    }
+    if (planState === 'error') {
+      return (
+        <div className="rounded-lg border bg-card">
+          <ErrorState title="No fue posible cargar el plan." onRetry={() => void loadPlan(selectedId)} />
+        </div>
+      );
+    }
+    if (planState === 'missing' || !plan) {
+      return (
+        <div className="rounded-lg border bg-card">
+          <EmptyState
+            icon={ClipboardList}
+            title="Esta solicitud aún no tiene un plan."
+            description="Crea el plan para definir fases y tareas."
+            action={
+              <Button type="button" loading={busy} onClick={() => void handleCreatePlan()}>
+                {busy ? null : <Plus aria-hidden="true" />}
+                Crear plan
+              </Button>
+            }
+          />
+        </div>
+      );
+    }
+    return (
+      <>
+        {plan.status === 'DEVUELTO' ? (
+          <InlineNotice tone="warning">
+            {plan.returnReason
+              ? // El motivo puede traer su propio punto final: no se duplica.
+                `Plan devuelto: ${plan.returnReason.trim().replace(/[.\s]+$/, '')}. Corrige lo indicado y vuelve a enviarlo.`
+              : 'Plan devuelto. Corrige lo indicado y vuelve a enviarlo.'}
+          </InlineNotice>
+        ) : null}
+        {!canEdit ? (
+          <InlineNotice tone="info">
+            {`El plan está ${planStatePhrase(plan.status)}; las fases y tareas no se pueden editar.`}
+          </InlineNotice>
+        ) : null}
+        {/* La guía solo se muestra si el plan es editable (§11.9); getPlanGuide se sigue llamando. */}
+        {canEdit && guide ? renderGuide(guide) : null}
+        {renderPhases()}
+        {renderTasks()}
+      </>
+    );
+  }
+
+  if (forbidden) {
+    return (
+      <PageLayout>
+        <PageHeader title={TITLE} description={PLAN_DESCRIPTION} />
+        <InlineNotice
+          tone="neutral"
+          title="Esta pantalla no está disponible para tu rol."
+          action={
+            allowedModules.has('assigned') ? (
+              <Link href="/mi-trabajo" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                Ir a Mi trabajo
+              </Link>
+            ) : undefined
+          }
+        >
+          <p className="text-muted-foreground">
+            Planificar fases y tareas corresponde al jefe de área y a los líderes de proceso. Tus
+            tareas asignadas están en Mi trabajo.
+          </p>
+        </InlineNotice>
+      </PageLayout>
+    );
+  }
+
+  let content: React.ReactNode;
+  if (requestsState === 'loading') {
+    content = (
+      <div aria-busy="true" className="flex flex-col gap-6">
+        <Skeleton className="h-16 rounded-lg" />
+        <Skeleton className="h-64 rounded-lg" />
+      </div>
+    );
+  } else if (requestsState === 'error') {
+    content = (
+      <div className="rounded-lg border bg-card">
+        <ErrorState
+          title="No fue posible cargar las solicitudes."
+          message={requestsError}
+          onRetry={() => void loadRequests()}
+        />
+      </div>
+    );
+  } else if (requests.length === 0) {
+    content = (
+      <div className="rounded-lg border bg-card">
+        <EmptyState
+          icon={ClipboardList}
+          title="No hay solicitudes comprometidas, en planificación o en ejecución en tu alcance."
+          description="Una solicitud llega aquí cuando se aprueba su compromiso en Aprobaciones."
+        />
+      </div>
+    );
+  } else {
+    content = (
+      <>
+        <RequestContextBar
+          id="plan-request"
+          requests={requests}
+          value={selectedId}
+          onValueChange={handlePick}
+          groups={GROUPS}
+          summary={
+            plan && planState === 'success' ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-meta text-muted-foreground">Estado del plan</span>
+                <StatusBadge kind="plan" value={plan.status} />
+              </div>
+            ) : null
+          }
+        />
+        {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
+        {selected ? (
+          renderPlan()
+        ) : (
+          <div className="rounded-lg border bg-card">
+            <EmptyState
+              icon={ClipboardList}
+              title="Elige una solicitud para empezar."
+              description="En el selector, las solicitudes están agrupadas por estado: comprometidas, en planificación y en ejecución."
+            />
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <PageLayout>
+      <PageHeader title={TITLE} description={PLAN_DESCRIPTION} />
+      {content}
 
       {plan ? (
         <>
@@ -604,9 +1036,7 @@ export function PlanView(): React.ReactElement {
             open={phaseDialog.open}
             phase={phaseDialog.phase}
             planId={plan.id}
-            onOpenChange={(open) =>
-              setPhaseDialog((prev) => ({ ...prev, open }))
-            }
+            onOpenChange={(open) => setPhaseDialog((prev) => ({ ...prev, open }))}
             onSaved={() => {
               setPhaseDialog({ open: false, phase: null });
               void refreshPlanData();
@@ -617,200 +1047,45 @@ export function PlanView(): React.ReactElement {
             task={taskDialog.task}
             phaseId={taskDialog.phaseId}
             allTasks={tasks}
-            onOpenChange={(open) =>
-              setTaskDialog((prev) => ({ ...prev, open }))
-            }
+            onOpenChange={(open) => setTaskDialog((prev) => ({ ...prev, open }))}
             onSaved={() => {
               setTaskDialog({ open: false, task: null, phaseId: null });
               void refreshPlanData();
             }}
           />
+          <ConfirmDialog
+            open={submitOpen}
+            onOpenChange={setSubmitOpen}
+            tone="default"
+            title="¿Enviar el plan a autorización?"
+            description="Mientras esté en autorización no podrás editar fases ni tareas."
+            confirmLabel="Enviar a autorización"
+            onConfirm={handleSubmitPlan}
+          />
+          <ConfirmDialog
+            open={phaseConfirmOpen}
+            onOpenChange={setPhaseConfirmOpen}
+            title={`¿Eliminar la fase «${phaseToDelete?.name ?? ''}»?`}
+            description="Esta acción no se puede deshacer."
+            confirmLabel="Eliminar fase"
+            onConfirm={async () => {
+              if (phaseToDelete) await handleDeletePhase(phaseToDelete);
+            }}
+            returnFocusTo={returnFocusToPhases}
+          />
+          <ConfirmDialog
+            open={taskConfirmOpen}
+            onOpenChange={setTaskConfirmOpen}
+            title={`¿Eliminar la tarea «${taskToDelete?.title ?? ''}»?`}
+            description="Esta acción no se puede deshacer. Si otra tarea depende de esta, no se podrá eliminar."
+            confirmLabel="Eliminar tarea"
+            onConfirm={async () => {
+              if (taskToDelete) await handleDeleteTask(taskToDelete);
+            }}
+            returnFocusTo={returnFocusToTasks}
+          />
         </>
       ) : null}
-    </div>
-  );
-
-  function handleTaskNew(phaseId: string) {
-    setTaskDialog({ open: true, task: null, phaseId });
-  }
-}
-
-/** Panel con el estado del plan (loading/error/empty + crear). */
-function PlanPanel({
-  planState,
-  plan,
-  busy,
-  onCreatePlan,
-  onRetry,
-}: {
-  planState: LoadState | 'empty';
-  plan: Plan | null;
-  busy: boolean;
-  onCreatePlan: () => void;
-  onRetry: () => void;
-}): React.ReactElement {
-  if (planState === 'loading') {
-    return (
-      <section className="flex flex-col gap-3 rounded-lg border bg-card p-4">
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-24 w-full" />
-      </section>
-    );
-  }
-  if (planState === 'error') {
-    return (
-      <section className="flex flex-col items-center gap-3 rounded-lg border bg-card p-10 text-center">
-        <p className="text-sm text-muted-foreground">
-          No fue posible cargar el plan.
-        </p>
-        <Button variant="outline" onClick={onRetry}>
-          <RefreshCw aria-hidden="true" />
-          Reintentar
-        </Button>
-      </section>
-    );
-  }
-  if (planState === 'empty' && !plan) {
-    return (
-      <section className="flex flex-col items-center gap-3 rounded-lg border bg-card p-10 text-center">
-        <p className="text-sm font-medium">
-          Esta solicitud aun no tiene un plan.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Crea el plan para empezar a definir fases y tareas.
-        </p>
-        <Button disabled={busy} onClick={onCreatePlan}>
-          <Plus aria-hidden="true" />
-          Crear plan
-        </Button>
-      </section>
-    );
-  }
-  if (plan) {
-    return (
-      <section className="flex items-center justify-between rounded-lg border bg-card p-4">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-sm text-muted-foreground">Estado del plan</span>
-          <span className="text-lg font-medium">
-            {planStatusLabel(plan.status)}
-          </span>
-          {plan.status === 'DEVUELTO' && plan.returnReason ? (
-            <span className="text-sm text-destructive">
-              Devuelto: {plan.returnReason}
-            </span>
-          ) : null}
-        </div>
-      </section>
-    );
-  }
-  return <></>;
-}
-
-/** Guia "Resuelve el siguiente paso" + boton Enviar (AC-007). */
-function PlanGuidePanel({
-  guide,
-  canEdit,
-  busy,
-  onSubmit,
-  phaseName,
-  tasks,
-}: {
-  guide: PlanGuide;
-  canEdit: boolean;
-  busy: boolean;
-  onSubmit: () => void;
-  phaseName: (id: string) => string;
-  tasks: Task[];
-}): React.ReactElement {
-  const byCategory = React.useMemo(() => {
-    const map = new Map<string, typeof guide.pendings>();
-    for (const p of guide.pendings) {
-      const list = map.get(p.category) ?? [];
-      list.push(p);
-      map.set(p.category, list);
-    }
-    return map;
-  }, [guide]);
-
-  const taskTitle = React.useCallback(
-    (id: string | null | undefined) =>
-      id ? (tasks.find((t) => t.id === id)?.title ?? '') : '',
-    [tasks],
-  );
-
-  function targetLabel(category: string, targetId?: string | null): string {
-    if (!targetId) return '';
-    if (category === 'datesPhases') return ` · ${phaseName(targetId)}`;
-    const title = taskTitle(targetId);
-    return title ? ` · ${title}` : '';
-  }
-
-  return (
-    <section
-      aria-live="polite"
-      className="flex flex-col gap-3 rounded-lg border bg-card p-4"
-    >
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">Resuelve el siguiente paso</h2>
-        {guide.canSubmit ? (
-          <Badge variant="success">Listo para enviar</Badge>
-        ) : (
-          <Badge variant="secondary">
-            {guide.pendings.length} pendiente(s)
-          </Badge>
-        )}
-      </div>
-
-      {guide.pendings.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No hay pendientes en las categorias evaluadas. Puedes enviar el plan a
-          autorizacion.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {Array.from(byCategory.entries()).map(([category, items]) => (
-            <div key={category} className="flex flex-col gap-1">
-              <span className="text-sm font-medium capitalize">{category}</span>
-              <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                {items.map((p) => (
-                  <li key={`${p.code}-${p.targetId ?? ''}`}>
-                    {p.message}
-                    {targetLabel(category, p.targetId)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {guide.futureCategories.length > 0 ? (
-        <p className="text-xs text-muted-foreground">
-          Se evaluaran en una fase posterior:{' '}
-          {guide.futureCategories.join(', ')}.
-        </p>
-      ) : null}
-
-      {canEdit ? (
-        <div className="flex items-center gap-3">
-          <Button
-            disabled={busy || !guide.canSubmit}
-            onClick={onSubmit}
-            title={
-              guide.canSubmit
-                ? undefined
-                : 'Resuelve los pendientes para habilitar el envio.'
-            }
-          >
-            Enviar a autorizacion
-          </Button>
-          {!guide.canSubmit ? (
-            <span className="text-sm text-muted-foreground">
-              Resuelve los pendientes para habilitar el envio.
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-    </section>
+    </PageLayout>
   );
 }

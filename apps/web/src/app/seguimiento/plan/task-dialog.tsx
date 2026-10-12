@@ -2,9 +2,12 @@
 
 import * as React from 'react';
 import { toast } from 'sonner';
+import { Field, FieldSet, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -41,6 +44,12 @@ interface TaskDialogProps {
   onSaved: () => void;
 }
 
+/** Id del formulario: el FormError lleva `task-form-error`. */
+const FORM_ID = 'task-form';
+
+type FieldKey = 'title' | 'hours';
+type FieldErrors = Partial<Record<FieldKey, string>>;
+
 function toDateInput(iso: string | null | undefined): string {
   if (!iso) return '';
   const date = new Date(iso);
@@ -56,9 +65,14 @@ function toIso(value: string): string | undefined {
 }
 
 function messageOf(err: unknown): string {
-  return err instanceof PlanError ? err.message : 'Ocurrio un error inesperado.';
+  return err instanceof PlanError ? err.message : 'Ocurrió un error inesperado.';
 }
 
+/**
+ * Alta y edición de una tarea (design §9 E, tamaño md). Mismos campos, reglas y
+ * llamadas que antes, ahora con todos los errores a la vez; las predecesoras
+ * solo se gestionan al editar.
+ */
 export function TaskDialog({
   open,
   task,
@@ -75,8 +89,11 @@ export function TaskDialog({
   const [isMilestone, setIsMilestone] = React.useState(false);
   const [description, setDescription] = React.useState('');
   const [acceptanceCriteria, setAcceptanceCriteria] = React.useState('');
-  const [clientError, setClientError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
+  const [formError, setFormError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const titleRef = React.useRef<HTMLInputElement>(null);
+  const hoursRef = React.useRef<HTMLInputElement>(null);
 
   const [users, setUsers] = React.useState<CoordinationPerson[]>([]);
   const [predecessorIds, setPredecessorIds] = React.useState<Set<string>>(
@@ -85,9 +102,9 @@ export function TaskDialog({
 
   // Personas en alcance para el selector de responsable. Usa
   // /coordination/people (disponible para los 3 roles, filtrado por alcance),
-  // NO /users (que es solo-jefe): quien gestiona el plan es el lider, y debe
+  // NO /users (que es solo-jefe): quien gestiona el plan es el líder, y debe
   // poder asignar responsables de su proceso. Si falla, se degrada a un
-  // selector vacio sin romper el formulario.
+  // selector vacío sin romper el formulario.
   React.useEffect(() => {
     if (!open) return;
     let active = true;
@@ -120,7 +137,8 @@ export function TaskDialog({
       setPredecessorIds(
         new Set((task?.predecessors ?? []).map((p) => p.id)),
       );
-      setClientError(null);
+      setFieldErrors({});
+      setFormError(null);
     }
   }, [open, task]);
 
@@ -129,6 +147,10 @@ export function TaskDialog({
     () => allTasks.filter((t) => t.id !== task?.id),
     [allTasks, task],
   );
+
+  function clearFieldError(key: FieldKey): void {
+    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+  }
 
   function togglePredecessor(id: string) {
     setPredecessorIds((prev) => {
@@ -140,7 +162,7 @@ export function TaskDialog({
   }
 
   async function syncDependencies(taskId: string) {
-    // Solo para edicion: se calcula el delta frente a las predecesoras actuales.
+    // Solo para edición: se calcula el delta frente a las predecesoras actuales.
     const current = await listDependencies(taskId);
     const currentIds = new Set(current.map((d) => d.predecessorTaskId));
     const toAdd = [...predecessorIds].filter((id) => !currentIds.has(id));
@@ -155,10 +177,7 @@ export function TaskDialog({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!title.trim()) {
-      setClientError('El titulo de la tarea es obligatorio.');
-      return;
-    }
+    if (submitting) return;
     // Regla hito (BR-010/AC-011): una sola fecha y 0 horas. La UI lo fuerza; el
     // backend es el control real.
     const effectiveEnd = isMilestone ? startDate || endDate : endDate;
@@ -168,11 +187,23 @@ export function TaskDialog({
       : estimateHours.trim() === ''
         ? undefined
         : Number(estimateHours);
+
+    // Las reglas de siempre, evaluadas todas a la vez (design §9).
+    const errors: FieldErrors = {};
+    if (!title.trim()) errors.title = 'El título de la tarea es obligatorio.';
     if (hours !== undefined && (Number.isNaN(hours) || hours < 0)) {
-      setClientError('El esfuerzo debe ser un numero de horas valido.');
+      errors.hours = 'El esfuerzo debe ser un número de horas válido.';
+    }
+    const missingPhase = !task && !phaseId;
+    setFieldErrors(errors);
+    setFormError(missingPhase ? 'Falta la fase de la tarea.' : null);
+    if (errors.title || errors.hours || missingPhase) {
+      // Foco al primer campo con error, en orden del DOM.
+      if (errors.title) titleRef.current?.focus();
+      else if (errors.hours) hoursRef.current?.focus();
       return;
     }
-    setClientError(null);
+
     setSubmitting(true);
     const body = {
       title: title.trim(),
@@ -189,18 +220,14 @@ export function TaskDialog({
         await updateTask(task.id, body);
         await syncDependencies(task.id);
         toast.success('Tarea actualizada.');
-      } else {
-        if (!phaseId) {
-          setClientError('Falta la fase de la tarea.');
-          setSubmitting(false);
-          return;
-        }
+      } else if (phaseId) {
         await createTask(phaseId, body);
         toast.success('Tarea creada.');
       }
       onSaved();
     } catch (err) {
-      setClientError(messageOf(err));
+      // Conserva los valores ante error (AC-031).
+      setFormError(messageOf(err));
     } finally {
       setSubmitting(false);
     }
@@ -208,7 +235,7 @@ export function TaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>{task ? 'Editar tarea' : 'Nueva tarea'}</DialogTitle>
           <DialogDescription>
@@ -216,138 +243,122 @@ export function TaskDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="task-title">Titulo *</Label>
-            <Input
-              id="task-title"
-              autoFocus
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="task-responsible">Responsable</Label>
-            <Select
-              value={responsibleUserId}
-              onValueChange={setResponsibleUserId}
-            >
-              <SelectTrigger id="task-responsible">
-                <SelectValue placeholder="Sin asignar" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <label className="flex items-center gap-2 text-sm">
-            <Switch
-              checked={isMilestone}
-              onCheckedChange={(checked) => {
-                setIsMilestone(checked);
-                if (checked) setEstimateHours('0');
-              }}
-            />
-            Es un hito (una sola fecha, sin esfuerzo)
-          </label>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label htmlFor="task-start">
-                {isMilestone ? 'Fecha del hito' : 'Inicio'}
-              </Label>
+        <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <DialogBody className="grid gap-4">
+            <RequiredHint />
+            <Field id="task-title" label="Título" required error={fieldErrors.title}>
               <Input
-                id="task-start"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                ref={titleRef}
+                autoFocus
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  clearFieldError('title');
+                }}
               />
-            </div>
-            {!isMilestone ? (
-              <div className="grid gap-2">
-                <Label htmlFor="task-end">Vencimiento</Label>
-                <Input
-                  id="task-end"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
-            ) : null}
-          </div>
+            </Field>
 
-          {!isMilestone ? (
-            <div className="grid gap-2">
-              <Label htmlFor="task-hours">Esfuerzo (horas)</Label>
-              <Input
-                id="task-hours"
-                type="number"
-                min={0}
-                value={estimateHours}
-                onChange={(e) => setEstimateHours(e.target.value)}
-              />
-            </div>
-          ) : null}
-
-          <div className="grid gap-2">
-            <Label htmlFor="task-desc">Descripcion</Label>
-            <Textarea
-              id="task-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="task-criteria">Criterios de aceptacion</Label>
-            <Textarea
-              id="task-criteria"
-              value={acceptanceCriteria}
-              onChange={(e) => setAcceptanceCriteria(e.target.value)}
-            />
-          </div>
-
-          {task ? (
-            <div className="grid gap-2">
-              <Label>Predecesoras</Label>
-              {candidates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No hay otras tareas en el plan.
-                </p>
-              ) : (
-                <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-md border p-2">
-                  {candidates.map((c) => (
-                    <li key={c.id}>
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={predecessorIds.has(c.id)}
-                          onChange={() => togglePredecessor(c.id)}
-                        />
-                        {c.title}
-                      </label>
-                    </li>
-                  ))}
-                </ul>
+            <Field id="task-responsible" label="Responsable">
+              {(control) => (
+                <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
+                  <SelectTrigger {...control}>
+                    <SelectValue placeholder="Sin asignar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Las predecesoras se gestionan tras crear la tarea.
-            </p>
-          )}
+            </Field>
 
-          {clientError ? (
-            <p className="text-sm text-destructive" role="alert">
-              {clientError}
-            </p>
-          ) : null}
+            <div className="flex min-h-8 items-center gap-2">
+              <Switch
+                id="task-milestone"
+                checked={isMilestone}
+                onCheckedChange={(checked) => {
+                  setIsMilestone(checked);
+                  if (checked) {
+                    setEstimateHours('0');
+                    clearFieldError('hours');
+                  }
+                }}
+              />
+              <Label htmlFor="task-milestone" className="font-normal">
+                Es un hito (una sola fecha, sin esfuerzo)
+              </Label>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="task-start" label={isMilestone ? 'Fecha del hito' : 'Inicio'}>
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </Field>
+              {!isMilestone ? (
+                <Field id="task-end" label="Vencimiento">
+                  <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                </Field>
+              ) : null}
+            </div>
+
+            {!isMilestone ? (
+              <Field id="task-hours" label="Esfuerzo (horas)" error={fieldErrors.hours}>
+                <Input
+                  ref={hoursRef}
+                  type="number"
+                  min={0}
+                  inputMode="decimal"
+                  className="sm:w-40"
+                  value={estimateHours}
+                  onChange={(e) => {
+                    setEstimateHours(e.target.value);
+                    clearFieldError('hours');
+                  }}
+                />
+              </Field>
+            ) : null}
+
+            <Field id="task-desc" label="Descripción">
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+            </Field>
+
+            <Field id="task-criteria" label="Criterios de aceptación">
+              <Textarea
+                value={acceptanceCriteria}
+                onChange={(e) => setAcceptanceCriteria(e.target.value)}
+              />
+            </Field>
+
+            {task ? (
+              <FieldSet id="task-predecessors-field" kind="checkbox" legend="Predecesoras">
+                {candidates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No hay otras tareas en el plan.</p>
+                ) : (
+                  <ul className="flex max-h-48 flex-col overflow-y-auto rounded-md border px-3 py-1">
+                    {candidates.map((c) => (
+                      <li key={c.id}>
+                        <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={predecessorIds.has(c.id)}
+                            onChange={() => togglePredecessor(c.id)}
+                          />
+                          <span className="min-w-0 wrap-break-word">{c.title}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </FieldSet>
+            ) : (
+              <p className="text-meta text-muted-foreground">
+                Las predecesoras se gestionan tras crear la tarea.
+              </p>
+            )}
+
+            <FormError id={FORM_ID} message={formError} />
+          </DialogBody>
 
           <DialogFooter>
             <Button
@@ -358,8 +369,8 @@ export function TaskDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Guardando...' : 'Guardar'}
+            <Button type="submit" loading={submitting}>
+              {submitting ? 'Guardando…' : task ? 'Guardar cambios' : 'Crear tarea'}
             </Button>
           </DialogFooter>
         </form>

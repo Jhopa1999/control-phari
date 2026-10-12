@@ -2,9 +2,11 @@
 
 import * as React from 'react';
 import { toast } from 'sonner';
+import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -12,7 +14,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { PlanPhase } from '@/lib/api-client';
 import { PlanError } from '@/lib/plan';
@@ -26,7 +27,10 @@ interface PhaseDialogProps {
   onSaved: () => void;
 }
 
-/** Fecha ISO -> valor de <input type="date"> (yyyy-mm-dd). */
+/** Id del formulario: el FormError lleva `phase-form-error`. */
+const FORM_ID = 'phase-form';
+
+/** Fecha ISO -> valor de <input type="date"> (yyyy-mm-dd), en UTC como siempre. */
 function toDateInput(iso: string | null | undefined): string {
   if (!iso) return '';
   const date = new Date(iso);
@@ -34,7 +38,7 @@ function toDateInput(iso: string | null | undefined): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** yyyy-mm-dd -> ISO date-time (o undefined si vacio). */
+/** yyyy-mm-dd -> ISO date-time (o undefined si vacío). */
 function toIso(value: string): string | undefined {
   if (!value) return undefined;
   const date = new Date(`${value}T00:00:00.000Z`);
@@ -43,9 +47,13 @@ function toIso(value: string): string | undefined {
 }
 
 function messageOf(err: unknown): string {
-  return err instanceof PlanError ? err.message : 'Ocurrio un error inesperado.';
+  return err instanceof PlanError ? err.message : 'Ocurrió un error inesperado.';
 }
 
+/**
+ * Alta y edición de una fase (design §9 E, tamaño sm). Mismos campos, reglas y
+ * llamadas que antes; los valores se conservan ante cualquier error (AC-031).
+ */
 export function PhaseDialog({
   open,
   phase,
@@ -57,27 +65,33 @@ export function PhaseDialog({
   const [startDate, setStartDate] = React.useState('');
   const [endDate, setEndDate] = React.useState('');
   const [deliverable, setDeliverable] = React.useState('');
-  const [clientError, setClientError] = React.useState<string | null>(null);
+  const [nameError, setNameError] = React.useState<string | null>(null);
+  const [formError, setFormError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const nameRef = React.useRef<HTMLInputElement>(null);
 
-  // Prellenar al abrir (reset solo en exito, AC-031).
+  // Prellenar al abrir (reset solo en éxito, AC-031).
   React.useEffect(() => {
     if (open) {
       setName(phase?.name ?? '');
       setStartDate(toDateInput(phase?.startDate));
       setEndDate(toDateInput(phase?.endDate));
       setDeliverable(phase?.deliverable ?? '');
-      setClientError(null);
+      setNameError(null);
+      setFormError(null);
     }
   }, [open, phase]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (submitting) return;
     if (!name.trim()) {
-      setClientError('El nombre de la fase es obligatorio.');
+      setNameError('El nombre de la fase es obligatorio.');
+      nameRef.current?.focus();
       return;
     }
-    setClientError(null);
+    setNameError(null);
+    setFormError(null);
     setSubmitting(true);
     const body = {
       name: name.trim(),
@@ -96,7 +110,7 @@ export function PhaseDialog({
       onSaved();
     } catch (err) {
       // Conserva los valores ante error (AC-031).
-      setClientError(messageOf(err));
+      setFormError(messageOf(err));
     } finally {
       setSubmitting(false);
     }
@@ -104,58 +118,40 @@ export function PhaseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>{phase ? 'Editar fase' : 'Nueva fase'}</DialogTitle>
-          <DialogDescription>
-            Define el nombre, el periodo y el entregable de la fase.
-          </DialogDescription>
+          <DialogDescription>Define el nombre, el periodo y el entregable de la fase.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="phase-name">Nombre *</Label>
-            <Input
-              id="phase-name"
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label htmlFor="phase-start">Inicio</Label>
+        <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <DialogBody className="grid gap-4">
+            <RequiredHint />
+            <Field id="phase-name" label="Nombre" required error={nameError}>
               <Input
-                id="phase-start"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                ref={nameRef}
+                autoFocus
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setNameError(null);
+                }}
               />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="phase-start" label="Inicio">
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </Field>
+              <Field id="phase-end" label="Fin">
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </Field>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phase-end">Fin</Label>
-              <Input
-                id="phase-end"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="phase-deliverable">Entregable</Label>
-            <Textarea
-              id="phase-deliverable"
-              value={deliverable}
-              onChange={(e) => setDeliverable(e.target.value)}
-            />
-          </div>
+            <Field id="phase-deliverable" label="Entregable">
+              <Textarea value={deliverable} onChange={(e) => setDeliverable(e.target.value)} />
+            </Field>
 
-          {clientError ? (
-            <p className="text-sm text-destructive" role="alert">
-              {clientError}
-            </p>
-          ) : null}
+            <FormError id={FORM_ID} message={formError} />
+          </DialogBody>
 
           <DialogFooter>
             <Button
@@ -166,8 +162,8 @@ export function PhaseDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Guardando...' : 'Guardar'}
+            <Button type="submit" loading={submitting}>
+              {submitting ? 'Guardando…' : phase ? 'Guardar cambios' : 'Crear fase'}
             </Button>
           </DialogFooter>
         </form>
