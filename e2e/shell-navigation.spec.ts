@@ -1,9 +1,13 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+// Solo tipo: lib/api-client.ts lanza al evaluarse sin NEXT_PUBLIC_API_BASE_URL.
+// lib/requests.ts importa Request pero no lo reexporta.
+import type { Request } from '../apps/web/src/lib/api-client';
 
 /**
  * Shell y navegación (design §8 y §20, «e2e/shell-navigation.spec.ts»):
  * grupos del menú y página activa, filtrado por permisos, cajón móvil, riel,
- * skip link y ruta inexistente. Ninguna URL cambia con el rediseño.
+ * skip link, ruta inexistente y (paso 8) conteo, paginación, sin resultados y
+ * orden del listado de Solicitudes. Ninguna URL cambia con el rediseño.
  *
  * Solo depende del seed (actores y permisos), como el resto de la suite: usa
  * el storageState del jefe y, para otros actores o la preferencia del riel,
@@ -226,6 +230,114 @@ test('el primer Tab enfoca «Saltar al contenido» y Enter lleva el foco al cont
   ).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('main#contenido')).toBeFocused();
+});
+
+// Paso 8: listado de Solicitudes con un fixture de 30 solicitudes. El seed no
+// crea solicitudes y la CI parte de una base limpia, así que se intercepta solo
+// el GET del listado: la petición llega a la API real (autenticación, permisos
+// y CORS reales) y solo se sustituye el cuerpo. No abre fichas ni menús: los
+// ids del fixture no existen en la base.
+const PROCESS_ID = '00000000-0000-4000-8000-000000000000'; // no existe: la columna Proceso muestra «—»
+const FIXTURE_STATES = [
+  'REGISTRADA',
+  'EN_TRIAGE',
+  'BACKLOG_PRIORIZADO',
+  'COMPROMETIDA',
+  'EN_EJECUCION',
+  'CERRADA',
+];
+const FIXTURE_BANDS: Array<[number, string] | null> = [
+  null,
+  [84, 'P1 · Primera consideracion para compromiso'],
+  [70, 'P2 · Programacion en el horizonte cercano'],
+  [52, 'P3 · Planificacion ordinaria segun capacidad'],
+  [30, 'P4 · Reserva de demanda, reformulacion o cierre motivado'],
+]; // mismas glosas que devuelve la API
+
+function fakeRequest(i: number): Request {
+  const n = String(i).padStart(2, '0');
+  const at = new Date(Date.UTC(2026, 0, i, 12)).toISOString(); // registeredAt crece con i
+  const band = FIXTURE_BANDS[i % FIXTURE_BANDS.length];
+  return {
+    id: `00000000-0000-4000-8000-0000000000${n}`,
+    title: `Solicitud e2e ${n}`,
+    registeredAt: at,
+    createdAt: at,
+    updatedAt: at,
+    requesterArea: null,
+    requesterName: null,
+    functionalOwner: null,
+    targetDate: null,
+    referenceUrl: null,
+    expectedResult: null,
+    initialCommitmentDate: null,
+    changeJustification: null,
+    mainProcessId: PROCESS_ID, // string en el contrato: no admite null
+    participants: [],
+    operationalState: FIXTURE_STATES[i % FIXTURE_STATES.length],
+    currentTriageDecision: band ? 'CONTINUAR' : null,
+    currentScore: band ? band[0] : null,
+    priorityLabel: band ? band[1] : null,
+  };
+}
+
+const FIXTURE = Array.from({ length: 30 }, (_, i) => fakeRequest(i + 1));
+
+test('Solicitudes cuenta, pagina, filtra y ordena en cliente (fixture de 30)', async ({
+  page,
+}) => {
+  await page.route(
+    (url) => url.pathname.endsWith('/requests'),
+    async (route) => {
+      // El resto de métodos sigue a la API sin cambios.
+      if (route.request().method() !== 'GET') return route.continue();
+      const response = await route.fetch(); // estado y cabeceras reales (CORS incluido)
+      await route.fulfill({ response, json: FIXTURE });
+    },
+  );
+  await page.goto('/demanda/solicitudes'); // la ruta se registra antes de navegar
+
+  const count = page.getByRole('group', { name: 'Filtros de solicitudes' }).getByRole('status');
+  const region = page.getByRole('region', { name: 'Tabla de solicitudes' });
+  const rows = region.getByRole('row'); // la fila 0 es la de encabezados
+  const registro = region.getByRole('columnheader', { name: 'Registro, ordenar' });
+  const sorted = region.locator('th[aria-sort]');
+
+  // Conteo y paginación. toHaveText sobre el conteo: «30 solicitudes» también
+  // está dentro de la paginación.
+  await expect(count).toHaveText('30 solicitudes');
+  const pagination = page.getByRole('navigation', { name: 'Paginación de solicitudes' });
+  await expect(pagination).toContainText('1–25 de 30 solicitudes');
+  await expect(pagination).toContainText('Página 1 de 2');
+  await expect(rows).toHaveCount(26);
+  await expect(rows.nth(1).getByText('—', { exact: true }).first()).toBeVisible();
+
+  // Sin resultados: un solo «Limpiar filtros», en el toolbar.
+  const search = page.locator('#sol-buscar');
+  await search.fill('zzz sin coincidencias e2e');
+  await expect(count).toHaveText('0 de 30 solicitudes');
+  await expect(page.getByText('Ningún resultado coincide con los filtros.')).toBeVisible();
+  const clear = page.getByRole('button', { name: 'Limpiar filtros', exact: true });
+  await expect(clear).toHaveCount(1);
+  await clear.click();
+  await expect(search).toHaveValue('');
+  await expect(search).toBeFocused();
+  await expect(count).toHaveText('30 solicitudes');
+
+  // Orden real de la columna Registro, no solo el atributo.
+  await expect(registro).toHaveAttribute('aria-sort', 'descending');
+  await expect(rows.nth(1)).toContainText('Solicitud e2e 30');
+  await expect(sorted).toHaveCount(1);
+
+  await registro.getByRole('button', { name: 'Registro, ordenar' }).click();
+  await expect(registro).toHaveAttribute('aria-sort', 'ascending');
+  await expect(rows.nth(1)).toContainText('Solicitud e2e 01');
+  await expect(sorted).toHaveCount(1);
+
+  await registro.getByRole('button', { name: 'Registro, ordenar' }).click();
+  await expect(registro).toHaveAttribute('aria-sort', 'descending');
+  await expect(rows.nth(1)).toContainText('Solicitud e2e 30');
+  await expect(sorted).toHaveCount(1);
 });
 
 test('una ruta inexistente responde 404 con su propia pantalla', async ({ page }) => {
