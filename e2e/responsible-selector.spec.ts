@@ -16,7 +16,10 @@ import { expect, test } from '@playwright/test';
  * solicitud comprometida ni un plan con fases).
  */
 
-const WEB_ORIGIN = 'http://localhost:3000';
+// Origen de la web: WEB_ORIGIN o, si falta, E2E_WEB_URL (el mismo de
+// playwright.config.ts). Sin variables vale lo mismo que en la CI.
+const WEB_ORIGIN =
+  process.env.WEB_ORIGIN ?? process.env.E2E_WEB_URL ?? 'http://localhost:3000';
 // Líder de proceso BI (seed): NO es jefe, por lo que /users le daría 403.
 const LIDER_IDENTIFIER = 'lider.bi@demo.local';
 

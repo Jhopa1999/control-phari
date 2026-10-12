@@ -1,8 +1,11 @@
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
-const WEB_URL = 'http://localhost:3000';
-const API_HEALTH = 'http://localhost:3001/health';
+// URLs de la suite configurables por entorno: E2E_WEB_URL (web) y E2E_API_URL
+// (API, se espera su /health). Sin variables valen lo mismo que en la CI.
+const WEB_URL = process.env.E2E_WEB_URL ?? 'http://localhost:3000';
+const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001';
+const API_HEALTH = `${API_URL}/health`;
 const isCI = Boolean(process.env.CI);
 
 /**

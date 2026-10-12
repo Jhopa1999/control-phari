@@ -12,7 +12,10 @@ import path from 'node:path';
  * Se usa `jefe@demo.local` (JEFE_AREA en los 4 procesos, segun el seed) porque
  * la maestra generica exige ese rol para escribir.
  */
-const WEB_ORIGIN = 'http://localhost:3000';
+// Origen de la web: WEB_ORIGIN o, si falta, E2E_WEB_URL (el mismo de
+// playwright.config.ts). Sin variables vale lo mismo que en la CI.
+const WEB_ORIGIN =
+  process.env.WEB_ORIGIN ?? process.env.E2E_WEB_URL ?? 'http://localhost:3000';
 const ACTOR_IDENTIFIER = 'jefe@demo.local';
 
 export const STORAGE_STATE_PATH = path.resolve(
