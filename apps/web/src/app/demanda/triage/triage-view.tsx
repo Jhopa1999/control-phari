@@ -1,12 +1,27 @@
 'use client';
 
 import * as React from 'react';
-import { Lock, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ListFilter } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
+import { Field, FieldSet, FormError, RequiredHint } from '@/components/field';
+import { InlineNotice } from '@/components/inline-notice';
+import { PageHeader } from '@/components/page-header';
+import { PageLayout } from '@/components/page-layout';
+import {
+  RequestContextBar,
+  RequestFacts,
+  RequestSummary,
+  type RequestPickerGroup,
+} from '@/components/request-context-bar';
+import { RequirementsPanel, type RequirementItem } from '@/components/requirements-panel';
+import { StatusBadge } from '@/components/status-badge';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { RadioCards } from '@/components/ui/radio-cards';
 import {
   Select,
   SelectContent,
@@ -14,17 +29,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import type { CatalogItem, Request } from '@/lib/api-client';
+import type { CatalogItem, Process, Request } from '@/lib/api-client';
+import { useActor } from '@/lib/actor-context';
 import { listCatalogItems } from '@/lib/catalog';
+import { formatCount } from '@/lib/format';
 import { listRequests } from '@/lib/requests';
-import { requestStateLabel } from '@/lib/request-state';
+import { isPrioritizable, isTriageable } from '@/lib/request-state';
+import { listProcesses } from '@/lib/team';
 import { createTriage, TriageError } from '@/lib/triage';
+import { useRequestIdParam } from '@/lib/use-request-param';
 
 type LoadState = 'loading' | 'success' | 'error';
 type Decision = 'CONTINUAR' | 'DEVOLVER' | 'RECHAZAR';
+
+const TITLE = 'Triage';
+/** La misma descripción usa el PageFallback de page.tsx. */
+const TRIAGE_DESCRIPTION =
+  'Clasifica cada solicitud registrada y decide si continúa, se devuelve o se rechaza.';
+const NOT_AVAILABLE = 'La solicitud indicada no está disponible aquí.';
+const FORM_ID = 'triage-form';
 
 const CATALOG_FAMILIES = [
   'TRIAGE_ROUTE',
@@ -49,6 +74,9 @@ interface TriageFormValues {
   decision: Decision | '';
 }
 
+type FieldKey = 'totalEffortHours' | 'decision';
+type FieldErrors = Partial<Record<FieldKey, string>>;
+
 const EMPTY_FORM: TriageFormValues = {
   routeCode: '',
   demandTypeCode: '',
@@ -62,7 +90,15 @@ const EMPTY_FORM: TriageFormValues = {
   decision: '',
 };
 
+const DECISIONS: { value: Decision; label: string }[] = [
+  { value: 'CONTINUAR', label: 'Continuar' },
+  { value: 'DEVOLVER', label: 'Devolver' },
+  { value: 'RECHAZAR', label: 'Rechazar' },
+];
+
 const NONE = '__none__';
+const PENDING_NOUN = { one: 'pendiente de triage', other: 'pendientes de triage' };
+const GROUPS: RequestPickerGroup[] = [{ label: 'Pendientes de triage', match: isTriageable }];
 
 function trimOrUndefined(value: string): string | undefined {
   const trimmed = value.trim();
@@ -73,25 +109,66 @@ function selectedOrUndefined(value: string): string | undefined {
   return value && value !== NONE ? value : undefined;
 }
 
+/**
+ * Reglas del cliente, evaluadas todas a la vez (design §9): la decisión es
+ * obligatoria y el esfuerzo, si se indica, es un entero mayor o igual a 0 (el
+ * mismo min=0 del campo numérico, ahora con su mensaje junto al campo).
+ */
+function validate(form: TriageFormValues): FieldErrors {
+  const errors: FieldErrors = {};
+  const effort = form.totalEffortHours.trim();
+  if (effort !== '') {
+    const hours = Number(effort);
+    if (!Number.isInteger(hours) || hours < 0) {
+      errors.totalEffortHours = 'Indica un número entero de horas, mayor o igual a 0.';
+    }
+  }
+  if (!form.decision) errors.decision = 'La decisión es obligatoria.';
+  return errors;
+}
+
+/**
+ * Triage (design §11.6 y §10.2, patrón C): barra de contexto con las
+ * solicitudes agrupadas, formulario por grupos y, si la solicitud no admite
+ * triage, el panel de requisitos con el motivo. La selección se refleja en
+ * ?requestId= (§7.9.1).
+ */
 export function TriageView(): React.ReactElement {
+  const router = useRouter();
+  const { allowedModules } = useActor();
+  const { requestId: urlId, setRequestId } = useRequestIdParam();
   const [requests, setRequests] = React.useState<Request[]>([]);
+  const [processes, setProcesses] = React.useState<Process[]>([]);
   const [catalogs, setCatalogs] = React.useState<CatalogsByFamily>({});
   const [state, setState] = React.useState<LoadState>('loading');
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [notice, setNotice] = React.useState<string | null>(null);
 
-  const [selectedId, setSelectedId] = React.useState<string>('');
+  const [selectedId, setSelectedId] = React.useState('');
+  const selectedRef = React.useRef(selectedId);
+  selectedRef.current = selectedId;
   const [form, setForm] = React.useState<TriageFormValues>(EMPTY_FORM);
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const effortRef = React.useRef<HTMLInputElement>(null);
+
+  // Fija la selección y reinicia el formulario (sin cambios respecto a hoy).
+  const selectRequest = React.useCallback((id: string) => {
+    setSelectedId(id);
+    setForm(EMPTY_FORM);
+    setFieldErrors({});
+    setFormError(null);
+  }, []);
 
   const load = React.useCallback(async () => {
     setState('loading');
     try {
-      const [reqs, ...families] = await Promise.all([
+      const [reqs, procs, ...families] = await Promise.all([
         listRequests(),
+        listProcesses().catch(() => [] as Process[]),
         ...CATALOG_FAMILIES.map((catalog) =>
-          listCatalogItems({ catalog, active: true }).catch(
-            () => [] as CatalogItem[],
-          ),
+          listCatalogItems({ catalog, active: true }).catch(() => [] as CatalogItem[]),
         ),
       ]);
       const byFamily: CatalogsByFamily = {};
@@ -99,67 +176,99 @@ export function TriageView(): React.ReactElement {
         byFamily[catalog] = families[i];
       });
       setRequests(reqs);
+      setProcesses(procs);
       setCatalogs(byFamily);
       setState('success');
-    } catch {
+      // Regla 3 de §7.9.1: si la solicitud elegida ya no está, se limpia.
+      if (selectedRef.current && !reqs.some((r) => r.id === selectedRef.current)) {
+        selectRequest('');
+        setRequestId(null);
+      }
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : null);
       setState('error');
     }
-  }, []);
+  }, [selectRequest, setRequestId]);
 
+  // `load` es estable: carga al montar, como hoy (Triage no recarga al cambiar de actor).
   React.useEffect(() => {
     void load();
   }, [load]);
+
+  // Regla 1 de §7.9.1: adoptar ?requestId= al terminar la carga y cuando cambia.
+  React.useEffect(() => {
+    if (state !== 'success' || !urlId || urlId === selectedRef.current) return;
+    if (requests.some((r) => r.id === urlId)) {
+      setNotice(null);
+      selectRequest(urlId);
+    } else {
+      setNotice(NOT_AVAILABLE);
+      setRequestId(null);
+    }
+  }, [state, requests, urlId, selectRequest, setRequestId]);
+
+  // Regla 2: primero el estado, después la URL.
+  function handlePick(id: string): void {
+    setNotice(null);
+    selectRequest(id);
+    setRequestId(id);
+  }
 
   const selected = React.useMemo(
     () => requests.find((r) => r.id === selectedId) ?? null,
     [requests, selectedId],
   );
+  const pendingCount = React.useMemo(() => requests.filter(isTriageable).length, [requests]);
+  const processName = selected
+    ? (processes.find((p) => p.id === selected.mainProcessId)?.name ?? null)
+    : null;
 
-  // El triage solo se admite desde REGISTRADA (gate server-side; HIGH-1).
-  const canDecide = selected?.operationalState === 'REGISTRADA';
-
-  function selectRequest(id: string) {
-    setSelectedId(id);
-    setForm(EMPTY_FORM);
-    setFormError(null);
+  function update<K extends keyof TriageFormValues>(key: K, value: TriageFormValues[K]): void {
+    setForm((f) => ({ ...f, [key]: value }));
+    setFieldErrors((prev) => (key in prev ? { ...prev, [key]: undefined } : prev));
   }
 
-  async function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (!selected) return;
-    if (!form.decision) {
-      setFormError('La decision es obligatoria.');
+    if (!selected || submitting) return;
+    const errors = validate(form);
+    setFieldErrors(errors);
+    if (errors.totalEffortHours || errors.decision) {
+      // Foco al primer campo con error, en orden del DOM.
+      if (errors.totalEffortHours) effortRef.current?.focus();
+      else document.getElementById('triage-decision-CONTINUAR')?.focus();
       return;
     }
+    const decision = form.decision as Decision;
     setSubmitting(true);
     setFormError(null);
     try {
       const effort =
-        form.totalEffortHours.trim() === ''
-          ? undefined
-          : Number.parseInt(form.totalEffortHours, 10);
+        form.totalEffortHours.trim() === '' ? undefined : Number.parseInt(form.totalEffortHours, 10);
       await createTriage(selected.id, {
-        decision: form.decision,
+        decision,
         routeCode: selectedOrUndefined(form.routeCode),
         demandTypeCode: selectedOrUndefined(form.demandTypeCode),
         criticalityCode: selectedOrUndefined(form.criticalityCode),
         sizeCode: selectedOrUndefined(form.sizeCode),
         dataAvailabilityCode: selectedOrUndefined(form.dataAvailabilityCode),
-        totalEffortHours:
-          effort !== undefined && Number.isFinite(effort) ? effort : undefined,
+        totalEffortHours: effort !== undefined && Number.isFinite(effort) ? effort : undefined,
         mainResponsible: trimOrUndefined(form.mainResponsible),
         dependencies: trimOrUndefined(form.dependencies),
         notes: trimOrUndefined(form.notes),
       });
-      toast.success('Triage registrado.');
-      // Reset solo en exito (AC-031); recarga para reflejar el nuevo estado.
+      const priorityHref = `/demanda/priorizacion?requestId=${encodeURIComponent(selected.id)}`;
+      toast.success(
+        'Triage registrado.',
+        decision === 'CONTINUAR' && allowedModules.has('priority')
+          ? { action: { label: 'Ir a priorización', onClick: () => router.push(priorityHref) } }
+          : undefined,
+      );
+      // Reset solo en éxito (AC-031); recarga para reflejar el nuevo estado.
       setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      const message =
-        err instanceof TriageError
-          ? err.message
-          : 'Ocurrio un error inesperado.';
+      const message = err instanceof TriageError ? err.message : 'Ocurrió un error inesperado.';
       setFormError(message);
       toast.error(message);
     } finally {
@@ -173,239 +282,260 @@ export function TriageView(): React.ReactElement {
     family: string,
     value: string,
     onChange: (value: string) => void,
-  ) {
+  ): React.ReactElement {
     const items = catalogs[family] ?? [];
     return (
-      <div className="grid gap-2">
-        <Label htmlFor={id}>{label}</Label>
-        <Select value={value || NONE} onValueChange={onChange}>
-          <SelectTrigger id={id}>
-            <SelectValue placeholder="Sin especificar" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>Sin especificar</SelectItem>
-            {items.map((item) => (
-              <SelectItem key={item.id} value={item.code}>
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <Field id={id} label={label}>
+        {(control) => (
+          <Select value={value || NONE} onValueChange={onChange}>
+            <SelectTrigger {...control}>
+              <SelectValue placeholder="Sin especificar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>Sin especificar</SelectItem>
+              {items.map((item) => (
+                <SelectItem key={item.id} value={item.code}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </Field>
+    );
+  }
+
+  function renderBlock(request: Request): React.ReactElement {
+    if (request.currentTriageDecision) {
+      // (a) Ya tiene triage: el único ítem está cumplido y el panel se pinta sin pendientes.
+      const doneTitle = 'El triage de esta solicitud ya está registrado';
+      const item: RequirementItem = {
+        id: 'triage',
+        label: 'Triage registrado',
+        status: 'met',
+        detail: (
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            Decisión: <StatusBadge kind="triage" value={request.currentTriageDecision} />
+            <span aria-hidden="true">·</span>
+            Estado actual: <StatusBadge kind="request" value={request.operationalState} />
+          </span>
+        ),
+        action:
+          isPrioritizable(request) && allowedModules.has('priority')
+            ? {
+                label: 'Ir a priorización',
+                href: `/demanda/priorizacion?requestId=${encodeURIComponent(request.id)}`,
+              }
+            : undefined,
+      };
+      return (
+        <RequirementsPanel
+          id="triage-block"
+          title={doneTitle}
+          doneTitle={doneTitle}
+          doneDescription="El triage se registra una sola vez, cuando la solicitud está Registrada."
+          items={[item]}
+        />
+      );
+    }
+    // (b) Sin triage y en otro estado.
+    return (
+      <RequirementsPanel
+        id="triage-block"
+        title="No puedes registrar el triage de esta solicitud"
+        description="El triage se registra una sola vez, cuando la solicitud está Registrada. Elige una del grupo «Pendientes de triage»."
+        items={[
+          {
+            id: 'state',
+            label: 'La solicitud debe estar en estado Registrada',
+            status: 'pending',
+            detail: (
+              <span className="inline-flex flex-wrap items-center gap-1.5">
+                Estado actual: <StatusBadge kind="request" value={request.operationalState} />
+              </span>
+            ),
+          },
+        ]}
+      />
+    );
+  }
+
+  function renderForm(): React.ReactElement {
+    return (
+      <form
+        id={FORM_ID}
+        noValidate
+        onSubmit={(event) => void handleSubmit(event)}
+        aria-labelledby="triage-form-title"
+        className="flex flex-col gap-5 rounded-lg border bg-card p-4"
+      >
+        <div className="flex flex-col gap-1">
+          <h2 id="triage-form-title" className="text-base font-semibold">
+            Registrar triage
+          </h2>
+          <RequiredHint />
+        </div>
+
+        <div className="grid gap-4">
+          <h3 className="text-sm font-semibold">Clasificación</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {renderCatalogSelect('triage-route', 'Ruta', 'TRIAGE_ROUTE', form.routeCode, (v) =>
+              update('routeCode', v),
+            )}
+            {renderCatalogSelect('triage-type', 'Tipo de demanda', 'DEMAND_TYPE', form.demandTypeCode, (v) =>
+              update('demandTypeCode', v),
+            )}
+            {renderCatalogSelect('triage-criticality', 'Criticidad', 'CRITICALITY', form.criticalityCode, (v) =>
+              update('criticalityCode', v),
+            )}
+            {renderCatalogSelect('triage-size', 'Tamaño', 'TRIAGE_SIZE', form.sizeCode, (v) =>
+              update('sizeCode', v),
+            )}
+            {renderCatalogSelect(
+              'triage-data',
+              'Disponibilidad de datos',
+              'DATA_AVAILABILITY',
+              form.dataAvailabilityCode,
+              (v) => update('dataAvailabilityCode', v),
+            )}
+            <Field id="triage-effort" label="Esfuerzo (horas)" error={fieldErrors.totalEffortHours}>
+              <Input
+                ref={effortRef}
+                type="number"
+                min={0}
+                step={1}
+                inputMode="numeric"
+                value={form.totalEffortHours}
+                onChange={(e) => update('totalEffortHours', e.target.value)}
+              />
+            </Field>
+          </div>
+        </div>
+
+        <div className="grid gap-4">
+          <h3 className="text-sm font-semibold">Responsable y dependencias</h3>
+          <Field id="triage-responsible" label="Responsable principal">
+            <Input value={form.mainResponsible} onChange={(e) => update('mainResponsible', e.target.value)} />
+          </Field>
+          <Field id="triage-dependencies" label="Dependencias">
+            <Textarea value={form.dependencies} onChange={(e) => update('dependencies', e.target.value)} />
+          </Field>
+          <Field id="triage-notes" label="Observaciones">
+            <Textarea value={form.notes} onChange={(e) => update('notes', e.target.value)} />
+          </Field>
+        </div>
+
+        {/* Grupo «Decisión»: su título es la legend del FieldSet; un h3 con el
+            mismo texto encima la repetiría en pantalla y al lector. */}
+        <div className="grid gap-4">
+          <FieldSet
+            id="triage-decision"
+            kind="radio"
+            legend="Decisión"
+            required
+            help="Solo Continuar habilita la priorización."
+            error={fieldErrors.decision}
+          >
+            <RadioCards
+              name="triage-decision"
+              idPrefix="triage-decision"
+              options={DECISIONS}
+              value={form.decision}
+              onValueChange={(value) => update('decision', value as Decision)}
+              invalid={Boolean(fieldErrors.decision)}
+            />
+          </FieldSet>
+        </div>
+
+        <FormError id={FORM_ID} message={formError} />
+
+        <div className="flex justify-end border-t pt-4">
+          <Button type="submit" loading={submitting}>
+            {submitting ? 'Guardando…' : 'Guardar triage'}
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
+  let content: React.ReactNode;
+  if (state === 'loading') {
+    content = (
+      <div aria-busy="true" className="flex flex-col gap-6">
+        <Skeleton className="h-16 rounded-lg" />
+        <Skeleton className="h-64 rounded-lg" />
       </div>
+    );
+  } else if (state === 'error') {
+    content = (
+      <div className="rounded-lg border bg-card">
+        <ErrorState
+          title="No fue posible cargar las solicitudes."
+          message={loadError}
+          onRetry={() => void load()}
+        />
+      </div>
+    );
+  } else if (requests.length === 0) {
+    content = (
+      <div className="rounded-lg border bg-card">
+        <EmptyState
+          icon={ListFilter}
+          title="No hay solicitudes en tu alcance."
+          description="Registra solicitudes para poder decidir su triage."
+          action={
+            allowedModules.has('requests') ? (
+              <Link href="/demanda/solicitudes" className={buttonVariants({ variant: 'outline' })}>
+                Ir a Solicitudes
+              </Link>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  } else {
+    content = (
+      <>
+        <RequestContextBar
+          id="triage-request"
+          requests={requests}
+          value={selectedId}
+          onValueChange={handlePick}
+          groups={GROUPS}
+          helper={formatCount(pendingCount, PENDING_NOUN)}
+          summary={selected ? <RequestSummary request={selected} show={['state', 'registered']} /> : null}
+        />
+        {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
+        {selected ? (
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,45rem)_minmax(18rem,1fr)] xl:items-start">
+            <div className="min-w-0">{isTriageable(selected) ? renderForm() : renderBlock(selected)}</div>
+            <section
+              aria-labelledby="triage-facts-title"
+              className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4"
+            >
+              <h2 id="triage-facts-title" className="text-base font-semibold">
+                Ficha de la solicitud
+              </h2>
+              <RequestFacts request={selected} processName={processName} />
+            </section>
+          </div>
+        ) : (
+          <div className="rounded-lg border bg-card">
+            <EmptyState
+              icon={ListFilter}
+              title="Elige una solicitud para empezar."
+              description="Las solicitudes pendientes de triage aparecen primero en el selector."
+            />
+          </div>
+        )}
+      </>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Triage</h1>
-        <p className="text-sm text-muted-foreground">
-          Clasifica y decide la ruta de cada solicitud (Continuar, Devolver o
-          Rechazar).
-        </p>
-      </header>
-
-      <section aria-live="polite" className="flex flex-col gap-6">
-        {state === 'loading' ? (
-          <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : state === 'error' ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border bg-card p-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              No fue posible comunicarse con el servidor.
-            </p>
-            <Button variant="outline" onClick={() => void load()}>
-              <RefreshCw aria-hidden="true" />
-              Reintentar
-            </Button>
-          </div>
-        ) : requests.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border bg-card p-10 text-center">
-            <p className="text-sm font-medium">
-              No hay solicitudes en tu alcance.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Registra solicitudes para poder decidir su triage.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="grid gap-2 rounded-lg border bg-card p-4">
-              <Label htmlFor="triage-request">Solicitud</Label>
-              <Select value={selectedId} onValueChange={selectRequest}>
-                <SelectTrigger id="triage-request">
-                  <SelectValue placeholder="Selecciona una solicitud" />
-                </SelectTrigger>
-                <SelectContent>
-                  {requests.map((req) => (
-                    <SelectItem key={req.id} value={req.id}>
-                      {req.title} - {requestStateLabel(req.operationalState)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selected ? (
-              canDecide ? (
-                <form
-                  onSubmit={handleSubmit}
-                  className="flex flex-col gap-4 rounded-lg border bg-card p-4"
-                >
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {renderCatalogSelect(
-                      'triage-route',
-                      'Ruta',
-                      'TRIAGE_ROUTE',
-                      form.routeCode,
-                      (v) => setForm((f) => ({ ...f, routeCode: v })),
-                    )}
-                    {renderCatalogSelect(
-                      'triage-type',
-                      'Tipo de demanda',
-                      'DEMAND_TYPE',
-                      form.demandTypeCode,
-                      (v) => setForm((f) => ({ ...f, demandTypeCode: v })),
-                    )}
-                    {renderCatalogSelect(
-                      'triage-criticality',
-                      'Criticidad',
-                      'CRITICALITY',
-                      form.criticalityCode,
-                      (v) => setForm((f) => ({ ...f, criticalityCode: v })),
-                    )}
-                    {renderCatalogSelect(
-                      'triage-size',
-                      'Tamano',
-                      'TRIAGE_SIZE',
-                      form.sizeCode,
-                      (v) => setForm((f) => ({ ...f, sizeCode: v })),
-                    )}
-                    {renderCatalogSelect(
-                      'triage-data',
-                      'Disponibilidad de datos',
-                      'DATA_AVAILABILITY',
-                      form.dataAvailabilityCode,
-                      (v) =>
-                        setForm((f) => ({ ...f, dataAvailabilityCode: v })),
-                    )}
-                    <div className="grid gap-2">
-                      <Label htmlFor="triage-effort">Esfuerzo (horas)</Label>
-                      <Input
-                        id="triage-effort"
-                        type="number"
-                        min={0}
-                        value={form.totalEffortHours}
-                        onChange={(e) =>
-                          setForm((f) => ({
-                            ...f,
-                            totalEffortHours: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="triage-responsible">
-                      Responsable principal
-                    </Label>
-                    <Input
-                      id="triage-responsible"
-                      value={form.mainResponsible}
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          mainResponsible: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="triage-dependencies">Dependencias</Label>
-                    <Textarea
-                      id="triage-dependencies"
-                      value={form.dependencies}
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          dependencies: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="triage-notes">Observaciones</Label>
-                    <Textarea
-                      id="triage-notes"
-                      value={form.notes}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, notes: e.target.value }))
-                      }
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="triage-decision">Decision *</Label>
-                    <Select
-                      value={form.decision}
-                      onValueChange={(v) =>
-                        setForm((f) => ({ ...f, decision: v as Decision }))
-                      }
-                    >
-                      <SelectTrigger id="triage-decision">
-                        <SelectValue placeholder="Selecciona la decision" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="CONTINUAR">Continuar</SelectItem>
-                        <SelectItem value="DEVOLVER">Devolver</SelectItem>
-                        <SelectItem value="RECHAZAR">Rechazar</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Solo Continuar habilita la priorizacion.
-                    </p>
-                  </div>
-
-                  {formError ? (
-                    <p className="text-sm text-destructive" role="alert">
-                      {formError}
-                    </p>
-                  ) : null}
-
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={submitting}>
-                      {submitting ? 'Guardando...' : 'Guardar triage'}
-                    </Button>
-                  </div>
-                </form>
-              ) : (
-                <div className="flex flex-col items-start gap-2 rounded-lg border border-dashed bg-card p-6">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Lock aria-hidden="true" className="size-4" />
-                    Triage no disponible
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Esta solicitud esta en estado{' '}
-                    <Badge variant="secondary">
-                      {requestStateLabel(selected.operationalState)}
-                    </Badge>
-                    . El triage solo puede registrarse cuando la solicitud esta
-                    Registrada; una vez decidido no se vuelve a ejecutar.
-                  </p>
-                </div>
-              )
-            ) : null}
-          </>
-        )}
-      </section>
-    </div>
+    <PageLayout>
+      <PageHeader title={TITLE} description={TRIAGE_DESCRIPTION} />
+      {content}
+    </PageLayout>
   );
 }
