@@ -1,14 +1,22 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DescriptionList } from '@/components/description-list';
+import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
+import { MasterDetail, SelectableList } from '@/components/master-detail';
+import { PageHeader } from '@/components/page-header';
+import { PageLayout } from '@/components/page-layout';
+import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CoordinationPerson, Meeting, Process } from '@/lib/api-client';
+import { formatDateOnly } from '@/lib/format';
 import {
   MeetingError,
   createMeeting,
@@ -18,18 +26,19 @@ import {
 } from '@/lib/meetings';
 import { listCoordinationPeople } from '@/lib/worklog';
 import { listProcesses } from '@/lib/team';
-import { stateLabel } from '@/lib/record-state';
-import {
-  ReunionFormDialog,
-  type ReunionFormValues,
-} from './reunion-form-dialog';
+import { ReunionFormDialog, type ReunionFormValues } from './reunion-form-dialog';
 
 type LoadState = 'loading' | 'success' | 'error';
+
+// Sin códigos internos visibles (design §13.1): si el proceso o la persona no
+// vienen en las listas del alcance del actor, se nombra el caso en vez del id.
+const OUT_OF_SCOPE_PROCESS = 'Proceso fuera de tu alcance';
+const OUT_OF_SCOPE_PERSON = 'Persona fuera de tu alcance';
 
 function messageOf(err: unknown): string {
   return err instanceof MeetingError
     ? err.message
-    : 'Ocurrio un error inesperado.';
+    : 'Ocurrió un error inesperado. Inténtalo de nuevo.';
 }
 
 function trimOrUndefined(value: string): string | undefined {
@@ -42,6 +51,7 @@ export function ReunionesView(): React.ReactElement {
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
@@ -50,6 +60,15 @@ export function ReunionesView(): React.ReactElement {
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+
+  // Confirmación de borrado (design §13.3). La reunión se fija al abrir: el
+  // título no cambia mientras el diálogo se cierra y la selección pasa a otra.
+  const [toDelete, setToDelete] = React.useState<Meeting | null>(null);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+
+  // Destinos del foco (NIT 4).
+  const listHeadingRef = React.useRef<HTMLHeadingElement>(null);
+  const detailHeadingRef = React.useRef<HTMLHeadingElement>(null);
 
   const load = React.useCallback(async () => {
     setState('loading');
@@ -62,12 +81,15 @@ export function ReunionesView(): React.ReactElement {
       setMeetings(mts);
       setProcesses(procs);
       setPeople(ppl);
+      setLoadError(null);
       setState('success');
+      // Mantiene la selección si sigue existiendo; si no, toma la primera.
       setSelectedId((prev) => {
         if (prev && mts.some((m) => m.id === prev)) return prev;
         return mts[0]?.id ?? null;
       });
-    } catch {
+    } catch (err) {
+      setLoadError(err instanceof MeetingError ? err.message : null);
       setState('error');
     }
   }, []);
@@ -82,12 +104,21 @@ export function ReunionesView(): React.ReactElement {
   );
 
   const processName = React.useCallback(
-    (id: string) => processes.find((p) => p.id === id)?.name ?? id,
+    (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS,
     [processes],
   );
   const personName = React.useCallback(
-    (id: string) => people.find((p) => p.id === id)?.name ?? id,
+    (id: string) => people.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PERSON,
     [people],
+  );
+
+  /** «fecha · hora · proceso»; sin hora, «fecha · proceso». */
+  const meetingMeta = React.useCallback(
+    (meeting: Meeting) =>
+      [formatDateOnly(meeting.meetingDate), meeting.meetingTime, processName(meeting.processId)]
+        .filter(Boolean)
+        .join(' · '),
+    [processName],
   );
 
   function openCreate() {
@@ -116,7 +147,7 @@ export function ReunionesView(): React.ReactElement {
           decisions: trimOrUndefined(values.decisions),
           notes: trimOrUndefined(values.notes),
         });
-        toast.success('Reunion actualizada.');
+        toast.success('Reunión actualizada.');
       } else {
         const created = await createMeeting({
           processId: values.processId,
@@ -129,7 +160,7 @@ export function ReunionesView(): React.ReactElement {
           decisions: trimOrUndefined(values.decisions),
           notes: trimOrUndefined(values.notes),
         });
-        toast.success('Reunion creada.');
+        toast.success('Reunión creada.');
         setSelectedId(created.id);
       }
       setOpen(false);
@@ -148,8 +179,8 @@ export function ReunionesView(): React.ReactElement {
     setDeleting(true);
     try {
       await deleteMeeting(meeting.id);
-      toast.success('Reunion eliminada.');
-      setSelectedId(null);
+      toast.success('Reunión eliminada.');
+      // load() selecciona la primera que quede (la eliminada ya no existe).
       await load();
     } catch (err) {
       toast.error(messageOf(err));
@@ -158,177 +189,156 @@ export function ReunionesView(): React.ReactElement {
     }
   }
 
+  // Tras eliminar, el botón pulsado ya no existe: el foco va al encabezado del
+  // detalle que quede seleccionado o, si no queda ninguno, al título de la
+  // lista (NIT 4).
+  const returnFocusToDetail = React.useCallback(
+    (): HTMLElement | null => detailHeadingRef.current ?? listHeadingRef.current,
+    [],
+  );
+
+  function renderDetail(): React.ReactNode {
+    if (state === 'loading' && !selected) {
+      return (
+        <Card aria-hidden="true" className="flex flex-col gap-4 p-4">
+          <Skeleton className="h-6 w-1/2" />
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </Card>
+      );
+    }
+    if (!selected) {
+      return (
+        <Card>
+          <EmptyState
+            title="Selecciona una reunión para ver su detalle."
+            description="O crea una nueva para registrar la agenda y los acuerdos."
+          />
+        </Card>
+      );
+    }
+    return (
+      <Card>
+        <CardHeader className="gap-3 border-b sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2
+                ref={detailHeadingRef}
+                tabIndex={-1}
+                className="rounded-sm text-lg font-semibold wrap-break-word focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {selected.title}
+              </h2>
+              <StatusBadge kind="record" value={selected.state} />
+            </div>
+            <p className="text-meta text-muted-foreground">{meetingMeta(selected)}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
+            <Button
+              type="button"
+              variant="ghost-destructive"
+              size="sm"
+              loading={deleting}
+              onClick={() => {
+                setToDelete(selected);
+                setDeleteOpen(true);
+              }}
+            >
+              {deleting ? null : <Trash2 aria-hidden="true" />}
+              {deleting ? 'Eliminando…' : 'Eliminar'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => openEdit(selected)}
+              disabled={deleting}
+            >
+              Editar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6 pt-4">
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-semibold">Participantes</h3>
+            {selected.participantUserIds.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin participantes registrados.</p>
+            ) : (
+              <ul aria-label="Participantes" className="flex flex-wrap gap-2">
+                {selected.participantUserIds.map((id) => (
+                  <li key={id}>
+                    <Badge variant="outline">{personName(id)}</Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <DescriptionList
+            className="border-t pt-4"
+            items={[
+              { term: 'Agenda', value: selected.agenda },
+              { term: 'Decisiones', value: selected.decisions },
+              { term: 'Observaciones', value: selected.notes },
+            ]}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Reuniones</h1>
-          <p className="text-sm text-muted-foreground">
-            Agenda y acuerdos de las reuniones del area, con sus participantes.
-          </p>
-        </div>
-        <Button onClick={openCreate} disabled={state === 'loading'}>
-          <Plus aria-hidden="true" />
-          Nueva reunion
-        </Button>
-      </header>
+    <PageLayout>
+      <PageHeader
+        title="Reuniones"
+        description="Agenda y acuerdos de las reuniones del área, con sus participantes."
+        actions={
+          <Button type="button" onClick={openCreate} disabled={state === 'loading'}>
+            <Plus aria-hidden="true" />
+            Nueva reunión
+          </Button>
+        }
+      />
 
       {state === 'error' ? (
-        <div className="flex flex-col items-center gap-3 rounded-lg border bg-card p-10 text-center">
-          <p className="text-sm text-muted-foreground">
-            No fue posible cargar las reuniones.
-          </p>
-          <Button variant="outline" onClick={() => void load()}>
-            <RefreshCw aria-hidden="true" />
-            Reintentar
-          </Button>
+        <div className="rounded-lg border bg-card">
+          <ErrorState
+            title="No fue posible cargar las reuniones."
+            message={loadError}
+            onRetry={() => void load()}
+          />
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-          <section aria-labelledby="reuniones-heading" className="flex flex-col gap-3">
-            <h2
-              id="reuniones-heading"
-              className="text-lg font-semibold tracking-tight"
-            >
-              Lista
-            </h2>
-            <div className="rounded-lg border bg-card">
-              {state === 'loading' ? (
-                <div className="flex flex-col gap-3 p-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : meetings.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 p-8 text-center">
-                  <p className="text-sm font-medium">Aun no hay reuniones.</p>
-                  <Button variant="outline" size="sm" onClick={openCreate}>
+        <MasterDetail
+          listTitle="Reuniones"
+          listHeadingRef={listHeadingRef}
+          detailHeadingRef={detailHeadingRef}
+          list={
+            <SelectableList
+              label="Reuniones"
+              loading={state === 'loading' && meetings.length === 0}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              items={meetings.map((meeting) => ({
+                id: meeting.id,
+                title: meeting.title,
+                meta: meetingMeta(meeting),
+                badge: <StatusBadge kind="record" value={meeting.state} />,
+              }))}
+              empty={{
+                title: 'Aún no hay reuniones.',
+                description: 'Registra una reunión con su agenda, participantes y acuerdos.',
+                action: (
+                  <Button type="button" variant="outline" size="sm" onClick={openCreate}>
                     <Plus aria-hidden="true" />
-                    Nueva reunion
+                    Nueva reunión
                   </Button>
-                </div>
-              ) : (
-                <ul className="divide-y">
-                  {meetings.map((meeting) => (
-                    <li key={meeting.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedId(meeting.id)}
-                        aria-current={meeting.id === selectedId}
-                        className={`flex w-full flex-col gap-1 p-3 text-left transition-colors hover:bg-muted/50 ${
-                          meeting.id === selectedId ? 'bg-muted' : ''
-                        }`}
-                      >
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="font-medium">{meeting.title}</span>
-                          <Badge variant="secondary">
-                            {stateLabel(meeting.state)}
-                          </Badge>
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {meeting.meetingDate}
-                          {meeting.meetingTime ? ` · ${meeting.meetingTime}` : ''}{' '}
-                          · {processName(meeting.processId)}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </section>
-
-          <section aria-label="Detalle de la reunion" className="flex flex-col gap-3">
-            {!selected ? (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-card p-10 text-center">
-                <p className="text-sm font-medium">Selecciona una reunion.</p>
-                <p className="text-sm text-muted-foreground">
-                  O crea una nueva para registrar la agenda y los acuerdos.
-                </p>
-              </div>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex flex-col gap-1">
-                      <CardTitle className="flex items-center gap-2">
-                        {selected.title}
-                        <Badge variant="secondary">
-                          {stateLabel(selected.state)}
-                        </Badge>
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {selected.meetingDate}
-                        {selected.meetingTime
-                          ? ` · ${selected.meetingTime}`
-                          : ''}{' '}
-                        · {processName(selected.processId)}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEdit(selected)}
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={deleting}
-                        onClick={() => void handleDelete(selected)}
-                      >
-                        {deleting ? 'Borrando...' : 'Borrar'}
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  <div>
-                    <h3 className="mb-1 text-sm font-semibold">Participantes</h3>
-                    {selected.participantUserIds.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        Sin participantes registrados.
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {selected.participantUserIds.map((id) => (
-                          <Badge key={id} variant="outline">
-                            {personName(id)}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <Separator />
-
-                  <dl className="grid gap-3 text-sm">
-                    <div>
-                      <dt className="text-muted-foreground">Agenda</dt>
-                      <dd className="whitespace-pre-wrap">
-                        {selected.agenda ?? '—'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Decisiones</dt>
-                      <dd className="whitespace-pre-wrap">
-                        {selected.decisions ?? '—'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Observaciones</dt>
-                      <dd className="whitespace-pre-wrap">
-                        {selected.notes ?? '—'}
-                      </dd>
-                    </div>
-                  </dl>
-                </CardContent>
-              </Card>
-            )}
-          </section>
-        </div>
+                ),
+              }}
+            />
+          }
+          detail={renderDetail()}
+        />
       )}
 
       <ReunionFormDialog
@@ -347,6 +357,19 @@ export function ReunionesView(): React.ReactElement {
         errorMessage={formError}
         onSubmit={handleSubmit}
       />
-    </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`¿Eliminar la reunión «${toDelete?.title ?? ''}»?`}
+        description="Esta acción no se puede deshacer."
+        confirmLabel="Eliminar reunión"
+        busy={deleting}
+        onConfirm={async () => {
+          if (toDelete) await handleDelete(toDelete);
+        }}
+        returnFocusTo={returnFocusToDetail}
+      />
+    </PageLayout>
   );
 }

@@ -1,9 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import { useDialogReturnFocus } from '@/components/confirm-dialog';
+import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -11,7 +14,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -26,7 +28,7 @@ import type {
   Meeting,
   Process,
 } from '@/lib/api-client';
-import { localDateInputValue } from '@/lib/format';
+import { formatDateOnly, localDateInputValue } from '@/lib/format';
 
 export interface CompromisoFormValues {
   processId: string;
@@ -47,11 +49,33 @@ interface CompromisoFormDialogProps {
   people: CoordinationPerson[];
   meetings: Meeting[];
   submitting: boolean;
+  /** Error del backend; se conserva ante fallo (AC-031). */
   errorMessage: string | null;
   onSubmit: (values: CompromisoFormValues) => void;
 }
 
 const SIN_VALOR = '__none__';
+
+type FieldKey = 'processId' | 'title' | 'dueDate';
+type FieldErrors = Partial<Record<FieldKey, string>>;
+
+/** Id del formulario: el FormError lleva `com-form-error`. */
+const FORM_ID = 'com-form';
+
+/**
+ * Reglas del cliente, las mismas de siempre (proceso al crear, título y
+ * vencimiento), evaluadas todas a la vez (design §9).
+ */
+function validate(
+  values: Pick<CompromisoFormValues, FieldKey>,
+  isEdit: boolean,
+): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!isEdit && !values.processId) errors.processId = 'Selecciona un proceso.';
+  if (!values.title.trim()) errors.title = 'El título es obligatorio.';
+  if (!values.dueDate) errors.dueDate = 'El vencimiento es obligatorio.';
+  return errors;
+}
 
 export function CompromisoFormDialog({
   open,
@@ -73,11 +97,19 @@ export function CompromisoFormDialog({
   const [sourceMeetingId, setSourceMeetingId] = React.useState('');
   const [expectedResult, setExpectedResult] = React.useState('');
   const [blockers, setBlockers] = React.useState('');
-  const [clientError, setClientError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
+  const processRef = React.useRef<HTMLButtonElement>(null);
+  const titleRef = React.useRef<HTMLInputElement>(null);
+  const dueRef = React.useRef<HTMLInputElement>(null);
+  // Sin DialogTrigger, Radix no sabe a dónde devolver el foco al cerrar: vuelve
+  // al botón que abrió el diálogo («Nuevo compromiso» o «Editar»), NIT 4.
+  const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
+  // Inicializa al abrir. El reset solo ocurre aquí; ante fallo del POST/PATCH
+  // el padre mantiene el diálogo abierto con los valores (AC-031).
   React.useEffect(() => {
     if (!open) return;
-    setClientError(null);
+    setFieldErrors({});
     if (editing) {
       setProcessId(editing.processId);
       setTitle(editing.title);
@@ -100,21 +132,21 @@ export function CompromisoFormDialog({
     }
   }, [open, editing]);
 
+  function clearError(key: FieldKey) {
+    setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+  }
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!isEdit && !processId) {
-      setClientError('Selecciona un proceso.');
+    const errors = validate({ processId, title, dueDate }, isEdit);
+    setFieldErrors(errors);
+    if (errors.processId || errors.title || errors.dueDate) {
+      // Foco al primer campo con error, en orden del DOM.
+      if (errors.processId) processRef.current?.focus();
+      else if (errors.title) titleRef.current?.focus();
+      else dueRef.current?.focus();
       return;
     }
-    if (!title.trim()) {
-      setClientError('El titulo es obligatorio.');
-      return;
-    }
-    if (!dueDate) {
-      setClientError('El vencimiento es obligatorio.');
-      return;
-    }
-    setClientError(null);
     onSubmit({
       processId,
       title,
@@ -127,158 +159,157 @@ export function CompromisoFormDialog({
     });
   }
 
+  // Sin códigos internos visibles (design §13.1).
   const processName = (id: string) =>
-    processes.find((p) => p.id === id)?.name ?? id;
+    processes.find((p) => p.id === id)?.name ?? 'Proceso fuera de tu alcance';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        size="md"
+        onOpenAutoFocus={captureTrigger}
+        onCloseAutoFocus={handleCloseAutoFocus}
+      >
         <DialogHeader>
-          <DialogTitle>
-            {isEdit ? 'Editar compromiso' : 'Nuevo compromiso'}
-          </DialogTitle>
+          <DialogTitle>{isEdit ? 'Editar compromiso' : 'Nuevo compromiso'}</DialogTitle>
           <DialogDescription>
-            Un compromiso tiene vencimiento. La reunion fuente es opcional y solo
-            relaciona; no se crea automaticamente desde reuniones.
+            Un compromiso tiene vencimiento. La reunión de origen es opcional y solo relaciona; no
+            se crea automáticamente desde reuniones.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="com-process">Proceso *</Label>
-            {isEdit ? (
-              <Input
-                id="com-process"
-                readOnly
-                disabled
-                value={processName(processId)}
-              />
-            ) : (
-              <Select value={processId} onValueChange={setProcessId}>
-                <SelectTrigger id="com-process">
-                  <SelectValue placeholder="Selecciona un proceso" />
-                </SelectTrigger>
-                <SelectContent>
-                  {processes.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="com-title">Titulo *</Label>
-            <Input
-              id="com-title"
-              value={title}
-              placeholder="Que se compromete"
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="com-due">Vencimiento *</Label>
-            <Input
-              id="com-due"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="com-assigned">Asignado</Label>
-              <Select
-                value={assignedUserId || SIN_VALOR}
-                onValueChange={(v) =>
-                  setAssignedUserId(v === SIN_VALOR ? '' : v)
-                }
-              >
-                <SelectTrigger id="com-assigned">
-                  <SelectValue placeholder="Sin asignar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SIN_VALOR}>Sin asignar</SelectItem>
-                  {people.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="com-responsible">Responsable</Label>
-              <Select
-                value={responsibleUserId || SIN_VALOR}
-                onValueChange={(v) =>
-                  setResponsibleUserId(v === SIN_VALOR ? '' : v)
-                }
-              >
-                <SelectTrigger id="com-responsible">
-                  <SelectValue placeholder="Sin responsable" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SIN_VALOR}>Sin responsable</SelectItem>
-                  {people.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="com-meeting">Reunion fuente</Label>
-            <Select
-              value={sourceMeetingId || SIN_VALOR}
-              onValueChange={(v) =>
-                setSourceMeetingId(v === SIN_VALOR ? '' : v)
+        <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <DialogBody className="grid gap-4">
+            <RequiredHint />
+            <Field id="com-process" label="Proceso" required={!isEdit} error={fieldErrors.processId}>
+              {(control) =>
+                isEdit ? (
+                  <Input {...control} readOnly disabled value={processName(processId)} />
+                ) : (
+                  <Select
+                    value={processId}
+                    onValueChange={(value) => {
+                      setProcessId(value);
+                      clearError('processId');
+                    }}
+                  >
+                    <SelectTrigger ref={processRef} {...control}>
+                      <SelectValue placeholder="Selecciona un proceso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {processes.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )
               }
-            >
-              <SelectTrigger id="com-meeting">
-                <SelectValue placeholder="Sin reunion" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={SIN_VALOR}>Sin reunion</SelectItem>
-                {meetings.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.title} ({m.meetingDate})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="com-result">Resultado esperado</Label>
-            <Textarea
-              id="com-result"
-              value={expectedResult}
-              onChange={(e) => setExpectedResult(e.target.value)}
-            />
-          </div>
+            <Field id="com-title" label="Título" required error={fieldErrors.title}>
+              <Input
+                ref={titleRef}
+                value={title}
+                placeholder="Qué se compromete"
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  clearError('title');
+                }}
+              />
+            </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="com-blockers">Bloqueos</Label>
-            <Textarea
-              id="com-blockers"
-              value={blockers}
-              onChange={(e) => setBlockers(e.target.value)}
-            />
-          </div>
+            <Field id="com-due" label="Vencimiento" required error={fieldErrors.dueDate}>
+              <Input
+                ref={dueRef}
+                type="date"
+                value={dueDate}
+                className="sm:max-w-[calc(50%-0.5rem)]"
+                onChange={(e) => {
+                  setDueDate(e.target.value);
+                  clearError('dueDate');
+                }}
+              />
+            </Field>
 
-          {clientError || errorMessage ? (
-            <p className="text-sm text-destructive" role="alert">
-              {clientError ?? errorMessage}
-            </p>
-          ) : null}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="com-assigned" label="Asignado">
+                {(control) => (
+                  <Select
+                    value={assignedUserId || SIN_VALOR}
+                    onValueChange={(v) => setAssignedUserId(v === SIN_VALOR ? '' : v)}
+                  >
+                    <SelectTrigger {...control}>
+                      <SelectValue placeholder="Sin asignar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SIN_VALOR}>Sin asignar</SelectItem>
+                      {people.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </Field>
+              <Field id="com-responsible" label="Responsable">
+                {(control) => (
+                  <Select
+                    value={responsibleUserId || SIN_VALOR}
+                    onValueChange={(v) => setResponsibleUserId(v === SIN_VALOR ? '' : v)}
+                  >
+                    <SelectTrigger {...control}>
+                      <SelectValue placeholder="Sin responsable" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SIN_VALOR}>Sin responsable</SelectItem>
+                      {people.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </Field>
+            </div>
+
+            <Field id="com-meeting" label="Reunión de origen">
+              {(control) => (
+                <Select
+                  value={sourceMeetingId || SIN_VALOR}
+                  onValueChange={(v) => setSourceMeetingId(v === SIN_VALOR ? '' : v)}
+                >
+                  <SelectTrigger {...control}>
+                    <SelectValue placeholder="Sin reunión" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SIN_VALOR}>Sin reunión</SelectItem>
+                    {meetings.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {`${m.title} (${formatDateOnly(m.meetingDate)})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
+
+            <Field id="com-result" label="Resultado esperado">
+              <Textarea
+                value={expectedResult}
+                onChange={(e) => setExpectedResult(e.target.value)}
+              />
+            </Field>
+
+            <Field id="com-blockers" label="Bloqueos">
+              <Textarea value={blockers} onChange={(e) => setBlockers(e.target.value)} />
+            </Field>
+
+            <FormError id={FORM_ID} message={errorMessage} />
+          </DialogBody>
 
           <DialogFooter>
             <Button
@@ -289,12 +320,8 @@ export function CompromisoFormDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting
-                ? 'Guardando...'
-                : isEdit
-                  ? 'Guardar cambios'
-                  : 'Crear compromiso'}
+            <Button type="submit" loading={submitting}>
+              {submitting ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear compromiso'}
             </Button>
           </DialogFooter>
         </form>

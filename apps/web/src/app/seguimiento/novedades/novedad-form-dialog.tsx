@@ -1,9 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import { useDialogReturnFocus } from '@/components/confirm-dialog';
+import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -11,7 +14,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -43,18 +45,19 @@ export interface NovedadFormValues {
 interface NovedadFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Novedad en edicion; un registro por incidente (PATCH, AC-019). */
+  /** Novedad en edición; un registro por incidente (PATCH, AC-019). */
   editing?: Issue | null;
   processes: Process[];
   people: CoordinationPerson[];
   submitting: boolean;
+  /** Error del backend; se conserva ante fallo (AC-031). */
   errorMessage: string | null;
   onSubmit: (values: NovedadFormValues) => void;
 }
 
 type IssueTypeValue = NonNullable<IssueType>;
 
-const TYPES: { value: IssueTypeValue; label: string }[] = [
+export const ISSUE_TYPES: { value: IssueTypeValue; label: string }[] = [
   { value: 'BLOQUEO', label: 'Bloqueo' },
   { value: 'INCIDENTE', label: 'Incidente' },
   { value: 'CALIDAD_DATOS', label: 'Calidad de datos' },
@@ -62,6 +65,27 @@ const TYPES: { value: IssueTypeValue; label: string }[] = [
 ];
 
 const SIN_VALOR = '__none__';
+
+type FieldKey = 'processId' | 'date' | 'title';
+type FieldErrors = Partial<Record<FieldKey, string>>;
+
+/** Id del formulario: el FormError lleva `nov-form-error`. */
+const FORM_ID = 'nov-form';
+
+/**
+ * Reglas del cliente, las mismas de siempre (proceso y fecha al crear, título),
+ * evaluadas todas a la vez (design §9).
+ */
+function validate(
+  values: Pick<NovedadFormValues, 'processId' | 'date' | 'title'>,
+  isEdit: boolean,
+): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!isEdit && !values.processId) errors.processId = 'Selecciona un proceso.';
+  if (!isEdit && !values.date) errors.date = 'La fecha es obligatoria.';
+  if (!values.title.trim()) errors.title = 'El título es obligatorio.';
+  return errors;
+}
 
 export function NovedadFormDialog({
   open,
@@ -83,11 +107,19 @@ export function NovedadFormDialog({
   const [resolverUserId, setResolverUserId] = React.useState('');
   const [targetDate, setTargetDate] = React.useState('');
   const [resolution, setResolution] = React.useState('');
-  const [clientError, setClientError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
+  const processRef = React.useRef<HTMLButtonElement>(null);
+  const dateRef = React.useRef<HTMLInputElement>(null);
+  const titleRef = React.useRef<HTMLInputElement>(null);
+  // Sin DialogTrigger, Radix no sabe a dónde devolver el foco al cerrar: vuelve
+  // al botón que abrió el diálogo («Nueva novedad» o «Editar»), NIT 4.
+  const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
+  // Inicializa al abrir. El reset solo ocurre aquí; ante fallo del POST/PATCH
+  // el padre mantiene el diálogo abierto con los valores (AC-031).
   React.useEffect(() => {
     if (!open) return;
-    setClientError(null);
+    setFieldErrors({});
     if (editing) {
       setProcessId(editing.processId);
       setDate(editing.date);
@@ -112,21 +144,21 @@ export function NovedadFormDialog({
     }
   }, [open, editing]);
 
+  function clearError(key: FieldKey) {
+    setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+  }
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!isEdit && !processId) {
-      setClientError('Selecciona un proceso.');
+    const errors = validate({ processId, date, title }, isEdit);
+    setFieldErrors(errors);
+    if (errors.processId || errors.date || errors.title) {
+      // Foco al primer campo con error, en orden del DOM.
+      if (errors.processId) processRef.current?.focus();
+      else if (errors.date) dateRef.current?.focus();
+      else titleRef.current?.focus();
       return;
     }
-    if (!isEdit && !date) {
-      setClientError('La fecha es obligatoria.');
-      return;
-    }
-    if (!title.trim()) {
-      setClientError('El titulo es obligatorio.');
-      return;
-    }
-    setClientError(null);
     onSubmit({
       processId,
       date,
@@ -140,154 +172,150 @@ export function NovedadFormDialog({
     });
   }
 
+  // Sin códigos internos visibles (design §13.1).
   const processName = (id: string) =>
-    processes.find((p) => p.id === id)?.name ?? id;
+    processes.find((p) => p.id === id)?.name ?? 'Proceso fuera de tu alcance';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        size="md"
+        onOpenAutoFocus={captureTrigger}
+        onCloseAutoFocus={handleCloseAutoFocus}
+      >
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Editar novedad' : 'Nueva novedad'}</DialogTitle>
           <DialogDescription>
-            Cada incidente es un solo registro que se actualiza hasta
-            resolverlo. El tipo por defecto es Bloqueo.
+            Cada incidente es un solo registro que se actualiza hasta resolverlo. El tipo por
+            defecto es Bloqueo.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="nov-process">Proceso *</Label>
-            {isEdit ? (
+        <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <DialogBody className="grid gap-4">
+            <RequiredHint />
+            <Field id="nov-process" label="Proceso" required={!isEdit} error={fieldErrors.processId}>
+              {(control) =>
+                isEdit ? (
+                  <Input {...control} readOnly disabled value={processName(processId)} />
+                ) : (
+                  <Select
+                    value={processId}
+                    onValueChange={(value) => {
+                      setProcessId(value);
+                      clearError('processId');
+                    }}
+                  >
+                    <SelectTrigger ref={processRef} {...control}>
+                      <SelectValue placeholder="Selecciona un proceso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {processes.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )
+              }
+            </Field>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="nov-date" label="Fecha" required={!isEdit} error={fieldErrors.date}>
+                <Input
+                  ref={dateRef}
+                  type="date"
+                  value={date}
+                  readOnly={isEdit}
+                  disabled={isEdit}
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    clearError('date');
+                  }}
+                />
+              </Field>
+              <Field id="nov-type" label="Tipo">
+                {(control) => (
+                  <Select
+                    value={typeCode}
+                    onValueChange={(v) => setTypeCode(v as IssueTypeValue)}
+                  >
+                    <SelectTrigger {...control}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ISSUE_TYPES.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </Field>
+            </div>
+
+            <Field id="nov-title" label="Título" required error={fieldErrors.title}>
               <Input
-                id="nov-process"
-                readOnly
-                disabled
-                value={processName(processId)}
+                ref={titleRef}
+                value={title}
+                placeholder="Resumen del incidente"
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  clearError('title');
+                }}
               />
-            ) : (
-              <Select value={processId} onValueChange={setProcessId}>
-                <SelectTrigger id="nov-process">
-                  <SelectValue placeholder="Selecciona un proceso" />
-                </SelectTrigger>
-                <SelectContent>
-                  {processes.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+            </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="nov-date">Fecha *</Label>
-              <Input
-                id="nov-date"
-                type="date"
-                value={date}
-                readOnly={isEdit}
-                disabled={isEdit}
-                onChange={(e) => setDate(e.target.value)}
+            <Field id="nov-detail" label="Detalle">
+              <Textarea value={detail} onChange={(e) => setDetail(e.target.value)} />
+            </Field>
+
+            <Field id="nov-impact" label="Impacto">
+              <Textarea value={impact} onChange={(e) => setImpact(e.target.value)} />
+            </Field>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="nov-resolver" label="Responsable">
+                {(control) => (
+                  <Select
+                    value={resolverUserId || SIN_VALOR}
+                    onValueChange={(v) => setResolverUserId(v === SIN_VALOR ? '' : v)}
+                  >
+                    <SelectTrigger {...control}>
+                      <SelectValue placeholder="Sin asignar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SIN_VALOR}>Sin asignar</SelectItem>
+                      {people.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </Field>
+              <Field id="nov-target" label="Fecha objetivo">
+                <Input
+                  type="date"
+                  value={targetDate}
+                  onChange={(e) => setTargetDate(e.target.value)}
+                />
+              </Field>
+            </div>
+
+            <Field id="nov-resolution" label="Resolución">
+              <Textarea
+                value={resolution}
+                placeholder="Cómo se resolvió (al cerrar)"
+                onChange={(e) => setResolution(e.target.value)}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="nov-type">Tipo</Label>
-              <Select
-                value={typeCode}
-                onValueChange={(v) => setTypeCode(v as IssueTypeValue)}
-              >
-                <SelectTrigger id="nov-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="nov-title">Titulo *</Label>
-            <Input
-              id="nov-title"
-              value={title}
-              placeholder="Resumen del incidente"
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="nov-detail">Detalle</Label>
-            <Textarea
-              id="nov-detail"
-              value={detail}
-              onChange={(e) => setDetail(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="nov-impact">Impacto</Label>
-            <Textarea
-              id="nov-impact"
-              value={impact}
-              onChange={(e) => setImpact(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="nov-resolver">Responsable</Label>
-              <Select
-                value={resolverUserId || SIN_VALOR}
-                onValueChange={(v) =>
-                  setResolverUserId(v === SIN_VALOR ? '' : v)
-                }
-              >
-                <SelectTrigger id="nov-resolver">
-                  <SelectValue placeholder="Sin asignar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SIN_VALOR}>Sin asignar</SelectItem>
-                  {people.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="nov-target">Fecha objetivo</Label>
-              <Input
-                id="nov-target"
-                type="date"
-                value={targetDate}
-                onChange={(e) => setTargetDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="nov-resolution">Resolucion</Label>
-            <Textarea
-              id="nov-resolution"
-              value={resolution}
-              placeholder="Como se resolvio (al cerrar)"
-              onChange={(e) => setResolution(e.target.value)}
-            />
-          </div>
-
-          {clientError || errorMessage ? (
-            <p className="text-sm text-destructive" role="alert">
-              {clientError ?? errorMessage}
-            </p>
-          ) : null}
+            <FormError id={FORM_ID} message={errorMessage} />
+          </DialogBody>
 
           <DialogFooter>
             <Button
@@ -298,12 +326,8 @@ export function NovedadFormDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting
-                ? 'Guardando...'
-                : isEdit
-                  ? 'Guardar cambios'
-                  : 'Crear novedad'}
+            <Button type="submit" loading={submitting}>
+              {submitting ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear novedad'}
             </Button>
           </DialogFooter>
         </form>

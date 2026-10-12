@@ -1,9 +1,13 @@
 'use client';
 
 import * as React from 'react';
+import { useDialogReturnFocus } from '@/components/confirm-dialog';
+import { Field, FieldSet, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -11,7 +15,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -42,11 +45,36 @@ interface ReunionFormDialogProps {
   processes: Process[];
   people: CoordinationPerson[];
   submitting: boolean;
+  /** Error del backend; se conserva ante fallo (AC-031). */
   errorMessage: string | null;
   onSubmit: (values: ReunionFormValues) => void;
 }
 
 const SIN_VALOR = '__none__';
+
+type FieldKey = 'processId' | 'title' | 'meetingDate' | 'meetingTime';
+type FieldErrors = Partial<Record<FieldKey, string>>;
+
+/** Id del formulario: el FormError lleva `reu-form-error`. */
+const FORM_ID = 'reu-form';
+
+/**
+ * Reglas del cliente, las mismas de siempre (proceso al crear, título, fecha y
+ * hora HH:mm), evaluadas todas a la vez (design §9).
+ */
+function validate(
+  values: Pick<ReunionFormValues, FieldKey>,
+  isEdit: boolean,
+): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!isEdit && !values.processId) errors.processId = 'Selecciona un proceso.';
+  if (!values.title.trim()) errors.title = 'El título es obligatorio.';
+  if (!values.meetingDate) errors.meetingDate = 'La fecha es obligatoria.';
+  if (values.meetingTime && !/^\d{2}:\d{2}$/.test(values.meetingTime)) {
+    errors.meetingTime = 'La hora debe tener formato HH:mm.';
+  }
+  return errors;
+}
 
 export function ReunionFormDialog({
   open,
@@ -63,18 +91,25 @@ export function ReunionFormDialog({
   const [title, setTitle] = React.useState('');
   const [meetingDate, setMeetingDate] = React.useState('');
   const [meetingTime, setMeetingTime] = React.useState('');
-  const [participantUserIds, setParticipantUserIds] = React.useState<string[]>(
-    [],
-  );
+  const [participantUserIds, setParticipantUserIds] = React.useState<string[]>([]);
   const [responsibleUserId, setResponsibleUserId] = React.useState('');
   const [agenda, setAgenda] = React.useState('');
   const [decisions, setDecisions] = React.useState('');
   const [notes, setNotes] = React.useState('');
-  const [clientError, setClientError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
+  const processRef = React.useRef<HTMLButtonElement>(null);
+  const titleRef = React.useRef<HTMLInputElement>(null);
+  const dateRef = React.useRef<HTMLInputElement>(null);
+  const timeRef = React.useRef<HTMLInputElement>(null);
+  // Sin DialogTrigger, Radix no sabe a dónde devolver el foco al cerrar: vuelve
+  // al botón que abrió el diálogo («Nueva reunión» o «Editar»), NIT 4.
+  const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
+  // Inicializa al abrir. El reset solo ocurre aquí; ante fallo del POST/PATCH
+  // el padre mantiene el diálogo abierto con los valores (AC-031).
   React.useEffect(() => {
     if (!open) return;
-    setClientError(null);
+    setFieldErrors({});
     if (editing) {
       setProcessId(editing.processId);
       setTitle(editing.title);
@@ -99,6 +134,10 @@ export function ReunionFormDialog({
     }
   }, [open, editing]);
 
+  function clearError(key: FieldKey) {
+    setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+  }
+
   function toggleParticipant(id: string) {
     setParticipantUserIds((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
@@ -107,23 +146,16 @@ export function ReunionFormDialog({
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!isEdit && !processId) {
-      setClientError('Selecciona un proceso.');
+    const errors = validate({ processId, title, meetingDate, meetingTime }, isEdit);
+    setFieldErrors(errors);
+    if (errors.processId || errors.title || errors.meetingDate || errors.meetingTime) {
+      // Foco al primer campo con error, en orden del DOM.
+      if (errors.processId) processRef.current?.focus();
+      else if (errors.title) titleRef.current?.focus();
+      else if (errors.meetingDate) dateRef.current?.focus();
+      else timeRef.current?.focus();
       return;
     }
-    if (!title.trim()) {
-      setClientError('El titulo es obligatorio.');
-      return;
-    }
-    if (!meetingDate) {
-      setClientError('La fecha es obligatoria.');
-      return;
-    }
-    if (meetingTime && !/^\d{2}:\d{2}$/.test(meetingTime)) {
-      setClientError('La hora debe tener formato HH:mm.');
-      return;
-    }
-    setClientError(null);
     onSubmit({
       processId,
       title,
@@ -137,160 +169,148 @@ export function ReunionFormDialog({
     });
   }
 
+  // Sin códigos internos visibles (design §13.1).
   const processName = (id: string) =>
-    processes.find((p) => p.id === id)?.name ?? id;
+    processes.find((p) => p.id === id)?.name ?? 'Proceso fuera de tu alcance';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        size="md"
+        onOpenAutoFocus={captureTrigger}
+        onCloseAutoFocus={handleCloseAutoFocus}
+      >
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Editar reunion' : 'Nueva reunion'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Editar reunión' : 'Nueva reunión'}</DialogTitle>
           <DialogDescription>
-            Registra la reunion y sus participantes. La reunion inicia en estado
-            Borrador.
+            Registra la reunión y sus participantes. La reunión inicia en estado Borrador.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="reu-process">Proceso *</Label>
-            {isEdit ? (
-              <Input
-                id="reu-process"
-                readOnly
-                disabled
-                value={processName(processId)}
-              />
-            ) : (
-              <Select value={processId} onValueChange={setProcessId}>
-                <SelectTrigger id="reu-process">
-                  <SelectValue placeholder="Selecciona un proceso" />
-                </SelectTrigger>
-                <SelectContent>
-                  {processes.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="reu-title">Titulo *</Label>
-            <Input
-              id="reu-title"
-              value={title}
-              placeholder="Asunto de la reunion"
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="reu-date">Fecha *</Label>
-              <Input
-                id="reu-date"
-                type="date"
-                value={meetingDate}
-                onChange={(e) => setMeetingDate(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="reu-time">Hora (HH:mm)</Label>
-              <Input
-                id="reu-time"
-                type="time"
-                value={meetingTime}
-                onChange={(e) => setMeetingTime(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="reu-responsible">Responsable</Label>
-            <Select
-              value={responsibleUserId || SIN_VALOR}
-              onValueChange={(v) =>
-                setResponsibleUserId(v === SIN_VALOR ? '' : v)
+        <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <DialogBody className="grid gap-4">
+            <RequiredHint />
+            <Field id="reu-process" label="Proceso" required={!isEdit} error={fieldErrors.processId}>
+              {(control) =>
+                isEdit ? (
+                  <Input {...control} readOnly disabled value={processName(processId)} />
+                ) : (
+                  <Select
+                    value={processId}
+                    onValueChange={(value) => {
+                      setProcessId(value);
+                      clearError('processId');
+                    }}
+                  >
+                    <SelectTrigger ref={processRef} {...control}>
+                      <SelectValue placeholder="Selecciona un proceso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {processes.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )
               }
-            >
-              <SelectTrigger id="reu-responsible">
-                <SelectValue placeholder="Sin responsable" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={SIN_VALOR}>Sin responsable</SelectItem>
-                {people.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            </Field>
 
-          <div className="grid gap-2">
-            <span className="text-sm font-medium">Participantes</span>
-            {people.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                No hay personas en tu alcance para agregar.
-              </p>
-            ) : (
-              <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-md border p-2">
-                {people.map((p) => {
-                  const checked = participantUserIds.includes(p.id);
-                  return (
-                    <label
-                      key={p.id}
-                      className="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-muted/50"
-                    >
-                      <input
-                        type="checkbox"
-                        className="size-4"
-                        checked={checked}
-                        onChange={() => toggleParticipant(p.id)}
-                      />
-                      <span>{p.name}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+            <Field id="reu-title" label="Título" required error={fieldErrors.title}>
+              <Input
+                ref={titleRef}
+                value={title}
+                placeholder="Asunto de la reunión"
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  clearError('title');
+                }}
+              />
+            </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="reu-agenda">Agenda</Label>
-            <Textarea
-              id="reu-agenda"
-              value={agenda}
-              onChange={(e) => setAgenda(e.target.value)}
-            />
-          </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="reu-date" label="Fecha" required error={fieldErrors.meetingDate}>
+                <Input
+                  ref={dateRef}
+                  type="date"
+                  value={meetingDate}
+                  onChange={(e) => {
+                    setMeetingDate(e.target.value);
+                    clearError('meetingDate');
+                  }}
+                />
+              </Field>
+              <Field id="reu-time" label="Hora (HH:mm)" error={fieldErrors.meetingTime}>
+                <Input
+                  ref={timeRef}
+                  type="time"
+                  value={meetingTime}
+                  onChange={(e) => {
+                    setMeetingTime(e.target.value);
+                    clearError('meetingTime');
+                  }}
+                />
+              </Field>
+            </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="reu-decisions">Decisiones</Label>
-            <Textarea
-              id="reu-decisions"
-              value={decisions}
-              onChange={(e) => setDecisions(e.target.value)}
-            />
-          </div>
+            <Field id="reu-responsible" label="Responsable">
+              {(control) => (
+                <Select
+                  value={responsibleUserId || SIN_VALOR}
+                  onValueChange={(v) => setResponsibleUserId(v === SIN_VALOR ? '' : v)}
+                >
+                  <SelectTrigger {...control}>
+                    <SelectValue placeholder="Sin responsable" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SIN_VALOR}>Sin responsable</SelectItem>
+                    {people.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="reu-notes">Observaciones</Label>
-            <Textarea
-              id="reu-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
+            <FieldSet id="reu-participants" legend="Participantes" kind="checkbox">
+              {people.length === 0 ? (
+                <p className="text-meta text-muted-foreground">
+                  No hay personas en tu alcance para agregar.
+                </p>
+              ) : (
+                <ul className="flex max-h-48 flex-col overflow-y-auto rounded-md border px-2 py-1">
+                  {people.map((p) => (
+                    <li key={p.id}>
+                      <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={participantUserIds.includes(p.id)}
+                          onChange={() => toggleParticipant(p.id)}
+                        />
+                        <span>{p.name}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </FieldSet>
 
-          {clientError || errorMessage ? (
-            <p className="text-sm text-destructive" role="alert">
-              {clientError ?? errorMessage}
-            </p>
-          ) : null}
+            <Field id="reu-agenda" label="Agenda">
+              <Textarea value={agenda} onChange={(e) => setAgenda(e.target.value)} />
+            </Field>
+
+            <Field id="reu-decisions" label="Decisiones">
+              <Textarea value={decisions} onChange={(e) => setDecisions(e.target.value)} />
+            </Field>
+
+            <Field id="reu-notes" label="Observaciones">
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </Field>
+
+            <FormError id={FORM_ID} message={errorMessage} />
+          </DialogBody>
 
           <DialogFooter>
             <Button
@@ -301,12 +321,8 @@ export function ReunionFormDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting
-                ? 'Guardando...'
-                : isEdit
-                  ? 'Guardar cambios'
-                  : 'Crear reunion'}
+            <Button type="submit" loading={submitting}>
+              {submitting ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear reunión'}
             </Button>
           </DialogFooter>
         </form>

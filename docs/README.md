@@ -332,6 +332,20 @@ defecto de la plantilla.
   errores a la vez; las reglas que combinan campos (planificada: proyecto o
   tarea; extraordinaria: solicitante y justificación) van en `FormError` y
   marcan solo los campos que las incumplen.
+- Coordinación: Novedades (`/seguimiento/novedades`), Reuniones
+  (`/seguimiento/reuniones`) y Compromisos (`/seguimiento/compromisos`) usan
+  el mismo maestro‑detalle. La ficha es una `Card` con el título en `h2`, el
+  estado (`StatusBadge kind="record"`), los metadatos y una `DescriptionList`.
+  Novedades y Compromisos agrupan sus transiciones bajo «Cambiar estado a:»
+  (`role="group"`), un botón por destino de `nextStates` sin cambios; tras
+  una transición, si el foco se perdió, pasa al encabezado del detalle.
+  Eliminar una reunión pide confirmación (§13.3) y el foco va al encabezado de
+  la reunión que quede seleccionada o al título de la lista. Los tres
+  diálogos (`nov-*`, `reu-*`, `com-*`, mismos ids) muestran todos los errores
+  a la vez y, al cerrarse, devuelven el foco al botón que los abrió con
+  `useDialogReturnFocus` (sin `DialogTrigger`, Radix lo dejaría en `body`).
+  Si un proceso, una persona o una reunión no vienen en las listas del alcance
+  del actor, se muestra «… fuera de tu alcance» en vez del id.
 - Shell y navegación: `components/app-shell.tsx` monta «Saltar al contenido»
   (primer enfocable, lleva a `main#contenido`), el menú lateral
   (`app-sidebar.tsx`) y, por debajo de 1024 px, una barra superior con el menú

@@ -1,12 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
+import { DescriptionList } from '@/components/description-list';
+import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
+import { MasterDetail, SelectableList } from '@/components/master-detail';
+import { PageHeader } from '@/components/page-header';
+import { PageLayout } from '@/components/page-layout';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type {
   Commitment,
@@ -22,6 +27,7 @@ import {
   transitionCommitment,
   updateCommitment,
 } from '@/lib/commitments';
+import { formatDateOnly } from '@/lib/format';
 import { listMeetings } from '@/lib/meetings';
 import { listCoordinationPeople } from '@/lib/worklog';
 import { listProcesses } from '@/lib/team';
@@ -36,7 +42,7 @@ type LoadState = 'loading' | 'success' | 'error';
 function messageOf(err: unknown): string {
   return err instanceof CommitmentError
     ? err.message
-    : 'Ocurrio un error inesperado.';
+    : 'Ocurrió un error inesperado. Inténtalo de nuevo.';
 }
 
 function trimOrUndefined(value: string): string | undefined {
@@ -44,12 +50,22 @@ function trimOrUndefined(value: string): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+/** Id del rótulo del grupo de transiciones (aria-labelledby). */
+const TRANSITIONS_LABEL_ID = 'com-transiciones';
+
+// Sin códigos internos visibles (design §13.1): si el proceso, la persona o la
+// reunión no vienen en las listas del alcance del actor, se nombra el caso.
+const OUT_OF_SCOPE_PROCESS = 'Proceso fuera de tu alcance';
+const OUT_OF_SCOPE_PERSON = 'Persona fuera de tu alcance';
+const OUT_OF_SCOPE_MEETING = 'Reunión fuera de tu alcance';
+
 export function CompromisosView(): React.ReactElement {
   const [commitments, setCommitments] = React.useState<Commitment[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
   const [meetings, setMeetings] = React.useState<Meeting[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
@@ -57,7 +73,12 @@ export function CompromisosView(): React.ReactElement {
   const [editing, setEditing] = React.useState<Commitment | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [transitioning, setTransitioning] = React.useState(false);
+  // Destino en curso: su botón muestra el spinner y los demás se deshabilitan.
+  const [transitioningTo, setTransitioningTo] = React.useState<RecordState | null>(null);
+
+  // Destino del foco: el encabezado del detalle (MasterDetail en <1024 px y
+  // tras una transición, cuando el botón pulsado desaparece; NIT 4).
+  const detailHeadingRef = React.useRef<HTMLHeadingElement>(null);
 
   const load = React.useCallback(async () => {
     setState('loading');
@@ -72,12 +93,15 @@ export function CompromisosView(): React.ReactElement {
       setProcesses(procs);
       setPeople(ppl);
       setMeetings(mts);
+      setLoadError(null);
       setState('success');
+      // Mantiene la selección si sigue existiendo; si no, toma el primero.
       setSelectedId((prev) => {
         if (prev && cmts.some((c) => c.id === prev)) return prev;
         return cmts[0]?.id ?? null;
       });
-    } catch {
+    } catch (err) {
+      setLoadError(err instanceof CommitmentError ? err.message : null);
       setState('error');
     }
   }, []);
@@ -92,18 +116,25 @@ export function CompromisosView(): React.ReactElement {
   );
 
   const processName = React.useCallback(
-    (id: string) => processes.find((p) => p.id === id)?.name ?? id,
+    (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS,
     [processes],
   );
   const personName = React.useCallback(
     (id: string | null) =>
-      id ? (people.find((p) => p.id === id)?.name ?? id) : '—',
+      id ? (people.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PERSON) : null,
     [people],
   );
   const meetingTitle = React.useCallback(
     (id: string | null) =>
-      id ? (meetings.find((m) => m.id === id)?.title ?? id) : '—',
+      id ? (meetings.find((m) => m.id === id)?.title ?? OUT_OF_SCOPE_MEETING) : null,
     [meetings],
+  );
+
+  /** «Vence {fecha} · proceso». */
+  const commitmentMeta = React.useCallback(
+    (commitment: Commitment) =>
+      `Vence ${formatDateOnly(commitment.dueDate)} · ${processName(commitment.processId)}`,
+    [processName],
   );
 
   function openCreate() {
@@ -159,190 +190,174 @@ export function CompromisosView(): React.ReactElement {
   }
 
   async function handleTransition(commitment: Commitment, toState: RecordState) {
-    setTransitioning(true);
+    setTransitioningTo(toState);
     try {
       await transitionCommitment(commitment.id, { toState });
       toast.success(`Compromiso movido a ${stateLabel(toState)}.`);
       await load();
+      // El botón pulsado ya no existe con el nuevo estado: el foco va al
+      // encabezado del detalle si se perdió (NIT 4).
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+        if (!active || active === document.body) detailHeadingRef.current?.focus();
+      });
     } catch (err) {
       toast.error(messageOf(err));
     } finally {
-      setTransitioning(false);
+      setTransitioningTo(null);
     }
   }
 
+  function renderDetail(): React.ReactNode {
+    if (state === 'loading' && !selected) {
+      return (
+        <Card aria-hidden="true" className="flex flex-col gap-4 p-4">
+          <Skeleton className="h-6 w-1/2" />
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </Card>
+      );
+    }
+    if (!selected) {
+      return (
+        <Card>
+          <EmptyState
+            title="Selecciona un compromiso para ver su detalle."
+            description="O crea uno nuevo para registrar un acuerdo con vencimiento."
+          />
+        </Card>
+      );
+    }
+    const targets = nextStates(selected.state);
+    return (
+      <Card>
+        <CardHeader className="gap-3 border-b sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2
+                ref={detailHeadingRef}
+                tabIndex={-1}
+                className="rounded-sm text-lg font-semibold wrap-break-word focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {selected.title}
+              </h2>
+              <StatusBadge kind="record" value={selected.state} />
+            </div>
+            <p className="text-meta text-muted-foreground">{commitmentMeta(selected)}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => openEdit(selected)}
+            >
+              Editar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6 pt-4">
+          <DescriptionList
+            columns={2}
+            items={[
+              { term: 'Asignado', value: personName(selected.assignedUserId) },
+              { term: 'Responsable', value: personName(selected.responsibleUserId) },
+              {
+                term: 'Reunión de origen',
+                value: meetingTitle(selected.sourceMeetingId),
+                span: 2,
+              },
+              { term: 'Resultado esperado', value: selected.expectedResult, span: 2 },
+              { term: 'Bloqueos', value: selected.blockers, span: 2 },
+            ]}
+          />
+
+          <div className="flex flex-col gap-2 border-t pt-4">
+            <h3 id={TRANSITIONS_LABEL_ID} className="text-sm font-semibold">
+              Cambiar estado a:
+            </h3>
+            {targets.length === 0 ? (
+              <p className="text-meta text-muted-foreground">
+                No hay transiciones disponibles desde este estado.
+              </p>
+            ) : (
+              <div
+                role="group"
+                aria-labelledby={TRANSITIONS_LABEL_ID}
+                className="flex flex-wrap gap-2"
+              >
+                {targets.map((to) => (
+                  <Button
+                    key={to}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    loading={transitioningTo === to}
+                    disabled={transitioningTo !== null}
+                    onClick={() => void handleTransition(selected, to)}
+                  >
+                    {stateLabel(to)}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Compromisos</h1>
-          <p className="text-sm text-muted-foreground">
-            Acuerdos con vencimiento y responsable. Puedes relacionarlos con una
-            reunion fuente.
-          </p>
-        </div>
-        <Button onClick={openCreate} disabled={state === 'loading'}>
-          <Plus aria-hidden="true" />
-          Nuevo compromiso
-        </Button>
-      </header>
+    <PageLayout>
+      <PageHeader
+        title="Compromisos"
+        description="Acuerdos con vencimiento y responsable. Puedes relacionarlos con una reunión de origen."
+        actions={
+          <Button type="button" onClick={openCreate} disabled={state === 'loading'}>
+            <Plus aria-hidden="true" />
+            Nuevo compromiso
+          </Button>
+        }
+      />
 
       {state === 'error' ? (
-        <div className="flex flex-col items-center gap-3 rounded-lg border bg-card p-10 text-center">
-          <p className="text-sm text-muted-foreground">
-            No fue posible cargar los compromisos.
-          </p>
-          <Button variant="outline" onClick={() => void load()}>
-            <RefreshCw aria-hidden="true" />
-            Reintentar
-          </Button>
+        <div className="rounded-lg border bg-card">
+          <ErrorState
+            title="No fue posible cargar los compromisos."
+            message={loadError}
+            onRetry={() => void load()}
+          />
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-          <section aria-labelledby="compromisos-heading" className="flex flex-col gap-3">
-            <h2
-              id="compromisos-heading"
-              className="text-lg font-semibold tracking-tight"
-            >
-              Lista
-            </h2>
-            <div className="rounded-lg border bg-card">
-              {state === 'loading' ? (
-                <div className="flex flex-col gap-3 p-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : commitments.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 p-8 text-center">
-                  <p className="text-sm font-medium">Aun no hay compromisos.</p>
-                  <Button variant="outline" size="sm" onClick={openCreate}>
+        <MasterDetail
+          listTitle="Compromisos"
+          detailHeadingRef={detailHeadingRef}
+          list={
+            <SelectableList
+              label="Compromisos"
+              loading={state === 'loading' && commitments.length === 0}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              items={commitments.map((commitment) => ({
+                id: commitment.id,
+                title: commitment.title,
+                meta: commitmentMeta(commitment),
+                badge: <StatusBadge kind="record" value={commitment.state} />,
+              }))}
+              empty={{
+                title: 'Aún no hay compromisos.',
+                description: 'Registra un acuerdo con su vencimiento y su responsable.',
+                action: (
+                  <Button type="button" variant="outline" size="sm" onClick={openCreate}>
                     <Plus aria-hidden="true" />
                     Nuevo compromiso
                   </Button>
-                </div>
-              ) : (
-                <ul className="divide-y">
-                  {commitments.map((commitment) => (
-                    <li key={commitment.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedId(commitment.id)}
-                        aria-current={commitment.id === selectedId}
-                        className={`flex w-full flex-col gap-1 p-3 text-left transition-colors hover:bg-muted/50 ${
-                          commitment.id === selectedId ? 'bg-muted' : ''
-                        }`}
-                      >
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="font-medium">{commitment.title}</span>
-                          <Badge variant="secondary">
-                            {stateLabel(commitment.state)}
-                          </Badge>
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          Vence {commitment.dueDate} ·{' '}
-                          {processName(commitment.processId)}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </section>
-
-          <section aria-label="Detalle del compromiso" className="flex flex-col gap-3">
-            {!selected ? (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-card p-10 text-center">
-                <p className="text-sm font-medium">Selecciona un compromiso.</p>
-                <p className="text-sm text-muted-foreground">
-                  O crea uno nuevo para registrar un acuerdo con vencimiento.
-                </p>
-              </div>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex flex-col gap-1">
-                      <CardTitle className="flex items-center gap-2">
-                        {selected.title}
-                        <Badge variant="secondary">
-                          {stateLabel(selected.state)}
-                        </Badge>
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Vence {selected.dueDate} ·{' '}
-                        {processName(selected.processId)}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEdit(selected)}
-                    >
-                      Editar
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                    <div>
-                      <dt className="text-muted-foreground">Asignado</dt>
-                      <dd>{personName(selected.assignedUserId)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Responsable</dt>
-                      <dd>{personName(selected.responsibleUserId)}</dd>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <dt className="text-muted-foreground">Reunion fuente</dt>
-                      <dd>{meetingTitle(selected.sourceMeetingId)}</dd>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <dt className="text-muted-foreground">
-                        Resultado esperado
-                      </dt>
-                      <dd className="whitespace-pre-wrap">
-                        {selected.expectedResult ?? '—'}
-                      </dd>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <dt className="text-muted-foreground">Bloqueos</dt>
-                      <dd className="whitespace-pre-wrap">
-                        {selected.blockers ?? '—'}
-                      </dd>
-                    </div>
-                  </dl>
-
-                  <Separator />
-
-                  <div className="flex flex-col gap-2">
-                    <h3 className="text-sm font-semibold">Cambiar estado</h3>
-                    {nextStates(selected.state).length === 0 ? (
-                      <p className="text-xs text-muted-foreground">
-                        No hay transiciones disponibles desde este estado.
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {nextStates(selected.state).map((to) => (
-                          <Button
-                            key={to}
-                            variant="outline"
-                            size="sm"
-                            disabled={transitioning}
-                            onClick={() => void handleTransition(selected, to)}
-                          >
-                            {stateLabel(to)}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </section>
-        </div>
+                ),
+              }}
+            />
+          }
+          detail={renderDetail()}
+        />
       )}
 
       <CompromisoFormDialog
@@ -362,6 +377,6 @@ export function CompromisosView(): React.ReactElement {
         errorMessage={formError}
         onSubmit={handleSubmit}
       />
-    </div>
+    </PageLayout>
   );
 }
