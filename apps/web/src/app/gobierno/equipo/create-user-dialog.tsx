@@ -1,9 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import { useDialogReturnFocus } from '@/components/confirm-dialog';
+import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -11,113 +14,130 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface CreateUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   submitting: boolean;
-  /** Devuelve true si la creacion fue exitosa (el formulario se limpia). */
+  /** Error del backend (p. ej. identificador duplicado); el padre lo limpia al abrir. */
+  errorMessage: string | null;
+  /** Devuelve true si la creación fue exitosa (el formulario se limpia). */
   onSubmit: (input: { identifier: string; name: string }) => Promise<boolean>;
 }
 
+const FORM_ID = 'user-form';
+const FORM_ERROR_ID = `${FORM_ID}-error`;
 const EMPTY = { identifier: '', name: '' };
+const NO_MISSING = { identifier: false, name: false };
 
+/**
+ * Nuevo usuario (design §11.21), diálogo sm. «Identificador y nombre son
+ * obligatorios.» es una regla de dos campos: va en FormError y marca solo los
+ * campos vacíos (NIT 6b).
+ */
 export function CreateUserDialog({
   open,
   onOpenChange,
   submitting,
+  errorMessage,
   onSubmit,
 }: CreateUserDialogProps): React.ReactElement {
   const [values, setValues] = React.useState(EMPTY);
-  const [error, setError] = React.useState<string | null>(null);
+  const [missing, setMissing] = React.useState(NO_MISSING);
   const identifierRef = React.useRef<HTMLInputElement>(null);
+  const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
-  async function handleSubmit(event: React.FormEvent) {
+  const ruleError =
+    missing.identifier || missing.name ? 'Identificador y nombre son obligatorios.' : null;
+
+  function update(key: 'identifier' | 'name', value: string): void {
+    setValues((v) => ({ ...v, [key]: value }));
+    // El campo deja de marcarse al editarlo; la regla, cuando ninguno queda marcado.
+    setMissing((prev) => (prev[key] ? { ...prev, [key]: false } : prev));
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    if (submitting) return;
     const identifier = values.identifier.trim();
     const name = values.name.trim();
-    if (!identifier || !name) {
-      // AC-031: no se limpia; se marca el error y se conserva lo ingresado.
-      setError('Identificador y nombre son obligatorios.');
+    const next = { identifier: !identifier, name: !name };
+    setMissing(next);
+    if (next.identifier || next.name) {
+      // No se limpia: se conserva lo escrito y el foco vuelve al identificador.
       identifierRef.current?.focus();
       return;
     }
-    setError(null);
     const ok = await onSubmit({ identifier, name });
     if (ok) {
-      // Reset solo en exito.
+      // Reinicio solo tras el éxito.
       setValues(EMPTY);
     } else {
-      // AC-031: en error se conservan los valores y se mantiene el foco.
+      // Ante un error se conservan los valores y el foco vuelve al identificador.
       identifierRef.current?.focus();
     }
   }
 
+  function handleOpenChange(next: boolean): void {
+    if (!next && submitting) return;
+    // Al cerrar se limpia; al reabrir parte de cero.
+    if (!next) {
+      setValues(EMPTY);
+      setMissing(NO_MISSING);
+    }
+    onOpenChange(next);
+  }
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        // Al cerrar manualmente se limpia; al reabrir parte de cero.
-        if (!next) {
-          setValues(EMPTY);
-          setError(null);
-        }
-        onOpenChange(next);
-      }}
-    >
-      <DialogContent>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent size="sm" onOpenAutoFocus={captureTrigger} onCloseAutoFocus={handleCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>Nuevo usuario</DialogTitle>
-          <DialogDescription>
-            Registra una identidad funcional del area.
-          </DialogDescription>
+          <DialogDescription>Registra una identidad funcional del área.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="user-identifier">Identificador</Label>
-            <Input
-              id="user-identifier"
-              ref={identifierRef}
-              value={values.identifier}
-              placeholder="persona@demo.local"
-              autoComplete="off"
-              onChange={(e) =>
-                setValues((v) => ({ ...v, identifier: e.target.value }))
-              }
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="user-name">Nombre</Label>
-            <Input
-              id="user-name"
-              value={values.name}
-              placeholder="Persona Demo"
-              onChange={(e) =>
-                setValues((v) => ({ ...v, name: e.target.value }))
-              }
-            />
-          </div>
-
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
+        <form
+          id={FORM_ID}
+          noValidate
+          onSubmit={(event) => void handleSubmit(event)}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <DialogBody className="grid gap-4">
+            <RequiredHint />
+            <Field id="user-identifier" label="Identificador" required>
+              <Input
+                ref={identifierRef}
+                value={values.identifier}
+                placeholder="persona@demo.local"
+                autoComplete="off"
+                aria-invalid={missing.identifier ? true : undefined}
+                aria-describedby={missing.identifier ? FORM_ERROR_ID : undefined}
+                onChange={(e) => update('identifier', e.target.value)}
+              />
+            </Field>
+            <Field id="user-name" label="Nombre" required>
+              <Input
+                value={values.name}
+                placeholder="Persona Demo"
+                aria-invalid={missing.name ? true : undefined}
+                aria-describedby={missing.name ? FORM_ERROR_ID : undefined}
+                onChange={(e) => update('name', e.target.value)}
+              />
+            </Field>
+            <FormError id={FORM_ID} message={ruleError ?? errorMessage} />
+          </DialogBody>
 
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
               disabled={submitting}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Creando...' : 'Crear'}
+            <Button type="submit" loading={submitting}>
+              {submitting ? 'Creando…' : 'Crear'}
             </Button>
           </DialogFooter>
         </form>

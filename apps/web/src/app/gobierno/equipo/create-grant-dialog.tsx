@@ -1,16 +1,18 @@
 'use client';
 
 import * as React from 'react';
+import { useDialogReturnFocus } from '@/components/confirm-dialog';
+import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -21,6 +23,7 @@ import {
 import type { Process, User } from '@/lib/api-client';
 
 type RoleCode = 'JEFE_AREA' | 'LIDER_PROCESO' | 'INTEGRANTE';
+type FieldKey = 'userId' | 'roleCode' | 'processId';
 
 interface GrantFormValues {
   userId: string;
@@ -34,19 +37,34 @@ interface CreateGrantDialogProps {
   submitting: boolean;
   users: User[];
   processes: Process[];
-  roleLabels: Record<string, string>;
-  /** Devuelve true si la asignacion fue exitosa (el formulario se limpia). */
-  onSubmit: (input: {
-    userId: string;
-    roleCode: RoleCode;
-    processId: string;
-  }) => Promise<boolean>;
+  roleLabels: Record<RoleCode, string>;
+  /** Error del backend (p. ej. rol ya asignado); el padre lo limpia al abrir. */
+  errorMessage: string | null;
+  /** Devuelve true si la asignación fue exitosa (el formulario se limpia). */
+  onSubmit: (input: { userId: string; roleCode: RoleCode; processId: string }) => Promise<boolean>;
 }
 
+const FORM_ID = 'grant-form';
+const FORM_ERROR_ID = `${FORM_ID}-error`;
 const ROLE_CODES: RoleCode[] = ['JEFE_AREA', 'LIDER_PROCESO', 'INTEGRANTE'];
-
 const EMPTY: GrantFormValues = { userId: '', roleCode: '', processId: '' };
+const NO_MISSING: Record<FieldKey, boolean> = { userId: false, roleCode: false, processId: false };
+const FIELD_ORDER: readonly FieldKey[] = ['userId', 'roleCode', 'processId'];
+const FIELD_IDS: Record<FieldKey, string> = {
+  userId: 'grant-user',
+  roleCode: 'grant-role',
+  processId: 'grant-process',
+};
 
+function isRoleCode(value: string): value is RoleCode {
+  return (ROLE_CODES as string[]).includes(value);
+}
+
+/**
+ * Asignar rol (design §11.21), diálogo sm. «Usuario, rol y proceso son
+ * obligatorios.» es una regla de tres campos: va en FormError y marca solo los
+ * que faltan (NIT 6b).
+ */
 export function CreateGrantDialog({
   open,
   onOpenChange,
@@ -54,131 +72,143 @@ export function CreateGrantDialog({
   users,
   processes,
   roleLabels,
+  errorMessage,
   onSubmit,
 }: CreateGrantDialogProps): React.ReactElement {
   const [values, setValues] = React.useState<GrantFormValues>(EMPTY);
-  const [error, setError] = React.useState<string | null>(null);
+  const [missing, setMissing] = React.useState(NO_MISSING);
+  const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
-  async function handleSubmit(event: React.FormEvent) {
+  const ruleError =
+    missing.userId || missing.roleCode || missing.processId
+      ? 'Usuario, rol y proceso son obligatorios.'
+      : null;
+
+  function update(key: FieldKey, value: string): void {
+    setValues((v) => ({ ...v, [key]: value }));
+    setMissing((prev) => (prev[key] ? { ...prev, [key]: false } : prev));
+  }
+
+  /** Props de error de un campo de la regla combinada. */
+  function invalidProps(key: FieldKey): { 'aria-invalid'?: true; 'aria-describedby'?: string } {
+    return missing[key] ? { 'aria-invalid': true, 'aria-describedby': FORM_ERROR_ID } : {};
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (!values.userId || !values.roleCode || !values.processId) {
-      // AC-031: no se limpia; se conserva la seleccion.
-      setError('Usuario, rol y proceso son obligatorios.');
+    if (submitting) return;
+    const next = { userId: !values.userId, roleCode: !values.roleCode, processId: !values.processId };
+    setMissing(next);
+    if (next.userId || next.roleCode || next.processId || !values.roleCode) {
+      // No se limpia: se conserva la selección; el foco va al primer campo que falta.
+      const first = FIELD_ORDER.find((key) => next[key]);
+      if (first) document.getElementById(FIELD_IDS[first])?.focus();
       return;
     }
-    setError(null);
     const ok = await onSubmit({
       userId: values.userId,
       roleCode: values.roleCode,
       processId: values.processId,
     });
-    if (ok) {
-      // Reset solo en exito.
+    // Reinicio solo tras el éxito; ante un error se conserva la selección.
+    if (ok) setValues(EMPTY);
+  }
+
+  function handleOpenChange(next: boolean): void {
+    if (!next && submitting) return;
+    if (!next) {
       setValues(EMPTY);
+      setMissing(NO_MISSING);
     }
-    // En error se conservan los valores seleccionados (AC-031).
+    onOpenChange(next);
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) {
-          setValues(EMPTY);
-          setError(null);
-        }
-        onOpenChange(next);
-      }}
-    >
-      <DialogContent>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent size="sm" onOpenAutoFocus={captureTrigger} onCloseAutoFocus={handleCloseAutoFocus}>
         <DialogHeader>
-          <DialogTitle>Asignar grant</DialogTitle>
-          <DialogDescription>
-            Concede un rol a un usuario dentro de un proceso.
-          </DialogDescription>
+          <DialogTitle>Asignar rol</DialogTitle>
+          <DialogDescription>Concede un rol a un usuario dentro de un proceso.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="grant-user">Usuario</Label>
-            <Select
-              value={values.userId}
-              onValueChange={(value) =>
-                setValues((v) => ({ ...v, userId: value }))
-              }
-            >
-              <SelectTrigger id="grant-user">
-                <SelectValue placeholder="Selecciona un usuario" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name} ({user.identifier})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <form
+          id={FORM_ID}
+          noValidate
+          onSubmit={(event) => void handleSubmit(event)}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <DialogBody className="grid gap-4">
+            <RequiredHint />
+            <Field id="grant-user" label="Usuario" required>
+              {(control) => (
+                <Select value={values.userId} onValueChange={(value) => update('userId', value)}>
+                  <SelectTrigger {...control} {...invalidProps('userId')}>
+                    <SelectValue placeholder="Elige un usuario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name} ({user.identifier})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="grant-role">Rol</Label>
-            <Select
-              value={values.roleCode}
-              onValueChange={(value) =>
-                setValues((v) => ({ ...v, roleCode: value as RoleCode }))
-              }
-            >
-              <SelectTrigger id="grant-role">
-                <SelectValue placeholder="Selecciona un rol" />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLE_CODES.map((code) => (
-                  <SelectItem key={code} value={code}>
-                    {roleLabels[code] ?? code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <Field id="grant-role" label="Rol" required>
+              {(control) => (
+                <Select
+                  value={values.roleCode}
+                  onValueChange={(value) => {
+                    if (isRoleCode(value)) update('roleCode', value);
+                  }}
+                >
+                  <SelectTrigger {...control} {...invalidProps('roleCode')}>
+                    <SelectValue placeholder="Elige un rol" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_CODES.map((code) => (
+                      <SelectItem key={code} value={code}>
+                        {roleLabels[code]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="grant-process">Proceso</Label>
-            <Select
-              value={values.processId}
-              onValueChange={(value) =>
-                setValues((v) => ({ ...v, processId: value }))
-              }
-            >
-              <SelectTrigger id="grant-process">
-                <SelectValue placeholder="Selecciona un proceso" />
-              </SelectTrigger>
-              <SelectContent>
-                {processes.map((process) => (
-                  <SelectItem key={process.id} value={process.id}>
-                    {process.name} ({process.code})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <Field id="grant-process" label="Proceso" required>
+              {(control) => (
+                <Select value={values.processId} onValueChange={(value) => update('processId', value)}>
+                  <SelectTrigger {...control} {...invalidProps('processId')}>
+                    <SelectValue placeholder="Elige un proceso" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {processes.map((process) => (
+                      <SelectItem key={process.id} value={process.id}>
+                        {process.name} ({process.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
 
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
+            <FormError id={FORM_ID} message={ruleError ?? errorMessage} />
+          </DialogBody>
 
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
               disabled={submitting}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Asignando...' : 'Asignar'}
+            <Button type="submit" loading={submitting}>
+              {submitting ? 'Asignando…' : 'Asignar'}
             </Button>
           </DialogFooter>
         </form>
