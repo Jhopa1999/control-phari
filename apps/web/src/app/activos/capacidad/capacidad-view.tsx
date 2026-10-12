@@ -25,6 +25,7 @@ import type {
   Request,
 } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
+import { localMonthInputValue } from '@/lib/format';
 import {
   CapacityError,
   createAssignment,
@@ -49,14 +50,6 @@ import {
 } from './asignacion-form-dialog';
 
 type LoadState = 'loading' | 'success' | 'error';
-
-/** Mes actual en formato YYYY-MM (UTC) para el valor inicial del selector. */
-function currentMonth(): string {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  return `${year}-${month}`;
-}
 
 function messageOf(err: unknown): string {
   return err instanceof CapacityError
@@ -90,7 +83,14 @@ export function CapacidadView(): React.ReactElement {
     return grants.every((g) => g.roleCode === 'INTEGRANTE');
   }, [permissions]);
 
-  const [month, setMonth] = React.useState<string>(() => currentMonth());
+  // Mes local del usuario (design §7.9, regla 2), calculado tras el montaje: el
+  // inicializador de useState también corre al prerenderizar en el servidor y
+  // dejaría el mes del build y la zona del servidor. Mientras vale '' no se
+  // carga nada y el campo muestra un Skeleton.
+  const [month, setMonth] = React.useState<string>('');
+  React.useEffect(() => {
+    setMonth((v) => v || localMonthInputValue());
+  }, []);
 
   const [summary, setSummary] = React.useState<CapacitySummaryRow[]>([]);
   const [availability, setAvailability] = React.useState<Availability[]>([]);
@@ -137,6 +137,7 @@ export function CapacidadView(): React.ReactElement {
   }, []);
 
   React.useEffect(() => {
+    if (!month) return;
     void load(month);
   }, [month, load]);
 
@@ -285,15 +286,19 @@ export function CapacidadView(): React.ReactElement {
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="capacidad-month">Mes</Label>
-          <Input
-            id="capacidad-month"
-            type="month"
-            className="w-44"
-            value={month}
-            onChange={(e) => {
-              if (e.target.value) setMonth(e.target.value);
-            }}
-          />
+          {month ? (
+            <Input
+              id="capacidad-month"
+              type="month"
+              className="w-44"
+              value={month}
+              onChange={(e) => {
+                if (e.target.value) setMonth(e.target.value);
+              }}
+            />
+          ) : (
+            <Skeleton className="h-9 w-44" />
+          )}
         </div>
       </header>
 

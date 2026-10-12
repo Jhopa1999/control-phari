@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { DailyLog, Process } from '@/lib/api-client';
+import { localDateInputValue } from '@/lib/format';
 
 export interface DiarioFormValues {
   processId: string;
@@ -39,11 +40,6 @@ interface DiarioFormDialogProps {
   /** Mensaje de error en linea; se conserva ante fallo (AC-031). */
   errorMessage: string | null;
   onSubmit: (values: DiarioFormValues) => void;
-}
-
-/** Fecha de hoy en formato YYYY-MM-DD (UTC) para el valor inicial. */
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 export function DiarioFormDialog({
@@ -72,7 +68,8 @@ export function DiarioFormDialog({
       setDayNotes(editing.dayNotes ?? '');
     } else {
       setProcessId('');
-      setDate(today());
+      // Hoy en el calendario local del usuario (design §7.9, regla 2).
+      setDate(localDateInputValue());
       setDayNotes('');
     }
   }, [open, editing]);

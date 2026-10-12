@@ -312,6 +312,15 @@ defecto de la plantilla.
   `format.ts` fija `process.env.TZ = 'America/Bogota'` y lo restaura al
   terminar, para que los errores de UTC frente a hora local aparezcan también
   en una máquina o una CI en UTC.
+- `e2e/date-display.spec.ts`: fechas con datos fijos. Fija la zona horaria del
+  navegador (`timezoneId: 'America/Bogota'`) y su reloj
+  (`page.clock.setFixedTime`) en una hora en la que el calendario UTC ya va un
+  día por delante, y comprueba que «Nuevo diario» propone el día local. Abre el
+  diálogo y lo cierra con «Cancelar»: no crea datos. Los valores por defecto
+  de diario, novedad, reunión, compromiso, reporte semanal, Capacidad, Panel
+  del área e Indicadores se calculan con el calendario local en el cliente;
+  las tres vistas con periodo o mes lo fijan después del montaje y, hasta
+  entonces, muestran un esqueleto en el campo y no consultan la API.
 - Datos E2E aislados en `E2E_CATALOG`. Limpieza con utilidad de testing
   `apps/api/test-utils/e2e-cleanup.ts` (Prisma directo, `deleteMany` con filtro
   estricto `catalog = E2E_CATALOG`; nunca sin `where`). NO se expone por HTTP y

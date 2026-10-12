@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Process } from '@/lib/api-client';
+import { localWeekMondayInputValue } from '@/lib/format';
 
 export interface SemanalFormValues {
   processId: string;
@@ -33,17 +34,6 @@ interface SemanalFormDialogProps {
   submitting: boolean;
   errorMessage: string | null;
   onSubmit: (values: SemanalFormValues) => void;
-}
-
-/** Lunes de la semana actual en formato YYYY-MM-DD (UTC). */
-function currentMonday(): string {
-  const now = new Date();
-  const day = now.getUTCDay(); // 0=domingo
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff),
-  );
-  return monday.toISOString().slice(0, 10);
 }
 
 export function SemanalFormDialog({
@@ -62,7 +52,8 @@ export function SemanalFormDialog({
     if (!open) return;
     setClientError(null);
     setProcessId('');
-    setWeekStart(currentMonday());
+    // Lunes de la semana actual en el calendario local (design §7.9, regla 2).
+    setWeekStart(localWeekMondayInputValue());
   }, [open]);
 
   function handleSubmit(event: React.FormEvent) {

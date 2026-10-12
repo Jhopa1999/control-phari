@@ -26,6 +26,7 @@ import type {
   Meeting,
   Process,
 } from '@/lib/api-client';
+import { localDateInputValue } from '@/lib/format';
 
 export interface CompromisoFormValues {
   processId: string;
@@ -51,10 +52,6 @@ interface CompromisoFormDialogProps {
 }
 
 const SIN_VALOR = '__none__';
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function CompromisoFormDialog({
   open,
@@ -93,7 +90,8 @@ export function CompromisoFormDialog({
     } else {
       setProcessId('');
       setTitle('');
-      setDueDate(today());
+      // Hoy en el calendario local del usuario (design §7.9, regla 2).
+      setDueDate(localDateInputValue());
       setAssignedUserId('');
       setResponsibleUserId('');
       setSourceMeetingId('');

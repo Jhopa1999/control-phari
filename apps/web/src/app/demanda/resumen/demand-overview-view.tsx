@@ -23,25 +23,9 @@ import {
   type IndicatorStatus,
 } from '@/lib/area-control';
 import { useActor } from '@/lib/actor-context';
+import { localMonthPeriod } from '@/lib/format';
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
-
-/** Primer dia del mes en curso (UTC), formato YYYY-MM-DD. */
-function monthStart(): string {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  return `${year}-${month}-01`;
-}
-
-/** Primer dia del mes siguiente (UTC), limite exclusivo, formato YYYY-MM-DD. */
-function nextMonthStart(): string {
-  const now = new Date();
-  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-  const ny = next.getUTCFullYear();
-  const nm = String(next.getUTCMonth() + 1).padStart(2, '0');
-  return `${ny}-${nm}-01`;
-}
 
 function messageOf(err: unknown): string {
   return err instanceof ApiError
@@ -161,8 +145,17 @@ export function DemandOverviewView(): React.ReactElement {
   const permissionsLoaded = permissions !== null;
   const moduleAllowed = allowedModules.has('demandOverview');
 
-  const [from, setFrom] = React.useState<string>(() => monthStart());
-  const [to, setTo] = React.useState<string>(() => nextMonthStart());
+  // Periodo del mes local del usuario (design §7.9, regla 2), calculado tras el
+  // montaje: el inicializador de useState también corre al prerenderizar en el
+  // servidor y dejaría la fecha del build y la zona del servidor. Mientras vale
+  // '' no se carga nada y cada campo muestra un Skeleton.
+  const [from, setFrom] = React.useState<string>('');
+  const [to, setTo] = React.useState<string>('');
+  React.useEffect(() => {
+    const period = localMonthPeriod();
+    setFrom((v) => v || period.from);
+    setTo((v) => v || period.to);
+  }, []);
 
   const [indicators, setIndicators] = React.useState<AreaIndicators | null>(
     null,
@@ -198,6 +191,7 @@ export function DemandOverviewView(): React.ReactElement {
       setState('forbidden');
       return;
     }
+    if (!from || !to) return;
     void load(from, to);
   }, [permissionsLoaded, moduleAllowed, from, to, load]);
 
@@ -220,29 +214,37 @@ export function DemandOverviewView(): React.ReactElement {
             <div className="flex items-end gap-3">
               <div className="flex flex-col gap-1">
                 <Label htmlFor="indicadores-from">Desde</Label>
-                <Input
-                  id="indicadores-from"
-                  type="date"
-                  className="w-40"
-                  value={from}
-                  max={to}
-                  onChange={(e) => {
-                    if (e.target.value) setFrom(e.target.value);
-                  }}
-                />
+                {from ? (
+                  <Input
+                    id="indicadores-from"
+                    type="date"
+                    className="w-40"
+                    value={from}
+                    max={to}
+                    onChange={(e) => {
+                      if (e.target.value) setFrom(e.target.value);
+                    }}
+                  />
+                ) : (
+                  <Skeleton className="h-9 w-40" />
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <Label htmlFor="indicadores-to">Hasta</Label>
-                <Input
-                  id="indicadores-to"
-                  type="date"
-                  className="w-40"
-                  value={to}
-                  min={from}
-                  onChange={(e) => {
-                    if (e.target.value) setTo(e.target.value);
-                  }}
-                />
+                {to ? (
+                  <Input
+                    id="indicadores-to"
+                    type="date"
+                    className="w-40"
+                    value={to}
+                    min={from}
+                    onChange={(e) => {
+                      if (e.target.value) setTo(e.target.value);
+                    }}
+                  />
+                ) : (
+                  <Skeleton className="h-9 w-40" />
+                )}
               </div>
             </div>
           </fieldset>

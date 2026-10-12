@@ -26,6 +26,7 @@ import type {
   IssueType,
   Process,
 } from '@/lib/api-client';
+import { localDateInputValue } from '@/lib/format';
 
 export interface NovedadFormValues {
   processId: string;
@@ -61,10 +62,6 @@ const TYPES: { value: IssueTypeValue; label: string }[] = [
 ];
 
 const SIN_VALOR = '__none__';
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function NovedadFormDialog({
   open,
@@ -103,7 +100,8 @@ export function NovedadFormDialog({
       setResolution(editing.resolution ?? '');
     } else {
       setProcessId('');
-      setDate(today());
+      // Hoy en el calendario local del usuario (design §7.9, regla 2).
+      setDate(localDateInputValue());
       setTypeCode('BLOQUEO');
       setTitle('');
       setDetail('');

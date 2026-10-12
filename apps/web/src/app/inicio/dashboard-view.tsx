@@ -20,6 +20,7 @@ import {
   getDemandSummary,
   type DemandSummary,
 } from '@/lib/area-control';
+import { localMonthPeriod } from '@/lib/format';
 import { requestStateLabel } from '@/lib/request-state';
 
 type LoadState = 'loading' | 'success' | 'error';
@@ -37,25 +38,6 @@ function bandLabel(band: string): string {
   return BAND_LABELS[band] ?? band;
 }
 
-/** Primer dia del mes en curso (UTC), formato YYYY-MM-DD. */
-function monthStart(): string {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  return `${year}-${month}-01`;
-}
-
-/** Primer dia del mes siguiente (UTC), limite exclusivo, formato YYYY-MM-DD. */
-function nextMonthStart(): string {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = now.getUTCMonth();
-  const next = new Date(Date.UTC(year, month + 1, 1));
-  const ny = next.getUTCFullYear();
-  const nm = String(next.getUTCMonth() + 1).padStart(2, '0');
-  return `${ny}-${nm}-01`;
-}
-
 function messageOf(err: unknown): string {
   return err instanceof ApiError
     ? err.message
@@ -63,8 +45,17 @@ function messageOf(err: unknown): string {
 }
 
 export function DashboardView(): React.ReactElement {
-  const [from, setFrom] = React.useState<string>(() => monthStart());
-  const [to, setTo] = React.useState<string>(() => nextMonthStart());
+  // Periodo del mes local del usuario (design §7.9, regla 2), calculado tras el
+  // montaje: el inicializador de useState también corre al prerenderizar en el
+  // servidor y dejaría la fecha del build y la zona del servidor. Mientras vale
+  // '' no se carga nada y cada campo muestra un Skeleton.
+  const [from, setFrom] = React.useState<string>('');
+  const [to, setTo] = React.useState<string>('');
+  React.useEffect(() => {
+    const period = localMonthPeriod();
+    setFrom((v) => v || period.from);
+    setTo((v) => v || period.to);
+  }, []);
 
   const [summary, setSummary] = React.useState<DemandSummary | null>(null);
   const [state, setState] = React.useState<LoadState>('loading');
@@ -84,6 +75,7 @@ export function DashboardView(): React.ReactElement {
   }, []);
 
   React.useEffect(() => {
+    if (!from || !to) return;
     void load(from, to);
   }, [from, to, load]);
 
@@ -111,29 +103,37 @@ export function DashboardView(): React.ReactElement {
           <div className="flex items-end gap-3">
             <div className="flex flex-col gap-1">
               <Label htmlFor="dashboard-from">Desde</Label>
-              <Input
-                id="dashboard-from"
-                type="date"
-                className="w-40"
-                value={from}
-                max={to}
-                onChange={(e) => {
-                  if (e.target.value) setFrom(e.target.value);
-                }}
-              />
+              {from ? (
+                <Input
+                  id="dashboard-from"
+                  type="date"
+                  className="w-40"
+                  value={from}
+                  max={to}
+                  onChange={(e) => {
+                    if (e.target.value) setFrom(e.target.value);
+                  }}
+                />
+              ) : (
+                <Skeleton className="h-9 w-40" />
+              )}
             </div>
             <div className="flex flex-col gap-1">
               <Label htmlFor="dashboard-to">Hasta</Label>
-              <Input
-                id="dashboard-to"
-                type="date"
-                className="w-40"
-                value={to}
-                min={from}
-                onChange={(e) => {
-                  if (e.target.value) setTo(e.target.value);
-                }}
-              />
+              {to ? (
+                <Input
+                  id="dashboard-to"
+                  type="date"
+                  className="w-40"
+                  value={to}
+                  min={from}
+                  onChange={(e) => {
+                    if (e.target.value) setTo(e.target.value);
+                  }}
+                />
+              ) : (
+                <Skeleton className="h-9 w-40" />
+              )}
             </div>
           </div>
         </fieldset>

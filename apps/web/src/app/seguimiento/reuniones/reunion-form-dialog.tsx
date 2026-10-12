@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { CoordinationPerson, Meeting, Process } from '@/lib/api-client';
+import { localDateInputValue } from '@/lib/format';
 
 export interface ReunionFormValues {
   processId: string;
@@ -46,10 +47,6 @@ interface ReunionFormDialogProps {
 }
 
 const SIN_VALOR = '__none__';
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function ReunionFormDialog({
   open,
@@ -91,7 +88,8 @@ export function ReunionFormDialog({
     } else {
       setProcessId('');
       setTitle('');
-      setMeetingDate(today());
+      // Hoy en el calendario local del usuario (design §7.9, regla 2).
+      setMeetingDate(localDateInputValue());
       setMeetingTime('');
       setParticipantUserIds([]);
       setResponsibleUserId('');
