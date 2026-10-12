@@ -52,8 +52,8 @@ async function createItem(
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('Nuevo elemento')).toBeVisible();
 
-  await dialog.getByLabel('Catalogo').fill(E2E_CATALOG);
-  await dialog.getByLabel('Codigo').fill(values.code);
+  await dialog.getByLabel('Catálogo').fill(E2E_CATALOG);
+  await dialog.getByLabel('Código').fill(values.code);
   await dialog.getByLabel('Etiqueta').fill(values.label);
   await dialog.getByLabel('Orden').fill(String(values.sortOrder));
 
@@ -77,7 +77,7 @@ test('flujo principal de maestras', async ({ page }) => {
 
   // 3. Estado vacio para E2E_CATALOG.
   await applyFilter(page, 'Todos');
-  await expect(page.getByText('No hay elementos todavia.')).toBeVisible();
+  await expect(page.getByText('No hay elementos todavía.')).toBeVisible();
 
   // 4-5. Crear HIGH y confirmar en tabla.
   await createItem(page, { code: 'HIGH', label: 'Alta', sortOrder: 1 });
@@ -98,8 +98,8 @@ test('flujo principal de maestras', async ({ page }) => {
   const editDialog = page.getByRole('dialog');
   await expect(editDialog.getByText('Editar elemento')).toBeVisible();
   // catalog y code son solo lectura en edicion.
-  await expect(editDialog.getByLabel('Catalogo')).toBeDisabled();
-  await expect(editDialog.getByLabel('Codigo')).toBeDisabled();
+  await expect(editDialog.getByLabel('Catálogo')).toBeDisabled();
+  await expect(editDialog.getByLabel('Código')).toBeDisabled();
   await editDialog.getByLabel('Etiqueta').fill('Alta prioridad');
   await editDialog.getByLabel('Orden').fill('10');
   const edited = page.waitForResponse(
@@ -153,14 +153,14 @@ test('duplicado muestra feedback entendible (409)', async ({ page }) => {
   // Intenta crear el mismo catalog/code otra vez.
   await page.getByRole('button', { name: 'Nuevo elemento' }).first().click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Catalogo').fill(E2E_CATALOG);
-  await dialog.getByLabel('Codigo').fill('HIGH');
+  await dialog.getByLabel('Catálogo').fill(E2E_CATALOG);
+  await dialog.getByLabel('Código').fill('HIGH');
   await dialog.getByLabel('Etiqueta').fill('Duplicada');
   await dialog.getByRole('button', { name: 'Crear' }).click();
 
   // Feedback entendible (toast), sin texto interno de Prisma.
   await expect(
-    page.getByText('Ya existe un elemento con ese codigo en esta maestra.'),
+    dialog.getByText('Ya existe un elemento con ese código en esta maestra.'),
   ).toBeVisible();
 });
 
@@ -171,7 +171,7 @@ test('el formulario requiere los campos obligatorios', async ({ page }) => {
   // Intento crear sin completar nada: no debe crear y debe avisar.
   await dialog.getByRole('button', { name: 'Crear' }).click();
   await expect(
-    dialog.getByText('Catalogo y codigo son obligatorios.'),
+    dialog.getByText('Catálogo y código son obligatorios.'),
   ).toBeVisible();
   // El dialog sigue abierto (no se creo nada).
   await expect(dialog.getByText('Nuevo elemento')).toBeVisible();

@@ -346,6 +346,24 @@ defecto de la plantilla.
   `useDialogReturnFocus` (sin `DialogTrigger`, Radix lo dejaría en `body`).
   Si un proceso, una persona o una reunión no vienen en las listas del alcance
   del actor, se muestra «… fuera de tu alcance» en vez del id.
+- Activos, Documentos y Maestras (patrón A): Activos (`/activos/catalogo`) y
+  Documentos (`/activos/documentos`) buscan por nombre o título
+  (`filtro-busqueda`, `doc-filtro-busqueda`), filtran, ordenan y paginan en
+  cliente de 25 en 25, con los filtros e ids de siempre y «Limpiar filtros»
+  (el foco vuelve a la búsqueda). Los estados se muestran con su etiqueta
+  (`StatusBadge asset` y `document`), también en los toasts de transición. Las
+  transiciones siguen dependiendo de los roles asignados (jefe de área o líder
+  del proceso del activo). En Documentos, «Editar» e «Historial» van en línea y
+  «Descargar .md» y las transiciones en «Más acciones»; sin activos no
+  retirados, «Nuevo documento» queda no disponible con su motivo y el enlace
+  «Ir a Activos». El editor usa `Tabs` (Editor / Vista previa) y conserva el
+  límite de 200.000 caracteres y Ctrl/Cmd+S. Maestras (`/catalogs` y
+  `/administracion/maestras`, un único componente) mantiene sus filtros de
+  servidor con «Aplicar» y añade orden y paginación en cliente; el diálogo
+  muestra «Catálogo y código son obligatorios.» en `FormError` (marcando solo
+  los campos vacíos) y los errores del backend, como el 409 de duplicado,
+  también dentro del diálogo además del toast. `lib/catalog.ts` y
+  `e2e/catalogs.spec.ts` pasan a los textos con tilde en el mismo cambio.
 - Shell y navegación: `components/app-shell.tsx` monta «Saltar al contenido»
   (primer enfocable, lleva a `main#contenido`), el menú lateral
   (`app-sidebar.tsx`) y, por debajo de 1024 px, una barra superior con el menú

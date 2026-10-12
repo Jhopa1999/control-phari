@@ -1,9 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import { useDialogReturnFocus } from '@/components/confirm-dialog';
+import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -26,11 +29,17 @@ export interface CatalogFormValues {
 interface CatalogFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Si se pasa, el dialog esta en modo edicion (catalog y code solo lectura). */
+  /** Si se pasa, el diálogo está en modo edición (catálogo y código solo lectura). */
   editing?: CatalogItem | null;
   submitting: boolean;
+  /** Error del backend (p. ej. el 409 de duplicado); el padre lo limpia al abrir. */
+  errorMessage: string | null;
   onSubmit: (values: CatalogFormValues) => void;
 }
+
+/** Id del formulario: el FormError lleva `catalog-form-error`. */
+const FORM_ID = 'catalog-form';
+const FORM_ERROR_ID = `${FORM_ID}-error`;
 
 const EMPTY: CatalogFormValues = {
   catalog: '',
@@ -40,21 +49,57 @@ const EMPTY: CatalogFormValues = {
   sortOrder: 0,
 };
 
+interface Validation {
+  /** Regla de dos campos: «Catálogo y código son obligatorios.». */
+  formError: string | null;
+  /** Campos de la regla combinada que la incumplen (NIT 6b). */
+  missing: { catalog: boolean; code: boolean };
+  labelError: string | null;
+}
+
+const NO_ERRORS: Validation = {
+  formError: null,
+  missing: { catalog: false, code: false },
+  labelError: null,
+};
+
+/** Reglas del cliente (las de siempre), evaluadas todas a la vez (design §9). */
+function validate(values: CatalogFormValues, isEdit: boolean): Validation {
+  const missingCatalog = !isEdit && values.catalog.trim() === '';
+  const missingCode = !isEdit && values.code.trim() === '';
+  return {
+    formError: missingCatalog || missingCode ? 'Catálogo y código son obligatorios.' : null,
+    missing: { catalog: missingCatalog, code: missingCode },
+    labelError: values.label.trim() === '' ? 'La etiqueta es obligatoria.' : null,
+  };
+}
+
+/**
+ * Alta y edición de un elemento de maestra (design §11.22), diálogo sm. Al
+ * editar, catálogo y código quedan en solo lectura y el padre envía solo
+ * etiqueta, activo y orden. Textos fijados por E2E: design §13.4.
+ */
 export function CatalogFormDialog({
   open,
   onOpenChange,
   editing,
   submitting,
+  errorMessage,
   onSubmit,
-}: CatalogFormDialogProps) {
+}: CatalogFormDialogProps): React.ReactElement {
   const isEdit = Boolean(editing);
   const [values, setValues] = React.useState<CatalogFormValues>(EMPTY);
-  const [error, setError] = React.useState<string | null>(null);
+  const [errors, setErrors] = React.useState<Validation>(NO_ERRORS);
+  const catalogRef = React.useRef<HTMLInputElement>(null);
+  const codeRef = React.useRef<HTMLInputElement>(null);
+  const labelRef = React.useRef<HTMLInputElement>(null);
+  // Sin DialogTrigger, el foco vuelve al botón que abrió el diálogo (NIT 4).
+  const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
   // Reinicia el formulario cada vez que se abre (crear o editar).
   React.useEffect(() => {
     if (!open) return;
-    setError(null);
+    setErrors(NO_ERRORS);
     if (editing) {
       setValues({
         catalog: editing.catalog,
@@ -68,25 +113,37 @@ export function CatalogFormDialog({
     }
   }, [open, editing]);
 
-  function handleSubmit(event: React.FormEvent) {
+  function updatePair(key: 'catalog' | 'code', value: string): void {
+    setValues((v) => ({ ...v, [key]: value }));
+    // El error de un campo se limpia al editarlo; la regla combinada, cuando
+    // ningún campo implicado queda marcado.
+    setErrors((prev) => {
+      if (!prev.missing[key]) return prev;
+      const missing = { ...prev.missing, [key]: false };
+      return {
+        ...prev,
+        missing,
+        formError: missing.catalog || missing.code ? prev.formError : null,
+      };
+    });
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    // Validacion minima en cliente; el backend es la autoridad.
-    const catalog = values.catalog.trim();
-    const code = values.code.trim();
-    const label = values.label.trim();
-    if (!isEdit && (!catalog || !code)) {
-      setError('Catalogo y codigo son obligatorios.');
+    // Validación mínima en cliente; el backend es la autoridad.
+    const result = validate(values, isEdit);
+    setErrors(result);
+    if (result.formError || result.labelError) {
+      // Foco al primer campo con error, en orden del DOM.
+      if (result.missing.catalog) catalogRef.current?.focus();
+      else if (result.missing.code) codeRef.current?.focus();
+      else labelRef.current?.focus();
       return;
     }
-    if (!label) {
-      setError('La etiqueta es obligatoria.');
-      return;
-    }
-    setError(null);
     onSubmit({
-      catalog,
-      code,
-      label,
+      catalog: values.catalog.trim(),
+      code: values.code.trim(),
+      label: values.label.trim(),
       active: values.active,
       sortOrder: Number.isFinite(values.sortOrder) ? values.sortOrder : 0,
     });
@@ -94,91 +151,90 @@ export function CatalogFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent
+        size="sm"
+        onOpenAutoFocus={captureTrigger}
+        onCloseAutoFocus={handleCloseAutoFocus}
+      >
         <DialogHeader>
-          <DialogTitle>
-            {isEdit ? 'Editar elemento' : 'Nuevo elemento'}
-          </DialogTitle>
+          <DialogTitle>{isEdit ? 'Editar elemento' : 'Nuevo elemento'}</DialogTitle>
           <DialogDescription>
             {isEdit
-              ? 'Catalogo y codigo son estables y no se pueden modificar.'
+              ? 'El catálogo y el código no se pueden modificar.'
               : 'Crea un valor reutilizable para una maestra del portal.'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="catalog">Catalogo</Label>
-            <Input
-              id="catalog"
-              value={values.catalog}
-              readOnly={isEdit}
-              disabled={isEdit}
-              placeholder="PRIORITY"
-              onChange={(e) =>
-                setValues((v) => ({ ...v, catalog: e.target.value }))
-              }
-            />
-          </div>
+        <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <DialogBody className="grid gap-4">
+            {!isEdit ? <RequiredHint /> : null}
 
-          <div className="grid gap-2">
-            <Label htmlFor="code">Codigo</Label>
-            <Input
-              id="code"
-              value={values.code}
-              readOnly={isEdit}
-              disabled={isEdit}
-              placeholder="HIGH"
-              onChange={(e) =>
-                setValues((v) => ({ ...v, code: e.target.value }))
-              }
-            />
-          </div>
+            <Field id="catalog" label="Catálogo" required={!isEdit}>
+              <Input
+                ref={catalogRef}
+                value={values.catalog}
+                readOnly={isEdit}
+                disabled={isEdit}
+                placeholder="PRIORITY"
+                aria-invalid={errors.missing.catalog ? true : undefined}
+                aria-describedby={errors.missing.catalog ? FORM_ERROR_ID : undefined}
+                onChange={(e) => updatePair('catalog', e.target.value)}
+              />
+            </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="label">Etiqueta</Label>
-            <Input
-              id="label"
-              value={values.label}
-              placeholder="Alta"
-              onChange={(e) =>
-                setValues((v) => ({ ...v, label: e.target.value }))
-              }
-            />
-          </div>
+            <Field id="code" label="Código" required={!isEdit}>
+              <Input
+                ref={codeRef}
+                value={values.code}
+                readOnly={isEdit}
+                disabled={isEdit}
+                placeholder="HIGH"
+                aria-invalid={errors.missing.code ? true : undefined}
+                aria-describedby={errors.missing.code ? FORM_ERROR_ID : undefined}
+                onChange={(e) => updatePair('code', e.target.value)}
+              />
+            </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="sortOrder">Orden</Label>
-            <Input
-              id="sortOrder"
-              type="number"
-              min={0}
-              value={String(values.sortOrder)}
-              onChange={(e) =>
-                setValues((v) => ({
-                  ...v,
-                  sortOrder: Number.parseInt(e.target.value, 10) || 0,
-                }))
-              }
-            />
-          </div>
+            <Field id="label" label="Etiqueta" required error={errors.labelError}>
+              <Input
+                ref={labelRef}
+                value={values.label}
+                placeholder="Alta"
+                onChange={(e) => {
+                  const label = e.target.value;
+                  setValues((v) => ({ ...v, label }));
+                  setErrors((prev) => (prev.labelError ? { ...prev, labelError: null } : prev));
+                }}
+              />
+            </Field>
 
-          <div className="flex items-center justify-between">
-            <Label htmlFor="active">Activo</Label>
-            <Switch
-              id="active"
-              checked={values.active}
-              onCheckedChange={(checked) =>
-                setValues((v) => ({ ...v, active: checked }))
-              }
-            />
-          </div>
+            <Field id="sortOrder" label="Orden">
+              <Input
+                type="number"
+                min={0}
+                className="w-32"
+                value={String(values.sortOrder)}
+                onChange={(e) =>
+                  setValues((v) => ({
+                    ...v,
+                    sortOrder: Number.parseInt(e.target.value, 10) || 0,
+                  }))
+                }
+              />
+            </Field>
 
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="active">Activo</Label>
+              <Switch
+                id="active"
+                checked={values.active}
+                onCheckedChange={(checked) => setValues((v) => ({ ...v, active: checked }))}
+              />
+            </div>
+
+            {/* Regla combinada o, si no la hay, el error del backend (los dos van en FormError). */}
+            <FormError id={FORM_ID} message={errors.formError ?? errorMessage} />
+          </DialogBody>
 
           <DialogFooter>
             <Button
@@ -189,8 +245,8 @@ export function CatalogFormDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear'}
+            <Button type="submit" loading={submitting}>
+              {submitting ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear'}
             </Button>
           </DialogFooter>
         </form>

@@ -26,9 +26,9 @@ function messageForStatus(status: number): string {
     case 404:
       return 'El elemento no existe o fue removido.';
     case 409:
-      return 'Ya existe un elemento con ese codigo en esta maestra.';
+      return 'Ya existe un elemento con ese código en esta maestra.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
@@ -38,7 +38,7 @@ function messageForStatus(status: number): string {
 function toCatalogError(status: number | undefined): CatalogError {
   if (status === undefined) {
     return new CatalogError(
-      'No fue posible comunicarse con el servidor.',
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
   return new CatalogError(messageForStatus(status), status);
