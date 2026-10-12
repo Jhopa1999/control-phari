@@ -265,6 +265,18 @@ defecto de la plantilla.
   devuelven el foco al control que los abrió y, si la acción lo retiró, a
   `returnFocusTo()`. Mi trabajo y Proyectos son las primeras pantallas
   migradas.
+- Paneles (patrón F): Panel del área (`/inicio`), Indicadores
+  (`/demanda/resumen`) y Capacidad (`/activos/capacidad`). Los dos primeros
+  comparten el filtro «Periodo» (`components/period-fieldset.tsx`, con los ids
+  `dashboard-*` e `indicadores-*` de siempre). Los cuatro indicadores del Panel
+  se leen tal cual de la respuesta de la API, sin cálculos nuevos; la barra de
+  distribución es solo presentación. En Indicadores, un indicador que no aplica
+  muestra «No aplica» con el motivo de la API, nunca un 0, y sin el módulo
+  `demandOverview` no se llama al backend. El Resumen de carga de Capacidad
+  muestra todas las personas (`pageSize: null`) y se ordena por Persona,
+  Utilización y Utilización plan. Sus diálogos usan `Field` y `FormError`:
+  todos los errores del cliente se muestran a la vez y el foco va al primer
+  campo con error.
 - Shell y navegación: `components/app-shell.tsx` monta «Saltar al contenido»
   (primer enfocable, lleva a `main#contenido`), el menú lateral
   (`app-sidebar.tsx`) y, por debajo de 1024 px, una barra superior con el menú

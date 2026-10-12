@@ -54,6 +54,12 @@ async function signIn(page: Page): Promise<void> {
 }
 const mainHeading = (page: Page) =>
   page.getByRole('main').getByRole('heading', { level: 1 });
+// /inicio ya tiene su h1 definitivo (design §11.3): los casos que llegan a
+// /inicio lo comprueban por nombre.
+const panelHeading = (page: Page) =>
+  page
+    .getByRole('main')
+    .getByRole('heading', { level: 1, name: 'Panel del área', exact: true });
 // Desde el rediseño del login (design §11.2), /login también tiene main + h1.
 const loginHeading = (page: Page) =>
   page
@@ -75,12 +81,12 @@ test('recargar una ruta protegida conserva la sesión y la ruta', async ({
 }) => {
   await page.goto('/login');
   await signIn(page);
-  await expect(mainHeading(page)).toBeVisible();
+  await expect(panelHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/inicio');
 
   await page.reload();
   await settled(page);
-  await expect(mainHeading(page)).toBeVisible();
+  await expect(panelHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/inicio');
 
   await page.goto('/seguimiento/portafolio');
@@ -108,11 +114,11 @@ test('un enlace directo sin sesión vuelve a su ruta tras iniciar sesión', asyn
 test('/login con sesión válida lleva a /inicio', async ({ page }) => {
   await page.goto('/login');
   await signIn(page);
-  await expect(mainHeading(page)).toBeVisible();
+  await expect(panelHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/inicio');
 
   await page.goto('/login');
-  await expect(mainHeading(page)).toBeVisible();
+  await expect(panelHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/inicio');
   await expect(loginForm(page)).toHaveCount(0);
 });
@@ -148,7 +154,7 @@ test('un next externo se ignora y lleva a /inicio del mismo origen', async ({
   for (const next of ['https%3A%2F%2Fejemplo.invalid', '%2F%2Fejemplo.invalid']) {
     await page.goto(`/login?next=${next}`);
     await signIn(page);
-    await expect(mainHeading(page)).toBeVisible();
+    await expect(panelHeading(page)).toBeVisible();
     await expect(page).toHaveURL(`${baseURL}/inicio`);
     // El siguiente valor se prueba de nuevo sin sesión.
     await page.evaluate(() => window.localStorage.clear());

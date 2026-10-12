@@ -1,15 +1,21 @@
 'use client';
 
 import * as React from 'react';
-import { RefreshCw } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Inbox } from 'lucide-react';
+import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
+import { PageHeader } from '@/components/page-header';
+import { PageLayout } from '@/components/page-layout';
+import { PeriodFieldset } from '@/components/period-fieldset';
+import { Section } from '@/components/section';
+import { StatStrip, StatTile } from '@/components/stat-tile';
+import { StatusBadge } from '@/components/status-badge';
+import { TableSkeleton } from '@/components/table-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -21,29 +27,94 @@ import {
   type DemandSummary,
 } from '@/lib/area-control';
 import { localMonthPeriod } from '@/lib/format';
-import { requestStateLabel } from '@/lib/request-state';
+import type { StatusKind } from '@/lib/status-presentation';
+import { cn } from '@/lib/utils';
 
 type LoadState = 'loading' | 'success' | 'error';
 
-/** Etiquetas legibles de las bandas de prioridad del marco §4. */
-const BAND_LABELS: Record<string, string> = {
-  P1: 'P1',
-  P2: 'P2',
-  P3: 'P3',
-  P4: 'P4',
-  SIN_PRIORIZAR: 'Sin priorizar',
-};
+const NUMBER_FORMAT = new Intl.NumberFormat('es');
 
-function bandLabel(band: string): string {
-  return BAND_LABELS[band] ?? band;
+function messageOf(err: unknown): string | null {
+  return err instanceof ApiError ? err.message : null;
 }
 
-function messageOf(err: unknown): string {
-  return err instanceof ApiError
-    ? err.message
-    : 'Ocurrio un error inesperado.';
+interface DistributionRow {
+  key: string;
+  count: number;
 }
 
+/**
+ * Tabla compacta de distribución: Estado o Banda (StatusBadge) · Solicitudes ·
+ * Distribución. La barra es decorativa (aria-hidden): su ancho es count/total,
+ * un cálculo de presentación sobre los datos de la API.
+ */
+function DistributionTable({
+  caption,
+  columnLabel,
+  kind,
+  rows,
+  total,
+}: {
+  caption: string;
+  columnLabel: string;
+  kind: StatusKind;
+  rows: DistributionRow[];
+  total: number;
+}): React.ReactElement {
+  return (
+    <div className="overflow-hidden rounded-lg border bg-card">
+      <Table density="compact">
+        <TableCaption>{caption}</TableCaption>
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col">{columnLabel}</TableHead>
+            <TableHead scope="col" className="text-right tabular-nums">
+              Solicitudes
+            </TableHead>
+            <TableHead scope="col" className="w-1/3">
+              Distribución
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => {
+            const width = total > 0 ? Math.min((row.count / total) * 100, 100) : 0;
+            return (
+              <TableRow
+                key={row.key}
+                className={cn(row.count === 0 && 'text-muted-foreground')}
+              >
+                <TableCell className="whitespace-nowrap">
+                  <StatusBadge kind={kind} value={row.key} />
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {NUMBER_FORMAT.format(row.count)}
+                </TableCell>
+                <TableCell>
+                  <span
+                    aria-hidden="true"
+                    className="block h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                  >
+                    <span
+                      className="block h-full rounded-full bg-primary/70"
+                      style={{ width: `${width}%` }}
+                    />
+                  </span>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+/**
+ * Panel del área (design §11.3, patrón F): periodo, cuatro indicadores clave
+ * leídos de GET /area-control/demand-summary sin ningún cálculo nuevo y las
+ * distribuciones por estado operativo y por banda de prioridad.
+ */
 export function DashboardView(): React.ReactElement {
   // Periodo del mes local del usuario (design §7.9, regla 2), calculado tras el
   // montaje: el inicializador de useState también corre al prerenderizar en el
@@ -85,209 +156,110 @@ export function DashboardView(): React.ReactElement {
       summary.byState.some((s) => s.count > 0) ||
       summary.byPriorityBand.some((b) => b.count > 0));
 
-  return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Control del area
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Panorama de la demanda del area para el periodo elegido: cuantas
-            solicitudes hay, cuantas estan bloqueadas, y su distribucion por
-            estado operativo y por banda de prioridad.
-          </p>
+  // Leídos de los arreglos de la API, sin cálculo (0 si la fila no viene).
+  const unprioritized =
+    summary?.byPriorityBand.find((b) => b.band === 'SIN_PRIORIZAR')?.count ?? 0;
+  const inExecution =
+    summary?.byState.find((s) => s.state === 'EN_EJECUCION')?.count ?? 0;
+
+  let content: React.ReactNode;
+  if (state === 'loading') {
+    content = (
+      <div aria-busy="true" className="flex flex-col gap-6">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-2 bg-card p-4">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-7 w-12" />
+            </div>
+          ))}
         </div>
-        <fieldset className="flex flex-col gap-1">
-          <legend className="mb-1 text-sm font-medium">Periodo</legend>
-          <div className="flex items-end gap-3">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="dashboard-from">Desde</Label>
-              {from ? (
-                <Input
-                  id="dashboard-from"
-                  type="date"
-                  className="w-40"
-                  value={from}
-                  max={to}
-                  onChange={(e) => {
-                    if (e.target.value) setFrom(e.target.value);
-                  }}
-                />
-              ) : (
-                <Skeleton className="h-9 w-40" />
-              )}
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="dashboard-to">Hasta</Label>
-              {to ? (
-                <Input
-                  id="dashboard-to"
-                  type="date"
-                  className="w-40"
-                  value={to}
-                  min={from}
-                  onChange={(e) => {
-                    if (e.target.value) setTo(e.target.value);
-                  }}
-                />
-              ) : (
-                <Skeleton className="h-9 w-40" />
-              )}
-            </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <TableSkeleton rows={6} columns={3} />
           </div>
-        </fieldset>
-      </header>
-
-      <div aria-live="polite" className="flex flex-col gap-6">
-        {state === 'loading' ? (
-          <div className="flex flex-col gap-6">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-            <Skeleton className="h-64 w-full" />
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <TableSkeleton rows={5} columns={3} />
           </div>
-        ) : state === 'error' ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border bg-card p-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              {errorMessage ?? 'No fue posible cargar el panorama de demanda.'}
-            </p>
-            <Button variant="outline" onClick={() => void load(from, to)}>
-              <RefreshCw aria-hidden="true" />
-              Reintentar
-            </Button>
-          </div>
-        ) : summary === null ? null : (
-          <>
-            <section
-              aria-label="Resumen general"
-              className="grid gap-4 sm:grid-cols-2"
-            >
-              <div className="rounded-lg border bg-card p-4">
-                <p className="text-sm text-muted-foreground">
-                  Solicitudes en alcance
-                </p>
-                <p className="text-3xl font-semibold tracking-tight">
-                  {summary.total}
-                </p>
-              </div>
-              <div className="rounded-lg border bg-card p-4">
-                <p className="text-sm text-muted-foreground">
-                  Bloqueadas activas
-                </p>
-                <p className="text-3xl font-semibold tracking-tight">
-                  {summary.blockedActive}
-                </p>
-              </div>
-            </section>
-
-            {!hasData ? (
-              <div className="flex flex-col items-center gap-2 rounded-lg border bg-card p-10 text-center">
-                <p className="text-sm font-medium">
-                  No hay solicitudes en tu alcance para este periodo.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Ajusta el periodo para ver la demanda de otro rango.
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-6 lg:grid-cols-2">
-                <section
-                  aria-labelledby="por-estado-heading"
-                  className="flex flex-col gap-3"
-                >
-                  <h2
-                    id="por-estado-heading"
-                    className="text-lg font-semibold tracking-tight"
-                  >
-                    Por estado operativo
-                  </h2>
-                  <div className="rounded-lg border bg-card">
-                    <Table>
-                      <caption className="sr-only">
-                        Numero de solicitudes por estado operativo en el
-                        periodo seleccionado.
-                      </caption>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead scope="col">Estado</TableHead>
-                          <TableHead scope="col" className="text-right">
-                            Solicitudes
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {summary.byState.map((row) => (
-                          <TableRow key={row.state}>
-                            <TableCell className="font-medium">
-                              {requestStateLabel(row.state)}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {row.count}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </section>
-
-                <section
-                  aria-labelledby="por-banda-heading"
-                  className="flex flex-col gap-3"
-                >
-                  <h2
-                    id="por-banda-heading"
-                    className="text-lg font-semibold tracking-tight"
-                  >
-                    Por banda de prioridad
-                  </h2>
-                  <div className="rounded-lg border bg-card">
-                    <Table>
-                      <caption className="sr-only">
-                        Numero de solicitudes por banda de prioridad en el
-                        periodo seleccionado.
-                      </caption>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead scope="col">Banda</TableHead>
-                          <TableHead scope="col" className="text-right">
-                            Solicitudes
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {summary.byPriorityBand.map((row) => (
-                          <TableRow key={row.band}>
-                            <TableCell>
-                              {row.band === 'SIN_PRIORIZAR' ? (
-                                <Badge
-                                  variant="secondary"
-                                  aria-label="Sin priorizar"
-                                >
-                                  {bandLabel(row.band)}
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline">
-                                  {bandLabel(row.band)}
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {row.count}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </section>
-              </div>
-            )}
-          </>
-        )}
+        </div>
       </div>
-    </div>
+    );
+  } else if (state === 'error' || summary === null) {
+    content = (
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <ErrorState
+          title="No fue posible cargar el panorama de la demanda."
+          message={errorMessage}
+          onRetry={() => void load(from, to)}
+        />
+      </div>
+    );
+  } else {
+    content = (
+      <>
+        <StatStrip label="Resumen general">
+          <StatTile
+            label="Solicitudes en alcance"
+            value={NUMBER_FORMAT.format(summary.total)}
+          />
+          <StatTile
+            label="Bloqueadas activas"
+            value={NUMBER_FORMAT.format(summary.blockedActive)}
+            tone={summary.blockedActive > 0 ? 'danger' : 'default'}
+          />
+          <StatTile label="Sin priorizar" value={NUMBER_FORMAT.format(unprioritized)} />
+          <StatTile label="En ejecución" value={NUMBER_FORMAT.format(inExecution)} />
+        </StatStrip>
+
+        {!hasData ? (
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <EmptyState
+              icon={Inbox}
+              title="No hay solicitudes en tu alcance para este periodo."
+              description="Ajusta el periodo para ver otro rango."
+            />
+          </div>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Section title="Por estado operativo">
+              <DistributionTable
+                caption="Número de solicitudes por estado operativo en el periodo seleccionado."
+                columnLabel="Estado"
+                kind="request"
+                rows={summary.byState.map((row) => ({ key: row.state, count: row.count }))}
+                total={summary.total}
+              />
+            </Section>
+            <Section title="Por banda de prioridad">
+              <DistributionTable
+                caption="Número de solicitudes por banda de prioridad en el periodo seleccionado."
+                columnLabel="Banda"
+                kind="band"
+                rows={summary.byPriorityBand.map((row) => ({ key: row.band, count: row.count }))}
+                total={summary.total}
+              />
+            </Section>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <PageLayout>
+      <PageHeader
+        title="Panel del área"
+        description="Demanda del área en el periodo: volumen, bloqueos y distribución por estado y prioridad."
+      />
+      <PeriodFieldset
+        fromId="dashboard-from"
+        toId="dashboard-to"
+        from={from}
+        to={to}
+        onFromChange={setFrom}
+        onToChange={setTo}
+      />
+      {content}
+    </PageLayout>
   );
 }

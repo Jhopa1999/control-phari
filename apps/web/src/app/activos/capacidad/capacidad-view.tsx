@@ -1,8 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
+import { CalendarClock, ChevronRight, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { SortableTableHead } from '@/components/data-table';
+import { DataView, type DataViewState } from '@/components/data-view';
+import { PageHeader } from '@/components/page-header';
+import { PageLayout } from '@/components/page-layout';
+import { RowActions, RowActionsCell } from '@/components/row-actions';
+import { Section } from '@/components/section';
+import { StatusBadge } from '@/components/status-badge';
+import { Toolbar } from '@/components/toolbar';
+import { UtilizationBar } from '@/components/utilization-bar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -25,7 +36,7 @@ import type {
   Request,
 } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
-import { localMonthInputValue } from '@/lib/format';
+import { formatHours, formatMonth, localMonthInputValue, orDash } from '@/lib/format';
 import {
   CapacityError,
   createAssignment,
@@ -40,6 +51,9 @@ import {
 } from '@/lib/capacity';
 import { listProcesses } from '@/lib/team';
 import { listRequests } from '@/lib/requests';
+import { compareNumber, compareText, type Comparator } from '@/lib/table-sort';
+import { useClientTable } from '@/lib/use-client-table';
+import { cn } from '@/lib/utils';
 import {
   DisponibilidadFormDialog,
   type DisponibilidadFormValues,
@@ -50,11 +64,25 @@ import {
 } from './asignacion-form-dialog';
 
 type LoadState = 'loading' | 'success' | 'error';
+type SummarySortKey = 'person' | 'utilization' | 'planUtilization';
+
+const SUMMARY_COMPARATORS: Record<SummarySortKey, Comparator<CapacitySummaryRow>> = {
+  person: (a, b, direction) => compareText(a.userName, b.userName, direction),
+  utilization: (a, b, direction) => compareNumber(a.utilizacion, b.utilizacion, direction),
+  planUtilization: (a, b, direction) =>
+    compareNumber(a.utilizacionPlan, b.utilizacionPlan, direction),
+};
+
+/** Explicación de la señal para lectores de pantalla (Carga parcial ya la muestra visible). */
+const SIGNAL_DESCRIPTIONS: Record<CapacitySummaryRow['estado'], string | undefined> = {
+  OK: 'la carga comprometida está dentro de lo disponible',
+  SOBRECARGA: 'hay más horas asignadas que disponibles',
+  SIN_DISPONIBILIDAD: 'no hay disponibilidad registrada este mes',
+  CARGA_PARCIAL: undefined,
+};
 
 function messageOf(err: unknown): string {
-  return err instanceof CapacityError
-    ? err.message
-    : 'Ocurrio un error inesperado.';
+  return err instanceof CapacityError ? err.message : 'Ocurrió un error inesperado.';
 }
 
 function trimOrUndefined(value: string): string | undefined {
@@ -62,20 +90,19 @@ function trimOrUndefined(value: string): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-function nullOrNumber(value: number | null): string {
-  return value === null ? '—' : String(value);
+function hoursOrDash(value: number | null): string {
+  return value === null ? orDash(value) : formatHours(value);
 }
 
-/** Porcentaje nullable (utilizacion / utilizacion plan): null -> guion. */
-function nullOrPercent(value: number | null): string {
-  return value === null ? '—' : `${value}%`;
+function assignmentActionId(id: string): string {
+  return `asig-editar-${id}`;
 }
 
 export function CapacidadView(): React.ReactElement {
   const { permissions } = useActor();
 
   // Un integrante "puro" solo tiene grants INTEGRANTE: puede registrar su
-  // propia capacidad y nada mas (el backend reconfirma el alcance; design D8).
+  // propia capacidad y nada más (el backend reconfirma el alcance; design D8).
   const selfUserId = permissions?.userId ?? null;
   const lockPerson = React.useMemo(() => {
     const grants = permissions?.grants ?? [];
@@ -100,18 +127,26 @@ export function CapacidadView(): React.ReactElement {
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
 
-  // Dialogos de disponibilidad.
+  // Diálogos de disponibilidad.
   const [dispOpen, setDispOpen] = React.useState(false);
   const [dispEditing, setDispEditing] = React.useState<Availability | null>(null);
   const [dispSubmitting, setDispSubmitting] = React.useState(false);
   const [dispError, setDispError] = React.useState<string | null>(null);
 
-  // Dialogos de asignacion.
+  // Diálogos de asignación.
   const [asigOpen, setAsigOpen] = React.useState(false);
   const [asigEditing, setAsigEditing] = React.useState<Assignment | null>(null);
   const [asigSubmitting, setAsigSubmitting] = React.useState(false);
   const [asigError, setAsigError] = React.useState<string | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+
+  // Confirmación de «Eliminar» y destino del foco si la fila desaparece (NIT 4).
+  // El destino se conserva al cerrar para que el título no se vacíe durante la
+  // animación de salida.
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [confirmTarget, setConfirmTarget] = React.useState<Assignment | null>(null);
+  const focusAfterDeleteRef = React.useRef<string | null>(null);
+  const assignmentsHeadingRef = React.useRef<HTMLHeadingElement>(null);
 
   const load = React.useCallback(async (targetMonth: string) => {
     setState('loading');
@@ -141,6 +176,14 @@ export function CapacidadView(): React.ReactElement {
     void load(month);
   }, [month, load]);
 
+  // Resumen: todas las personas (pageSize null, §24.1), orden de la API por defecto.
+  const summaryTable = useClientTable({
+    rows: summary,
+    comparators: SUMMARY_COMPARATORS,
+    defaultSort: null,
+    pageSize: null,
+  });
+
   const processName = React.useCallback(
     (id: string) => processes.find((p) => p.id === id)?.name ?? id,
     [processes],
@@ -150,8 +193,7 @@ export function CapacidadView(): React.ReactElement {
     [people],
   );
   const requestTitle = React.useCallback(
-    (id: string | null) =>
-      id ? (requests.find((r) => r.id === id)?.title ?? id) : '—',
+    (id: string | null) => (id ? (requests.find((r) => r.id === id)?.title ?? id) : orDash(id)),
     [requests],
   );
 
@@ -184,12 +226,12 @@ export function CapacidadView(): React.ReactElement {
         });
         toast.success('Disponibilidad registrada.');
       }
-      // Reset solo en el camino de exito (AC-031).
+      // Reset solo en el camino de éxito (AC-031).
       setDispOpen(false);
       setDispEditing(null);
       await load(month);
     } catch (err) {
-      // Fallo: conserva el dialog abierto y los valores (AC-031).
+      // Fallo: conserva el diálogo abierto y los valores (AC-031).
       const message = messageOf(err);
       setDispError(message);
       toast.error(message);
@@ -210,7 +252,7 @@ export function CapacidadView(): React.ReactElement {
     }
   }
 
-  // --- Asignacion ---
+  // --- Asignación ---
   function openCreateAsig() {
     setAsigEditing(null);
     setAsigError(null);
@@ -229,13 +271,13 @@ export function CapacidadView(): React.ReactElement {
       if (asigEditing) {
         await updateAssignment(asigEditing.id, {
           processId: values.processId,
-          // Al editar, "Sin solicitud" (vacio) envia null para DESLIGAR la
+          // Al editar, "Sin solicitud" (vacío) envía null para DESLIGAR la
           // solicitud actual (design §2.2 set/clear), no undefined (que se omite).
           requestId: trimOrUndefined(values.requestId) ?? null,
           committedHours: Number(values.committedHours),
           description: trimOrUndefined(values.description),
         });
-        toast.success('Asignacion actualizada.');
+        toast.success('Asignación actualizada.');
       } else {
         await createAssignment({
           userId: values.userId,
@@ -245,14 +287,14 @@ export function CapacidadView(): React.ReactElement {
           committedHours: Number(values.committedHours),
           description: trimOrUndefined(values.description),
         });
-        toast.success('Asignacion creada.');
+        toast.success('Asignación creada.');
       }
-      // Reset solo en el camino de exito (AC-031).
+      // Reset solo en el camino de éxito (AC-031).
       setAsigOpen(false);
       setAsigEditing(null);
       await load(month);
     } catch (err) {
-      // Fallo: conserva el dialog abierto y los valores (AC-031).
+      // Fallo: conserva el diálogo abierto y los valores (AC-031).
       const message = messageOf(err);
       setAsigError(message);
       toast.error(message);
@@ -261,11 +303,21 @@ export function CapacidadView(): React.ReactElement {
     }
   }
 
+  function requestDeleteAsig(row: Assignment) {
+    // Si la fila desaparece, el foco pasa a la fila siguiente (o a la anterior
+    // si era la última) y, sin filas, al encabezado de la sección (NIT 4).
+    const index = assignments.findIndex((a) => a.id === row.id);
+    const neighbour = assignments[index + 1] ?? assignments[index - 1] ?? null;
+    focusAfterDeleteRef.current = neighbour?.id ?? null;
+    setConfirmTarget(row);
+    setConfirmOpen(true);
+  }
+
   async function handleDeleteAsig(row: Assignment) {
     setDeletingId(row.id);
     try {
       await deleteAssignment(row.id);
-      toast.success('Asignacion eliminada.');
+      toast.success('Asignación eliminada.');
       await load(month);
     } catch (err) {
       toast.error(messageOf(err));
@@ -274,328 +326,376 @@ export function CapacidadView(): React.ReactElement {
     }
   }
 
+  const returnFocusAfterDelete = React.useCallback((): HTMLElement | null => {
+    const neighbourId = focusAfterDeleteRef.current;
+    const neighbour = neighbourId ? document.getElementById(assignmentActionId(neighbourId)) : null;
+    return neighbour ?? assignmentsHeadingRef.current;
+  }, []);
+
+  function sectionState(isEmpty: boolean): DataViewState {
+    if (state === 'loading') return 'loading';
+    if (state === 'error') return 'error';
+    return isEmpty ? 'empty' : 'ready';
+  }
+
+  const retry = () => void load(month);
+
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Capacidad</h1>
-          <p className="text-sm text-muted-foreground">
-            Disponibilidad y carga del equipo por mes. Elige un mes para ver el
-            resumen y gestionar la capacidad dentro de tu alcance.
-          </p>
-        </div>
-        <div className="flex flex-col gap-1">
+    <PageLayout>
+      <PageHeader
+        title="Capacidad"
+        description="Disponibilidad y carga del equipo por mes, dentro de tu alcance."
+      />
+
+      <Toolbar label="Mes de capacidad">
+        <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="capacidad-month">Mes</Label>
           {month ? (
             <Input
               id="capacidad-month"
               type="month"
-              className="w-44"
+              className="w-full sm:w-44"
               value={month}
               onChange={(e) => {
                 if (e.target.value) setMonth(e.target.value);
               }}
             />
           ) : (
-            <Skeleton className="h-9 w-44" />
+            <Skeleton className="h-9 w-full sm:w-44" />
           )}
         </div>
-      </header>
+      </Toolbar>
 
-      {/* Explicacion en lenguaje llano (brief / design 4.2). */}
-      <section
-        aria-label="Como leer el resumen"
-        className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground"
-      >
-        <p>
-          La <strong>disponibilidad</strong> son las horas que una persona tiene
-          en el mes y se registra una sola vez por persona y mes. Las{' '}
-          <strong>asignaciones</strong> de distintos procesos se suman: eso es lo{' '}
-          <strong>comprometido</strong>. La <strong>utilizacion</strong> es el
-          porcentaje de las horas disponibles que ya estan comprometidas; mas de
-          100% significa que hay mas horas asignadas que disponibles
-          (sobrecarga). Lo <strong>libre</strong> es lo que queda sin comprometer.
-        </p>
-        <p className="mt-2">
-          Lo <strong>planificado</strong> es una estimacion distinta: suma las
-          horas estimadas de las tareas del plan asignadas a la persona ese mes.
-          No es lo mismo que lo <strong>comprometido</strong> (horas que se
-          registran a mano en asignaciones) y no cambia la senal de sobrecarga; es
-          solo una referencia de la carga que proyecta el plan.
-        </p>
-      </section>
+      {/* Explicación en lenguaje llano (design §11.11), cerrada por defecto. */}
+      <details className="group rounded-lg border bg-card text-sm">
+        <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-4 py-3 font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+          <ChevronRight
+            className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90 motion-reduce:transition-none"
+            aria-hidden="true"
+          />
+          ¿Cómo se calcula?
+        </summary>
+        <div className="flex max-w-prose flex-col gap-2 px-4 pb-4 text-muted-foreground">
+          <p>
+            La <strong className="text-foreground">disponibilidad</strong> son las horas que una
+            persona tiene en el mes y se registra una sola vez por persona y mes. Las{' '}
+            <strong className="text-foreground">asignaciones</strong> de distintos procesos se
+            suman: eso es lo <strong className="text-foreground">comprometido</strong>. La{' '}
+            <strong className="text-foreground">utilización</strong> es el porcentaje de las horas
+            disponibles que ya están comprometidas; más de 100&nbsp;% significa que hay más horas
+            asignadas que disponibles (sobrecarga). Lo{' '}
+            <strong className="text-foreground">libre</strong> es lo que queda sin comprometer.
+          </p>
+          <p>
+            Lo <strong className="text-foreground">planificado</strong> es una estimación
+            distinta: suma las horas estimadas de las tareas del plan asignadas a la persona ese
+            mes. No es lo mismo que lo <strong className="text-foreground">comprometido</strong>{' '}
+            (horas que se registran a mano en asignaciones) y no cambia la señal de sobrecarga; es
+            solo una referencia de la carga que proyecta el plan.
+          </p>
+        </div>
+      </details>
 
-      {/* Resumen de carga por persona */}
-      <section aria-labelledby="resumen-heading" className="flex flex-col gap-3">
-        <h2 id="resumen-heading" className="text-lg font-semibold tracking-tight">
-          Resumen de carga
-        </h2>
-        <div aria-live="polite" className="rounded-lg border bg-card">
-          {state === 'loading' ? (
-            <div className="flex flex-col gap-3 p-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-          ) : state === 'error' ? (
-            <div className="flex flex-col items-center gap-3 p-10 text-center">
-              <p className="text-sm text-muted-foreground">
-                No fue posible cargar el resumen de capacidad.
-              </p>
-              <Button variant="outline" onClick={() => void load(month)}>
-                <RefreshCw aria-hidden="true" />
-                Reintentar
-              </Button>
-            </div>
-          ) : summary.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 p-10 text-center">
-              <p className="text-sm font-medium">
-                Aun no hay disponibilidad ni asignaciones este mes.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Registra la disponibilidad del equipo y crea asignaciones para
-                ver la carga.
-              </p>
-            </div>
-          ) : (
-            <Table>
-              <caption className="sr-only">
-                Resumen de carga por persona para el mes {month}. Incluye las
-                horas comprometidas (asignaciones registradas a mano) y las horas
-                planificadas (estimacion de las tareas del plan).
-              </caption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead scope="col">Persona</TableHead>
-                  <TableHead scope="col">Disponible</TableHead>
-                  <TableHead scope="col">Comprometido</TableHead>
-                  <TableHead scope="col">Utilizacion %</TableHead>
-                  <TableHead scope="col">Libre</TableHead>
-                  <TableHead scope="col">Planificado</TableHead>
-                  <TableHead scope="col">Utilizacion plan %</TableHead>
-                  <TableHead scope="col">Senal</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {summary.map((row) => (
-                  <TableRow key={row.userId}>
-                    <TableCell className="font-medium">{row.userName}</TableCell>
-                    <TableCell>{nullOrNumber(row.disponible)}</TableCell>
-                    <TableCell>{row.comprometido}</TableCell>
-                    <TableCell>{nullOrPercent(row.utilizacion)}</TableCell>
-                    <TableCell>{nullOrNumber(row.libre)}</TableCell>
-                    <TableCell>
-                      <span className="flex items-center gap-2">
-                        {row.planificado}
-                        {row.planSobreDisponible ? (
-                          <Badge
-                            variant="outline"
-                            aria-label="La carga planificada supera las horas disponibles de esta persona este mes; es informativo y no implica sobrecarga comprometida"
-                          >
-                            Plan &gt; disponible
-                          </Badge>
-                        ) : null}
-                      </span>
-                    </TableCell>
-                    <TableCell>{nullOrPercent(row.utilizacionPlan)}</TableCell>
-                    <TableCell>
-                      {row.estado === 'SOBRECARGA' ? (
-                        <Badge
-                          variant="destructive"
-                          aria-label="Persona sobrecargada: hay mas horas asignadas que disponibles"
-                        >
-                          Sobrecarga
-                        </Badge>
-                      ) : row.estado === 'SIN_DISPONIBILIDAD' ? (
-                        <Badge
-                          variant="secondary"
-                          aria-label="Sin disponibilidad registrada este mes"
-                        >
-                          Sin disponibilidad
-                        </Badge>
-                      ) : row.estado === 'CARGA_PARCIAL' ? (
-                        <span className="flex flex-col gap-1">
-                          <Badge
-                            variant="outline"
-                            aria-label="Carga parcial: esta persona tiene asignaciones fuera de tu alcance"
-                          >
-                            Carga parcial
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            Esta persona tiene asignaciones en procesos fuera de
-                            tu alcance; la carga total la ve el jefe de area.
+      <Section title="Resumen de carga">
+        <DataView
+          state={sectionState(summary.length === 0)}
+          loading={{ rows: 4, columns: 8 }}
+          error={{
+            title: 'No fue posible cargar el resumen de capacidad.',
+            onRetry: retry,
+          }}
+          empty={{
+            icon: Users,
+            title: 'Aún no hay disponibilidad ni asignaciones este mes.',
+            description:
+              'Registra la disponibilidad del equipo y crea asignaciones para ver la carga.',
+          }}
+        >
+          <Table scrollLabel="Tabla del resumen de carga">
+            <TableCaption>
+              {`Resumen de carga por persona para ${month ? formatMonth(month) : 'el mes elegido'}. Incluye las horas comprometidas (asignaciones registradas a mano) y las horas planificadas (estimación de las tareas del plan).`}
+            </TableCaption>
+            <TableHeader>
+              <TableRow>
+                <SortableTableHead
+                  label="Persona"
+                  sortKey="person"
+                  sort={summaryTable.sort}
+                  onSort={summaryTable.toggleSort}
+                />
+                <TableHead scope="col" className="text-right tabular-nums">
+                  Disponible
+                </TableHead>
+                <TableHead scope="col" className="text-right tabular-nums">
+                  Comprometido
+                </TableHead>
+                <SortableTableHead
+                  label="Utilización"
+                  sortKey="utilization"
+                  sort={summaryTable.sort}
+                  onSort={summaryTable.toggleSort}
+                />
+                <TableHead scope="col" className="text-right tabular-nums">
+                  Libre
+                </TableHead>
+                <TableHead scope="col" className="text-right tabular-nums">
+                  Planificado
+                </TableHead>
+                <SortableTableHead
+                  label="Utilización plan"
+                  sortKey="planUtilization"
+                  sort={summaryTable.sort}
+                  onSort={summaryTable.toggleSort}
+                />
+                <TableHead scope="col">Señal</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {summaryTable.pageRows.map((row) => (
+                <TableRow key={row.userId}>
+                  <TableCell className="min-w-40 font-medium">{row.userName}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap tabular-nums">
+                    {hoursOrDash(row.disponible)}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap tabular-nums">
+                    {formatHours(row.comprometido)}
+                  </TableCell>
+                  <TableCell>
+                    <UtilizationBar
+                      value={row.utilizacion}
+                      tone={row.sobrecargado ? 'danger' : 'default'}
+                      label="Utilización"
+                    />
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      'text-right whitespace-nowrap tabular-nums',
+                      row.libre !== null && row.libre < 0 && 'text-danger',
+                    )}
+                  >
+                    {hoursOrDash(row.libre)}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap tabular-nums">
+                    <span className="inline-flex items-center justify-end gap-2">
+                      {formatHours(row.planificado)}
+                      {row.planSobreDisponible ? (
+                        <>
+                          <Badge variant="warning">Plan supera lo disponible</Badge>
+                          <span className="sr-only">
+                            : la carga planificada supera las horas disponibles de esta persona
+                            este mes; es informativo y no implica sobrecarga comprometida
                           </span>
+                        </>
+                      ) : null}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <UtilizationBar
+                      value={row.utilizacionPlan}
+                      tone={row.planSobreDisponible ? 'warning' : 'default'}
+                      label="Utilización plan"
+                    />
+                  </TableCell>
+                  <TableCell className="min-w-36">
+                    {row.estado === 'CARGA_PARCIAL' ? (
+                      <span className="flex flex-col items-start gap-1 py-1">
+                        <StatusBadge kind="capacity" value={row.estado} />
+                        <span className="max-w-64 text-meta text-muted-foreground">
+                          Esta persona tiene asignaciones en procesos fuera de tu alcance; la
+                          carga total la ve el jefe de área.
                         </span>
-                      ) : (
-                        <Badge variant="secondary" aria-label="Carga dentro de lo disponible">
-                          OK
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </div>
-      </section>
+                      </span>
+                    ) : (
+                      <StatusBadge
+                        kind="capacity"
+                        value={row.estado}
+                        srDescription={SIGNAL_DESCRIPTIONS[row.estado]}
+                      />
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DataView>
+      </Section>
 
-      {/* Disponibilidad */}
-      <section
-        aria-labelledby="disponibilidad-heading"
-        className="flex flex-col gap-3"
-      >
-        <div className="flex items-center justify-between">
-          <h2
-            id="disponibilidad-heading"
-            className="text-lg font-semibold tracking-tight"
-          >
-            Disponibilidad
-          </h2>
+      <Section
+        title="Disponibilidad"
+        actions={
           <Button size="sm" onClick={openCreateDisp} disabled={state === 'loading'}>
             <Plus aria-hidden="true" />
             Registrar disponibilidad
           </Button>
-        </div>
-        <div className="rounded-lg border bg-card">
-          {state === 'success' && availability.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 p-8 text-center">
-              <p className="text-sm font-medium">
-                Aun no hay disponibilidad este mes.
-              </p>
+        }
+      >
+        <DataView
+          state={sectionState(availability.length === 0)}
+          loading={{ rows: 2, columns: 3 }}
+          error={{
+            title: 'No fue posible cargar la disponibilidad.',
+            onRetry: retry,
+            size: 'compact',
+          }}
+          empty={{
+            icon: CalendarClock,
+            title: 'Aún no hay disponibilidad este mes.',
+            description: 'Registra las horas que cada persona tiene en el mes.',
+            size: 'compact',
+            action: (
               <Button variant="outline" size="sm" onClick={openCreateDisp}>
                 <Plus aria-hidden="true" />
                 Registrar disponibilidad
               </Button>
-            </div>
-          ) : state === 'success' ? (
-            <Table>
-              <caption className="sr-only">
-                Disponibilidad registrada para el mes {month}.
-              </caption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead scope="col">Persona</TableHead>
-                  <TableHead scope="col">Horas disponibles</TableHead>
-                  <TableHead scope="col" className="text-right">
-                    Acciones
-                  </TableHead>
+            ),
+          }}
+        >
+          <Table scrollLabel="Tabla de disponibilidad">
+            <TableCaption>
+              {`Disponibilidad registrada para ${month ? formatMonth(month) : 'el mes elegido'}.`}
+            </TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">Persona</TableHead>
+                <TableHead scope="col" className="text-right tabular-nums">
+                  Horas disponibles
+                </TableHead>
+                <TableHead scope="col" className="text-right">
+                  Acciones
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {availability.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell className="min-w-40 font-medium">{personName(row.userId)}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap tabular-nums">
+                    {formatHours(row.availableHours)}
+                  </TableCell>
+                  <RowActionsCell>
+                    <RowActions
+                      rowLabel={personName(row.userId)}
+                      actions={[
+                        { key: 'edit', label: 'Editar', onSelect: () => openEditDisp(row) },
+                      ]}
+                    />
+                  </RowActionsCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {availability.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">
-                      {personName(row.userId)}
-                    </TableCell>
-                    <TableCell>{row.availableHours}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDisp(row)}
-                        >
-                          Editar
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="p-4">
-              <Skeleton className="h-10 w-full" />
-            </div>
-          )}
-        </div>
-      </section>
+              ))}
+            </TableBody>
+          </Table>
+        </DataView>
+      </Section>
 
-      {/* Asignaciones */}
-      <section aria-labelledby="asignaciones-heading" className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2
-            id="asignaciones-heading"
-            className="text-lg font-semibold tracking-tight"
-          >
-            Asignaciones
-          </h2>
+      <Section
+        title="Asignaciones"
+        headingRef={assignmentsHeadingRef}
+        actions={
           <Button size="sm" onClick={openCreateAsig} disabled={state === 'loading'}>
             <Plus aria-hidden="true" />
-            Nueva asignacion
+            Nueva asignación
           </Button>
-        </div>
-        <div className="rounded-lg border bg-card">
-          {state === 'success' && assignments.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 p-8 text-center">
-              <p className="text-sm font-medium">
-                Aun no hay asignaciones este mes.
-              </p>
+        }
+      >
+        <DataView
+          state={sectionState(assignments.length === 0)}
+          loading={{ rows: 3, columns: 6 }}
+          error={{
+            title: 'No fue posible cargar las asignaciones.',
+            onRetry: retry,
+            size: 'compact',
+          }}
+          empty={{
+            icon: CalendarClock,
+            title: 'Aún no hay asignaciones este mes.',
+            description: 'Asigna horas de una persona a un proceso o a una solicitud.',
+            size: 'compact',
+            action: (
               <Button variant="outline" size="sm" onClick={openCreateAsig}>
                 <Plus aria-hidden="true" />
-                Nueva asignacion
+                Nueva asignación
               </Button>
-            </div>
-          ) : state === 'success' ? (
-            <Table>
-              <caption className="sr-only">
-                Asignaciones de horas para el mes {month}.
-              </caption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead scope="col">Persona</TableHead>
-                  <TableHead scope="col">Proceso</TableHead>
-                  <TableHead scope="col">Solicitud</TableHead>
-                  <TableHead scope="col">Horas</TableHead>
-                  <TableHead scope="col">Descripcion</TableHead>
-                  <TableHead scope="col" className="text-right">
-                    Acciones
-                  </TableHead>
+            ),
+          }}
+        >
+          <Table scrollLabel="Tabla de asignaciones">
+            <TableCaption>
+              {`Asignaciones de horas para ${month ? formatMonth(month) : 'el mes elegido'}.`}
+            </TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">Persona</TableHead>
+                <TableHead scope="col">Proceso</TableHead>
+                <TableHead scope="col">Solicitud</TableHead>
+                <TableHead scope="col" className="text-right tabular-nums">
+                  Horas
+                </TableHead>
+                <TableHead scope="col">Descripción</TableHead>
+                <TableHead scope="col" className="text-right">
+                  Acciones
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {assignments.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell className="min-w-40 font-medium">{personName(row.userId)}</TableCell>
+                  <TableCell className="min-w-32">{processName(row.processId)}</TableCell>
+                  <TableCell className="min-w-48 max-w-[24rem]">
+                    <span className="line-clamp-2" title={requestTitle(row.requestId)}>
+                      {requestTitle(row.requestId)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap tabular-nums">
+                    {formatHours(row.committedHours)}
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate text-muted-foreground">
+                    <span title={row.description ?? undefined}>{orDash(row.description)}</span>
+                  </TableCell>
+                  <RowActionsCell>
+                    <RowActions
+                      rowLabel={personName(row.userId)}
+                      actions={[
+                        {
+                          key: 'edit',
+                          id: assignmentActionId(row.id),
+                          label: 'Editar',
+                          onSelect: () => openEditAsig(row),
+                        },
+                        {
+                          key: 'delete',
+                          label: 'Eliminar',
+                          tone: 'danger',
+                          busy: deletingId === row.id,
+                          busyLabel: 'Eliminando…',
+                          onSelect: () => requestDeleteAsig(row),
+                        },
+                      ]}
+                    />
+                  </RowActionsCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {assignments.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">
-                      {personName(row.userId)}
-                    </TableCell>
-                    <TableCell>{processName(row.processId)}</TableCell>
-                    <TableCell>{requestTitle(row.requestId)}</TableCell>
-                    <TableCell>{row.committedHours}</TableCell>
-                    <TableCell className="max-w-xs truncate text-muted-foreground">
-                      {row.description ?? '—'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditAsig(row)}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void handleDeleteAsig(row)}
-                          disabled={deletingId === row.id}
-                        >
-                          {deletingId === row.id ? 'Borrando...' : 'Borrar'}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="p-4">
-              <Skeleton className="h-10 w-full" />
-            </div>
-          )}
-        </div>
-      </section>
+              ))}
+            </TableBody>
+          </Table>
+        </DataView>
+      </Section>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={
+          confirmTarget
+            ? `¿Eliminar la asignación de ${personName(confirmTarget.userId)} (${formatHours(confirmTarget.committedHours)})?`
+            : ''
+        }
+        description="Esta acción no se puede deshacer."
+        confirmLabel="Eliminar asignación"
+        busy={confirmTarget !== null && deletingId === confirmTarget.id}
+        onConfirm={async () => {
+          if (confirmTarget) await handleDeleteAsig(confirmTarget);
+        }}
+        returnFocusTo={returnFocusAfterDelete}
+      />
 
       <DisponibilidadFormDialog
         open={dispOpen}
@@ -636,6 +736,6 @@ export function CapacidadView(): React.ReactElement {
         errorMessage={asigError}
         onSubmit={handleAsigSubmit}
       />
-    </div>
+    </PageLayout>
   );
 }
