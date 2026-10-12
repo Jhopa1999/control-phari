@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -11,7 +13,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -32,8 +33,23 @@ interface SemanalFormDialogProps {
   onOpenChange: (open: boolean) => void;
   processes: Process[];
   submitting: boolean;
+  /** Error del backend; se conserva ante fallo (AC-031). */
   errorMessage: string | null;
   onSubmit: (values: SemanalFormValues) => void;
+}
+
+type FieldKey = 'processId' | 'weekStart';
+type FieldErrors = Partial<Record<FieldKey, string>>;
+
+/** Id del formulario: el FormError lleva `sem-form-error`. */
+const FORM_ID = 'sem-form';
+
+/** Reglas del cliente, las mismas de siempre, evaluadas todas a la vez (design §9). */
+function validate(values: SemanalFormValues): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!values.processId) errors.processId = 'Selecciona un proceso.';
+  if (!values.weekStart) errors.weekStart = 'Selecciona una fecha de la semana.';
+  return errors;
 }
 
 export function SemanalFormDialog({
@@ -46,11 +62,15 @@ export function SemanalFormDialog({
 }: SemanalFormDialogProps): React.ReactElement {
   const [processId, setProcessId] = React.useState('');
   const [weekStart, setWeekStart] = React.useState('');
-  const [clientError, setClientError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
+  const processRef = React.useRef<HTMLButtonElement>(null);
+  const weekRef = React.useRef<HTMLInputElement>(null);
 
+  // Inicializa al abrir. El reset solo ocurre aquí; ante fallo del POST el
+  // padre mantiene el diálogo abierto con los valores (AC-031).
   React.useEffect(() => {
     if (!open) return;
-    setClientError(null);
+    setFieldErrors({});
     setProcessId('');
     // Lunes de la semana actual en el calendario local (design §7.9, regla 2).
     setWeekStart(localWeekMondayInputValue());
@@ -58,64 +78,75 @@ export function SemanalFormDialog({
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!processId) {
-      setClientError('Selecciona un proceso.');
+    const values = { processId, weekStart };
+    const errors = validate(values);
+    setFieldErrors(errors);
+    if (errors.processId || errors.weekStart) {
+      // Foco al primer campo con error, en orden del DOM.
+      if (errors.processId) processRef.current?.focus();
+      else weekRef.current?.focus();
       return;
     }
-    if (!weekStart) {
-      setClientError('Selecciona una fecha de la semana.');
-      return;
-    }
-    setClientError(null);
-    onSubmit({ processId, weekStart });
+    onSubmit(values);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent size="sm">
         <DialogHeader>
-          <DialogTitle>Nuevo registro semanal</DialogTitle>
+          <DialogTitle>Nuevo reporte semanal</DialogTitle>
           <DialogDescription>
-            El registro se ancla al lunes de la semana. Puedes elegir cualquier
-            dia; el sistema lo ajusta al lunes correspondiente.
+            El reporte se ancla al lunes de la semana. Puedes elegir cualquier día; el sistema lo
+            ajusta al lunes correspondiente.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="sem-process">Proceso *</Label>
-            <Select value={processId} onValueChange={setProcessId}>
-              <SelectTrigger id="sem-process">
-                <SelectValue placeholder="Selecciona un proceso" />
-              </SelectTrigger>
-              <SelectContent>
-                {processes.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <DialogBody className="grid gap-4">
+            <RequiredHint />
+            <Field id="sem-process" label="Proceso" required error={fieldErrors.processId}>
+              {(control) => (
+                <Select
+                  value={processId}
+                  onValueChange={(value) => {
+                    setProcessId(value);
+                    setFieldErrors((prev) => ({ ...prev, processId: undefined }));
+                  }}
+                >
+                  <SelectTrigger ref={processRef} {...control}>
+                    <SelectValue placeholder="Selecciona un proceso" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {processes.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="sem-week">Semana (dia cualquiera) *</Label>
-            <Input
+            <Field
               id="sem-week"
-              type="date"
-              value={weekStart}
-              onChange={(e) => setWeekStart(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Se usara el lunes de esa semana como ancla.
-            </p>
-          </div>
+              label="Semana (día cualquiera)"
+              required
+              error={fieldErrors.weekStart}
+              help="Se usará el lunes de esa semana."
+            >
+              <Input
+                ref={weekRef}
+                type="date"
+                value={weekStart}
+                onChange={(e) => {
+                  setWeekStart(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, weekStart: undefined }));
+                }}
+              />
+            </Field>
 
-          {clientError || errorMessage ? (
-            <p className="text-sm text-destructive" role="alert">
-              {clientError ?? errorMessage}
-            </p>
-          ) : null}
+            <FormError id={FORM_ID} message={errorMessage} />
+          </DialogBody>
 
           <DialogFooter>
             <Button
@@ -126,8 +157,8 @@ export function SemanalFormDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Creando...' : 'Crear semanal'}
+            <Button type="submit" loading={submitting}>
+              {submitting ? 'Creando…' : 'Crear reporte semanal'}
             </Button>
           </DialogFooter>
         </form>

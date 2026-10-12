@@ -317,6 +317,21 @@ defecto de la plantilla.
   conserva sus tres filtros de servidor y añade búsqueda por título, orden y
   paginación de 25 en 25 en cliente; «Limpiar filtros» restablece también los
   de servidor y recarga.
+- Registro diario: Bitácora (`/seguimiento/bitacora`) y Reporte semanal
+  (`/seguimiento/semanal`) usan `MasterDetail` + `SelectableList`. La cabecera
+  del detalle (fecha o «Semana del {lunes}», estado y proceso) sale del ítem de
+  la lista mientras carga el detalle, así el `h2` sigue montado y, por debajo
+  de 1024 px, recibe el foco al elegir. Tras guardar o eliminar, el detalle se
+  recarga sin pasar por el esqueleto, para que las filas sigan montadas y el
+  foco pueda volver a ellas. Enviar y eliminar piden confirmación
+  (`ConfirmDialog`, textos de §13.3); al eliminar un diario el foco va al
+  encabezado del diario que quede seleccionado o, si no queda ninguno, al
+  título de la lista (`MasterDetail` acepta `listHeadingRef`), y al eliminar
+  una actividad, a la fila siguiente o al encabezado «Actividades». Los tres
+  diálogos (`diario-*`, `act-*`, `sem-*`, mismos ids) muestran todos los
+  errores a la vez; las reglas que combinan campos (planificada: proyecto o
+  tarea; extraordinaria: solicitante y justificación) van en `FormError` y
+  marcan solo los campos que las incumplen.
 - Shell y navegación: `components/app-shell.tsx` monta «Saltar al contenido»
   (primer enfocable, lleva a `main#contenido`), el menú lateral
   (`app-sidebar.tsx`) y, por debajo de 1024 px, una barra superior con el menú

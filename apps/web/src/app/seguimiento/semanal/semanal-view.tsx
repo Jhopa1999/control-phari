@@ -1,16 +1,25 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, RefreshCw, Send } from 'lucide-react';
+import { Plus, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
+import { Field } from '@/components/field';
+import { InlineNotice } from '@/components/inline-notice';
+import { MasterDetail, SelectableList } from '@/components/master-detail';
+import { PageHeader } from '@/components/page-header';
+import { PageLayout } from '@/components/page-layout';
+import { Section } from '@/components/section';
+import { StatStrip, StatTile } from '@/components/stat-tile';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import type { Process, WeeklyReport } from '@/lib/api-client';
+import { formatDateOnly, formatHours } from '@/lib/format';
 import {
   WorklogError,
   createWeeklyReport,
@@ -20,17 +29,14 @@ import {
   updateWeeklyReport,
 } from '@/lib/worklog';
 import { listProcesses } from '@/lib/team';
-import {
-  SemanalFormDialog,
-  type SemanalFormValues,
-} from './semanal-form-dialog';
+import { SemanalFormDialog, type SemanalFormValues } from './semanal-form-dialog';
 
 type LoadState = 'loading' | 'success' | 'error';
 
 function messageOf(err: unknown): string {
   return err instanceof WorklogError
     ? err.message
-    : 'Ocurrio un error inesperado.';
+    : 'Ocurrió un error inesperado. Inténtalo de nuevo.';
 }
 
 function trimOrUndefined(value: string): string | undefined {
@@ -56,14 +62,35 @@ function sectionsOf(report: WeeklyReport): Sections {
   };
 }
 
+/** Secciones de texto del reporte, en el orden de siempre, con sus ids. */
+const SECTION_FIELDS: { key: keyof Sections; id: string; label: string; help?: string }[] = [
+  { key: 'results', id: 'sem-results', label: 'Resultados' },
+  {
+    key: 'proposals',
+    id: 'sem-proposals',
+    label: 'Propuestas',
+    help: 'Las propuestas son texto; no cambian prioridades ni crean compromisos.',
+  },
+  { key: 'blockers', id: 'sem-blockers', label: 'Bloqueos' },
+  { key: 'commitmentsText', id: 'sem-commitments', label: 'Compromisos de la próxima semana' },
+  { key: 'decisions', id: 'sem-decisions', label: 'Decisiones' },
+];
+
+function weekLabel(weekStart: string): string {
+  return `Semana del ${formatDateOnly(weekStart)}`;
+}
+
 export function SemanalView(): React.ReactElement {
   const [reports, setReports] = React.useState<WeeklyReport[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<WeeklyReport | null>(null);
   const [detailState, setDetailState] = React.useState<LoadState>('loading');
+  const [detailError, setDetailError] = React.useState<string | null>(null);
+  const latestDetailIdRef = React.useRef<string | null>(null);
 
   // Secciones editables (se conservan ante error; se resetean al cargar detalle).
   const [sections, setSections] = React.useState<Sections>({
@@ -75,10 +102,13 @@ export function SemanalView(): React.ReactElement {
   });
   const [saving, setSaving] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [sendOpen, setSendOpen] = React.useState(false);
 
   const [createOpen, setCreateOpen] = React.useState(false);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
+
+  const detailHeadingRef = React.useRef<HTMLHeadingElement>(null);
 
   const load = React.useCallback(async () => {
     setState('loading');
@@ -89,12 +119,15 @@ export function SemanalView(): React.ReactElement {
       ]);
       setReports(reps);
       setProcesses(procs);
+      setLoadError(null);
       setState('success');
+      // Mantiene la selección si sigue existiendo; si no, toma el primero.
       setSelectedId((prev) => {
         if (prev && reps.some((r) => r.id === prev)) return prev;
         return reps[0]?.id ?? null;
       });
-    } catch {
+    } catch (err) {
+      setLoadError(err instanceof WorklogError ? err.message : null);
       setState('error');
     }
   }, []);
@@ -103,21 +136,31 @@ export function SemanalView(): React.ReactElement {
     void load();
   }, [load]);
 
-  const loadDetail = React.useCallback(async (id: string) => {
-    setDetailState('loading');
+  /**
+   * Carga el detalle. `silent` (tras guardar o enviar) no pasa por el estado de
+   * carga: los campos siguen montados y conservan el foco.
+   */
+  const loadDetail = React.useCallback(async (id: string, silent = false) => {
+    latestDetailIdRef.current = id;
+    if (!silent) setDetailState('loading');
     try {
       const d = await getWeeklyReport(id);
+      if (latestDetailIdRef.current !== id) return;
       setDetail(d);
       setSections(sectionsOf(d));
+      setDetailError(null);
       setDetailState('success');
-    } catch {
+    } catch (err) {
+      if (latestDetailIdRef.current !== id) return;
       setDetail(null);
+      setDetailError(err instanceof WorklogError ? err.message : null);
       setDetailState('error');
     }
   }, []);
 
   React.useEffect(() => {
     if (!selectedId) {
+      latestDetailIdRef.current = null;
       setDetail(null);
       return;
     }
@@ -129,7 +172,12 @@ export function SemanalView(): React.ReactElement {
     [processes],
   );
 
-  const isDraft = detail?.status === 'BORRADOR';
+  // La cabecera del detalle sale del ítem de la lista mientras carga el detalle,
+  // para que el encabezado siga montado (y con el foco) al cambiar de reporte.
+  const selectedReport = reports.find((r) => r.id === selectedId) ?? null;
+  const detailReady = detailState === 'success' && detail !== null && detail.id === selectedId;
+  const current = detailReady ? detail : selectedReport;
+  const isDraft = detailReady && detail.status === 'BORRADOR';
 
   async function handleCreate(values: SemanalFormValues) {
     setCreateSubmitting(true);
@@ -139,7 +187,7 @@ export function SemanalView(): React.ReactElement {
         processId: values.processId,
         weekStart: values.weekStart,
       });
-      toast.success('Registro semanal creado.');
+      toast.success('Reporte semanal creado.');
       setCreateOpen(false);
       setSelectedId(created.id);
       await load();
@@ -156,7 +204,8 @@ export function SemanalView(): React.ReactElement {
     setSections((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function handleSaveSections() {
+  async function handleSaveSections(event: React.FormEvent) {
+    event.preventDefault();
     if (!detail) return;
     setSaving(true);
     try {
@@ -168,22 +217,22 @@ export function SemanalView(): React.ReactElement {
         decisions: trimOrUndefined(sections.decisions),
       });
       toast.success('Secciones guardadas.');
-      await loadDetail(detail.id);
+      await loadDetail(detail.id, true);
     } catch (err) {
-      // Fallo: conserva lo tecleado en las secciones (AC-031).
+      // Fallo: conserva lo escrito en las secciones (AC-031).
       toast.error(messageOf(err));
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleSubmitForReview() {
+  async function handleSubmitReport() {
     if (!detail) return;
     setSubmitting(true);
     try {
       await submitWeeklyReport(detail.id);
-      toast.success('Registro semanal enviado.');
-      await Promise.all([load(), loadDetail(detail.id)]);
+      toast.success('Reporte semanal enviado.');
+      await Promise.all([load(), loadDetail(detail.id, true)]);
     } catch (err) {
       toast.error(messageOf(err));
     } finally {
@@ -191,277 +240,197 @@ export function SemanalView(): React.ReactElement {
     }
   }
 
-  const consolidation = detail?.consolidation ?? null;
+  // Tras enviar, «Enviar reporte» desaparece: el foco va al encabezado (NIT 4).
+  const returnFocusToHeading = React.useCallback(
+    (): HTMLElement | null => detailHeadingRef.current,
+    [],
+  );
+
+  function renderDetailBody(): React.ReactNode {
+    if (detailState === 'error') {
+      return (
+        <ErrorState
+          size="compact"
+          title="No fue posible cargar el reporte semanal."
+          message={detailError}
+          onRetry={() => selectedId && void loadDetail(selectedId)}
+        />
+      );
+    }
+    if (!detailReady || !detail) {
+      return (
+        <div aria-hidden="true" className="flex flex-col gap-4">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-24 w-full max-w-[720px]" />
+          <Skeleton className="h-24 w-full max-w-[720px]" />
+        </div>
+      );
+    }
+    const consolidation = detail.consolidation;
+    return (
+      <>
+        <Section
+          title="Consolidado de bitácoras"
+          headingLevel={3}
+          description="Solo cuentan los diarios enviados o revisados del proceso en esa semana."
+        >
+          <div aria-live="polite">
+            {consolidation && consolidation.hasBacking ? (
+              <StatStrip label="Consolidado de bitácoras">
+                <StatTile label="Diarios" value={consolidation.dailyLogCount} />
+                <StatTile label="Actividades" value={consolidation.activityCount} />
+                <StatTile label="Dedicación" value={formatHours(consolidation.totalHours)} />
+                <StatTile label="Extraordinarias" value={consolidation.extraordinaryCount} />
+              </StatStrip>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Sin bitácoras de respaldo para esta semana: no hay diarios enviados ni revisados
+                del proceso.
+              </p>
+            )}
+          </div>
+        </Section>
+
+        <Section title="Secciones del reporte" headingLevel={3}>
+          {!isDraft ? (
+            <InlineNotice tone="neutral">
+              El reporte se envió; sus secciones ya no se pueden editar.
+            </InlineNotice>
+          ) : null}
+          <form noValidate onSubmit={handleSaveSections} className="grid max-w-[720px] gap-4">
+            {SECTION_FIELDS.map((field) => (
+              <Field key={field.id} id={field.id} label={field.label} help={field.help}>
+                <Textarea
+                  value={sections[field.key]}
+                  disabled={!isDraft}
+                  onChange={(e) => setSection(field.key, e.target.value)}
+                />
+              </Field>
+            ))}
+            {isDraft ? (
+              <div className="flex justify-end">
+                <Button type="submit" variant="secondary" loading={saving}>
+                  {saving ? 'Guardando…' : 'Guardar secciones'}
+                </Button>
+              </div>
+            ) : null}
+          </form>
+        </Section>
+      </>
+    );
+  }
+
+  function renderDetail(): React.ReactNode {
+    if (state === 'loading' && !current) {
+      return (
+        <Card aria-hidden="true" className="flex flex-col gap-4 p-4">
+          <Skeleton className="h-6 w-1/2" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </Card>
+      );
+    }
+    if (!current) {
+      return (
+        <Card>
+          <EmptyState
+            title="Selecciona un reporte semanal."
+            description="O crea uno nuevo para consolidar la semana."
+          />
+        </Card>
+      );
+    }
+    return (
+      <Card>
+        <CardHeader className="gap-3 border-b sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2
+                ref={detailHeadingRef}
+                tabIndex={-1}
+                className="rounded-sm text-lg font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {weekLabel(current.weekStart)}
+              </h2>
+              <StatusBadge kind="log" value={current.status} />
+            </div>
+            <p className="text-meta text-muted-foreground">{processName(current.processId)}</p>
+          </div>
+          {isDraft ? (
+            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setSendOpen(true)}
+                disabled={submitting}
+              >
+                <Send aria-hidden="true" />
+                Enviar reporte
+              </Button>
+            </div>
+          ) : null}
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6 pt-4">{renderDetailBody()}</CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Semanal</h1>
-          <p className="text-sm text-muted-foreground">
-            Consolidado semanal por proceso. Los conteos resumen solo las
-            bitacoras enviadas o revisadas de la semana.
-          </p>
-        </div>
-        <Button onClick={() => setCreateOpen(true)} disabled={state === 'loading'}>
-          <Plus aria-hidden="true" />
-          Nuevo semanal
-        </Button>
-      </header>
+    <PageLayout>
+      <PageHeader
+        title="Reporte semanal"
+        description="Consolida resultados, bloqueos y decisiones de la semana por proceso."
+        actions={
+          <Button type="button" onClick={() => setCreateOpen(true)} disabled={state === 'loading'}>
+            <Plus aria-hidden="true" />
+            Nuevo reporte semanal
+          </Button>
+        }
+      />
 
       {state === 'error' ? (
-        <div className="flex flex-col items-center gap-3 rounded-lg border bg-card p-10 text-center">
-          <p className="text-sm text-muted-foreground">
-            No fue posible cargar los registros semanales.
-          </p>
-          <Button variant="outline" onClick={() => void load()}>
-            <RefreshCw aria-hidden="true" />
-            Reintentar
-          </Button>
+        <div className="rounded-lg border bg-card">
+          <ErrorState
+            title="No fue posible cargar los reportes semanales."
+            message={loadError}
+            onRetry={() => void load()}
+          />
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-          <section aria-labelledby="semanales-heading" className="flex flex-col gap-3">
-            <h2
-              id="semanales-heading"
-              className="text-lg font-semibold tracking-tight"
-            >
-              Mis semanales
-            </h2>
-            <div className="rounded-lg border bg-card">
-              {state === 'loading' ? (
-                <div className="flex flex-col gap-3 p-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : reports.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 p-8 text-center">
-                  <p className="text-sm font-medium">Aun no hay semanales.</p>
+        <MasterDetail
+          listTitle="Mis reportes"
+          detailHeadingRef={detailHeadingRef}
+          list={
+            <SelectableList
+              label="Mis reportes"
+              loading={state === 'loading' && reports.length === 0}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              items={reports.map((rep) => ({
+                id: rep.id,
+                title: weekLabel(rep.weekStart),
+                meta: processName(rep.processId),
+                badge: <StatusBadge kind="log" value={rep.status} />,
+              }))}
+              empty={{
+                title: 'Aún no hay reportes semanales.',
+                description: 'Crea el reporte de la semana para consolidar tus bitácoras.',
+                action: (
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setCreateOpen(true)}
                   >
                     <Plus aria-hidden="true" />
-                    Nuevo semanal
+                    Nuevo reporte semanal
                   </Button>
-                </div>
-              ) : (
-                <ul className="divide-y">
-                  {reports.map((rep) => (
-                    <li key={rep.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedId(rep.id)}
-                        aria-current={rep.id === selectedId}
-                        className={`flex w-full flex-col gap-1 p-3 text-left transition-colors hover:bg-muted/50 ${
-                          rep.id === selectedId ? 'bg-muted' : ''
-                        }`}
-                      >
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="font-medium">Semana {rep.weekStart}</span>
-                          <Badge
-                            variant={
-                              rep.status === 'BORRADOR' ? 'outline' : 'secondary'
-                            }
-                          >
-                            {rep.status === 'BORRADOR' ? 'Borrador' : 'Enviado'}
-                          </Badge>
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {processName(rep.processId)}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </section>
-
-          <section aria-label="Detalle del semanal" className="flex flex-col gap-3">
-            {!selectedId ? (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-card p-10 text-center">
-                <p className="text-sm font-medium">
-                  Selecciona un registro semanal.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  O crea uno nuevo para consolidar la semana.
-                </p>
-              </div>
-            ) : detailState === 'loading' ? (
-              <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
-                <Skeleton className="h-8 w-1/2" />
-                <Skeleton className="h-24 w-full" />
-              </div>
-            ) : detailState === 'error' || !detail ? (
-              <div className="flex flex-col items-center gap-3 rounded-lg border bg-card p-10 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No fue posible cargar el registro semanal.
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => selectedId && void loadDetail(selectedId)}
-                >
-                  <RefreshCw aria-hidden="true" />
-                  Reintentar
-                </Button>
-              </div>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex flex-col gap-1">
-                      <CardTitle className="flex items-center gap-2">
-                        Semana {detail.weekStart}
-                        <Badge variant={isDraft ? 'outline' : 'secondary'}>
-                          {isDraft ? 'Borrador' : 'Enviado'}
-                        </Badge>
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {processName(detail.processId)}
-                      </p>
-                    </div>
-                    {isDraft ? (
-                      <Button
-                        size="sm"
-                        onClick={() => void handleSubmitForReview()}
-                        disabled={submitting}
-                      >
-                        <Send aria-hidden="true" />
-                        Enviar
-                      </Button>
-                    ) : null}
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  {/* Consolidacion: solo diarios enviados/revisados. */}
-                  <div
-                    className="rounded-md border bg-muted/40 p-4"
-                    aria-live="polite"
-                  >
-                    <h3 className="mb-2 text-sm font-semibold">
-                      Consolidado (bitacoras de respaldo)
-                    </h3>
-                    {consolidation && consolidation.hasBacking ? (
-                      <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-                        <div>
-                          <dt className="text-muted-foreground">Diarios</dt>
-                          <dd className="font-medium">
-                            {consolidation.dailyLogCount}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Actividades</dt>
-                          <dd className="font-medium">
-                            {consolidation.activityCount}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">
-                            Dedicacion (h)
-                          </dt>
-                          <dd className="font-medium">
-                            {consolidation.totalHours}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">
-                            Extraordinarias
-                          </dt>
-                          <dd className="font-medium">
-                            {consolidation.extraordinaryCount}
-                          </dd>
-                        </div>
-                      </dl>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Sin bitacoras de respaldo para esta semana (no hay
-                        diarios enviados ni revisados del proceso).
-                      </p>
-                    )}
-                  </div>
-
-                  <Separator />
-
-                  {/* Secciones de texto. */}
-                  <div className="grid gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="sem-results">Resultados</Label>
-                      <Textarea
-                        id="sem-results"
-                        value={sections.results}
-                        disabled={!isDraft}
-                        onChange={(e) => setSection('results', e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="sem-proposals">Propuestas</Label>
-                      <Textarea
-                        id="sem-proposals"
-                        value={sections.proposals}
-                        disabled={!isDraft}
-                        onChange={(e) => setSection('proposals', e.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Las propuestas son texto; no cambian prioridades ni
-                        crean compromisos.
-                      </p>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="sem-blockers">Bloqueos</Label>
-                      <Textarea
-                        id="sem-blockers"
-                        value={sections.blockers}
-                        disabled={!isDraft}
-                        onChange={(e) => setSection('blockers', e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="sem-commitments">
-                        Compromisos proxima semana
-                      </Label>
-                      <Textarea
-                        id="sem-commitments"
-                        value={sections.commitmentsText}
-                        disabled={!isDraft}
-                        onChange={(e) =>
-                          setSection('commitmentsText', e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="sem-decisions">Decisiones</Label>
-                      <Textarea
-                        id="sem-decisions"
-                        value={sections.decisions}
-                        disabled={!isDraft}
-                        onChange={(e) => setSection('decisions', e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {isDraft ? (
-                    <div className="flex justify-end">
-                      <Button
-                        variant="outline"
-                        onClick={() => void handleSaveSections()}
-                        disabled={saving}
-                      >
-                        {saving ? 'Guardando...' : 'Guardar secciones'}
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      El semanal fue enviado; las secciones ya no se editan.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </section>
-        </div>
+                ),
+              }}
+            />
+          }
+          detail={renderDetail()}
+        />
       )}
 
       <SemanalFormDialog
@@ -475,6 +444,17 @@ export function SemanalView(): React.ReactElement {
         errorMessage={createError}
         onSubmit={handleCreate}
       />
-    </div>
+
+      <ConfirmDialog
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        tone="default"
+        title="¿Enviar el reporte semanal?"
+        description="Después de enviarlo no podrás editar sus secciones."
+        confirmLabel="Enviar reporte"
+        onConfirm={handleSubmitReport}
+        returnFocusTo={returnFocusToHeading}
+      />
+    </PageLayout>
   );
 }

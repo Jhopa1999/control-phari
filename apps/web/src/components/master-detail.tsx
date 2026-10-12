@@ -19,6 +19,11 @@ export interface MasterDetailProps {
   detail: React.ReactNode;
   /** Encabezado del detalle (tabIndex -1): recibe el foco tras elegir en <1024 px. */
   detailHeadingRef?: React.RefObject<HTMLHeadingElement | null>;
+  /**
+   * Ref del h2 de la lista, que pasa a tener tabIndex -1: destino del foco
+   * cuando se elimina el último registro y no queda detalle (NIT 4).
+   */
+  listHeadingRef?: React.Ref<HTMLHeadingElement>;
 }
 
 /**
@@ -32,6 +37,7 @@ export function MasterDetail({
   list,
   detail,
   detailHeadingRef,
+  listHeadingRef,
 }: MasterDetailProps): React.ReactElement {
   const listTitleId = React.useId();
   const detailRef = React.useRef<HTMLDivElement>(null);
@@ -52,7 +58,12 @@ export function MasterDetail({
           aria-labelledby={listTitleId}
           className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-6"
         >
-          <h2 id={listTitleId} className="text-base font-semibold">
+          <h2
+            id={listTitleId}
+            ref={listHeadingRef}
+            tabIndex={listHeadingRef ? -1 : undefined}
+            className="rounded-sm text-base font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
             {listTitle}
           </h2>
           <div className="overflow-y-auto rounded-lg border bg-card lg:max-h-[calc(100dvh-8rem)]">
