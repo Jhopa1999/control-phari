@@ -297,6 +297,26 @@ defecto de la plantilla.
   (`devolver-dialog.tsx`) y, como la fila desaparece, el foco pasa a la fila
   siguiente o al encabezado de la sección. Sin el módulo `review` no se llama
   al backend y se muestra un aviso, como en Indicadores.
+- Ejecución: Planificación (`/seguimiento/plan`) es una mesa de trabajo con
+  `RequestContextBar` agrupada por estado y acepta `?requestId=` como Triage
+  y Priorización (los enlaces «Ir a planificación» de Solicitudes y «Ver plan»
+  de Aprobaciones llegan con la solicitud elegida). Con el plan en borrador o
+  devuelto, la guía es un `RequirementsPanel` (`plan-guide`) con los textos y
+  acciones de `lib/plan-guide.ts` y el envío a autorización con confirmación;
+  con el plan en autorización o autorizado, la guía no se muestra (aunque
+  `getPlanGuide` se sigue llamando) y un aviso explica que no se puede editar.
+  Las fases van en una tabla compacta: subir y bajar respetan el límite
+  natural y el bloqueo de la fase inicial con tareas (motivo en tooltip), el
+  foco vuelve al botón pulsado tras reordenar y «Agregar tarea» ya funciona en
+  fases que tienen tareas (§19.1). Las tareas muestran todas las filas
+  (`pageSize: null`), con la columna Responsable y «Solo mis tareas»
+  comparando con `permissions.userId` (§19.13). Sin el módulo `plan` no se
+  llama al backend y se muestra el aviso de rol. Tareas (`/seguimiento/tareas`)
+  es una página de detalle con migas, predecesoras (`task-predecessors` si
+  alguna bloquea) y, en el lateral, evidencia y aceptación. Portafolio
+  conserva sus tres filtros de servidor y añade búsqueda por título, orden y
+  paginación de 25 en 25 en cliente; «Limpiar filtros» restablece también los
+  de servidor y recarga.
 - Shell y navegación: `components/app-shell.tsx` monta «Saltar al contenido»
   (primer enfocable, lleva a `main#contenido`), el menú lateral
   (`app-sidebar.tsx`) y, por debajo de 1024 px, una barra superior con el menú

@@ -1,8 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { RefreshCw } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { FolderKanban } from 'lucide-react';
+import {
+  CellTitle,
+  DataTablePagination,
+  ResultCount,
+  SortableTableHead,
+} from '@/components/data-table';
+import { DataView, type DataViewState } from '@/components/data-view';
+import { PageHeader } from '@/components/page-header';
+import { PageLayout } from '@/components/page-layout';
+import { PriorityBadge, PriorityLegend, StatusBadge } from '@/components/status-badge';
+import { SearchInput, Toolbar } from '@/components/toolbar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -12,27 +22,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Process } from '@/lib/api-client';
+import type { CatalogItem, Process } from '@/lib/api-client';
+import { listCatalogItems } from '@/lib/catalog';
+import { formatDateOnly } from '@/lib/format';
 import {
   ApiError,
   listPortfolio,
   type PortfolioItem,
 } from '@/lib/portfolio';
-import { listProcesses } from '@/lib/team';
 import { REQUEST_STATE_LABELS, requestStateLabel } from '@/lib/request-state';
+import { routeLabel } from '@/lib/status-presentation';
+import {
+  compareByOrder,
+  compareDate,
+  compareText,
+  matchesSearch,
+  type Comparator,
+} from '@/lib/table-sort';
+import { listProcesses } from '@/lib/team';
+import { useClientTable } from '@/lib/use-client-table';
 
 type LoadState = 'loading' | 'success' | 'error';
+type SortKey = 'title' | 'state' | 'band' | 'registered' | 'target';
 
-/** Valor centinela del Select para "sin filtro" (Radix no admite value vacio). */
+/** Valor centinela del Select para "sin filtro" (Radix no admite value vacío). */
 const ANY = '__any';
 
 /** Bandas de prioridad del marco §4 + SIN_PRIORIZAR. */
@@ -48,69 +70,53 @@ const BAND_LABELS: Record<string, string> = {
 
 /** Estados operativos en orden del enum RequestState. */
 const STATE_OPTIONS = Object.keys(REQUEST_STATE_LABELS);
+const NOUN = { one: 'iniciativa', other: 'iniciativas' };
+
+const compareState = compareByOrder(STATE_OPTIONS);
+// P1 → P4; sin priorizar (null) al final en las dos direcciones.
+const compareBand = compareByOrder(['P1', 'P2', 'P3', 'P4']);
+const COMPARATORS: Record<SortKey, Comparator<PortfolioItem>> = {
+  title: (a, b, direction) => compareText(a.title, b.title, direction),
+  state: (a, b, direction) => compareState(a.operationalState, b.operationalState, direction),
+  band: (a, b, direction) => compareBand(a.priorityBand, b.priorityBand, direction),
+  registered: (a, b, direction) => compareDate(a.registeredAt, b.registeredAt, direction),
+  target: (a, b, direction) => compareDate(a.targetDate, b.targetDate, direction),
+};
 
 function messageOf(err: unknown): string {
   return err instanceof ApiError
     ? err.message
-    : 'Ocurrio un error inesperado.';
+    : 'Ocurrió un error inesperado.';
 }
 
-function dash(value: string | null): string {
-  return value === null || value === '' ? '—' : value;
-}
-
-/** Badge de banda: P1-P4 con color, SIN_PRIORIZAR neutro, null como '—'. */
-function BandBadge({
-  band,
-  label,
-}: {
-  band: string | null;
-  label: string | null;
-}): React.ReactElement {
-  if (band === null) {
-    return (
-      <Badge variant="secondary" aria-label="Sin priorizar">
-        Sin priorizar
-      </Badge>
-    );
-  }
-  const text = label ?? BAND_LABELS[band] ?? band;
-  // P1 mas urgente -> destructive; P2 -> default; P3 -> secondary; P4 -> outline.
-  const variant =
-    band === 'P1'
-      ? 'destructive'
-      : band === 'P2'
-        ? 'default'
-        : band === 'P3'
-          ? 'secondary'
-          : 'outline';
-  return (
-    <Badge variant={variant} aria-label={`Banda de prioridad ${text}`}>
-      {text}
-    </Badge>
-  );
-}
-
+/**
+ * Portafolio (design §11.12, patrón A): vista de solo lectura de las
+ * iniciativas en alcance. Proceso, estado y banda filtran en el servidor, como
+ * siempre; la búsqueda por título, el orden y la paginación son de
+ * presentación, en cliente.
+ */
 export function PortafolioView(): React.ReactElement {
   const [processId, setProcessId] = React.useState<string>(ANY);
   const [stateFilter, setStateFilter] = React.useState<string>(ANY);
   const [bandFilter, setBandFilter] = React.useState<string>(ANY);
+  const [query, setQuery] = React.useState('');
+  const searchRef = React.useRef<HTMLInputElement>(null);
 
   const [items, setItems] = React.useState<PortfolioItem[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
+  const [routes, setRoutes] = React.useState<CatalogItem[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  // Procesos para poblar el filtro: acotados por el alcance del backend.
+  // Procesos para poblar el filtro (acotados por el alcance del backend) y la
+  // maestra de rutas para sus etiquetas; si fallan, se degradan a vacío.
   React.useEffect(() => {
-    void (async () => {
-      try {
-        const procs = await listProcesses();
-        setProcesses(procs);
-      } catch {
-        setProcesses([]);
-      }
-    })();
+    void listProcesses()
+      .then(setProcesses)
+      .catch(() => setProcesses([]));
+    void listCatalogItems({ catalog: 'GOVERNANCE_ROUTE' })
+      .then(setRoutes)
+      .catch(() => setRoutes([]));
   }, []);
 
   const load = React.useCallback(
@@ -142,29 +148,80 @@ export function PortafolioView(): React.ReactElement {
     [processId, stateFilter, bandFilter],
   );
 
+  // Filtros de servidor: recarga automática al cambiar, como hasta ahora.
   React.useEffect(() => {
     void load(activeFilters);
   }, [activeFilters, load]);
 
-  return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Portafolio</h1>
-        <p className="text-sm text-muted-foreground">
-          Vista de conjunto de las iniciativas dentro de tu alcance. Filtra por
-          proceso, estado operativo o banda de prioridad; los filtros acotan tu
-          alcance, no lo amplian.
-        </p>
-      </header>
+  const hasServerFilters = processId !== ANY || stateFilter !== ANY || bandFilter !== ANY;
+  const hasFilters = hasServerFilters || query.trim() !== '';
+  const filter = React.useCallback((item: PortfolioItem) => matchesSearch(item.title, query), [query]);
+  const table = useClientTable({
+    rows: items,
+    filter,
+    comparators: COMPARATORS,
+    defaultSort: null,
+    resetKey: JSON.stringify([query, processId, stateFilter, bandFilter]),
+    pageSize: 25,
+  });
 
-      <section
-        aria-label="Filtros del portafolio"
-        className="grid gap-3 sm:grid-cols-3"
+  function clearFilters(): void {
+    // Restablecer los filtros de servidor dispara la misma recarga que elegirlos.
+    setProcessId(ANY);
+    setStateFilter(ANY);
+    setBandFilter(ANY);
+    setQuery('');
+    // «Limpiar filtros» desaparece: el foco pasa a la búsqueda (NIT 4, plan D9).
+    searchRef.current?.focus();
+  }
+
+  // NIT 7: total = lo que devuelve el servidor con sus filtros; filtered = tras
+  // la búsqueda en cliente; los filtros de servidor también cuentan como filtros.
+  let viewState: DataViewState;
+  if (state === 'loading') viewState = 'loading';
+  else if (state === 'error') viewState = 'error';
+  else if (table.total === 0 && !hasFilters) viewState = 'empty';
+  else if (table.filtered === 0) viewState = 'no-results';
+  else viewState = 'ready';
+
+  return (
+    <PageLayout>
+      <PageHeader
+        title="Portafolio"
+        description="Vista de conjunto de las iniciativas de tu alcance. Los filtros acotan tu alcance, no lo amplían."
+      />
+
+      <Toolbar
+        label="Filtros del portafolio"
+        end={
+          <>
+            {state !== 'error' ? (
+              <ResultCount
+                loading={state === 'loading'}
+                total={table.total}
+                filtered={table.filtered}
+                noun={NOUN}
+              />
+            ) : null}
+            {hasFilters ? (
+              <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                Limpiar filtros
+              </Button>
+            ) : null}
+          </>
+        }
       >
-        <div className="flex flex-col gap-1">
+        <SearchInput
+          ref={searchRef}
+          id="portafolio-buscar"
+          placeholder="Título de la iniciativa"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="portafolio-proceso">Proceso</Label>
           <Select value={processId} onValueChange={setProcessId}>
-            <SelectTrigger id="portafolio-proceso">
+            <SelectTrigger id="portafolio-proceso" className="w-full sm:w-44">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
@@ -177,10 +234,10 @@ export function PortafolioView(): React.ReactElement {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="portafolio-estado">Estado operativo</Label>
           <Select value={stateFilter} onValueChange={setStateFilter}>
-            <SelectTrigger id="portafolio-estado">
+            <SelectTrigger id="portafolio-estado" className="w-full sm:w-44">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
@@ -193,10 +250,10 @@ export function PortafolioView(): React.ReactElement {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="portafolio-banda">Banda de prioridad</Label>
           <Select value={bandFilter} onValueChange={setBandFilter}>
-            <SelectTrigger id="portafolio-banda">
+            <SelectTrigger id="portafolio-banda" className="w-full sm:w-40">
               <SelectValue placeholder="Todas" />
             </SelectTrigger>
             <SelectContent>
@@ -209,104 +266,112 @@ export function PortafolioView(): React.ReactElement {
             </SelectContent>
           </Select>
         </div>
-      </section>
+      </Toolbar>
 
-      <div aria-live="polite" className="rounded-lg border bg-card">
-        {state === 'loading' ? (
-          <div className="flex flex-col gap-3 p-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : state === 'error' ? (
-          <div className="flex flex-col items-center gap-3 p-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              {errorMessage ?? 'No fue posible cargar el portafolio.'}
-            </p>
-            <Button variant="outline" onClick={() => void load(activeFilters)}>
-              <RefreshCw aria-hidden="true" />
-              Reintentar
-            </Button>
-          </div>
-        ) : items.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 p-10 text-center">
-            <p className="text-sm font-medium">
-              No hay iniciativas en tu alcance con estos filtros.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Ajusta o limpia los filtros para ver mas iniciativas.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <caption className="sr-only">
-                Iniciativas del portafolio dentro de tu alcance, con proceso,
-                estado operativo, banda de prioridad, ruta de gobierno,
-                responsable y fechas clave.
-              </caption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead scope="col">Titulo</TableHead>
-                  <TableHead scope="col">Proceso</TableHead>
-                  <TableHead scope="col">Estado</TableHead>
-                  <TableHead scope="col">Banda</TableHead>
-                  <TableHead scope="col">Ruta</TableHead>
-                  <TableHead scope="col">Responsable</TableHead>
-                  <TableHead scope="col">Registro</TableHead>
-                  <TableHead scope="col">Objetivo</TableHead>
-                  <TableHead scope="col">Compromiso</TableHead>
-                  <TableHead scope="col">Bloqueo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.title}</TableCell>
-                    <TableCell>{item.mainProcessName}</TableCell>
-                    <TableCell>
-                      {requestStateLabel(item.operationalState)}
-                    </TableCell>
-                    <TableCell>
-                      <BandBadge
-                        band={item.priorityBand}
-                        label={item.priorityLabel}
-                      />
-                    </TableCell>
-                    <TableCell>{dash(item.governanceRoute)}</TableCell>
-                    <TableCell>{dash(item.responsibleName)}</TableCell>
-                    <TableCell className="tabular-nums">
-                      {item.registeredAt}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {dash(item.targetDate)}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {dash(item.initialCommitmentDate)}
-                    </TableCell>
-                    <TableCell>
-                      {item.blocked ? (
-                        <Badge
-                          variant="destructive"
-                          aria-label={
-                            item.blockedReason
-                              ? `Bloqueada: ${item.blockedReason}`
-                              : 'Bloqueada'
-                          }
+      <PriorityLegend />
+
+      <DataView
+        state={viewState}
+        loading={{ rows: 8, columns: 8 }}
+        error={{
+          title: 'No fue posible cargar el portafolio.',
+          message: errorMessage,
+          onRetry: () => void load(activeFilters),
+        }}
+        empty={{
+          icon: FolderKanban,
+          title: 'No hay iniciativas en tu alcance.',
+          description: 'Las solicitudes de los procesos de tu alcance aparecen aquí desde su registro.',
+        }}
+      >
+        <Table scrollLabel="Tabla del portafolio">
+          <TableCaption>
+            Iniciativas del portafolio dentro de tu alcance, con proceso, estado operativo, banda de
+            prioridad, ruta de gobierno, responsable y fechas clave.
+          </TableCaption>
+          <TableHeader>
+            <TableRow>
+              <SortableTableHead label="Título" sortKey="title" sort={table.sort} onSort={table.toggleSort} />
+              <TableHead>Proceso</TableHead>
+              <SortableTableHead label="Estado" sortKey="state" sort={table.sort} onSort={table.toggleSort} />
+              <SortableTableHead label="Banda" sortKey="band" sort={table.sort} onSort={table.toggleSort} />
+              <TableHead>Ruta</TableHead>
+              <TableHead>Responsable</TableHead>
+              <SortableTableHead
+                label="Registro"
+                sortKey="registered"
+                sort={table.sort}
+                onSort={table.toggleSort}
+              />
+              <SortableTableHead label="Objetivo" sortKey="target" sort={table.sort} onSort={table.toggleSort} />
+              <TableHead>Compromiso</TableHead>
+              <TableHead>Bloqueo</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {table.pageRows.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="min-w-56 max-w-[28rem]">
+                  <CellTitle>{item.title}</CellTitle>
+                </TableCell>
+                <TableCell className="min-w-32 text-muted-foreground">{item.mainProcessName}</TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <StatusBadge kind="request" value={item.operationalState} />
+                </TableCell>
+                <TableCell>
+                  <PriorityBadge variant="compact" band={item.priorityBand} label={item.priorityLabel} />
+                </TableCell>
+                <TableCell className="whitespace-nowrap">{routeLabel(item.governanceRoute, routes)}</TableCell>
+                <TableCell className="min-w-44 max-w-[16rem]">
+                  {item.responsibleName ? (
+                    <span className="line-clamp-2 wrap-break-word" title={item.responsibleName}>
+                      {item.responsibleName}
+                    </span>
+                  ) : (
+                    '—'
+                  )}
+                </TableCell>
+                <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
+                  {formatDateOnly(item.registeredAt)}
+                </TableCell>
+                <TableCell className="whitespace-nowrap tabular-nums">{formatDateOnly(item.targetDate)}</TableCell>
+                <TableCell className="whitespace-nowrap tabular-nums">
+                  {formatDateOnly(item.initialCommitmentDate)}
+                </TableCell>
+                <TableCell className="min-w-40 max-w-[16rem]">
+                  {item.blocked ? (
+                    <div className="flex flex-col items-start gap-0.5 py-0.5">
+                      <StatusBadge kind="blocked" value="true" />
+                      {item.blockedReason ? (
+                        <span
+                          className="line-clamp-2 text-meta wrap-break-word text-muted-foreground"
+                          title={item.blockedReason}
                         >
-                          Bloqueada
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
-    </div>
+                          {item.blockedReason}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <DataTablePagination
+          id="portafolio-paginacion"
+          page={table.page}
+          pageCount={table.pageCount}
+          from={table.from}
+          to={table.to}
+          filtered={table.filtered}
+          pageSize={table.pageSize ?? 25}
+          onPageChange={table.setPage}
+          onPageSizeChange={table.setPageSize}
+          noun={NOUN}
+        />
+      </DataView>
+    </PageLayout>
   );
 }
