@@ -1,11 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { BadgeCheck, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { CellTitle } from '@/components/data-table';
+import { DataView, type DataViewState } from '@/components/data-view';
+import { InlineNotice } from '@/components/inline-notice';
+import { PageHeader } from '@/components/page-header';
+import { PageLayout } from '@/components/page-layout';
+import { RowActions, RowActionsCell } from '@/components/row-actions';
+import { Section } from '@/components/section';
+import { PriorityBadge, PriorityLegend } from '@/components/status-badge';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -15,37 +22,40 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { Request } from '@/lib/api-client';
-import {
-  ApprovalError,
-  createApproval,
-  listPendingApproval,
-} from '@/lib/approval';
-import { Separator } from '@/components/ui/separator';
+import { useActor } from '@/lib/actor-context';
+import { ApprovalError, createApproval, listPendingApproval } from '@/lib/approval';
+import { formatDate } from '@/lib/format';
 import { DevolverDialog } from './devolver-dialog';
 import { PlanAuthorizationSection } from './plan-authorization-section';
+import { focusTargetAfterRemoval } from './row-focus';
 
-type LoadState = 'loading' | 'success' | 'error';
-
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '-';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat('es', { dateStyle: 'medium' }).format(date);
-}
+type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
 
 function messageOf(err: unknown): string {
-  return err instanceof ApprovalError
-    ? err.message
-    : 'Ocurrio un error inesperado.';
+  return err instanceof ApprovalError ? err.message : 'Ocurrió un error inesperado.';
 }
 
+/**
+ * Aprobaciones (design §11.8, patrón A): cola de compromisos por aprobar y,
+ * para quien tiene `review`, planes por autorizar. Aprobar, autorizar y
+ * devolver retiran la fila; el foco pasa a la fila siguiente o al encabezado
+ * de la sección (NIT 4).
+ */
 export function RevisionView(): React.ReactElement {
+  const { permissions, allowedModules } = useActor();
+  const permissionsLoaded = permissions !== null;
+  const reviewAllowed = allowedModules.has('review');
   const [queue, setQueue] = React.useState<Request[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
+  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [actingId, setActingId] = React.useState<string | null>(null);
+  const [approvingId, setApprovingId] = React.useState<string | null>(null);
 
   const [devolver, setDevolver] = React.useState<Request | null>(null);
   const [devolverError, setDevolverError] = React.useState<string | null>(null);
+  const rowIndexRef = React.useRef(0);
+  const bodyRef = React.useRef<HTMLTableSectionElement>(null);
+  const headingRef = React.useRef<HTMLHeadingElement>(null);
 
   const load = React.useCallback(async () => {
     setState('loading');
@@ -53,40 +63,63 @@ export function RevisionView(): React.ReactElement {
       const data = await listPendingApproval();
       setQueue(data);
       setState('success');
-    } catch {
+    } catch (err) {
+      if (err instanceof ApprovalError && err.status === 403) {
+        setState('forbidden');
+        return;
+      }
+      setLoadError(messageOf(err));
       setState('error');
     }
   }, []);
 
+  // Gating cosmético, como en Indicadores: sin el módulo review no se llama al
+  // backend (respondería 403) y se muestra el aviso; un 403 lleva al mismo aviso.
   React.useEffect(() => {
+    if (!permissionsLoaded) return;
+    if (!reviewAllowed) {
+      setState('forbidden');
+      return;
+    }
     void load();
-  }, [load]);
+  }, [permissionsLoaded, reviewAllowed, load]);
 
-  async function handleApprove(request: Request) {
+  const returnFocusTo = React.useCallback(
+    () => focusTargetAfterRemoval(bodyRef.current, rowIndexRef.current, headingRef.current),
+    [],
+  );
+
+  async function handleApprove(request: Request, index: number): Promise<void> {
     setActingId(request.id);
+    setApprovingId(request.id);
     try {
       await createApproval(request.id, { decision: 'APROBAR' });
       toast.success('Solicitud aprobada. Pasa a Comprometida.');
       await load();
+      // La fila ya no está: tras pintar la tabla, el foco pasa a la siguiente.
+      rowIndexRef.current = index;
+      requestAnimationFrame(() => requestAnimationFrame(() => returnFocusTo()?.focus()));
     } catch (err) {
       toast.error(messageOf(err));
     } finally {
       setActingId(null);
+      setApprovingId(null);
     }
   }
 
-  async function handleDevolver(reason: string) {
+  async function handleDevolver(reason: string): Promise<void> {
     if (!devolver) return;
     setActingId(devolver.id);
     setDevolverError(null);
     try {
       await createApproval(devolver.id, { decision: 'DEVOLVER', reason });
       toast.success('Solicitud devuelta a triage.');
-      // Reset solo en exito (AC-031).
-      setDevolver(null);
+      // Se recarga antes de cerrar: al cerrarse, la fila ya no está y el foco
+      // va a returnFocusTo. Reset solo en éxito (AC-031).
       await load();
+      setDevolver(null);
     } catch (err) {
-      // Fallo (p. ej. 400 motivo faltante): conserva el dialog y los valores.
+      // Fallo (p. ej. 400 motivo faltante): conserva el diálogo y lo escrito.
       const message = messageOf(err);
       setDevolverError(message);
       toast.error(message);
@@ -95,121 +128,143 @@ export function RevisionView(): React.ReactElement {
     }
   }
 
-  return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Revision</h1>
-          <p className="text-sm text-muted-foreground">
-            Cola de solicitudes priorizadas pendientes de aprobacion del
-            compromiso.
+  const header = (
+    <PageHeader
+      title="Aprobaciones"
+      description="Decide el compromiso de las solicitudes priorizadas y autoriza los planes enviados."
+    />
+  );
+
+  if (state === 'forbidden') {
+    return (
+      <PageLayout>
+        {header}
+        <InlineNotice
+          tone="neutral"
+          title="Esta pantalla no está disponible para tu rol."
+          action={
+            allowedModules.has('requests') ? (
+              <Link
+                href="/demanda/solicitudes"
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                Ir a Solicitudes
+              </Link>
+            ) : undefined
+          }
+        >
+          <p className="text-muted-foreground">
+            Aprobar compromisos y autorizar planes corresponde al jefe de área y a los líderes de
+            proceso. El estado de cada solicitud se consulta en Solicitudes.
           </p>
-        </div>
-        <Button variant="outline" onClick={() => void load()}>
-          <RefreshCw aria-hidden="true" />
-          Actualizar
-        </Button>
-      </header>
+        </InlineNotice>
+      </PageLayout>
+    );
+  }
 
-      <p className="rounded-md bg-muted p-3 text-sm">
-        La decision de compromiso es independiente del guardado de la evaluacion
-        (BR-006): aprobar lleva la solicitud a Comprometida; devolver la regresa
-        a triage con un motivo.
-      </p>
+  let viewState: DataViewState;
+  if (state === 'loading') viewState = 'loading';
+  else if (state === 'error') viewState = 'error';
+  else if (queue.length === 0) viewState = 'empty';
+  else viewState = 'ready';
 
-      <section aria-live="polite" className="rounded-lg border bg-card">
-        {state === 'loading' ? (
-          <div className="flex flex-col gap-3 p-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : state === 'error' ? (
-          <div className="flex flex-col items-center gap-3 p-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              No fue posible comunicarse con el servidor.
-            </p>
-            <Button variant="outline" onClick={() => void load()}>
-              <RefreshCw aria-hidden="true" />
-              Reintentar
-            </Button>
-          </div>
-        ) : queue.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 p-10 text-center">
-            <p className="text-sm font-medium">
-              No hay solicitudes pendientes de aprobacion.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Las solicitudes priorizadas apareceran aqui para su revision.
-            </p>
-          </div>
-        ) : (
-          <Table>
+  return (
+    <PageLayout>
+      {header}
+
+      <Section
+        title="Compromisos por aprobar"
+        count={state === 'success' ? queue.length : undefined}
+        headingRef={headingRef}
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
+            <RefreshCw aria-hidden="true" />
+            Actualizar
+          </Button>
+        }
+      >
+        <InlineNotice tone="info" className="py-2">
+          Aprobar lleva la solicitud a Comprometida; devolver la regresa a triage con un motivo.
+        </InlineNotice>
+        <PriorityLegend />
+        <DataView
+          state={viewState}
+          loading={{ rows: 3, columns: 4 }}
+          error={{
+            title: 'No fue posible cargar los compromisos por aprobar.',
+            message: loadError,
+            onRetry: () => void load(),
+          }}
+          empty={{
+            icon: BadgeCheck,
+            title: 'No hay solicitudes pendientes de aprobación.',
+            description: 'Las solicitudes priorizadas aparecerán aquí para su revisión.',
+          }}
+        >
+          <Table scrollLabel="Tabla de compromisos por aprobar">
             <TableHeader>
               <TableRow>
-                <TableHead>Titulo</TableHead>
-                <TableHead>Score</TableHead>
+                <TableHead>Título</TableHead>
                 <TableHead>Prioridad</TableHead>
                 <TableHead>Registro</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {queue.map((req) => (
-                <TableRow key={req.id}>
-                  <TableCell className="font-medium">{req.title}</TableCell>
-                  <TableCell>
-                    {req.currentScore !== null &&
-                    req.currentScore !== undefined
-                      ? req.currentScore
-                      : '-'}
-                  </TableCell>
-                  <TableCell>
-                    {req.priorityLabel ? (
-                      <Badge variant="secondary">{req.priorityLabel}</Badge>
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">
-                    {formatDate(req.registeredAt)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        disabled={actingId === req.id}
-                        onClick={() => void handleApprove(req)}
-                      >
-                        Aprobar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={actingId === req.id}
-                        onClick={() => {
-                          setDevolverError(null);
-                          setDevolver(req);
-                        }}
-                      >
-                        Devolver
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+            <TableBody ref={bodyRef}>
+              {queue.map((req, index) => {
+                const acting = actingId === req.id;
+                return (
+                  <TableRow key={req.id}>
+                    <TableCell className="min-w-56 max-w-[28rem]">
+                      <CellTitle>{req.title}</CellTitle>
+                    </TableCell>
+                    <TableCell>
+                      <PriorityBadge variant="compact" score={req.currentScore} label={req.priorityLabel} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
+                      {formatDate(req.registeredAt)}
+                    </TableCell>
+                    <RowActionsCell>
+                      <RowActions
+                        rowLabel={req.title}
+                        actions={[
+                          {
+                            key: 'approve',
+                            label: 'Aprobar',
+                            onSelect: () => void handleApprove(req, index),
+                            busy: approvingId === req.id,
+                            busyLabel: 'Aprobando…',
+                            disabled: acting,
+                            placement: 'inline',
+                          },
+                          {
+                            key: 'return',
+                            label: 'Devolver',
+                            onSelect: () => {
+                              rowIndexRef.current = index;
+                              setDevolverError(null);
+                              setDevolver(req);
+                            },
+                            disabled: acting,
+                            placement: 'inline',
+                          },
+                        ]}
+                      />
+                    </RowActionsCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
-        )}
-      </section>
+        </DataView>
+      </Section>
 
-      <Separator />
-
-      {/* Fase 3: autorizacion de planes (AÑADIDA; no reemplaza la cola de
-          compromiso de arriba). Oculta para quien no tiene capacidad review. */}
+      {/* Autorización de planes: se añade a la cola de compromiso. Oculta para
+          quien no tiene el módulo review. */}
       <PlanAuthorizationSection />
 
       <DevolverDialog
+        kind="solicitud"
         open={devolver !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -220,8 +275,9 @@ export function RevisionView(): React.ReactElement {
         requestTitle={devolver?.title ?? ''}
         submitting={actingId !== null && actingId === devolver?.id}
         errorMessage={devolverError}
-        onConfirm={handleDevolver}
+        onConfirm={(reason) => void handleDevolver(reason)}
+        returnFocusTo={returnFocusTo}
       />
-    </div>
+    </PageLayout>
   );
 }

@@ -1,103 +1,57 @@
 'use client';
 
 import * as React from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { ReasonDialog } from '@/components/reason-dialog';
 
 interface DevolverDialogProps {
+  /** 'solicitud' vuelve a triage; 'plan' vuelve a edición (design §13.3). */
+  kind: 'solicitud' | 'plan';
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requestTitle: string;
   submitting: boolean;
-  /** Error en linea; se conserva ante fallo (AC-031). */
+  /** Error del backend en línea; se conserva lo escrito (AC-031). */
   errorMessage: string | null;
   onConfirm: (reason: string) => void;
+  /** La fila desaparece al devolver: destino del foco al cerrar (NIT 4). */
+  returnFocusTo?: () => HTMLElement | null;
 }
 
 /**
- * Dialogo para devolver una solicitud en revision. El motivo es obligatorio
- * (si falta, el backend responde 400 y el formulario conserva los valores).
+ * Devolución con motivo obligatorio, compartida por las dos colas de
+ * Aprobaciones. Envoltorio de ReasonDialog con los textos de §13.3; si falta el
+ * motivo, el backend responde 400 y el diálogo conserva lo escrito.
  */
 export function DevolverDialog({
+  kind,
   open,
   onOpenChange,
   requestTitle,
   submitting,
   errorMessage,
   onConfirm,
+  returnFocusTo,
 }: DevolverDialogProps): React.ReactElement {
-  const [reason, setReason] = React.useState('');
-  const [clientError, setClientError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (open) {
-      setReason('');
-      setClientError(null);
-    }
-  }, [open]);
-
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!reason.trim()) {
-      setClientError('El motivo es obligatorio para devolver.');
-      return;
-    }
-    setClientError(null);
-    onConfirm(reason.trim());
-  }
-
+  const isPlan = kind === 'plan';
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Devolver solicitud</DialogTitle>
-          <DialogDescription>
-            Devolver &laquo;{requestTitle}&raquo; a triage. Indica el motivo de
-            la devolucion.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="devolver-reason">Motivo *</Label>
-            <Textarea
-              id="devolver-reason"
-              autoFocus
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-          </div>
-
-          {clientError || errorMessage ? (
-            <p className="text-sm text-destructive" role="alert">
-              {clientError ?? errorMessage}
-            </p>
-          ) : null}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={submitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" variant="destructive" disabled={submitting}>
-              {submitting ? 'Devolviendo...' : 'Devolver'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <ReasonDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isPlan ? 'Devolver plan' : 'Devolver solicitud'}
+      description={
+        isPlan
+          ? `El plan de «${requestTitle}» volverá a edición con el motivo que indiques.`
+          : `«${requestTitle}» volverá a triage con el motivo que indiques.`
+      }
+      fieldId="devolver-reason"
+      confirmLabel="Devolver"
+      busyLabel="Devolviendo…"
+      tone="danger"
+      submitting={submitting}
+      errorMessage={errorMessage}
+      onConfirm={onConfirm}
+      returnFocusTo={returnFocusTo}
+      requiredMessage="El motivo es obligatorio para devolver."
+    />
   );
 }

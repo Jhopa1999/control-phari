@@ -277,6 +277,26 @@ defecto de la plantilla.
   Utilización y Utilización plan. Sus diálogos usan `Field` y `FormError`:
   todos los errores del cliente se muestran a la vez y el foco va al primer
   campo con error.
+- Demanda: Solicitudes (`/demanda/solicitudes`) busca, filtra (estado,
+  proceso y banda de prioridad), ordena y pagina en cliente, de 25 en 25, sin
+  parámetros nuevos en la API. El título abre la ficha y el menú «Más
+  acciones» ofrece «Ir a triage», «Ir a priorización», «Ir a planificación» e
+  «Ir a controles de gobierno» solo si el módulo está permitido y la solicitud
+  cumple el predicado del destino (`isTriageable`, `isPrioritizable`,
+  `isPlannable` de `lib/request-state.ts`; Controles no tiene predicado).
+  Triage y Priorización son mesas de trabajo con `RequestContextBar` agrupada,
+  la ficha de la solicitud al lado y, si la solicitud no admite la acción, un
+  `RequirementsPanel` (`triage-block`, `priority-block`) con el motivo y la
+  acción para resolverlo. Las dos aceptan `?requestId=` (`lib/use-request-param.ts`,
+  `page.tsx` con `<Suspense>` y `PageFallback`): la selección vive en el estado
+  de la vista y la URL solo la refleja; un id que no está en la lista muestra
+  un aviso y limpia la URL. Los toasts de éxito encadenan el paso siguiente
+  («Ir a triage», «Ir a priorización», «Ir a aprobaciones») cuando el módulo
+  está permitido. Aprobaciones (`/administracion/revision`) tiene dos
+  secciones con su «Actualizar»; devolver usa `ReasonDialog`
+  (`devolver-dialog.tsx`) y, como la fila desaparece, el foco pasa a la fila
+  siguiente o al encabezado de la sección. Sin el módulo `review` no se llama
+  al backend y se muestra un aviso, como en Indicadores.
 - Shell y navegación: `components/app-shell.tsx` monta «Saltar al contenido»
   (primer enfocable, lleva a `main#contenido`), el menú lateral
   (`app-sidebar.tsx`) y, por debajo de 1024 px, una barra superior con el menú
@@ -361,8 +381,12 @@ defecto de la plantilla.
   `/catalogs`), el filtrado del integrante, el cajón a 390 px (navega, se
   cierra y devuelve el foco; sin tooltips aunque esté guardada la preferencia
   de riel), el riel a 1100 px (botón, foco y preferencia guardada), «Saltar al
-  contenido» y el 404 de una ruta inexistente. Solo depende de los actores del
-  seed.
+  contenido», el 404 de una ruta inexistente y (paso 8) el listado de
+  Solicitudes con 30 solicitudes ficticias: conteo, paginación, sin resultados
+  con un solo «Limpiar filtros» y orden real de la columna Registro. Ese paso
+  sirve el `GET /requests` con un fixture (`page.route` + `route.fetch()` +
+  `route.fulfill({ response, json })`): la petición pasa por la API real y solo
+  se sustituye el cuerpo. Solo depende de los actores del seed.
 - `e2e/web-lib.spec.ts`: funciones puras de `apps/web/src/lib`
   (`safe-redirect.ts`, `format.ts`, `navigation.ts`, comparado con
   `MODULE_KEYS` y `MODULE_MATRIX` del backend, `status-presentation.ts`,
