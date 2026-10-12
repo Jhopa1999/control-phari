@@ -24,19 +24,21 @@ function messageForStatus(status: number): string {
     case 400:
       return 'Revisa los datos ingresados.';
     case 403:
-      return 'No tienes permiso para esta accion.';
+      return 'No tienes permiso para esta acción.';
     case 404:
-      return 'No existe o esta fuera de tu alcance.';
+      return 'No existe o está fuera de tu alcance.';
     case 409:
-      return 'La solicitud no esta lista para aprobacion.';
+      return 'La solicitud no está lista para aprobación.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
 function toApprovalError(status: number | undefined): ApprovalError {
   if (status === undefined) {
-    return new ApprovalError('No fue posible comunicarse con el servidor.');
+    return new ApprovalError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new ApprovalError(messageForStatus(status), status);
 }

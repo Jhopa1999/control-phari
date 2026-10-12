@@ -27,19 +27,21 @@ function messageForStatus(status: number): string {
     case 400:
       return 'Revisa los datos ingresados.';
     case 403:
-      return 'No tienes permiso para esta accion.';
+      return 'No tienes permiso para esta acción.';
     case 404:
-      return 'No existe o esta fuera de tu alcance.';
+      return 'No existe o está fuera de tu alcance.';
     case 409:
-      return 'El plan no cumple la precondicion de esta fase.';
+      return 'El plan no cumple la precondición de esta fase.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
 function toPlanError(status: number | undefined): PlanError {
   if (status === undefined) {
-    return new PlanError('No fue posible comunicarse con el servidor.');
+    return new PlanError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new PlanError(messageForStatus(status), status);
 }
@@ -190,14 +192,6 @@ export async function returnPlan(
   }
 }
 
-/** Etiquetas legibles de PlanStatus (design 1.4). Estado read-only en UI. */
-export const PLAN_STATUS_LABELS: Record<string, string> = {
-  BORRADOR: 'Borrador',
-  EN_AUTORIZACION: 'En autorizacion',
-  AUTORIZADO: 'Autorizado',
-  DEVUELTO: 'Devuelto',
-};
-
-export function planStatusLabel(status: string): string {
-  return PLAN_STATUS_LABELS[status] ?? status;
-}
+// Etiquetas de PlanStatus: viven en el módulo puro status-labels.ts
+// (design §7.9.2) y se reexportan aquí para que los consumidores no cambien.
+export { PLAN_STATUS_LABELS, planStatusLabel } from './status-labels';

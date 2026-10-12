@@ -23,22 +23,24 @@ export class AssetError extends Error {
 function messageForStatus(status: number): string {
   switch (status) {
     case 400:
-      return 'Revisa los datos o la transicion solicitada.';
+      return 'Revisa los datos o la transición solicitada.';
     case 403:
-      return 'No tienes acceso a esta accion.';
+      return 'No tienes acceso a esta acción.';
     case 404:
-      return 'El activo no existe o esta fuera de tu alcance.';
+      return 'El activo no existe o está fuera de tu alcance.';
     case 409:
       return 'El activo entra en conflicto con otro existente.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
 /** Normaliza cualquier fallo (HTTP o de red) a un AssetError entendible. */
 function toAssetError(status: number | undefined): AssetError {
   if (status === undefined) {
-    return new AssetError('No fue posible comunicarse con el servidor.');
+    return new AssetError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new AssetError(messageForStatus(status), status);
 }

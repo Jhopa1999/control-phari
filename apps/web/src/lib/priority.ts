@@ -23,19 +23,21 @@ function messageForStatus(status: number): string {
     case 400:
       return 'Revisa los datos ingresados.';
     case 403:
-      return 'No tienes permiso para esta accion.';
+      return 'No tienes permiso para esta acción.';
     case 404:
-      return 'No existe o esta fuera de tu alcance.';
+      return 'No existe o está fuera de tu alcance.';
     case 409:
-      return 'La priorizacion requiere un triage con decision Continuar.';
+      return 'La priorización requiere un triage con decisión Continuar.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
 function toPriorityError(status: number | undefined): PriorityError {
   if (status === undefined) {
-    return new PriorityError('No fue posible comunicarse con el servidor.');
+    return new PriorityError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new PriorityError(messageForStatus(status), status);
 }

@@ -8,21 +8,23 @@ import { PlanError } from './plan';
 function messageForStatus(status: number): string {
   switch (status) {
     case 400:
-      return 'La predecesora no es valida (ciclo, auto-dependencia u otro plan).';
+      return 'La predecesora no es válida (ciclo, autodependencia u otro plan).';
     case 403:
-      return 'No tienes permiso para esta accion.';
+      return 'No tienes permiso para esta acción.';
     case 404:
-      return 'No existe o esta fuera de tu alcance.';
+      return 'No existe o está fuera de tu alcance.';
     case 409:
       return 'Esa dependencia ya existe.';
     default:
-      return 'Ocurrio un error al procesar la dependencia.';
+      return 'Ocurrió un error al procesar la dependencia.';
   }
 }
 
 function toDependencyError(status: number | undefined): PlanError {
   if (status === undefined) {
-    return new PlanError('No fue posible comunicarse con el servidor.');
+    return new PlanError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new PlanError(messageForStatus(status), status);
 }

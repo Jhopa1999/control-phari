@@ -227,6 +227,19 @@ defecto de la plantilla.
   en la pila de sistema (`system-ui`, `Segoe UI`, Roboto…).
 - El tema oscuro queda preparado en `.dark`, pero no hay selector de tema; los
   toasts usan tema claro fijo hasta que exista.
+- Utilidades de presentación en `apps/web/src/lib`, sin reglas de negocio:
+  `format.ts` define las únicas reglas de fechas del portal (una fecha de
+  calendario guardada se muestra en UTC; un valor por defecto, como "hoy" o el
+  mes actual, se propone con el calendario local del usuario; una fecha
+  guardada pasa a un `<input type="date">` en UTC) y el formato de horas,
+  porcentajes y conteos ("1 pendiente", "−10 h", "45 %").
+  `status-presentation.ts` da etiqueta, tono e icono de cada estado, y
+  `table-sort.ts` con el hook `use-client-table.ts` hacen búsqueda, orden y
+  paginación en cliente sobre lo que ya devuelve la API. `useClientTable`
+  exige `pageSize` (`25 | 50 | 100 | null`): con `null` no pagina y entrega
+  todas las filas filtradas; con un número, la vista pinta siempre la
+  paginación, para que ninguna fila quede oculta sin un control que lo
+  indique.
 - Pantalla `/catalogs`: listar, filtrar (catalogo + estado via query backend,
   con boton Aplicar), crear (Dialog), editar (Dialog con catalog/code en solo
   lectura; PATCH no envia catalog/code), activar/desactivar (`PATCH active`). Sin
@@ -285,13 +298,20 @@ defecto de la plantilla.
   Playwright reutiliza los servidores que ya están en marcha. Después,
   `npm run test:e2e -- e2e/jwt-session.spec.ts` (solo ese spec: el resto de la
   suite usa dev-header).
-- `e2e/web-lib.spec.ts`: funciones puras de `apps/web/src/lib` (hoy,
-  `safe-redirect.ts`) con el runner de Playwright y sin el fixture `page`, así
-  que no abre navegador. Es una excepción a `.kiro/steering/30-pruebas.md`, que
-  reserva Playwright a los flujos E2E: Jest solo está configurado en `apps/api`
-  y llevarlo a `apps/web` exigiría dependencias y configuración nuevas. Los
-  módulos que importa son puros (solo importaciones relativas, sin el alias
-  `@/` ni valores de `lib/api-client.ts`).
+- `e2e/web-lib.spec.ts`: funciones puras de `apps/web/src/lib`
+  (`safe-redirect.ts`, `format.ts`, `status-presentation.ts`, `plan-guide.ts`,
+  `request-state.ts`, `task-filters.ts` y `table-sort.ts`, incluida la
+  invariante de paginación de `buildTableView`) con el runner de Playwright y
+  sin el fixture `page`, así que no abre navegador. Es una excepción a
+  `.kiro/steering/30-pruebas.md`, que reserva Playwright a los flujos E2E: Jest
+  solo está configurado en `apps/api` y llevarlo a `apps/web` exigiría
+  dependencias y configuración nuevas. Los módulos que importa son puros (solo
+  importaciones relativas, `lucide-react` e `import type` de
+  `lib/api-client.ts`; nunca el alias `@/` ni valores de ese módulo, que lanza
+  un error al importarse sin `NEXT_PUBLIC_API_BASE_URL`). El bloque de
+  `format.ts` fija `process.env.TZ = 'America/Bogota'` y lo restaura al
+  terminar, para que los errores de UTC frente a hora local aparezcan también
+  en una máquina o una CI en UTC.
 - Datos E2E aislados en `E2E_CATALOG`. Limpieza con utilidad de testing
   `apps/api/test-utils/e2e-cleanup.ts` (Prisma directo, `deleteMany` con filtro
   estricto `catalog = E2E_CATALOG`; nunca sin `where`). NO se expone por HTTP y

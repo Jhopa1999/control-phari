@@ -31,20 +31,22 @@ function messageForStatus(status: number): string {
     case 400:
       return 'Revisa los datos ingresados.';
     case 403:
-      return 'No tienes acceso a esta accion.';
+      return 'No tienes acceso a esta acción.';
     case 404:
       return 'No existe o fue removido.';
     case 409:
       return 'Ya hay un registro para esa persona, proceso y fecha.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
 /** Normaliza cualquier fallo (HTTP o de red) a un WorklogError entendible. */
 function toWorklogError(status: number | undefined): WorklogError {
   if (status === undefined) {
-    return new WorklogError('No fue posible comunicarse con el servidor.');
+    return new WorklogError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new WorklogError(messageForStatus(status), status);
 }

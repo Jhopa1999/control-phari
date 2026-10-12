@@ -25,19 +25,21 @@ function messageForStatus(status: number): string {
     case 400:
       return 'Revisa los datos ingresados.';
     case 403:
-      return 'No tienes permiso para esta accion.';
+      return 'No tienes permiso para esta acción.';
     case 404:
-      return 'No existe o esta fuera de tu alcance.';
+      return 'No existe o está fuera de tu alcance.';
     case 409:
-      return 'La solicitud no cumple la precondicion de esta fase.';
+      return 'La solicitud no cumple la precondición de esta fase.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
 function toRequestError(status: number | undefined): RequestError {
   if (status === undefined) {
-    return new RequestError('No fue posible comunicarse con el servidor.');
+    return new RequestError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new RequestError(messageForStatus(status), status);
 }

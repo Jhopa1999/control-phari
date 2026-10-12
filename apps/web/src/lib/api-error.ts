@@ -26,13 +26,13 @@ export function messageForStatus(status: number): string {
     case 401:
       return 'No hay un usuario actual. Selecciona un usuario para continuar.';
     case 403:
-      return 'No tienes acceso a esta accion.';
+      return 'No tienes acceso a esta acción.';
     case 404:
       return 'No existe o fue removido.';
     case 409:
       return 'Ya existe un registro con esos datos.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
@@ -41,7 +41,9 @@ export function messageForStatus(status: number): string {
  */
 export function toApiError(status: number | undefined): ApiError {
   if (status === undefined) {
-    return new ApiError('No fue posible comunicarse con el servidor.');
+    return new ApiError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new ApiError(messageForStatus(status), status);
 }

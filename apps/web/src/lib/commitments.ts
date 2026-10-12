@@ -23,22 +23,24 @@ export class CommitmentError extends Error {
 function messageForStatus(status: number): string {
   switch (status) {
     case 400:
-      return 'Revisa los datos o la transicion solicitada.';
+      return 'Revisa los datos o la transición solicitada.';
     case 403:
-      return 'No tienes acceso a esta accion.';
+      return 'No tienes acceso a esta acción.';
     case 404:
       return 'No existe o fue removido.';
     case 409:
       return 'El compromiso entra en conflicto con otro existente.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
 /** Normaliza cualquier fallo (HTTP o de red) a un CommitmentError entendible. */
 function toCommitmentError(status: number | undefined): CommitmentError {
   if (status === undefined) {
-    return new CommitmentError('No fue posible comunicarse con el servidor.');
+    return new CommitmentError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new CommitmentError(messageForStatus(status), status);
 }

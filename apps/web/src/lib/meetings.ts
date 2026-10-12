@@ -24,20 +24,22 @@ function messageForStatus(status: number): string {
     case 400:
       return 'Revisa los datos ingresados.';
     case 403:
-      return 'No tienes acceso a esta accion.';
+      return 'No tienes acceso a esta acción.';
     case 404:
       return 'No existe o fue removido.';
     case 409:
-      return 'La reunion entra en conflicto con otra existente.';
+      return 'La reunión entra en conflicto con otra existente.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
 /** Normaliza cualquier fallo (HTTP o de red) a un MeetingError entendible. */
 function toMeetingError(status: number | undefined): MeetingError {
   if (status === undefined) {
-    return new MeetingError('No fue posible comunicarse con el servidor.');
+    return new MeetingError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new MeetingError(messageForStatus(status), status);
 }

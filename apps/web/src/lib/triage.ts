@@ -19,19 +19,21 @@ function messageForStatus(status: number): string {
     case 400:
       return 'Revisa los datos ingresados.';
     case 403:
-      return 'No tienes permiso para esta accion.';
+      return 'No tienes permiso para esta acción.';
     case 404:
-      return 'No existe o esta fuera de tu alcance.';
+      return 'No existe o está fuera de tu alcance.';
     case 409:
-      return 'El triage ya fue resuelto o la solicitud no esta en registro.';
+      return 'El triage ya fue resuelto o la solicitud no está en registro.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
 function toTriageError(status: number | undefined): TriageError {
   if (status === undefined) {
-    return new TriageError('No fue posible comunicarse con el servidor.');
+    return new TriageError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new TriageError(messageForStatus(status), status);
 }

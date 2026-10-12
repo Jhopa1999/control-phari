@@ -23,22 +23,24 @@ export class IssueError extends Error {
 function messageForStatus(status: number): string {
   switch (status) {
     case 400:
-      return 'Revisa los datos o la transicion solicitada.';
+      return 'Revisa los datos o la transición solicitada.';
     case 403:
-      return 'No tienes acceso a esta accion.';
+      return 'No tienes acceso a esta acción.';
     case 404:
       return 'No existe o fue removido.';
     case 409:
       return 'La novedad entra en conflicto con otra existente.';
     default:
-      return 'Ocurrio un error al procesar la solicitud.';
+      return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
 }
 
 /** Normaliza cualquier fallo (HTTP o de red) a un IssueError entendible. */
 function toIssueError(status: number | undefined): IssueError {
   if (status === undefined) {
-    return new IssueError('No fue posible comunicarse con el servidor.');
+    return new IssueError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new IssueError(messageForStatus(status), status);
 }

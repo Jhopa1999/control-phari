@@ -13,19 +13,21 @@ function messageForStatus(status: number): string {
     case 400:
       return 'Revisa los datos de la tarea.';
     case 403:
-      return 'No tienes permiso para esta accion.';
+      return 'No tienes permiso para esta acción.';
     case 404:
-      return 'No existe o esta fuera de tu alcance.';
+      return 'No existe o está fuera de tu alcance.';
     case 409:
-      return 'La tarea no cumple la precondicion para esta accion.';
+      return 'La tarea no cumple la precondición para esta acción.';
     default:
-      return 'Ocurrio un error al procesar la tarea.';
+      return 'Ocurrió un error al procesar la tarea.';
   }
 }
 
 function toTaskError(status: number | undefined): PlanError {
   if (status === undefined) {
-    return new PlanError('No fue posible comunicarse con el servidor.');
+    return new PlanError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new PlanError(messageForStatus(status), status);
 }
@@ -169,24 +171,10 @@ export async function acceptTask(
   }
 }
 
-/** Etiquetas legibles de TaskStatus (design 1.3). */
-export const TASK_STATUS_LABELS: Record<string, string> = {
-  POR_HACER: 'Por hacer',
-  EN_CURSO: 'En curso',
-  BLOQUEADA: 'Bloqueada',
-  EN_REVISION: 'En revision',
-  TERMINADA: 'Terminada',
-};
-
-export function taskStatusLabel(status: string): string {
-  return TASK_STATUS_LABELS[status] ?? status;
-}
-
-/** Orden de estados para selects/listados. */
-export const TASK_STATUSES: readonly UpdateTaskStatus['status'][] = [
-  'POR_HACER',
-  'EN_CURSO',
-  'BLOQUEADA',
-  'EN_REVISION',
-  'TERMINADA',
-] as const;
+// Etiquetas y orden de TaskStatus: viven en el módulo puro status-labels.ts
+// (design §7.9.2) y se reexportan aquí para que los consumidores no cambien.
+export {
+  TASK_STATUS_LABELS,
+  taskStatusLabel,
+  TASK_STATUSES,
+} from './status-labels';

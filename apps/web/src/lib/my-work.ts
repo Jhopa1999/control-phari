@@ -6,15 +6,17 @@ function messageForStatus(status: number): string {
     case 403:
       return 'No tienes permiso para ver tu trabajo.';
     case 404:
-      return 'No existe o esta fuera de tu alcance.';
+      return 'No existe o está fuera de tu alcance.';
     default:
-      return 'Ocurrio un error al cargar tu trabajo.';
+      return 'Ocurrió un error al cargar tu trabajo.';
   }
 }
 
 function toMyWorkError(status: number | undefined): PlanError {
   if (status === undefined) {
-    return new PlanError('No fue posible comunicarse con el servidor.');
+    return new PlanError(
+      'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
   }
   return new PlanError(messageForStatus(status), status);
 }
