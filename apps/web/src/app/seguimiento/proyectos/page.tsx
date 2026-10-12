@@ -1,12 +1,7 @@
-import { UnderConstruction } from '@/components/under-construction';
+import { ProyectosView } from './proyectos-view';
 
 export const metadata = { title: 'Proyectos' };
 
 export default function ProyectosPage(): React.ReactElement {
-  return (
-    <UnderConstruction
-      title="Proyectos"
-      description="Seguimiento de proyectos en curso."
-    />
-  );
+  return <ProyectosView />;
 }

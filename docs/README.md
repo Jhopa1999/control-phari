@@ -240,6 +240,31 @@ defecto de la plantilla.
   todas las filas filtradas; con un número, la vista pinta siempre la
   paginación, para que ninguna fila quede oculta sin un control que lo
   indique.
+- Componentes compartidos en `apps/web/src/components`, que toda pantalla
+  migrada compone en lugar de estilos propios: estructura (`PageLayout`,
+  `PageHeader`, que emite el único `h1`, `Section` y `Toolbar` con
+  `SearchInput`), estados (`DataView`, `EmptyState`, `ErrorState`,
+  `InlineNotice`, `TableSkeleton` y `PageFallback`), estados de dominio
+  (`StatusBadge`, `PriorityBadge` y `PriorityLegend`), indicadores
+  (`StatStrip`, `StatTile` y `UtilizationBar`), bloqueos (`DisabledReason`,
+  `DisabledHint` y `RequirementsPanel`), confirmaciones (`ConfirmDialog` y
+  `ReasonDialog`), tablas (`RowActions`, `RowActionsCell`,
+  `SortableTableHead`, `ResultCount`, `DataTablePagination` y `CellTitle`),
+  maestro‑detalle (`MasterDetail` y `SelectableList`), formularios (`Field`,
+  `FieldSet`, `FormError` y `RequiredHint`) y la barra de contexto de solicitud
+  (`RequestContextBar`, `RequestSummary` y `RequestFacts`). Son seguros para
+  servidor (sin `'use client'`, hooks ni Radix) `PageLayout`, `PageHeader`,
+  `EmptyState`, `InlineNotice`, `DescriptionList`, `StatStrip`/`StatTile`,
+  `StatusBadge`/`PriorityBadge`/`PriorityLegend`, `TableSkeleton` y
+  `PageFallback`; en código de servidor, un enlace con aspecto de botón se
+  escribe `<Link className={buttonVariants({ variant })}>`. Una acción
+  bloqueada por una regla usa `aria-disabled` (`Button unavailable`) con su
+  motivo visible (`DisabledReason`) o en un tooltip que también se abre al
+  pulsar (`DisabledHint`); el atributo `disabled` queda para lo transitorio, el
+  límite natural y «sin cambios por guardar». `ConfirmDialog` y `ReasonDialog`
+  devuelven el foco al control que los abrió y, si la acción lo retiró, a
+  `returnFocusTo()`. Mi trabajo y Proyectos son las primeras pantallas
+  migradas.
 - Pantalla `/catalogs`: listar, filtrar (catalogo + estado via query backend,
   con boton Aplicar), crear (Dialog), editar (Dialog con catalog/code en solo
   lectura; PATCH no envia catalog/code), activar/desactivar (`PATCH active`). Sin
@@ -316,7 +341,12 @@ defecto de la plantilla.
   navegador (`timezoneId: 'America/Bogota'`) y su reloj
   (`page.clock.setFixedTime`) en una hora en la que el calendario UTC ya va un
   día por delante, y comprueba que «Nuevo diario» propone el día local. Abre el
-  diálogo y lo cierra con «Cancelar»: no crea datos. Los valores por defecto
+  diálogo y lo cierra con «Cancelar»: no crea datos. También comprueba que Mi
+  trabajo muestra la fecha de vencimiento guardada sin correrla un día: sirve
+  el `GET /my-work` con un fixture (`page.route` + `route.fetch()` +
+  `route.fulfill({ response, json })`), de modo que la petición pasa por la
+  API real, con autenticación, permisos y CORS, y solo se sustituye el cuerpo;
+  no depende de los datos de la base. Los valores por defecto
   de diario, novedad, reunión, compromiso, reporte semanal, Capacidad, Panel
   del área e Indicadores se calculan con el calendario local en el cliente;
   las tres vistas con periodo o mes lo fijan después del montaje y, hasta

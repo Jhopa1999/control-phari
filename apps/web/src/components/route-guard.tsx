@@ -11,12 +11,15 @@ const HOME_ROUTE = '/inicio';
 /**
  * Shell del portal: sidebar + area principal. Es el layout historico; se extrae
  * aqui para que el guard decida cuando montarlo (p.ej. no en `/login`).
+ * `min-w-0` deja que el area principal se estreche junto al sidebar: sin el, el
+ * ancho minimo de una tabla ensancha la pagina en lugar de desplazarse dentro de
+ * su region (el AppShell de FEAT-005 mantiene esa regla).
  */
 function AppShell({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <AppSidebar />
-      <main className="flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
+      <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
     </div>
   );
 }

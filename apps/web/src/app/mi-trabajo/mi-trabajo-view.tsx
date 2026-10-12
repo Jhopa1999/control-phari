@@ -1,11 +1,28 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
-import { RefreshCw } from 'lucide-react';
+import { ListChecks, RefreshCw } from 'lucide-react';
+import {
+  CellTitle,
+  DataTablePagination,
+  ResultCount,
+  SortableTableHead,
+} from '@/components/data-table';
+import { DataView, type DataViewState } from '@/components/data-view';
+import { PageHeader } from '@/components/page-header';
+import { PageLayout } from '@/components/page-layout';
+import { StatusBadge } from '@/components/status-badge';
+import { SearchInput, Toolbar } from '@/components/toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -16,22 +33,48 @@ import {
 } from '@/components/ui/table';
 import type { MyWorkItem } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
+import { formatDateOnly, formatPercent } from '@/lib/format';
 import { listMyWork } from '@/lib/my-work';
-import { taskStatusLabel } from '@/lib/tasks';
+import {
+  compareByOrder,
+  compareDate,
+  compareText,
+  matchesSearch,
+  type Comparator,
+  type SortState,
+} from '@/lib/table-sort';
+import { TASK_STATUSES, taskStatusLabel } from '@/lib/tasks';
+import { useClientTable } from '@/lib/use-client-table';
 
 type LoadState = 'loading' | 'success' | 'error';
+type SortKey = 'title' | 'endDate' | 'status';
 
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '-';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat('es', { dateStyle: 'medium' }).format(date);
-}
+/** Centinela de «Todos» en el filtro de estado. */
+const ALL = 'ALL';
+const NOUN = { one: 'tarea', other: 'tareas' };
+/** Vence ascendente; las tareas sin fecha quedan al final en las dos direcciones. */
+const DEFAULT_SORT: SortState<SortKey> = { key: 'endDate', direction: 'asc' };
+const compareStatus = compareByOrder(TASK_STATUSES);
+const COMPARATORS: Record<SortKey, Comparator<MyWorkItem>> = {
+  title: (a, b, direction) => compareText(a.title, b.title, direction),
+  endDate: (a, b, direction) => compareDate(a.endDate, b.endDate, direction),
+  // Orden del flujo: Por hacer → En curso → Bloqueada → En revisión → Terminada.
+  status: (a, b, direction) => compareStatus(a.status, b.status, direction),
+};
 
+/**
+ * Mi trabajo (design §11.4, patrón A): tareas de las que el actor es
+ * responsable, con búsqueda, filtro de estado, orden y paginación en cliente
+ * sobre lo que devuelve GET /my-work. El título abre el detalle de la tarea.
+ */
 export function MiTrabajoView(): React.ReactElement {
   const { actorId } = useActor();
   const [items, setItems] = React.useState<MyWorkItem[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState('');
+  const [status, setStatus] = React.useState(ALL);
+  const searchRef = React.useRef<HTMLInputElement>(null);
 
   const load = React.useCallback(async () => {
     setState('loading');
@@ -39,104 +82,189 @@ export function MiTrabajoView(): React.ReactElement {
       const data = await listMyWork();
       setItems(data);
       setState('success');
-    } catch {
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : null);
       setState('error');
     }
   }, []);
 
+  // Recarga también al cambiar de actor, como hasta ahora.
   React.useEffect(() => {
     void load();
   }, [load, actorId]);
 
-  return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Mi trabajo</h1>
-          <p className="text-sm text-muted-foreground">
-            Tus tareas asignadas con su contexto de plan y estado.
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => void load()}>
-          <RefreshCw aria-hidden="true" />
-          Actualizar
-        </Button>
-      </header>
+  const hasFilters = query.trim() !== '' || status !== ALL;
+  const filter = React.useCallback(
+    (item: MyWorkItem) => matchesSearch(item.title, query) && (status === ALL || item.status === status),
+    [query, status],
+  );
+  const table = useClientTable({
+    rows: items,
+    filter,
+    comparators: COMPARATORS,
+    defaultSort: DEFAULT_SORT,
+    resetKey: JSON.stringify([query, status]),
+    pageSize: 25,
+  });
 
-      <section aria-live="polite" className="rounded-lg border bg-card">
-        {state === 'loading' ? (
-          <div className="flex flex-col gap-3 p-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : state === 'error' ? (
-          <div className="flex flex-col items-center gap-3 p-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              No fue posible cargar tu trabajo.
-            </p>
-            <Button variant="outline" onClick={() => void load()}>
-              <RefreshCw aria-hidden="true" />
-              Reintentar
-            </Button>
-          </div>
-        ) : items.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 p-10 text-center">
-            <p className="text-sm font-medium">No tienes tareas asignadas.</p>
-            <p className="text-sm text-muted-foreground">
-              Las tareas de las que seas responsable apareceran aqui.
-            </p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tarea</TableHead>
-                <TableHead>Solicitud</TableHead>
-                <TableHead>Fase</TableHead>
-                <TableHead>Vence</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Accion</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.taskId}>
-                  <TableCell className="font-medium">
-                    {item.title}
+  function clearFilters(): void {
+    setQuery('');
+    setStatus(ALL);
+    // «Limpiar filtros» desaparece al no quedar filtros: el foco pasa a la
+    // búsqueda en lugar de perderse (NIT 4, plan D9).
+    searchRef.current?.focus();
+  }
+
+  let viewState: DataViewState;
+  if (state === 'loading') viewState = 'loading';
+  else if (state === 'error') viewState = 'error';
+  else if (table.total === 0 && !hasFilters) viewState = 'empty';
+  else if (table.filtered === 0) viewState = 'no-results';
+  else viewState = 'ready';
+
+  return (
+    <PageLayout>
+      <PageHeader
+        title="Mi trabajo"
+        description="Tareas en las que eres responsable, con su plan y su estado."
+        actions={
+          <Button type="button" variant="outline" onClick={() => void load()}>
+            <RefreshCw aria-hidden="true" />
+            Actualizar
+          </Button>
+        }
+      />
+
+      <Toolbar
+        label="Filtros de mi trabajo"
+        end={
+          <>
+            {state !== 'error' ? (
+              <ResultCount
+                loading={state === 'loading'}
+                total={table.total}
+                filtered={table.filtered}
+                noun={NOUN}
+              />
+            ) : null}
+            {hasFilters ? (
+              <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                Limpiar filtros
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        <SearchInput
+          ref={searchRef}
+          id="mt-buscar"
+          placeholder="Título de la tarea"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <div className="grid w-full gap-1.5 sm:w-auto">
+          <Label htmlFor="mt-filtro-estado">Estado</Label>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger id="mt-filtro-estado" className="w-full sm:w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Todos</SelectItem>
+              {TASK_STATUSES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {taskStatusLabel(value)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </Toolbar>
+
+      <DataView
+        state={viewState}
+        loading={{ rows: 6, columns: 5 }}
+        error={{
+          title: 'No fue posible cargar tu trabajo.',
+          message: errorMessage,
+          onRetry: () => void load(),
+        }}
+        empty={{
+          icon: ListChecks,
+          title: 'No tienes tareas asignadas.',
+          description: 'Las tareas de las que seas responsable aparecerán aquí.',
+        }}
+      >
+        <Table scrollLabel="Tabla de mis tareas">
+          <TableHeader>
+            <TableRow>
+              <SortableTableHead
+                label="Tarea"
+                sortKey="title"
+                sort={table.sort}
+                onSort={table.toggleSort}
+              />
+              <TableHead>Solicitud</TableHead>
+              <TableHead>Fase</TableHead>
+              <SortableTableHead
+                label="Vence"
+                sortKey="endDate"
+                sort={table.sort}
+                onSort={table.toggleSort}
+              />
+              <SortableTableHead
+                label="Estado"
+                sortKey="status"
+                sort={table.sort}
+                onSort={table.toggleSort}
+              />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {table.pageRows.map((item) => (
+              <TableRow key={item.taskId}>
+                <TableCell className="min-w-56 max-w-[28rem]">
+                  <div className="flex items-center gap-2">
+                    <CellTitle href={`/seguimiento/tareas?taskId=${encodeURIComponent(item.taskId)}`}>
+                      {item.title}
+                    </CellTitle>
                     {item.isMilestone ? (
-                      <Badge variant="outline" className="ml-2">
+                      <Badge variant="outline" className="shrink-0">
                         Hito
                       </Badge>
                     ) : null}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.requestTitle}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.phaseName}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {formatDate(item.endDate)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {taskStatusLabel(item.status)} ({item.progress}%)
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/seguimiento/tareas?taskId=${item.taskId}`}>
-                        Abrir
-                      </Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </section>
-    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="min-w-40 text-muted-foreground">{item.requestTitle}</TableCell>
+                <TableCell className="min-w-32 text-muted-foreground">{item.phaseName}</TableCell>
+                <TableCell className="whitespace-nowrap tabular-nums">
+                  {formatDateOnly(item.endDate)}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <span className="inline-flex items-center gap-2">
+                    <StatusBadge kind="task" value={item.status} />
+                    <span className="text-meta tabular-nums text-muted-foreground">
+                      <span className="sr-only">avance </span>
+                      {formatPercent(item.progress)}
+                    </span>
+                  </span>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <DataTablePagination
+          id="mt-paginacion"
+          page={table.page}
+          pageCount={table.pageCount}
+          from={table.from}
+          to={table.to}
+          filtered={table.filtered}
+          pageSize={table.pageSize ?? 25}
+          onPageChange={table.setPage}
+          onPageSizeChange={table.setPageSize}
+          noun={NOUN}
+        />
+      </DataView>
+    </PageLayout>
   );
 }
