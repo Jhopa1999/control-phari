@@ -14,8 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useActor } from '@/lib/actor-context';
 import { ApiError, login as loginRequest } from '@/lib/auth';
-/** Ruta de inicio tras autenticar correctamente. */
-const HOME_ROUTE = '/inicio';
+import { postLoginPath } from '@/lib/safe-redirect';
 interface FieldErrors {
   identifier?: string;
   password?: string;
@@ -28,8 +27,10 @@ interface FieldErrors {
 export function LoginForm(): React.ReactElement {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useActor();
-  const expired = searchParams.get('expired') === '1';
+  const { login, sessionExpired } = useActor();
+  // Tambien con sessionExpired: el 401 de una sesion guardada se detecta ya en
+  // /login, sin pasar por ?expired=1 (evita el bucle /login -> /inicio -> /login).
+  const expired = searchParams.get('expired') === '1' || sessionExpired;
   const [identifier, setIdentifier] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
@@ -62,7 +63,8 @@ export function LoginForm(): React.ReactElement {
         password,
       });
       login(result.accessToken, result.user);
-      router.replace(HOME_ROUTE);
+      // Vuelve a la ruta de origen (`next`) si es interna y segura; si no, /inicio.
+      router.replace(postLoginPath(searchParams));
     } catch (err) {
       // 401 -> mensaje generico, sin filtrar si el usuario existe.
       if (err instanceof ApiError && err.status === 401) {

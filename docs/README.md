@@ -244,6 +244,33 @@ defecto de la plantilla.
   reporter `list`, `screenshot: only-on-failure`, `trace: retain-on-failure`,
   `video: off`. Valida la cadena completa navegador -> Next -> api-client ->
   NestJS -> Prisma -> PostgreSQL.
+- URLs de la suite configurables por entorno. Sin variables valen lo mismo que
+  en la CI: `E2E_WEB_URL` (`baseURL` y `webServer` de la web; por defecto
+  `http://localhost:3000`), `E2E_API_URL` (se espera su `/health`; por defecto
+  `http://localhost:3001`) y `WEB_ORIGIN` (origen del `localStorage` que fijan
+  `e2e/global-setup.ts` y `e2e/responsible-selector.spec.ts`; si falta, se usa
+  `E2E_WEB_URL`). Sirven para verificar contra servidores en otros puertos sin
+  tocar los de 3000/3001: fuera de CI, `reuseExistingServer` reutiliza los que
+  ya respondan en esas URLs.
+- `e2e/jwt-session.spec.ts`: regresiones de la sesión jwt (recargar conserva la
+  sesión y la ruta; un enlace directo vuelve a su ruta tras iniciar sesión;
+  `/login` con sesión lleva a `/inicio`; aviso de sesión expirada; un `next`
+  externo se ignora; cerrar sesión no deja `next`). Se salta salvo
+  `E2E_AUTH_MODE=jwt`. Necesita `E2E_JWT_PASSWORD`, la contraseña de desarrollo
+  del seed (`DEV_PASSWORD` en `apps/api/prisma/seed.ts`; ni el spec ni esta
+  documentación la copian), y admite `E2E_JWT_IDENTIFIER` (por defecto
+  `jefe@demo.local`). Antes hay que levantar la API con `AUTH_MODE=jwt` y
+  `JWT_SECRET`, y la web con `NEXT_PUBLIC_AUTH_MODE=jwt`, porque fuera de CI
+  Playwright reutiliza los servidores que ya están en marcha. Después,
+  `npm run test:e2e -- e2e/jwt-session.spec.ts` (solo ese spec: el resto de la
+  suite usa dev-header).
+- `e2e/web-lib.spec.ts`: funciones puras de `apps/web/src/lib` (hoy,
+  `safe-redirect.ts`) con el runner de Playwright y sin el fixture `page`, así
+  que no abre navegador. Es una excepción a `.kiro/steering/30-pruebas.md`, que
+  reserva Playwright a los flujos E2E: Jest solo está configurado en `apps/api`
+  y llevarlo a `apps/web` exigiría dependencias y configuración nuevas. Los
+  módulos que importa son puros (solo importaciones relativas, sin el alias
+  `@/` ni valores de `lib/api-client.ts`).
 - Datos E2E aislados en `E2E_CATALOG`. Limpieza con utilidad de testing
   `apps/api/test-utils/e2e-cleanup.ts` (Prisma directo, `deleteMany` con filtro
   estricto `catalog = E2E_CATALOG`; nunca sin `where`). NO se expone por HTTP y
