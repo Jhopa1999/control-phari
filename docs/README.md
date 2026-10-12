@@ -364,6 +364,34 @@ defecto de la plantilla.
   los campos vacíos) y los errores del backend, como el 409 de duplicado,
   también dentro del diálogo además del toast. `lib/catalog.ts` y
   `e2e/catalogs.spec.ts` pasan a los textos con tilde en el mismo cambio.
+- Gobierno: Controles de gobierno (`/administracion/frameworks`) es una mesa
+  de trabajo con `RequestContextBar` (`governance-request`), acepta
+  `?requestId=` (el enlace «Ir a controles de gobierno» de Solicitudes llega
+  con la solicitud elegida) y reparte el contenido en dos pestañas,
+  «Controles» y «Validaciones (n)», con la ruta proporcional y el avance de
+  etapas en una columna lateral. La banda de prioridad se lee de la API (ya no
+  se calcula desde el score). En GC4, si el servidor dice que no es
+  aprobable, el panel `GC4-block` lista los motivos de la API con «Ver
+  validaciones», y «Aprobar GC4» queda no disponible con su motivo; un
+  control marcado «No aplica» no muestra ni panel ni acciones, y «Marcar como
+  no aplica» pide el motivo en un `ReasonDialog` (antes `window.prompt`). Sin
+  rol de revisión se ve un aviso de rol y solo la ruta actual. «Registrar
+  validación» abre un diálogo con los mismos ids `val-*`; el ejecutor se elige
+  entre las personas en alcance (`/coordination/people`) o se escribe su id.
+  Auditoría (`/gobierno/auditoria`) envía el filtro «Objeto» al servidor
+  (`objectType`) y pide siempre `take=500` (`AUDIT_TAKE` en `lib/audit.ts`);
+  «Acción» solo acota lo que se muestra. Si llegan 500 eventos, un aviso dice
+  que son los más recientes y el conteo habla de «eventos más recientes». Las
+  opciones de «Objeto» salen del tipo generado del contrato con un `Record`
+  exhaustivo: si el contrato cambia, el typecheck falla. Mis permisos
+  (`/gobierno/mis-permisos`) muestra identidad, roles y módulos con
+  `MODULE_ORDER`/`MODULE_LABELS`. Equipo y permisos (`/gobierno/equipo`)
+  llama «rol asignado» a lo que la API llama grant; revocar pide
+  confirmación y «Asignar rol» queda no disponible, con su motivo, si faltan
+  usuarios o procesos.
+- `Badge` ya no tiene los alias de compatibilidad (`default`, `secondary`,
+  `destructive`): solo los tonos `neutral`, `info`, `success`, `warning`,
+  `danger`, `accent` y `outline`. Los estados de dominio usan `StatusBadge`.
 - Shell y navegación: `components/app-shell.tsx` monta «Saltar al contenido»
   (primer enfocable, lleva a `main#contenido`), el menú lateral
   (`app-sidebar.tsx`) y, por debajo de 1024 px, una barra superior con el menú
@@ -389,7 +417,8 @@ defecto de la plantilla.
   con boton Aplicar), crear (Dialog), editar (Dialog con catalog/code en solo
   lectura; PATCH no envia catalog/code), activar/desactivar (`PATCH active`). Sin
   DELETE fisico. Estados loading/vacio/error/exito explicitos. Fechas formateadas
-  con `Intl.DateTimeFormat` (no ISO crudo). `/` redirige a `/catalogs`.
+  con `Intl.DateTimeFormat` (no ISO crudo). `/` redirige a `/inicio` y
+  `/catalogs` sigue respondiendo fuera del menú.
 - Cliente: `apps/web/src/lib/api-client.ts` (instancia unica,
   `createApiClient({ baseUrl })` con `NEXT_PUBLIC_API_BASE_URL`, error claro si
   falta) y `apps/web/src/lib/catalog.ts` (envuelve las llamadas y traduce
@@ -431,6 +460,30 @@ defecto de la plantilla.
   `E2E_WEB_URL`). Sirven para verificar contra servidores en otros puertos sin
   tocar los de 3000/3001: fuera de CI, `reuseExistingServer` reutiliza los que
   ya respondan en esas URLs.
+- Specs de la suite (6), con el detalle de los nuevos más abajo:
+  - `e2e/catalogs.spec.ts`: flujo principal de Maestras, duplicado (409) y
+    campos obligatorios, sobre su catálogo reservado (`E2E_CATALOG`), que
+    limpia al terminar.
+  - `e2e/responsible-selector.spec.ts`: para un líder, el selector
+    «Responsable» del diálogo de Activos se puebla con `/coordination/people`
+    (no con `/users`).
+  - `e2e/jwt-session.spec.ts`: sesión jwt (solo con `E2E_AUTH_MODE=jwt`).
+  - `e2e/shell-navigation.spec.ts`: menú, cajón móvil, riel, «Saltar al
+    contenido», 404 y el listado de Solicitudes con un fixture.
+  - `e2e/web-lib.spec.ts`: funciones puras de `apps/web/src/lib`, sin
+    navegador.
+  - `e2e/date-display.spec.ts`: fechas propuestas y mostradas sin correrse un
+    día.
+- Datos: toda la suite usa los actores del seed (`jefe@demo.local` en el
+  `storageState` de `e2e/global-setup.ts`; un actor que no existe recibe 401).
+  En una base nueva hay que ejecutar antes
+  `npm run prisma:seed --workspace apps/api`. La CI actual
+  (`.github/workflows/ci.yml`) aplica `prisma migrate deploy` sobre una base
+  limpia pero no ejecuta el seed, así que hoy no puede pasar la suite E2E sin
+  ese paso (leído en el código, no ejecutado en CI); añadirlo queda pendiente.
+  Los listados que necesitan muchas filas (paso 8 de `shell-navigation` y la
+  fecha de Mi trabajo en `date-display`) usan fixtures y no dependen de otros
+  datos.
 - `e2e/jwt-session.spec.ts`: regresiones de la sesión jwt (recargar conserva la
   sesión y la ruta; un enlace directo vuelve a su ruta tras iniciar sesión;
   `/login` con sesión lleva a `/inicio`; aviso de sesión expirada; un `next`
@@ -581,3 +634,19 @@ Detalle operativo completo en `docs/deployment.md`. Resumen técnico:
 - Reducir el tamaño de la imagen de la API (hoy conserva dev deps para migrar).
 - Paralelizar E2E con datos aislados por worker (hoy workers=1).
 - MCP (incremento futuro).
+- Ejecutar el seed en la CI antes de `test:e2e` (los specs usan sus actores).
+- Pendientes de API detectados en la renovación de UI (la renovación fue solo
+  de frontend y no los toca):
+  - Auditoría, enum de `objectType`: el `@ApiQuery` de
+    `apps/api/src/modules/audit/audit.controller.ts` declara solo 4 valores
+    (`PROCESS`, `USER`, `GRANT`, `CATALOG_ITEM`), aunque `ListAuditEventsDto`
+    acepta 26 (`OBJECT_TYPES`). Alinearlo y regenerar contratos
+    (`npm run contracts:generate`) amplía el filtro «Objeto» sin tocar el
+    frontend más que el `Record` de `lib/audit.ts`, que el typecheck señalará.
+  - Auditoría, paginación en el servidor: hoy la consulta devuelve como
+    máximo los 500 eventos más recientes, sin total ni páginas; la UI lo avisa.
+  - Equipo, columna Rol: `GET /grants` no devuelve el código ni el nombre del
+    rol, así que la tabla «Roles asignados» no puede mostrarlo.
+  - Textos de la API sin tildes (mensajes de error, `roleName`,
+    `conditionText`, `authorityText`, `blockingReasons`): la UI los muestra
+    tal cual llegan.
