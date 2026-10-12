@@ -54,6 +54,11 @@ async function signIn(page: Page): Promise<void> {
 }
 const mainHeading = (page: Page) =>
   page.getByRole('main').getByRole('heading', { level: 1 });
+// Desde el rediseño del login (design §11.2), /login también tiene main + h1.
+const loginHeading = (page: Page) =>
+  page
+    .getByRole('main')
+    .getByRole('heading', { level: 1, name: 'Iniciar sesión', exact: true });
 const loginForm = (page: Page) => page.locator('#password');
 const expiredNotice = (page: Page) =>
   page.getByRole('status').filter({ hasText: /expir/i });
@@ -92,6 +97,7 @@ test('un enlace directo sin sesión vuelve a su ruta tras iniciar sesión', asyn
 }) => {
   await page.goto('/demanda/solicitudes');
   await expect(loginForm(page)).toBeVisible();
+  await expect(loginHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/login?next=%2Fdemanda%2Fsolicitudes');
 
   await signIn(page);
@@ -129,6 +135,9 @@ test('una sesión rechazada lleva a /login?expired=1 con el aviso de sesión exp
 
   await page.goto('/inicio');
   await expect(expiredNotice(page)).toBeVisible();
+  await expect(expiredNotice(page)).toHaveText(
+    'La sesión expiró. Vuelve a iniciar sesión.',
+  );
   await expect(page).toHaveURL('/login?expired=1');
 });
 
@@ -152,6 +161,9 @@ test('cerrar sesión lleva a /login sin next y una recarga no la recupera', asyn
   await page.goto('/login');
   await signIn(page);
   await expect(mainHeading(page)).toBeVisible();
+  // /login ya tiene su propio h1: la URL confirma que el inicio de sesión
+  // terminó antes de navegar a otra ruta.
+  await expect(page).toHaveURL('/inicio');
   // Desde una ruta distinta de /inicio, que sin cierre explícito llevaría `next`.
   await page.goto('/demanda/solicitudes');
   await settled(page);
@@ -159,6 +171,7 @@ test('cerrar sesión lleva a /login sin next y una recarga no la recupera', asyn
 
   await logoutButton(page).click();
   await expect(loginForm(page)).toBeVisible();
+  await expect(loginHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/login');
   expect(
     await page.evaluate(() => window.localStorage.getItem('authToken')),
@@ -166,5 +179,6 @@ test('cerrar sesión lleva a /login sin next y una recarga no la recupera', asyn
 
   await page.goto('/inicio');
   await expect(loginForm(page)).toBeVisible();
+  await expect(loginHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/login');
 });

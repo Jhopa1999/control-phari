@@ -1,7 +1,9 @@
 'use client';
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { AppSidebar } from '@/components/app-sidebar';
+import { LoaderCircle } from 'lucide-react';
+import { AppShell } from '@/components/app-shell';
+import { BrandMark } from '@/components/brand';
 import { useActor } from '@/lib/actor-context';
 import { postLoginPath } from '@/lib/safe-redirect';
 /** Ruta publica de login. */
@@ -9,27 +11,21 @@ const LOGIN_ROUTE = '/login';
 /** Destino por defecto tras iniciar sesion: no hace falta enviarlo en `next`. */
 const HOME_ROUTE = '/inicio';
 /**
- * Shell del portal: sidebar + area principal. Es el layout historico; se extrae
- * aqui para que el guard decida cuando montarlo (p.ej. no en `/login`).
- * `min-w-0` deja que el area principal se estreche junto al sidebar: sin el, el
- * ancho minimo de una tabla ensancha la pagina en lugar de desplazarse dentro de
- * su region (el AppShell de FEAT-005 mantiene esa regla).
+ * Estado de pantalla completa del guard (design §8.1): marca, spinner y el
+ * texto en role="status". Ningun texto puede contener «expir»: el aviso de
+ * sesion expirada del login se reconoce por esa raiz.
  */
-function AppShell({ children }: { children: React.ReactNode }): React.ReactElement {
-  return (
-    <div className="flex min-h-screen flex-col md:flex-row">
-      <AppSidebar />
-      <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
-    </div>
-  );
-}
 function CenteredMessage({ text }: { text: string }): React.ReactElement {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      role="status"
-    >
-      <p className="text-sm text-muted-foreground">{text}</p>
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4">
+      <BrandMark />
+      <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+        <LoaderCircle
+          className="size-4 shrink-0 animate-spin motion-reduce:animate-none"
+          aria-hidden="true"
+        />
+        {text}
+      </p>
     </div>
   );
 }
@@ -124,8 +120,13 @@ export function RouteGuard({
       }
       // state === 'error': se deja ver el formulario, sin redirigir.
     }
-    // /login sin sesion (o tras 401, que ya limpio la sesion): sin shell.
-    return <>{children}</>;
+    // /login sin sesion (o tras 401, que ya limpio la sesion): sin shell, pero
+    // con el landmark principal que en las demas rutas aporta el shell (§11.2).
+    return (
+      <main id="contenido" tabIndex={-1} className="focus:outline-none">
+        {children}
+      </main>
+    );
   }
   // Ruta protegida sin sesion: no se monta el shell (el efecto redirige).
   if (!isAuthenticated) {

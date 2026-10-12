@@ -1,7 +1,8 @@
 'use client';
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Field, FormError } from '@/components/field';
+import { InlineNotice } from '@/components/inline-notice';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -11,7 +12,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useActor } from '@/lib/actor-context';
 import { ApiError, login as loginRequest } from '@/lib/auth';
 import { postLoginPath } from '@/lib/safe-redirect';
@@ -19,10 +19,15 @@ interface FieldErrors {
   identifier?: string;
   password?: string;
 }
+/** Id del formulario: el FormError lleva `login-error`. */
+const FORM_ID = 'login';
 /**
- * Formulario de login (modo jwt). HTML semantico (`<form>`, `<label htmlFor>`),
- * navegable por teclado, errores por campo accesibles (`role="alert"`,
- * `aria-describedby`) y estado de envio (boton deshabilitado + spinner).
+ * Formulario de login (modo jwt, design §11.2). `noValidate` y validación al
+ * enviar con todos los errores a la vez, bajo cada campo, con role="alert",
+ * aria-describedby y aria-invalid; el foco va al primer campo con error y el
+ * error de un campo se limpia al editarlo. Los fallos del backend van en el
+ * FormError. Durante el envío los campos se deshabilitan y el botón muestra
+ * «Ingresando…».
  */
 export function LoginForm(): React.ReactElement {
   const router = useRouter();
@@ -36,13 +41,15 @@ export function LoginForm(): React.ReactElement {
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [formError, setFormError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const identifierRef = React.useRef<HTMLInputElement>(null);
+  const passwordRef = React.useRef<HTMLInputElement>(null);
   function validate(): FieldErrors {
     const errors: FieldErrors = {};
     if (identifier.trim().length === 0) {
       errors.identifier = 'Ingresa tu usuario o correo.';
     }
     if (password.length === 0) {
-      errors.password = 'Ingresa tu contrasena.';
+      errors.password = 'Ingresa tu contraseña.';
     }
     return errors;
   }
@@ -54,6 +61,8 @@ export function LoginForm(): React.ReactElement {
     const errors = validate();
     setFieldErrors(errors);
     if (errors.identifier || errors.password) {
+      // Foco al primer campo con error, en el orden del formulario.
+      (errors.identifier ? identifierRef : passwordRef).current?.focus();
       return;
     }
     setSubmitting(true);
@@ -68,97 +77,75 @@ export function LoginForm(): React.ReactElement {
     } catch (err) {
       // 401 -> mensaje generico, sin filtrar si el usuario existe.
       if (err instanceof ApiError && err.status === 401) {
-        setFormError('Usuario o contrasena incorrectos.');
+        setFormError('Usuario o contraseña incorrectos.');
       } else if (err instanceof ApiError) {
         setFormError(err.message);
       } else {
-        setFormError('No fue posible iniciar sesion. Intenta de nuevo.');
+        setFormError('No fue posible iniciar sesión. Inténtalo de nuevo.');
       }
       setSubmitting(false);
     }
   }
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle>Iniciar sesion</CardTitle>
-        <CardDescription>
-          Accede con tu usuario o correo del portal.
-        </CardDescription>
+    <Card className="w-full max-w-[400px]">
+      <CardHeader className="gap-1.5 p-6 pb-4">
+        <CardTitle as="h1" className="text-lg tracking-tight">
+          Iniciar sesión
+        </CardTitle>
+        <CardDescription>Accede con tu usuario o correo del portal.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="grid gap-4 p-6 pt-0">
         {expired ? (
-          <p
-            role="status"
-            className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800"
-          >
-            La sesion expiro, vuelve a iniciar sesion.
-          </p>
+          <InlineNotice tone="warning" role="status">
+            La sesión expiró. Vuelve a iniciar sesión.
+          </InlineNotice>
         ) : null}
         <form onSubmit={handleSubmit} noValidate className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="identifier">Usuario o correo</Label>
+          <Field
+            id="identifier"
+            label="Usuario o correo"
+            error={fieldErrors.identifier}
+            errorRole="alert"
+          >
             <Input
-              id="identifier"
+              ref={identifierRef}
               name="identifier"
               type="text"
               autoComplete="username"
               value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              onChange={(e) => {
+                setIdentifier(e.target.value);
+                if (fieldErrors.identifier) {
+                  setFieldErrors((prev) => ({ ...prev, identifier: undefined }));
+                }
+              }}
               disabled={submitting}
-              aria-invalid={fieldErrors.identifier ? true : undefined}
-              aria-describedby={
-                fieldErrors.identifier ? 'identifier-error' : undefined
-              }
             />
-            {fieldErrors.identifier ? (
-              <p
-                id="identifier-error"
-                role="alert"
-                className="text-sm text-destructive"
-              >
-                {fieldErrors.identifier}
-              </p>
-            ) : null}
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">Contrasena</Label>
+          </Field>
+          <Field
+            id="password"
+            label="Contraseña"
+            error={fieldErrors.password}
+            errorRole="alert"
+          >
             <Input
-              id="password"
+              ref={passwordRef}
               name="password"
               type="password"
               autoComplete="current-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) {
+                  setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                }
+              }}
               disabled={submitting}
-              aria-invalid={fieldErrors.password ? true : undefined}
-              aria-describedby={
-                fieldErrors.password ? 'password-error' : undefined
-              }
             />
-            {fieldErrors.password ? (
-              <p
-                id="password-error"
-                role="alert"
-                className="text-sm text-destructive"
-              >
-                {fieldErrors.password}
-              </p>
-            ) : null}
-          </div>
-          {formError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {formError}
-            </p>
-          ) : null}
-          <Button type="submit" disabled={submitting} className="w-full">
-            {submitting ? (
-              <>
-                <Loader2 className="animate-spin" aria-hidden="true" />
-                Ingresando...
-              </>
-            ) : (
-              'Ingresar'
-            )}
+          </Field>
+          <FormError id={FORM_ID} message={formError} />
+          <Button type="submit" size="lg" loading={submitting} className="w-full">
+            {submitting ? 'Ingresando…' : 'Ingresar'}
           </Button>
         </form>
       </CardContent>

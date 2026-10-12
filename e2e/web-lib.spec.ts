@@ -21,6 +21,19 @@ import {
   orDash,
 } from '../apps/web/src/lib/format';
 import {
+  MODULE_KEYS,
+  allowedModulesFor,
+} from '../apps/api/src/modules/auth/module-matrix';
+import { RoleCode } from '../apps/api/src/modules/auth/role-code';
+import {
+  MODULE_LABELS,
+  MODULE_ORDER,
+  NAV_GROUPS,
+  getVisibleNavGroups,
+  isNavItemActive,
+  type NavItem,
+} from '../apps/web/src/lib/navigation';
+import {
   guideCategoryLabel,
   presentGuidePending,
   type GuideActionKind,
@@ -64,7 +77,9 @@ import {
  * Pruebas de funciones puras de apps/web/src/lib (design §7.9.2 y §20) con el
  * runner de Playwright y sin el fixture `page`: no abren navegador. Los módulos
  * que se importan solo usan importaciones relativas, lucide-react e
- * `import type`, así que Node los carga sin la configuración de Next.
+ * `import type`, así que Node los carga sin la configuración de Next. El
+ * bloque de navigation.ts compara con MODULE_KEYS y MODULE_MATRIX del backend
+ * (module-matrix.ts solo depende del enum RoleCode).
  */
 
 test.describe('safe-redirect', () => {
@@ -202,6 +217,103 @@ test.describe('format', () => {
       from: '2026-12-01',
       to: '2027-01-01',
     });
+  });
+});
+
+test.describe('navigation', () => {
+  const allItems = (): NavItem[] => NAV_GROUPS.flatMap((group) => group.items);
+  const itemByLabel = (label: string): NavItem => {
+    const item = allItems().find((candidate) => candidate.label === label);
+    if (!item) throw new Error(`No existe el ítem «${label}» en NAV_GROUPS`);
+    return item;
+  };
+
+  test('MODULE_ORDER tiene las 21 claves del backend, sin repetidos, y cada una su etiqueta', () => {
+    expect(MODULE_ORDER).toHaveLength(21);
+    expect(new Set(MODULE_ORDER).size).toBe(21);
+    expect([...MODULE_ORDER].sort()).toEqual([...MODULE_KEYS].sort());
+    for (const key of MODULE_ORDER) {
+      expect(MODULE_LABELS[key], key).toBeTruthy();
+    }
+  });
+
+  test('los href del menú son exactamente las 23 rutas de §8.5, en sus 7 grupos', () => {
+    // Protege las URLs: el rediseño reagrupa el menú, pero ninguna ruta cambia.
+    expect(allItems().map((item) => item.href)).toEqual([
+      '/inicio',
+      '/mi-trabajo',
+      '/demanda/solicitudes',
+      '/demanda/triage',
+      '/demanda/priorizacion',
+      '/administracion/revision',
+      '/seguimiento/plan',
+      '/activos/capacidad',
+      '/seguimiento/portafolio',
+      '/demanda/resumen',
+      '/seguimiento/proyectos',
+      '/seguimiento/bitacora',
+      '/seguimiento/semanal',
+      '/seguimiento/novedades',
+      '/seguimiento/reuniones',
+      '/seguimiento/compromisos',
+      '/activos/catalogo',
+      '/activos/documentos',
+      '/administracion/frameworks',
+      '/gobierno/auditoria',
+      '/gobierno/mis-permisos',
+      '/gobierno/equipo',
+      '/administracion/maestras',
+    ]);
+    expect(NAV_GROUPS.map((group) => group.label)).toEqual([
+      null,
+      'Demanda',
+      'Ejecución',
+      'Seguimiento',
+      'Activos y conocimiento',
+      'Gobierno',
+      'Administración',
+    ]);
+    for (const item of allItems()) {
+      expect(MODULE_ORDER, item.href).toContain(item.moduleKey);
+    }
+  });
+
+  test('getVisibleNavGroups filtra por módulos y quita los grupos vacíos', () => {
+    const onlyDashboard = getVisibleNavGroups(new Set(['dashboard']));
+    expect(onlyDashboard).toHaveLength(1);
+    expect(onlyDashboard[0].items.map((item) => item.href)).toEqual(['/inicio']);
+    expect(getVisibleNavGroups(new Set())).toEqual([]);
+
+    // Claves que MODULE_MATRIX da al rol INTEGRANTE.
+    const integrante = getVisibleNavGroups(
+      new Set<string>(allowedModulesFor([RoleCode.INTEGRANTE])),
+    );
+    const labels = integrante.flatMap((group) => group.items.map((item) => item.label));
+    for (const hidden of [
+      'Triage',
+      'Priorización',
+      'Aprobaciones',
+      'Planificación',
+      'Indicadores',
+      'Equipo y permisos',
+      'Maestras',
+    ]) {
+      expect(labels, hidden).not.toContain(hidden);
+    }
+    for (const visible of ['Panel del área', 'Mi trabajo', 'Solicitudes', 'Capacidad']) {
+      expect(labels, visible).toContain(visible);
+    }
+    expect(integrante.every((group) => group.items.length > 0)).toBe(true);
+  });
+
+  test('isNavItemActive usa igualdad o prefijo de ruta, también en activeFor', () => {
+    expect(isNavItemActive(itemByLabel('Mi trabajo'), '/seguimiento/tareas')).toBe(true);
+    expect(isNavItemActive(itemByLabel('Maestras'), '/catalogs')).toBe(true);
+    const solicitudes = itemByLabel('Solicitudes');
+    expect(isNavItemActive(solicitudes, '/demanda/solicitudes')).toBe(true);
+    expect(isNavItemActive(solicitudes, '/demanda/solicitudes/x')).toBe(true);
+    expect(isNavItemActive(solicitudes, '/demanda/solicitudesx')).toBe(false);
+    expect(isNavItemActive(itemByLabel('Panel del área'), '/seguimiento/tareas')).toBe(false);
   });
 });
 

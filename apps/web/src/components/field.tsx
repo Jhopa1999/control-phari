@@ -43,6 +43,11 @@ export interface FieldProps {
   help?: React.ReactNode;
   /** Error de una regla de este campo; id `${id}-error`. */
   error?: string | null;
+  /**
+   * role="alert" en el error, para anunciarlo al aparecer. Lo usa el login, que
+   * lo conserva del formulario anterior (design §11.2).
+   */
+  errorRole?: 'alert';
   labelHidden?: boolean;
   className?: string;
   /**
@@ -57,10 +62,20 @@ function joinIds(...ids: Array<string | undefined>): string | undefined {
   return joined === '' ? undefined : joined;
 }
 
-function FieldMessage({ id, error, children }: { id: string; error?: boolean; children: React.ReactNode }): React.ReactElement {
+function FieldMessage({
+  id,
+  error,
+  role,
+  children,
+}: {
+  id: string;
+  error?: boolean;
+  role?: 'alert';
+  children: React.ReactNode;
+}): React.ReactElement {
   if (error) {
     return (
-      <p id={id} className="flex gap-1 text-meta text-danger">
+      <p id={id} role={role} className="flex gap-1 text-meta text-danger">
         <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
         <span>{children}</span>
       </p>
@@ -80,6 +95,7 @@ export function Field({
   required = false,
   help,
   error,
+  errorRole,
   labelHidden = false,
   className,
   children,
@@ -113,7 +129,7 @@ export function Field({
       {rendered}
       {help ? <FieldMessage id={`${id}-help`}>{help}</FieldMessage> : null}
       {error ? (
-        <FieldMessage id={`${id}-error`} error>
+        <FieldMessage id={`${id}-error`} error role={errorRole}>
           {error}
         </FieldMessage>
       ) : null}

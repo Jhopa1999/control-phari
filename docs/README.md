@@ -265,6 +265,27 @@ defecto de la plantilla.
   devuelven el foco al control que los abrió y, si la acción lo retiró, a
   `returnFocusTo()`. Mi trabajo y Proyectos son las primeras pantallas
   migradas.
+- Shell y navegación: `components/app-shell.tsx` monta «Saltar al contenido»
+  (primer enfocable, lleva a `main#contenido`), el menú lateral
+  (`app-sidebar.tsx`) y, por debajo de 1024 px, una barra superior con el menú
+  en un cajón (`mobile-nav.tsx`). En escritorio, la columna del menú ocupa todo
+  el alto de la página y el menú queda fijo al alto de la ventana (`sticky`),
+  con scroll propio si no cabe. El menú se reagrupa por flujo de trabajo en
+  `lib/navigation.ts` (7 grupos y 23 ítems, filtrados por `allowedModules`; es
+  cosmético, el servidor manda) sin cambiar ninguna URL: «Tareas» sale del
+  menú y marca «Mi trabajo», y `/catalogs` marca «Maestras».
+  `MODULE_LABELS` y `MODULE_ORDER` dan la etiqueta y el orden de los 21
+  módulos. Entre 1024 y 1279 px el menú es un riel de 56 px; el botón
+  «Contraer menú» / «Expandir menú» guarda la preferencia en
+  `localStorage.sidebarCollapsed` (`lib/use-sidebar-mode.ts`), y CSS resuelve
+  el modo con `data-sidebar` y la variante `rail:` de `globals.css`. El login
+  tiene su propio `h1`, y las rutas inexistentes y los errores de ejecución
+  tienen pantallas en español (`app/not-found.tsx`, `app/error.tsx` y
+  `app/global-error.tsx`).
+- Cambiar el logo: sustituir el contenido de `BrandMark` en
+  `apps/web/src/components/brand.tsx` por un `next/image` de `/logo.svg` a
+  28 px. Es el único punto: lo usan el menú, la barra móvil, el login, las
+  pantallas de carga de la sesión y la de error global.
 - Pantalla `/catalogs`: listar, filtrar (catalogo + estado via query backend,
   con boton Aplicar), crear (Dialog), editar (Dialog con catalog/code en solo
   lectura; PATCH no envia catalog/code), activar/desactivar (`PATCH active`). Sin
@@ -323,10 +344,18 @@ defecto de la plantilla.
   Playwright reutiliza los servidores que ya están en marcha. Después,
   `npm run test:e2e -- e2e/jwt-session.spec.ts` (solo ese spec: el resto de la
   suite usa dev-header).
+- `e2e/shell-navigation.spec.ts`: el menú con sus grupos en orden y la página
+  activa (también «Mi trabajo» en `/seguimiento/tareas` y «Maestras» en
+  `/catalogs`), el filtrado del integrante, el cajón a 390 px (navega, se
+  cierra y devuelve el foco; sin tooltips aunque esté guardada la preferencia
+  de riel), el riel a 1100 px (botón, foco y preferencia guardada), «Saltar al
+  contenido» y el 404 de una ruta inexistente. Solo depende de los actores del
+  seed.
 - `e2e/web-lib.spec.ts`: funciones puras de `apps/web/src/lib`
-  (`safe-redirect.ts`, `format.ts`, `status-presentation.ts`, `plan-guide.ts`,
-  `request-state.ts`, `task-filters.ts` y `table-sort.ts`, incluida la
-  invariante de paginación de `buildTableView`) con el runner de Playwright y
+  (`safe-redirect.ts`, `format.ts`, `navigation.ts`, comparado con
+  `MODULE_KEYS` y `MODULE_MATRIX` del backend, `status-presentation.ts`,
+  `plan-guide.ts`, `request-state.ts`, `task-filters.ts` y `table-sort.ts`,
+  incluida la invariante de paginación de `buildTableView`) con el runner de Playwright y
   sin el fixture `page`, así que no abre navegador. Es una excepción a
   `.kiro/steering/30-pruebas.md`, que reserva Playwright a los flujos E2E: Jest
   solo está configurado en `apps/api` y llevarlo a `apps/web` exigiría

@@ -14,28 +14,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useActor } from '@/lib/actor-context';
-import { NAV_GROUPS, type ModuleKey } from '@/lib/navigation';
+// Las 21 claves de módulo y sus etiquetas vienen de lib/navigation.ts (design
+// §8.5): el menú reagrupado ya no sirve para derivarlas (repite `log` y
+// `meeting` y no incluye `task`).
+import { MODULE_LABELS, MODULE_ORDER } from '@/lib/navigation';
 import type { MyGrant } from '@/lib/api-client';
-
-/** Etiqueta visible de cada moduleKey, derivada del modelo de navegacion. */
-const MODULE_LABELS: Record<string, string> = (() => {
-  const map: Record<string, string> = {};
-  for (const group of NAV_GROUPS) {
-    for (const item of group.items) {
-      map[item.moduleKey] = `${group.label} · ${item.label}`;
-    }
-  }
-  return map;
-})();
-
-/** Todas las claves de modulo conocidas, en el orden del menu. */
-const ALL_MODULE_KEYS: ModuleKey[] = NAV_GROUPS.flatMap((g) =>
-  g.items.map((i) => i.moduleKey),
-);
-
-function moduleLabel(key: string): string {
-  return MODULE_LABELS[key] ?? key;
-}
 
 export function MisPermisosView(): React.ReactElement {
   const { actorId, permissions, state, reload } = useActor();
@@ -119,14 +102,14 @@ export function MisPermisosView(): React.ReactElement {
             <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
               <h2 className="text-sm font-semibold">Modulos</h2>
               <ul className="flex flex-col gap-2">
-                {ALL_MODULE_KEYS.map((key) => {
+                {MODULE_ORDER.map((key) => {
                   const allowed = permissions.allowedModules.includes(key);
                   return (
                     <li
                       key={key}
                       className="flex items-center justify-between gap-3 border-b pb-2 last:border-b-0 last:pb-0"
                     >
-                      <span className="text-sm">{moduleLabel(key)}</span>
+                      <span className="text-sm">{MODULE_LABELS[key]}</span>
                       {allowed ? (
                         <Badge variant="success">Permitido</Badge>
                       ) : (
