@@ -1,5 +1,5 @@
 import { createApiClient } from '@plantilla-portales/api-client';
-import type { components } from '@plantilla-portales/api-client';
+import type { components, paths } from '@plantilla-portales/api-client';
 import { getAuthMode } from './auth-mode';
 /**
  * Tipos del dominio derivados del contrato OpenAPI generado.
@@ -20,6 +20,10 @@ export type UpdateUser = components['schemas']['UpdateUserDto'];
 export type Grant = components['schemas']['GrantResponseDto'];
 export type CreateGrant = components['schemas']['CreateGrantDto'];
 export type AuditEvent = components['schemas']['AuditEventResponseDto'];
+/** Query de GET /audit-events (objectType y take), tal como la declara el contrato. */
+export type AuditEventsQuery = NonNullable<
+  paths['/audit-events']['get']['parameters']['query']
+>;
 // --- Autenticacion (login JWT): tipos derivados del contrato OpenAPI ---
 /** Respuesta de POST /auth/login: { accessToken, expiresIn, user }. */
 export type LoginResponse = components['schemas']['LoginResponseDto'];
