@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   // workspaces hay que apuntar la raiz de rastreo de archivos al root del repo.
   output: 'standalone',
   outputFileTracingRoot: require('node:path').join(__dirname, '../../'),
+  // Solo desarrollo: el indicador de Next tapaba el menú lateral abajo a la izquierda.
+  devIndicators: { position: 'bottom-right' },
 };
 
 export default nextConfig;

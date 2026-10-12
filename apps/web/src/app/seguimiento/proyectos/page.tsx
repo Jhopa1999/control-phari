@@ -1,6 +1,6 @@
 import { UnderConstruction } from '@/components/under-construction';
 
-export const metadata = { title: 'Proyectos | Portal del area' };
+export const metadata = { title: 'Proyectos' };
 
 export default function ProyectosPage(): React.ReactElement {
   return (

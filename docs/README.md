@@ -203,9 +203,30 @@ defecto de la plantilla.
   contratos. Los tipos salen de `components['schemas'][...]`.
 - Dependencias agregadas a apps/web: `@radix-ui/*` (dialog, label, select,
   separator, slot, switch), `class-variance-authority`, `clsx`, `tailwind-merge`,
-  `lucide-react`, `sonner`; dev `tw-animate-css`. No se instalo React Query,
+  `lucide-react`, `sonner`; dev `tw-animate-css`. Renovación de UI: también
+  `@radix-ui/react-tooltip@1.3.0`, `@radix-ui/react-dropdown-menu@2.1.25` y
+  `@radix-ui/react-tabs@1.1.22`, con versión exacta y sin scripts de
+  instalación (`allowScripts` no cambia). No se instalo React Query,
   Redux, Zustand, React Hook Form ni Zod: cinco campos simples se manejan con
   estado React y validacion minima (el backend es la autoridad).
+- Sistema de diseño (`apps/web/src/app/globals.css`): tokens en OKLCH para el
+  tema claro (`:root`) y el oscuro (`.dark`), un único acento y tonos
+  semánticos `success`, `warning`, `danger`, `info` y `neutral` con variantes
+  `-subtle` y `-border`. La paleta `neutral-50…950` de Tailwind se elimina para
+  que `text-neutral` y `bg-neutral-subtle` sean tokens propios. `text-meta`
+  (13/18 px) es un tamaño propio y `cn()` lo registra en tailwind-merge para
+  que no lo confunda con un color.
+- Cambiar el acento corporativo: editar solo `--primary`, `--primary-hover`,
+  `--primary-foreground` y `--primary-subtle` en el bloque marcado al inicio de
+  `:root` y de `.dark`; `--ring` lo sigue solo. Condiciones de contraste:
+  `--primary-foreground` sobre `--primary` ≥ 4.5:1, y `--primary` como texto
+  sobre `#fff` y sobre `--muted` ≥ 4.5:1.
+- Tipografía: Inter con `next/font/google` (se autoaloja en el build; variable
+  `--font-inter` en `<html>`). Si el build no puede descargarla (entorno sin
+  salida a internet), se quita el import de `layout.tsx` y `--font-sans` queda
+  en la pila de sistema (`system-ui`, `Segoe UI`, Roboto…).
+- El tema oscuro queda preparado en `.dark`, pero no hay selector de tema; los
+  toasts usan tema claro fijo hasta que exista.
 - Pantalla `/catalogs`: listar, filtrar (catalogo + estado via query backend,
   con boton Aplicar), crear (Dialog), editar (Dialog con catalog/code en solo
   lectura; PATCH no envia catalog/code), activar/desactivar (`PATCH active`). Sin

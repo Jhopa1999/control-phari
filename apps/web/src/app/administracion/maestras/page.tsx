@@ -1,6 +1,6 @@
 import { CatalogsView } from '@/app/catalogs/catalogs-view';
 
-export const metadata = { title: 'Configuracion / maestras | Portal del area' };
+export const metadata = { title: 'Maestras' };
 
 /**
  * SCR-18 Configuracion / maestras: reutiliza la vista existente de /catalogs

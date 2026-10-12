@@ -1,6 +1,6 @@
 import { DemandOverviewView } from './demand-overview-view';
 
-export const metadata = { title: 'Resumen de demanda | Portal del area' };
+export const metadata = { title: 'Indicadores' };
 
 export default function DemandaResumenPage(): React.ReactElement {
   return <DemandOverviewView />;

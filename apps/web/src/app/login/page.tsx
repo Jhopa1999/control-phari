@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { Metadata } from 'next';
 import { LoginForm } from './login-form';
 export const metadata: Metadata = {
-  title: 'Iniciar sesion - Portal del area',
+  title: 'Iniciar sesión',
 };
 /**
  * Pantalla de login (App Router). El formulario es un componente cliente;

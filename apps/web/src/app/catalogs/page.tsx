@@ -1,7 +1,7 @@
 import { CatalogsView } from './catalogs-view';
 
 export const metadata = {
-  title: 'Maestras | Plantilla de Portales',
+  title: 'Maestras',
 };
 
 export default function CatalogsPage(): React.ReactElement {

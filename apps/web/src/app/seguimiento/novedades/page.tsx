@@ -1,6 +1,6 @@
 import { NovedadesView } from './novedades-view';
 
-export const metadata = { title: 'Novedades | Portal del area' };
+export const metadata = { title: 'Novedades' };
 
 export default function NovedadesPage(): React.ReactElement {
   return <NovedadesView />;

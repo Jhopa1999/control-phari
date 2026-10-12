@@ -2,24 +2,34 @@ import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
+// Tonos semánticos: el tono expresa nivel de atención, no identidad (§1).
+const badgeTones = {
+  neutral: 'bg-neutral-subtle text-neutral',
+  info: 'bg-info-subtle text-info',
+  success: 'bg-success-subtle text-success',
+  warning: 'bg-warning-subtle text-warning',
+  danger: 'bg-danger-subtle text-danger',
+  accent: 'bg-primary-subtle text-primary',
+  outline: 'border-border-strong text-foreground',
+} as const;
+
+// No es interactivo: sin estilos de foco. El borde transparente se vuelve
+// visible en forced-colors.
 const badgeVariants = cva(
-  'inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  'inline-flex h-5 items-center gap-1 rounded-sm border border-transparent px-1.5 text-xs font-medium whitespace-nowrap [&_svg]:size-3',
   {
     variants: {
       variant: {
-        default:
-          'border-transparent bg-primary text-primary-foreground',
-        secondary:
-          'border-transparent bg-secondary text-secondary-foreground',
-        destructive:
-          'border-transparent bg-destructive text-destructive-foreground',
-        success:
-          'border-transparent bg-success text-success-foreground',
-        outline: 'text-foreground',
+        ...badgeTones,
+        // Alias de compatibilidad durante la migración de pantallas (§6).
+        // No usarlos en código nuevo; al terminar la migración no debe quedar ninguno.
+        default: badgeTones.accent,
+        secondary: badgeTones.neutral,
+        destructive: badgeTones.danger,
       },
     },
     defaultVariants: {
-      variant: 'default',
+      variant: 'accent',
     },
   },
 );
