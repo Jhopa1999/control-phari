@@ -19,14 +19,7 @@ const badgeVariants = cva(
   'inline-flex h-5 items-center gap-1 rounded-sm border border-transparent px-1.5 text-xs font-medium whitespace-nowrap [&_svg]:size-3',
   {
     variants: {
-      variant: {
-        ...badgeTones,
-        // Alias de compatibilidad durante la migración de pantallas (§6).
-        // No usarlos en código nuevo; al terminar la migración no debe quedar ninguno.
-        default: badgeTones.accent,
-        secondary: badgeTones.neutral,
-        destructive: badgeTones.danger,
-      },
+      variant: badgeTones,
     },
     defaultVariants: {
       variant: 'accent',
