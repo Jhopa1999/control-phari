@@ -69,7 +69,8 @@ export function HistorialDialog({
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
   const authorName = React.useCallback(
-    (id: string) => owners.find((u) => u.id === id)?.name ?? id,
+    // Autor fuera de las personas del alcance: nunca un UUID visible (§13.1).
+    (id: string) => owners.find((u) => u.id === id)?.name ?? 'Persona fuera de tu alcance',
     [owners],
   );
 

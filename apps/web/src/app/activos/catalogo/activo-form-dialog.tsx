@@ -234,7 +234,10 @@ export function ActivoFormDialog({
                     {...control}
                     readOnly
                     disabled
-                    value={processes.find((p) => p.id === values.processId)?.name ?? values.processId}
+                    value={
+                      processes.find((p) => p.id === values.processId)?.name ??
+                      'Proceso fuera de tu alcance'
+                    }
                   />
                 ) : (
                   <Select value={values.processId} onValueChange={(v) => set('processId', v)}>

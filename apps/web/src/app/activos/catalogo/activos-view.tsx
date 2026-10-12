@@ -74,6 +74,10 @@ const ASSET_STATES = ['BORRADOR', 'ACTIVO', 'RETIRADO'] as const;
 const compareStatus = compareByOrder(ASSET_STATES);
 /** Orden por defecto: Nombre ascendente (design §11.16). */
 const DEFAULT_SORT: SortState<SortKey> = { key: 'name', direction: 'asc' };
+// Ids que no vienen en las listas del alcance del actor: nunca un UUID visible (§13.1).
+const OUT_OF_SCOPE_PROCESS = 'Proceso fuera de tu alcance';
+const OUT_OF_SCOPE_REQUEST = 'Solicitud fuera de tu alcance';
+const OUT_OF_SCOPE_PERSON = 'Persona fuera de tu alcance';
 
 function messageOf(err: unknown): string {
   return err instanceof AssetError
@@ -180,15 +184,17 @@ export function ActivosView(): React.ReactElement {
   }, [load]);
 
   const processName = React.useCallback(
-    (id: string) => processes.find((p) => p.id === id)?.name ?? id,
+    (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS,
     [processes],
   );
   const requestTitle = React.useCallback(
-    (id: string | null) => (id ? (requests.find((r) => r.id === id)?.title ?? id) : '—'),
+    (id: string | null) =>
+      id ? (requests.find((r) => r.id === id)?.title ?? OUT_OF_SCOPE_REQUEST) : '—',
     [requests],
   );
   const ownerName = React.useCallback(
-    (id: string | null) => (id ? (owners.find((u) => u.id === id)?.name ?? id) : '—'),
+    (id: string | null) =>
+      id ? (owners.find((u) => u.id === id)?.name ?? OUT_OF_SCOPE_PERSON) : '—',
     [owners],
   );
   const typeLabel = React.useCallback(

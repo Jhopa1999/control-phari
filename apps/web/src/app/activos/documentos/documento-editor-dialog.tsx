@@ -216,7 +216,11 @@ export function DocumentoEditorDialog({
                     {...control}
                     readOnly
                     disabled
-                    value={editingAssetName ?? assets.find((a) => a.id === assetId)?.name ?? assetId}
+                    value={
+                      editingAssetName ??
+                      assets.find((a) => a.id === assetId)?.name ??
+                      'Activo fuera de tu alcance'
+                    }
                   />
                 ) : (
                   <Select

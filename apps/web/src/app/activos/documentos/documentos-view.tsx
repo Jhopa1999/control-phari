@@ -211,11 +211,12 @@ export function DocumentosView(): React.ReactElement {
   }, [load]);
 
   const assetName = React.useCallback(
-    (id: string) => assetById.get(id)?.name ?? id,
+    // Ids que no vienen en las listas del alcance: nunca un UUID visible (§13.1).
+    (id: string) => assetById.get(id)?.name ?? 'Activo fuera de tu alcance',
     [assetById],
   );
   const processName = React.useCallback(
-    (id: string) => processes.find((p) => p.id === id)?.name ?? id,
+    (id: string) => processes.find((p) => p.id === id)?.name ?? 'Proceso fuera de tu alcance',
     [processes],
   );
 
