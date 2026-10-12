@@ -1,9 +1,20 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Database, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
+import {
+  CellTitle,
+  DataTablePagination,
+  ResultCount,
+  SortableTableHead,
+} from '@/components/data-table';
+import { DataView, type DataViewState } from '@/components/data-view';
+import { PageHeader } from '@/components/page-header';
+import { PageLayout } from '@/components/page-layout';
+import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
+import { StatusBadge } from '@/components/status-badge';
+import { SearchInput, Toolbar } from '@/components/toolbar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -13,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -39,18 +49,36 @@ import {
   updateAsset,
 } from '@/lib/assets';
 import { listCatalogItems } from '@/lib/catalog';
+import { getStatus } from '@/lib/status-presentation';
+import {
+  compareByOrder,
+  compareText,
+  matchesSearch,
+  type Comparator,
+  type SortState,
+} from '@/lib/table-sort';
 import { listProcesses } from '@/lib/team';
+import { useClientTable } from '@/lib/use-client-table';
 import { listCoordinationPeople } from '@/lib/worklog';
 import { listRequests } from '@/lib/requests';
 import { ActivoFormDialog, type ActivoFormValues } from './activo-form-dialog';
 
 type LoadState = 'loading' | 'success' | 'error';
+type SortKey = 'name' | 'process' | 'status';
 
-/** Valor del Select de filtro que representa "todos". */
+/** Centinela de «Todos» / «Todas» en los filtros. */
 const ALL = '__all__';
+const NOUN = { one: 'activo', other: 'activos' };
+/** Estados en el orden del ciclo de vida. */
+const ASSET_STATES = ['BORRADOR', 'ACTIVO', 'RETIRADO'] as const;
+const compareStatus = compareByOrder(ASSET_STATES);
+/** Orden por defecto: Nombre ascendente (design §11.16). */
+const DEFAULT_SORT: SortState<SortKey> = { key: 'name', direction: 'asc' };
 
 function messageOf(err: unknown): string {
-  return err instanceof AssetError ? err.message : 'Ocurrio un error inesperado.';
+  return err instanceof AssetError
+    ? err.message
+    : 'Ocurrió un error inesperado. Inténtalo de nuevo.';
 }
 
 function trimOrUndefined(value: string): string | undefined {
@@ -58,25 +86,24 @@ function trimOrUndefined(value: string): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-/** Variante visual del badge de estado. */
-function statusVariant(
-  status: string,
-): 'default' | 'secondary' | 'destructive' | 'outline' {
-  switch (status) {
-    case 'ACTIVO':
-      return 'default';
-    case 'RETIRADO':
-      return 'destructive';
-    default:
-      return 'secondary';
-  }
+/** Transición disponible desde el estado actual (como hoy, §4.1). */
+function transitionOf(status: string): { label: string; target: AssetStatus } | null {
+  if (status === 'BORRADOR') return { label: 'Activar', target: 'ACTIVO' };
+  if (status === 'ACTIVO') return { label: 'Retirar', target: 'RETIRADO' };
+  if (status === 'RETIRADO') return { label: 'Recuperar', target: 'ACTIVO' };
+  return null;
 }
 
+/**
+ * Activos (design §11.16, patrón A): inventario con búsqueda, filtros, orden y
+ * paginación en cliente sobre GET /assets. El nombre es texto; las acciones
+ * («Editar» y la transición permitida) van en línea.
+ */
 export function ActivosView(): React.ReactElement {
   const { permissions } = useActor();
 
-  // Gating cosmetico (el control real es server-side): puede cambiar estado
-  // el jefe de area o el lider del proceso del activo (design §6).
+  // Gating cosmético (el control real es del servidor): puede cambiar estado
+  // el jefe de área o el líder del proceso del activo.
   const isJefe = React.useMemo(
     () => (permissions?.grants ?? []).some((g) => g.roleCode === 'JEFE_AREA'),
     [permissions],
@@ -100,21 +127,20 @@ export function ActivosView(): React.ReactElement {
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [owners, setOwners] = React.useState<CoordinationPerson[]>([]);
   const [typeOptions, setTypeOptions] = React.useState<CatalogItem[]>([]);
-  const [technologyOptions, setTechnologyOptions] = React.useState<
-    CatalogItem[]
-  >([]);
+  const [technologyOptions, setTechnologyOptions] = React.useState<CatalogItem[]>([]);
   const [sourceOptions, setSourceOptions] = React.useState<CatalogItem[]>([]);
-  const [frequencyOptions, setFrequencyOptions] = React.useState<
-    CatalogItem[]
-  >([]);
+  const [frequencyOptions, setFrequencyOptions] = React.useState<CatalogItem[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  // Filtros (client-side; el contrato no expone query params).
+  // Búsqueda y filtros en cliente (el contrato no expone parámetros de consulta).
+  const [query, setQuery] = React.useState('');
   const [processFilter, setProcessFilter] = React.useState<string>(ALL);
   const [requestFilter, setRequestFilter] = React.useState<string>(ALL);
   const [statusFilter, setStatusFilter] = React.useState<string>(ALL);
+  const searchRef = React.useRef<HTMLInputElement>(null);
 
-  // Dialogo de alta/edicion.
+  // Diálogo de alta y edición.
   const [open, setOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Asset | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -124,25 +150,16 @@ export function ActivosView(): React.ReactElement {
   const load = React.useCallback(async () => {
     setState('loading');
     try {
-      const [list, procs, reqs, usrs, types, techs, sources, freqs] =
-        await Promise.all([
-          listAssets(),
-          listProcesses().catch(() => [] as Process[]),
-          listRequests().catch(() => [] as Request[]),
-          listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
-          listCatalogItems({ catalog: 'ASSET_TYPE', active: true }).catch(
-            () => [] as CatalogItem[],
-          ),
-          listCatalogItems({ catalog: 'TECHNOLOGY', active: true }).catch(
-            () => [] as CatalogItem[],
-          ),
-          listCatalogItems({ catalog: 'SOURCE', active: true }).catch(
-            () => [] as CatalogItem[],
-          ),
-          listCatalogItems({ catalog: 'FREQUENCY', active: true }).catch(
-            () => [] as CatalogItem[],
-          ),
-        ]);
+      const [list, procs, reqs, usrs, types, techs, sources, freqs] = await Promise.all([
+        listAssets(),
+        listProcesses().catch(() => [] as Process[]),
+        listRequests().catch(() => [] as Request[]),
+        listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
+        listCatalogItems({ catalog: 'ASSET_TYPE', active: true }).catch(() => [] as CatalogItem[]),
+        listCatalogItems({ catalog: 'TECHNOLOGY', active: true }).catch(() => [] as CatalogItem[]),
+        listCatalogItems({ catalog: 'SOURCE', active: true }).catch(() => [] as CatalogItem[]),
+        listCatalogItems({ catalog: 'FREQUENCY', active: true }).catch(() => [] as CatalogItem[]),
+      ]);
       setAssets(list);
       setProcesses(procs);
       setRequests(reqs);
@@ -152,7 +169,8 @@ export function ActivosView(): React.ReactElement {
       setSourceOptions(sources);
       setFrequencyOptions(freqs);
       setState('success');
-    } catch {
+    } catch (err) {
+      setErrorMessage(messageOf(err));
       setState('error');
     }
   }, []);
@@ -166,13 +184,11 @@ export function ActivosView(): React.ReactElement {
     [processes],
   );
   const requestTitle = React.useCallback(
-    (id: string | null) =>
-      id ? (requests.find((r) => r.id === id)?.title ?? id) : '—',
+    (id: string | null) => (id ? (requests.find((r) => r.id === id)?.title ?? id) : '—'),
     [requests],
   );
   const ownerName = React.useCallback(
-    (id: string | null) =>
-      id ? (owners.find((u) => u.id === id)?.name ?? id) : '—',
+    (id: string | null) => (id ? (owners.find((u) => u.id === id)?.name ?? id) : '—'),
     [owners],
   );
   const typeLabel = React.useCallback(
@@ -181,36 +197,63 @@ export function ActivosView(): React.ReactElement {
     [typeOptions],
   );
 
-  const filtered = React.useMemo(
-    () =>
-      assets.filter((a) => {
-        if (processFilter !== ALL && a.processId !== processFilter) return false;
-        if (requestFilter !== ALL && a.requestId !== requestFilter) return false;
-        if (statusFilter !== ALL && a.status !== statusFilter) return false;
-        return true;
-      }),
-    [assets, processFilter, requestFilter, statusFilter],
+  const comparators = React.useMemo<Record<SortKey, Comparator<Asset>>>(
+    () => ({
+      name: (a, b, direction) => compareText(a.name, b.name, direction),
+      process: (a, b, direction) =>
+        compareText(processName(a.processId), processName(b.processId), direction),
+      status: (a, b, direction) => compareStatus(a.status, b.status, direction),
+    }),
+    [processName],
   );
 
-  function openCreate() {
+  const hasFilters =
+    query.trim() !== '' || processFilter !== ALL || requestFilter !== ALL || statusFilter !== ALL;
+  const filter = React.useCallback(
+    (a: Asset) =>
+      matchesSearch(a.name, query) &&
+      (processFilter === ALL || a.processId === processFilter) &&
+      (requestFilter === ALL || a.requestId === requestFilter) &&
+      (statusFilter === ALL || a.status === statusFilter),
+    [query, processFilter, requestFilter, statusFilter],
+  );
+  const table = useClientTable({
+    rows: assets,
+    filter,
+    comparators,
+    defaultSort: DEFAULT_SORT,
+    resetKey: JSON.stringify([query, processFilter, requestFilter, statusFilter]),
+    pageSize: 25,
+  });
+
+  function clearFilters(): void {
+    setQuery('');
+    setProcessFilter(ALL);
+    setRequestFilter(ALL);
+    setStatusFilter(ALL);
+    // «Limpiar filtros» desaparece: el foco pasa a la búsqueda (NIT 4, plan D9).
+    searchRef.current?.focus();
+  }
+
+  function openCreate(): void {
     setEditing(null);
     setFormError(null);
     setOpen(true);
   }
-  function openEdit(asset: Asset) {
+  function openEdit(asset: Asset): void {
     setEditing(asset);
     setFormError(null);
     setOpen(true);
   }
 
-  async function handleSubmit(values: ActivoFormValues) {
+  async function handleSubmit(values: ActivoFormValues): Promise<void> {
     setSubmitting(true);
     setFormError(null);
     try {
       if (editing) {
         await updateAsset(editing.id, {
           name: values.name.trim(),
-          // Vacio en los Selects opcionales = desligar (null); undefined omite.
+          // Vacío en los Selects opcionales = desligar (null); undefined omite.
           requestId: trimOrUndefined(values.requestId) ?? null,
           ownerUserId: trimOrUndefined(values.ownerUserId) ?? null,
           typeCode: trimOrUndefined(values.typeCode),
@@ -238,12 +281,12 @@ export function ActivosView(): React.ReactElement {
         });
         toast.success('Activo creado.');
       }
-      // Reset solo en el camino de exito (AC-031).
+      // Reset solo en el camino de éxito (AC-031).
       setOpen(false);
       setEditing(null);
       await load();
     } catch (err) {
-      // Fallo: conserva el dialog abierto y los valores (AC-031).
+      // Fallo: conserva el diálogo abierto y los valores (AC-031).
       const message = messageOf(err);
       setFormError(message);
       toast.error(message);
@@ -252,11 +295,11 @@ export function ActivosView(): React.ReactElement {
     }
   }
 
-  async function handleStatus(asset: Asset, targetStatus: AssetStatus) {
+  async function handleStatus(asset: Asset, targetStatus: AssetStatus): Promise<void> {
     setStatusBusyId(asset.id);
     try {
       await changeAssetStatus(asset.id, { targetStatus });
-      toast.success(`Activo movido a ${targetStatus}.`);
+      toast.success(`Activo movido a ${getStatus('asset', targetStatus).label}.`);
       await load();
     } catch (err) {
       toast.error(messageOf(err));
@@ -265,62 +308,76 @@ export function ActivosView(): React.ReactElement {
     }
   }
 
-  /** Botones de transicion disponibles segun el estado actual (§4.1). */
-  function statusActions(asset: Asset): React.ReactElement | null {
-    if (!canChangeStatus(asset)) return null;
-    const busy = statusBusyId === asset.id;
-    const actions: { label: string; target: AssetStatus }[] = [];
-    if (asset.status === 'BORRADOR') {
-      actions.push({ label: 'Activar', target: 'ACTIVO' });
-    } else if (asset.status === 'ACTIVO') {
-      actions.push({ label: 'Retirar', target: 'RETIRADO' });
-    } else if (asset.status === 'RETIRADO') {
-      actions.push({ label: 'Recuperar', target: 'ACTIVO' });
+  function rowActions(asset: Asset): RowAction[] {
+    const actions: RowAction[] = [
+      { key: 'edit', label: 'Editar', onSelect: () => openEdit(asset), placement: 'inline' },
+    ];
+    const transition = canChangeStatus(asset) ? transitionOf(asset.status) : null;
+    if (transition) {
+      actions.push({
+        key: 'status',
+        label: transition.label,
+        placement: 'inline',
+        busy: statusBusyId === asset.id,
+        busyLabel: transition.label,
+        onSelect: () => void handleStatus(asset, transition.target),
+      });
     }
-    if (actions.length === 0) return null;
-    return (
-      <>
-        {actions.map((a) => (
-          <Button
-            key={a.target}
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() => void handleStatus(asset, a.target)}
-          >
-            {busy ? '...' : a.label}
-          </Button>
-        ))}
-      </>
-    );
+    return actions;
   }
 
-  return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Activos</h1>
-          <p className="text-sm text-muted-foreground">
-            Inventario de activos analiticos del area. Cada activo pertenece a un
-            proceso, nace en BORRADOR y cambia de estado sin borrado fisico.
-          </p>
-        </div>
-        <Button onClick={openCreate} disabled={state === 'loading'}>
-          <Plus aria-hidden="true" />
-          Nuevo activo
-        </Button>
-      </header>
+  let viewState: DataViewState;
+  if (state === 'loading') viewState = 'loading';
+  else if (state === 'error') viewState = 'error';
+  else if (table.total === 0) viewState = 'empty';
+  else if (table.filtered === 0) viewState = 'no-results';
+  else viewState = 'ready';
 
-      {/* Filtros */}
-      <section
-        aria-label="Filtros de activos"
-        className="grid gap-3 rounded-lg border bg-muted/40 p-4 sm:grid-cols-3"
+  return (
+    <PageLayout>
+      <PageHeader
+        title="Activos"
+        description="Activos de datos y soluciones de cada proceso."
+        actions={
+          <Button type="button" onClick={openCreate} disabled={state === 'loading'}>
+            <Plus aria-hidden="true" />
+            Nuevo activo
+          </Button>
+        }
+      />
+
+      <Toolbar
+        label="Filtros de activos"
+        end={
+          <>
+            {state !== 'error' ? (
+              <ResultCount
+                loading={state === 'loading'}
+                total={table.total}
+                filtered={table.filtered}
+                noun={NOUN}
+              />
+            ) : null}
+            {hasFilters ? (
+              <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                Limpiar filtros
+              </Button>
+            ) : null}
+          </>
+        }
       >
-        <div className="flex flex-col gap-1">
+        <SearchInput
+          ref={searchRef}
+          id="filtro-busqueda"
+          placeholder="Nombre del activo"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="filtro-proceso">Proceso</Label>
           <Select value={processFilter} onValueChange={setProcessFilter}>
-            <SelectTrigger id="filtro-proceso">
-              <SelectValue placeholder="Todos" />
+            <SelectTrigger id="filtro-proceso" className="w-full sm:w-44">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todos</SelectItem>
@@ -332,11 +389,11 @@ export function ActivosView(): React.ReactElement {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="filtro-solicitud">Solicitud</Label>
           <Select value={requestFilter} onValueChange={setRequestFilter}>
-            <SelectTrigger id="filtro-solicitud">
-              <SelectValue placeholder="Todas" />
+            <SelectTrigger id="filtro-solicitud" className="w-full sm:w-56">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todas</SelectItem>
@@ -348,100 +405,114 @@ export function ActivosView(): React.ReactElement {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="filtro-estado">Estado</Label>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger id="filtro-estado">
-              <SelectValue placeholder="Todos" />
+            <SelectTrigger id="filtro-estado" className="w-full sm:w-40">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todos</SelectItem>
-              <SelectItem value="BORRADOR">Borrador</SelectItem>
-              <SelectItem value="ACTIVO">Activo</SelectItem>
-              <SelectItem value="RETIRADO">Retirado</SelectItem>
+              {ASSET_STATES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {getStatus('asset', value).label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
-      </section>
+      </Toolbar>
 
-      <div aria-live="polite" className="rounded-lg border bg-card">
-        {state === 'loading' ? (
-          <div className="flex flex-col gap-3 p-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : state === 'error' ? (
-          <div className="flex flex-col items-center gap-3 p-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              No fue posible cargar los activos.
-            </p>
-            <Button variant="outline" onClick={() => void load()}>
-              <RefreshCw aria-hidden="true" />
-              Reintentar
-            </Button>
-          </div>
-        ) : assets.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 p-10 text-center">
-            <p className="text-sm font-medium">Aun no hay activos registrados.</p>
-            <Button variant="outline" size="sm" onClick={openCreate}>
+      <DataView
+        state={viewState}
+        loading={{ rows: 6, columns: 7 }}
+        error={{
+          title: 'No fue posible cargar los activos.',
+          message: errorMessage,
+          onRetry: () => void load(),
+        }}
+        empty={{
+          icon: Database,
+          title: 'Aún no hay activos registrados.',
+          description: 'Registra el primer activo de un proceso para documentarlo y seguir su estado.',
+          action: (
+            <Button type="button" onClick={openCreate}>
               <Plus aria-hidden="true" />
               Nuevo activo
             </Button>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 p-10 text-center">
-            <p className="text-sm font-medium">
-              Ningun activo coincide con los filtros.
-            </p>
-          </div>
-        ) : (
-          <Table>
-            <caption className="sr-only">Inventario de activos.</caption>
-            <TableHeader>
-              <TableRow>
-                <TableHead scope="col">Nombre</TableHead>
-                <TableHead scope="col">Proceso</TableHead>
-                <TableHead scope="col">Solicitud</TableHead>
-                <TableHead scope="col">Responsable</TableHead>
-                <TableHead scope="col">Tipo</TableHead>
-                <TableHead scope="col">Estado</TableHead>
-                <TableHead scope="col" className="text-right">
-                  Acciones
-                </TableHead>
+          ),
+        }}
+      >
+        <Table scrollLabel="Tabla de activos">
+          <TableHeader>
+            <TableRow>
+              <SortableTableHead
+                label="Nombre"
+                sortKey="name"
+                sort={table.sort}
+                onSort={table.toggleSort}
+              />
+              <SortableTableHead
+                label="Proceso"
+                sortKey="process"
+                sort={table.sort}
+                onSort={table.toggleSort}
+              />
+              <TableHead>Solicitud</TableHead>
+              <TableHead>Responsable</TableHead>
+              <TableHead>Tipo</TableHead>
+              <SortableTableHead
+                label="Estado"
+                sortKey="status"
+                sort={table.sort}
+                onSort={table.toggleSort}
+              />
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {table.pageRows.map((asset) => (
+              <TableRow key={asset.id}>
+                <TableCell className="min-w-56 max-w-[28rem]">
+                  <CellTitle>{asset.name}</CellTitle>
+                </TableCell>
+                <TableCell className="min-w-28 text-muted-foreground">
+                  {processName(asset.processId)}
+                </TableCell>
+                <TableCell className="min-w-40 max-w-64">
+                  <span className="line-clamp-2 wrap-break-word text-muted-foreground">
+                    {requestTitle(asset.requestId)}
+                  </span>
+                </TableCell>
+                <TableCell className="min-w-32 text-muted-foreground">
+                  {ownerName(asset.ownerUserId)}
+                </TableCell>
+                <TableCell className="min-w-28 text-muted-foreground">
+                  {typeLabel(asset.typeCode)}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <StatusBadge kind="asset" value={asset.status} />
+                </TableCell>
+                <RowActionsCell>
+                  <RowActions rowLabel={asset.name} actions={rowActions(asset)} />
+                </RowActionsCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((asset) => (
-                <TableRow key={asset.id}>
-                  <TableCell className="font-medium">{asset.name}</TableCell>
-                  <TableCell>{processName(asset.processId)}</TableCell>
-                  <TableCell>{requestTitle(asset.requestId)}</TableCell>
-                  <TableCell>{ownerName(asset.ownerUserId)}</TableCell>
-                  <TableCell>{typeLabel(asset.typeCode)}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant(asset.status)}>
-                      {asset.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEdit(asset)}
-                      >
-                        Editar
-                      </Button>
-                      {statusActions(asset)}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+            ))}
+          </TableBody>
+        </Table>
+        <DataTablePagination
+          id="activos-paginacion"
+          page={table.page}
+          pageCount={table.pageCount}
+          from={table.from}
+          to={table.to}
+          filtered={table.filtered}
+          pageSize={table.pageSize ?? 25}
+          onPageChange={table.setPage}
+          onPageSizeChange={table.setPageSize}
+          noun={NOUN}
+        />
+      </DataView>
 
       <ActivoFormDialog
         open={open}
@@ -462,8 +533,8 @@ export function ActivosView(): React.ReactElement {
         frequencyOptions={frequencyOptions}
         submitting={submitting}
         errorMessage={formError}
-        onSubmit={handleSubmit}
+        onSubmit={(values) => void handleSubmit(values)}
       />
-    </div>
+    </PageLayout>
   );
 }
