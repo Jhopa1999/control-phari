@@ -16,6 +16,12 @@
         "docs/aplicacion/autenticacion-autorizacion.md"
       ],
       "summary": "Se documentaron el modelo AuthToken (auth_tokens) y los flujos de credencial por correo: POST /auth/forgot-password, POST /auth/reset-password y POST /users/:id/invite."
+    },
+    {
+      "timestamp": "2026-10-13T18:00:00Z",
+      "trigger_file": "apps/web/src/app/olvide-contrasena/page.tsx",
+      "updated_docs": ["docs/aplicacion/frontend-pantallas.md"],
+      "summary": "Se documentaron las pantallas públicas /olvide-contrasena, /restablecer-contrasena y /activar-cuenta y el enlace de recuperación en el login."
     }
   ]
 }

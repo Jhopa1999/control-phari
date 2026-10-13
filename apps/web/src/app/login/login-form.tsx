@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Field, FormError } from '@/components/field';
 import { InlineNotice } from '@/components/inline-notice';
@@ -143,6 +144,14 @@ export function LoginForm(): React.ReactElement {
               disabled={submitting}
             />
           </Field>
+          <div className="text-meta">
+            <Link
+              href="/olvide-contrasena"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
           <FormError id={FORM_ID} message={formError} />
           <Button type="submit" size="lg" loading={submitting} className="w-full">
             {submitting ? 'Ingresando…' : 'Ingresar'}
