@@ -643,13 +643,39 @@ Detalle operativo completo en `docs/deployment.md`. Resumen técnico:
   --with-deps chromium` → `test:e2e` (NEXT_PUBLIC_API_BASE_URL=localhost:3001,
   CORS_ORIGINS=localhost:3000). Solo CI; sin CD automático.
 
+### Servidor MCP (apps/mcp)
+
+- Nuevo workspace `apps/mcp`: servidor Model Context Protocol que se ejecuta por
+  stdio (`node dist/index.js`). Capa delgada sin lógica de negocio, sin
+  autorización, sin validación de dominio, sin Prisma ni PostgreSQL: reutiliza
+  `@plantilla-portales/api-client` para hablar con la API. Todo el logging va a
+  stderr porque stdout está reservado al protocolo MCP.
+- Versiones elegidas (estables, sin rango `^`, pineadas en
+  `apps/mcp/package.json`):
+  - `@modelcontextprotocol/sdk`: **1.32.1**. Es el `latest` estable del SDK de
+    TypeScript; `engines.node` = `>=18` (OK con Node 20.9+). No se usa la línea
+    v2 por ser preliminar en el momento del andamiaje.
+  - `zod`: **4.6.7**. Último estable; el peer del SDK admite `^3.25 || ^4.0`,
+    así que 4.x es compatible.
+  - Dev: `typescript@5.9.3` y `@types/node@26.6.4` (igual que apps/api).
+- `apps/mcp/tsconfig.json` parte del estilo de `packages/api-client` (target
+  ES2021, `strict`, `esModuleInterop`, `skipLibCheck`,
+  `forceConsistentCasingInFileNames`, `noUnusedLocals`, `noUnusedParameters`)
+  pero con `module`/`moduleResolution` = `nodenext` (lib `ES2021`), para que
+  Node resuelva nativamente los exports ESM del SDK en ejecución. `nodenext`
+  resolvió el SDK y el api-client sin necesidad de cambiar a `bundler`.
+- Precondición de verificación: el `exports` de `@plantilla-portales/api-client`
+  apunta solo a `dist`, así que hay que ejecutar `npm run build:api-client`
+  antes de `npm run typecheck --workspace apps/mcp`.
+
 ## Decisiones pendientes
 
 - Estrategia de autenticacion e identidad.
 - HTTPS con certificados reales (Certbot) y, luego, CD automático a un servidor.
 - Reducir el tamaño de la imagen de la API (hoy conserva dev deps para migrar).
 - Paralelizar E2E con datos aislados por worker (hoy workers=1).
-- MCP (incremento futuro).
+- MCP: scaffold inicial listo (apps/mcp, FEAT-001); faltan las tools que
+  exponen las capacidades del backend.
 - Ejecutar el seed en la CI antes de `test:e2e` (los specs usan sus actores).
 - Pendientes de API detectados en la renovación de UI (la renovación fue solo
   de frontend y no los toca):

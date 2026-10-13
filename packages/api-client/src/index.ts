@@ -1,3 +1,3 @@
-export { createApiClient } from './client';
-export type { ApiClientOptions } from './client';
-export type { paths, components, operations } from './generated/schema';
+export { createApiClient } from './client.js';
+export type { ApiClientOptions } from './client.js';
+export type { paths, components, operations } from './generated/schema.js';
