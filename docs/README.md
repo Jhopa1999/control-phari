@@ -463,7 +463,7 @@ defecto de la plantilla.
   `E2E_WEB_URL`). Sirven para verificar contra servidores en otros puertos sin
   tocar los de 3000/3001: fuera de CI, `reuseExistingServer` reutiliza los que
   ya respondan en esas URLs.
-- Specs de la suite (6), con el detalle de los nuevos más abajo:
+- Specs de la suite (7), con el detalle de los nuevos más abajo:
   - `e2e/catalogs.spec.ts`: flujo principal de Maestras, duplicado (409) y
     campos obligatorios, sobre su catálogo reservado (`E2E_CATALOG`), que
     limpia al terminar.
@@ -477,6 +477,8 @@ defecto de la plantilla.
     navegador.
   - `e2e/date-display.spec.ts`: fechas propuestas y mostradas sin correrse un
     día.
+  - `e2e/audit-filter.spec.ts`: Auditoría, filtro «Objeto» en el servidor y
+    tope de 500 eventos con fixtures.
 - Datos: toda la suite usa los actores del seed (`jefe@demo.local` en el
   `storageState` de `e2e/global-setup.ts`; un actor que no existe recibe 401).
   En una base nueva hay que ejecutar antes
@@ -490,7 +492,9 @@ defecto de la plantilla.
 - `e2e/jwt-session.spec.ts`: regresiones de la sesión jwt (recargar conserva la
   sesión y la ruta; un enlace directo vuelve a su ruta tras iniciar sesión;
   `/login` con sesión lleva a `/inicio`; aviso de sesión expirada; un `next`
-  externo se ignora; cerrar sesión no deja `next`). Se salta salvo
+  externo se ignora; cerrar sesión no deja `next`; credenciales incorrectas
+  muestran el error genérico sin guardar sesión; sin sesión, una ruta protegida
+  no pide sus datos ni muestra su contenido). Se salta salvo
   `E2E_AUTH_MODE=jwt`. Necesita `E2E_JWT_PASSWORD`, la contraseña de desarrollo
   del seed (`DEV_PASSWORD` en `apps/api/prisma/seed.ts`; ni el spec ni esta
   documentación la copian), y admite `E2E_JWT_IDENTIFIER` (por defecto
@@ -525,6 +529,15 @@ defecto de la plantilla.
   `format.ts` fija `process.env.TZ = 'America/Bogota'` y lo restaura al
   terminar, para que los errores de UTC frente a hora local aparezcan también
   en una máquina o una CI en UTC.
+- `e2e/audit-filter.spec.ts`: Auditoría (design §24.2). Sirve el
+  `GET /audit-events` con fixtures (la petición pasa por la API real y solo se
+  sustituye el cuerpo) y comprueba que la carga inicial pide `take=500` sin
+  `objectType`; que 500 eventos se presentan como «500 eventos más recientes»
+  con el aviso de tope; que «Objeto» ofrece «Todos» más los 4 valores del
+  contrato generado y envía `objectType`; que con menos de 500 el conteo es el
+  total y no hay aviso; que «Limpiar filtros» vuelve a pedir sin `objectType`,
+  y que una respuesta anterior que llega tarde no pisa la del filtro elegido.
+  No crea datos.
 - `e2e/date-display.spec.ts`: fechas con datos fijos. Fija la zona horaria del
   navegador (`timezoneId: 'America/Bogota'`) y su reloj
   (`page.clock.setFixedTime`) en una hora en la que el calendario UTC ya va un
