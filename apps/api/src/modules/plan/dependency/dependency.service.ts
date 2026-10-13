@@ -11,6 +11,7 @@ import { CurrentActor } from '../../auth/current-actor';
 import { PlanStateService } from '../plan-state.service';
 import { AddDependencyDto } from './dto/add-dependency.dto';
 import { TaskDependencyResponseDto } from './dto/task-dependency-response.dto';
+import { reaches } from './cycle';
 
 /**
  * Gestiona las predecesoras de una tarea (design §2.3/§3.3): listar, anadir
@@ -192,33 +193,22 @@ export class DependencyService {
     dependentTaskId: string,
     predecessorTaskId: string,
   ): Promise<void> {
-    const edges = await this.prisma.taskDependency.findMany({
+    const rows = await this.prisma.taskDependency.findMany({
       where: { dependent: { phase: { planId } } },
       select: { dependentTaskId: true, predecessorTaskId: true },
     });
 
-    // adjacency: dependent -> [predecesoras...]
-    const adjacency = new Map<string, string[]>();
-    for (const edge of edges) {
-      const list = adjacency.get(edge.dependentTaskId) ?? [];
-      list.push(edge.predecessorTaskId);
-      adjacency.set(edge.dependentTaskId, list);
-    }
-
-    const visited = new Set<string>();
-    const stack = [predecessorTaskId];
-    while (stack.length > 0) {
-      const node = stack.pop() as string;
-      if (node === dependentTaskId) {
-        throw new BadRequestException(
-          `La dependencia crearia un ciclo entre las tareas "${predecessorTaskId}" y "${dependentTaskId}".`,
-        );
-      }
-      if (visited.has(node)) continue;
-      visited.add(node);
-      for (const next of adjacency.get(node) ?? []) {
-        stack.push(next);
-      }
+    // Aristas dependent->predecessor sobre UUID de BD; delega el DFS en el
+    // helper puro compartido (design §6.2). Si `predecessorTaskId` ya alcanza
+    // `dependentTaskId`, anadir la arista cerraria un ciclo.
+    const edges = rows.map((row) => ({
+      dependentRef: row.dependentTaskId,
+      predecessorRef: row.predecessorTaskId,
+    }));
+    if (reaches(edges, predecessorTaskId, dependentTaskId)) {
+      throw new BadRequestException(
+        `La dependencia crearia un ciclo entre las tareas "${predecessorTaskId}" y "${dependentTaskId}".`,
+      );
     }
   }
 }

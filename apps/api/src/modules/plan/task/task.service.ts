@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -13,6 +12,7 @@ import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
 import { PlanStateService } from '../plan-state.service';
 import { TaskStatus } from '../task-status';
+import { applyMilestoneRule } from './milestone';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
@@ -94,46 +94,6 @@ export class TaskService {
     };
   }
 
-  /**
-   * Normaliza y valida la regla del hito (design §2.4, BR-010/AC-011): hito =>
-   * estimateHours 0 (null se normaliza a 0; >0 -> 400) y una sola fecha efectiva
-   * (dos fechas distintas -> 400; si llega una, se copia a ambas). Devuelve los
-   * campos ya normalizados para persistir.
-   */
-  private applyMilestoneRule(input: {
-    isMilestone: boolean;
-    estimateHours?: number | null;
-    startDate?: Date | null;
-    endDate?: Date | null;
-  }): { estimateHours: number | null; startDate: Date | null; endDate: Date | null } {
-    const { isMilestone } = input;
-    let estimateHours = input.estimateHours ?? null;
-    let startDate = input.startDate ?? null;
-    let endDate = input.endDate ?? null;
-
-    if (!isMilestone) {
-      return { estimateHours, startDate, endDate };
-    }
-
-    if (estimateHours !== null && estimateHours > 0) {
-      throw new BadRequestException('Un hito debe tener estimacion 0.');
-    }
-    estimateHours = 0;
-
-    if (
-      startDate !== null &&
-      endDate !== null &&
-      startDate.getTime() !== endDate.getTime()
-    ) {
-      throw new BadRequestException('Un hito usa una sola fecha.');
-    }
-    // Una sola fecha efectiva: copiar la informada a ambas columnas.
-    if (startDate !== null && endDate === null) endDate = startDate;
-    if (endDate !== null && startDate === null) startDate = endDate;
-
-    return { estimateHours, startDate, endDate };
-  }
-
   async findForPlan(
     actor: CurrentActor,
     planId: string,
@@ -199,7 +159,7 @@ export class TaskService {
     );
 
     const isMilestone = dto.isMilestone ?? false;
-    const normalized = this.applyMilestoneRule({
+    const normalized = applyMilestoneRule({
       isMilestone,
       estimateHours: dto.estimateHours ?? null,
       startDate: dto.startDate !== undefined ? new Date(dto.startDate) : null,
@@ -249,7 +209,7 @@ export class TaskService {
     );
 
     const isMilestone = dto.isMilestone ?? task.isMilestone;
-    const normalized = this.applyMilestoneRule({
+    const normalized = applyMilestoneRule({
       isMilestone,
       estimateHours:
         dto.estimateHours !== undefined ? dto.estimateHours : task.estimateHours,

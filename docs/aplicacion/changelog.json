@@ -1,0 +1,11 @@
+{
+  "description": "Registro append-only de actualizaciones de la documentacion en docs/aplicacion/ realizadas por el hook 'Actualizar documentacion de la aplicacion'. Cada entrada corresponde a una actualizacion real; los disparos sin cambios no se registran.",
+  "entries": [
+    {
+      "timestamp": "2026-02-14T00:00:00Z",
+      "trigger_file": "apps/api/src/modules/plan/plan.controller.ts",
+      "updated_docs": ["docs/aplicacion/modulos-backend.md"],
+      "summary": "Se documentaron los endpoints GET /requests/:requestId/plan/export y POST /requests/:requestId/plan/import del módulo de planificación."
+    }
+  ]
+}

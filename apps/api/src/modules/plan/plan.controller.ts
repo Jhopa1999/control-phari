@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -22,6 +23,8 @@ import { ReturnPlanDto } from './dto/return-plan.dto';
 import { SubmitPlanDto, AuthorizePlanDto } from './dto/submit-plan.dto';
 import { PlanResponseDto } from './dto/plan-response.dto';
 import { PlanGuideDto } from './dto/plan-guide.dto';
+import { PlanDocumentDto } from './dto/plan-document.dto';
+import { ImportPlanResultDto } from './dto/import-plan-result.dto';
 import { CurrentActor } from '../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../auth/current-actor';
 import { CurrentUserGuard } from '../auth/current-user.guard';
@@ -97,6 +100,37 @@ export class PlanController {
     @Param('requestId', ParseUUIDPipe) requestId: string,
   ) {
     return this.planService.getGuide(actor, requestId);
+  }
+
+  @Get(':requestId/plan/export')
+  @ApiOperation({ summary: 'Exporta el plan a un documento JSON portable (solo lectura).' })
+  @ApiParam({ name: 'requestId', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Documento del plan.', type: PlanDocumentDto })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Plan inexistente o fuera de alcance.' })
+  exportPlan(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('requestId', ParseUUIDPipe) requestId: string,
+  ) {
+    return this.planService.exportPlan(actor, requestId);
+  }
+
+  @Post(':requestId/plan/import')
+  @ApiOperation({ summary: 'Importa un plan desde un documento (reemplaza el contenido actual).' })
+  @ApiParam({ name: 'requestId', format: 'uuid' })
+  @ApiBody({ type: PlanDocumentDto })
+  @ApiResponse({ status: 200, description: 'Plan importado (reemplazado).', type: ImportPlanResultDto })
+  @ApiResponse({ status: 400, description: 'Documento invalido (kind/version/ref/ciclo/hito).' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Plan inexistente o fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El plan no esta en borrador ni devuelto.' })
+  @HttpCode(200)
+  importPlan(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('requestId', ParseUUIDPipe) requestId: string,
+    @Body() dto: PlanDocumentDto,
+  ) {
+    return this.planService.importPlan(actor, requestId, dto);
   }
 
   @Post(':requestId/plan/submit')

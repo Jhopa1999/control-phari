@@ -143,6 +143,8 @@ estado de tareas lo tienen los 3 roles; "mi trabajo" usa la capacidad `assigned`
 | GET | `/requests/:requestId/plan` | Devuelve el plan de una solicitud. |
 | PATCH | `/requests/:requestId/plan` | Edita datos del plan (no el estado). |
 | GET | `/requests/:requestId/plan/guide` | Guía de pendientes del plan (gate de envío). |
+| GET | `/requests/:requestId/plan/export` | Exporta el plan a un documento JSON portable (solo lectura; cualquier estado). |
+| POST | `/requests/:requestId/plan/import` | Importa un plan desde un documento y reemplaza su contenido (`409` si no está en borrador/devuelto; `400` si el documento es inválido). |
 | POST | `/requests/:requestId/plan/submit` | Envía el plan a autorización (`409` si hay pendientes). |
 | POST | `/requests/:requestId/plan/authorize` | Autoriza el plan (→ *Autorizado*; Request → *En ejecución*). |
 | POST | `/requests/:requestId/plan/return` | Devuelve el plan con motivo (→ *Devuelto*). |
