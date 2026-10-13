@@ -12,6 +12,21 @@
   }
 }
 
+/* Pista de desplazamiento del menú lateral: una sombra suave arriba o abajo
+   solo cuando queda contenido por ese lado. Los degradados `local` se mueven
+   con el contenido y tapan la sombra (`scroll`) al llegar al borde; sin
+   desbordamiento no se ve ninguna. Sin JavaScript. */
+@utility nav-scroll-shadow {
+  background:
+    linear-gradient(var(--sidebar) 30%, transparent) center top / 100% 1.5rem no-repeat local,
+    linear-gradient(transparent, var(--sidebar) 70%) center bottom / 100% 1.5rem no-repeat local,
+    radial-gradient(farthest-side at 50% 0, oklch(0 0 0 / 14%), transparent) center top / 100% 0.625rem
+      no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, oklch(0 0 0 / 14%), transparent) center bottom / 100%
+      0.625rem no-repeat scroll;
+  background-color: var(--sidebar);
+}
+
 :root {
   /* Acento de marca: único punto a cambiar cuando exista color corporativo */
   --primary: oklch(0.47 0.15 258);

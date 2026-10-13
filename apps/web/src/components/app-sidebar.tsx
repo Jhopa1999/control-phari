@@ -338,7 +338,10 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
         </Link>
       </div>
 
-      <nav aria-label="Navegación principal" className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+      <nav
+        aria-label="Navegación principal"
+        className="nav-scroll-shadow min-h-0 flex-1 overflow-y-auto px-2 py-3"
+      >
         {renderMenu()}
       </nav>
 

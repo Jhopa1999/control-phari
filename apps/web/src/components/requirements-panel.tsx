@@ -114,7 +114,9 @@ function RequirementRow({ item, compact }: { item: RequirementItem; compact: boo
         </div>
       </div>
       {item.action ? (
-        <div className="shrink-0 pl-6 sm:pl-0">
+        // En fila, el botón (32 px) se centra con la primera línea del texto
+        // (20 px): -my-1.5 lo sube 6 px sin agrandar la fila.
+        <div className="shrink-0 pl-6 sm:-my-1.5 sm:pl-0">
           <RequirementActionControl action={item.action} />
         </div>
       ) : null}

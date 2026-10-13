@@ -405,7 +405,10 @@ defecto de la plantilla.
   módulos. Entre 1024 y 1279 px el menú es un riel de 56 px; el botón
   «Contraer menú» / «Expandir menú» guarda la preferencia en
   `localStorage.sidebarCollapsed` (`lib/use-sidebar-mode.ts`), y CSS resuelve
-  el modo con `data-sidebar` y la variante `rail:` de `globals.css`. El login
+  el modo con `data-sidebar` y la variante `rail:` de `globals.css`. Cuando el
+  menú no cabe en el alto de la ventana, la utilidad `nav-scroll-shadow` de
+  `globals.css` pinta una sombra suave en el borde por el que queda contenido
+  (solo CSS). El login
   tiene su propio `h1`, y las rutas inexistentes y los errores de ejecución
   tienen pantallas en español (`app/not-found.tsx`, `app/error.tsx` y
   `app/global-error.tsx`).
