@@ -99,6 +99,25 @@ export async function revokeGrant(id: string): Promise<Grant> {
 }
 
 /**
+ * Reenvía la invitación de activación (POST /users/{id}/invite). Responde 204
+ * sin body: el éxito es la ausencia de `error` (no comprobar `!data`, siempre
+ * sería undefined). Reenviar invalida el enlace de invitaciones anteriores.
+ */
+export async function inviteUser(id: string): Promise<void> {
+  try {
+    const { error, response } = await api.POST('/users/{id}/invite', {
+      params: { path: { id } },
+    });
+    if (error) {
+      throw toApiError(response.status);
+    }
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/**
  * Procesos accesibles (GET /processes). Se usa para poblar el selector de
  * proceso al crear un grant; el backend filtra por alcance segun el rol.
  */

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { KeyRound, Plus, Users } from 'lucide-react';
+import { KeyRound, Mail, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DisabledReason } from '@/components/disabled-reason';
@@ -30,6 +30,7 @@ import {
   ApiError,
   createGrant,
   createUser,
+  inviteUser,
   listGrants,
   listProcesses,
   listUsers,
@@ -55,6 +56,10 @@ function messageOf(err: unknown): string {
 
 function revokeButtonId(grantId: string): string {
   return `revocar-${grantId}`;
+}
+
+function inviteButtonId(userId: string): string {
+  return `invitar-${userId}`;
 }
 
 /**
@@ -83,6 +88,14 @@ export function EquipoView(): React.ReactElement {
   const [revokeTarget, setRevokeTarget] = React.useState<Grant | null>(null);
   const [revokeOpen, setRevokeOpen] = React.useState(false);
   const grantsHeadingRef = React.useRef<HTMLHeadingElement>(null);
+
+  // Invitación por reenviar; se conserva al cerrar para que el texto del diálogo
+  // no cambie durante la animación de salida (mismo patrón que revokeTarget).
+  const [inviteTarget, setInviteTarget] = React.useState<User | null>(null);
+  const [inviteOpen, setInviteOpen] = React.useState(false);
+  // Estado de envío por-fila: solo el botón de este id muestra «Enviando…» y se
+  // deshabilita; las demás filas quedan intactas.
+  const [invitingUserId, setInvitingUserId] = React.useState<string | null>(null);
 
   const load = React.useCallback(async (silent = false) => {
     // Tras una acción se recarga sin el esqueleto: las tablas siguen montadas y
@@ -190,6 +203,25 @@ export function EquipoView(): React.ReactElement {
       await load(true);
     } catch (err) {
       toast.error(messageOf(err));
+    }
+  }
+
+  async function handleInvite(): Promise<void> {
+    if (!inviteTarget) return;
+    const target = inviteTarget;
+    setInvitingUserId(target.id);
+    try {
+      await inviteUser(target.id);
+      // Éxito en español, sin JSON crudo. No se recarga la tabla: la invitación
+      // no cambia el listado de usuarios.
+      toast.success(
+        `Enviamos el correo de activación a ${target.name} (${target.identifier}). Puede tardar unos minutos en llegar.`,
+      );
+    } catch (err) {
+      // messageOf + messageForStatus ya traduce 403/404/red a texto entendible.
+      toast.error(messageOf(err));
+    } finally {
+      setInvitingUserId(null);
     }
   }
 
@@ -305,6 +337,7 @@ export function EquipoView(): React.ReactElement {
                     <TableHead>Nombre</TableHead>
                     <TableHead>Identificador</TableHead>
                     <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -317,6 +350,27 @@ export function EquipoView(): React.ReactElement {
                       <TableCell className="whitespace-nowrap">
                         <StatusBadge kind="active" value={String(user.active)} />
                       </TableCell>
+                      <RowActionsCell>
+                        {/* Label único «Reenviar invitación»: el endpoint reenvía el
+                            correo de activación en ambos casos (invitado o ya activo),
+                            y User no expone si ya se activó alguna vez. El texto visible
+                            es el nombre accesible, por eso no hace falta aria-label. */}
+                        <Button
+                          id={inviteButtonId(user.id)}
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          loading={invitingUserId === user.id}
+                          disabled={invitingUserId !== null && invitingUserId !== user.id}
+                          onClick={() => {
+                            setInviteTarget(user);
+                            setInviteOpen(true);
+                          }}
+                        >
+                          <Mail aria-hidden="true" />
+                          {invitingUserId === user.id ? 'Enviando…' : 'Reenviar invitación'}
+                        </Button>
+                      </RowActionsCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -424,6 +478,26 @@ export function EquipoView(): React.ReactElement {
         confirmLabel="Revocar rol"
         onConfirm={handleRevoke}
         returnFocusTo={revokeFocusTarget}
+      />
+      {/* Confirmación: reenviar invalida el enlace anterior, consecuencia no
+          obvia; se usa ConfirmDialog (como en revocar) con tono no destructivo.
+          La fila no se elimina al invitar, así que el foco vuelve al propio botón. */}
+      <ConfirmDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        tone="default"
+        title="¿Reenviar la invitación?"
+        description={
+          inviteTarget
+            ? `Enviaremos un nuevo correo de activación a ${inviteTarget.name} (${inviteTarget.identifier}). El enlace de invitaciones anteriores dejará de funcionar.`
+            : ''
+        }
+        confirmLabel="Reenviar invitación"
+        busy={invitingUserId === inviteTarget?.id}
+        onConfirm={handleInvite}
+        returnFocusTo={() =>
+          inviteTarget ? document.getElementById(inviteButtonId(inviteTarget.id)) : null
+        }
       />
     </PageLayout>
   );
