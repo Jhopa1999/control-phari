@@ -1,0 +1,51 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "Fuente de global-error.tsx",
+      "detail": "global-error.tsx define su propio <html lang=\"es\"> sin la clase inter.variable, así que --font-inter no existe y la pantalla sale en system-ui/Segoe UI, distinta del resto del portal (§5.2).",
+      "action": "Importar Inter de next/font en global-error.tsx (como en layout.tsx) y aplicar su .variable al <html>.",
+      "evidence": ["screenshots/FEAT-005/review/pantallas-de-error/global-error--1440x900.png", "apps/web/src/app/global-error.tsx:23-24"]
+    },
+    {
+      "id": "F-2",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "Login dentro del shell en dev-header",
+      "detail": "La raíz de /login (min-h-dvh bg-muted px-4 py-10, §11.2) se pinta dentro del main con padding del shell: se ve como un recuadro gris con margen blanco y la página sobrepasa el viewport (948 px a 1440x900 y 940 px a 390x844). Solo afecta al modo de desarrollo; en jwt se ve bien.",
+      "action": "Con shell (dev-header), usar min-h-full/flex-1 en lugar de min-h-dvh, o quitar bg-muted en la raíz de /login.",
+      "evidence": ["screenshots/FEAT-005/review/jefe/login--1440x900.png", "screenshots/FEAT-005/review/jefe/login--390x844.png"]
+    },
+    {
+      "id": "F-3",
+      "severity": "low",
+      "confidence": "likely",
+      "title": "Overflow del riel sin pista",
+      "detail": "A 1100x800 el riel del jefe no cabe: el último icono visible queda cortado contra el pie y nada indica que el nav tiene scroll propio (en riel tampoco hay etiquetas de grupo).",
+      "action": "Añadir una sombra o un degradado en el borde inferior del nav cuando tiene overflow.",
+      "evidence": ["screenshots/FEAT-005/review/jefe/inicio--1100x800.png", "screenshots/FEAT-005/review/sidebar-sticky/solicitudes-scroll-final--1100x800.png"]
+    },
+    {
+      "id": "F-4",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "Texto de Proyectos para quien no tiene Planificación",
+      "detail": "La integrante (sin módulo plan) lee «Mientras tanto, usa Planificación y Portafolio», pero solo ve «Ir a Portafolio». El texto viene literal de §11.14.",
+      "action": "Filtrar la frase según allowedModules, como los enlaces, o dejarla neutra.",
+      "evidence": ["screenshots/FEAT-004/review/integrante/seguimiento-proyectos--1440x900.png"]
+    },
+    {
+      "id": "F-5",
+      "severity": "low",
+      "confidence": "likely",
+      "title": "Alineación vertical de acciones",
+      "detail": "En RequirementsPanel a 1440 px, el botón de cada pendiente queda unos 6 px por debajo de la primera línea del texto; en la tabla de QA, las celdas de texto quedan unos 3 px más altas que RowActionsCell en la misma fila.",
+      "action": "Alinear la acción con la primera línea del pendiente y revisar el alineamiento vertical entre celdas de texto y RowActionsCell.",
+      "evidence": ["screenshots/FEAT-004/review/componentes/qa-componentes--1440x900--parte-1-de-3.png", "screenshots/FEAT-004/review/componentes/qa-componentes--1440x900--parte-2-de-3.png"]
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\ui-redesign/foundations-review.md"
+}

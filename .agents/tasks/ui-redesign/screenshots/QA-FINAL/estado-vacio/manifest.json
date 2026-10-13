@@ -1,0 +1,210 @@
+{
+  "mode": "empty",
+  "at": "2026-10-13T03:29:53.875Z",
+  "results": [
+    {
+      "route": "/demanda/solicitudes",
+      "viewport": "1440x900",
+      "file": "demanda-solicitudes--1440x900.png",
+      "h1": [
+        "Solicitudes"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Solicitudes Registra y actualiza las solicitudes de demanda de tu alcance. Nueva solicitud Buscar Estado Todos Proceso Todos Prioridad Todas 0 solicitudes P1 Primera consideración para compromiso P2 Programación en el horizonte cercano P3 Planificación ordinaria según capacidad P4 Reserva de demanda, reformulación o cierre motivado Aún no hay solicitudes. Registra la primera para iniciar el triage",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "route": "/gobierno/auditoria",
+      "viewport": "1440x900",
+      "file": "gobierno-auditoria--1440x900.png",
+      "h1": [
+        "Auditoría"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Auditoría Cambios registrados dentro de tu alcance. Objeto Todos Vuelve a consultar al servidor. Acción Todas Acota lo que se muestra; no cambia la consulta. 0 eventos No hay eventos visibles. Los cambios registrados dentro de tu alcance aparecerán aquí.",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "route": "/mi-trabajo",
+      "viewport": "1440x900",
+      "file": "mi-trabajo--1440x900.png",
+      "h1": [
+        "Mi trabajo"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Mi trabajo Tareas en las que eres responsable, con su plan y su estado. Actualizar Buscar Estado Todos 0 tareas No tienes tareas asignadas. Las tareas de las que seas responsable aparecerán aquí.",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "route": "/seguimiento/novedades",
+      "viewport": "1440x900",
+      "file": "seguimiento-novedades--1440x900.png",
+      "h1": [
+        "Novedades"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Novedades Bloqueos, incidentes y solicitudes de apoyo. Cada incidente es un solo registro que se actualiza hasta resolverlo. Nueva novedad Novedades Aún no hay novedades. Registra un bloqueo, un incidente o una solicitud de apoyo. Nueva novedad Selecciona una novedad para ver su ficha. O crea una nueva para registrar un bloqueo o incidente.",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "route": "/seguimiento/compromisos",
+      "viewport": "1440x900",
+      "file": "seguimiento-compromisos--1440x900.png",
+      "h1": [
+        "Compromisos"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Compromisos Acuerdos con vencimiento y responsable. Puedes relacionarlos con una reunión de origen. Nuevo compromiso Compromisos Aún no hay compromisos. Registra un acuerdo con su vencimiento y su responsable. Nuevo compromiso Selecciona un compromiso para ver su detalle. O crea uno nuevo para registrar un acuerdo con vencimiento.",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "route": "/activos/catalogo",
+      "viewport": "1440x900",
+      "file": "activos-catalogo--1440x900.png",
+      "h1": [
+        "Activos"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Activos Activos de datos y soluciones de cada proceso. Nuevo activo Buscar Proceso Todos Solicitud Todas Estado Todos 0 activos Aún no hay activos registrados. Registra el primer activo de un proceso para documentarlo y seguir su estado. Nuevo activo",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "route": "/demanda/solicitudes",
+      "viewport": "390x844",
+      "file": "demanda-solicitudes--390x844.png",
+      "h1": [
+        "Solicitudes"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Solicitudes Registra y actualiza las solicitudes de demanda de tu alcance. Nueva solicitud Buscar Estado Todos Proceso Todos Prioridad Todas 0 solicitudes P1 Primera consideración para compromiso P2 Programación en el horizonte cercano P3 Planificación ordinaria según capacidad P4 Reserva de demanda, reformulación o cierre motivado Aún no hay solicitudes. Registra la primera para iniciar el triage",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "route": "/gobierno/auditoria",
+      "viewport": "390x844",
+      "file": "gobierno-auditoria--390x844.png",
+      "h1": [
+        "Auditoría"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Auditoría Cambios registrados dentro de tu alcance. Objeto Todos Vuelve a consultar al servidor. Acción Todas Acota lo que se muestra; no cambia la consulta. 0 eventos No hay eventos visibles. Los cambios registrados dentro de tu alcance aparecerán aquí.",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "route": "/mi-trabajo",
+      "viewport": "390x844",
+      "file": "mi-trabajo--390x844.png",
+      "h1": [
+        "Mi trabajo"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Mi trabajo Tareas en las que eres responsable, con su plan y su estado. Actualizar Buscar Estado Todos 0 tareas No tienes tareas asignadas. Las tareas de las que seas responsable aparecerán aquí.",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "route": "/seguimiento/novedades",
+      "viewport": "390x844",
+      "file": "seguimiento-novedades--390x844.png",
+      "h1": [
+        "Novedades"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Novedades Bloqueos, incidentes y solicitudes de apoyo. Cada incidente es un solo registro que se actualiza hasta resolverlo. Nueva novedad Novedades Aún no hay novedades. Registra un bloqueo, un incidente o una solicitud de apoyo. Nueva novedad Selecciona una novedad para ver su ficha. O crea una nueva para registrar un bloqueo o incidente.",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "route": "/seguimiento/compromisos",
+      "viewport": "390x844",
+      "file": "seguimiento-compromisos--390x844.png",
+      "h1": [
+        "Compromisos"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Compromisos Acuerdos con vencimiento y responsable. Puedes relacionarlos con una reunión de origen. Nuevo compromiso Compromisos Aún no hay compromisos. Registra un acuerdo con su vencimiento y su responsable. Nuevo compromiso Selecciona un compromiso para ver su detalle. O crea uno nuevo para registrar un acuerdo con vencimiento.",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "route": "/activos/catalogo",
+      "viewport": "390x844",
+      "file": "activos-catalogo--390x844.png",
+      "h1": [
+        "Activos"
+      ],
+      "overflowX": 0,
+      "alerts": [],
+      "mainAlerts": [],
+      "rows": 0,
+      "mainText": "Activos Activos de datos y soluciones de cada proceso. Nuevo activo Buscar Proceso Todos Solicitud Todas Estado Todos 0 activos Aún no hay activos registrados. Registra el primer activo de un proceso para documentarlo y seguir su estado. Nuevo activo",
+      "clipped": [],
+      "consoleErrors": [],
+      "failures": [],
+      "ok": true
+    }
+  ]
+}

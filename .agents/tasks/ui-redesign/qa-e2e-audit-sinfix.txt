@@ -1,0 +1,51 @@
+
+> plantilla-portales@0.1.0 test:e2e
+> playwright test e2e/audit-filter.spec.ts
+
+
+Running 2 tests using 1 worker
+
+  ok 1 [chromium] › e2e\audit-filter.spec.ts:33:5 › «Objeto» consulta al servidor con el contrato y el tope no se presenta como total (2.5s)
+  x  2 [chromium] › e2e\audit-filter.spec.ts:97:5 › una respuesta anterior que llega tarde no pisa la del filtro elegido (7.3s)
+
+
+  1) [chromium] › e2e\audit-filter.spec.ts:97:5 › una respuesta anterior que llega tarde no pisa la del filtro elegido 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('3 eventos', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('3 eventos', { exact: true }) with timeout 5000ms
+      - waiting for getByText('3 eventos', { exact: true })
+
+
+      131 |   await initialFulfilled;
+      132 |   await page.waitForLoadState('networkidle');
+    > 133 |   await expect(page.getByText('3 eventos', { exact: true })).toBeVisible();
+          |                                                              ^
+      134 |   await expect(page.getByText('eventos más recientes')).toHaveCount(0);
+      135 | });
+      136 |
+        at C:\Users\analistabi2\Desarrollo\control-phari\.worktrees\ui-redesign\e2e\audit-filter.spec.ts:133:62
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\audit-filter-una-respuesta-e1e6f--pisa-la-del-filtro-elegido-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\audit-filter-una-respuesta-e1e6f--pisa-la-del-filtro-elegido-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\audit-filter-una-respuesta-e1e6f--pisa-la-del-filtro-elegido-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\audit-filter-una-respuesta-e1e6f--pisa-la-del-filtro-elegido-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › e2e\audit-filter.spec.ts:97:5 › una respuesta anterior que llega tarde no pisa la del filtro elegido 
+  1 passed (11.2s)

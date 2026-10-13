@@ -1,0 +1,7 @@
+{
+  "task_id": "task-fase8-portafolio",
+  "task_description": "Fase 8 de control-phari: módulo backend read-only de métricas/portafolio (indicadores del marco §9 con fórmula exacta o 'No aplica', conteos de demanda, listado de portafolio; alcance por rol en el where; demandOverview niega integrante vía RolesGuard+@Roles 403), regeneración del contrato OpenAPI + api-client (committeada), y conversión de los tres placeholders de frontend (/inicio, /demanda/resumen, /seguimiento/portafolio) consumiendo solo el api-client. Sin migración, sin escritura, sin AuditEvent. Diseño APROBADO en design.md.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

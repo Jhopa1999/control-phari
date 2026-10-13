@@ -1,0 +1,20 @@
+{
+  "task_id": "task-ui-redesign",
+  "task_description": "Renovación integral de UI/UX del frontend del portal control-phari (apps/web) según el diseño APROBADO y cerrado en c:/Users/analistabi2/Desarrollo/control-phari/.agents/tasks/ui-redesign/design.md (§24 prevalece): sistema de diseño propio (tokens claro/oscuro en OKLCH, Inter, rejilla de 4 px, densidad de 40 px), primitivas y componentes compartidos, shell con navegación por flujo (sidebar con riel y cajón móvil), login y pantallas de error, y migración de las 26 rutas a patrones reutilizables (listado, maestro-detalle, mesa de trabajo, detalle, formulario, panel). Sin cambiar URLs, sin tocar backend ni contrato, conservando el doble modo de autenticación, RouteGuard, actor-context, el filtrado por allowedModules y TODAS las capacidades de inventario-capacidades.md. Incluye las correcciones funcionales de frontend decididas en el diseño (§8.7 sesión jwt, §19). Plan ordenado en plan.md; 12 tramos secuenciales en features/.",
+  "status": "pending",
+  "feature_order": [
+    "FEAT-001",
+    "FEAT-002",
+    "FEAT-003",
+    "FEAT-004",
+    "FEAT-005",
+    "FEAT-006",
+    "FEAT-007",
+    "FEAT-008",
+    "FEAT-009",
+    "FEAT-010",
+    "FEAT-011",
+    "FEAT-012"
+  ],
+  "blocked_reason": null
+}

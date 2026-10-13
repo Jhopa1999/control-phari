@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-003",
+  "type": "chore",
+  "description": "Regenerar el contrato OpenAPI y el cliente tipado tras los controllers/DTOs de governance (FEAT-002) y versionar los artefactos generados. Debe ir antes del typecheck/build de web (FEAT-004), porque el frontend compila contra el contrato nuevo. Depende de FEAT-002.",
+  "status": "completed",
+  "steps": [
+    "Ejecutar 'npm run contracts:generate' en la raiz del worktree (openapi:generate con tsx -> apps/api/openapi/openapi.json; luego api-client:generate -> packages/api-client/src/generated/schema.d.ts). No conecta a Postgres (no llama app.init()).",
+    "Ejecutar 'npm run build:api-client' para reconstruir el cliente consumido por web.",
+    "Verificar que los artefactos generados quedan sincronizados y versionados: 'git -C <worktree> diff --exit-code -- apps/api/openapi/openapi.json packages/api-client/src/generated/schema.d.ts' NO debe mostrar diffs pendientes tras regenerar (el commit de la feature debe incluir ambos). CI falla si no estan sincronizados.",
+    "Confirmar que aparecen en el schema los nuevos endpoints de gobierno (gates/validations) y, si se anadio, el campo priorityBand en los DTOs de respuesta."
+  ],
+  "acceptance_criteria": [
+    "apps/api/openapi/openapi.json y packages/api-client/src/generated/schema.d.ts reflejan los endpoints de governance y estan versionados en el commit.",
+    "'npm run build:api-client' termina sin errores.",
+    "Tras regenerar, 'git diff --exit-code' de los dos artefactos generados queda limpio (sincronizado, como exige CI)."
+  ],
+  "verification": [
+    "npm run contracts:generate",
+    "npm run build:api-client",
+    "npm run typecheck:api-client"
+  ],
+  "blocked_reason": null,
+  "findings": "Ejecutado en la raiz del worktree (feat/fase7-gobierno): 'npm run contracts:generate' (openapi:generate via tsx src/generate-openapi.ts -> apps/api/openapi/openapi.json; luego api-client:generate via openapi-typescript -> packages/api-client/src/generated/schema.d.ts) y 'npm run build:api-client' (tsc + copy-schema), ambos exit 0. 'npm run typecheck:api-client' tambien OK. SINCRONIZACION: tras regenerar, 'git diff --exit-code -- apps/api/openapi/openapi.json packages/api-client/src/generated/schema.d.ts' = exit 0 (sin diffs pendientes); working tree limpio. Esto confirma que los artefactos que FEAT-002 ya versiono (commit 3f833cb) son reproducibles byte a byte; no se genero cambio nuevo que commitear. Ambos ficheros estan tracked en HEAD (git ls-files los lista). GOVERNANCE EN EL CONTRATO: openapi.json incluye los endpoints de gobierno GET /requests/{id}/gates, POST .../gates/{gateCode}/pending-items (+ PATCH /{itemId}), POST .../gates/GC4/request-validation, .../gates/GC4/mark-ready, .../gates/GC5/confirm-stabilization, POST .../gates/{gateCode}/approve, .../gates/{gateCode}/waive, PUT /requests/{id}/governance-route, GET/POST /requests/{id}/validations y PATCH .../validations/{validationId}/resolve-blocking; schema.d.ts se regenero a partir de ese contrato. priorityBand: no expuesto (FEAT-002 no lo anadio a los DTOs; no era requisito de FEAT-003). COMMIT: no se requirio commit adicional porque la regeneracion no produjo diff respecto al commit de FEAT-002 (3f833cb) que ya contiene openapi.json + packages/api-client/src/generated/schema.d.ts; NUNCA push."
+}

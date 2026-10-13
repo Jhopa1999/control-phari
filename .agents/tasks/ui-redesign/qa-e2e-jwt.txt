@@ -1,0 +1,13 @@
+
+Running 8 tests using 1 worker
+
+  ok 1 [chromium] › e2e\jwt-session.spec.ts:81:5 › recargar una ruta protegida conserva la sesión y la ruta (8.1s)
+  ok 2 [chromium] › e2e\jwt-session.spec.ts:103:5 › un enlace directo sin sesión vuelve a su ruta tras iniciar sesión (2.9s)
+  ok 3 [chromium] › e2e\jwt-session.spec.ts:116:5 › /login con sesión válida lleva a /inicio (3.6s)
+  ok 4 [chromium] › e2e\jwt-session.spec.ts:128:5 › una sesión rechazada lleva a /login?expired=1 con el aviso de sesión expirada (6.6s)
+  ok 5 [chromium] › e2e\jwt-session.spec.ts:152:5 › un next externo se ignora y lleva a /inicio del mismo origen (4.2s)
+  ok 6 [chromium] › e2e\jwt-session.spec.ts:166:5 › cerrar sesión lleva a /login sin next y una recarga no la recupera (5.2s)
+  ok 7 [chromium] › e2e\jwt-session.spec.ts:193:5 › credenciales incorrectas muestran el error y no inician sesión (1.9s)
+  ok 8 [chromium] › e2e\jwt-session.spec.ts:208:5 › sin sesión, una ruta protegida no pide sus datos ni muestra su contenido (2.5s)
+
+  8 passed (39.4s)

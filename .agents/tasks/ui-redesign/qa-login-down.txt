@@ -1,0 +1,1 @@
+["No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.",""] http://localhost:3300/login

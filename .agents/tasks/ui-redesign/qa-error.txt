@@ -1,0 +1,14 @@
+ok   caída /inicio: «No fue posible…» + «Reintentar» — No fue posible cargar el panorama de la demanda. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar
+ok   recuperación /inicio: el contenido vuelve tras «Reintentar» — Panel del área
+ok   caída /demanda/solicitudes: «No fue posible…» + «Reintentar» — No fue posible cargar las solicitudes. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar
+ok   recuperación /demanda/solicitudes: el contenido vuelve tras «Reintentar» — Solicitudes
+ok   caída /seguimiento/tareas?taskId=e9c32143-3ec8-4023-8544-d62fbc7e9f1c: «No fue posible…» + «Reintentar» — No fue posible cargar la tarea. Revisa tu conexión e inténtalo de nuevo. Si el problema continúa, contacta al administrador del portal. Reintentar
+ok   recuperación /seguimiento/tareas?taskId=e9c32143-3ec8-4023-8544-d62fbc7e9f1c: el contenido vuelve tras «Reintentar» — QA UI · Preparar extracción de datos
+ok   caída /gobierno/auditoria: «No fue posible…» + «Reintentar» — No fue posible cargar la auditoría. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar
+ok   recuperación /gobierno/auditoria: el contenido vuelve tras «Reintentar» — Auditoría
+ok   caída /mi-trabajo: «No fue posible…» + «Reintentar» — No fue posible cargar tu trabajo. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar
+ok   recuperación /mi-trabajo: el contenido vuelve tras «Reintentar» — Mi trabajo
+ok   caída /activos/capacidad: «No fue posible…» + «Reintentar» — No fue posible cargar el resumen de capacidad. Revisa tu conexión e inténtalo de nuevo. Si el problema continúa, contacta al administrador del portal. Reintentar
+ok   recuperación /activos/capacidad: el contenido vuelve tras «Reintentar» — Capacidad
+
+flujos: total=12 ok=12 fallidos=0

@@ -1,0 +1,38 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": "QA2-1",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "verification.md desalineado con la evidencia de QA-1",
+      "detail": "La tabla de QA-1 dice que 'Enviar a autorización' quedó deshabilitado, que autorización y aceptación se probaron con datos demo y que los gates no se mutan; el manifest registra desde la UI plan/submit (014), plan/authorize (015), tasks/:id/accept (008), governance-route (016) y waive de GC4/GC5 (017-018). El texto dice 509 entidades; el manifest tiene 512. Los dos qa-flows.txt en disco son reejecuciones donde las altas salen 'ya existía'.",
+      "action": "Corregir la sección QA-1 de verification.md según el manifest y conservar el log de la primera ejecución, o anotar que la prueba de las altas es demo-data/manifest.json (qa.ui.*)."
+    },
+    {
+      "id": "QA2-2",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "Acciones de Controles y eliminaciones sin recorrido en la UI",
+      "detail": "No se pulsaron 'Aprobar GC4/GC5', 'Enviar a validación', 'Marcar lista para liberar', 'Confirmar estabilización' ni 'Resolver bloqueo'; tampoco edición/eliminación de fase y tarea ni eliminación de disponibilidad/asignación. El cableado revisado por código es directo (onApprove -> approveGate, handleStage) y sigue el patrón ya recorrido de 'Marcar como no aplica'.",
+      "action": "Recorrerlos en una solicitud con controles aprobables, o listarlos como pendientes en verification.md."
+    },
+    {
+      "id": "QA2-3",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "El 409 de disponibilidad descarta lo escrito",
+      "detail": "b961ba5 cierra el diálogo de alta ante el 409 y 'Editar la existente' abre la fila guardada: las horas tecleadas se pierden. El comentario del catch sigue diciendo 'conserva el diálogo abierto y los valores (AC-031)'.",
+      "action": "Actualizar el comentario y valorar precargar los valores tecleados en el diálogo de edición."
+    },
+    {
+      "id": "QA2-4",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "Reejecuciones de qa-flows acumulan datos",
+      "detail": "Los pasos de asignación y validación no son idempotentes: el manifest acumula 10 Assignment y 7 ValidationRecord qa.ui.*.",
+      "action": "Hacerlos idempotentes como el resto de pasos antes de reutilizar los scripts."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\ui-redesign/qa-review.md"
+}

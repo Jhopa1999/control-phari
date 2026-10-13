@@ -1,0 +1,68 @@
+
+> plantilla-portales@0.1.0 test:e2e
+> playwright test e2e/shell-navigation.spec.ts e2e/web-lib.spec.ts e2e/date-display.spec.ts e2e/catalogs.spec.ts e2e/responsible-selector.spec.ts --reporter=line
+
+◇ injected env (9) from .env
+
+Running 57 tests using 1 worker
+
+◇ injected env (0) from .env
+
+[1/57] [chromium] › e2e\catalogs.spec.ts:69:5 › flujo principal de maestras
+[2/57] [chromium] › e2e\catalogs.spec.ts:149:5 › duplicado muestra feedback entendible (409)
+[3/57] [chromium] › e2e\catalogs.spec.ts:167:5 › el formulario requiere los campos obligatorios
+[4/57] [chromium] › e2e\date-display.spec.ts:36:5 › Mi trabajo muestra la fecha de vencimiento guardada, sin correrla un día
+[5/57] [chromium] › e2e\date-display.spec.ts:56:5 › «Nuevo diario» propone la fecha del calendario local
+[6/57] [chromium] › e2e\responsible-selector.spec.ts:40:5 › el selector de responsable se puebla vía /coordination/people para un líder (no /users)
+[7/57] [chromium] › e2e\shell-navigation.spec.ts:59:7 › escritorio 1440×900 › el menú agrupa la navegación por flujo y marca la página actual
+[8/57] [chromium] › e2e\shell-navigation.spec.ts:89:7 › escritorio 1440×900 › el integrante solo ve los módulos que tiene habilitados
+[9/57] [chromium] › e2e\shell-navigation.spec.ts:113:7 › escritorio 1440×900 › Tareas marca «Mi trabajo» y /catalogs marca «Maestras»
+[10/57] [chromium] › e2e\shell-navigation.spec.ts:143:7 › móvil 390×844 › el cajón navega, se cierra y devuelve el foco a «Abrir menú»
+[11/57] [chromium] › e2e\shell-navigation.spec.ts:163:7 › móvil 390×844 › con la preferencia de riel guardada, el cajón no abre tooltips
+[12/57] [chromium] › e2e\shell-navigation.spec.ts:186:7 › riel 1100×800 › el botón del riel expande el menú, conserva el foco y recuerda la preferencia
+[13/57] [chromium] › e2e\shell-navigation.spec.ts:221:5 › el primer Tab enfoca «Saltar al contenido» y Enter lleva el foco al contenido
+[14/57] [chromium] › e2e\shell-navigation.spec.ts:286:5 › Solicitudes cuenta, pagina, filtra y ordena en cliente (fixture de 30)
+[15/57] [chromium] › e2e\shell-navigation.spec.ts:343:5 › una ruta inexistente responde 404 con su propia pantalla
+[16/57] [chromium] › e2e\web-lib.spec.ts:86:7 › safe-redirect › safeInternalPath conserva una ruta interna válida
+[17/57] [chromium] › e2e\web-lib.spec.ts:92:7 › safe-redirect › safeInternalPath rechaza destinos externos, /login y valores vacíos
+[18/57] [chromium] › e2e\web-lib.spec.ts:109:7 › safe-redirect › postLoginPath usa un next válido y, si no, /inicio
+[19/57] [chromium] › e2e\web-lib.spec.ts:134:7 › format › el proceso corre en UTC−5 (precondición del bloque)
+[20/57] [chromium] › e2e\web-lib.spec.ts:141:7 › format › formatDateOnly lee la fecha de calendario en UTC
+[21/57] [chromium] › e2e\web-lib.spec.ts:146:7 › format › formatDate y formatDateTime usan la zona local
+[22/57] [chromium] › e2e\web-lib.spec.ts:154:7 › format › las fechas vacías dan — y un texto que no es fecha se devuelve tal cual
+[23/57] [chromium] › e2e\web-lib.spec.ts:163:7 › format › formatMonth lee el mes en UTC
+[24/57] [chromium] › e2e\web-lib.spec.ts:168:7 › format › formatHours y formatPercent usan U+2212 y espacio duro
+[25/57] [chromium] › e2e\web-lib.spec.ts:177:7 › format › formatCount usa el singular con 1 y el plural en el resto
+[26/57] [chromium] › e2e\web-lib.spec.ts:188:7 › format › orDash da — para null, undefined o vacío
+[27/57] [chromium] › e2e\web-lib.spec.ts:196:7 › format › los valores por defecto usan el calendario local (regla 2)
+[28/57] [chromium] › e2e\web-lib.spec.ts:231:7 › navigation › MODULE_ORDER tiene las 21 claves del backend, sin repetidos, y cada una su etiqueta
+[29/57] [chromium] › e2e\web-lib.spec.ts:240:7 › navigation › los href del menú son exactamente las 23 rutas de §8.5, en sus 7 grupos
+[30/57] [chromium] › e2e\web-lib.spec.ts:281:7 › navigation › getVisibleNavGroups filtra por módulos y quita los grupos vacíos
+[31/57] [chromium] › e2e\web-lib.spec.ts:309:7 › navigation › isNavItemActive usa igualdad o prefijo de ruta, también en activeFor
+[32/57] [chromium] › e2e\web-lib.spec.ts:321:7 › status-presentation › getStatus con un valor desconocido o vacío no lanza
+[33/57] [chromium] › e2e\web-lib.spec.ts:335:7 › status-presentation › getStatus cubre la tabla completa de §7.3
+[34/57] [chromium] › e2e\web-lib.spec.ts:412:7 › status-presentation › getStatus lleva los iconos de §7.3
+[35/57] [chromium] › e2e\web-lib.spec.ts:422:7 › status-presentation › parseBand toma la banda del prefijo de la etiqueta de la API
+[36/57] [chromium] › e2e\web-lib.spec.ts:429:7 › status-presentation › routeLabel usa la maestra, después el respaldo y después el código
+[37/57] [chromium] › e2e\web-lib.spec.ts:461:7 › plan-guide › cada código conocido produce su texto y su acción (§10.2)
+[38/57] [chromium] › e2e\web-lib.spec.ts:532:7 › plan-guide › un código desconocido devuelve el mensaje de la API y ninguna acción
+[39/57] [chromium] › e2e\web-lib.spec.ts:551:7 › plan-guide › un targetId que no está en los datos cargados devuelve el mensaje de la API
+[40/57] [chromium] › e2e\web-lib.spec.ts:569:7 › plan-guide › guideCategoryLabel traduce las categorías y deja la clave si es desconocida
+[41/57] [chromium] › e2e\web-lib.spec.ts:580:7 › request-state › isTriageable solo con REGISTRADA
+[42/57] [chromium] › e2e\web-lib.spec.ts:587:7 › request-state › isPrioritizable con Continuar y En triage o Backlog priorizado
+[43/57] [chromium] › e2e\web-lib.spec.ts:620:7 › request-state › isPlannable con los tres estados de PLANNABLE_STATES
+[44/57] [chromium] › e2e\web-lib.spec.ts:647:7 › task-filters › 'ALL' y mineUserId null no filtran
+[45/57] [chromium] › e2e\web-lib.spec.ts:654:7 › task-filters › Solo mis tareas compara responsibleUserId con el userId del actor
+[46/57] [chromium] › e2e\web-lib.spec.ts:669:7 › task-filters › q no distingue mayúsculas ni tildes
+[47/57] [chromium] › e2e\web-lib.spec.ts:677:7 › task-filters › estado y fase filtran por igualdad
+[48/57] [chromium] › e2e\web-lib.spec.ts:707:7 › table-sort › compareText no distingue mayúsculas ni tildes y ordena números de forma natural
+[49/57] [chromium] › e2e\web-lib.spec.ts:718:7 › table-sort › los vacíos quedan al final en las dos direcciones
+[50/57] [chromium] › e2e\web-lib.spec.ts:747:7 › table-sort › sortRows es estable y con sort null devuelve el orden recibido
+[51/57] [chromium] › e2e\web-lib.spec.ts:773:7 › table-sort › paginate acota la página y calcula from y to
+[52/57] [chromium] › e2e\web-lib.spec.ts:792:7 › table-sort › matchesSearch ignora espacios, mayúsculas y tildes
+[53/57] [chromium] › e2e\web-lib.spec.ts:802:7 › table-sort › nextSort: ascendente, descendente y vuelta al orden por defecto
+[54/57] [chromium] › e2e\web-lib.spec.ts:830:7 › table-sort › invariante §24.1: con pageSize null, pageRows contiene todas las filas
+[55/57] [chromium] › e2e\web-lib.spec.ts:861:7 › table-sort › invariante §24.1: con un número, pageRows.length <= pageSize y filtered sigue disponible
+[56/57] [chromium] › e2e\web-lib.spec.ts:899:7 › table-sort › invariante §24.1: sin filas, pageCount 1, from 0 y to 0
+[57/57] [chromium] › e2e\web-lib.spec.ts:920:7 › table-sort › buildTableView filtra, después ordena y después pagina
+  57 passed (38.7s)

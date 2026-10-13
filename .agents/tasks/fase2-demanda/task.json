@@ -1,0 +1,7 @@
+{
+  "task_id": "task-fase2-demanda",
+  "task_description": "Implementar la FASE 2 (flujo de Demanda) de control-phari sobre la base de Fase 1: entidades Prisma Request/RequestParticipant/Triage/PriorityEvaluation/Approval + migracion fase2_demanda + seed de maestras; modulo NestJS request/ con submodulos triage/priority/approval aplicando gates server-side y auditando en transaccion; regeneracion de OpenAPI + api-client; pantallas SCR-03/04/05/20 en apps/web consumidas solo via api-client; y pruebas unitarias nuevas. Diseno APROBADO en .agents/tasks/fase2-demanda/design.md (Revision 3).",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null
+}

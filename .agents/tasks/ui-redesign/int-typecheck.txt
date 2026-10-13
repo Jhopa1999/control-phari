@@ -1,0 +1,16 @@
+
+> plantilla-portales@0.1.0 typecheck
+> npm run typecheck --workspace apps/api && npm run typecheck --workspace packages/api-client && npm run typecheck --workspace apps/web
+
+
+> @plantilla-portales/api@0.1.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+
+> @plantilla-portales/api-client@0.1.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+
+> @plantilla-portales/web@0.1.0 typecheck
+> tsc --noEmit
+

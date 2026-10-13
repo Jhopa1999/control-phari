@@ -1,0 +1,1326 @@
+{
+  "generatedAt": "2026-10-12T06:14:41.263Z",
+  "base": "http://localhost:3300",
+  "auth": "dev-header",
+  "roles": [
+    "jefe",
+    "integrante"
+  ],
+  "viewports": [
+    "1440x900",
+    "1280x800",
+    "768x1024",
+    "390x844"
+  ],
+  "routes": [
+    "/inicio",
+    "/demanda/solicitudes",
+    "/catalogs",
+    "/seguimiento/plan",
+    "/login"
+  ],
+  "total": 40,
+  "failed": 16,
+  "failuresByCheck": {
+    "h1Count": 8,
+    "overflowX": 8
+  },
+  "results": [
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/inicio",
+      "file": "jefe\\inicio--1440x900.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/demanda/solicitudes",
+      "file": "jefe\\demanda-solicitudes--1440x900.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/catalogs",
+      "file": "jefe\\catalogs--1440x900.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/plan",
+      "file": "jefe\\seguimiento-plan--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificacion"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/login",
+      "file": "jefe\\login--1440x900.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 0,
+      "h1Texts": [],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "h1Count"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/inicio",
+      "file": "jefe\\inicio--1280x800.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/demanda/solicitudes",
+      "file": "jefe\\demanda-solicitudes--1280x800.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/catalogs",
+      "file": "jefe\\catalogs--1280x800.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 1391,
+        "innerWidth": 1280,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/seguimiento/plan",
+      "file": "jefe\\seguimiento-plan--1280x800.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificacion"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/login",
+      "file": "jefe\\login--1280x800.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 0,
+      "h1Texts": [],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "h1Count"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/inicio",
+      "file": "jefe\\inicio--768x1024.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 777,
+        "innerWidth": 768,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/demanda/solicitudes",
+      "file": "jefe\\demanda-solicitudes--768x1024.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 1032,
+        "innerWidth": 768,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/catalogs",
+      "file": "jefe\\catalogs--768x1024.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 1391,
+        "innerWidth": 768,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/seguimiento/plan",
+      "file": "jefe\\seguimiento-plan--768x1024.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificacion"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/login",
+      "file": "jefe\\login--768x1024.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 0,
+      "h1Texts": [],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "h1Count"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/inicio",
+      "file": "jefe\\inicio--390x844.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/demanda/solicitudes",
+      "file": "jefe\\demanda-solicitudes--390x844.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/catalogs",
+      "file": "jefe\\catalogs--390x844.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/plan",
+      "file": "jefe\\seguimiento-plan--390x844.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificacion"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/login",
+      "file": "jefe\\login--390x844.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 0,
+      "h1Texts": [],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "h1Count"
+      ],
+      "ok": false
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/inicio",
+      "file": "integrante\\inicio--1440x900.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/demanda/solicitudes",
+      "file": "integrante\\demanda-solicitudes--1440x900.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/catalogs",
+      "file": "integrante\\catalogs--1440x900.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/plan",
+      "file": "integrante\\seguimiento-plan--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificacion"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/login",
+      "file": "integrante\\login--1440x900.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 0,
+      "h1Texts": [],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "h1Count"
+      ],
+      "ok": false
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/inicio",
+      "file": "integrante\\inicio--1280x800.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/demanda/solicitudes",
+      "file": "integrante\\demanda-solicitudes--1280x800.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/catalogs",
+      "file": "integrante\\catalogs--1280x800.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 1391,
+        "innerWidth": 1280,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/seguimiento/plan",
+      "file": "integrante\\seguimiento-plan--1280x800.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificacion"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/login",
+      "file": "integrante\\login--1280x800.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 0,
+      "h1Texts": [],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "h1Count"
+      ],
+      "ok": false
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/inicio",
+      "file": "integrante\\inicio--768x1024.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 777,
+        "innerWidth": 768,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/demanda/solicitudes",
+      "file": "integrante\\demanda-solicitudes--768x1024.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 1032,
+        "innerWidth": 768,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/catalogs",
+      "file": "integrante\\catalogs--768x1024.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 1391,
+        "innerWidth": 768,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/seguimiento/plan",
+      "file": "integrante\\seguimiento-plan--768x1024.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificacion"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/login",
+      "file": "integrante\\login--768x1024.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 0,
+      "h1Texts": [],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "h1Count"
+      ],
+      "ok": false
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/inicio",
+      "file": "integrante\\inicio--390x844.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/demanda/solicitudes",
+      "file": "integrante\\demanda-solicitudes--390x844.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/catalogs",
+      "file": "integrante\\catalogs--390x844.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/plan",
+      "file": "integrante\\seguimiento-plan--390x844.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificacion"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/login",
+      "file": "integrante\\login--390x844.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 0,
+      "h1Texts": [],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "h1Count"
+      ],
+      "ok": false
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "mode": "error",
+  "at": "2026-10-13T03:29:21.059Z",
+  "results": [
+    {
+      "route": "/inicio",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar el panorama de la demanda. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar",
+      "retryButtons": 1,
+      "sidebar": [],
+      "h1": [
+        "Panel del área"
+      ]
+    },
+    {
+      "route": "/demanda/solicitudes",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar las solicitudes. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar",
+      "retryButtons": 1,
+      "sidebar": [],
+      "h1": [
+        "Solicitudes"
+      ]
+    },
+    {
+      "route": "/seguimiento/tareas?taskId=e9c32143-3ec8-4023-8544-d62fbc7e9f1c",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar la tarea. Revisa tu conexión e inténtalo de nuevo. Si el problema continúa, contacta al administrador del portal. Reintentar",
+      "retryButtons": 1,
+      "sidebar": [],
+      "h1": [
+        "Tarea"
+      ]
+    },
+    {
+      "route": "/gobierno/auditoria",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar la auditoría. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar",
+      "retryButtons": 1,
+      "sidebar": [],
+      "h1": [
+        "Auditoría"
+      ]
+    },
+    {
+      "route": "/mi-trabajo",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar tu trabajo. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar",
+      "retryButtons": 1,
+      "sidebar": [],
+      "h1": [
+        "Mi trabajo"
+      ]
+    },
+    {
+      "route": "/activos/capacidad",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar el resumen de capacidad. Revisa tu conexión e inténtalo de nuevo. Si el problema continúa, contacta al administrador del portal. Reintentar",
+      "retryButtons": 1,
+      "sidebar": [],
+      "h1": [
+        "Capacidad"
+      ]
+    },
+    {
+      "route": "/inicio",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "retryClicked": 1,
+      "h1": [
+        "Panel del área"
+      ],
+      "rows": 20,
+      "mainText": "Panel del área Demanda del área en el periodo: volumen, bloqueos y distribución por estado y prioridad. Periodo Desde Hasta Solicitudes en alcance 47 Bloqueadas activas 2 Sin priorizar 18 En ejecución"
+    },
+    {
+      "route": "/demanda/solicitudes",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "retryClicked": 1,
+      "h1": [
+        "Solicitudes"
+      ],
+      "rows": 25,
+      "mainText": "Solicitudes Registra y actualiza las solicitudes de demanda de tu alcance. Nueva solicitud Buscar Estado Todos Proceso Todos Prioridad Todas 47 solicitudes P1 Primera consideración para compromiso P2 "
+    },
+    {
+      "route": "/seguimiento/tareas?taskId=e9c32143-3ec8-4023-8544-d62fbc7e9f1c",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "retryClicked": 1,
+      "h1": [
+        "QA UI · Preparar extracción de datos"
+      ],
+      "rows": 0,
+      "mainText": "Mi trabajo QA UI · Preparar extracción de datos Terminada avance 30 % Aceptada Descripción Tarea de prueba desde la UI. Dato de prueba (demo-ui) Criterios de aceptación Sin criterios de aceptación. Ac"
+    },
+    {
+      "route": "/gobierno/auditoria",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "retryClicked": 1,
+      "h1": [
+        "Auditoría"
+      ],
+      "rows": 25,
+      "mainText": "Auditoría Cambios registrados dentro de tu alcance. Objeto Todos Vuelve a consultar al servidor. Acción Todas Acota lo que se muestra; no cambia la consulta. 500 eventos más recientes Se muestran los "
+    },
+    {
+      "route": "/mi-trabajo",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "retryClicked": 1,
+      "h1": [
+        "Mi trabajo"
+      ],
+      "rows": 1,
+      "mainText": "Mi trabajo Tareas en las que eres responsable, con su plan y su estado. Actualizar Buscar Estado Todos 1 tarea Tarea Tarea, ordenar Solicitud Fase Vence Vence, ordenar Estado Estado, ordenar Gestión d"
+    },
+    {
+      "route": "/activos/capacidad",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "retryClicked": 3,
+      "h1": [
+        "Capacidad"
+      ],
+      "rows": 33,
+      "mainText": "Capacidad Disponibilidad y carga del equipo por mes, dentro de tu alcance. Mes ¿Cómo se calcula? Resumen de carga Resumen de carga por persona para octubre de 2026. Incluye las horas comprometidas (as"
+    }
+  ]
+}

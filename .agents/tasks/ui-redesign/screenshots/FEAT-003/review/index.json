@@ -1,0 +1,102 @@
+[
+  {
+    "source": "jefe\\activos-capacidad--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-capacidad--1440x900--parte-1-de-2.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\activos-capacidad--1440x900--parte-2-de-2.png",
+        "width": 1440,
+        "height": 421
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-capacidad--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-capacidad--390x844--parte-1-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\activos-capacidad--390x844--parte-2-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\activos-capacidad--390x844--parte-3-de-3.png",
+        "width": 390,
+        "height": 990
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-resumen--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-resumen--1440x900--parte-1-de-2.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-resumen--1440x900--parte-2-de-2.png",
+        "width": 1440,
+        "height": 28
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-resumen--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-resumen--390x844--parte-1-de-3.png",
+        "width": 392,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-resumen--390x844--parte-2-de-3.png",
+        "width": 392,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-resumen--390x844--parte-3-de-3.png",
+        "width": 392,
+        "height": 515
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--1440x900.png",
+        "width": 1440,
+        "height": 1273
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\inicio--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 952
+      }
+    ]
+  }
+]

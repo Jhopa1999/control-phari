@@ -1,0 +1,48 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": "INT-1",
+      "severity": "low",
+      "confidence": "likely",
+      "title": "Carrera en la recarga de Auditoría",
+      "detail": "auditoria-view.tsx: load(objectType) no descarta respuestas obsoletas; si se cambia «Objeto» o se pulsa «Limpiar filtros» con una carga en curso, la respuesta que llega última puede mostrar eventos de una consulta anterior. Añadir un contador de petición o AbortController."
+    },
+    {
+      "id": "INT-2",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "Aviso de tope con Objeto ya filtrado",
+      "detail": "Con un tipo de objeto elegido y 500 resultados, el aviso sigue diciendo «Usa el filtro Objeto para acotar la búsqueda». Ajustar el texto cuando objectFilter !== ALL."
+    },
+    {
+      "id": "INT-3",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "Sin prueba de regresión del §24.2",
+      "detail": "El envío de objectType, take=500 fijo y el texto «eventos más recientes» solo se verificaron con un script temporal ya borrado. Añadir un caso E2E que intercepte /audit-events."
+    },
+    {
+      "id": "INT-4",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "Recarga innecesaria de procesos y personas",
+      "detail": "Cada cambio de «Objeto» vuelve a pedir listProcesses() y listCoordinationPeople(), que no dependen del filtro. Cargarlos una vez y recargar solo los eventos."
+    },
+    {
+      "id": "INT-5",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "Contrato de objectType con 4 valores (pendiente de API)",
+      "detail": "El @ApiQuery de audit.controller.ts declara 4 valores aunque el DTO acepta 26; el filtro ofrece solo esos 4. Documentado en docs/README.md; al ampliar el enum y regenerar el cliente, el typecheck obligará a completar AUDIT_OBJECT_TYPE_FILTER."
+    },
+    {
+      "id": "INT-6",
+      "severity": "low",
+      "confidence": "confirmed",
+      "title": "next-env.d.ts modificado sin commitear en el worktree",
+      "detail": "next dev reescribió las rutas a .next/dev/types; no está en ningún commit, pero hay que restaurarlo antes de integrar."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\ui-redesign/review.md"
+}

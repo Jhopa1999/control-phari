@@ -1,0 +1,2265 @@
+[
+  {
+    "source": "26-rutas\\jefe\\activos-capacidad--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\activos-capacidad--1440x900--parte-1-de-2.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\activos-capacidad--1440x900--parte-2-de-2.png",
+        "width": 1440,
+        "height": 365
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\activos-capacidad--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\activos-capacidad--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\activos-capacidad--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 1564
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\activos-catalogo--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\activos-catalogo--1440x900.png",
+        "width": 1440,
+        "height": 1467
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\activos-catalogo--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\activos-catalogo--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\activos-catalogo--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 313
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\activos-documentos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\activos-documentos--1440x900.png",
+        "width": 1440,
+        "height": 1212
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\activos-documentos--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\activos-documentos--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\activos-documentos--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 848
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\administracion-frameworks--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\administracion-frameworks--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\administracion-frameworks--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\administracion-frameworks--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\administracion-maestras--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\administracion-maestras--1440x900--parte-1-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\administracion-maestras--1440x900--parte-2-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\administracion-maestras--1440x900--parte-3-de-3.png",
+        "width": 1440,
+        "height": 1033
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\administracion-maestras--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\administracion-maestras--390x844--parte-1-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\administracion-maestras--390x844--parte-2-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\administracion-maestras--390x844--parte-3-de-3.png",
+        "width": 390,
+        "height": 1438
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\administracion-revision--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\administracion-revision--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\administracion-revision--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\administracion-revision--390x844.png",
+        "width": 390,
+        "height": 1468
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\catalogs--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\catalogs--1440x900--parte-1-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\catalogs--1440x900--parte-2-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\catalogs--1440x900--parte-3-de-3.png",
+        "width": 1440,
+        "height": 1033
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\catalogs--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\catalogs--390x844--parte-1-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\catalogs--390x844--parte-2-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\catalogs--390x844--parte-3-de-3.png",
+        "width": 390,
+        "height": 1438
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\demanda-priorizacion--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-priorizacion--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\demanda-priorizacion--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-priorizacion--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\demanda-resumen--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-resumen--1440x900.png",
+        "width": 1440,
+        "height": 1796
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\demanda-resumen--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-resumen--390x844--parte-1-de-2.png",
+        "width": 392,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-resumen--390x844--parte-2-de-2.png",
+        "width": 392,
+        "height": 1089
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\demanda-solicitudes--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-solicitudes--1440x900--parte-1-de-2.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-solicitudes--1440x900--parte-2-de-2.png",
+        "width": 1440,
+        "height": 1070
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\demanda-solicitudes--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-solicitudes--390x844--parte-1-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-solicitudes--390x844--parte-2-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-solicitudes--390x844--parte-3-de-3.png",
+        "width": 390,
+        "height": 1442
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\demanda-triage--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-triage--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\demanda-triage--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\demanda-triage--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\gobierno-auditoria--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-1-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-2-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-3-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-4-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-5-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-6-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-7-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-8-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-9-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-10-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-11-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-12-de-13.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--1440x900--parte-13-de-13.png",
+        "width": 1440,
+        "height": 1066
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\gobierno-auditoria--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-1-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-2-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-3-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-4-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-5-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-6-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-7-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-8-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-9-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-10-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-11-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-12-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-13-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-14-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-15-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-16-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-17-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-18-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-19-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-20-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-21-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-22-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-23-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-24-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-25-de-26.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-auditoria--390x844--parte-26-de-26.png",
+        "width": 390,
+        "height": 1714
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\gobierno-equipo--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-equipo--1440x900.png",
+        "width": 1440,
+        "height": 1441
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\gobierno-equipo--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-equipo--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-equipo--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 60
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\gobierno-mis-permisos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-mis-permisos--1440x900.png",
+        "width": 1440,
+        "height": 1370
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\gobierno-mis-permisos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\gobierno-mis-permisos--390x844.png",
+        "width": 390,
+        "height": 1542
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\inicio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\inicio--1440x900.png",
+        "width": 1440,
+        "height": 942
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\inicio--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\inicio--390x844.png",
+        "width": 390,
+        "height": 1526
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\login--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\login--1440x900.png",
+        "width": 1440,
+        "height": 948
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\login--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\login--390x844.png",
+        "width": 390,
+        "height": 940
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\mi-trabajo--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\mi-trabajo--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\mi-trabajo--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\mi-trabajo--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-bitacora--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-bitacora--1440x900--parte-1-de-2.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-bitacora--1440x900--parte-2-de-2.png",
+        "width": 1440,
+        "height": 1229
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-bitacora--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-bitacora--390x844--parte-1-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-bitacora--390x844--parte-2-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-bitacora--390x844--parte-3-de-3.png",
+        "width": 390,
+        "height": 24
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-compromisos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-compromisos--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-compromisos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-compromisos--390x844.png",
+        "width": 390,
+        "height": 1532
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-novedades--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-novedades--1440x900.png",
+        "width": 1440,
+        "height": 1059
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-novedades--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-novedades--390x844.png",
+        "width": 390,
+        "height": 1638
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-plan--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-plan--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-plan--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-plan--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-portafolio--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-portafolio--1440x900--parte-1-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-portafolio--1440x900--parte-2-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-portafolio--1440x900--parte-3-de-3.png",
+        "width": 1440,
+        "height": 395
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-portafolio--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-portafolio--390x844--parte-1-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-portafolio--390x844--parte-2-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-portafolio--390x844--parte-3-de-3.png",
+        "width": 390,
+        "height": 633
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-proyectos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-proyectos--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-proyectos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-proyectos--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-reuniones--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-reuniones--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-reuniones--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-reuniones--390x844.png",
+        "width": 390,
+        "height": 1268
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-semanal--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-semanal--1440x900.png",
+        "width": 1440,
+        "height": 1006
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-semanal--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-semanal--390x844.png",
+        "width": 390,
+        "height": 1719
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-tareas--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-tareas--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "26-rutas\\jefe\\seguimiento-tareas--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\26-rutas\\jefe\\seguimiento-tareas--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "exploracion\\drawer--390.png",
+    "outputs": [
+      {
+        "file": "review\\exploracion\\drawer--390.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "exploracion\\inicio--1100.png",
+    "outputs": [
+      {
+        "file": "review\\exploracion\\inicio--1100.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "exploracion\\inicio--1440.png",
+    "outputs": [
+      {
+        "file": "review\\exploracion\\inicio--1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "exploracion\\inicio--390.png",
+    "outputs": [
+      {
+        "file": "review\\exploracion\\inicio--390.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "exploracion\\login--1440.png",
+    "outputs": [
+      {
+        "file": "review\\exploracion\\login--1440.png",
+        "width": 1440,
+        "height": 948
+      }
+    ]
+  },
+  {
+    "source": "exploracion\\login--390.png",
+    "outputs": [
+      {
+        "file": "review\\exploracion\\login--390.png",
+        "width": 390,
+        "height": 940
+      }
+    ]
+  },
+  {
+    "source": "exploracion\\rail-tooltip--1100.png",
+    "outputs": [
+      {
+        "file": "review\\exploracion\\rail-tooltip--1100.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "exploracion\\ruta-inexistente--1440.png",
+    "outputs": [
+      {
+        "file": "review\\exploracion\\ruta-inexistente--1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "exploracion\\ruta-inexistente--390.png",
+    "outputs": [
+      {
+        "file": "review\\exploracion\\ruta-inexistente--390.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "exploracion\\skip-link--1100.png",
+    "outputs": [
+      {
+        "file": "review\\exploracion\\skip-link--1100.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "exploracion\\solicitudes--1440.png",
+    "outputs": [
+      {
+        "file": "review\\exploracion\\solicitudes--1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\catalogs--1100x800.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\catalogs--1100x800--parte-1-de-3.png",
+        "width": 1100,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\catalogs--1100x800--parte-2-de-3.png",
+        "width": 1100,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\catalogs--1100x800--parte-3-de-3.png",
+        "width": 1100,
+        "height": 1205
+      }
+    ]
+  },
+  {
+    "source": "integrante\\catalogs--1280x800.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\catalogs--1280x800--parte-1-de-3.png",
+        "width": 1280,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\catalogs--1280x800--parte-2-de-3.png",
+        "width": 1280,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\catalogs--1280x800--parte-3-de-3.png",
+        "width": 1280,
+        "height": 1205
+      }
+    ]
+  },
+  {
+    "source": "integrante\\catalogs--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\catalogs--1440x900--parte-1-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\catalogs--1440x900--parte-2-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\catalogs--1440x900--parte-3-de-3.png",
+        "width": 1440,
+        "height": 1033
+      }
+    ]
+  },
+  {
+    "source": "integrante\\catalogs--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\catalogs--390x844--parte-1-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\catalogs--390x844--parte-2-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\catalogs--390x844--parte-3-de-3.png",
+        "width": 390,
+        "height": 1438
+      }
+    ]
+  },
+  {
+    "source": "integrante\\catalogs--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\catalogs--768x1024--parte-1-de-3.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\catalogs--768x1024--parte-2-de-3.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\catalogs--768x1024--parte-3-de-3.png",
+        "width": 768,
+        "height": 1261
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-solicitudes--1100x800.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-solicitudes--1100x800--parte-1-de-2.png",
+        "width": 1100,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\demanda-solicitudes--1100x800--parte-2-de-2.png",
+        "width": 1100,
+        "height": 215
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-solicitudes--1280x800.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-solicitudes--1280x800--parte-1-de-2.png",
+        "width": 1280,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\demanda-solicitudes--1280x800--parte-2-de-2.png",
+        "width": 1280,
+        "height": 215
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-solicitudes--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-solicitudes--1440x900--parte-1-de-2.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\demanda-solicitudes--1440x900--parte-2-de-2.png",
+        "width": 1440,
+        "height": 147
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-solicitudes--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-solicitudes--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\demanda-solicitudes--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 1335
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-solicitudes--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-solicitudes--768x1024--parte-1-de-2.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\demanda-solicitudes--768x1024--parte-2-de-2.png",
+        "width": 768,
+        "height": 1059
+      }
+    ]
+  },
+  {
+    "source": "integrante\\gobierno-mis-permisos--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\gobierno-mis-permisos--1100x800.png",
+        "width": 1100,
+        "height": 1250
+      }
+    ]
+  },
+  {
+    "source": "integrante\\gobierno-mis-permisos--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\gobierno-mis-permisos--1280x800.png",
+        "width": 1280,
+        "height": 1250
+      }
+    ]
+  },
+  {
+    "source": "integrante\\gobierno-mis-permisos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\gobierno-mis-permisos--1440x900.png",
+        "width": 1440,
+        "height": 1250
+      }
+    ]
+  },
+  {
+    "source": "integrante\\gobierno-mis-permisos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\gobierno-mis-permisos--390x844.png",
+        "width": 390,
+        "height": 1370
+      }
+    ]
+  },
+  {
+    "source": "integrante\\gobierno-mis-permisos--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\gobierno-mis-permisos--768x1024.png",
+        "width": 768,
+        "height": 1322
+      }
+    ]
+  },
+  {
+    "source": "integrante\\inicio--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\inicio--1100x800.png",
+        "width": 1100,
+        "height": 942
+      }
+    ]
+  },
+  {
+    "source": "integrante\\inicio--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\inicio--1280x800.png",
+        "width": 1280,
+        "height": 942
+      }
+    ]
+  },
+  {
+    "source": "integrante\\inicio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\inicio--1440x900.png",
+        "width": 1440,
+        "height": 942
+      }
+    ]
+  },
+  {
+    "source": "integrante\\inicio--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\inicio--390x844.png",
+        "width": 390,
+        "height": 1526
+      }
+    ]
+  },
+  {
+    "source": "integrante\\inicio--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\inicio--768x1024.png",
+        "width": 768,
+        "height": 1339
+      }
+    ]
+  },
+  {
+    "source": "integrante\\login--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\login--1100x800.png",
+        "width": 1100,
+        "height": 848
+      }
+    ]
+  },
+  {
+    "source": "integrante\\login--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\login--1280x800.png",
+        "width": 1280,
+        "height": 848
+      }
+    ]
+  },
+  {
+    "source": "integrante\\login--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\login--1440x900.png",
+        "width": 1440,
+        "height": 948
+      }
+    ]
+  },
+  {
+    "source": "integrante\\login--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\login--390x844.png",
+        "width": 390,
+        "height": 940
+      }
+    ]
+  },
+  {
+    "source": "integrante\\login--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\login--768x1024.png",
+        "width": 768,
+        "height": 1128
+      }
+    ]
+  },
+  {
+    "source": "integrante\\ruta-inexistente--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\ruta-inexistente--1100x800.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\ruta-inexistente--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\ruta-inexistente--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\ruta-inexistente--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\ruta-inexistente--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\ruta-inexistente--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\ruta-inexistente--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\ruta-inexistente--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\ruta-inexistente--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan--1100x800.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas--1100x800.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\catalogs--1100x800.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\catalogs--1100x800--parte-1-de-3.png",
+        "width": 1100,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\catalogs--1100x800--parte-2-de-3.png",
+        "width": 1100,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\catalogs--1100x800--parte-3-de-3.png",
+        "width": 1100,
+        "height": 1205
+      }
+    ]
+  },
+  {
+    "source": "jefe\\catalogs--1280x800.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\catalogs--1280x800--parte-1-de-3.png",
+        "width": 1280,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\catalogs--1280x800--parte-2-de-3.png",
+        "width": 1280,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\catalogs--1280x800--parte-3-de-3.png",
+        "width": 1280,
+        "height": 1205
+      }
+    ]
+  },
+  {
+    "source": "jefe\\catalogs--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\catalogs--1440x900--parte-1-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\catalogs--1440x900--parte-2-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\catalogs--1440x900--parte-3-de-3.png",
+        "width": 1440,
+        "height": 1033
+      }
+    ]
+  },
+  {
+    "source": "jefe\\catalogs--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\catalogs--390x844--parte-1-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\catalogs--390x844--parte-2-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\catalogs--390x844--parte-3-de-3.png",
+        "width": 390,
+        "height": 1438
+      }
+    ]
+  },
+  {
+    "source": "jefe\\catalogs--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\catalogs--768x1024--parte-1-de-3.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\catalogs--768x1024--parte-2-de-3.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\catalogs--768x1024--parte-3-de-3.png",
+        "width": 768,
+        "height": 1261
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-solicitudes--1100x800.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-solicitudes--1100x800--parte-1-de-2.png",
+        "width": 1100,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-solicitudes--1100x800--parte-2-de-2.png",
+        "width": 1100,
+        "height": 1286
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-solicitudes--1280x800.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-solicitudes--1280x800--parte-1-de-2.png",
+        "width": 1280,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-solicitudes--1280x800--parte-2-de-2.png",
+        "width": 1280,
+        "height": 1286
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-solicitudes--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-solicitudes--1440x900--parte-1-de-2.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-solicitudes--1440x900--parte-2-de-2.png",
+        "width": 1440,
+        "height": 1070
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-solicitudes--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-solicitudes--390x844--parte-1-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-solicitudes--390x844--parte-2-de-3.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-solicitudes--390x844--parte-3-de-3.png",
+        "width": 390,
+        "height": 1442
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-solicitudes--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-solicitudes--768x1024--parte-1-de-3.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-solicitudes--768x1024--parte-2-de-3.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-solicitudes--768x1024--parte-3-de-3.png",
+        "width": 768,
+        "height": 926
+      }
+    ]
+  },
+  {
+    "source": "jefe\\gobierno-mis-permisos--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\gobierno-mis-permisos--1100x800.png",
+        "width": 1100,
+        "height": 1370
+      }
+    ]
+  },
+  {
+    "source": "jefe\\gobierno-mis-permisos--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\gobierno-mis-permisos--1280x800.png",
+        "width": 1280,
+        "height": 1370
+      }
+    ]
+  },
+  {
+    "source": "jefe\\gobierno-mis-permisos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\gobierno-mis-permisos--1440x900.png",
+        "width": 1440,
+        "height": 1370
+      }
+    ]
+  },
+  {
+    "source": "jefe\\gobierno-mis-permisos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\gobierno-mis-permisos--390x844.png",
+        "width": 390,
+        "height": 1542
+      }
+    ]
+  },
+  {
+    "source": "jefe\\gobierno-mis-permisos--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\gobierno-mis-permisos--768x1024.png",
+        "width": 768,
+        "height": 1442
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--1100x800.png",
+        "width": 1100,
+        "height": 942
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--1280x800.png",
+        "width": 1280,
+        "height": 942
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--1440x900.png",
+        "width": 1440,
+        "height": 942
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--390x844.png",
+        "width": 390,
+        "height": 1526
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--768x1024.png",
+        "width": 768,
+        "height": 1339
+      }
+    ]
+  },
+  {
+    "source": "jefe\\login--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\login--1100x800.png",
+        "width": 1100,
+        "height": 872
+      }
+    ]
+  },
+  {
+    "source": "jefe\\login--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\login--1280x800.png",
+        "width": 1280,
+        "height": 848
+      }
+    ]
+  },
+  {
+    "source": "jefe\\login--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\login--1440x900.png",
+        "width": 1440,
+        "height": 948
+      }
+    ]
+  },
+  {
+    "source": "jefe\\login--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\login--390x844.png",
+        "width": 390,
+        "height": 940
+      }
+    ]
+  },
+  {
+    "source": "jefe\\login--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\login--768x1024.png",
+        "width": 768,
+        "height": 1128
+      }
+    ]
+  },
+  {
+    "source": "jefe\\ruta-inexistente--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\ruta-inexistente--1100x800.png",
+        "width": 1100,
+        "height": 872
+      }
+    ]
+  },
+  {
+    "source": "jefe\\ruta-inexistente--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\ruta-inexistente--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jefe\\ruta-inexistente--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\ruta-inexistente--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\ruta-inexistente--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\ruta-inexistente--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "jefe\\ruta-inexistente--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\ruta-inexistente--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan--1100x800.png",
+        "width": 1100,
+        "height": 872
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas--1100x800.png",
+        "width": 1100,
+        "height": 872
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jwt\\integrante\\inicio--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\integrante\\inicio--1100x800.png",
+        "width": 1100,
+        "height": 942
+      }
+    ]
+  },
+  {
+    "source": "jwt\\integrante\\inicio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\integrante\\inicio--1440x900.png",
+        "width": 1440,
+        "height": 942
+      }
+    ]
+  },
+  {
+    "source": "jwt\\integrante\\inicio--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\integrante\\inicio--390x844.png",
+        "width": 390,
+        "height": 1526
+      }
+    ]
+  },
+  {
+    "source": "jwt\\integrante\\login--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\integrante\\login--1100x800.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jwt\\integrante\\login--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\integrante\\login--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jwt\\integrante\\login--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\integrante\\login--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "jwt\\jefe\\inicio--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\jefe\\inicio--1100x800.png",
+        "width": 1100,
+        "height": 942
+      }
+    ]
+  },
+  {
+    "source": "jwt\\jefe\\inicio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\jefe\\inicio--1440x900.png",
+        "width": 1440,
+        "height": 942
+      }
+    ]
+  },
+  {
+    "source": "jwt\\jefe\\inicio--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\jefe\\inicio--390x844.png",
+        "width": 390,
+        "height": 1526
+      }
+    ]
+  },
+  {
+    "source": "jwt\\jefe\\login--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\jefe\\login--1100x800.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jwt\\jefe\\login--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\jefe\\login--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jwt\\jefe\\login--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jwt\\jefe\\login--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "jwt-shell\\J1-login-1440.png",
+    "outputs": [
+      {
+        "file": "review\\jwt-shell\\J1-login-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jwt-shell\\J2-login-errores-1440.png",
+    "outputs": [
+      {
+        "file": "review\\jwt-shell\\J2-login-errores-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jwt-shell\\J4-login-401-1440.png",
+    "outputs": [
+      {
+        "file": "review\\jwt-shell\\J4-login-401-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jwt-shell\\J5-login-enviando-1440.png",
+    "outputs": [
+      {
+        "file": "review\\jwt-shell\\J5-login-enviando-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jwt-shell\\J6-inicio-jwt-1440.png",
+    "outputs": [
+      {
+        "file": "review\\jwt-shell\\J6-inicio-jwt-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jwt-shell\\J7-inicio-jwt-riel-1100.png",
+    "outputs": [
+      {
+        "file": "review\\jwt-shell\\J7-inicio-jwt-riel-1100.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jwt-shell\\J8-guard-cargando-1100.png",
+    "outputs": [
+      {
+        "file": "review\\jwt-shell\\J8-guard-cargando-1100.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jwt-shell\\J9-cajon-jwt-390.png",
+    "outputs": [
+      {
+        "file": "review\\jwt-shell\\J9-cajon-jwt-390.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "pantallas-de-error\\error-tsx--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\pantallas-de-error\\error-tsx--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "pantallas-de-error\\error-tsx--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\pantallas-de-error\\error-tsx--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "pantallas-de-error\\global-error--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\pantallas-de-error\\global-error--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "pantallas-de-error\\global-error--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\pantallas-de-error\\global-error--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "shell-dev-header\\A-1440-expandido.png",
+    "outputs": [
+      {
+        "file": "review\\shell-dev-header\\A-1440-expandido.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "shell-dev-header\\A-1440-riel-tooltip.png",
+    "outputs": [
+      {
+        "file": "review\\shell-dev-header\\A-1440-riel-tooltip.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "shell-dev-header\\B-390-cajon.png",
+    "outputs": [
+      {
+        "file": "review\\shell-dev-header\\B-390-cajon.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "shell-dev-header\\C1-sin-actor.png",
+    "outputs": [
+      {
+        "file": "review\\shell-dev-header\\C1-sin-actor.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "shell-dev-header\\C2-error-1440.png",
+    "outputs": [
+      {
+        "file": "review\\shell-dev-header\\C2-error-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "shell-dev-header\\C3-error-riel-1100.png",
+    "outputs": [
+      {
+        "file": "review\\shell-dev-header\\C3-error-riel-1100.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "shell-dev-header\\C5-cargando.png",
+    "outputs": [
+      {
+        "file": "review\\shell-dev-header\\C5-cargando.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "sidebar-sticky\\solicitudes-scroll-final--1100x800.png",
+    "outputs": [
+      {
+        "file": "review\\sidebar-sticky\\solicitudes-scroll-final--1100x800.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "sidebar-sticky\\solicitudes-scroll-final--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\sidebar-sticky\\solicitudes-scroll-final--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  }
+]

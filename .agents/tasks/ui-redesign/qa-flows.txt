@@ -1,0 +1,83 @@
+
+== demanda
+ok   solicitud B ya existía (reejecución) — e7ab86c0-018b-4755-843c-eee7ec1205a0
+ok   la ficha abre con el título guardado
+ok   PATCH /requests/:id de la edición — 200 Persona de prueba QA (editada)
+ok   toast «Solicitud actualizada.»
+ok   solicitud A ya existía (reejecución) — 4d650b85-0f57-4760-8f5f-79b454e3782d
+ok   triage A ya registrado (reejecución) — CONTINUAR
+ok   evaluación A ya registrada (reejecución) — 84
+ok   triage B ya registrado (reejecución) — CONTINUAR
+ok   evaluación B ya registrada (reejecución) — 47
+ok   demanda (beto): sin errores de consola — []
+ok   A ya aprobada (reejecución) — EN_EJECUCION
+ok   B ya devuelta (reejecución) — EN_TRIAGE
+ok   aprobaciones (jefe): sin errores de consola — []
+
+== plan
+ok   plan A ya existe (reejecución) — AUTORIZADO
+ok   fase A ya existe (reejecución) — 3a40eec1-af3f-4fe1-9a75-794a7fd94db6
+ok   tarea A ya existe (reejecución) — QA UI · Preparar extracción de datos resp=2a6264af-e786-4eba-96ce-9dc6fd6c6846
+ok   la tarea ya tiene responsable — 2a6264af-e786-4eba-96ce-9dc6fd6c6846
+ok   plan ya enviado (reejecución) — AUTORIZADO
+ok   plan (beto): sin errores de consola — []
+ok   plan ya autorizado (reejecución) — AUTORIZADO
+ok   autorización (jefe): sin errores de consola — []
+ok   la tarea de QA existe para transicionar — QA UI · Preparar extracción de datos TERMINADA
+ok   la tarea ya está en curso (reejecución) — TERMINADA
+ok   tarea ya aceptada (reejecución)
+ok   aceptación (jefe): sin errores de consola — []
+
+== registro
+ok   diario de prueba ya existe (reejecución) — ENVIADO
+ok   diario ya enviado (reejecución) — ENVIADO
+ok   semanal de prueba ya existe (reejecución) — ENVIADO
+ok   semanal ya enviado (reejecución) — ENVIADO
+ok   registro (beto): sin errores de consola — []
+
+== coordinacion
+ok   novedad de prueba ya existe (reejecución)
+ok   POST /issues/:id/transition — 201
+ok   toast «Novedad movida a …»
+ok   reunión de prueba ya existe (reejecución)
+ok   compromiso de prueba ya existe (reejecución)
+ok   POST /commitments/:id/transition — 201
+ok   toast «Compromiso movido a …»
+ok   coordinación (beto): sin errores de consola — []
+
+== activos
+ok   activo de prueba ya existe (reejecución) — ACTIVO
+ok   activo ya no está en borrador (reejecución) — ACTIVO
+ok   documento de prueba ya existe (reejecución) — VIGENTE
+ok   POST /documents/:id/versions — 201
+ok   toast «Nueva versión guardada.»
+ok   documento ya no está en borrador (reejecución) — VIGENTE
+ok   activos (beto): sin errores de consola — []
+
+== capacidad
+ok   disponibilidad del mes ya existe (reejecución) — 120 h
+ok   la segunda alta devuelve 409 — 409
+ok   toast «Ya hay disponibilidad para esa persona y mes.»
+ok   «Editar la existente» abre el diálogo de edición
+ok   POST /capacity/assignments — 201
+ok   capacidad (beto): sin errores de consola — []
+
+== controles
+ok   la ruta simplificada ya estaba guardada (reejecución)
+ok   validación incompleta: no llama a la API
+ok   POST /requests/:id/validations — 201 tipo=Funcional y aceptacion
+ok   toast de validación registrada (BR-008)
+ok   la validación aparece en el registro — 3 -> 4
+ok   GC4 ya está en «No aplica» (reejecución)
+ok   GC5 ya está en «No aplica» (reejecución)
+ok   controles (jefe): sin errores de consola — []
+
+== equipo
+ok   usuario de prueba ya existe (reejecución) — 0a4cb44e-5db8-455e-93e4-7de59756e9f8
+ok   el usuario de prueba ya tiene un rol (reejecución) — abc005fe-e043-4238-82a0-9e15220ff98b
+ok   hay un grant del usuario de prueba para revocar — abc005fe-e043-4238-82a0-9e15220ff98b
+ok   la UI envía DELETE /grants/:id — /grants/abc005fe-e043-4238-82a0-9e15220ff98b
+ok   el grant NO se borró en la API (DELETE interceptado) — active=true
+ok   equipo (jefe): sin errores de consola — []
+
+flujos: total=65 ok=65 fallidos=0

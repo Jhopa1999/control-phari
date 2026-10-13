@@ -1,0 +1,11 @@
+ok   1440x900 /demanda/solicitudes  | Solicitudes Registra y actualiza las solicitudes de demanda de tu alcance. Nueva solicitud Buscar Estado Todos Proceso Todos Prioridad Todas 47 solicitudes P1 P
+ok   1440x900 /mi-trabajo  | Mi trabajo Tareas en las que eres responsable, con su plan y su estado. Actualizar Buscar Estado Todos 1 tarea Tarea Tarea, ordenar Solicitud Fase Vence Vence, 
+ok   1440x900 /seguimiento/novedades  | Novedades Bloqueos, incidentes y solicitudes de apoyo. Cada incidente es un solo registro que se actualiza hasta resolverlo. Nueva novedad Novedades Título exte
+ok   1440x900 /activos/catalogo  | Activos Activos de datos y soluciones de cada proceso. Nuevo activo Buscar Proceso Todos Solicitud Todas Estado Todos 15 activos Nombre Nombre, ordenar Proceso 
+ok   1440x900 /inicio  | Panel del área Demanda del área en el periodo: volumen, bloqueos y distribución por estado y prioridad. Periodo Desde Hasta Solicitudes en alcance 47 Bloqueadas
+ok   390x844 /demanda/solicitudes  | Solicitudes Registra y actualiza las solicitudes de demanda de tu alcance. Nueva solicitud Buscar Estado Todos Proceso Todos Prioridad Todas 47 solicitudes P1 P
+ok   390x844 /mi-trabajo  | Mi trabajo Tareas en las que eres responsable, con su plan y su estado. Actualizar Buscar Estado Todos 1 tarea Tarea Tarea, ordenar Solicitud Fase Vence Vence, 
+ok   390x844 /seguimiento/novedades  | Novedades Bloqueos, incidentes y solicitudes de apoyo. Cada incidente es un solo registro que se actualiza hasta resolverlo. Nueva novedad Novedades Título exte
+ok   390x844 /activos/catalogo  | Activos Activos de datos y soluciones de cada proceso. Nuevo activo Buscar Proceso Todos Solicitud Todas Estado Todos 15 activos Nombre Nombre, ordenar Proceso 
+ok   390x844 /inicio  | Panel del área Demanda del área en el periodo: volumen, bloqueos y distribución por estado y prioridad. Periodo Desde Hasta Solicitudes en alcance 47 Bloqueadas
+modo=long total=10 fallidos=0

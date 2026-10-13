@@ -1,0 +1,542 @@
+[
+  {
+    "source": "integrante\\administracion-revision--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\administracion-revision--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\administracion-revision--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\administracion-revision--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\administracion-revision--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\administracion-revision--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\administracion-revision--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\administracion-revision--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-priorizacion--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-priorizacion--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-priorizacion--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-priorizacion--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-priorizacion--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-priorizacion--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-priorizacion--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-priorizacion--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-solicitudes--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-solicitudes--1280x800.png",
+        "width": 1280,
+        "height": 1449
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-solicitudes--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-solicitudes--1440x900.png",
+        "width": 1440,
+        "height": 1395
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-solicitudes--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-solicitudes--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\demanda-solicitudes--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 146
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-solicitudes--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-solicitudes--768x1024.png",
+        "width": 768,
+        "height": 1586
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-triage--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-triage--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-triage--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-triage--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-triage--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-triage--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-triage--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-triage--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\administracion-revision--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\administracion-revision--1280x800.png",
+        "width": 1280,
+        "height": 868
+      }
+    ]
+  },
+  {
+    "source": "jefe\\administracion-revision--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\administracion-revision--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\administracion-revision--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\administracion-revision--390x844.png",
+        "width": 390,
+        "height": 1170
+      }
+    ]
+  },
+  {
+    "source": "jefe\\administracion-revision--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\administracion-revision--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-priorizacion--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-priorizacion--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-priorizacion--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-priorizacion--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-priorizacion--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-priorizacion--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-priorizacion--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-priorizacion--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--1280x800.png",
+        "width": 1280,
+        "height": 1111
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--1440x900.png",
+        "width": 1440,
+        "height": 1111
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 432
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-priorizacion-requestId-13bd274d-0dba-4cd3-8404-6ce82062221d--768x1024.png",
+        "width": 768,
+        "height": 1581
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-solicitudes--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-solicitudes--1280x800.png",
+        "width": 1280,
+        "height": 1683
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-solicitudes--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-solicitudes--1440x900.png",
+        "width": 1440,
+        "height": 1565
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-solicitudes--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-solicitudes--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-solicitudes--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 380
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-solicitudes--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-solicitudes--768x1024--parte-1-de-2.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-solicitudes--768x1024--parte-2-de-2.png",
+        "width": 768,
+        "height": 20
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-triage--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-triage--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-triage--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-triage--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-triage--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-triage--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-triage--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-triage--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--1280x800.png",
+        "width": 1280,
+        "height": 1114
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--1440x900.png",
+        "width": 1440,
+        "height": 1114
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 233
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-triage-requestId-5066d467-6221-4bec-8164-86a013ae5269--768x1024.png",
+        "width": 768,
+        "height": 1544
+      }
+    ]
+  },
+  {
+    "source": "manual-devolver-vacio.png",
+    "outputs": [
+      {
+        "file": "review\\manual-devolver-vacio.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "manual-nueva-solicitud-errores.png",
+    "outputs": [
+      {
+        "file": "review\\manual-nueva-solicitud-errores.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "manual-triage-bloqueo.png",
+    "outputs": [
+      {
+        "file": "review\\manual-triage-bloqueo.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  }
+]

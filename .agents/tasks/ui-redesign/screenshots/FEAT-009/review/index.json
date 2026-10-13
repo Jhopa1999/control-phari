@@ -1,0 +1,352 @@
+[
+  {
+    "source": "integrante\\seguimiento-bitacora--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-bitacora--1280x800.png",
+        "width": 1280,
+        "height": 852
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-bitacora--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-bitacora--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-bitacora--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-bitacora--390x844.png",
+        "width": 390,
+        "height": 1586
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-bitacora--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-bitacora--768x1024.png",
+        "width": 768,
+        "height": 1470
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-semanal--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-semanal--1280x800.png",
+        "width": 1280,
+        "height": 1082
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-semanal--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-semanal--1440x900.png",
+        "width": 1440,
+        "height": 1082
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-semanal--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-semanal--390x844.png",
+        "width": 390,
+        "height": 1505
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-semanal--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-semanal--768x1024.png",
+        "width": 768,
+        "height": 1347
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-bitacora--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-bitacora--1280x800.png",
+        "width": 1280,
+        "height": 852
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-bitacora--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-bitacora--1440x900.png",
+        "width": 1440,
+        "height": 952
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-bitacora--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-bitacora--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\seguimiento-bitacora--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 1756
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-bitacora--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-bitacora--768x1024--parte-1-de-2.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\seguimiento-bitacora--768x1024--parte-2-de-2.png",
+        "width": 768,
+        "height": 1576
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-semanal--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-semanal--1280x800.png",
+        "width": 1280,
+        "height": 1082
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-semanal--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-semanal--1440x900.png",
+        "width": 1440,
+        "height": 1082
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-semanal--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-semanal--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\seguimiento-semanal--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 10
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-semanal--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-semanal--768x1024.png",
+        "width": 768,
+        "height": 1652
+      }
+    ]
+  },
+  {
+    "source": "lider\\seguimiento-bitacora--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\lider\\seguimiento-bitacora--1280x800.png",
+        "width": 1280,
+        "height": 852
+      }
+    ]
+  },
+  {
+    "source": "lider\\seguimiento-bitacora--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\lider\\seguimiento-bitacora--1440x900.png",
+        "width": 1440,
+        "height": 952
+      }
+    ]
+  },
+  {
+    "source": "lider\\seguimiento-bitacora--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\lider\\seguimiento-bitacora--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\lider\\seguimiento-bitacora--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 457
+      }
+    ]
+  },
+  {
+    "source": "lider\\seguimiento-bitacora--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\lider\\seguimiento-bitacora--768x1024--parte-1-de-2.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\lider\\seguimiento-bitacora--768x1024--parte-2-de-2.png",
+        "width": 768,
+        "height": 341
+      }
+    ]
+  },
+  {
+    "source": "lider\\seguimiento-semanal--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\lider\\seguimiento-semanal--1280x800.png",
+        "width": 1280,
+        "height": 1082
+      }
+    ]
+  },
+  {
+    "source": "lider\\seguimiento-semanal--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\lider\\seguimiento-semanal--1440x900.png",
+        "width": 1440,
+        "height": 1082
+      }
+    ]
+  },
+  {
+    "source": "lider\\seguimiento-semanal--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\lider\\seguimiento-semanal--390x844.png",
+        "width": 390,
+        "height": 1627
+      }
+    ]
+  },
+  {
+    "source": "lider\\seguimiento-semanal--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\lider\\seguimiento-semanal--768x1024.png",
+        "width": 768,
+        "height": 1469
+      }
+    ]
+  },
+  {
+    "source": "lideria\\seguimiento-bitacora--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\seguimiento-bitacora--1280x800.png",
+        "width": 1280,
+        "height": 852
+      }
+    ]
+  },
+  {
+    "source": "lideria\\seguimiento-bitacora--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\seguimiento-bitacora--1440x900.png",
+        "width": 1440,
+        "height": 913
+      }
+    ]
+  },
+  {
+    "source": "lideria\\seguimiento-bitacora--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\seguimiento-bitacora--390x844.png",
+        "width": 390,
+        "height": 1604
+      }
+    ]
+  },
+  {
+    "source": "lideria\\seguimiento-bitacora--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\seguimiento-bitacora--768x1024.png",
+        "width": 768,
+        "height": 1424
+      }
+    ]
+  },
+  {
+    "source": "lideria\\seguimiento-semanal--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\seguimiento-semanal--1280x800.png",
+        "width": 1280,
+        "height": 1084
+      }
+    ]
+  },
+  {
+    "source": "lideria\\seguimiento-semanal--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\seguimiento-semanal--1440x900.png",
+        "width": 1440,
+        "height": 1084
+      }
+    ]
+  },
+  {
+    "source": "lideria\\seguimiento-semanal--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\seguimiento-semanal--390x844.png",
+        "width": 390,
+        "height": 1526
+      }
+    ]
+  },
+  {
+    "source": "lideria\\seguimiento-semanal--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\seguimiento-semanal--768x1024.png",
+        "width": 768,
+        "height": 1410
+      }
+    ]
+  }
+]

@@ -1,0 +1,115 @@
+{
+  "requestId": "d24edd4b-1ad4-4467-8555-76f64495f850",
+  "checks": [
+    {
+      "name": "1440x900 enlace directo con query lleva a /login?next",
+      "ok": true,
+      "detail": "http://localhost:3300/login?next=%2Fseguimiento%2Fplan%3FrequestId%3Dd24edd4b-1ad4-4467-8555-76f64495f850"
+    },
+    {
+      "name": "1440x900 tras iniciar sesión vuelve a la ruta con query",
+      "ok": true,
+      "detail": "http://localhost:3300/seguimiento/plan?requestId=d24edd4b-1ad4-4467-8555-76f64495f850"
+    },
+    {
+      "name": "1440x900 F5 en /inicio conserva sesión y ruta",
+      "ok": true,
+      "detail": "http://localhost:3300/inicio"
+    },
+    {
+      "name": "1440x900 F5 en /seguimiento/plan?requestId=d24edd4b-1ad4-4467-8555-76f64495f850 conserva sesión y ruta",
+      "ok": true,
+      "detail": "http://localhost:3300/seguimiento/plan?requestId=d24edd4b-1ad4-4467-8555-76f64495f850"
+    },
+    {
+      "name": "1440x900 F5 en /gobierno/auditoria conserva sesión y ruta",
+      "ok": true,
+      "detail": "http://localhost:3300/gobierno/auditoria"
+    },
+    {
+      "name": "1440x900 /login con sesión lleva a /inicio",
+      "ok": true,
+      "detail": "http://localhost:3300/inicio"
+    },
+    {
+      "name": "1440x900 /login con error 500 de permisos muestra el formulario",
+      "ok": true,
+      "detail": "http://localhost:3300/login"
+    },
+    {
+      "name": "1440x900 cerrar sesión lleva a /login sin next",
+      "ok": true,
+      "detail": "http://localhost:3300/login"
+    },
+    {
+      "name": "1440x900 token rechazado lleva a /login?expired=1",
+      "ok": true,
+      "detail": "http://localhost:3300/login?expired=1"
+    },
+    {
+      "name": "1440x900 sin errores de consola salvo los 401/500 provocados",
+      "ok": true,
+      "detail": "Failed to load resource: the server responded with a status of 500 (Internal Server Error) | Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "name": "1440x900 localStorage bloqueado lleva a /login?next",
+      "ok": true,
+      "detail": "http://localhost:3300/login?next=%2Fdemanda%2Fsolicitudes"
+    },
+    {
+      "name": "390x844 enlace directo con query lleva a /login?next",
+      "ok": true,
+      "detail": "http://localhost:3300/login?next=%2Fseguimiento%2Fplan%3FrequestId%3Dd24edd4b-1ad4-4467-8555-76f64495f850"
+    },
+    {
+      "name": "390x844 tras iniciar sesión vuelve a la ruta con query",
+      "ok": true,
+      "detail": "http://localhost:3300/seguimiento/plan?requestId=d24edd4b-1ad4-4467-8555-76f64495f850"
+    },
+    {
+      "name": "390x844 F5 en /inicio conserva sesión y ruta",
+      "ok": true,
+      "detail": "http://localhost:3300/inicio"
+    },
+    {
+      "name": "390x844 F5 en /seguimiento/plan?requestId=d24edd4b-1ad4-4467-8555-76f64495f850 conserva sesión y ruta",
+      "ok": true,
+      "detail": "http://localhost:3300/seguimiento/plan?requestId=d24edd4b-1ad4-4467-8555-76f64495f850"
+    },
+    {
+      "name": "390x844 F5 en /gobierno/auditoria conserva sesión y ruta",
+      "ok": true,
+      "detail": "http://localhost:3300/gobierno/auditoria"
+    },
+    {
+      "name": "390x844 /login con sesión lleva a /inicio",
+      "ok": true,
+      "detail": "http://localhost:3300/inicio"
+    },
+    {
+      "name": "390x844 /login con error 500 de permisos muestra el formulario",
+      "ok": true,
+      "detail": "http://localhost:3300/login"
+    },
+    {
+      "name": "390x844 cerrar sesión lleva a /login sin next",
+      "ok": true,
+      "detail": "http://localhost:3300/login"
+    },
+    {
+      "name": "390x844 token rechazado lleva a /login?expired=1",
+      "ok": true,
+      "detail": "http://localhost:3300/login?expired=1"
+    },
+    {
+      "name": "390x844 sin errores de consola salvo los 401/500 provocados",
+      "ok": true,
+      "detail": "Failed to load resource: the server responded with a status of 500 (Internal Server Error) | Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "name": "390x844 localStorage bloqueado lleva a /login?next",
+      "ok": true,
+      "detail": "http://localhost:3300/login?next=%2Fdemanda%2Fsolicitudes"
+    }
+  ]
+}

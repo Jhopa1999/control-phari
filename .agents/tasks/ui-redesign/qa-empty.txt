@@ -1,0 +1,13 @@
+ok   1440x900 /demanda/solicitudes  | Solicitudes Registra y actualiza las solicitudes de demanda de tu alcance. Nueva solicitud Buscar Estado Todos Proceso Todos Prioridad Todas 0 solicitudes P1 Pr
+ok   1440x900 /gobierno/auditoria  | Auditoría Cambios registrados dentro de tu alcance. Objeto Todos Vuelve a consultar al servidor. Acción Todas Acota lo que se muestra; no cambia la consulta. 0 
+ok   1440x900 /mi-trabajo  | Mi trabajo Tareas en las que eres responsable, con su plan y su estado. Actualizar Buscar Estado Todos 0 tareas No tienes tareas asignadas. Las tareas de las qu
+ok   1440x900 /seguimiento/novedades  | Novedades Bloqueos, incidentes y solicitudes de apoyo. Cada incidente es un solo registro que se actualiza hasta resolverlo. Nueva novedad Novedades Aún no hay 
+ok   1440x900 /seguimiento/compromisos  | Compromisos Acuerdos con vencimiento y responsable. Puedes relacionarlos con una reunión de origen. Nuevo compromiso Compromisos Aún no hay compromisos. Registr
+ok   1440x900 /activos/catalogo  | Activos Activos de datos y soluciones de cada proceso. Nuevo activo Buscar Proceso Todos Solicitud Todas Estado Todos 0 activos Aún no hay activos registrados. 
+ok   390x844 /demanda/solicitudes  | Solicitudes Registra y actualiza las solicitudes de demanda de tu alcance. Nueva solicitud Buscar Estado Todos Proceso Todos Prioridad Todas 0 solicitudes P1 Pr
+ok   390x844 /gobierno/auditoria  | Auditoría Cambios registrados dentro de tu alcance. Objeto Todos Vuelve a consultar al servidor. Acción Todas Acota lo que se muestra; no cambia la consulta. 0 
+ok   390x844 /mi-trabajo  | Mi trabajo Tareas en las que eres responsable, con su plan y su estado. Actualizar Buscar Estado Todos 0 tareas No tienes tareas asignadas. Las tareas de las qu
+ok   390x844 /seguimiento/novedades  | Novedades Bloqueos, incidentes y solicitudes de apoyo. Cada incidente es un solo registro que se actualiza hasta resolverlo. Nueva novedad Novedades Aún no hay 
+ok   390x844 /seguimiento/compromisos  | Compromisos Acuerdos con vencimiento y responsable. Puedes relacionarlos con una reunión de origen. Nuevo compromiso Compromisos Aún no hay compromisos. Registr
+ok   390x844 /activos/catalogo  | Activos Activos de datos y soluciones de cada proceso. Nuevo activo Buscar Proceso Todos Solicitud Todas Estado Todos 0 activos Aún no hay activos registrados. 
+modo=empty total=12 fallidos=0

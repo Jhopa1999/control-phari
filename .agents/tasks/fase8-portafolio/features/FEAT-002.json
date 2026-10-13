@@ -1,0 +1,23 @@
+{
+  "id": "FEAT-002",
+  "type": "chore",
+  "description": "Regenerar y COMMITTEAR el contrato OpenAPI y el cliente tipado tras los nuevos DTOs de FEAT-001, para que el frontend (FEAT-003) consuma los tipos reales. Depende de FEAT-001 (los DTOs y endpoints deben existir y compilar).",
+  "status": "completed",
+  "steps": [
+    "Ejecutar npm run contracts:generate desde la raíz del worktree (= openapi:generate que emite apps/api/openapi/openapi.json vía tsx src/generate-openapi.ts, + api-client:generate que regenera packages/api-client/src/generated/schema.d.ts vía openapi-typescript).",
+    "Ejecutar npm run build:api-client y confirmar que compila.",
+    "Confirmar que packages/api-client/src/generated/schema.d.ts incluye en components['schemas'] los tipos AreaIndicatorsResponseDto, DemandSummaryResponseDto y PortfolioItemResponseDto (y los DTOs anidados: IndicatorStatusDto, EvaluationTimeIndicatorDto, MilestoneComplianceIndicatorDto, DeliveryTimeIndicatorDto, BlocksIndicatorDto, FutureIndicatorDto, StateCountDto, BandCountDto).",
+    "Committear localmente en la rama feat/fase8-portafolio los artefactos generados: apps/api/openapi/openapi.json y packages/api-client/src/generated/schema.d.ts (ambos trackeados por git). NO hacer push."
+  ],
+  "acceptance_criteria": [
+    "npm run build:api-client termina sin errores.",
+    "Los 3 schemas de respuesta (AreaIndicatorsResponseDto, DemandSummaryResponseDto, PortfolioItemResponseDto) están presentes en packages/api-client/src/generated/schema.d.ts.",
+    "apps/api/openapi/openapi.json y packages/api-client/src/generated/schema.d.ts quedan committeados en la rama (git status limpio respecto a esos dos archivos tras volver a correr contracts:generate)."
+  ],
+  "verification": [
+    "npm run contracts:generate",
+    "npm run build:api-client"
+  ],
+  "blocked_reason": null,
+  "findings": "Contrato regenerado y verificado. npm run contracts:generate corrio OK (openapi:generate via tsx src/generate-openapi.ts emitio apps/api/openapi/openapi.json; api-client:generate via openapi-typescript 7.13.0 regenero packages/api-client/src/generated/schema.d.ts). npm run build:api-client compilo sin errores (tsc -p tsconfig.json + copy-schema.mjs).\n- VERIFICADO en schema.d.ts generado (components['schemas']): AreaIndicatorsResponseDto, DemandSummaryResponseDto y PortfolioItemResponseDto[] estan presentes, mas TODOS los anidados: IndicatorStatusDto, EvaluationTimeIndicatorDto, MilestoneComplianceIndicatorDto, DeliveryTimeGroupDto, DeliveryTimeIndicatorDto, BlockCauseDto, BlocksIndicatorDto, FutureIndicatorDto, StateCountDto, BandCountDto. Las 3 rutas (/area-control/indicators, /area-control/demand-summary, /portfolio) referencian estos schemas en sus responses application/json.\n- COMMIT: los dos artefactos trackeados (apps/api/openapi/openapi.json y packages/api-client/src/generated/schema.d.ts) YA fueron committeados por FEAT-001 en el commit 437c5de de feat/fase8-portafolio. Al volver a correr contracts:generate la salida fue IDENTICA (git status limpio, sin diff en esos dos archivos), por lo que no habia nada nuevo que committear; el commit separado de FEAT-002 no aplica porque no hay cambios. Se cumple el acceptance criterion de 'git status limpio tras volver a correr contracts:generate'. NO se hizo push.\n- FEAT-001 findings confirmados: RequestModule ya exportaba RequestStateService; sin cambios en DTOs posteriores. FEAT-003 (frontend) puede derivar los tipos de components['schemas'][...] sin regenerar."
+}

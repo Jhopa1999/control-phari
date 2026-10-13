@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-10-12T13:20:56.908Z",
+  "total": 11,
+  "failed": 0,
+  "results": [
+    {
+      "name": "J1 /login sin shell: un solo main#contenido con el h1 «Iniciar sesión»",
+      "ok": true
+    },
+    {
+      "name": "J2 enviar vacío: los dos errores a la vez, con role=alert, aria-invalid, aria-describedby y foco al primero",
+      "ok": true
+    },
+    {
+      "name": "J3 al escribir, el error de ese campo desaparece",
+      "ok": true
+    },
+    {
+      "name": "J4 contraseña incorrecta: «Usuario o contraseña incorrectos.» en el FormError y valores conservados",
+      "ok": true
+    },
+    {
+      "name": "J5 durante el envío: «Ingresando…», aria-busy, botón y campos deshabilitados; después /inicio",
+      "ok": true
+    },
+    {
+      "name": "J6 1440: bloque «Usuario autenticado» con nombre e identificador y un solo «Cerrar sesión»; sin selector dev",
+      "ok": true
+    },
+    {
+      "name": "J7 1100 (riel): nombre e identificador siguen en el árbol, un solo «Cerrar sesión» (icono) con tooltip",
+      "ok": true,
+      "detail": {
+        "avatarTitle": "Ana Jefa"
+      }
+    },
+    {
+      "name": "J8 pantalla de carga del guard: marca, spinner y «Cargando tu sesión…» en role=status",
+      "ok": true
+    },
+    {
+      "name": "J9 390: el cajón tiene el bloque de usuario y «Cerrar sesión»; sin ids duplicados",
+      "ok": true
+    },
+    {
+      "name": "J10 «Cerrar sesión» desde el riel: /login sin next y sin token",
+      "ok": true
+    },
+    {
+      "name": "J11 en jwt no se llama a /dev/actors y no hay errores ni avisos de consola",
+      "ok": true,
+      "detail": {
+        "erroresProvocados": 1
+      }
+    }
+  ]
+}

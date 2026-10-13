@@ -1,0 +1,78 @@
+
+> plantilla-portales@0.1.0 build
+> npm run build:api && npm run build:api-client && npm run build:web
+
+
+> plantilla-portales@0.1.0 build:api
+> npm run build --workspace apps/api
+
+
+> @plantilla-portales/api@0.1.0 build
+> nest build
+
+
+> plantilla-portales@0.1.0 build:api-client
+> npm run build --workspace packages/api-client
+
+
+> @plantilla-portales/api-client@0.1.0 build
+> tsc -p tsconfig.json && node ./scripts/copy-schema.mjs
+
+[api-client] schema copiado -> C:\Users\analistabi2\Desarrollo\control-phari\.worktrees\ui-redesign\packages\api-client\dist\generated\schema.d.ts
+
+> plantilla-portales@0.1.0 build:web
+> npm run build --workspace apps/web
+
+
+> @plantilla-portales/web@0.1.0 build
+> next build
+
+▲ Next.js 16.4.0 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 68ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.6s
+  Running TypeScript ...
+  Finished TypeScript in 6.0s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/29) ...
+  Generating static pages using 7 workers (7/29) 
+  Generating static pages using 7 workers (14/29) 
+  Generating static pages using 7 workers (21/29) 
+✓ Generating static pages using 7 workers (29/29) in 1386ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /activos/capacidad
+├ ○ /activos/catalogo
+├ ○ /activos/documentos
+├ ○ /administracion/frameworks
+├ ○ /administracion/maestras
+├ ○ /administracion/revision
+├ ○ /catalogs
+├ ○ /demanda/priorizacion
+├ ○ /demanda/resumen
+├ ○ /demanda/solicitudes
+├ ○ /demanda/triage
+├ ○ /gobierno/auditoria
+├ ○ /gobierno/equipo
+├ ○ /gobierno/mis-permisos
+├ ○ /inicio
+├ ○ /login
+├ ○ /mi-trabajo
+├ ○ /seguimiento/bitacora
+├ ○ /seguimiento/compromisos
+├ ○ /seguimiento/novedades
+├ ○ /seguimiento/plan
+├ ○ /seguimiento/portafolio
+├ ○ /seguimiento/proyectos
+├ ○ /seguimiento/reuniones
+├ ○ /seguimiento/semanal
+└ ○ /seguimiento/tareas
+
+
+○  (Static)  prerendered as static content
+

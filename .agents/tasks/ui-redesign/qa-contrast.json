@@ -1,0 +1,1250 @@
+{
+  "measuredAt": "2026-10-13T00:25:08.207Z",
+  "base": "http://localhost:3300",
+  "report": {
+    "light": [
+      {
+        "fg": "foreground",
+        "bg": "background",
+        "use": "texto principal",
+        "min": 4.5,
+        "ratio": 17.76,
+        "pass": true,
+        "fgCss": "lab(8.28833 -0.156209 -5.16435)",
+        "bgCss": "lab(100 0 0)",
+        "fgRgb": [
+          21,
+          24,
+          31
+        ],
+        "bgRgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      {
+        "fg": "foreground",
+        "bg": "surface-subtle",
+        "use": "texto sobre superficie sutil",
+        "min": 4.5,
+        "ratio": 16.57,
+        "pass": true,
+        "fgCss": "lab(8.28833 -0.156209 -5.16435)",
+        "bgCss": "lab(97.088 -0.091821 -1.13481)",
+        "fgRgb": [
+          21,
+          24,
+          31
+        ],
+        "bgRgb": [
+          246,
+          247,
+          249
+        ]
+      },
+      {
+        "fg": "card-foreground",
+        "bg": "card",
+        "use": "texto en tarjetas",
+        "min": 4.5,
+        "ratio": 17.76,
+        "pass": true,
+        "fgCss": "lab(8.28833 -0.156209 -5.16435)",
+        "bgCss": "lab(100 0 0)",
+        "fgRgb": [
+          21,
+          24,
+          31
+        ],
+        "bgRgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      {
+        "fg": "popover-foreground",
+        "bg": "popover",
+        "use": "menús y desplegables",
+        "min": 4.5,
+        "ratio": 17.76,
+        "pass": true,
+        "fgCss": "lab(8.28833 -0.156209 -5.16435)",
+        "bgCss": "lab(100 0 0)",
+        "fgRgb": [
+          21,
+          24,
+          31
+        ],
+        "bgRgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      {
+        "fg": "muted-foreground",
+        "bg": "background",
+        "use": "texto secundario",
+        "min": 4.5,
+        "ratio": 6.53,
+        "pass": true,
+        "fgCss": "lab(39.5972 -0.364319 -6.70935)",
+        "bgCss": "lab(100 0 0)",
+        "fgRgb": [
+          88,
+          94,
+          104
+        ],
+        "bgRgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      {
+        "fg": "muted-foreground",
+        "bg": "card",
+        "use": "texto secundario en tarjeta",
+        "min": 4.5,
+        "ratio": 6.53,
+        "pass": true,
+        "fgCss": "lab(39.5972 -0.364319 -6.70935)",
+        "bgCss": "lab(100 0 0)",
+        "fgRgb": [
+          88,
+          94,
+          104
+        ],
+        "bgRgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      {
+        "fg": "muted-foreground",
+        "bg": "muted",
+        "use": "texto secundario sobre muted",
+        "min": 4.5,
+        "ratio": 5.89,
+        "pass": true,
+        "fgCss": "lab(39.5972 -0.364319 -6.70935)",
+        "bgCss": "lab(95.9239 -0.121236 -1.51231)",
+        "fgRgb": [
+          88,
+          94,
+          104
+        ],
+        "bgRgb": [
+          242,
+          243,
+          246
+        ]
+      },
+      {
+        "fg": "muted-foreground",
+        "bg": "surface-subtle",
+        "use": "texto secundario en barra de contexto",
+        "min": 4.5,
+        "ratio": 6.09,
+        "pass": true,
+        "fgCss": "lab(39.5972 -0.364319 -6.70935)",
+        "bgCss": "lab(97.088 -0.091821 -1.13481)",
+        "fgRgb": [
+          88,
+          94,
+          104
+        ],
+        "bgRgb": [
+          246,
+          247,
+          249
+        ]
+      },
+      {
+        "fg": "primary",
+        "bg": "background",
+        "use": "enlaces",
+        "min": 4.5,
+        "ratio": 6.98,
+        "pass": true,
+        "fgCss": "lab(37.2151 6.44305 -52.0981)",
+        "bgCss": "lab(100 0 0)",
+        "fgRgb": [
+          26,
+          87,
+          173
+        ],
+        "bgRgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      {
+        "fg": "primary",
+        "bg": "primary-subtle",
+        "use": "elemento activo / seleccionado",
+        "min": 4.5,
+        "ratio": 6.13,
+        "pass": true,
+        "fgCss": "lab(37.2151 6.44305 -52.0981)",
+        "bgCss": "lab(94.7314 -1.04186 -6.28837)",
+        "fgRgb": [
+          26,
+          87,
+          173
+        ],
+        "bgRgb": [
+          233,
+          241,
+          252
+        ]
+      },
+      {
+        "fg": "primary-foreground",
+        "bg": "primary",
+        "use": "botón primario",
+        "min": 4.5,
+        "ratio": 6.68,
+        "pass": true,
+        "fgCss": "lab(98.248 -0.0918508 -1.13485)",
+        "bgCss": "lab(37.2151 6.44305 -52.0981)",
+        "fgRgb": [
+          249,
+          250,
+          252
+        ],
+        "bgRgb": [
+          26,
+          87,
+          173
+        ]
+      },
+      {
+        "fg": "primary-foreground",
+        "bg": "primary-hover",
+        "use": "botón primario (hover)",
+        "min": 4.5,
+        "ratio": 8.21,
+        "pass": true,
+        "fgCss": "lab(98.248 -0.0918508 -1.13485)",
+        "bgCss": "lab(31.4569 6.76785 -48.5812)",
+        "fgRgb": [
+          249,
+          250,
+          252
+        ],
+        "bgRgb": [
+          16,
+          74,
+          151
+        ]
+      },
+      {
+        "fg": "secondary-foreground",
+        "bg": "secondary",
+        "use": "botón secundario",
+        "min": 4.5,
+        "ratio": 15.59,
+        "pass": true,
+        "fgCss": "lab(8.28833 -0.156209 -5.16435)",
+        "bgCss": "lab(94.7639 -0.121236 -1.51227)",
+        "fgRgb": [
+          21,
+          24,
+          31
+        ],
+        "bgRgb": [
+          239,
+          240,
+          243
+        ]
+      },
+      {
+        "fg": "secondary-foreground",
+        "bg": "secondary-hover",
+        "use": "botón secundario (hover)",
+        "min": 4.5,
+        "ratio": 14.21,
+        "pass": true,
+        "fgCss": "lab(8.28833 -0.156209 -5.16435)",
+        "bgCss": "lab(91.2672 -0.231802 -3.01831)",
+        "fgRgb": [
+          21,
+          24,
+          31
+        ],
+        "bgRgb": [
+          227,
+          230,
+          236
+        ]
+      },
+      {
+        "fg": "accent-foreground",
+        "bg": "accent",
+        "use": "hover de fila / ghost",
+        "min": 4.5,
+        "ratio": 15.57,
+        "pass": true,
+        "fgCss": "lab(8.28833 -0.156209 -5.16435)",
+        "bgCss": "lab(94.7598 -0.149995 -1.88941)",
+        "fgRgb": [
+          21,
+          24,
+          31
+        ],
+        "bgRgb": [
+          238,
+          240,
+          244
+        ]
+      },
+      {
+        "fg": "destructive-foreground",
+        "bg": "destructive",
+        "use": "botón destructivo",
+        "min": 4.5,
+        "ratio": 5.82,
+        "pass": true,
+        "fgCss": "lab(98.248 -0.0918508 -1.13485)",
+        "bgCss": "lab(42.4236 59.8149 41.9956)",
+        "fgRgb": [
+          249,
+          250,
+          252
+        ],
+        "bgRgb": [
+          190,
+          35,
+          35
+        ]
+      },
+      {
+        "fg": "destructive-foreground",
+        "bg": "destructive-hover",
+        "use": "botón destructivo (hover)",
+        "min": 4.5,
+        "ratio": 7.16,
+        "pass": true,
+        "fgCss": "lab(98.248 -0.0918508 -1.13485)",
+        "bgCss": "lab(36.7136 56.7532 40.8365)",
+        "fgRgb": [
+          249,
+          250,
+          252
+        ],
+        "bgRgb": [
+          169,
+          21,
+          24
+        ]
+      },
+      {
+        "fg": "success",
+        "bg": "success-subtle",
+        "use": "badge éxito",
+        "min": 4.5,
+        "ratio": 6.04,
+        "pass": true,
+        "fgCss": "lab(38.8544 -36.4235 24.2394)",
+        "bgCss": "lab(95.8301 -10.5625 6.19323)",
+        "fgRgb": [
+          15,
+          106,
+          49
+        ],
+        "bgRgb": [
+          225,
+          249,
+          230
+        ]
+      },
+      {
+        "fg": "warning",
+        "bg": "warning-subtle",
+        "use": "badge aviso",
+        "min": 4.5,
+        "ratio": 6.09,
+        "pass": true,
+        "fgCss": "lab(39.243 22.5154 48.0641)",
+        "bgCss": "lab(96.0699 1.01763 13.1601)",
+        "fgRgb": [
+          136,
+          77,
+          1
+        ],
+        "bgRgb": [
+          254,
+          242,
+          218
+        ]
+      },
+      {
+        "fg": "danger",
+        "bg": "danger-subtle",
+        "use": "badge peligro",
+        "min": 4.5,
+        "ratio": 5.86,
+        "pass": true,
+        "fgCss": "lab(40.2064 56.6396 39.4962)",
+        "bgCss": "lab(95.1951 5.31921 2.4871)",
+        "fgRgb": [
+          179,
+          35,
+          34
+        ],
+        "bgRgb": [
+          253,
+          238,
+          237
+        ]
+      },
+      {
+        "fg": "info",
+        "bg": "info-subtle",
+        "use": "badge información",
+        "min": 4.5,
+        "ratio": 6.08,
+        "pass": true,
+        "fgCss": "lab(37.5112 3.50545 -45.3086)",
+        "bgCss": "lab(94.7314 -1.04186 -6.28837)",
+        "fgRgb": [
+          39,
+          89,
+          162
+        ],
+        "bgRgb": [
+          233,
+          241,
+          252
+        ]
+      },
+      {
+        "fg": "neutral",
+        "bg": "neutral-subtle",
+        "use": "badge neutro",
+        "min": 4.5,
+        "ratio": 7.43,
+        "pass": true,
+        "fgCss": "lab(32.6462 -0.320941 -5.96249)",
+        "bgCss": "lab(94.7639 -0.121236 -1.51227)",
+        "fgRgb": [
+          73,
+          77,
+          86
+        ],
+        "bgRgb": [
+          239,
+          240,
+          243
+        ]
+      },
+      {
+        "fg": "success",
+        "bg": "background",
+        "use": "texto de éxito",
+        "min": 4.5,
+        "ratio": 6.72,
+        "pass": true,
+        "fgCss": "lab(38.8544 -36.4235 24.2394)",
+        "bgCss": "lab(100 0 0)",
+        "fgRgb": [
+          15,
+          106,
+          49
+        ],
+        "bgRgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      {
+        "fg": "warning",
+        "bg": "background",
+        "use": "texto de aviso",
+        "min": 4.5,
+        "ratio": 6.75,
+        "pass": true,
+        "fgCss": "lab(39.243 22.5154 48.0641)",
+        "bgCss": "lab(100 0 0)",
+        "fgRgb": [
+          136,
+          77,
+          1
+        ],
+        "bgRgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      {
+        "fg": "danger",
+        "bg": "background",
+        "use": "texto de error de campo",
+        "min": 4.5,
+        "ratio": 6.6,
+        "pass": true,
+        "fgCss": "lab(40.2064 56.6396 39.4962)",
+        "bgCss": "lab(100 0 0)",
+        "fgRgb": [
+          179,
+          35,
+          34
+        ],
+        "bgRgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      {
+        "fg": "success-foreground",
+        "bg": "success",
+        "use": "relleno de éxito",
+        "min": 4.5,
+        "ratio": 6.43,
+        "pass": true,
+        "fgCss": "lab(98.248 -0.0918508 -1.13485)",
+        "bgCss": "lab(38.8544 -36.4235 24.2394)",
+        "fgRgb": [
+          249,
+          250,
+          252
+        ],
+        "bgRgb": [
+          15,
+          106,
+          49
+        ]
+      },
+      {
+        "fg": "sidebar-foreground",
+        "bg": "sidebar",
+        "use": "menú lateral",
+        "min": 4.5,
+        "ratio": 10.04,
+        "pass": true,
+        "fgCss": "lab(25.6845 -0.289634 -5.94817)",
+        "bgCss": "lab(96.7359 -0.121295 -1.51234)",
+        "fgRgb": [
+          57,
+          61,
+          70
+        ],
+        "bgRgb": [
+          244,
+          246,
+          248
+        ]
+      },
+      {
+        "fg": "sidebar-muted-foreground",
+        "bg": "sidebar",
+        "use": "grupos del menú",
+        "min": 4.5,
+        "ratio": 5.75,
+        "pass": true,
+        "fgCss": "lab(40.7678 -0.347629 -5.9752)",
+        "bgCss": "lab(96.7359 -0.121295 -1.51234)",
+        "fgRgb": [
+          92,
+          97,
+          106
+        ],
+        "bgRgb": [
+          244,
+          246,
+          248
+        ]
+      },
+      {
+        "fg": "sidebar-accent-foreground",
+        "bg": "sidebar-accent",
+        "use": "ítem activo del menú",
+        "min": 4.5,
+        "ratio": 14.21,
+        "pass": true,
+        "fgCss": "lab(8.28833 -0.156209 -5.16435)",
+        "bgCss": "lab(91.2672 -0.231802 -3.01831)",
+        "fgRgb": [
+          21,
+          24,
+          31
+        ],
+        "bgRgb": [
+          227,
+          230,
+          236
+        ]
+      },
+      {
+        "fg": "input",
+        "bg": "background",
+        "use": "borde de campo (no texto, 1.4.11)",
+        "min": 3,
+        "ratio": 3.65,
+        "pass": true,
+        "fgCss": "lab(55.8686 -0.309169 -4.50608)",
+        "bgCss": "lab(100 0 0)",
+        "fgRgb": [
+          130,
+          134,
+          142
+        ],
+        "bgRgb": [
+          255,
+          255,
+          255
+        ]
+      },
+      {
+        "fg": "ring",
+        "bg": "background",
+        "use": "anillo de foco (no texto, 2.4.11/1.4.11)",
+        "min": 3,
+        "ratio": 6.98,
+        "pass": true,
+        "fgCss": "lab(37.2151 6.44305 -52.0981)",
+        "bgCss": "lab(100 0 0)",
+        "fgRgb": [
+          26,
+          87,
+          173
+        ],
+        "bgRgb": [
+          255,
+          255,
+          255
+        ]
+      }
+    ],
+    "dark": [
+      {
+        "fg": "foreground",
+        "bg": "background",
+        "use": "texto principal",
+        "min": 4.5,
+        "ratio": 16.52,
+        "pass": true,
+        "fgCss": "lab(94.1839 -0.121236 -1.51224)",
+        "bgCss": "lab(4.40437 -0.0913739 -2.76522)",
+        "fgRgb": [
+          237,
+          238,
+          241
+        ],
+        "bgRgb": [
+          13,
+          15,
+          20
+        ]
+      },
+      {
+        "fg": "foreground",
+        "bg": "surface-subtle",
+        "use": "texto sobre superficie sutil",
+        "min": 4.5,
+        "ratio": 15.77,
+        "pass": true,
+        "fgCss": "lab(94.1839 -0.121236 -1.51224)",
+        "bgCss": "lab(6.64972 -0.139602 -3.92696)",
+        "fgRgb": [
+          237,
+          238,
+          241
+        ],
+        "bgRgb": [
+          18,
+          21,
+          26
+        ]
+      },
+      {
+        "fg": "card-foreground",
+        "bg": "card",
+        "use": "texto en tarjetas",
+        "min": 4.5,
+        "ratio": 15.63,
+        "pass": true,
+        "fgCss": "lab(94.1839 -0.121236 -1.51224)",
+        "bgCss": "lab(7.17602 -0.151373 -4.02204)",
+        "fgRgb": [
+          237,
+          238,
+          241
+        ],
+        "bgRgb": [
+          19,
+          22,
+          27
+        ]
+      },
+      {
+        "fg": "popover-foreground",
+        "bg": "popover",
+        "use": "menús y desplegables",
+        "min": 4.5,
+        "ratio": 15.63,
+        "pass": true,
+        "fgCss": "lab(94.1839 -0.121236 -1.51224)",
+        "bgCss": "lab(7.17602 -0.151373 -4.02204)",
+        "fgRgb": [
+          237,
+          238,
+          241
+        ],
+        "bgRgb": [
+          19,
+          22,
+          27
+        ]
+      },
+      {
+        "fg": "muted-foreground",
+        "bg": "background",
+        "use": "texto secundario",
+        "min": 4.5,
+        "ratio": 7.75,
+        "pass": true,
+        "fgCss": "lab(67.46 -0.36037 -5.25689)",
+        "bgCss": "lab(4.40437 -0.0913739 -2.76522)",
+        "fgRgb": [
+          160,
+          165,
+          174
+        ],
+        "bgRgb": [
+          13,
+          15,
+          20
+        ]
+      },
+      {
+        "fg": "muted-foreground",
+        "bg": "card",
+        "use": "texto secundario en tarjeta",
+        "min": 4.5,
+        "ratio": 7.33,
+        "pass": true,
+        "fgCss": "lab(67.46 -0.36037 -5.25689)",
+        "bgCss": "lab(7.17602 -0.151373 -4.02204)",
+        "fgRgb": [
+          160,
+          165,
+          174
+        ],
+        "bgRgb": [
+          19,
+          22,
+          27
+        ]
+      },
+      {
+        "fg": "muted-foreground",
+        "bg": "muted",
+        "use": "texto secundario sobre muted",
+        "min": 4.5,
+        "ratio": 6.82,
+        "pass": true,
+        "fgCss": "lab(67.46 -0.36037 -5.25689)",
+        "bgCss": "lab(10.6217 -0.18844 -4.44859)",
+        "fgRgb": [
+          160,
+          165,
+          174
+        ],
+        "bgRgb": [
+          26,
+          29,
+          35
+        ]
+      },
+      {
+        "fg": "muted-foreground",
+        "bg": "surface-subtle",
+        "use": "texto secundario en barra de contexto",
+        "min": 4.5,
+        "ratio": 7.39,
+        "pass": true,
+        "fgCss": "lab(67.46 -0.36037 -5.25689)",
+        "bgCss": "lab(6.64972 -0.139602 -3.92696)",
+        "fgRgb": [
+          160,
+          165,
+          174
+        ],
+        "bgRgb": [
+          18,
+          21,
+          26
+        ]
+      },
+      {
+        "fg": "primary",
+        "bg": "background",
+        "use": "enlaces",
+        "min": 4.5,
+        "ratio": 7.74,
+        "pass": true,
+        "fgCss": "lab(66.9201 -2.92665 -42.1444)",
+        "bgCss": "lab(4.40437 -0.0913739 -2.76522)",
+        "fgRgb": [
+          113,
+          167,
+          239
+        ],
+        "bgRgb": [
+          13,
+          15,
+          20
+        ]
+      },
+      {
+        "fg": "primary",
+        "bg": "primary-subtle",
+        "use": "elemento activo / seleccionado",
+        "min": 4.5,
+        "ratio": 5.91,
+        "pass": true,
+        "fgCss": "lab(66.9201 -2.92665 -42.1444)",
+        "bgCss": "lab(16.1924 -0.428259 -17.6586)",
+        "fgRgb": [
+          113,
+          167,
+          239
+        ],
+        "bgRgb": [
+          25,
+          41,
+          65
+        ]
+      },
+      {
+        "fg": "primary-foreground",
+        "bg": "primary",
+        "use": "botón primario",
+        "min": 4.5,
+        "ratio": 7.62,
+        "pass": true,
+        "fgCss": "lab(5.12103 0.231124 -9.99233)",
+        "bgCss": "lab(66.9201 -2.92665 -42.1444)",
+        "fgRgb": [
+          10,
+          17,
+          31
+        ],
+        "bgRgb": [
+          113,
+          167,
+          239
+        ]
+      },
+      {
+        "fg": "primary-foreground",
+        "bg": "primary-hover",
+        "use": "botón primario (hover)",
+        "min": 4.5,
+        "ratio": 9.12,
+        "pass": true,
+        "fgCss": "lab(5.12103 0.231124 -9.99233)",
+        "bgCss": "lab(72.8189 -3.58698 -38.8225)",
+        "fgRgb": [
+          10,
+          17,
+          31
+        ],
+        "bgRgb": [
+          133,
+          183,
+          250
+        ]
+      },
+      {
+        "fg": "secondary-foreground",
+        "bg": "secondary",
+        "use": "botón secundario",
+        "min": 4.5,
+        "ratio": 13.74,
+        "pass": true,
+        "fgCss": "lab(94.1839 -0.121236 -1.51224)",
+        "bgCss": "lab(12.9426 -0.203989 -4.45529)",
+        "fgRgb": [
+          237,
+          238,
+          241
+        ],
+        "bgRgb": [
+          31,
+          34,
+          40
+        ]
+      },
+      {
+        "fg": "secondary-foreground",
+        "bg": "secondary-hover",
+        "use": "botón secundario (hover)",
+        "min": 4.5,
+        "ratio": 12.22,
+        "pass": true,
+        "fgCss": "lab(94.1839 -0.121236 -1.51224)",
+        "bgCss": "lab(17.5785 -0.233769 -4.83221)",
+        "fgRgb": [
+          237,
+          238,
+          241
+        ],
+        "bgRgb": [
+          40,
+          43,
+          50
+        ]
+      },
+      {
+        "fg": "accent-foreground",
+        "bg": "accent",
+        "use": "hover de fila / ghost",
+        "min": 4.5,
+        "ratio": 13.74,
+        "pass": true,
+        "fgCss": "lab(94.1839 -0.121236 -1.51224)",
+        "bgCss": "lab(12.9426 -0.203989 -4.45529)",
+        "fgRgb": [
+          237,
+          238,
+          241
+        ],
+        "bgRgb": [
+          31,
+          34,
+          40
+        ]
+      },
+      {
+        "fg": "destructive-foreground",
+        "bg": "destructive",
+        "use": "botón destructivo",
+        "min": 4.5,
+        "ratio": 5.34,
+        "pass": true,
+        "fgCss": "lab(98.248 -0.0918508 -1.13485)",
+        "bgCss": "lab(44.7116 60.1633 37.6838)",
+        "fgRgb": [
+          249,
+          250,
+          252
+        ],
+        "bgRgb": [
+          197,
+          43,
+          48
+        ]
+      },
+      {
+        "fg": "destructive-foreground",
+        "bg": "destructive-hover",
+        "use": "botón destructivo (hover)",
+        "min": 4.5,
+        "ratio": 6.57,
+        "pass": true,
+        "fgCss": "lab(98.248 -0.0918508 -1.13485)",
+        "bgCss": "lab(39.0055 57.0581 36.3156)",
+        "fgRgb": [
+          249,
+          250,
+          252
+        ],
+        "bgRgb": [
+          176,
+          30,
+          37
+        ]
+      },
+      {
+        "fg": "success",
+        "bg": "success-subtle",
+        "use": "badge éxito",
+        "min": 4.5,
+        "ratio": 8.37,
+        "pass": true,
+        "fgCss": "lab(78.4851 -39.858 23.6764)",
+        "bgCss": "lab(15.8405 -12.2388 7.25718)",
+        "fgRgb": [
+          120,
+          214,
+          148
+        ],
+        "bgRgb": [
+          23,
+          44,
+          29
+        ]
+      },
+      {
+        "fg": "warning",
+        "bg": "warning-subtle",
+        "use": "badge aviso",
+        "min": 4.5,
+        "ratio": 8.56,
+        "pass": true,
+        "fgCss": "lab(80.3772 11.2993 50.6135)",
+        "bgCss": "lab(16.4098 6.86993 18.0899)",
+        "fgRgb": [
+          240,
+          190,
+          103
+        ],
+        "bgRgb": [
+          55,
+          37,
+          14
+        ]
+      },
+      {
+        "fg": "danger",
+        "bg": "danger-subtle",
+        "use": "badge peligro",
+        "min": 4.5,
+        "ratio": 6.58,
+        "pass": true,
+        "fgCss": "lab(70.8529 41.1456 20.061)",
+        "bgCss": "lab(15.9764 15.8326 7.7409)",
+        "fgRgb": [
+          249,
+          142,
+          139
+        ],
+        "bgRgb": [
+          62,
+          30,
+          30
+        ]
+      },
+      {
+        "fg": "info",
+        "bg": "info-subtle",
+        "use": "badge información",
+        "min": 4.5,
+        "ratio": 7.32,
+        "pass": true,
+        "fgCss": "lab(74.0513 -3.75864 -35.4117)",
+        "bgCss": "lab(16.1924 -0.428259 -17.6586)",
+        "fgRgb": [
+          141,
+          186,
+          247
+        ],
+        "bgRgb": [
+          25,
+          41,
+          65
+        ]
+      },
+      {
+        "fg": "neutral",
+        "bg": "neutral-subtle",
+        "use": "badge neutro",
+        "min": 4.5,
+        "ratio": 8.67,
+        "pass": true,
+        "fgCss": "lab(79.0784 -0.279218 -3.76683)",
+        "bgCss": "lab(15.2741 -0.203803 -3.72809)",
+        "fgRgb": [
+          193,
+          196,
+          203
+        ],
+        "bgRgb": [
+          36,
+          38,
+          43
+        ]
+      },
+      {
+        "fg": "success",
+        "bg": "background",
+        "use": "texto de éxito",
+        "min": 4.5,
+        "ratio": 10.81,
+        "pass": true,
+        "fgCss": "lab(78.4851 -39.858 23.6764)",
+        "bgCss": "lab(4.40437 -0.0913739 -2.76522)",
+        "fgRgb": [
+          120,
+          214,
+          148
+        ],
+        "bgRgb": [
+          13,
+          15,
+          20
+        ]
+      },
+      {
+        "fg": "warning",
+        "bg": "background",
+        "use": "texto de aviso",
+        "min": 4.5,
+        "ratio": 11.2,
+        "pass": true,
+        "fgCss": "lab(80.3772 11.2993 50.6135)",
+        "bgCss": "lab(4.40437 -0.0913739 -2.76522)",
+        "fgRgb": [
+          240,
+          190,
+          103
+        ],
+        "bgRgb": [
+          13,
+          15,
+          20
+        ]
+      },
+      {
+        "fg": "danger",
+        "bg": "background",
+        "use": "texto de error de campo",
+        "min": 4.5,
+        "ratio": 8.46,
+        "pass": true,
+        "fgCss": "lab(70.8529 41.1456 20.061)",
+        "bgCss": "lab(4.40437 -0.0913739 -2.76522)",
+        "fgRgb": [
+          249,
+          142,
+          139
+        ],
+        "bgRgb": [
+          13,
+          15,
+          20
+        ]
+      },
+      {
+        "fg": "success-foreground",
+        "bg": "success",
+        "use": "relleno de éxito",
+        "min": 4.5,
+        "ratio": 10.81,
+        "pass": true,
+        "fgCss": "lab(4.40437 -0.0913739 -2.76522)",
+        "bgCss": "lab(78.4851 -39.858 23.6764)",
+        "fgRgb": [
+          13,
+          15,
+          20
+        ],
+        "bgRgb": [
+          120,
+          214,
+          148
+        ]
+      },
+      {
+        "fg": "sidebar-foreground",
+        "bg": "sidebar",
+        "use": "menú lateral",
+        "min": 4.5,
+        "ratio": 11.34,
+        "pass": true,
+        "fgCss": "lab(79.0784 -0.279218 -3.76683)",
+        "bgCss": "lab(2.73161 -0.0553355 -1.81826)",
+        "fgRgb": [
+          193,
+          196,
+          203
+        ],
+        "bgRgb": [
+          8,
+          10,
+          14
+        ]
+      },
+      {
+        "fg": "sidebar-muted-foreground",
+        "bg": "sidebar",
+        "use": "grupos del menú",
+        "min": 4.5,
+        "ratio": 6.35,
+        "pass": true,
+        "fgCss": "lab(60.4996 -0.352889 -5.25292)",
+        "bgCss": "lab(2.73161 -0.0553355 -1.81826)",
+        "fgRgb": [
+          142,
+          146,
+          155
+        ],
+        "bgRgb": [
+          8,
+          10,
+          14
+        ]
+      },
+      {
+        "fg": "sidebar-accent-foreground",
+        "bg": "sidebar-accent",
+        "use": "ítem activo del menú",
+        "min": 4.5,
+        "ratio": 14.61,
+        "pass": true,
+        "fgCss": "lab(96.508 -0.0918806 -1.1348)",
+        "bgCss": "lab(12.9426 -0.203989 -4.45529)",
+        "fgRgb": [
+          244,
+          245,
+          247
+        ],
+        "bgRgb": [
+          31,
+          34,
+          40
+        ]
+      },
+      {
+        "fg": "input",
+        "bg": "background",
+        "use": "borde de campo (no texto, 1.4.11)",
+        "min": 3,
+        "ratio": 3.48,
+        "pass": true,
+        "fgCss": "lab(44.2582 -0.32866 -5.24042)",
+        "bgCss": "lab(4.40437 -0.0913739 -2.76522)",
+        "fgRgb": [
+          101,
+          105,
+          113
+        ],
+        "bgRgb": [
+          13,
+          15,
+          20
+        ]
+      },
+      {
+        "fg": "ring",
+        "bg": "background",
+        "use": "anillo de foco (no texto, 2.4.11/1.4.11)",
+        "min": 3,
+        "ratio": 7.74,
+        "pass": true,
+        "fgCss": "lab(66.9201 -2.92665 -42.1444)",
+        "bgCss": "lab(4.40437 -0.0913739 -2.76522)",
+        "fgRgb": [
+          113,
+          167,
+          239
+        ],
+        "bgRgb": [
+          13,
+          15,
+          20
+        ]
+      }
+    ]
+  }
+}

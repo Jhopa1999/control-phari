@@ -1,0 +1,122 @@
+[
+  {
+    "source": "integrante\\inicio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\inicio--1440x900.png",
+        "width": 1440,
+        "height": 914
+      }
+    ]
+  },
+  {
+    "source": "integrante\\inicio--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\inicio--390x844.png",
+        "width": 390,
+        "height": 1374
+      }
+    ]
+  },
+  {
+    "source": "integrante\\login--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\login--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\login--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\login--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-proyectos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-proyectos--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-proyectos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-proyectos--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--1440x900.png",
+        "width": 1440,
+        "height": 914
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--390x844.png",
+        "width": 390,
+        "height": 1374
+      }
+    ]
+  },
+  {
+    "source": "jefe\\login--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\login--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\login--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\login--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-proyectos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-proyectos--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-proyectos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-proyectos--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  }
+]

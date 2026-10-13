@@ -1,0 +1,539 @@
+{
+  "capturedAt": "2026-10-13T03:33:16.973Z",
+  "web": "http://localhost:3300",
+  "api": "http://localhost:3301",
+  "conditions": [
+    "Misma sesión que before-same-data: jwt, jefe@demo.local (e integrante.bi@demo.local para sus dos capturas).",
+    "Rutas protegidas con carga completa dentro de la sesión (la recarga en jwt quedó corregida, design §8.7).",
+    "Indicador de desarrollo de Next oculto; scroll arriba y puntero en (0,0) antes de cada captura.",
+    "Mismas selecciones: Planificación y Controles con la primera solicitud de APPROVED_WITH_PLAN; Capacidad en 2026-10."
+  ],
+  "results": [
+    {
+      "file": "login-1440.png",
+      "route": "/login",
+      "user": "(sin sesión)",
+      "viewport": "1440x900",
+      "checks": {
+        "url": "/login",
+        "h1": "Iniciar sesión",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 900,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "inicio-1440.png",
+      "route": "/inicio",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "checks": {
+        "url": "/inicio",
+        "h1": "Panel del área",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 20,
+        "pageHeight": 914,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "demanda-solicitudes-1440.png",
+      "route": "/demanda/solicitudes",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "checks": {
+        "url": "/demanda/solicitudes",
+        "h1": "Solicitudes",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 25,
+        "pageHeight": 1565,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "demanda-priorizacion-1440.png",
+      "route": "/demanda/priorizacion",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "checks": {
+        "url": "/demanda/priorizacion",
+        "h1": "Priorización",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 900,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "demanda-priorizacion-seleccion-1440.png",
+      "route": "/demanda/priorizacion",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "extra": true,
+      "selection": "Gobierno del dato maestro de clientes entre BI, Integraciones e IA · Backlog priorizado",
+      "checks": {
+        "url": "/demanda/priorizacion?requestId=13bd274d-0dba-4cd3-8404-6ce82062221d",
+        "h1": "Priorización",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 1111,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "demanda-triage-1440.png",
+      "route": "/demanda/triage",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "checks": {
+        "url": "/demanda/triage",
+        "h1": "Triage",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 900,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "demanda-triage-seleccion-1440.png",
+      "route": "/demanda/triage",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "extra": true,
+      "selection": "Catálogo corporativo de datos y glosario de negocio · En triage",
+      "checks": {
+        "url": "/demanda/triage?requestId=7ad70344-b279-4304-8c68-44034e37148e",
+        "h1": "Triage",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 900,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "seguimiento-tareas-1440.png",
+      "route": "/seguimiento/tareas",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "checks": {
+        "url": "/seguimiento/tareas",
+        "h1": "Detalle de tarea",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 900,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "seguimiento-plan-1440.png",
+      "route": "/seguimiento/plan",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "selection": "Tablero ejecutivo de ventas y margen por canal · En ejecución",
+      "checks": {
+        "url": "/seguimiento/plan?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+        "h1": "Planificación",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 15,
+        "pageHeight": 1321,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "seguimiento-tareas-detalle-1440.png",
+      "route": "/seguimiento/tareas?taskId=<primera tarea del plan>",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "extra": true,
+      "openedFrom": "Tablero ejecutivo de ventas y margen por canal · En ejecución",
+      "task": "Entrevistas con Gerencia Comercial y Finanzas",
+      "checks": {
+        "url": "/seguimiento/tareas?taskId=7c69f63c-1535-4ec8-9a77-25a1cc21161f",
+        "h1": "Entrevistas con Gerencia Comercial y Finanzas",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 900,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "activos-capacidad-1440.png",
+      "route": "/activos/capacidad",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "month": "2026-10",
+      "checks": {
+        "url": "/activos/capacidad",
+        "h1": "Capacidad",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 33,
+        "pageHeight": 2089,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "administracion-frameworks-1440.png",
+      "route": "/administracion/frameworks",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "selection": "Tablero ejecutivo de ventas y margen por canal · En ejecución",
+      "gates": 5,
+      "checks": {
+        "url": "/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+        "h1": "Controles de gobierno",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 1439,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "gobierno-equipo-1440.png",
+      "route": "/gobierno/equipo",
+      "user": "jefe@demo.local",
+      "viewport": "1440x900",
+      "checks": {
+        "url": "/gobierno/equipo",
+        "h1": "Equipo y permisos",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 30,
+        "pageHeight": 1496,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "login-390.png",
+      "route": "/login",
+      "user": "(sin sesión)",
+      "viewport": "390x844",
+      "checks": {
+        "url": "/login",
+        "h1": "Iniciar sesión",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 844,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "inicio-390.png",
+      "route": "/inicio",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "checks": {
+        "url": "/inicio",
+        "h1": "Panel del área",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 20,
+        "pageHeight": 1374,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "demanda-solicitudes-390.png",
+      "route": "/demanda/solicitudes",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "checks": {
+        "url": "/demanda/solicitudes",
+        "h1": "Solicitudes",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 25,
+        "pageHeight": 2234,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "demanda-priorizacion-390.png",
+      "route": "/demanda/priorizacion",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "checks": {
+        "url": "/demanda/priorizacion",
+        "h1": "Priorización",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 844,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "demanda-priorizacion-seleccion-390.png",
+      "route": "/demanda/priorizacion",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "extra": true,
+      "selection": "Gobierno del dato maestro de clientes entre BI, Integraciones e IA · Backlog priorizado",
+      "checks": {
+        "url": "/demanda/priorizacion?requestId=13bd274d-0dba-4cd3-8404-6ce82062221d",
+        "h1": "Priorización",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 2232,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "demanda-triage-390.png",
+      "route": "/demanda/triage",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "checks": {
+        "url": "/demanda/triage",
+        "h1": "Triage",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 844,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "demanda-triage-seleccion-390.png",
+      "route": "/demanda/triage",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "extra": true,
+      "selection": "Catálogo corporativo de datos y glosario de negocio · En triage",
+      "checks": {
+        "url": "/demanda/triage?requestId=7ad70344-b279-4304-8c68-44034e37148e",
+        "h1": "Triage",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 1154,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "seguimiento-tareas-390.png",
+      "route": "/seguimiento/tareas",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "checks": {
+        "url": "/seguimiento/tareas",
+        "h1": "Detalle de tarea",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 844,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "seguimiento-plan-390.png",
+      "route": "/seguimiento/plan",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "selection": "Tablero ejecutivo de ventas y margen por canal · En ejecución",
+      "checks": {
+        "url": "/seguimiento/plan?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+        "h1": "Planificación",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 15,
+        "pageHeight": 1843,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "seguimiento-tareas-detalle-390.png",
+      "route": "/seguimiento/tareas?taskId=<primera tarea del plan>",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "extra": true,
+      "openedFrom": "Tablero ejecutivo de ventas y margen por canal · En ejecución",
+      "task": "Entrevistas con Gerencia Comercial y Finanzas",
+      "checks": {
+        "url": "/seguimiento/tareas?taskId=7c69f63c-1535-4ec8-9a77-25a1cc21161f",
+        "h1": "Entrevistas con Gerencia Comercial y Finanzas",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 1094,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "activos-capacidad-390.png",
+      "route": "/activos/capacidad",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "month": "2026-10",
+      "checks": {
+        "url": "/activos/capacidad",
+        "h1": "Capacidad",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 33,
+        "pageHeight": 2157,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "administracion-frameworks-390.png",
+      "route": "/administracion/frameworks",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "selection": "Tablero ejecutivo de ventas y margen por canal · En ejecución",
+      "gates": 5,
+      "checks": {
+        "url": "/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+        "h1": "Controles de gobierno",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 0,
+        "pageHeight": 2744,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "gobierno-equipo-390.png",
+      "route": "/gobierno/equipo",
+      "user": "jefe@demo.local",
+      "viewport": "390x844",
+      "checks": {
+        "url": "/gobierno/equipo",
+        "h1": "Equipo y permisos",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 30,
+        "pageHeight": 1658,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "integrante-inicio-1440.png",
+      "route": "/inicio",
+      "user": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "checks": {
+        "url": "/inicio",
+        "h1": "Panel del área",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 20,
+        "pageHeight": 914,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    },
+    {
+      "file": "integrante-mi-trabajo-1440.png",
+      "route": "/mi-trabajo",
+      "user": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "checks": {
+        "url": "/mi-trabajo",
+        "h1": "Mi trabajo",
+        "skeletons": 0,
+        "errorMessages": [],
+        "sessionGuardVisible": false,
+        "tableRows": 16,
+        "pageHeight": 931,
+        "horizontalOverflowPx": 0
+      },
+      "consoleErrors": [],
+      "failedApiResponses": []
+    }
+  ]
+}

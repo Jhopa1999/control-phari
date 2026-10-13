@@ -1,0 +1,32 @@
+[
+  {
+    "source": "nav-1100x800-final.png",
+    "outputs": [
+      {
+        "file": "review\\nav-1100x800-final.png",
+        "width": 1100,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "nav-1440x1400-final.png",
+    "outputs": [
+      {
+        "file": "review\\nav-1440x1400-final.png",
+        "width": 1440,
+        "height": 1400
+      }
+    ]
+  },
+  {
+    "source": "nav-1440x900-final.png",
+    "outputs": [
+      {
+        "file": "review\\nav-1440x900-final.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  }
+]

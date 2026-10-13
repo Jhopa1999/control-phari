@@ -1,0 +1,678 @@
+[
+  {
+    "source": "integrante\\seguimiento-plan--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-portafolio--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-portafolio--1280x800.png",
+        "width": 1280,
+        "height": 1504
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-portafolio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-portafolio--1440x900.png",
+        "width": 1440,
+        "height": 1504
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-portafolio--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-portafolio--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\seguimiento-portafolio--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 115
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-portafolio--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-portafolio--768x1024.png",
+        "width": 768,
+        "height": 1623
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--390x844.png",
+        "width": 390,
+        "height": 934
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--390x844.png",
+        "width": 390,
+        "height": 1042
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--390x844.png",
+        "width": 390,
+        "height": 876
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1280x800.png",
+        "width": 1280,
+        "height": 1455
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1440x900.png",
+        "width": 1440,
+        "height": 1321
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 43
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--768x1024.png",
+        "width": 768,
+        "height": 1623
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1280x800.png",
+        "width": 1280,
+        "height": 1740
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1440x900.png",
+        "width": 1440,
+        "height": 1716
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 658
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--768x1024--parte-1-de-2.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\seguimiento-plan-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--768x1024--parte-2-de-2.png",
+        "width": 768,
+        "height": 102
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-portafolio--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-portafolio--1280x800.png",
+        "width": 1280,
+        "height": 1755
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-portafolio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-portafolio--1440x900.png",
+        "width": 1440,
+        "height": 1755
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-portafolio--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-portafolio--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\seguimiento-portafolio--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 366
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-portafolio--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-portafolio--768x1024--parte-1-de-2.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\seguimiento-portafolio--768x1024--parte-2-de-2.png",
+        "width": 768,
+        "height": 74
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--390x844.png",
+        "width": 390,
+        "height": 1112
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-0b627ebf-759e-4fe5-9dd6-ef4b89ddb556--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--390x844.png",
+        "width": 390,
+        "height": 1220
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-9e18bd14-8f0b-4109-b68f-d86689bf2a23--768x1024.png",
+        "width": 768,
+        "height": 1047
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--390x844.png",
+        "width": 390,
+        "height": 1054
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-tareas-taskId-f7ab2224-5518-4a05-b0ff-ec0e03baafd3--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  }
+]

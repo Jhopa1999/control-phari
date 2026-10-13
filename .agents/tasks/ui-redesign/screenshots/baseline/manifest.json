@@ -1,0 +1,366 @@
+[
+  {
+    "route": "/activos/capacidad",
+    "viewport": "desktop",
+    "file": "activos-capacidad--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/activos/catalogo",
+    "viewport": "desktop",
+    "file": "activos-catalogo--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/activos/documentos",
+    "viewport": "desktop",
+    "file": "activos-documentos--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/administracion/frameworks",
+    "viewport": "desktop",
+    "file": "administracion-frameworks--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/administracion/maestras",
+    "viewport": "desktop",
+    "file": "administracion-maestras--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/administracion/revision",
+    "viewport": "desktop",
+    "file": "administracion-revision--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/catalogs",
+    "viewport": "desktop",
+    "file": "catalogs--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/demanda/priorizacion",
+    "viewport": "desktop",
+    "file": "demanda-priorizacion--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/demanda/resumen",
+    "viewport": "desktop",
+    "file": "demanda-resumen--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/demanda/solicitudes",
+    "viewport": "desktop",
+    "file": "demanda-solicitudes--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/demanda/triage",
+    "viewport": "desktop",
+    "file": "demanda-triage--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/gobierno/auditoria",
+    "viewport": "desktop",
+    "file": "gobierno-auditoria--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/gobierno/equipo",
+    "viewport": "desktop",
+    "file": "gobierno-equipo--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/gobierno/mis-permisos",
+    "viewport": "desktop",
+    "file": "gobierno-mis-permisos--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 3
+  },
+  {
+    "route": "/inicio",
+    "viewport": "desktop",
+    "file": "inicio--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/login",
+    "viewport": "desktop",
+    "file": "login--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/mi-trabajo",
+    "viewport": "desktop",
+    "file": "mi-trabajo--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/bitacora",
+    "viewport": "desktop",
+    "file": "seguimiento-bitacora--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/compromisos",
+    "viewport": "desktop",
+    "file": "seguimiento-compromisos--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/novedades",
+    "viewport": "desktop",
+    "file": "seguimiento-novedades--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/plan",
+    "viewport": "desktop",
+    "file": "seguimiento-plan--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/portafolio",
+    "viewport": "desktop",
+    "file": "seguimiento-portafolio--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/proyectos",
+    "viewport": "desktop",
+    "file": "seguimiento-proyectos--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/reuniones",
+    "viewport": "desktop",
+    "file": "seguimiento-reuniones--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/semanal",
+    "viewport": "desktop",
+    "file": "seguimiento-semanal--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/tareas",
+    "viewport": "desktop",
+    "file": "seguimiento-tareas--desktop.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/activos/capacidad",
+    "viewport": "mobile",
+    "file": "activos-capacidad--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/activos/catalogo",
+    "viewport": "mobile",
+    "file": "activos-catalogo--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/activos/documentos",
+    "viewport": "mobile",
+    "file": "activos-documentos--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/administracion/frameworks",
+    "viewport": "mobile",
+    "file": "administracion-frameworks--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/administracion/maestras",
+    "viewport": "mobile",
+    "file": "administracion-maestras--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/administracion/revision",
+    "viewport": "mobile",
+    "file": "administracion-revision--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/catalogs",
+    "viewport": "mobile",
+    "file": "catalogs--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/demanda/priorizacion",
+    "viewport": "mobile",
+    "file": "demanda-priorizacion--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/demanda/resumen",
+    "viewport": "mobile",
+    "file": "demanda-resumen--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/demanda/solicitudes",
+    "viewport": "mobile",
+    "file": "demanda-solicitudes--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/demanda/triage",
+    "viewport": "mobile",
+    "file": "demanda-triage--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/gobierno/auditoria",
+    "viewport": "mobile",
+    "file": "gobierno-auditoria--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/gobierno/equipo",
+    "viewport": "mobile",
+    "file": "gobierno-equipo--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/gobierno/mis-permisos",
+    "viewport": "mobile",
+    "file": "gobierno-mis-permisos--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 3
+  },
+  {
+    "route": "/inicio",
+    "viewport": "mobile",
+    "file": "inicio--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/login",
+    "viewport": "mobile",
+    "file": "login--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/mi-trabajo",
+    "viewport": "mobile",
+    "file": "mi-trabajo--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/bitacora",
+    "viewport": "mobile",
+    "file": "seguimiento-bitacora--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/compromisos",
+    "viewport": "mobile",
+    "file": "seguimiento-compromisos--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/novedades",
+    "viewport": "mobile",
+    "file": "seguimiento-novedades--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/plan",
+    "viewport": "mobile",
+    "file": "seguimiento-plan--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/portafolio",
+    "viewport": "mobile",
+    "file": "seguimiento-portafolio--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/proyectos",
+    "viewport": "mobile",
+    "file": "seguimiento-proyectos--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/reuniones",
+    "viewport": "mobile",
+    "file": "seguimiento-reuniones--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/semanal",
+    "viewport": "mobile",
+    "file": "seguimiento-semanal--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  },
+  {
+    "route": "/seguimiento/tareas",
+    "viewport": "mobile",
+    "file": "seguimiento-tareas--mobile.png",
+    "actor": "Ana Jefa",
+    "consoleErrors": 0
+  }
+]

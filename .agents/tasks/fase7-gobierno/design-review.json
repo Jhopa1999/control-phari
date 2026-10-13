@@ -1,0 +1,31 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": "NIT-1",
+      "severity": "NIT",
+      "title": "VALIDATION_RESULT.BLOQUEADA colisiona conceptualmente con el flag blocking",
+      "where": "design.md §2.7, §1.5/D-C3b",
+      "problem": "El resultCode BLOQUEADA junto a un campo blocking:boolean invita a tratarlos como equivalentes, cuando el diseno los declara ortogonales. Coherente internamente, pero confuso para el implementador.",
+      "fix": "Aclarar en §2.7 que el bloqueo de GC4 se evalua EXCLUSIVAMENTE sobre blocking=true AND blockingResolved=false (D-C5), nunca sobre resultCode; VALIDATION_RESULT.BLOQUEADA es solo etiqueta descriptiva."
+    },
+    {
+      "id": "NIT-2",
+      "severity": "NIT",
+      "title": "confirm-stabilization mueve a OPERATIVA sin registrar evidencia de recepcion operativa (marco §8)",
+      "where": "design.md §1.2 D-B4, §3.4",
+      "problem": "El marco §8/§5 exige 'recepcion operativa confirmada'. El endpoint tiene note? opcional y no captura ningun registro de la recepcion. No bloquea porque el diseno difiere transferencia/expediente a Fase 8 y la autoridad GC5 es acto separado, pero el nombre promete una confirmacion que el modelo no materializa.",
+      "fix": "Documentar en §3.4 que confirm-stabilization no registra evidencia (eso es Fase 8) y solo mueve el estado, O reutilizar GatePendingItem/ValidationRecord de GC5 como registro minimo. Elegir una opcion y marcarla reversible (R14)."
+    },
+    {
+      "id": "NIT-3",
+      "severity": "NIT",
+      "title": "La obligatoriedad de FUNCIONAL_ACEPTACION para GC4 no fija si se cuenta a nivel Request o vinculada al gateCheckId del GC4",
+      "where": "design.md §1.5, §2.4 (gateCheckId opcional)",
+      "problem": "Con ValidationRecord.gateCheckId opcional, no queda determinado si la validacion obligatoria debe estar vinculada al GC4 o basta a nivel de Request. En reprocesos puede cambiar el resultado del recomputo server-side.",
+      "fix": "Fijar en §1.5 y en el spec de §6 que la obligatoriedad se evalua sobre ValidationRecord con requestId=:id (recomendado, mas simple y testeable), declarandolo explicitamente."
+    }
+  ],
+  "counts": { "HIGH": 0, "MEDIUM": 0, "NIT": 3 },
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\fase7-gobierno\\design-review.md"
+}

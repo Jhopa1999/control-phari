@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Registrar inicio de agente",
+      "trigger": "SessionStart",
+      "description": "Anexa una línea con timestamp y el contexto de sesión a .kiro/agent-usage.log cuando arranca una sesión/agente.",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .kiro/hooks/log-agent-usage.ps1 -Event \"INICIO\""
+      },
+      "enabled": false
+    }
+  ]
+}

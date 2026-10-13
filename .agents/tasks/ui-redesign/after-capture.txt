@@ -1,0 +1,29 @@
+ok login-1440.png h1="Iniciar sesión" filas=0 alto=900
+ok inicio-1440.png h1="Panel del área" filas=20 alto=914
+ok demanda-solicitudes-1440.png h1="Solicitudes" filas=25 alto=1565
+ok demanda-priorizacion-1440.png h1="Priorización" filas=0 alto=900
+ok demanda-priorizacion-seleccion-1440.png h1="Priorización" filas=0 alto=1111
+ok demanda-triage-1440.png h1="Triage" filas=0 alto=900
+ok demanda-triage-seleccion-1440.png h1="Triage" filas=0 alto=900
+ok seguimiento-tareas-1440.png h1="Detalle de tarea" filas=0 alto=900
+ok seguimiento-plan-1440.png h1="Planificación" filas=15 alto=1321
+ok seguimiento-tareas-detalle-1440.png h1="Entrevistas con Gerencia Comercial y Finanzas" filas=0 alto=900
+ok activos-capacidad-1440.png h1="Capacidad" filas=33 alto=2089
+ok administracion-frameworks-1440.png h1="Controles de gobierno" filas=0 alto=1439
+ok gobierno-equipo-1440.png h1="Equipo y permisos" filas=30 alto=1496
+ok login-390.png h1="Iniciar sesión" filas=0 alto=844
+ok inicio-390.png h1="Panel del área" filas=20 alto=1374
+ok demanda-solicitudes-390.png h1="Solicitudes" filas=25 alto=2234
+ok demanda-priorizacion-390.png h1="Priorización" filas=0 alto=844
+ok demanda-priorizacion-seleccion-390.png h1="Priorización" filas=0 alto=2232
+ok demanda-triage-390.png h1="Triage" filas=0 alto=844
+ok demanda-triage-seleccion-390.png h1="Triage" filas=0 alto=1154
+ok seguimiento-tareas-390.png h1="Detalle de tarea" filas=0 alto=844
+ok seguimiento-plan-390.png h1="Planificación" filas=15 alto=1843
+ok seguimiento-tareas-detalle-390.png h1="Entrevistas con Gerencia Comercial y Finanzas" filas=0 alto=1094
+ok activos-capacidad-390.png h1="Capacidad" filas=33 alto=2157
+ok administracion-frameworks-390.png h1="Controles de gobierno" filas=0 alto=2744
+ok gobierno-equipo-390.png h1="Equipo y permisos" filas=30 alto=1658
+ok integrante-inicio-1440.png h1="Panel del área" filas=20 alto=914
+ok integrante-mi-trabajo-1440.png h1="Mi trabajo" filas=16 alto=931
+total=28 fallidas=0 out=C:\Users\analistabi2\Desarrollo\control-phari\.agents\tasks\ui-redesign\screenshots\after

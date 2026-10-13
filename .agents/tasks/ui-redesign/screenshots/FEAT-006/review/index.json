@@ -1,0 +1,392 @@
+[
+  {
+    "source": "integrante\\activos-capacidad--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-capacidad--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\activos-capacidad--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-capacidad--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\activos-capacidad--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-capacidad--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\activos-capacidad--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-capacidad--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-resumen--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-resumen--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-resumen--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-resumen--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-resumen--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-resumen--390x844.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "integrante\\demanda-resumen--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\demanda-resumen--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\inicio--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\inicio--1280x800.png",
+        "width": 1280,
+        "height": 914
+      }
+    ]
+  },
+  {
+    "source": "integrante\\inicio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\inicio--1440x900.png",
+        "width": 1440,
+        "height": 914
+      }
+    ]
+  },
+  {
+    "source": "integrante\\inicio--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\inicio--390x844.png",
+        "width": 390,
+        "height": 1374
+      }
+    ]
+  },
+  {
+    "source": "integrante\\inicio--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\inicio--768x1024.png",
+        "width": 768,
+        "height": 1315
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-capacidad--1280x800.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-capacidad--1280x800--parte-1-de-2.png",
+        "width": 1280,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\activos-capacidad--1280x800--parte-2-de-2.png",
+        "width": 1280,
+        "height": 289
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-capacidad--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-capacidad--1440x900--parte-1-de-2.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\activos-capacidad--1440x900--parte-2-de-2.png",
+        "width": 1440,
+        "height": 289
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-capacidad--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-capacidad--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\activos-capacidad--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 357
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-capacidad--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-capacidad--768x1024--parte-1-de-2.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\activos-capacidad--768x1024--parte-2-de-2.png",
+        "width": 768,
+        "height": 345
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-resumen--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-resumen--1280x800.png",
+        "width": 1280,
+        "height": 1516
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-resumen--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-resumen--1440x900.png",
+        "width": 1440,
+        "height": 1508
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-resumen--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-resumen--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\demanda-resumen--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 1022
+      }
+    ]
+  },
+  {
+    "source": "jefe\\demanda-resumen--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\demanda-resumen--768x1024.png",
+        "width": 768,
+        "height": 1745
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--1280x800.png",
+        "width": 1280,
+        "height": 914
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--1440x900.png",
+        "width": 1440,
+        "height": 914
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--390x844.png",
+        "width": 390,
+        "height": 1374
+      }
+    ]
+  },
+  {
+    "source": "jefe\\inicio--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\inicio--768x1024.png",
+        "width": 768,
+        "height": 1315
+      }
+    ]
+  },
+  {
+    "source": "lideria\\activos-capacidad--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\activos-capacidad--1280x800.png",
+        "width": 1280,
+        "height": 1238
+      }
+    ]
+  },
+  {
+    "source": "lideria\\activos-capacidad--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\activos-capacidad--1440x900.png",
+        "width": 1440,
+        "height": 1130
+      }
+    ]
+  },
+  {
+    "source": "lideria\\activos-capacidad--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\activos-capacidad--390x844.png",
+        "width": 390,
+        "height": 1306
+      }
+    ]
+  },
+  {
+    "source": "lideria\\activos-capacidad--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\activos-capacidad--768x1024.png",
+        "width": 768,
+        "height": 1294
+      }
+    ]
+  },
+  {
+    "source": "lideria\\demanda-resumen--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\demanda-resumen--1280x800.png",
+        "width": 1280,
+        "height": 1097
+      }
+    ]
+  },
+  {
+    "source": "lideria\\demanda-resumen--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\demanda-resumen--1440x900.png",
+        "width": 1440,
+        "height": 1089
+      }
+    ]
+  },
+  {
+    "source": "lideria\\demanda-resumen--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\demanda-resumen--390x844.png",
+        "width": 390,
+        "height": 1628
+      }
+    ]
+  },
+  {
+    "source": "lideria\\demanda-resumen--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\demanda-resumen--768x1024.png",
+        "width": 768,
+        "height": 1185
+      }
+    ]
+  },
+  {
+    "source": "lideria\\inicio--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\inicio--1280x800.png",
+        "width": 1280,
+        "height": 914
+      }
+    ]
+  },
+  {
+    "source": "lideria\\inicio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\inicio--1440x900.png",
+        "width": 1440,
+        "height": 914
+      }
+    ]
+  },
+  {
+    "source": "lideria\\inicio--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\inicio--390x844.png",
+        "width": 390,
+        "height": 1374
+      }
+    ]
+  },
+  {
+    "source": "lideria\\inicio--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\lideria\\inicio--768x1024.png",
+        "width": 768,
+        "height": 1315
+      }
+    ]
+  }
+]

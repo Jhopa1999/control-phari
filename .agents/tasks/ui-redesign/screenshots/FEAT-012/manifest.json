@@ -1,0 +1,1564 @@
+{
+  "generatedAt": "2026-10-12T21:53:20.085Z",
+  "base": "http://localhost:3300",
+  "auth": "dev-header",
+  "roles": [
+    "jefe",
+    "integrante"
+  ],
+  "viewports": [
+    "1440x900",
+    "1280x800",
+    "768x1024",
+    "390x844"
+  ],
+  "routes": [
+    "/administracion/frameworks",
+    "/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+    "/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+    "/gobierno/auditoria",
+    "/gobierno/mis-permisos",
+    "/gobierno/equipo"
+  ],
+  "total": 48,
+  "failed": 0,
+  "failuresByCheck": {},
+  "results": [
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/administracion/frameworks",
+      "file": "jefe\\administracion-frameworks--1440x900.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "file": "jefe\\administracion-frameworks-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1440x900.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "file": "jefe\\administracion-frameworks-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1440x900.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/gobierno/auditoria",
+      "file": "jefe\\gobierno-auditoria--1440x900.png",
+      "url": "http://localhost:3300/gobierno/auditoria",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Auditoría"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/gobierno/mis-permisos",
+      "file": "jefe\\gobierno-mis-permisos--1440x900.png",
+      "url": "http://localhost:3300/gobierno/mis-permisos",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mis permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/gobierno/equipo",
+      "file": "jefe\\gobierno-equipo--1440x900.png",
+      "url": "http://localhost:3300/gobierno/equipo",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Equipo y permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/administracion/frameworks",
+      "file": "jefe\\administracion-frameworks--1280x800.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "file": "jefe\\administracion-frameworks-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1280x800.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "file": "jefe\\administracion-frameworks-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1280x800.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/gobierno/auditoria",
+      "file": "jefe\\gobierno-auditoria--1280x800.png",
+      "url": "http://localhost:3300/gobierno/auditoria",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Auditoría"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/gobierno/mis-permisos",
+      "file": "jefe\\gobierno-mis-permisos--1280x800.png",
+      "url": "http://localhost:3300/gobierno/mis-permisos",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mis permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/gobierno/equipo",
+      "file": "jefe\\gobierno-equipo--1280x800.png",
+      "url": "http://localhost:3300/gobierno/equipo",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Equipo y permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/administracion/frameworks",
+      "file": "jefe\\administracion-frameworks--768x1024.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "file": "jefe\\administracion-frameworks-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--768x1024.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "file": "jefe\\administracion-frameworks-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--768x1024.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/gobierno/auditoria",
+      "file": "jefe\\gobierno-auditoria--768x1024.png",
+      "url": "http://localhost:3300/gobierno/auditoria",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Auditoría"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/gobierno/mis-permisos",
+      "file": "jefe\\gobierno-mis-permisos--768x1024.png",
+      "url": "http://localhost:3300/gobierno/mis-permisos",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mis permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/gobierno/equipo",
+      "file": "jefe\\gobierno-equipo--768x1024.png",
+      "url": "http://localhost:3300/gobierno/equipo",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Equipo y permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/administracion/frameworks",
+      "file": "jefe\\administracion-frameworks--390x844.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "file": "jefe\\administracion-frameworks-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--390x844.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "file": "jefe\\administracion-frameworks-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--390x844.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/gobierno/auditoria",
+      "file": "jefe\\gobierno-auditoria--390x844.png",
+      "url": "http://localhost:3300/gobierno/auditoria",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Auditoría"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/gobierno/mis-permisos",
+      "file": "jefe\\gobierno-mis-permisos--390x844.png",
+      "url": "http://localhost:3300/gobierno/mis-permisos",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mis permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/gobierno/equipo",
+      "file": "jefe\\gobierno-equipo--390x844.png",
+      "url": "http://localhost:3300/gobierno/equipo",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Equipo y permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/administracion/frameworks",
+      "file": "integrante\\administracion-frameworks--1440x900.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "file": "integrante\\administracion-frameworks-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1440x900.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "file": "integrante\\administracion-frameworks-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1440x900.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/gobierno/auditoria",
+      "file": "integrante\\gobierno-auditoria--1440x900.png",
+      "url": "http://localhost:3300/gobierno/auditoria",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Auditoría"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/gobierno/mis-permisos",
+      "file": "integrante\\gobierno-mis-permisos--1440x900.png",
+      "url": "http://localhost:3300/gobierno/mis-permisos",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mis permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/gobierno/equipo",
+      "file": "integrante\\gobierno-equipo--1440x900.png",
+      "url": "http://localhost:3300/gobierno/equipo",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Equipo y permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/administracion/frameworks",
+      "file": "integrante\\administracion-frameworks--1280x800.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "file": "integrante\\administracion-frameworks-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--1280x800.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "file": "integrante\\administracion-frameworks-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--1280x800.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/gobierno/auditoria",
+      "file": "integrante\\gobierno-auditoria--1280x800.png",
+      "url": "http://localhost:3300/gobierno/auditoria",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Auditoría"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/gobierno/mis-permisos",
+      "file": "integrante\\gobierno-mis-permisos--1280x800.png",
+      "url": "http://localhost:3300/gobierno/mis-permisos",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mis permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/gobierno/equipo",
+      "file": "integrante\\gobierno-equipo--1280x800.png",
+      "url": "http://localhost:3300/gobierno/equipo",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Equipo y permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/administracion/frameworks",
+      "file": "integrante\\administracion-frameworks--768x1024.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "file": "integrante\\administracion-frameworks-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--768x1024.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "file": "integrante\\administracion-frameworks-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--768x1024.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/gobierno/auditoria",
+      "file": "integrante\\gobierno-auditoria--768x1024.png",
+      "url": "http://localhost:3300/gobierno/auditoria",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Auditoría"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/gobierno/mis-permisos",
+      "file": "integrante\\gobierno-mis-permisos--768x1024.png",
+      "url": "http://localhost:3300/gobierno/mis-permisos",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mis permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/gobierno/equipo",
+      "file": "integrante\\gobierno-equipo--768x1024.png",
+      "url": "http://localhost:3300/gobierno/equipo",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Equipo y permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/administracion/frameworks",
+      "file": "integrante\\administracion-frameworks--390x844.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "file": "integrante\\administracion-frameworks-requestId-a6eea150-ab92-4d93-a359-d020bddafceb--390x844.png",
+      "url": "http://localhost:3300/administracion/frameworks?requestId=a6eea150-ab92-4d93-a359-d020bddafceb",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/administracion/frameworks?requestId=d24edd4b-1ad4-4467-8555-76f64495f850",
+      "file": "integrante\\administracion-frameworks-requestId-d24edd4b-1ad4-4467-8555-76f64495f850--390x844.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/gobierno/auditoria",
+      "file": "integrante\\gobierno-auditoria--390x844.png",
+      "url": "http://localhost:3300/gobierno/auditoria",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Auditoría"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/gobierno/mis-permisos",
+      "file": "integrante\\gobierno-mis-permisos--390x844.png",
+      "url": "http://localhost:3300/gobierno/mis-permisos",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mis permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/gobierno/equipo",
+      "file": "integrante\\gobierno-equipo--390x844.png",
+      "url": "http://localhost:3300/gobierno/equipo",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Equipo y permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    }
+  ]
+}

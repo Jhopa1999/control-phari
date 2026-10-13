@@ -1,0 +1,115 @@
+{
+  "generatedAt": "2026-10-12T12:37:42.595Z",
+  "total": 25,
+  "failed": 0,
+  "results": [
+    {
+      "name": "A1 marca: enlace a /inicio con nombre «Portal del área Analítica»",
+      "ok": true
+    },
+    {
+      "name": "A2 Proyectos se llama «Proyectos Próximamente»",
+      "ok": true
+    },
+    {
+      "name": "A3 selector dev: nombre = etiqueta visible, id actor-select, sin aria-label",
+      "ok": true
+    },
+    {
+      "name": "A4 el menú no tiene h2 y el aside es el landmark «Menú lateral»",
+      "ok": true,
+      "detail": "ancho 240"
+    },
+    {
+      "name": "A5 cambiar de actor desde el sidebar recarga permisos y menú",
+      "ok": true,
+      "detail": "X-Actor-Id integrante, sin Triage"
+    },
+    {
+      "name": "A6 «Contraer menú» con teclado: riel de 56 px, foco en «Expandir menú», preferencia true",
+      "ok": true
+    },
+    {
+      "name": "A7 en riel a 1440 un ítem con foco de teclado muestra su tooltip, sin describir el enlace",
+      "ok": true,
+      "detail": {
+        "focused": "Mis permisos",
+        "tooltip": "Mis permisos"
+      }
+    },
+    {
+      "name": "A8 tooltip de Proyectos en riel: «Proyectos · Próximamente»",
+      "ok": true
+    },
+    {
+      "name": "A9 tras recargar, la preferencia de riel se conserva a 1440",
+      "ok": true
+    },
+    {
+      "name": "A10 el avatar del riel expande el menú y enfoca el selector dev",
+      "ok": true,
+      "detail": "Usuario actual (dev): Ana Jefa. Expandir el menú para cambiarlo"
+    },
+    {
+      "name": "A11 sin ids duplicados ni errores/avisos de consola",
+      "ok": true
+    },
+    {
+      "name": "B1 a 390 el h1 es lo primero del contenido y el aside no se ve",
+      "ok": true,
+      "detail": "h1 a 76 px"
+    },
+    {
+      "name": "B2 el cajón: selector dev con id drawer-actor-select y nombre visible, sin ids duplicados",
+      "ok": true
+    },
+    {
+      "name": "B3 cambiar de actor desde el cajón recarga permisos y menú",
+      "ok": true
+    },
+    {
+      "name": "B4 Escape cierra el cajón y devuelve el foco a «Abrir menú»",
+      "ok": true
+    },
+    {
+      "name": "B5 clic fuera cierra el cajón",
+      "ok": true
+    },
+    {
+      "name": "B6 al pasar a ≥1024 px el cajón se cierra",
+      "ok": true
+    },
+    {
+      "name": "B7 la marca del cajón navega a /inicio y lo cierra",
+      "ok": true
+    },
+    {
+      "name": "B8 sin errores/avisos de consola",
+      "ok": true
+    },
+    {
+      "name": "C1 sin actor: «Elige un usuario en «Usuario actual (dev)»…»",
+      "ok": true
+    },
+    {
+      "name": "C2 error: «No fue posible cargar tus permisos.» (alert) y «Reintentar» recupera",
+      "ok": true
+    },
+    {
+      "name": "C3 error en riel (1100): aviso en el árbol, botón Info que expande y enfoca el aviso",
+      "ok": true
+    },
+    {
+      "name": "C4 sin módulos: «No tienes módulos habilitados. Pide acceso al jefe de área.»",
+      "ok": true
+    },
+    {
+      "name": "C5 cargando: 6 esqueletos y «Cargando menú…» en role=status",
+      "ok": true
+    },
+    {
+      "name": "C6 /dev/actors con error: «No fue posible cargar los usuarios.» (alert)",
+      "ok": true
+    }
+  ]
+}

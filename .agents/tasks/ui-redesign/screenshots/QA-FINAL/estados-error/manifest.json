@@ -1,0 +1,96 @@
+{
+  "mode": "error",
+  "at": "2026-10-13T03:30:11.820Z",
+  "results": [
+    {
+      "route": "/inicio",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar el panorama de la demanda. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar",
+      "retryButtons": 1
+    },
+    {
+      "route": "/inicio",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "h1": [
+        "Panel del área"
+      ]
+    },
+    {
+      "route": "/demanda/solicitudes",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar las solicitudes. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar",
+      "retryButtons": 1
+    },
+    {
+      "route": "/demanda/solicitudes",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "h1": [
+        "Solicitudes"
+      ]
+    },
+    {
+      "route": "/seguimiento/tareas?taskId=e9c32143-3ec8-4023-8544-d62fbc7e9f1c",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar la tarea. Revisa tu conexión e inténtalo de nuevo. Si el problema continúa, contacta al administrador del portal. Reintentar",
+      "retryButtons": 1
+    },
+    {
+      "route": "/seguimiento/tareas?taskId=e9c32143-3ec8-4023-8544-d62fbc7e9f1c",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "h1": [
+        "QA UI · Preparar extracción de datos"
+      ]
+    },
+    {
+      "route": "/gobierno/auditoria",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar la auditoría. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar",
+      "retryButtons": 1
+    },
+    {
+      "route": "/gobierno/auditoria",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "h1": [
+        "Auditoría"
+      ]
+    },
+    {
+      "route": "/mi-trabajo",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar tu trabajo. No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo. Reintentar",
+      "retryButtons": 1
+    },
+    {
+      "route": "/mi-trabajo",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "h1": [
+        "Mi trabajo"
+      ]
+    },
+    {
+      "route": "/activos/capacidad",
+      "phase": "datos caídos",
+      "errorVisible": true,
+      "message": "No fue posible cargar el resumen de capacidad. Revisa tu conexión e inténtalo de nuevo. Si el problema continúa, contacta al administrador del portal. Reintentar",
+      "retryButtons": 1
+    },
+    {
+      "route": "/activos/capacidad",
+      "phase": "tras Reintentar",
+      "recovered": true,
+      "h1": [
+        "Capacidad"
+      ]
+    }
+  ]
+}

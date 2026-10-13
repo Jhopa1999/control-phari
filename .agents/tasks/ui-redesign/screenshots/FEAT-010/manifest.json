@@ -1,0 +1,793 @@
+{
+  "generatedAt": "2026-10-12T18:36:26.476Z",
+  "base": "http://localhost:3300",
+  "auth": "dev-header",
+  "roles": [
+    "jefe",
+    "integrante"
+  ],
+  "viewports": [
+    "1440x900",
+    "1280x800",
+    "768x1024",
+    "390x844"
+  ],
+  "routes": [
+    "/seguimiento/novedades",
+    "/seguimiento/reuniones",
+    "/seguimiento/compromisos"
+  ],
+  "total": 24,
+  "failed": 0,
+  "failuresByCheck": {},
+  "results": [
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/novedades",
+      "file": "jefe\\seguimiento-novedades--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/novedades",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Novedades"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/reuniones",
+      "file": "jefe\\seguimiento-reuniones--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/reuniones",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reuniones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/compromisos",
+      "file": "jefe\\seguimiento-compromisos--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/compromisos",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Compromisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/seguimiento/novedades",
+      "file": "jefe\\seguimiento-novedades--1280x800.png",
+      "url": "http://localhost:3300/seguimiento/novedades",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Novedades"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/seguimiento/reuniones",
+      "file": "jefe\\seguimiento-reuniones--1280x800.png",
+      "url": "http://localhost:3300/seguimiento/reuniones",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reuniones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/seguimiento/compromisos",
+      "file": "jefe\\seguimiento-compromisos--1280x800.png",
+      "url": "http://localhost:3300/seguimiento/compromisos",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Compromisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/seguimiento/novedades",
+      "file": "jefe\\seguimiento-novedades--768x1024.png",
+      "url": "http://localhost:3300/seguimiento/novedades",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Novedades"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/seguimiento/reuniones",
+      "file": "jefe\\seguimiento-reuniones--768x1024.png",
+      "url": "http://localhost:3300/seguimiento/reuniones",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reuniones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/seguimiento/compromisos",
+      "file": "jefe\\seguimiento-compromisos--768x1024.png",
+      "url": "http://localhost:3300/seguimiento/compromisos",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Compromisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/novedades",
+      "file": "jefe\\seguimiento-novedades--390x844.png",
+      "url": "http://localhost:3300/seguimiento/novedades",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Novedades"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/reuniones",
+      "file": "jefe\\seguimiento-reuniones--390x844.png",
+      "url": "http://localhost:3300/seguimiento/reuniones",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reuniones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/compromisos",
+      "file": "jefe\\seguimiento-compromisos--390x844.png",
+      "url": "http://localhost:3300/seguimiento/compromisos",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Compromisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/novedades",
+      "file": "integrante\\seguimiento-novedades--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/novedades",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Novedades"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/reuniones",
+      "file": "integrante\\seguimiento-reuniones--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/reuniones",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reuniones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/compromisos",
+      "file": "integrante\\seguimiento-compromisos--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/compromisos",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Compromisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/seguimiento/novedades",
+      "file": "integrante\\seguimiento-novedades--1280x800.png",
+      "url": "http://localhost:3300/seguimiento/novedades",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Novedades"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/seguimiento/reuniones",
+      "file": "integrante\\seguimiento-reuniones--1280x800.png",
+      "url": "http://localhost:3300/seguimiento/reuniones",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reuniones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "1280x800",
+      "route": "/seguimiento/compromisos",
+      "file": "integrante\\seguimiento-compromisos--1280x800.png",
+      "url": "http://localhost:3300/seguimiento/compromisos",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Compromisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/seguimiento/novedades",
+      "file": "integrante\\seguimiento-novedades--768x1024.png",
+      "url": "http://localhost:3300/seguimiento/novedades",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Novedades"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/seguimiento/reuniones",
+      "file": "integrante\\seguimiento-reuniones--768x1024.png",
+      "url": "http://localhost:3300/seguimiento/reuniones",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reuniones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "768x1024",
+      "route": "/seguimiento/compromisos",
+      "file": "integrante\\seguimiento-compromisos--768x1024.png",
+      "url": "http://localhost:3300/seguimiento/compromisos",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Compromisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/novedades",
+      "file": "integrante\\seguimiento-novedades--390x844.png",
+      "url": "http://localhost:3300/seguimiento/novedades",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Novedades"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/reuniones",
+      "file": "integrante\\seguimiento-reuniones--390x844.png",
+      "url": "http://localhost:3300/seguimiento/reuniones",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reuniones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "integrante",
+      "actor": "integrante.bi@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/compromisos",
+      "file": "integrante\\seguimiento-compromisos--390x844.png",
+      "url": "http://localhost:3300/seguimiento/compromisos",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Compromisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    }
+  ]
+}

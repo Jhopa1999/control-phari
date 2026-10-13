@@ -1,0 +1,22 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "NIT",
+      "title": "Regla ambigua del puntero currentVersionId al editar un documento VIGENTE",
+      "where": "design.md §4.2 (nota 'Puntero currentVersionId al crear versión')",
+      "problem": "La coletilla 'el contenido vigente queda apuntado por currentVersionId solo si así se decide' contradice la regla única del resto del documento (§2.4 paso 3, §9, §8), que afirma que crear versión SIEMPRE mueve currentVersionId a la nueva versión.",
+      "fix": "Eliminar 'solo si así se decide' y dejar la regla determinista: al crear versión, Document.currentVersionId SIEMPRE pasa a la versión recién creada (puntero de contenido vigente), ortogonal al status que solo cambia por POST /documents/:id/status."
+    },
+    {
+      "id": 2,
+      "severity": "NIT",
+      "title": "Falta orden explícito 403-rol vs 400-body en POST /assets y PATCH /assets/:id",
+      "where": "design.md §3.2 / §3.4 (validaciones MEDIUM-1 / D2 en create y update)",
+      "problem": "No se fija la prelación entre el control de rol de escritura (requireAssetWritable, 403) y las validaciones 400 del body (ownerUserId/requestId/códigos de maestra) en create (donde no hay recurso que resolver). El orden afecta la respuesta y la previsibilidad de los tests de §8.",
+      "fix": "Fijar en §3.4: en create y update el orden es 1) rol/alcance (403), 2) validaciones 400 de FK y códigos de maestra del body, 3) persistir en $transaction."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\fase6-activos\\design-review.md"
+}

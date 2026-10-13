@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Registrar prompt del usuario",
+      "trigger": "UserPromptSubmit",
+      "description": "Anexa a .kiro/agent-usage.log el texto del prompt del usuario (el porqué se invocó al agente).",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .kiro/hooks/log-agent-usage.ps1 -Event \"PROMPT\""
+      },
+      "enabled": false
+    }
+  ]
+}

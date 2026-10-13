@@ -1,0 +1,5 @@
+ok   jefe 390x844 /gobierno/auditoria
+ok   jefe 390x844 /activos/capacidad
+ok   jefe 1440x900 /gobierno/auditoria
+ok   jefe 1440x900 /activos/capacidad
+total=4 failed=0 {} out=C:\Users\analistabi2\Desarrollo\control-phari\.agents\tasks\ui-redesign\screenshots\QA-FINAL\barrido-fix

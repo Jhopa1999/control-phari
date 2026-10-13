@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Registrar fin de agente",
+      "trigger": "Stop",
+      "description": "Anexa una línea con timestamp y el contexto de sesión a .kiro/agent-usage.log cuando una ejecución del agente termina.",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .kiro/hooks/log-agent-usage.ps1 -Event \"FIN\""
+      },
+      "enabled": false
+    }
+  ]
+}

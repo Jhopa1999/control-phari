@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-003",
+  "type": "chore",
+  "description": "Regenerar el contrato OpenAPI y el cliente TypeScript api-client a partir de los endpoints/DTOs de FEAT-002, y commitear los artefactos generados (openapi.json + packages/api-client/src/generated/*). Deja el frontend listo para consumir los nuevos endpoints via tipos generados. Depende de FEAT-002.",
+  "status": "completed",
+  "steps": [
+    "Desde el worktree ejecutar npm run contracts:generate (= openapi:generate + api-client:generate).",
+    "Verificar que apps/api/openapi/openapi.json incluye los paths /requests, /requests/{id}, /requests/{id}/triage, /requests/{id}/priority, /requests/{id}/approval y /requests/pending-approval, y los schemas de los DTOs nuevos (CreateRequestDto, RequestResponseDto, CreateTriageDto, TriageResponseDto, CreatePriorityEvaluationDto, PriorityEvaluationResponseDto, CreateApprovalDto, ApprovalResponseDto).",
+    "Ejecutar npm run typecheck (incluye api-client y web) y npm run build; corregir cualquier desajuste de contrato antes de continuar.",
+    "Commitear apps/api/openapi/openapi.json y packages/api-client/src/generated/* en la rama feat/fase2-demanda (NO push). No modificar el mecanismo de X-Actor-Id de apps/web/src/lib/api-client.ts."
+  ],
+  "acceptance_criteria": [
+    "openapi.json contiene los 6 paths de Fase 2 y los schemas de los DTOs nuevos.",
+    "packages/api-client/src/generated/* se regenera e incluye los tipos de los nuevos endpoints.",
+    "npm run typecheck y npm run build en verde tras la regeneracion."
+  ],
+  "verification": [
+    "Desde el worktree: npm run contracts:generate (sin error).",
+    "Desde el worktree: npm run typecheck (verde).",
+    "Desde el worktree: npm run build (verde)."
+  ],
+  "blocked_reason": null,
+  "findings": "npm run contracts:generate (openapi:generate + api-client:generate) ejecutado sin error desde el worktree. VERIFICADO en apps/api/openapi/openapi.json los 6 paths de Fase 2: /requests, /requests/{id}, /requests/{id}/triage, /requests/{id}/priority, /requests/{id}/approval y /requests/pending-approval. VERIFICADO los 8 schemas de DTOs nuevos: CreateRequestDto, RequestResponseDto, CreateTriageDto, TriageResponseDto, CreatePriorityEvaluationDto, PriorityEvaluationResponseDto, CreateApprovalDto, ApprovalResponseDto. El cliente packages/api-client/src/generated/schema.d.ts se regenero con openapi-typescript 7.13.0 incluyendo los tipos de los nuevos endpoints. npm run typecheck (api + api-client + web) en verde; npm run build (api + api-client + web, Next.js 16.4.0) en verde. Solo cambiaron los 2 artefactos generados (openapi.json y schema.d.ts); NO se toco apps/web/src/lib/api-client.ts ni el mecanismo X-Actor-Id. Commit local a047a2b en feat/fase2-demanda (sin push)."
+}

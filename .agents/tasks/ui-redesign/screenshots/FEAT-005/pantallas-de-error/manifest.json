@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-10-12T13:01:09.900Z",
+  "total": 4,
+  "failed": 0,
+  "results": [
+    {
+      "name": "error.tsx 1440x900: pantalla dentro del shell, en español, y «Reintentar» recupera",
+      "ok": true,
+      "detail": "recuperado"
+    },
+    {
+      "name": "error.tsx 390x844: pantalla dentro del shell, en español, y «Reintentar» recupera",
+      "ok": true,
+      "detail": "recuperado"
+    },
+    {
+      "name": "global-error.tsx 1440x900: documento propio en español y «Reintentar» recupera",
+      "ok": true,
+      "detail": {
+        "lang": "es",
+        "bodyBackground": "lab(95.9239 -0.121236 -1.51231)"
+      }
+    },
+    {
+      "name": "global-error.tsx 390x844: documento propio en español y «Reintentar» recupera",
+      "ok": true,
+      "detail": {
+        "lang": "es",
+        "bodyBackground": "lab(95.9239 -0.121236 -1.51231)"
+      }
+    }
+  ]
+}

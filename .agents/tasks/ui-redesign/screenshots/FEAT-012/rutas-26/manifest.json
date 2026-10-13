@@ -1,0 +1,1709 @@
+{
+  "generatedAt": "2026-10-12T21:54:56.070Z",
+  "base": "http://localhost:3300",
+  "auth": "dev-header",
+  "roles": [
+    "jefe"
+  ],
+  "viewports": [
+    "1440x900",
+    "390x844"
+  ],
+  "routes": [
+    "/inicio",
+    "/mi-trabajo",
+    "/demanda/resumen",
+    "/demanda/solicitudes",
+    "/demanda/triage",
+    "/demanda/priorizacion",
+    "/administracion/revision",
+    "/seguimiento/plan",
+    "/seguimiento/tareas",
+    "/seguimiento/portafolio",
+    "/seguimiento/proyectos",
+    "/seguimiento/bitacora",
+    "/seguimiento/semanal",
+    "/seguimiento/novedades",
+    "/seguimiento/reuniones",
+    "/seguimiento/compromisos",
+    "/activos/catalogo",
+    "/activos/documentos",
+    "/activos/capacidad",
+    "/administracion/maestras",
+    "/administracion/frameworks",
+    "/gobierno/equipo",
+    "/gobierno/auditoria",
+    "/gobierno/mis-permisos",
+    "/catalogs",
+    "/login"
+  ],
+  "total": 52,
+  "failed": 0,
+  "failuresByCheck": {},
+  "results": [
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/inicio",
+      "file": "jefe\\inicio--1440x900.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Panel del área"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/mi-trabajo",
+      "file": "jefe\\mi-trabajo--1440x900.png",
+      "url": "http://localhost:3300/mi-trabajo",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mi trabajo"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/demanda/resumen",
+      "file": "jefe\\demanda-resumen--1440x900.png",
+      "url": "http://localhost:3300/demanda/resumen",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Indicadores del área"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/demanda/solicitudes",
+      "file": "jefe\\demanda-solicitudes--1440x900.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/demanda/triage",
+      "file": "jefe\\demanda-triage--1440x900.png",
+      "url": "http://localhost:3300/demanda/triage",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Triage"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/demanda/priorizacion",
+      "file": "jefe\\demanda-priorizacion--1440x900.png",
+      "url": "http://localhost:3300/demanda/priorizacion",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Priorización"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/administracion/revision",
+      "file": "jefe\\administracion-revision--1440x900.png",
+      "url": "http://localhost:3300/administracion/revision",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Aprobaciones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/plan",
+      "file": "jefe\\seguimiento-plan--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificación"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/tareas",
+      "file": "jefe\\seguimiento-tareas--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/tareas",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Detalle de tarea"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/portafolio",
+      "file": "jefe\\seguimiento-portafolio--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/portafolio",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Portafolio"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/proyectos",
+      "file": "jefe\\seguimiento-proyectos--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/proyectos",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Proyectos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/bitacora",
+      "file": "jefe\\seguimiento-bitacora--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/bitacora",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Bitácora"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/semanal",
+      "file": "jefe\\seguimiento-semanal--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/semanal",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reporte semanal"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/novedades",
+      "file": "jefe\\seguimiento-novedades--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/novedades",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Novedades"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/reuniones",
+      "file": "jefe\\seguimiento-reuniones--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/reuniones",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reuniones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/seguimiento/compromisos",
+      "file": "jefe\\seguimiento-compromisos--1440x900.png",
+      "url": "http://localhost:3300/seguimiento/compromisos",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Compromisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/activos/catalogo",
+      "file": "jefe\\activos-catalogo--1440x900.png",
+      "url": "http://localhost:3300/activos/catalogo",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Activos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/activos/documentos",
+      "file": "jefe\\activos-documentos--1440x900.png",
+      "url": "http://localhost:3300/activos/documentos",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Documentos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/activos/capacidad",
+      "file": "jefe\\activos-capacidad--1440x900.png",
+      "url": "http://localhost:3300/activos/capacidad",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Capacidad"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/administracion/maestras",
+      "file": "jefe\\administracion-maestras--1440x900.png",
+      "url": "http://localhost:3300/administracion/maestras",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/administracion/frameworks",
+      "file": "jefe\\administracion-frameworks--1440x900.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/gobierno/equipo",
+      "file": "jefe\\gobierno-equipo--1440x900.png",
+      "url": "http://localhost:3300/gobierno/equipo",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Equipo y permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/gobierno/auditoria",
+      "file": "jefe\\gobierno-auditoria--1440x900.png",
+      "url": "http://localhost:3300/gobierno/auditoria",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Auditoría"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/gobierno/mis-permisos",
+      "file": "jefe\\gobierno-mis-permisos--1440x900.png",
+      "url": "http://localhost:3300/gobierno/mis-permisos",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mis permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/catalogs",
+      "file": "jefe\\catalogs--1440x900.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/login",
+      "file": "jefe\\login--1440x900.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Iniciar sesión"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/inicio",
+      "file": "jefe\\inicio--390x844.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Panel del área"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/mi-trabajo",
+      "file": "jefe\\mi-trabajo--390x844.png",
+      "url": "http://localhost:3300/mi-trabajo",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mi trabajo"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/demanda/resumen",
+      "file": "jefe\\demanda-resumen--390x844.png",
+      "url": "http://localhost:3300/demanda/resumen",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Indicadores del área"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/demanda/solicitudes",
+      "file": "jefe\\demanda-solicitudes--390x844.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/demanda/triage",
+      "file": "jefe\\demanda-triage--390x844.png",
+      "url": "http://localhost:3300/demanda/triage",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Triage"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/demanda/priorizacion",
+      "file": "jefe\\demanda-priorizacion--390x844.png",
+      "url": "http://localhost:3300/demanda/priorizacion",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Priorización"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/administracion/revision",
+      "file": "jefe\\administracion-revision--390x844.png",
+      "url": "http://localhost:3300/administracion/revision",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Aprobaciones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/plan",
+      "file": "jefe\\seguimiento-plan--390x844.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificación"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/tareas",
+      "file": "jefe\\seguimiento-tareas--390x844.png",
+      "url": "http://localhost:3300/seguimiento/tareas",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Detalle de tarea"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/portafolio",
+      "file": "jefe\\seguimiento-portafolio--390x844.png",
+      "url": "http://localhost:3300/seguimiento/portafolio",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Portafolio"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/proyectos",
+      "file": "jefe\\seguimiento-proyectos--390x844.png",
+      "url": "http://localhost:3300/seguimiento/proyectos",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Proyectos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/bitacora",
+      "file": "jefe\\seguimiento-bitacora--390x844.png",
+      "url": "http://localhost:3300/seguimiento/bitacora",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Bitácora"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/semanal",
+      "file": "jefe\\seguimiento-semanal--390x844.png",
+      "url": "http://localhost:3300/seguimiento/semanal",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reporte semanal"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/novedades",
+      "file": "jefe\\seguimiento-novedades--390x844.png",
+      "url": "http://localhost:3300/seguimiento/novedades",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Novedades"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/reuniones",
+      "file": "jefe\\seguimiento-reuniones--390x844.png",
+      "url": "http://localhost:3300/seguimiento/reuniones",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Reuniones"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/seguimiento/compromisos",
+      "file": "jefe\\seguimiento-compromisos--390x844.png",
+      "url": "http://localhost:3300/seguimiento/compromisos",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Compromisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/activos/catalogo",
+      "file": "jefe\\activos-catalogo--390x844.png",
+      "url": "http://localhost:3300/activos/catalogo",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Activos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/activos/documentos",
+      "file": "jefe\\activos-documentos--390x844.png",
+      "url": "http://localhost:3300/activos/documentos",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Documentos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/activos/capacidad",
+      "file": "jefe\\activos-capacidad--390x844.png",
+      "url": "http://localhost:3300/activos/capacidad",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Capacidad"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/administracion/maestras",
+      "file": "jefe\\administracion-maestras--390x844.png",
+      "url": "http://localhost:3300/administracion/maestras",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/administracion/frameworks",
+      "file": "jefe\\administracion-frameworks--390x844.png",
+      "url": "http://localhost:3300/administracion/frameworks",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Controles de gobierno"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/gobierno/equipo",
+      "file": "jefe\\gobierno-equipo--390x844.png",
+      "url": "http://localhost:3300/gobierno/equipo",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Equipo y permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/gobierno/auditoria",
+      "file": "jefe\\gobierno-auditoria--390x844.png",
+      "url": "http://localhost:3300/gobierno/auditoria",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Auditoría"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/gobierno/mis-permisos",
+      "file": "jefe\\gobierno-mis-permisos--390x844.png",
+      "url": "http://localhost:3300/gobierno/mis-permisos",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Mis permisos"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/catalogs",
+      "file": "jefe\\catalogs--390x844.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/login",
+      "file": "jefe\\login--390x844.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Iniciar sesión"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "a «Saltar al contenido»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+ok   la fase QA ya tiene tareas antes de agregar — 2 tarea(s)
+ok   fechas de la fase sin correrse un día — 2 nov 2026 – 13 nov 2026
+ok   «Agregar tarea» habilitado en una fase con tareas — aria-disabled=null
+ok   la fase queda con una tarea más — 2 -> 2
+ok   la segunda tarea aparece en la tabla con 9 nov y 13 nov — QA · Segunda tarea desde la UI QA · Fase con tareas Sin asignar 9 nov 2026 13 nov 2026 4 h 0 Por hacer avance 0 % Editar
+ok   la primera tarea sigue con 2 nov y 6 nov — QA · Primera tarea de la fase QA · Fase con tareas Sin asignar 2 nov 2026 6 nov 2026 8 h 0 Por hacer avance 0 % Editar
+ok   «Agregar tarea» sigue habilitado con 2 tareas
+ok   fechas de las fases del plan PA iguales a las guardadas — 4 fases
+ok   «Solo mis tareas» devuelve las tareas del usuario — {"usuario":"2a6264af-e786-4eba-96ce-9dc6fd6c6846","esperadas":["Entrevistas con Gerencia Comercial y Finanzas","Diseño aprobado por la Gerencia Comercial","Reglas de asignación de costos por canal","Pruebas de aceptación con usuarios comerciales","Tablero en producción"],"filas":5,"antes":11}
+ok   fechas de tarea iguales a las guardadas — 5 tareas
+ok   sin errores de consola en Planificación — []
+ok   /seguimiento/novedades: «Nueva novedad» propone 2026-10-31 — valor=2026-10-31
+ok   /seguimiento/compromisos: «Nuevo compromiso» propone 2026-10-31 — valor=2026-10-31
+ok   /seguimiento/reuniones: «Nueva reunión» propone 2026-10-31 — valor=2026-10-31
+ok   /seguimiento/bitacora: «Nuevo diario» propone 2026-10-31 — valor=2026-10-31
+ok   /seguimiento/semanal: «Nuevo reporte semanal» propone 2026-10-26 — valor=2026-10-26
+ok   /activos/capacidad: #capacidad-month por defecto 2026-10 — valor=2026-10
+ok   /inicio: #dashboard-from por defecto 2026-10-01 — valor=2026-10-01
+ok   /inicio: #dashboard-to por defecto 2026-11-01 — valor=2026-11-01
+ok   /demanda/resumen: #indicadores-from por defecto 2026-10-01 — valor=2026-10-01
+ok   /demanda/resumen: #indicadores-to por defecto 2026-11-01 — valor=2026-11-01
+total=21 fallidos=0

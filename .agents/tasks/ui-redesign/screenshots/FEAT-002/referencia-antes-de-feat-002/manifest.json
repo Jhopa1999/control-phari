@@ -1,0 +1,355 @@
+{
+  "generatedAt": "2026-10-12T06:19:03.623Z",
+  "base": "http://localhost:3300",
+  "auth": "dev-header",
+  "roles": [
+    "jefe"
+  ],
+  "viewports": [
+    "1280x800",
+    "768x1024"
+  ],
+  "routes": [
+    "/inicio",
+    "/demanda/solicitudes",
+    "/catalogs",
+    "/seguimiento/plan",
+    "/login"
+  ],
+  "total": 10,
+  "failed": 6,
+  "failuresByCheck": {
+    "overflowX": 4,
+    "h1Count": 2
+  },
+  "results": [
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/inicio",
+      "file": "jefe\\inicio--1280x800.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "none",
+        "outlineWidth": "1px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(65.5349 -2.25151 -14.5072) 0px 0px 0px 2px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/demanda/solicitudes",
+      "file": "jefe\\demanda-solicitudes--1280x800.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "none",
+        "outlineWidth": "1px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(65.5349 -2.25151 -14.5072) 0px 0px 0px 2px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/catalogs",
+      "file": "jefe\\catalogs--1280x800.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 1353,
+        "innerWidth": 1280,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "none",
+        "outlineWidth": "1px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(65.5349 -2.25151 -14.5072) 0px 0px 0px 2px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/seguimiento/plan",
+      "file": "jefe\\seguimiento-plan--1280x800.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificacion"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "none",
+        "outlineWidth": "1px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(65.5349 -2.25151 -14.5072) 0px 0px 0px 2px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1280x800",
+      "route": "/login",
+      "file": "jefe\\login--1280x800.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 1280,
+        "innerWidth": 1280,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 0,
+      "h1Texts": [],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "none",
+        "outlineWidth": "1px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(65.5349 -2.25151 -14.5072) 0px 0px 0px 2px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "h1Count"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/inicio",
+      "file": "jefe\\inicio--768x1024.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 773,
+        "innerWidth": 768,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "none",
+        "outlineWidth": "1px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(65.5349 -2.25151 -14.5072) 0px 0px 0px 2px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/demanda/solicitudes",
+      "file": "jefe\\demanda-solicitudes--768x1024.png",
+      "url": "http://localhost:3300/demanda/solicitudes",
+      "overflowX": {
+        "scrollWidth": 990,
+        "innerWidth": 768,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Solicitudes"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "none",
+        "outlineWidth": "1px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(65.5349 -2.25151 -14.5072) 0px 0px 0px 2px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/catalogs",
+      "file": "jefe\\catalogs--768x1024.png",
+      "url": "http://localhost:3300/catalogs",
+      "overflowX": {
+        "scrollWidth": 1353,
+        "innerWidth": 768,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Maestras"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "none",
+        "outlineWidth": "1px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(65.5349 -2.25151 -14.5072) 0px 0px 0px 2px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/seguimiento/plan",
+      "file": "jefe\\seguimiento-plan--768x1024.png",
+      "url": "http://localhost:3300/seguimiento/plan",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Planificacion"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "none",
+        "outlineWidth": "1px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(65.5349 -2.25151 -14.5072) 0px 0px 0px 2px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "768x1024",
+      "route": "/login",
+      "file": "jefe\\login--768x1024.png",
+      "url": "http://localhost:3300/login",
+      "overflowX": {
+        "scrollWidth": 768,
+        "innerWidth": 768,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 0,
+      "h1Texts": [],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "none",
+        "outlineWidth": "1px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(65.5349 -2.25151 -14.5072) 0px 0px 0px 2px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "h1Count"
+      ],
+      "ok": false
+    }
+  ]
+}

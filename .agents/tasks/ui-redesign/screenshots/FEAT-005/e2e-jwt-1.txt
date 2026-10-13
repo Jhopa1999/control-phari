@@ -1,0 +1,15 @@
+
+> plantilla-portales@0.1.0 test:e2e
+> playwright test e2e/jwt-session.spec.ts
+
+
+Running 6 tests using 1 worker
+
+  ok 1 [chromium] › e2e\jwt-session.spec.ts:73:5 › recargar una ruta protegida conserva la sesión y la ruta (4.4s)
+  ok 2 [chromium] › e2e\jwt-session.spec.ts:95:5 › un enlace directo sin sesión vuelve a su ruta tras iniciar sesión (1.2s)
+  ok 3 [chromium] › e2e\jwt-session.spec.ts:108:5 › /login con sesión válida lleva a /inicio (1.6s)
+  ok 4 [chromium] › e2e\jwt-session.spec.ts:120:5 › una sesión rechazada lleva a /login?expired=1 con el aviso de sesión expirada (987ms)
+  ok 5 [chromium] › e2e\jwt-session.spec.ts:144:5 › un next externo se ignora y lleva a /inicio del mismo origen (1.8s)
+  ok 6 [chromium] › e2e\jwt-session.spec.ts:158:5 › cerrar sesión lleva a /login sin next y una recarga no la recupera (2.7s)
+
+  6 passed (14.1s)

@@ -45,3 +45,9 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Worktrees de git (nunca versionar árboles de trabajo)
+.worktrees/
+
+# Config local de Kiro con secretos/rutas de máquina (no versionar)
+.kiro/settings/

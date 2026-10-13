@@ -1,0 +1,121 @@
+{
+  "at": "2026-10-13T03:30:39.695Z",
+  "timezone": "America/Bogota",
+  "results": [
+    {
+      "name": "la fase QA ya tiene tareas antes de agregar",
+      "ok": true,
+      "detail": "2 tarea(s)"
+    },
+    {
+      "name": "fechas de la fase sin correrse un día",
+      "ok": true,
+      "detail": "2 nov 2026 – 13 nov 2026"
+    },
+    {
+      "name": "«Agregar tarea» habilitado en una fase con tareas",
+      "ok": true,
+      "detail": "aria-disabled=null"
+    },
+    {
+      "name": "la fase queda con una tarea más",
+      "ok": true,
+      "detail": "2 -> 2"
+    },
+    {
+      "name": "la segunda tarea aparece en la tabla con 9 nov y 13 nov",
+      "ok": true,
+      "detail": "QA · Segunda tarea desde la UI QA · Fase con tareas Sin asignar 9 nov 2026 13 nov 2026 4 h 0 Por hacer avance 0 % Editar"
+    },
+    {
+      "name": "la primera tarea sigue con 2 nov y 6 nov",
+      "ok": true,
+      "detail": "QA · Primera tarea de la fase QA · Fase con tareas Sin asignar 2 nov 2026 6 nov 2026 8 h 0 Por hacer avance 0 % Editar"
+    },
+    {
+      "name": "«Agregar tarea» sigue habilitado con 2 tareas",
+      "ok": true
+    },
+    {
+      "name": "fechas de las fases del plan PA iguales a las guardadas",
+      "ok": true,
+      "detail": "4 fases"
+    },
+    {
+      "name": "«Solo mis tareas» devuelve las tareas del usuario",
+      "ok": true,
+      "detail": {
+        "usuario": "2a6264af-e786-4eba-96ce-9dc6fd6c6846",
+        "esperadas": [
+          "Entrevistas con Gerencia Comercial y Finanzas",
+          "Diseño aprobado por la Gerencia Comercial",
+          "Reglas de asignación de costos por canal",
+          "Pruebas de aceptación con usuarios comerciales",
+          "Tablero en producción"
+        ],
+        "filas": 5,
+        "antes": 11
+      }
+    },
+    {
+      "name": "fechas de tarea iguales a las guardadas",
+      "ok": true,
+      "detail": "5 tareas"
+    },
+    {
+      "name": "sin errores de consola en Planificación",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "/seguimiento/novedades: «Nueva novedad» propone 2026-10-31",
+      "ok": true,
+      "detail": "valor=2026-10-31"
+    },
+    {
+      "name": "/seguimiento/compromisos: «Nuevo compromiso» propone 2026-10-31",
+      "ok": true,
+      "detail": "valor=2026-10-31"
+    },
+    {
+      "name": "/seguimiento/reuniones: «Nueva reunión» propone 2026-10-31",
+      "ok": true,
+      "detail": "valor=2026-10-31"
+    },
+    {
+      "name": "/seguimiento/bitacora: «Nuevo diario» propone 2026-10-31",
+      "ok": true,
+      "detail": "valor=2026-10-31"
+    },
+    {
+      "name": "/seguimiento/semanal: «Nuevo reporte semanal» propone 2026-10-26",
+      "ok": true,
+      "detail": "valor=2026-10-26"
+    },
+    {
+      "name": "/activos/capacidad: #capacidad-month por defecto 2026-10",
+      "ok": true,
+      "detail": "valor=2026-10"
+    },
+    {
+      "name": "/inicio: #dashboard-from por defecto 2026-10-01",
+      "ok": true,
+      "detail": "valor=2026-10-01"
+    },
+    {
+      "name": "/inicio: #dashboard-to por defecto 2026-11-01",
+      "ok": true,
+      "detail": "valor=2026-11-01"
+    },
+    {
+      "name": "/demanda/resumen: #indicadores-from por defecto 2026-10-01",
+      "ok": true,
+      "detail": "valor=2026-10-01"
+    },
+    {
+      "name": "/demanda/resumen: #indicadores-to por defecto 2026-11-01",
+      "ok": true,
+      "detail": "valor=2026-11-01"
+    }
+  ]
+}

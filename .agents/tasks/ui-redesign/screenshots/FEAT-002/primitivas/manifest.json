@@ -1,0 +1,403 @@
+{
+  "checks": [
+    {
+      "name": "1440x900 clic + foco por script llega a #qa-icono",
+      "ok": true,
+      "detail": "qa-icono"
+    },
+    {
+      "name": "1440x900 NIT 3: con foco no visible el tooltip no se abre",
+      "ok": true,
+      "detail": "closed"
+    },
+    {
+      "name": "1440x900 con foco de teclado el tooltip se abre",
+      "ok": true,
+      "detail": "instant-open"
+    },
+    {
+      "name": "1440x900 el tooltip abierto muestra la etiqueta",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 TooltipTarget: sin aria-describedby añadido por Radix",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 Tab + Enter + foco por script: foco visible y tooltip abierto",
+      "ok": true,
+      "detail": {
+        "activo": "qa-icono",
+        "focusVisible": true,
+        "estado": "instant-open"
+      }
+    },
+    {
+      "name": "1440x900 hover abre el tooltip y conserva la descripción propia",
+      "ok": true,
+      "detail": "qa-desc-texto"
+    },
+    {
+      "name": "1440x900 unavailable: aria-disabled=\"true\" y sin disabled",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 unavailable: sigue en el orden de tabulación",
+      "ok": true,
+      "detail": "qa-enviar"
+    },
+    {
+      "name": "1440x900 unavailable: Playwright lo ve como deshabilitado (toBeDisabled)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 unavailable: el clic no envía ni llama a onClick",
+      "ok": true,
+      "detail": "0|0|1"
+    },
+    {
+      "name": "1440x900 unavailable: Enter en el campo no envía el formulario",
+      "ok": true,
+      "detail": "0|0|2"
+    },
+    {
+      "name": "1440x900 loading: disabled, aria-busy y spinner",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 menú: el ítem no disponible lleva aria-disabled y muestra el motivo",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 menú: el teclado llega al ítem no disponible",
+      "ok": true,
+      "detail": "EliminarTiene tareas asociadas."
+    },
+    {
+      "name": "1440x900 menú: seleccionar el ítem no disponible no ejecuta y deja el menú abierto",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 menú: el ítem ocupado (disabled) se salta con el teclado",
+      "ok": true,
+      "detail": "EliminarTiene tareas asociadas."
+    },
+    {
+      "name": "1440x900 menú: el ítem ocupado muestra busyLabel y data-disabled",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 menú: Escape cierra y devuelve el foco al disparador",
+      "ok": true,
+      "detail": "qa-menu"
+    },
+    {
+      "name": "1440x900 tabs: ArrowRight activa «Validaciones»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 sheet: tiene «Cerrar menú»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 sheet: Escape cierra y devuelve el foco",
+      "ok": true,
+      "detail": "qa-abrir-menu"
+    },
+    {
+      "name": "1440x900 radio-cards: nombre = etiqueta y descripción aparte",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 radio-cards: clic y flechas cambian la opción",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 segmented-radio: radiogroup con nombre de labelledBy",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 segmented-radio: clic y flechas cambian el valor",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 checkbox: el label lo marca",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 select: el desplegable no sale del viewport",
+      "ok": true,
+      "detail": {
+        "x": 320,
+        "y": 641,
+        "width": 640,
+        "height": 191
+      }
+    },
+    {
+      "name": "1440x900 table: región con nombre y tabIndex 0",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 table compacta: encabezado 36 px y filas 32 px",
+      "ok": true,
+      "detail": [
+        36,
+        32,
+        32
+      ]
+    },
+    {
+      "name": "1440x900 table por defecto: encabezado 36 px y filas 40 px",
+      "ok": true,
+      "detail": [
+        36,
+        40,
+        40
+      ]
+    },
+    {
+      "name": "1440x900 dialog sm: ancho ≤ 440 px y dentro del viewport",
+      "ok": true,
+      "detail": {
+        "x": 500,
+        "y": 322.5,
+        "width": 440,
+        "height": 255
+      }
+    },
+    {
+      "name": "1440x900 dialog: botón «Cerrar»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 toaster: región «Notificaciones»",
+      "ok": true,
+      "detail": "Notificaciones alt+T"
+    },
+    {
+      "name": "1440x900 toaster: botón «Cerrar notificación»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "1440x900 sin errores de consola",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "390x844 clic + foco por script llega a #qa-icono",
+      "ok": true,
+      "detail": "qa-icono"
+    },
+    {
+      "name": "390x844 NIT 3: con foco no visible el tooltip no se abre",
+      "ok": true,
+      "detail": "closed"
+    },
+    {
+      "name": "390x844 con foco de teclado el tooltip se abre",
+      "ok": true,
+      "detail": "instant-open"
+    },
+    {
+      "name": "390x844 el tooltip abierto muestra la etiqueta",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 TooltipTarget: sin aria-describedby añadido por Radix",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 Tab + Enter + foco por script: foco visible y tooltip abierto",
+      "ok": true,
+      "detail": {
+        "activo": "qa-icono",
+        "focusVisible": true,
+        "estado": "instant-open"
+      }
+    },
+    {
+      "name": "390x844 unavailable: aria-disabled=\"true\" y sin disabled",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 unavailable: sigue en el orden de tabulación",
+      "ok": true,
+      "detail": "qa-enviar"
+    },
+    {
+      "name": "390x844 unavailable: Playwright lo ve como deshabilitado (toBeDisabled)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 unavailable: el clic no envía ni llama a onClick",
+      "ok": true,
+      "detail": "0|0|1"
+    },
+    {
+      "name": "390x844 unavailable: Enter en el campo no envía el formulario",
+      "ok": true,
+      "detail": "0|0|2"
+    },
+    {
+      "name": "390x844 loading: disabled, aria-busy y spinner",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 menú: el ítem no disponible lleva aria-disabled y muestra el motivo",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 menú: el teclado llega al ítem no disponible",
+      "ok": true,
+      "detail": "EliminarTiene tareas asociadas."
+    },
+    {
+      "name": "390x844 menú: seleccionar el ítem no disponible no ejecuta y deja el menú abierto",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 menú: el ítem ocupado (disabled) se salta con el teclado",
+      "ok": true,
+      "detail": "EliminarTiene tareas asociadas."
+    },
+    {
+      "name": "390x844 menú: el ítem ocupado muestra busyLabel y data-disabled",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 menú: Escape cierra y devuelve el foco al disparador",
+      "ok": true,
+      "detail": "qa-menu"
+    },
+    {
+      "name": "390x844 tabs: ArrowRight activa «Validaciones»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 sheet: tiene «Cerrar menú»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 sheet: Escape cierra y devuelve el foco",
+      "ok": true,
+      "detail": "qa-abrir-menu"
+    },
+    {
+      "name": "390x844 radio-cards: nombre = etiqueta y descripción aparte",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 radio-cards: clic y flechas cambian la opción",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 segmented-radio: radiogroup con nombre de labelledBy",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 segmented-radio: clic y flechas cambian el valor",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 checkbox: el label lo marca",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 select: el desplegable no sale del viewport",
+      "ok": true,
+      "detail": {
+        "x": 10,
+        "y": 616,
+        "width": 370,
+        "height": 191
+      }
+    },
+    {
+      "name": "390x844 table: región con nombre y tabIndex 0",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 table compacta: encabezado 36 px y filas 32 px",
+      "ok": true,
+      "detail": [
+        36,
+        32,
+        32
+      ]
+    },
+    {
+      "name": "390x844 table por defecto: encabezado 36 px y filas 40 px",
+      "ok": true,
+      "detail": [
+        36,
+        40,
+        40
+      ]
+    },
+    {
+      "name": "390x844 dialog sm: ancho ≤ 440 px y dentro del viewport",
+      "ok": true,
+      "detail": {
+        "x": 8,
+        "y": 260.5,
+        "width": 374,
+        "height": 323
+      }
+    },
+    {
+      "name": "390x844 dialog: botón «Cerrar»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 toaster: región «Notificaciones»",
+      "ok": true,
+      "detail": "Notificaciones alt+T"
+    },
+    {
+      "name": "390x844 toaster: botón «Cerrar notificación»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "390x844 sin errores de consola",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

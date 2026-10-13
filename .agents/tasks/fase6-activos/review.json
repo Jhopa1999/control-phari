@@ -1,0 +1,15 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "severity": "NIT",
+      "detail": "AC-020 'conserva la previa': las pruebas verifican que createVersion incrementa versionNumber y mueve solo currentVersionId, pero no afirman explicitamente que la fila de la version previa permanece. La inmutabilidad es estructural (DocumentVersion es append-only: solo create, nunca update/delete), por lo que la garantia se sostiene; una asercion directa cerraria el criterio de forma observable.",
+      "location": "apps/api/src/modules/knowledge/document/document.service.spec.ts:createVersion (versionado inmutable, AC-020)"
+    },
+    {
+      "severity": "NIT",
+      "detail": "Las validaciones 400 de content vacio / tope 200000 y title/name vacio se aplican a nivel DTO (class-validator @MinLength(1)/@MaxLength(200000) tras trim) via el ValidationPipe global, no en el service, y no hay un spec que las ejerza. Es coherente con el diseno (son reglas de DTO), pero un test de pipe o E2E las dejaria verificadas de punta a punta.",
+      "location": "apps/api/src/modules/knowledge/document/dto/create-document.dto.ts; create-document-version.dto.ts; asset/dto/create-asset.dto.ts"
+    }
+  ]
+}

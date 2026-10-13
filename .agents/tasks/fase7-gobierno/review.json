@@ -1,0 +1,12 @@
+{
+  "verdict": "APPROVED",
+  "summary": "Fase 7 (Gobierno de la demanda) es fiel al diseno rector y al marco FCGR §4-§7. Se verifico en el codigo: formula de prioridad P1-P4 con cortes 80/65/45 (computeScore y PRIORITY_WEIGHTS sin cambios), migracion aditiva sin tocar columnas/enum existentes, catalogos sembrados idempotentes (PRIORITY intacta), transiciones GC4/GC5 anadidas sin BLOQUEADA, bloqueo como flag transversal (no estado), RequestStateService unico escritor del estado via assertTransition, GC4 bloqueado por defecto bloqueante sin resolver o validacion obligatoria faltante, GC1-GC3 no aprobables por approve (409), AuditObjectType/OBJECT_TYPES sincronizados en los dos lugares, textos de GATE_DEFINITIONS literales del marco, pantalla frameworks convertida sin tocar navigation.ts ni las 21 claves de MODULE_MATRIX, y OpenAPI+api-client regenerados byte a byte (en sync, versionados). Verificacion independiente ejecutada: test:unit 367/367 (44 suites) OK, typecheck api+api-client+web OK, contracts:generate sin diff. No quedan hallazgos que exijan cambios.",
+  "findings": [
+    {
+      "severity": "NIT",
+      "location": "apps/api/src/modules/governance/validation/validation.service.ts:103",
+      "problem": "ValidationService.create nunca setea gateCheckId; el modelo ValidationRecord expone la FK opcional al gate (design D-C1: 'opcionalmente a un gate, tipicamente GC4') pero toda validacion queda ligada solo a la Request. No es un defecto: computeGc4Summary lee todas las validaciones por requestId, asi que el bloqueo de GC4 funciona correctamente; solo se pierde la asociacion directa validacion->gate en el expediente.",
+      "recommendation": "Opcional en una fase futura: permitir vincular una validacion al GC4 (aceptar gateCheckId en CreateValidationDto o resolverlo del GC4 materializado). Sin impacto en las reglas actuales; no bloquea esta fase."
+    }
+  ]
+}

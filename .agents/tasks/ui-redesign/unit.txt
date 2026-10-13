@@ -1,0 +1,65 @@
+
+> plantilla-portales@0.1.0 test:unit
+> npm run test --workspace apps/api
+
+
+> @plantilla-portales/api@0.1.0 test
+> jest --config jest.config.ts
+
+PASS src/modules/governance/gate-check/gate-check.service.spec.ts (10.097 s)
+PASS src/modules/capacity/capacity.service.spec.ts (10.27 s)
+PASS src/modules/knowledge/document/document.service.spec.ts (10.308 s)
+PASS src/modules/coordination/worklog/worklog.service.spec.ts (10.365 s)
+PASS src/modules/catalog/catalog.service.spec.ts (10.364 s)
+PASS src/modules/plan/task/task.service.spec.ts (10.377 s)
+PASS src/modules/portfolio/area-control.service.spec.ts (10.419 s)
+PASS src/modules/auth/auth-login.service.spec.ts
+PASS src/modules/process/process.service.spec.ts
+PASS src/modules/portfolio/area-control.controller.spec.ts
+PASS src/modules/knowledge/knowledge.module.spec.ts
+PASS src/modules/request/request.module.spec.ts
+PASS src/modules/coordination/coordination.module.spec.ts
+PASS src/modules/plan/plan.service.spec.ts
+PASS src/modules/plan/plan.module.spec.ts
+PASS src/modules/request/request-flow.spec.ts
+PASS src/modules/knowledge/asset/asset.service.spec.ts
+PASS src/modules/coordination/audit-contract.spec.ts
+PASS src/modules/governance/validation/validation.service.spec.ts
+PASS src/modules/request/request.service.spec.ts
+PASS src/modules/auth/jwt-actor.resolver.spec.ts
+PASS src/modules/grant/grant.service.spec.ts
+PASS src/modules/request/priority/priority.service.spec.ts
+PASS src/modules/coordination/issue/issue.service.spec.ts
+PASS src/modules/coordination/commitment/commitment.service.spec.ts
+PASS src/modules/request/triage/triage.service.spec.ts
+PASS src/modules/capacity/capacity.module.spec.ts
+PASS src/modules/audit/audit.service.spec.ts
+PASS src/modules/coordination/meeting/meeting.service.spec.ts
+PASS src/modules/portfolio/portfolio.service.spec.ts
+PASS src/modules/request/approval/approval.service.spec.ts
+PASS src/modules/plan/phase/phase.service.spec.ts
+PASS src/modules/auth/roles.guard.spec.ts
+PASS src/modules/plan/plan-guide.service.spec.ts
+PASS src/modules/user/user.service.spec.ts
+PASS src/modules/plan/dependency/dependency.service.spec.ts
+PASS src/modules/request/request-state.service.spec.ts
+PASS src/modules/plan/plan-status.spec.ts
+PASS src/modules/plan/plan-state.service.spec.ts
+PASS src/modules/coordination/coordination-scope.service.spec.ts
+PASS src/modules/coordination/date.spec.ts
+PASS src/modules/governance/governance-state.service.spec.ts
+PASS src/modules/knowledge/asset/asset-state.service.spec.ts
+PASS src/modules/portfolio/period.spec.ts
+PASS src/modules/coordination/workflow-state.service.spec.ts
+PASS src/modules/plan/task-status.spec.ts
+PASS src/modules/auth/module-matrix.spec.ts
+PASS src/modules/capacity/month.spec.ts
+PASS src/modules/portfolio/indicators.spec.ts
+PASS src/modules/coordination/record-state.spec.ts
+PASS src/modules/knowledge/document/document-state.service.spec.ts
+
+Test Suites: 51 passed, 51 total
+Tests:       434 passed, 434 total
+Snapshots:   0 total
+Time:        16.182 s, estimated 25 s
+Ran all test suites.

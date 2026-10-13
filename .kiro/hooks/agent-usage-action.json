@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Registrar accion del agente",
+      "trigger": "PostToolUse",
+      "matcher": "fs_write|str_replace|fs_append|delete_file|execute_pwsh|smart_relocate|semantic_rename",
+      "description": "Anexa a .kiro/agent-usage.log cada herramienta de escritura o comando que el agente ejecuta (el qué hizo).",
+      "action": {
+        "type": "command",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .kiro/hooks/log-agent-usage.ps1 -Event \"ACCION\""
+      },
+      "enabled": false
+    }
+  ]
+}

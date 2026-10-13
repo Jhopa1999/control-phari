@@ -1,0 +1,7 @@
+{
+  "task_id": "task-fase6-activos",
+  "task_description": "Implementar la Fase 6 (Activos y documentos) de control-phari a partir del diseño aprobado en .agents/tasks/fase6-activos/design.md: modelo Prisma (Asset/Document/DocumentVersion) + migración fase6_activos, seed de familias de catálogo, módulo backend knowledge/ (asset + document) con alcance por rol y auditoría transaccional, regeneración de contrato OpenAPI + api-client, wrappers tipados en apps/web/src/lib y pantallas SCR-15/SCR-16, más pruebas unitarias. Trabajo sobre el worktree .worktrees/fase6-activos, construyendo encima de las Fases 1-5 ya mergeadas (no se tocan).",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

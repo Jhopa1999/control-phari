@@ -1,0 +1,372 @@
+[
+  {
+    "source": "dialogs\\activo-vacio.png",
+    "outputs": [
+      {
+        "file": "review\\dialogs\\activo-vacio.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "dialogs\\documento-vacio.png",
+    "outputs": [
+      {
+        "file": "review\\dialogs\\documento-vacio.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "dialogs\\editor-vista-previa.png",
+    "outputs": [
+      {
+        "file": "review\\dialogs\\editor-vista-previa.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "dialogs\\historial.png",
+    "outputs": [
+      {
+        "file": "review\\dialogs\\historial.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "dialogs\\maestra-vacio.png",
+    "outputs": [
+      {
+        "file": "review\\dialogs\\maestra-vacio.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\activos-catalogo--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-catalogo--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\activos-catalogo--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-catalogo--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\activos-catalogo--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-catalogo--390x844.png",
+        "width": 390,
+        "height": 1032
+      }
+    ]
+  },
+  {
+    "source": "integrante\\activos-catalogo--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-catalogo--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\activos-documentos--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-documentos--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\activos-documentos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-documentos--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\activos-documentos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-documentos--390x844.png",
+        "width": 390,
+        "height": 1103
+      }
+    ]
+  },
+  {
+    "source": "integrante\\activos-documentos--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\activos-documentos--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\administracion-maestras--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\administracion-maestras--1280x800.png",
+        "width": 1280,
+        "height": 1091
+      }
+    ]
+  },
+  {
+    "source": "integrante\\administracion-maestras--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\administracion-maestras--1440x900.png",
+        "width": 1440,
+        "height": 1091
+      }
+    ]
+  },
+  {
+    "source": "integrante\\administracion-maestras--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\administracion-maestras--390x844.png",
+        "width": 390,
+        "height": 1380
+      }
+    ]
+  },
+  {
+    "source": "integrante\\administracion-maestras--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\administracion-maestras--768x1024.png",
+        "width": 768,
+        "height": 1147
+      }
+    ]
+  },
+  {
+    "source": "integrante\\catalogs--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\catalogs--1280x800.png",
+        "width": 1280,
+        "height": 1091
+      }
+    ]
+  },
+  {
+    "source": "integrante\\catalogs--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\catalogs--1440x900.png",
+        "width": 1440,
+        "height": 1091
+      }
+    ]
+  },
+  {
+    "source": "integrante\\catalogs--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\catalogs--390x844.png",
+        "width": 390,
+        "height": 1380
+      }
+    ]
+  },
+  {
+    "source": "integrante\\catalogs--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\catalogs--768x1024.png",
+        "width": 768,
+        "height": 1147
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-catalogo--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-catalogo--1280x800.png",
+        "width": 1280,
+        "height": 1030
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-catalogo--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-catalogo--1440x900.png",
+        "width": 1440,
+        "height": 1025
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-catalogo--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-catalogo--390x844.png",
+        "width": 390,
+        "height": 1425
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-catalogo--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-catalogo--768x1024.png",
+        "width": 768,
+        "height": 1149
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-documentos--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-documentos--1280x800.png",
+        "width": 1280,
+        "height": 940
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-documentos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-documentos--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-documentos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-documentos--390x844.png",
+        "width": 390,
+        "height": 1335
+      }
+    ]
+  },
+  {
+    "source": "jefe\\activos-documentos--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\activos-documentos--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\administracion-maestras--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\administracion-maestras--1280x800.png",
+        "width": 1280,
+        "height": 1091
+      }
+    ]
+  },
+  {
+    "source": "jefe\\administracion-maestras--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\administracion-maestras--1440x900.png",
+        "width": 1440,
+        "height": 1091
+      }
+    ]
+  },
+  {
+    "source": "jefe\\administracion-maestras--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\administracion-maestras--390x844.png",
+        "width": 390,
+        "height": 1380
+      }
+    ]
+  },
+  {
+    "source": "jefe\\administracion-maestras--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\administracion-maestras--768x1024.png",
+        "width": 768,
+        "height": 1147
+      }
+    ]
+  },
+  {
+    "source": "jefe\\catalogs--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\catalogs--1280x800.png",
+        "width": 1280,
+        "height": 1091
+      }
+    ]
+  },
+  {
+    "source": "jefe\\catalogs--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\catalogs--1440x900.png",
+        "width": 1440,
+        "height": 1091
+      }
+    ]
+  },
+  {
+    "source": "jefe\\catalogs--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\catalogs--390x844.png",
+        "width": 390,
+        "height": 1380
+      }
+    ]
+  },
+  {
+    "source": "jefe\\catalogs--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\catalogs--768x1024.png",
+        "width": 768,
+        "height": 1147
+      }
+    ]
+  }
+]

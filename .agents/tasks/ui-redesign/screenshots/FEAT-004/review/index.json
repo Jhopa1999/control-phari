@@ -1,0 +1,471 @@
+[
+  {
+    "source": "componentes\\qa-componentes--1440x900.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\componentes\\qa-componentes--1440x900--parte-1-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\componentes\\qa-componentes--1440x900--parte-2-de-3.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\componentes\\qa-componentes--1440x900--parte-3-de-3.png",
+        "width": 1440,
+        "height": 1578
+      }
+    ]
+  },
+  {
+    "source": "componentes\\qa-componentes--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\componentes\\qa-componentes--390x844--parte-1-de-5.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\componentes\\qa-componentes--390x844--parte-2-de-5.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\componentes\\qa-componentes--390x844--parte-3-de-5.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\componentes\\qa-componentes--390x844--parte-4-de-5.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\componentes\\qa-componentes--390x844--parte-5-de-5.png",
+        "width": 390,
+        "height": 577
+      }
+    ]
+  },
+  {
+    "source": "componentes\\qa-componentes--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\componentes\\qa-componentes--768x1024--parte-1-de-4.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\componentes\\qa-componentes--768x1024--parte-2-de-4.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\componentes\\qa-componentes--768x1024--parte-3-de-4.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\componentes\\qa-componentes--768x1024--parte-4-de-4.png",
+        "width": 768,
+        "height": 507
+      }
+    ]
+  },
+  {
+    "source": "componentes\\qa-servidor--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\componentes\\qa-servidor--1440x900.png",
+        "width": 1440,
+        "height": 1474
+      }
+    ]
+  },
+  {
+    "source": "efecto-min-w-0\\jefe\\catalogs--1280x800.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\catalogs--1280x800--parte-1-de-3.png",
+        "width": 1280,
+        "height": 1800
+      },
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\catalogs--1280x800--parte-2-de-3.png",
+        "width": 1280,
+        "height": 1800
+      },
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\catalogs--1280x800--parte-3-de-3.png",
+        "width": 1280,
+        "height": 1221
+      }
+    ]
+  },
+  {
+    "source": "efecto-min-w-0\\jefe\\catalogs--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\catalogs--768x1024--parte-1-de-3.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\catalogs--768x1024--parte-2-de-3.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\catalogs--768x1024--parte-3-de-3.png",
+        "width": 768,
+        "height": 1241
+      }
+    ]
+  },
+  {
+    "source": "efecto-min-w-0\\jefe\\demanda-solicitudes--1280x800.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\demanda-solicitudes--1280x800--parte-1-de-2.png",
+        "width": 1280,
+        "height": 1800
+      },
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\demanda-solicitudes--1280x800--parte-2-de-2.png",
+        "width": 1280,
+        "height": 1358
+      }
+    ]
+  },
+  {
+    "source": "efecto-min-w-0\\jefe\\demanda-solicitudes--768x1024.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\demanda-solicitudes--768x1024--parte-1-de-3.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\demanda-solicitudes--768x1024--parte-2-de-3.png",
+        "width": 768,
+        "height": 1800
+      },
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\demanda-solicitudes--768x1024--parte-3-de-3.png",
+        "width": 768,
+        "height": 1362
+      }
+    ]
+  },
+  {
+    "source": "efecto-min-w-0\\jefe\\inicio--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\inicio--1280x800.png",
+        "width": 1280,
+        "height": 1273
+      }
+    ]
+  },
+  {
+    "source": "efecto-min-w-0\\jefe\\inicio--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\efecto-min-w-0\\jefe\\inicio--768x1024.png",
+        "width": 768,
+        "height": 1683
+      }
+    ]
+  },
+  {
+    "source": "integrante\\mi-trabajo--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\mi-trabajo--1280x800.png",
+        "width": 1280,
+        "height": 1007
+      }
+    ]
+  },
+  {
+    "source": "integrante\\mi-trabajo--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\mi-trabajo--1440x900.png",
+        "width": 1440,
+        "height": 1007
+      }
+    ]
+  },
+  {
+    "source": "integrante\\mi-trabajo--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\integrante\\mi-trabajo--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\integrante\\mi-trabajo--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 601
+      }
+    ]
+  },
+  {
+    "source": "integrante\\mi-trabajo--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\mi-trabajo--768x1024.png",
+        "width": 768,
+        "height": 1277
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-proyectos--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-proyectos--1280x800.png",
+        "width": 1280,
+        "height": 1007
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-proyectos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-proyectos--1440x900.png",
+        "width": 1440,
+        "height": 1007
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-proyectos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-proyectos--390x844.png",
+        "width": 390,
+        "height": 1358
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-proyectos--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-proyectos--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\mi-trabajo--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\mi-trabajo--1280x800.png",
+        "width": 1280,
+        "height": 1273
+      }
+    ]
+  },
+  {
+    "source": "jefe\\mi-trabajo--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\mi-trabajo--1440x900.png",
+        "width": 1440,
+        "height": 1273
+      }
+    ]
+  },
+  {
+    "source": "jefe\\mi-trabajo--390x844.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\jefe\\mi-trabajo--390x844--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\jefe\\mi-trabajo--390x844--parte-2-de-2.png",
+        "width": 390,
+        "height": 78
+      }
+    ]
+  },
+  {
+    "source": "jefe\\mi-trabajo--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\mi-trabajo--768x1024.png",
+        "width": 768,
+        "height": 1273
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-proyectos--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-proyectos--1280x800.png",
+        "width": 1280,
+        "height": 1273
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-proyectos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-proyectos--1440x900.png",
+        "width": 1440,
+        "height": 1273
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-proyectos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-proyectos--390x844.png",
+        "width": 390,
+        "height": 1624
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-proyectos--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-proyectos--768x1024.png",
+        "width": 768,
+        "height": 1273
+      }
+    ]
+  },
+  {
+    "source": "mi-trabajo-estados\\mi-trabajo-cargando--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\mi-trabajo-estados\\mi-trabajo-cargando--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "mi-trabajo-estados\\mi-trabajo-error--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\mi-trabajo-estados\\mi-trabajo-error--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "mi-trabajo-estados\\mi-trabajo-vacio--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\mi-trabajo-estados\\mi-trabajo-vacio--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "sondeo-shell-sin-min-w-0\\integrante\\mi-trabajo--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\sondeo-shell-sin-min-w-0\\integrante\\mi-trabajo--1280x800.png",
+        "width": 1280,
+        "height": 1007
+      }
+    ]
+  },
+  {
+    "source": "sondeo-shell-sin-min-w-0\\integrante\\mi-trabajo--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\sondeo-shell-sin-min-w-0\\integrante\\mi-trabajo--768x1024.png",
+        "width": 1128,
+        "height": 1168
+      }
+    ]
+  },
+  {
+    "source": "sondeo-shell-sin-min-w-0\\integrante\\seguimiento-proyectos--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\sondeo-shell-sin-min-w-0\\integrante\\seguimiento-proyectos--1280x800.png",
+        "width": 1280,
+        "height": 1007
+      }
+    ]
+  },
+  {
+    "source": "sondeo-shell-sin-min-w-0\\integrante\\seguimiento-proyectos--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\sondeo-shell-sin-min-w-0\\integrante\\seguimiento-proyectos--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "sondeo-shell-sin-min-w-0\\jefe\\mi-trabajo--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\sondeo-shell-sin-min-w-0\\jefe\\mi-trabajo--1280x800.png",
+        "width": 1280,
+        "height": 1273
+      }
+    ]
+  },
+  {
+    "source": "sondeo-shell-sin-min-w-0\\jefe\\mi-trabajo--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\sondeo-shell-sin-min-w-0\\jefe\\mi-trabajo--768x1024.png",
+        "width": 1099,
+        "height": 1273
+      }
+    ]
+  },
+  {
+    "source": "sondeo-shell-sin-min-w-0\\jefe\\seguimiento-proyectos--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\sondeo-shell-sin-min-w-0\\jefe\\seguimiento-proyectos--1280x800.png",
+        "width": 1280,
+        "height": 1273
+      }
+    ]
+  },
+  {
+    "source": "sondeo-shell-sin-min-w-0\\jefe\\seguimiento-proyectos--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\sondeo-shell-sin-min-w-0\\jefe\\seguimiento-proyectos--768x1024.png",
+        "width": 768,
+        "height": 1273
+      }
+    ]
+  }
+]

@@ -1,0 +1,215 @@
+{
+  "generatedAt": "2026-10-12T11:36:50.256Z",
+  "total": 33,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "Un solo h1 «Mi trabajo»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Descripción de §11.1",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ResultCount «30 tareas»",
+      "ok": true,
+      "detail": "30 tareas"
+    },
+    {
+      "name": "Paginación «1–25 de 30 tareas» y «Página 1 de 2»",
+      "ok": true,
+      "detail": "1–25 de 30 tareas Filas por página 25 Página 1 de 2"
+    },
+    {
+      "name": "25 filas en la página 1",
+      "ok": true,
+      "detail": 25
+    },
+    {
+      "name": "Columnas Tarea, Solicitud, Fase, Vence y Estado (sin columna de acciones)",
+      "ok": true,
+      "detail": [
+        "Tarea Tarea, ordenar",
+        "Solicitud",
+        "Fase",
+        "Vence Vence, ordenar",
+        "Estado Estado, ordenar"
+      ]
+    },
+    {
+      "name": "Orden por defecto: Vence ascendente",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "La primera fila es la que vence antes («Tarea e2e 29», 2 ene 2027)",
+      "ok": true,
+      "detail": "Tarea e2e 29 Solicitud e2e Fase e2e 2 ene 2027 Terminada avance 70 %"
+    },
+    {
+      "name": "Página 2: las 5 filas, con las 6 sin fecha al final",
+      "ok": true,
+      "detail": [
+        "Tarea e2e 10 Solicitud e2e Fase e2e — Po",
+        "Tarea e2e 15 Solicitud e2e Fase e2e — Po",
+        "Tarea e2e 20 Solicitud e2e Fase e2e — Po",
+        "Tarea e2e 25 Solicitud e2e Fase e2e — Po",
+        "Tarea e2e 30 Solicitud e2e Fase e2e — Po"
+      ]
+    },
+    {
+      "name": "Vence descendente: la que vence más tarde primero y sin fecha al final",
+      "ok": true,
+      "detail": "Tarea e2e 01 Solicitud e2e Fase e2e 30 ene 2027 En curso avance 10 %"
+    },
+    {
+      "name": "Vence (orden por defecto) vuelve a ascendente",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Estado ascendente en el orden del flujo: primero «Por hacer»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Tarea ascendente: «Tarea e2e 01» primero",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "El título abre la tarea: /seguimiento/tareas?taskId=…",
+      "ok": true,
+      "detail": "/seguimiento/tareas?taskId=00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "name": "Badge «Hito» en las tareas hito",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Estado con StatusBadge «Bloqueada» y progreso «70 %» (espacio duro) con etiqueta sr-only «avance»",
+      "ok": true,
+      "detail": "Bloqueadaavance 70 %"
+    },
+    {
+      "name": "Búsqueda: «10 de 30 tareas»",
+      "ok": true,
+      "detail": "10 de 30 tareas"
+    },
+    {
+      "name": "«Limpiar filtros» aparece con un filtro activo",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Estado «Terminada» + búsqueda: «2 de 30 tareas»",
+      "ok": true,
+      "detail": "2 de 30 tareas"
+    },
+    {
+      "name": "Sin resultados: mensaje y «0 de 30 tareas»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Sin resultados: un solo «Limpiar filtros»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "«Limpiar filtros» restablece todo y lleva el foco a #mt-buscar (NIT 4)",
+      "ok": true,
+      "detail": {
+        "active": "mt-buscar",
+        "count": "30 tareas"
+      }
+    },
+    {
+      "name": "Sin filtros no hay «Limpiar filtros»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "50 por página: «1–30 de 30 tareas», «Página 1 de 1»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "«Actualizar» vuelve a pedir GET /my-work",
+      "ok": true,
+      "detail": {
+        "before": 3,
+        "after": 4
+      }
+    },
+    {
+      "name": "Al cambiar de actor recarga GET /my-work con el nuevo X-Actor-Id",
+      "ok": true,
+      "detail": [
+        "integrante.bi@demo.local"
+      ]
+    },
+    {
+      "name": "Cargando: «Cargando tareas…» y esqueleto con aria-busy",
+      "ok": true,
+      "detail": "Cargando tareas…"
+    },
+    {
+      "name": "Error: «No fue posible cargar tu trabajo.» con el mensaje del wrapper",
+      "ok": true,
+      "detail": "No fue posible cargar tu trabajo. Ocurrió un error al cargar tu trabajo. Reintentar"
+    },
+    {
+      "name": "Error: sin conteo ni tabla",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Reintentar recupera la lista",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Vacío: «No tienes tareas asignadas.» + guía, sin paginación",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Foco visible en los controles tras la búsqueda (select, región, encabezados, enlaces)",
+      "ok": true,
+      "detail": [
+        {
+          "el": "button#mt-filtro-estado Todos",
+          "visible": true
+        },
+        {
+          "el": "div Tabla de mis tareas",
+          "visible": true
+        },
+        {
+          "el": "button TareaTarea, ordenar",
+          "visible": true
+        },
+        {
+          "el": "button VenceVence, ordenar",
+          "visible": true
+        },
+        {
+          "el": "button EstadoEstado, ordenar",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "name": "Sin errores de consola en /mi-trabajo (salvo el 500 provocado por el fixture)",
+      "ok": true,
+      "detail": [
+        "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+      ]
+    }
+  ]
+}

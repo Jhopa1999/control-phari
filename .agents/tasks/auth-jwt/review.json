@@ -1,0 +1,16 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "severity": "non-blocking",
+      "label": "ValidationPipe 400 not documented in OpenAPI for /auth/login",
+      "detail": "The global ValidationPipe (whitelist/forbidNonWhitelisted on LoginRequestDto) yields a 400 that is not listed among the OpenAPI responses for POST /auth/login. The validation itself is in place; only the doc entry is missing. Cosmetic."
+    },
+    {
+      "severity": "non-blocking",
+      "label": "Timing side channel on unknown-user branch",
+      "detail": "When the user is not found, bcrypt.compare never runs, so the unknown-user path returns faster than the wrong-password path (theoretical enumeration via timing). Status and body are identical and the task requirement (uniform generic error path) is met; flagged for awareness only."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\auth-jwt\\review.md"
+}

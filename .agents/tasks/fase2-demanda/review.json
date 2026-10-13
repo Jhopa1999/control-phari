@@ -1,0 +1,18 @@
+{
+  "verdict": "APPROVED",
+  "summary": "Revision en frio de feat/fase2-demanda (main...HEAD, 55 archivos, 4 commits) contra el diseno APROBADO (Rev.3), plan y SDD. Todos los gates server-side, el score, BR-006, la auditoria y los limites arquitectonicos coinciden con el diseno. Verificacion reproducida localmente: npm run typecheck verde, npm run build verde (25 rutas web incl. las 4 de Fase 2), npm run test:unit 14 suites/110 pruebas en verde. Las pruebas unitarias de §5 existen y pasan. Sin findings bloqueantes.",
+  "findings": [
+    {
+      "severity": "NIT",
+      "where": "apps/api/src/modules/request/dto/update-request.dto.ts + request.service.ts (PATCH)",
+      "problem": "El diseno §1.2 dice en prosa 'cualquier edicion relevante exige changeJustification' (BR-017), pero §3.4 lo define como 'changeJustification?' opcional y el service no lo exige; se guarda solo si llega. Es una tension prosa-vs-contrato interna del diseno, no una violacion: §3.4 (el contrato) manda y el codigo es coherente con el.",
+      "fix": "Si el Site confirma que la justificacion es obligatoria en edicion, exigirla en el service (400 si falta cuando cambian campos de ficha) y marcarla requerida en el DTO. Mientras siga marcada P, dejar como esta."
+    },
+    {
+      "severity": "NIT",
+      "where": "apps/api/src/modules/request/approval (capacidad review)",
+      "problem": "La capacidad 'review' se modela como @Roles(JEFE_AREA, LIDER_PROCESO) a nivel de guard, no como un chequeo per-proceso de la grant 'review'. Un LIDER_PROCESO con alcance en su proceso siempre tiene review en Fase 2. Es exactamente la decision del diseno (reutilizar el mecanismo @Roles de Fase 1, MODULE_MATRIX.review=[JEFE_AREA,LIDER_PROCESO]); el aislamiento por proceso lo da el scope del where.",
+      "fix": "Ninguno requerido. Si el Site separa 'review' de rol, introducir el chequeo de capacidad por grant; hoy es consistente con el diseno aprobado."
+    }
+  ]
+}

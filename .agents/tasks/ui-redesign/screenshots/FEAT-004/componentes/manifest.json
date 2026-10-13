@@ -1,0 +1,803 @@
+{
+  "generatedAt": "2026-10-12T11:32:41.641Z",
+  "total": 141,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "ResultCount sin filtros: «60 elementos»",
+      "ok": true,
+      "detail": "60 elementos"
+    },
+    {
+      "name": "Paginación: «1–25 de 60 elementos» y «Página 1 de 3»",
+      "ok": true,
+      "detail": "1–25 de 60 elementos Filas por página 25 Página 1 de 3"
+    },
+    {
+      "name": "Página anterior deshabilitada en la primera página",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Página siguiente habilitada",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "25 filas en la página 1",
+      "ok": true,
+      "detail": 25
+    },
+    {
+      "name": "Orden por defecto Nombre descendente: primera fila «Elemento 60»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Un solo th[aria-sort] y es Nombre descendente",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Nombre (columna por defecto) desde descendente pasa a ascendente",
+      "ok": true,
+      "detail": "ascending"
+    },
+    {
+      "name": "Y de nuevo a descendente",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Otra columna: ascendente y aria-sort solo en ella",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Con Número ascendente la primera fila tiene n = 0",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "Página 2: «26–50 de 60 elementos»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Página 3: «51–60 de 60 elementos» y «Página 3 de 3»",
+      "ok": true,
+      "detail": "51–60 de 60 elementos Filas por página 25 Página 3 de 3"
+    },
+    {
+      "name": "En el extremo «Página siguiente» queda deshabilitada",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "El foco pasa a «Página anterior» al llegar al extremo",
+      "ok": true,
+      "detail": {
+        "tag": "button",
+        "id": null,
+        "label": "Página anterior",
+        "text": ""
+      }
+    },
+    {
+      "name": "NIT 3: con ratón, al llegar al extremo el foco pasa a «Página anterior» sin abrir su tooltip",
+      "ok": true,
+      "detail": {
+        "tag": "button",
+        "id": null,
+        "label": "Página anterior",
+        "text": ""
+      }
+    },
+    {
+      "name": "Filas por página 50: «1–50 de 60 elementos» y «Página 1 de 2»",
+      "ok": true,
+      "detail": "1–50 de 60 elementos Filas por página 50 Página 1 de 2"
+    },
+    {
+      "name": "La etiqueta «Filas por página» nombra el selector",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ResultCount con filtros: «0 de 60 elementos»",
+      "ok": true,
+      "detail": "0 de 60 elementos"
+    },
+    {
+      "name": "Sin resultados: título y descripción por defecto",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Sin resultados: un solo «Limpiar filtros» (el del toolbar)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Sin resultados: no se pinta la paginación",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ResultCount filtrado: «9 de 60 elementos»",
+      "ok": true,
+      "detail": "9 de 60 elementos"
+    },
+    {
+      "name": "Paginación siempre visible en ready aunque quepa en una página (D5)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Una fila: «1 elemento» (singular)",
+      "ok": true,
+      "detail": "1 elemento"
+    },
+    {
+      "name": "Una fila: «1–1 de 1 elemento», ambos botones deshabilitados",
+      "ok": true,
+      "detail": "1–1 de 1 elemento Filas por página 50 Página 1 de 1"
+    },
+    {
+      "name": "Vacío: EmptyState propio y sin paginación",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Cargando: «Cargando elementos…»",
+      "ok": true,
+      "detail": "Cargando elementos…"
+    },
+    {
+      "name": "Cargando: contenedor aria-busy con esqueleto aria-hidden",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Error: role=alert con el título y el mensaje por defecto",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Reintentar vuelve a cargar (estado listo)",
+      "ok": true,
+      "detail": 50
+    },
+    {
+      "name": "Fila con acciones en línea mide 40 px",
+      "ok": true,
+      "detail": 40
+    },
+    {
+      "name": "Fila por defecto con menú mide 40 px",
+      "ok": true,
+      "detail": 40
+    },
+    {
+      "name": "Fila con botones de icono mide 40 px",
+      "ok": true,
+      "detail": 40
+    },
+    {
+      "name": "Fila compacta con acciones mide 32 px",
+      "ok": true,
+      "detail": 32
+    },
+    {
+      "name": "Fila compacta con menú mide 32 px",
+      "ok": true,
+      "detail": 32
+    },
+    {
+      "name": "La región de la tabla es enfocable (tabindex 0)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "CellTitle con href: enlace con title igual al texto",
+      "ok": true,
+      "detail": "Elemento 01"
+    },
+    {
+      "name": "RowActions: 2 acciones en línea + disparador del menú",
+      "ok": true,
+      "detail": 3
+    },
+    {
+      "name": "Acción en línea no disponible: aria-disabled y enfocable",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Acción en línea no disponible: el motivo es su descripción",
+      "ok": true,
+      "detail": "Motivo de la fila."
+    },
+    {
+      "name": "Disparador del menú con aria-label «Más acciones para «Fila 1»»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Menú: Ver detalle, Archivar (con motivo), Descargar .md, Eliminar, Sin motivo",
+      "ok": true,
+      "detail": [
+        "Ver detalle",
+        "Archivar No se puede archivar todavía.",
+        "Descargar .md",
+        "Eliminar",
+        "Sin motivo"
+      ]
+    },
+    {
+      "name": "Ítem con href es un enlace",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Ítem no disponible: aria-disabled y sin data-disabled de Radix",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Elegir el ítem no disponible no cierra el menú",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Ítem sin motivo: deshabilitado por Radix",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Escape cierra el menú y devuelve el foco al disparador",
+      "ok": true,
+      "detail": {
+        "tag": "button",
+        "id": "radix-_R_abkslritplb_",
+        "label": "Más acciones para «Fila 1»",
+        "text": ""
+      }
+    },
+    {
+      "name": "Elegir «Eliminar» ejecuta la acción",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Acción del menú ocupada: el disparador lleva aria-busy y sigue habilitado",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Ítem ocupado: «Descargando…» y deshabilitado",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Acción en línea ocupada: «Agregando…», deshabilitada y aria-busy",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "placement inline: 4 acciones en línea + menú",
+      "ok": true,
+      "detail": 5
+    },
+    {
+      "name": "Solo icono: aria-label y sin descripción",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Solo icono: el tooltip repite el nombre al pasar el puntero",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Solo icono: con el tooltip abierto sigue sin descripción (TooltipTarget)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Solo icono no disponible: aria-disabled y motivo como descripción",
+      "ok": true,
+      "detail": "Fase inicial con tareas: no se mueve ni se elimina."
+    },
+    {
+      "name": "Pulsar el no disponible muestra el tooltip con nombre y motivo",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Pulsar el no disponible no ejecuta la acción",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Con el tooltip abierto, la descripción sigue siendo solo el motivo",
+      "ok": true,
+      "detail": "Fase inicial con tareas: no se mueve ni se elimina."
+    },
+    {
+      "name": "DisabledHint: aria-disabled=\"true\" sin atributo disabled",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "DisabledHint: descripción = motivo",
+      "ok": true,
+      "detail": "Motivo de prueba."
+    },
+    {
+      "name": "DisabledHint: el clic no ejecuta onClick ni envía el formulario",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "DisabledHint: pulsar abre el tooltip con el motivo",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Enter en un campo no envía el formulario por el botón no disponible",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "DisabledHint: con Tab se enfoca y abre el tooltip",
+      "ok": true,
+      "detail": {
+        "tag": "button",
+        "id": null,
+        "label": null,
+        "text": "Acción bloqueada"
+      }
+    },
+    {
+      "name": "NIT 3: clic + foco por script llega a «Destino bloqueado»",
+      "ok": true,
+      "detail": {
+        "tag": "button",
+        "id": "qa-hint-target",
+        "label": null,
+        "text": "Destino bloqueado"
+      }
+    },
+    {
+      "name": "NIT 3: con foco no visible el tooltip de DisabledHint no se abre",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "DisabledHint sin motivo devuelve el botón tal cual (onClick normal)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Panel: -summary con título y «2 pendientes»",
+      "ok": true,
+      "detail": "Aún no puedes enviar el plan a autorización 2 pendientes"
+    },
+    {
+      "name": "Panel: liveUpdates en -summary (aria-live polite)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Panel: «Pendiente:» ×2 y «Cumplido:» ×2 (sr-only)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Panel: listas rotuladas por grupo",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Panel: acción no disponible con href se pinta como botón (no enlace)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Panel: acción disponible con href es un enlace",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Panel: «Responsable: Beto Lider BI»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Panel: la acción bloqueada se describe con el resumen y el motivo",
+      "ok": true,
+      "detail": "Aún no puedes enviar el plan a autorización2 pendientes Resuelve los pendientes de la lista para enviar el plan."
+    },
+    {
+      "name": "Panel sin pendientes: doneTitle y «Todo listo»",
+      "ok": true,
+      "detail": "El plan está listo para enviar Todo listo"
+    },
+    {
+      "name": "Panel sin pendientes: la acción se habilita",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Panel compacto sin borde propio",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Contador en singular: «1 pendiente»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ConfirmDialog: role=alertdialog con foco inicial en Cancelar",
+      "ok": true,
+      "detail": {
+        "tag": "button",
+        "id": null,
+        "label": null,
+        "text": "Cancelar"
+      }
+    },
+    {
+      "name": "ConfirmDialog: descripción enlazada",
+      "ok": true,
+      "detail": "Esta acción no se puede deshacer."
+    },
+    {
+      "name": "ConfirmDialog: el clic fuera no lo cierra",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ConfirmDialog: Escape cierra y el foco vuelve al disparador",
+      "ok": true,
+      "detail": {
+        "tag": "button",
+        "id": null,
+        "label": null,
+        "text": "Eliminar Fila B"
+      }
+    },
+    {
+      "name": "ConfirmDialog: ocupado mientras corre onConfirm (aria-busy)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ConfirmDialog: Escape no cierra mientras está ocupado",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ConfirmDialog: se cierra al terminar y ejecutó la acción",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "NIT 4: disparador retirado → foco al destino de returnFocusTo (encabezado de la Section)",
+      "ok": true,
+      "detail": {
+        "tag": "h2",
+        "id": "_R_1clritplb_",
+        "label": null,
+        "text": "Diálogos"
+      }
+    },
+    {
+      "name": "ReasonDialog: foco inicial en el Textarea",
+      "ok": true,
+      "detail": {
+        "tag": "textarea",
+        "id": "devolver-reason",
+        "label": null,
+        "text": ""
+      }
+    },
+    {
+      "name": "ReasonDialog: sin atributo required y con aria-required",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ReasonDialog: motivo vacío → requiredMessage en el campo",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ReasonDialog: aria-invalid y error enlazado",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ReasonDialog: el foco vuelve al campo",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ReasonDialog: el error se limpia al editar",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ReasonDialog: solo espacios cuenta como vacío",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ReasonDialog: texto de progreso «Devolviendo…»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ReasonDialog: error del backend en línea (role=alert) y texto conservado",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ReasonDialog: onConfirm recibe el motivo recortado",
+      "ok": true,
+      "detail": "motivo=[motivo de prueba]"
+    },
+    {
+      "name": "ReasonDialog: al cerrar, el foco vuelve al disparador",
+      "ok": true,
+      "detail": {
+        "tag": "button",
+        "id": null,
+        "label": null,
+        "text": "Devolver solicitud"
+      }
+    },
+    {
+      "name": "ReasonDialog: cada apertura empieza vacía",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ReasonDialog: Cancelar cierra y devuelve el foco",
+      "ok": true,
+      "detail": {
+        "tag": "button",
+        "id": null,
+        "label": null,
+        "text": "Devolver solicitud"
+      }
+    },
+    {
+      "name": "Field: nombre accesible «Título» (asterisco aria-hidden)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Field: aria-required sin required y ayuda enlazada",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Field: con error, aria-invalid y describedby ayuda + error",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Field: editar limpia el error",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Field (función): la vista añade el FormError al describedby (regla combinada)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "FormError: role=alert con id `${formId}-error`",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "FieldSet radio: role=radiogroup, aria-required y legend como nombre",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "FieldSet radio: error enlazado",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "FieldSet checkbox: sin aria-required y «(obligatorio)» sr-only en la legend",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "RequestContextBar: el selector se describe con el helper",
+      "ok": true,
+      "detail": "1 pendiente de triage"
+    },
+    {
+      "name": "RequestContextBar: grupos y «Otras solicitudes», opciones «{título} · {estado}»",
+      "ok": true,
+      "detail": "Pendientes de triage Solicitud QA 1 · Registrada En triage Solicitud QA 2 · En triage Otras solicitudes Solicitud QA 3 · Cerrada"
+    },
+    {
+      "name": "RequestSummary: estado, «Sin triage», «84 P1» y registro",
+      "ok": true,
+      "detail": "Solicitud Solicitud QA 1 · Registrada 1 pendiente de triage Registrada Sin triage 84 P1 Registro: 1 ene 2026 Crear plan"
+    },
+    {
+      "name": "RequestFacts: enlace http(s) con target _blank y rel noopener noreferrer",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "RequestFacts: fecha objetivo en UTC («15 jul 2027») y vacíos con «—»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "RequestFacts: una referencia que no es http(s) no es enlace",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "StatStrip de 3 en lg: tres columnas iguales en una fila",
+      "ok": true,
+      "detail": [
+        361,
+        361,
+        361
+      ]
+    },
+    {
+      "name": "StatStrip de 4 en lg: una sola fila",
+      "ok": true,
+      "detail": [
+        1228,
+        1228,
+        1228,
+        1228
+      ]
+    },
+    {
+      "name": "UtilizationBar: textos sr-only con etiqueta",
+      "ok": true,
+      "detail": [
+        "Utilización: 45 %",
+        "Utilización plan: 130 %",
+        "Utilización: —"
+      ]
+    },
+    {
+      "name": "UtilizationBar: relleno acotado a 100 %",
+      "ok": true,
+      "detail": "100%"
+    },
+    {
+      "name": "Section: aria-labelledby apunta al encabezado y muestra el contador",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "MasterDetail ≥1024: elegir no mueve el foco al detalle",
+      "ok": true,
+      "detail": {
+        "tag": "button",
+        "id": null,
+        "label": null,
+        "text": "Diario del 11 oct 2026IAEnviado"
+      }
+    },
+    {
+      "name": "SelectableList: aria-current en el elegido",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "SelectableList vacía: EmptyState compacto",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Sin errores de consola en /qa-feat-004 (1440)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "StatStrip de 3 en 2 columnas: el último ocupa la fila entera (NIT 8)",
+      "ok": true,
+      "detail": {
+        "widths": [
+          207,
+          207,
+          414
+        ],
+        "stripWidth": 416
+      }
+    },
+    {
+      "name": "StatStrip: separadores de 1 px con gap-px (sin divide-*)",
+      "ok": true,
+      "detail": "1px"
+    },
+    {
+      "name": "Sin desbordamiento horizontal en 768 (con main min-w-0)",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "MasterDetail <1024: tras elegir, foco en el encabezado del detalle",
+      "ok": true,
+      "detail": {
+        "tag": "h2",
+        "id": null,
+        "label": null,
+        "text": "Detalle m3"
+      }
+    },
+    {
+      "name": "MasterDetail <1024: el detalle queda a la vista",
+      "ok": true,
+      "detail": 89
+    },
+    {
+      "name": "Toolbar en móvil: la búsqueda ocupa el ancho",
+      "ok": true,
+      "detail": 358
+    },
+    {
+      "name": "Sin desbordamiento horizontal en 390",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "Sin errores de consola en /qa-feat-004 (390)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "Componentes seguros para servidor: la página de servidor responde 200",
+      "ok": true,
+      "detail": 200
+    },
+    {
+      "name": "SSR: el HTML ya trae el h1, los badges y la leyenda",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "PageHeader: migas con enlace y separador oculto",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "PriorityBadge compacto «84 P1» y full sin banda «Sin priorizar»",
+      "ok": true,
+      "detail": "Inicio QA QA servidor Componentes seguros para servidor renderizados en un componente de servidor. En curso Ir al Panel del área Esta dirección no existe o cambió. Revisa el enlace o vuelve al inicio "
+    },
+    {
+      "name": "StatusBadge con srDescription: texto exacto + span hermano",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "DescriptionList: vacío como «—»",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Sin errores de consola en la página de servidor",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

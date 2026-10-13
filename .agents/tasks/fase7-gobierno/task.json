@@ -1,0 +1,7 @@
+{
+  "task_id": "fase7-gobierno",
+  "task_description": "Fase 7 - Gobierno de la demanda de control-phari: ajuste de la formula de prioridad al marco corporativo (P1-P4, 20-100), modelo Prisma + migracion fase7_gobierno (GateCheck, GatePendingItem, ValidationRecord, flag de bloqueo transversal y ruta proporcional en Request), catalogos y seed idempotente, extension de RequestStateService con transiciones GC4/GC5, modulo API governance (gates, pendientes, aprobacion por autoridad, validaciones/evidencias) con auditoria, regeneracion de OpenAPI + api-client, y pantalla de Gobierno/Cumplimiento (convertir el placeholder frameworks). Fiel al diseno aprobado en design.md.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null
+}

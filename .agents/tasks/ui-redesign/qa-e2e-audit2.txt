@@ -1,0 +1,12 @@
+
+> plantilla-portales@0.1.0 test:e2e
+> playwright test e2e/audit-filter.spec.ts
+
+
+Running 3 tests using 1 worker
+
+  ok 1 [chromium] › e2e\audit-filter.spec.ts:33:5 › «Objeto» consulta al servidor con el contrato y el tope no se presenta como total (2.3s)
+  ok 2 [chromium] › e2e\audit-filter.spec.ts:97:5 › con «Objeto» elegido y el tope alcanzado, el aviso no pide usar el filtro (2.1s)
+  ok 3 [chromium] › e2e\audit-filter.spec.ts:120:5 › una respuesta anterior que llega tarde no pisa la del filtro elegido (2.3s)
+
+  3 passed (8.2s)

@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Capa de datos de Fase 2: entidades Prisma (Request, RequestParticipant, Triage, PriorityEvaluation, Approval) + relaciones inversas en Process/User, migracion versionada fase2_demanda, extension idempotente del seed con las maestras TRIAGE_ROUTE y TRIAGE_SIZE, y ampliacion de AuditObjectType con los 4 nuevos tipos. Base de la que dependen el resto de features. Depende de la Fase 1 ya presente en el worktree.",
+  "status": "completed",
+  "steps": [
+    "Añadir a apps/api/prisma/schema.prisma los modelos Request, RequestParticipant, Triage, PriorityEvaluation, Approval EXACTAMENTE con los campos, columnas @map (snake_case), tipos, defaults, FKs con onDelete (Request.mainProcess Restrict; participants/triages/priorityEvaluations/approvals con onDelete Cascade desde Request; RequestParticipant.process Restrict), @@unique([requestId, processId], name: 'request_participant_unique'), indices y @@map de design §1.2. Request.operationalState String @default(\"REGISTRADA\") @map(\"operational_state\") (default SOLO en schema). PK String @id @default(uuid()) @db.Uuid y timestamps created_at/updated_at como en Fase 1.",
+    "Añadir las relaciones inversas en Process (requests Request[] via relation 'RequestMainProcess', requestParticipations RequestParticipant[]) y en User (triages Triage[], priorityEvaluations PriorityEvaluation[], approvals Approval[]) SIN alterar los campos existentes de Fase 1.",
+    "Ejecutar npm run prisma:validate (desde el worktree) y corregir hasta 'schema is valid'. Opcional npm run prisma:format.",
+    "Con Postgres de dev en puerto 5433 arriba (npm run db:up si hace falta), desde apps/api ejecutar: npm run prisma:migrate:dev -- --name fase2_demanda. Confirmar que crea apps/api/prisma/migrations/<ts>_fase2_demanda/migration.sql con las 5 tablas, FKs, uniques e indices, y regenera el client en apps/api/src/generated/prisma. No tocar migraciones de Fase 1.",
+    "Extender la constante CATALOG_ITEMS de apps/api/prisma/seed.ts con la familia TRIAGE_ROUTE (BI/'BI', INTEGRACIONES/'Integraciones', IA/'IA', MULTIPROCESO/'Multiproceso (FMAA)') y TRIAGE_SIZE (S/'S', M/'M', L/'L', XL/'XL'), sortOrder consecutivos, respetando el patron upsert por catalog_code_unique. No reescribir el resto del seed.",
+    "Ejecutar npm run prisma:seed dos veces seguidas (desde apps/api) y confirmar idempotencia (ambas 'Seed OK', conteo de maestras no se duplica).",
+    "Ampliar AuditObjectType en apps/api/src/modules/audit/audit.service.ts a 'PROCESS' | 'USER' | 'GRANT' | 'CATALOG_ITEM' | 'REQUEST' | 'TRIAGE' | 'PRIORITY_EVALUATION' | 'APPROVAL'. No cambiar AuditAction ni la firma de record.",
+    "Ejecutar npm run typecheck (api) y confirmar verde. Commitear schema.prisma, la carpeta de migracion, seed.ts y audit.service.ts en la rama feat/fase2-demanda (NO push)."
+  ],
+  "acceptance_criteria": [
+    "npm run prisma:validate termina con el schema valido.",
+    "La migracion <ts>_fase2_demanda existe y su migration.sql contiene CREATE TABLE para requests, request_participants, triages, priority_evaluations y approvals con sus FKs, uniques e indices.",
+    "npm run prisma:seed es idempotente (dos ejecuciones no duplican filas) y siembra TRIAGE_ROUTE (4 valores) y TRIAGE_SIZE (4 valores).",
+    "AuditObjectType incluye REQUEST, TRIAGE, PRIORITY_EVALUATION, APPROVAL y npm run typecheck (api) pasa.",
+    "Las tablas y migraciones de Fase 1 quedan intactas."
+  ],
+  "verification": [
+    "Desde el worktree: npm run prisma:validate (verde).",
+    "Desde apps/api con Postgres 5433 arriba: npm run prisma:migrate:dev -- --name fase2_demanda (aplica sin error).",
+    "Desde apps/api: npm run prisma:seed ejecutado dos veces (ambas 'Seed OK').",
+    "Desde el worktree: npm run typecheck (verde)."
+  ],
+  "blocked_reason": null,
+  "findings": "Migracion creada y aplicada: apps/api/prisma/migrations/20261008055643_fase2_demanda/migration.sql (features posteriores que necesiten el nombre exacto de la carpeta deben usar 20261008055643_fase2_demanda). Las 5 tablas (requests, request_participants, triages, priority_evaluations, approvals) estan con sus FKs (mainProcess Restrict; request_id Cascade; process/user Restrict), el unique compuesto request_participants_request_id_process_id_key (name logico request_participant_unique) e indices. Prisma Client regenerado en apps/api/src/generated/prisma (gitignored, NO commiteado). Seed extendido con TRIAGE_ROUTE (BI, INTEGRACIONES, IA, MULTIPROCESO) y TRIAGE_SIZE (S, M, L, XL); total ahora 45 maestras; idempotente (dos corridas = 'Seed OK: 3 roles, 4 procesos, 4 usuarios, 7 grants, 45 maestras'). AuditObjectType ampliado a PROCESS|USER|GRANT|CATALOG_ITEM|REQUEST|TRIAGE|PRIORITY_EVALUATION|APPROVAL (AuditAction y firma de record SIN cambios). operational_state tiene DEFAULT 'REGISTRADA' solo en el schema/BD (el service NO debe repetirlo al crear). NOTA de entorno: el worktree reutiliza el contenedor Postgres del workspace raiz (plantilla-portales-postgres-1) ya corriendo y healthy en 5433; 'npm run db:up' desde el worktree falla con 'port 5433 already allocated' (esperado) -> no levantar otro contenedor, usar el existente."
+}

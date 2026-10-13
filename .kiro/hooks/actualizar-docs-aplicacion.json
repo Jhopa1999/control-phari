@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Actualizar documentación de la aplicación",
+      "trigger": "PostFileSave",
+      "matcher": "apps[\\\\/](api[\\\\/]src[\\\\/]modules[\\\\/].*\\.(controller|service)\\.ts|api[\\\\/]prisma[\\\\/]schema\\.prisma|web[\\\\/]src[\\\\/]app[\\\\/].*[\\\\/]page\\.tsx|web[\\\\/]src[\\\\/]lib[\\\\/]navigation\\.ts)$",
+      "action": {
+        "type": "agent",
+        "prompt": "Se guardó un archivo clave de la aplicación (un controller/service de apps/api, el schema de Prisma, una page del frontend o la navegación). Revisa si este cambio afecta la documentación de la aplicación en docs/aplicacion/ (README.md, modulos-backend.md, modelo-datos.md, frontend-pantallas.md, autenticacion-autorizacion.md) y, si corresponde, actualiza SOLO esos archivos para que reflejen el estado real del código.\n\nReglas de la documentación:\n- Documenta únicamente la aplicación de negocio, no la plantilla base. No toques README.md de la raíz, docs/manual-uso-plantilla.md ni docs/deployment.md.\n- Describe lo que el código realmente hace; no inventes endpoints, entidades ni pantallas. Verifica contra el código antes de escribir.\n- Si el cambio es trivial (formato, comentarios, renombres internos sin impacto en endpoints/modelo/pantallas), NO modifiques la documentación ni el changelog; indícalo brevemente y termina.\n- Mantén el idioma español y las tildes correctas (UTF-8).\n\nRegistro de cambios (solo cuando SÍ hubo una actualización real de la documentación):\n- Después de actualizar la documentación, añade (append, sin reescribir las entradas existentes) una nueva entrada al array \"entries\" de docs/aplicacion/changelog.json.\n- Lee primero el JSON actual, agrega la entrada al final de \"entries\" y vuelve a escribir el archivo completo manteniendo las entradas previas y la clave \"description\". El archivo debe seguir siendo JSON válido.\n- Cada entrada tiene exactamente esta forma:\n  {\n    \"timestamp\": \"<fecha-hora ISO-8601 UTC, p. ej. 2026-10-13T14:30:00Z>\",\n    \"trigger_file\": \"<ruta relativa del archivo guardado que disparó el hook>\",\n    \"updated_docs\": [\"<rutas relativas de los docs que actualizaste>\"],\n    \"summary\": \"<una línea en español describiendo el cambio documentado>\"\n  }\n- Si NO hubo cambios en la documentación, NO escribas en el changelog.\n\nAl terminar, resume en 1-2 líneas qué documento actualizaste y qué entrada registraste, o indica que no hubo cambios necesarios."
+      }
+    }
+  ]
+}

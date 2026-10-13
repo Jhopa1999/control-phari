@@ -1,0 +1,30 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": "NIT-1",
+      "severity": "NIT",
+      "title": "Ambiguedad sobre quien escribe operationalState=REGISTRADA en el alta",
+      "location": "design.md 1.2 (nota de operationalState) vs 1.3 (tabla de transiciones y parrafo de validacion de escritura del estado)",
+      "problem": "1.2 dice que el @default(\"REGISTRADA\") vive solo en el schema y que el service NO lo repite al crear (el alta usa el default de la BD). 1.3 lista '(alta) -> REGISTRADA' como transicion implementada y afirma que el UNICO camino para escribir operational_state es el helper de RequestStateService, sin exceptuar el create. Leido literalmente, las dos frases se contradicen sobre si el alta pasa por el helper o por el default.",
+      "fix": "Reescribir 1.3 para carvar el alta: 'operational_state solo se escribe (a) por el @default en el alta y (b) por el helper en toda mutacion posterior; nunca por update directo ni DTO. El alta no es una transicion del helper.' Anotar la fila (alta)->REGISTRADA como estado inicial por @default, no via helper."
+    },
+    {
+      "id": "NIT-2",
+      "severity": "NIT",
+      "title": "Descripcion imprecisa del import del api-client en apps/web",
+      "location": "design.md Vision general ('el import real es ./api-client que reexporta el paquete')",
+      "problem": "Verificado contra apps/web/src/lib/api-client.ts: el modulo NO reexporta el paquete; instancia createApiClient(...) y expone la instancia 'api' mas alias de tipos, y monta el middleware onRequest que inyecta X-Actor-Id. La sustancia (consumo solo via el paquete generado desde OpenAPI, X-Actor-Id por middleware, sin Prisma/BD) es correcta y esta verificada.",
+      "fix": "Sustituir el parentesis por: 'el modulo apps/web/src/lib/api-client.ts instancia createApiClient(...) del paquete y expone esa instancia api mas alias de tipos; el middleware onRequest inyecta X-Actor-Id desde localStorage. No se reexporta el paquete en bloque.' Los wrappers de 4 reutilizan esa instancia api."
+    },
+    {
+      "id": "NIT-3",
+      "severity": "NIT",
+      "title": "Etiqueta de prioridad (priorityLabel/thresholdLabel) sin tabla de literales por tramo",
+      "location": "design.md 1.4, 3.4 (response DTO) y 11 D7",
+      "problem": "El diseno fija los cortes 80/65/50 y el tramo <50 y la inclusividad >= como DECISION D7, pero no fija las cadenas de etiqueta que devuelve el backend por tramo. 20-master-data.md tiene una familia PRIORITY (Muy alta/Alta/Media/Baja) sembrada en Fase 1, lo que invita a dos lecturas. Al ser solo etiqueta informativa sin efecto en transiciones (BR-005: no se aprueba ningun score automaticamente; cortes P), el riesgo es bajo, pero el implementador tendria que inventar los literales.",
+      "fix": "Fijar en 1.4/3.4 el mapeo exacto, p.ej. score>=80 'Muy alta', >=65 'Alta', >=50 'Media', <50 'Baja', derivado en backend, solo texto informativo del response (no persiste decision), y aclarar que NO se vincula a la familia PRIORITY del catalogo. Marcar como parte de D7; reabrir si el Site confirma literales distintos."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\fase2-demanda\\design-review.md"
+}

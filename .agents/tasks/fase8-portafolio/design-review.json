@@ -1,0 +1,30 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "NIT",
+      "title": "CapacityService citado como ejemplo del patrón de lectura por proceso es inexacto",
+      "location": "design.md §4",
+      "problem": "El diseño lista CapacityService entre los servicios cuyo where de lectura es jefe => {} / resto => mainProcessId ∈ scopedProcessIds. Verificado en capacity-scope.service.ts: el alcance de capacidad es por persona (scopedUserIds) y SÍ distingue rol (líder ve personas de sus procesos vía leaderProcessIds; integrante solo a sí mismo). No es el patrón por mainProcessId.",
+      "fix": "En §4 quitar CapacityService de la lista de servicios que ejemplifican el where de lectura por mainProcessId. Lista correcta y verificada: RequestStateService, RequestService, GovernanceScopeService, PlanStateService, ApprovalService, TaskService. Dejar la mención a capacidad solo como autoridad de escritura (leaderProcessIds)."
+    },
+    {
+      "id": 2,
+      "severity": "NIT",
+      "title": "La referencia a month.ts como helper del periodo [from, to) es ilustrativa, no reutilizable",
+      "location": "design.md §2 (Convención de periodo)",
+      "problem": "month.ts (apps/api/src/modules/capacity/month.ts) solo expone monthStringToDate y dateToMonthString sobre strings YYYY-MM; no calcula el rango semiabierto [from, to) ni el primer día del mes siguiente. El diseño describe bien la aritmética con Date.UTC, pero sugiere reutilizar un helper que no cubre ese rango.",
+      "fix": "Aclarar en §2 que el helper de rango [from, to) es nuevo (p. ej. period.ts en portfolio/ o funciones puras en indicators.ts), y que de month.ts solo se toma la convención UTC/primer-día. Cubrir el cálculo de from/to con unit test."
+    },
+    {
+      "id": 3,
+      "severity": "NIT",
+      "title": "SCR-08 pertenece a FEATURE-010 pero el diseño no lo menciona ni lo excluye explícitamente",
+      "location": "design.md §0 / §11; specs/23-feature-slices.md (FEATURE-010 = SCR-01/07/08)",
+      "problem": "FEATURE-010 incluye SCR-01/07/08. El diseño cubre SCR-01 (demandOverview) y SCR-07 (portfolio) pero no nombra SCR-08 (project, /seguimiento/proyectos). La §11 afirma que no queda placeholder demandOverview/dashboard/portfolio sin convertir (correcto) pero no aclara que SCR-08 queda fuera de alcance.",
+      "fix": "Añadir en §0 o §11 que SCR-08 (project, /seguimiento/proyectos) queda fuera del alcance de la Fase 8 (módulo aparte), para acotar el cierre de FEATURE-010 sin ambigüedad."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\fase8-portafolio\\design-review.md"
+}

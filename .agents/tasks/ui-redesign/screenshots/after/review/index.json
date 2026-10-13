@@ -1,0 +1,318 @@
+[
+  {
+    "source": "activos-capacidad-1440.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\activos-capacidad-1440--parte-1-de-2.png",
+        "width": 1440,
+        "height": 1800
+      },
+      {
+        "file": "review\\activos-capacidad-1440--parte-2-de-2.png",
+        "width": 1440,
+        "height": 289
+      }
+    ]
+  },
+  {
+    "source": "activos-capacidad-390.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\activos-capacidad-390--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\activos-capacidad-390--parte-2-de-2.png",
+        "width": 390,
+        "height": 357
+      }
+    ]
+  },
+  {
+    "source": "administracion-frameworks-1440.png",
+    "outputs": [
+      {
+        "file": "review\\administracion-frameworks-1440.png",
+        "width": 1440,
+        "height": 1439
+      }
+    ]
+  },
+  {
+    "source": "administracion-frameworks-390.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\administracion-frameworks-390--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\administracion-frameworks-390--parte-2-de-2.png",
+        "width": 390,
+        "height": 944
+      }
+    ]
+  },
+  {
+    "source": "demanda-priorizacion-1440.png",
+    "outputs": [
+      {
+        "file": "review\\demanda-priorizacion-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "demanda-priorizacion-390.png",
+    "outputs": [
+      {
+        "file": "review\\demanda-priorizacion-390.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "demanda-priorizacion-seleccion-1440.png",
+    "outputs": [
+      {
+        "file": "review\\demanda-priorizacion-seleccion-1440.png",
+        "width": 1440,
+        "height": 1111
+      }
+    ]
+  },
+  {
+    "source": "demanda-priorizacion-seleccion-390.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\demanda-priorizacion-seleccion-390--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\demanda-priorizacion-seleccion-390--parte-2-de-2.png",
+        "width": 390,
+        "height": 432
+      }
+    ]
+  },
+  {
+    "source": "demanda-solicitudes-1440.png",
+    "outputs": [
+      {
+        "file": "review\\demanda-solicitudes-1440.png",
+        "width": 1440,
+        "height": 1565
+      }
+    ]
+  },
+  {
+    "source": "demanda-solicitudes-390.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\demanda-solicitudes-390--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\demanda-solicitudes-390--parte-2-de-2.png",
+        "width": 390,
+        "height": 434
+      }
+    ]
+  },
+  {
+    "source": "demanda-triage-1440.png",
+    "outputs": [
+      {
+        "file": "review\\demanda-triage-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "demanda-triage-390.png",
+    "outputs": [
+      {
+        "file": "review\\demanda-triage-390.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "demanda-triage-seleccion-1440.png",
+    "outputs": [
+      {
+        "file": "review\\demanda-triage-seleccion-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "demanda-triage-seleccion-390.png",
+    "outputs": [
+      {
+        "file": "review\\demanda-triage-seleccion-390.png",
+        "width": 390,
+        "height": 1154
+      }
+    ]
+  },
+  {
+    "source": "gobierno-equipo-1440.png",
+    "outputs": [
+      {
+        "file": "review\\gobierno-equipo-1440.png",
+        "width": 1440,
+        "height": 1496
+      }
+    ]
+  },
+  {
+    "source": "gobierno-equipo-390.png",
+    "outputs": [
+      {
+        "file": "review\\gobierno-equipo-390.png",
+        "width": 390,
+        "height": 1658
+      }
+    ]
+  },
+  {
+    "source": "inicio-1440.png",
+    "outputs": [
+      {
+        "file": "review\\inicio-1440.png",
+        "width": 1440,
+        "height": 914
+      }
+    ]
+  },
+  {
+    "source": "inicio-390.png",
+    "outputs": [
+      {
+        "file": "review\\inicio-390.png",
+        "width": 390,
+        "height": 1374
+      }
+    ]
+  },
+  {
+    "source": "integrante-inicio-1440.png",
+    "outputs": [
+      {
+        "file": "review\\integrante-inicio-1440.png",
+        "width": 1440,
+        "height": 914
+      }
+    ]
+  },
+  {
+    "source": "integrante-mi-trabajo-1440.png",
+    "outputs": [
+      {
+        "file": "review\\integrante-mi-trabajo-1440.png",
+        "width": 1440,
+        "height": 931
+      }
+    ]
+  },
+  {
+    "source": "login-1440.png",
+    "outputs": [
+      {
+        "file": "review\\login-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "login-390.png",
+    "outputs": [
+      {
+        "file": "review\\login-390.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "seguimiento-plan-1440.png",
+    "outputs": [
+      {
+        "file": "review\\seguimiento-plan-1440.png",
+        "width": 1440,
+        "height": 1321
+      }
+    ]
+  },
+  {
+    "source": "seguimiento-plan-390.png",
+    "scaled": false,
+    "outputs": [
+      {
+        "file": "review\\seguimiento-plan-390--parte-1-de-2.png",
+        "width": 390,
+        "height": 1800
+      },
+      {
+        "file": "review\\seguimiento-plan-390--parte-2-de-2.png",
+        "width": 390,
+        "height": 43
+      }
+    ]
+  },
+  {
+    "source": "seguimiento-tareas-1440.png",
+    "outputs": [
+      {
+        "file": "review\\seguimiento-tareas-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "seguimiento-tareas-390.png",
+    "outputs": [
+      {
+        "file": "review\\seguimiento-tareas-390.png",
+        "width": 390,
+        "height": 844
+      }
+    ]
+  },
+  {
+    "source": "seguimiento-tareas-detalle-1440.png",
+    "outputs": [
+      {
+        "file": "review\\seguimiento-tareas-detalle-1440.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "seguimiento-tareas-detalle-390.png",
+    "outputs": [
+      {
+        "file": "review\\seguimiento-tareas-detalle-390.png",
+        "width": 390,
+        "height": 1094
+      }
+    ]
+  }
+]

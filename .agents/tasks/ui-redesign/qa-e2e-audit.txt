@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ok 1 [chromium] › e2e\audit-filter.spec.ts:33:5 › «Objeto» consulta al servidor con el contrato y el tope no se presenta como total (5.1s)
+  ok 2 [chromium] › e2e\audit-filter.spec.ts:97:5 › con «Objeto» elegido y el tope alcanzado, el aviso no pide usar el filtro (4.4s)
+  ok 3 [chromium] › e2e\audit-filter.spec.ts:120:5 › una respuesta anterior que llega tarde no pisa la del filtro elegido (3.2s)
+
+  3 passed (15.4s)

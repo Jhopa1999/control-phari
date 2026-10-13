@@ -1,0 +1,202 @@
+
+> plantilla-portales@0.1.0 test:e2e
+> playwright test e2e/jwt-session.spec.ts
+
+
+Running 6 tests using 1 worker
+
+  x  1 [chromium] › e2e\jwt-session.spec.ts:60:5 › recargar una ruta protegida conserva la sesión y la ruta (7.9s)
+  x  2 [chromium] › e2e\jwt-session.spec.ts:80:5 › un enlace directo sin sesión vuelve a su ruta tras iniciar sesión (6.6s)
+  x  3 [chromium] › e2e\jwt-session.spec.ts:92:5 › /login con sesión válida lleva a /inicio (6.4s)
+  x  4 [chromium] › e2e\jwt-session.spec.ts:104:5 › una sesión rechazada lleva a /login?expired=1 con el aviso de sesión expirada (5.9s)
+  ok 5 [chromium] › e2e\jwt-session.spec.ts:121:5 › un next externo se ignora y lleva a /inicio del mismo origen (1.6s)
+  x  6 [chromium] › e2e\jwt-session.spec.ts:135:5 › cerrar sesión lleva a /login sin next y una recarga no la recupera (30.2s)
+
+
+  1) [chromium] › e2e\jwt-session.spec.ts:60:5 › recargar una ruta protegida conserva la sesión y la ruta 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Portafolio', level: 1 })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Portafolio', level: 1 }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Portafolio', level: 1 })
+
+
+      74 |   await expect(
+      75 |     page.getByRole('heading', { level: 1, name: 'Portafolio' }),
+    > 76 |   ).toBeVisible();
+         |     ^
+      77 |   await expect(page).toHaveURL('/seguimiento/portafolio');
+      78 | });
+      79 |
+        at C:\Users\analistabi2\Desarrollo\control-phari\.worktrees\ui-redesign\e2e\jwt-session.spec.ts:76:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\jwt-session-recargar-una-r-53640-onserva-la-sesión-y-la-ruta-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\jwt-session-recargar-una-r-53640-onserva-la-sesión-y-la-ruta-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\jwt-session-recargar-una-r-53640-onserva-la-sesión-y-la-ruta-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\jwt-session-recargar-una-r-53640-onserva-la-sesión-y-la-ruta-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › e2e\jwt-session.spec.ts:80:5 › un enlace directo sin sesión vuelve a su ruta tras iniciar sesión 
+
+    Error: expect(page).toHaveURL(expected) failed
+
+    Expected: "http://localhost:3300/login?next=%2Fdemanda%2Fsolicitudes"
+    Received: "http://localhost:3300/login"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveURL" with timeout 5000ms
+        14 × locator resolved to <html lang="es">…</html>
+           - unexpected value "http://localhost:3300/login"
+
+
+      83 |   await page.goto('/demanda/solicitudes');
+      84 |   await expect(loginForm(page)).toBeVisible();
+    > 85 |   await expect(page).toHaveURL('/login?next=%2Fdemanda%2Fsolicitudes');
+         |                      ^
+      86 |
+      87 |   await signIn(page);
+      88 |   await expect(mainHeading(page)).toBeVisible();
+        at C:\Users\analistabi2\Desarrollo\control-phari\.worktrees\ui-redesign\e2e\jwt-session.spec.ts:85:22
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\jwt-session-un-enlace-dire-80633-su-ruta-tras-iniciar-sesión-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\jwt-session-un-enlace-dire-80633-su-ruta-tras-iniciar-sesión-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\jwt-session-un-enlace-dire-80633-su-ruta-tras-iniciar-sesión-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\jwt-session-un-enlace-dire-80633-su-ruta-tras-iniciar-sesión-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › e2e\jwt-session.spec.ts:92:5 › /login con sesión válida lleva a /inicio ──────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('main').getByRole('heading', { level: 1 })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('main').getByRole('heading', { level: 1 }) with timeout 5000ms
+      - waiting for getByRole('main').getByRole('heading', { level: 1 })
+
+
+       97 |
+       98 |   await page.goto('/login');
+    >  99 |   await expect(mainHeading(page)).toBeVisible();
+          |                                   ^
+      100 |   await expect(page).toHaveURL('/inicio');
+      101 |   await expect(loginForm(page)).toHaveCount(0);
+      102 | });
+        at C:\Users\analistabi2\Desarrollo\control-phari\.worktrees\ui-redesign\e2e\jwt-session.spec.ts:99:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\jwt-session--login-con-sesión-válida-lleva-a-inicio-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\jwt-session--login-con-sesión-válida-lleva-a-inicio-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\jwt-session--login-con-sesión-válida-lleva-a-inicio-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\jwt-session--login-con-sesión-válida-lleva-a-inicio-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › e2e\jwt-session.spec.ts:104:5 › una sesión rechazada lleva a /login?expired=1 con el aviso de sesión expirada 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('status').filter({ hasText: /expir/i })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('status').filter({ hasText: /expir/i }) with timeout 5000ms
+      - waiting for getByRole('status').filter({ hasText: /expir/i })
+
+
+      115 |
+      116 |   await page.goto('/inicio');
+    > 117 |   await expect(expiredNotice(page)).toBeVisible();
+          |                                     ^
+      118 |   await expect(page).toHaveURL('/login?expired=1');
+      119 | });
+      120 |
+        at C:\Users\analistabi2\Desarrollo\control-phari\.worktrees\ui-redesign\e2e\jwt-session.spec.ts:117:37
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\jwt-session-una-sesión-rec-0142d-el-aviso-de-sesión-expirada-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\jwt-session-una-sesión-rec-0142d-el-aviso-de-sesión-expirada-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\jwt-session-una-sesión-rec-0142d-el-aviso-de-sesión-expirada-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\jwt-session-una-sesión-rec-0142d-el-aviso-de-sesión-expirada-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › e2e\jwt-session.spec.ts:135:5 › cerrar sesión lleva a /login sin next y una recarga no la recupera 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: /Cerrar sesi[oó]n/ })
+
+
+      143 |   await expect(mainHeading(page)).toBeVisible();
+      144 |
+    > 145 |   await logoutButton(page).click();
+          |                            ^
+      146 |   await expect(loginForm(page)).toBeVisible();
+      147 |   await expect(page).toHaveURL('/login');
+      148 |   expect(
+        at C:\Users\analistabi2\Desarrollo\control-phari\.worktrees\ui-redesign\e2e\jwt-session.spec.ts:145:28
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\jwt-session-cerrar-sesión--1fa83--una-recarga-no-la-recupera-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\jwt-session-cerrar-sesión--1fa83--una-recarga-no-la-recupera-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\jwt-session-cerrar-sesión--1fa83--una-recarga-no-la-recupera-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\jwt-session-cerrar-sesión--1fa83--una-recarga-no-la-recupera-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5 failed
+    [chromium] › e2e\jwt-session.spec.ts:60:5 › recargar una ruta protegida conserva la sesión y la ruta 
+    [chromium] › e2e\jwt-session.spec.ts:80:5 › un enlace directo sin sesión vuelve a su ruta tras iniciar sesión 
+    [chromium] › e2e\jwt-session.spec.ts:92:5 › /login con sesión válida lleva a /inicio ───────────
+    [chromium] › e2e\jwt-session.spec.ts:104:5 › una sesión rechazada lleva a /login?expired=1 con el aviso de sesión expirada 
+    [chromium] › e2e\jwt-session.spec.ts:135:5 › cerrar sesión lleva a /login sin next y una recarga no la recupera 
+  1 passed (1.1m)

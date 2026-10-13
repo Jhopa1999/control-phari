@@ -1,0 +1,242 @@
+[
+  {
+    "source": "integrante\\seguimiento-compromisos--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-compromisos--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-compromisos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-compromisos--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-compromisos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-compromisos--390x844.png",
+        "width": 390,
+        "height": 1008
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-compromisos--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-compromisos--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-novedades--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-novedades--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-novedades--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-novedades--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-novedades--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-novedades--390x844.png",
+        "width": 390,
+        "height": 1129
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-novedades--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-novedades--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-reuniones--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-reuniones--1280x800.png",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-reuniones--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-reuniones--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-reuniones--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-reuniones--390x844.png",
+        "width": 390,
+        "height": 899
+      }
+    ]
+  },
+  {
+    "source": "integrante\\seguimiento-reuniones--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\integrante\\seguimiento-reuniones--768x1024.png",
+        "width": 768,
+        "height": 1024
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-compromisos--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-compromisos--1280x800.png",
+        "width": 1280,
+        "height": 852
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-compromisos--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-compromisos--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-compromisos--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-compromisos--390x844.png",
+        "width": 390,
+        "height": 1591
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-compromisos--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-compromisos--768x1024.png",
+        "width": 768,
+        "height": 1183
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-novedades--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-novedades--1280x800.png",
+        "width": 1280,
+        "height": 852
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-novedades--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-novedades--1440x900.png",
+        "width": 1440,
+        "height": 952
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-novedades--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-novedades--390x844.png",
+        "width": 390,
+        "height": 1619
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-novedades--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-novedades--768x1024.png",
+        "width": 768,
+        "height": 1285
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-reuniones--1280x800.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-reuniones--1280x800.png",
+        "width": 1280,
+        "height": 821
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-reuniones--1440x900.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-reuniones--1440x900.png",
+        "width": 1440,
+        "height": 900
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-reuniones--390x844.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-reuniones--390x844.png",
+        "width": 390,
+        "height": 1300
+      }
+    ]
+  },
+  {
+    "source": "jefe\\seguimiento-reuniones--768x1024.png",
+    "outputs": [
+      {
+        "file": "review\\jefe\\seguimiento-reuniones--768x1024.png",
+        "width": 768,
+        "height": 1080
+      }
+    ]
+  }
+]

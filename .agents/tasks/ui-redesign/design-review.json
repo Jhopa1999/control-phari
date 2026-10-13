@@ -1,0 +1,97 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "iteration": 4,
+  "summary": {
+    "high": 0,
+    "medium": 2,
+    "nit": 8
+  },
+  "previousFindings": {
+    "iteration": 3,
+    "total": 8,
+    "addressed": 8
+  },
+  "findings": [
+    {
+      "id": 1,
+      "severity": "MEDIUM",
+      "location": "§7.6 (useClientTable), §9 A (tabla de capacidades por listado), §11.9, §11.11",
+      "title": "useClientTable no tiene modo sin paginación y dos tablas lo necesitan",
+      "problem": "§7.6 define UseClientTableOptions (rows, filter, comparators, defaultSort, resetKey) y un ClientTable que solo expone pageRows, con tamaño de página 25 por defecto. §9 A fija «Paginación: No» para Planificación · Tareas y Capacidad · Resumen de carga, ambas con orden en cliente, y §11.11 pide literalmente «useClientTable sin paginación», opción que no existe. Al pie de la letra, una vista que ordene con useClientTable recibe como mucho 25 filas: o no pinta DataTablePagination y oculta sin aviso las filas 26+ (plan con más de 25 tareas, jefe con más de 25 personas), o la pinta (se muestra sola con filtered > 25) y contradice §9 A.",
+      "fix": "Añadir paginate?: boolean (por defecto true) a UseClientTableOptions. Con paginate === false: pageRows = todas las filas filtradas y ordenadas; page = 1; pageCount = 1; from = filtered > 0 ? 1 : 0; to = filtered; setPage/setPageSize no hacen nada; la vista no pinta DataTablePagination. Planificación · Tareas y Capacidad · Resumen de carga pasan paginate: false. Alternativa equivalente: esas dos vistas usan sortRows + nextSort de table-sort.ts con su propio estado y §11.11 deja de citar useClientTable."
+    },
+    {
+      "id": 2,
+      "severity": "MEDIUM",
+      "location": "§11.19 (Auditoría), §9 A, §16, §17, §20",
+      "title": "Auditoría filtra, cuenta y pagina en cliente sobre una respuesta truncada a 500 eventos sin indicarlo",
+      "problem": "audit.service.ts devuelve como máximo MAX_AUDIT_TAKE = 500 eventos (los más recientes, orderBy createdAt desc). El endpoint ya acepta objectType (26 valores en ListAuditEventsDto, los mismos que etiqueta §11.19) y take, y lib/audit.ts ya los envía (su tipo local AuditObjectType solo enumera 4). auditoria-view.tsx llama hoy a listAuditEvents() sin filtros. El diseño añade el filtro Objeto «con las opciones presentes en los datos», Acción, ResultCount y paginación en cliente: con más de 500 eventos, ResultCount dirá «500 eventos» como si fuera el total, y filtrar por Objeto mostrará solo esa ventana («3 de 500 eventos» o «Ningún resultado…» aunque haya cientos de eventos más antiguos). En una pantalla de auditoría, el dato truncado se presenta como completo y el diseño no menciona el tope.",
+      "fix": "Sin tocar backend ni contrato. Preferida: Objeto pasa a filtro de servidor con el parámetro existente, como en Portafolio (al cambiar, listAuditEvents({ objectType, take: AUDIT_TAKE }) y recarga; opciones = las 26 etiquetas de §11.19; ampliar el tipo local AuditObjectType de lib/audit.ts a esos 26 valores); Acción sigue en cliente. Mínima: los dos filtros siguen en cliente y solo se añade el aviso del tope. En cualquier opción: pedir take explícito con una constante del frontend AUDIT_TAKE = 500 y, si events.length === AUDIT_TAKE, mostrar InlineNotice info bajo el toolbar «Se muestran los 500 eventos más recientes de tu alcance. Usa el filtro Objeto para acotar la búsqueda.» y usar el sustantivo «eventos más recientes» en ResultCount. Añadir el caso a §16, §17 y a la QA de §20."
+    },
+    {
+      "id": 3,
+      "severity": "NIT",
+      "location": "§8.4 (botón de riel), §7.6 (DataTablePagination), §11.9 (foco tras reordenar), §14",
+      "title": "El foco restaurado por script abre los tooltips de etiqueta también con ratón",
+      "problem": "El diseño quita el tooltip de «Más acciones» y «Abrir menú» porque, al devolverles Radix el foco, «el tooltip se abriría solo, también con ratón» (§7.6, §14). Pero mueve el foco por script hacia controles con LabelTooltip en tres casos: «Contraer menú» → «Expandir menú» (§8.4), «Página siguiente» al extremo → «Página anterior» (§7.6) y el botón de la fase reordenada (§11.9). TooltipTrigger abre en onFocus si el foco no viene de un pointerdown de ese mismo disparador, y en los tres casos el pointerdown ocurrió en otro botón o ya terminó. Tras cada uno de esos clics queda abierto un tooltip que no sigue al puntero.",
+      "fix": "En LabelTooltip y DisabledHint: <TooltipTrigger asChild onFocus={(e) => { if (!e.currentTarget.matches(':focus-visible')) e.preventDefault(); }}>. composeEventHandlers de Radix no ejecuta su apertura si el evento llega con defaultPrevented (React lo marca aunque el foco no sea cancelable). Con teclado (también con foco por script tras una acción de teclado) Chromium marca :focus-visible y el tooltip se abre; tras un clic, no. Se conserva la restauración de foco para todos. La apertura por clic de DisabledHint (onUnavailableClick) no cambia. Alternativa: restaurar el foco solo si event.detail === 0, guardándolo en la ref de handleMovePhase."
+    },
+    {
+      "id": 4,
+      "severity": "NIT",
+      "location": "§9 A («Limpiar filtros»), §10.2 y §11.18 («Ver validaciones»), §7.5 (ConfirmDialog), §11.21 («Revocar»), §14",
+      "title": "Foco perdido cuando la acción retira el control enfocado",
+      "problem": "El diseño cuida el foco en paginación, reordenación y riel, pero no en controles que desaparecen al usarse: «Limpiar filtros» solo existe con filtros activos y al pulsarlo el foco cae en body (el E2E del paso 8 lo pulsa); «Ver validaciones» cambia de pestaña y Radix desmonta el TabsContent con el botón enfocado; ConfirmDialog de eliminar (fase, tarea, diario, actividad, reunión, asignación) y «Revocar» (que se oculta al revocar) devuelven el foco a un disparador que ya no está en el DOM.",
+      "fix": "Regla en §14 y una línea por caso: «Limpiar filtros» → foco al primer control del toolbar (#sol-buscar, #mt-buscar, #portafolio-buscar, #filtro-busqueda, #doc-filtro-busqueda o #aud-filtro-objeto). «Ver validaciones» → tras cambiar de pestaña, en el siguiente requestAnimationFrame, foco al TabsContent de Validaciones (Radix le da tabIndex=0). ConfirmDialog y ReasonDialog: prop returnFocusTo?: () => HTMLElement | null; en onCloseAutoFocus, si !trigger.isConnected, e.preventDefault() y foco al destino: la fila siguiente (CellTitle o su primera acción) o el encabezado de la Section (tabIndex=-1) si la tabla quedó vacía; en maestro-detalle, el encabezado del detalle que queda seleccionado o el título de la lista."
+    },
+    {
+      "id": 5,
+      "severity": "NIT",
+      "location": "§11.8 frente a §7.6 (RowActions) y §1 (principio 2); §11.11",
+      "title": "Botones de fila de Aprobaciones con variantes que RowActions no admite",
+      "problem": "§11.8 pide en cada fila «Aprobar» default sm y «Devolver» outline sm (y, por analogía, «Autorizar»). §7.6 pinta toda acción inline como ghost o ghost-destructive y RowAction no tiene variant. Un primario por fila choca además con el principio 2 («Una acción principal por región») y con el diagnóstico de §2 («Bitácora muestra 3 botones primarios a la vez»). Relacionado: §11.11 pide un Badge warning «Plan supera lo disponible» con srDescription, prop que solo tiene StatusBadge.",
+      "fix": "Usar RowActions sin excepción: «Aprobar», «Autorizar» y «Devolver» como ghost sm, como en el resto de tablas; o, si se quiere énfasis, añadir variant?: 'ghost' | 'outline' (sin default) a RowAction y documentarlo en §7.6. En §11.11: <Badge variant=\"warning\">Plan supera lo disponible</Badge> con un <span className=\"sr-only\">: {explicación}</span> hermano, o un kind más en StatusKind."
+    },
+    {
+      "id": 6,
+      "severity": "NIT",
+      "location": "§9 (reglas de errores), §11.18 (ValidationFormDialog), §7.5 (ReasonDialog), §13",
+      "title": "Mensajes de validación: tres puntos sin cerrar",
+      "problem": "(a) §11.18 dice «Errores de tipo, caso, resultado, ejecutor, fecha en sus campos», pero hoy esa regla tiene un único mensaje combinado («Completa tipo, caso, resultado, ejecutor y fecha de ejecucion.», handleCreateValidation en frameworks-view.tsx) y §9 exige mensajes «exactamente los del inventario»; no hay cinco mensajes por campo definidos. (b) La regla 3 de §9 no dice si aria-invalid se aplica a todos los campos de una regla combinada o solo a los que la incumplen: con «Catálogo y código son obligatorios.» y el catálogo relleno, marcarlo como inválido es incorrecto (igual en «Identificador y nombre son obligatorios.» y «Usuario, rol y proceso son obligatorios.»). (c) ReasonDialog fija «Escribe el motivo.», distinto del texto actual de DevolverDialog («El motivo es obligatorio para devolver.»), sin declararlo.",
+      "fix": "(a) Fijar cinco mensajes: «Elige el tipo de validación.», «Escribe el caso de prueba.», «Elige el resultado.», «Indica quién ejecutó la validación.», «Indica la fecha y hora de ejecución.» (o mantener la regla combinada en FormError). (b) aria-invalid y el aria-describedby al FormError solo en los campos implicados que incumplen la regla. (c) Declarar el cambio en §13 o fijar el mensaje por kind: «El motivo es obligatorio para devolver.» y «Escribe por qué este control no aplica.»."
+    },
+    {
+      "id": 7,
+      "severity": "NIT",
+      "location": "§7.6 (ResultCount), §7.2 (DataView), §9 A, §11.12 (Portafolio)",
+      "title": "Regla de ResultCount («N» frente a «N de M») y de vacío frente a sin resultados con filtros de servidor",
+      "problem": "ResultCount({ loading, total, filtered, noun }) distingue «sin filtros» y «con filtros», pero no recibe si hay filtros. Tampoco se dice cómo elige DataView entre empty y no-results en Portafolio, cuyos tres filtros son de servidor: con filtros activos y 0 filas, useClientTable ve total = 0 y la vista caería en el vacío («No hay iniciativas…») y no en «Ningún resultado coincide con los filtros.», aunque «Limpiar filtros» sí aparezca.",
+      "fix": "Fijar: ResultCount muestra formatCount(total, noun) si filtered === total y `${filtered} de ${formatCount(total, noun)}` en otro caso. En listados, hasFilters = búsqueda no vacía || algún filtro distinto de su centinela (incluidos los de servidor); total === 0 && !hasFilters → 'empty'; filtered === 0 && hasFilters → 'no-results'. En Portafolio, total = filas que devuelve el servidor con sus filtros y filtered = tras la búsqueda en cliente. Maestras conserva su excepción (§11.22)."
+    },
+    {
+      "id": 8,
+      "severity": "NIT",
+      "location": "§7.6 (StatStrip), §5.3 («Sin bordes dobles»), §11.3, §11.15",
+      "title": "StatStrip con divide-x divide-y deja bordes dobles en la rejilla de 2 columnas",
+      "problem": "grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 rounded-lg border: divide-* reparte el borde según el orden de los hijos, no según la fila o la columna. Con 2 columnas y 4 tiles, los tiles 2 y 3 llevan un borde pegado al borde exterior del contenedor (con la semántica de Tailwind 4, :not(:last-child), y con la de Tailwind 3, en lados distintos). Son los bordes dobles que §5.3 prohíbe, visibles por debajo de 1024 px en el Panel del área y en el consolidado del Reporte semanal.",
+      "fix": "Sustituir divide-* por separadores de hueco: StatStrip = section[aria-label] con «grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border lg:grid-cols-4» y StatTile con «bg-card p-4». Con número impar de tiles en 2 columnas, el último lleva col-span-2; en lg, lg:grid-cols-2/3/4 según el número de tiles (2–4), para no dejar una celda vacía con fondo de borde."
+    },
+    {
+      "id": 9,
+      "severity": "NIT",
+      "location": "§11.19 (Auditoría, columna Actor), VerCambioDialog",
+      "title": "El id completo de un actor fuera de alcance solo queda en title",
+      "problem": "Hoy la columna Actor muestra el actorUserId completo (auditoria-view.tsx: {event.actorUserId ?? 'Sistema'}). §11.19 lo sustituye, para actores fuera de alcance, por «xxxxxxxx…» con el id en title. title en un span solo se ve con ratón y los lectores de pantalla no lo leen de forma fiable, y VerCambioDialog no muestra el actor: el dato del inventario («Actor (actorUserId o \"Sistema\")») deja de estar disponible con teclado y lector de pantalla.",
+      "fix": "Mantener el id corto en la tabla y añadir a la cabecera de VerCambioDialog un DescriptionList con Fecha, Actor (nombre e id completo, o «Sistema»), Proceso, Acción y Objeto. El title queda como ayuda de ratón."
+    },
+    {
+      "id": 10,
+      "severity": "NIT",
+      "location": "§21 pasos 3 y 4, §20 (shell-navigation.spec.ts paso 8, date-display.spec.ts)",
+      "title": "Specs escritos antes de la pantalla que comprueban",
+      "problem": "El paso 3 de §21 crea el «E2E de navegación» y añade a date-display.spec.ts la prueba de Mi trabajo, que «debe fallar antes de migrar Mi trabajo». Pero el paso 8 de shell-navigation.spec.ts comprueba la tabla nueva de Solicitudes (región «Tabla de solicitudes», ResultCount, paginación, «Registro, ordenar»), que no existe hasta el paso 4 (b), y Mi trabajo se migra en el paso 4 (a). Entre esos pasos, ejecutar los specs del paso da fallos esperados que se confunden con regresiones, y los commits intermedios no pasan la suite.",
+      "fix": "Añadir el paso 8 de shell-navigation.spec.ts en el mismo commit que Solicitudes (paso 4 b) y la prueba de fecha de Mi trabajo al inicio del paso 4 (a), para que falle, se migre Mi trabajo y pase dentro del mismo incremento. Indicar que al cerrar cada paso pasan los specs que ese paso toca."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\ui-redesign\\design-review.md"
+}

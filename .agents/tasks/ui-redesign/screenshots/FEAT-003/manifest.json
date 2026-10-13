@@ -1,0 +1,218 @@
+{
+  "generatedAt": "2026-10-12T08:10:52.072Z",
+  "base": "http://localhost:3300",
+  "auth": "dev-header",
+  "roles": [
+    "jefe"
+  ],
+  "viewports": [
+    "1440x900",
+    "390x844"
+  ],
+  "routes": [
+    "/inicio",
+    "/demanda/resumen",
+    "/activos/capacidad"
+  ],
+  "total": 6,
+  "failed": 1,
+  "failuresByCheck": {
+    "overflowX": 1
+  },
+  "results": [
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/inicio",
+      "file": "jefe\\inicio--1440x900.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/demanda/resumen",
+      "file": "jefe\\demanda-resumen--1440x900.png",
+      "url": "http://localhost:3300/demanda/resumen",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Resumen de demanda"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "1440x900",
+      "route": "/activos/capacidad",
+      "file": "jefe\\activos-capacidad--1440x900.png",
+      "url": "http://localhost:3300/activos/capacidad",
+      "overflowX": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Capacidad"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/inicio",
+      "file": "jefe\\inicio--390x844.png",
+      "url": "http://localhost:3300/inicio",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Control del area"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/demanda/resumen",
+      "file": "jefe\\demanda-resumen--390x844.png",
+      "url": "http://localhost:3300/demanda/resumen",
+      "overflowX": {
+        "scrollWidth": 392,
+        "innerWidth": 390,
+        "fail": true
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Resumen de demanda"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [
+        "overflowX"
+      ],
+      "ok": false
+    },
+    {
+      "role": "jefe",
+      "actor": "jefe@demo.local",
+      "viewport": "390x844",
+      "route": "/activos/capacidad",
+      "file": "jefe\\activos-capacidad--390x844.png",
+      "url": "http://localhost:3300/activos/capacidad",
+      "overflowX": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "fail": false
+      },
+      "consoleErrors": {
+        "count": 0,
+        "first": []
+      },
+      "h1Count": 1,
+      "h1Texts": [
+        "Capacidad"
+      ],
+      "focusVisible": {
+        "ok": true,
+        "element": "button#actor-select «Usuario actual»",
+        "outlineStyle": "solid",
+        "outlineWidth": "2px",
+        "boxShadow": "none",
+        "tabs": 1
+      },
+      "notes": [],
+      "failures": [],
+      "ok": true
+    }
+  ]
+}
