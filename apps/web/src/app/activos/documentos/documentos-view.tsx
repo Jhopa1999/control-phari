@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Download, FileText, Plus, RotateCcwClock } from 'lucide-react';
+import { Download, Eye, FileText, Plus, RotateCcwClock } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   CellTitle,
@@ -74,6 +74,7 @@ import {
   type DocumentoEditorValues,
 } from './documento-editor-dialog';
 import { HistorialDialog } from './historial-dialog';
+import { VerDocumentoDialog } from './ver-documento-dialog';
 
 type LoadState = 'loading' | 'success' | 'error';
 type SortKey = 'title' | 'asset' | 'version' | 'status';
@@ -161,6 +162,10 @@ export function DocumentosView(): React.ReactElement {
   // Historial.
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [historyDoc, setHistoryDoc] = React.useState<Document | null>(null);
+
+  // Ver documento (solo lectura).
+  const [viewOpen, setViewOpen] = React.useState(false);
+  const [viewDoc, setViewDoc] = React.useState<Document | null>(null);
 
   const [statusBusyId, setStatusBusyId] = React.useState<string | null>(null);
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
@@ -377,8 +382,22 @@ export function DocumentosView(): React.ReactElement {
     setHistoryOpen(true);
   }
 
+  function openView(doc: Document): void {
+    setViewDoc(doc);
+    setViewOpen(true);
+  }
+
   function rowActions(doc: Document): RowAction[] {
     const actions: RowAction[] = [
+      {
+        key: 'view',
+        label: 'Ver',
+        icon: Eye,
+        placement: 'inline',
+        onSelect: () => openView(doc),
+        disabled: !doc.currentVersion,
+        disabledReason: doc.currentVersion ? undefined : 'Aún no tiene versiones.',
+      },
       { key: 'edit', label: 'Editar', onSelect: () => void openEdit(doc), placement: 'inline' },
       {
         key: 'history',
@@ -680,6 +699,15 @@ export function DocumentosView(): React.ReactElement {
         }}
         document={historyDoc}
         owners={owners}
+      />
+
+      <VerDocumentoDialog
+        open={viewOpen}
+        onOpenChange={(next) => {
+          setViewOpen(next);
+          if (!next) setViewDoc(null);
+        }}
+        document={viewDoc}
       />
     </PageLayout>
   );

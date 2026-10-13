@@ -4,6 +4,7 @@ import * as React from 'react';
 import { CircleAlert } from 'lucide-react';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
 import { Field, FormError, RequiredHint } from '@/components/field';
+import { MarkdownView } from '@/components/markdown-view';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -313,9 +314,15 @@ export function DocumentoEditorDialog({
                   />
                 </TabsContent>
                 <TabsContent value="preview" className="pt-3">
-                  <pre className="min-h-80 max-h-[60dvh] overflow-auto rounded-md border bg-muted/40 p-4 text-sm whitespace-pre-wrap wrap-break-word">
-                    {content || 'Nada que previsualizar todavía.'}
-                  </pre>
+                  <div className="min-h-80 max-h-[60dvh] overflow-auto rounded-md border p-4">
+                    {content ? (
+                      <MarkdownView content={content} />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Nada que previsualizar todavía.
+                      </p>
+                    )}
+                  </div>
                 </TabsContent>
               </Tabs>
               <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">

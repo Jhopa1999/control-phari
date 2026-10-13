@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
+import { MarkdownView } from '@/components/markdown-view';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { RowActionsCell } from '@/components/row-actions';
 import { Button } from '@/components/ui/button';
@@ -201,9 +202,9 @@ export function HistorialDialog({
                   Descargar .md
                 </Button>
               </div>
-              <pre className="max-h-72 overflow-auto rounded-md border bg-muted/40 p-4 text-sm whitespace-pre-wrap wrap-break-word">
-                {selected.content}
-              </pre>
+              <div className="max-h-72 overflow-auto rounded-md border p-4">
+                <MarkdownView content={selected.content} />
+              </div>
             </section>
           ) : null}
         </DialogBody>
