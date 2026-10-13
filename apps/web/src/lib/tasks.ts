@@ -171,6 +171,82 @@ export async function acceptTask(
   }
 }
 
+import { taskStatusLabel } from './status-labels';
+
+/** Lookups que la vista resuelve y pasa al export de CSV (design §7.2). */
+export interface TaskCsvLookups {
+  /** Nombre de la fase a partir de task.phaseId; '—' si no se resuelve. */
+  phaseName: (phaseId: string) => string | null | undefined;
+  /** Nombre del responsable a partir del userId; '—' si no se resuelve. */
+  personName: (userId: string) => string | null | undefined;
+  /** Formateo de fecha coherente con la tabla (la vista pasa formatDateOnly). */
+  formatDate: (value: string | null) => string;
+}
+
+/** Entrecomilla y duplica comillas si el campo lleva , " o salto de línea. */
+function csvField(value: string): string {
+  if (/[",\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+/**
+ * Exporta las tareas visibles como CSV con BOM UTF-8 (design §7.2). Es una foto
+ * de la vista para trabajo humano e incluye el responsable (nombre resuelto en
+ * el frontend); no debe alinearse con el documento JSON de import/export.
+ * Reutiliza datos ya presentes en la vista; sin backend ni dependencias.
+ * Dispara la descarga `tareas-<requestId>.csv` con el patrón Blob + <a download>.
+ */
+export function downloadTasksCsv(
+  requestId: string,
+  rows: Task[],
+  lookups: TaskCsvLookups,
+): void {
+  const headers = [
+    'Fase',
+    'Título',
+    'Responsable',
+    'Inicio',
+    'Fin',
+    'Estimación (h)',
+    'Estado',
+    'Hito',
+  ];
+  const lines = rows.map((task) => {
+    const phase = lookups.phaseName(task.phaseId) ?? '—';
+    const responsible =
+      task.responsibleUserId === null
+        ? 'Sin asignar'
+        : (lookups.personName(task.responsibleUserId) ?? '—');
+    const estimate =
+      task.isMilestone || task.estimateHours === null
+        ? ''
+        : String(task.estimateHours);
+    const cells = [
+      phase,
+      task.title,
+      responsible,
+      lookups.formatDate(task.startDate),
+      lookups.formatDate(task.endDate),
+      estimate,
+      taskStatusLabel(task.status),
+      task.isMilestone ? 'Sí' : 'No',
+    ];
+    return cells.map(csvField).join(',');
+  });
+  const content = `\uFEFF${[headers.join(','), ...lines].join('\r\n')}`;
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `tareas-${requestId}.csv`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 // Etiquetas y orden de TaskStatus: viven en el módulo puro status-labels.ts
 // (design §7.9.2) y se reexportan aquí para que los consumidores no cambien.
 export {

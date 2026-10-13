@@ -2,7 +2,17 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ArrowDown, ArrowUp, ClipboardList, ListChecks, Lock, Plus } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ClipboardList,
+  Download,
+  FileSpreadsheet,
+  ListChecks,
+  Lock,
+  Plus,
+  Upload,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CellTitle, ResultCount, SortableTableHead } from '@/components/data-table';
@@ -42,6 +52,7 @@ import {
 import type {
   CoordinationPerson,
   Plan,
+  PlanDocument,
   PlanGuide,
   PlanPhase,
   Request,
@@ -52,8 +63,12 @@ import { formatDateOnly, formatHours, formatPercent } from '@/lib/format';
 import {
   PlanError,
   createPlan,
+  downloadPlanDocument,
+  exportPlan,
   getPlan,
   getPlanGuide,
+  importPlan,
+  parsePlanDocumentFile,
   submitPlan,
 } from '@/lib/plan';
 import { guideCategoryLabel, presentGuidePending } from '@/lib/plan-guide';
@@ -62,7 +77,13 @@ import { PLANNABLE_STATES } from '@/lib/request-state';
 import { listRequests } from '@/lib/requests';
 import { compareByOrder, compareDate, type Comparator } from '@/lib/table-sort';
 import { matchesTaskFilters } from '@/lib/task-filters';
-import { TASK_STATUSES, deleteTask, listPlanTasks, taskStatusLabel } from '@/lib/tasks';
+import {
+  TASK_STATUSES,
+  deleteTask,
+  downloadTasksCsv,
+  listPlanTasks,
+  taskStatusLabel,
+} from '@/lib/tasks';
 import { useClientTable } from '@/lib/use-client-table';
 import { useRequestIdParam } from '@/lib/use-request-param';
 import { listCoordinationPeople } from '@/lib/worklog';
@@ -178,6 +199,10 @@ export function PlanView(): React.ReactElement {
   const [taskToDelete, setTaskToDelete] = React.useState<Task | null>(null);
   const [taskConfirmOpen, setTaskConfirmOpen] = React.useState(false);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  // Import de plan: documento elegido pendiente de confirmar el reemplazo.
+  const [importDoc, setImportDoc] = React.useState<PlanDocument | null>(null);
+  const [importConfirmOpen, setImportConfirmOpen] = React.useState(false);
+  const importInputRef = React.useRef<HTMLInputElement>(null);
 
   // Foco tras reordenar y tras eliminar una fila (§11.9 y NIT 4).
   const moveFocusRef = React.useRef<{ phaseId: string; dir: MoveDirection } | null>(null);
@@ -386,6 +411,62 @@ export function PlanView(): React.ReactElement {
       toast.error(messageOf(err));
     } finally {
       setDeletingId(null);
+      setBusy(false);
+    }
+  }
+
+  async function handleExportPlan() {
+    if (!selectedId) return;
+    setBusy(true);
+    try {
+      const doc = await exportPlan(selectedId);
+      downloadPlanDocument(selectedId, doc);
+    } catch (err) {
+      toast.error(messageOf(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleExportTasks() {
+    if (!selectedId) return;
+    // Foto de la vista: exporta las tareas actualmente filtradas (design §7.2).
+    downloadTasksCsv(selectedId, taskTable.pageRows, {
+      phaseName: (id) => phaseNameById.get(id),
+      personName: (id) => personNameById.get(id),
+      formatDate: formatDateOnly,
+    });
+  }
+
+  // El import se dispara desde un <input type=file> oculto; el botón real lo abre.
+  async function handleImportFileChange(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0] ?? null;
+    // Limpiar el value permite reintentar el mismo archivo tras un error.
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const parsed = await parsePlanDocumentFile(file);
+      // La forma la valida el backend al importar; aquí solo garantizamos JSON.
+      setImportDoc(parsed as PlanDocument);
+      setImportConfirmOpen(true);
+    } catch (err) {
+      toast.error(messageOf(err));
+    }
+  }
+
+  async function handleImportPlan() {
+    if (!selectedId || !importDoc) return;
+    setBusy(true);
+    try {
+      const result = await importPlan(selectedId, importDoc);
+      toast.success(result.message);
+      await refreshPlanData();
+    } catch (err) {
+      toast.error(messageOf(err));
+    } finally {
+      setImportDoc(null);
       setBusy(false);
     }
   }
@@ -931,11 +1012,75 @@ export function PlanView(): React.ReactElement {
             {`El plan está ${planStatePhrase(plan.status)}; las fases y tareas no se pueden editar.`}
           </InlineNotice>
         ) : null}
+        {renderPlanActions()}
         {/* La guía solo se muestra si el plan es editable (§11.9); getPlanGuide se sigue llamando. */}
         {canEdit && guide ? renderGuide(guide) : null}
         {renderPhases()}
         {renderTasks()}
       </>
+    );
+  }
+
+  /**
+   * Barra de acciones del plan (design §7.3): exportar plan (JSON), exportar
+   * tareas (CSV) e importar plan (JSON). El gating es cosmético; el backend es
+   * el control real (p. ej. 409 si el plan no es editable).
+   */
+  function renderPlanActions(): React.ReactElement {
+    const noTasks = taskTable.pageRows.length === 0;
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={() => void handleExportPlan()}
+        >
+          <Download aria-hidden="true" />
+          Exportar plan
+        </Button>
+        <div className="flex flex-col items-start gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            unavailable={noTasks}
+            disabled={!noTasks && busy}
+            aria-describedby={noTasks ? 'plan-export-tasks-reason' : undefined}
+            onClick={handleExportTasks}
+          >
+            <FileSpreadsheet aria-hidden="true" />
+            Exportar tareas (Excel)
+          </Button>
+          {noTasks ? (
+            <DisabledReason id="plan-export-tasks-reason">
+              Agrega al menos una tarea para exportarlas.
+            </DisabledReason>
+          ) : null}
+        </div>
+        {canEdit ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => importInputRef.current?.click()}
+            >
+              <Upload aria-hidden="true" />
+              Importar plan
+            </Button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(event) => void handleImportFileChange(event)}
+            />
+          </>
+        ) : null}
+      </div>
     );
   }
 
@@ -1072,6 +1217,15 @@ export function PlanView(): React.ReactElement {
               if (phaseToDelete) await handleDeletePhase(phaseToDelete);
             }}
             returnFocusTo={returnFocusToPhases}
+          />
+          <ConfirmDialog
+            open={importConfirmOpen}
+            onOpenChange={setImportConfirmOpen}
+            tone="danger"
+            title="¿Importar y reemplazar el plan?"
+            description="Importar reemplaza las fases, tareas y dependencias actuales por las del archivo. Esta acción no se puede deshacer."
+            confirmLabel="Importar y reemplazar"
+            onConfirm={handleImportPlan}
           />
           <ConfirmDialog
             open={taskConfirmOpen}
