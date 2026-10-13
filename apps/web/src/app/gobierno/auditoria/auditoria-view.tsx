@@ -85,24 +85,48 @@ export function AuditoriaView(): React.ReactElement {
   const [selected, setSelected] = React.useState<AuditEvent | null>(null);
   const objectFilterRef = React.useRef<HTMLButtonElement>(null);
 
-  const load = React.useCallback(async (objectType: AuditObjectType | typeof ALL) => {
-    setState('loading');
-    try {
-      // Procesos y personas solo dan nombres legibles: si fallan, no bloquean la auditoría.
-      const [ev, procs, persons] = await Promise.all([
-        listAuditEvents(objectType === ALL ? {} : { objectType }),
-        listProcesses().catch(() => [] as Process[]),
-        listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
-      ]);
-      setEvents(ev);
-      setProcesses(procs);
-      setPeople(persons);
-      setState('success');
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : null);
-      setState('error');
+  // Número de la última consulta de eventos: una respuesta que llega después de
+  // otra más nueva (cambio de Objeto o «Limpiar filtros» en curso) se descarta.
+  const requestRef = React.useRef(0);
+  // Procesos y personas no dependen del filtro: se piden una vez y solo se
+  // vuelven a pedir si fallaron (por ejemplo, tras «Reintentar»).
+  const processesRef = React.useRef<Promise<void> | null>(null);
+  const peopleRef = React.useRef<Promise<void> | null>(null);
+  const loadLookups = React.useCallback((): Promise<void[]> => {
+    if (!processesRef.current) {
+      processesRef.current = listProcesses().then(setProcesses, () => {
+        processesRef.current = null;
+      });
     }
+    if (!peopleRef.current) {
+      peopleRef.current = listCoordinationPeople().then(setPeople, () => {
+        peopleRef.current = null;
+      });
+    }
+    return Promise.all([processesRef.current, peopleRef.current]);
   }, []);
+
+  const load = React.useCallback(
+    async (objectType: AuditObjectType | typeof ALL) => {
+      const requestId = ++requestRef.current;
+      setState('loading');
+      try {
+        // Procesos y personas solo dan nombres legibles: si fallan, no bloquean la auditoría.
+        const [ev] = await Promise.all([
+          listAuditEvents(objectType === ALL ? {} : { objectType }),
+          loadLookups(),
+        ]);
+        if (requestId !== requestRef.current) return;
+        setEvents(ev);
+        setState('success');
+      } catch (err) {
+        if (requestId !== requestRef.current) return;
+        setErrorMessage(err instanceof Error ? err.message : null);
+        setState('error');
+      }
+    },
+    [loadLookups],
+  );
 
   React.useEffect(() => {
     void load(ALL);
