@@ -27,6 +27,16 @@
   background-color: var(--sidebar);
 }
 
+/* Oculta visualmente la barra de desplazamiento conservando el scroll por
+   rueda, trackpad y teclado. Firefox usa `scrollbar-width`; Chrome, Edge y
+   Safari usan el pseudo-elemento `::-webkit-scrollbar`. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 :root {
   /* Acento de marca: único punto a cambiar cuando exista color corporativo */
   --primary: oklch(0.47 0.15 258);
