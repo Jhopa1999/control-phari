@@ -1,7 +1,7 @@
 {
   "task_id": "mail-fase1",
   "task_description": "Correo transaccional Fase 1: modulo de correo (Nodemailer SMTP Office365), modelo AuthToken + migracion Prisma, reset de contrasena (forgot/reset) e invitacion/activacion de usuarios, pantallas frontend minimas, documentacion OpenAPI y regeneracion de contrato. Backend NestJS en apps/api, frontend Next.js en apps/web, contrato en packages/api-client. Preserva la politica de no revelar existencia de usuarios y las reglas del repo (Prisma solo en apps/api, TS estricto, sin secretos en Git).",
-  "status": "pending",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
   "blocked_reason": null
 }
