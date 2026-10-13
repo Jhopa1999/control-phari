@@ -55,6 +55,16 @@ Registro append-only de cada mutación (inmutable, sin `updatedAt`).
 - Restricciones/índices: por `(objectType, objectId)`, `actorUserId`, `scopeProcessId`,
   `createdAt`.
 
+### AuthToken (`auth_tokens`)
+Token de un solo uso para los flujos de credencial por correo (reestablecimiento de
+contraseña e invitación/activación de cuenta). El valor en claro (alta entropía,
+`randomBytes` ≥ 32 bytes) viaja solo en el correo; en BD se guarda únicamente su
+SHA-256.
+- Campos clave: `userId`, `purpose` (`PASSWORD_RESET` / `USER_INVITATION`), `tokenHash`
+  (SHA-256), `expiresAt`, `usedAt?` (marca el consumo de un solo uso), `createdAt`.
+- Relaciones: `User` (`onDelete: Cascade`).
+- Índices: por `userId`, `tokenHash`.
+
 ## Flujo de demanda
 
 ### Request (`requests`)
@@ -273,3 +283,4 @@ el service, por ejemplo: `ACTIVITY_CLASS`, `ISSUE_TYPE`, `RECORD_STATE`,
 8. `20261009141516_fase7_gobierno`
 9. `20261009200659_add_user_password_hash`
 10. `20261013055736_triage_main_responsible_fk`
+11. `20261013170314_create_auth_tokens`

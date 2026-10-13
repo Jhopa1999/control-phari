@@ -23,6 +23,33 @@ El `CurrentUserGuard` es el único punto que conoce el request HTTP: según el m
 carga del actor y sus grants (`load-actor.ts`) es **común a ambos modos**, de modo que
 la lógica de autorización no se duplica entre modos de autenticación.
 
+## Credenciales por correo (reset e invitación)
+
+Rutas **públicas** (sin `CurrentUserGuard`) para gestionar la contraseña por correo
+(`auth/auth-reset.controller.ts`). Usan tokens de un solo uso (`AuthToken`): el valor en
+claro viaja solo en el correo y en BD se guarda únicamente su SHA-256
+(`auth/auth-token.util.ts`, `auth/auth-token.service.ts`).
+
+- `POST /auth/forgot-password` (`204`): solicita el reestablecimiento. Responde **igual
+  exista o no el usuario** (no revela existencia, mismo criterio que el login). Si el
+  usuario existe y está activo, emite un token `PASSWORD_RESET` y envía el correo con el
+  enlace `APP_WEB_URL/restablecer-contrasena?token=...`.
+- `POST /auth/reset-password` (`204`): define una nueva contraseña consumiendo un token.
+  Acepta tokens `PASSWORD_RESET` **y** `USER_INVITATION`, por lo que también completa la
+  activación de cuenta invitada. Token inválido/purpose no permitido → `400`; token
+  caducado o ya usado → `410`; contraseña por debajo del mínimo → `400`.
+- `POST /users/{id}/invite` (`204`): protegido por `JEFE_AREA`. Emite un token
+  `USER_INVITATION` y envía la invitación con el enlace `APP_WEB_URL/activar-cuenta?
+  token=...`. El reenvío invalida el token previo no usado (queda un único enlace
+  vigente).
+
+El token se emite/consume dentro de una transacción junto con la auditoría
+(`AuditEvent`, acción `UPDATE` sobre `USER`, sin incluir nunca el token) y la
+actualización del `passwordHash`; el envío del correo ocurre **fuera** de la
+transacción. Vigencias y mínimo configurables por entorno: `PASSWORD_RESET_TTL`
+(default `1h`), `USER_INVITATION_TTL` (default `72h`), `PASSWORD_MIN_LENGTH` (default
+`8`).
+
 ## El actor (`CurrentActor`)
 
 Resuelto por petición y adjuntado a `request.actor`, se inyecta en los controllers con

@@ -72,6 +72,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Solicita el reestablecimiento de contrasena. Responde 204 exista o no el usuario (no revela existencia). */
+        post: operations["AuthResetController_forgotPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Define una nueva contrasena consumiendo un token de reset o de activacion de cuenta. */
+        post: operations["AuthResetController_resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit-events": {
         parameters: {
             query?: never;
@@ -195,6 +229,23 @@ export interface paths {
         head?: never;
         /** Edita name/active (solo JEFE_AREA). */
         patch: operations["UserController_update"];
+        trace?: never;
+    };
+    "/users/{id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Emite y envia la invitacion de activacion para un usuario (solo JEFE_AREA). El reenvio invalida el enlace previo. */
+        post: operations["UserInviteController_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/grants": {
@@ -1601,6 +1652,25 @@ export interface components {
             expiresIn: string;
             /** @description Usuario autenticado. */
             user: components["schemas"]["LoginUserDto"];
+        };
+        ForgotPasswordDto: {
+            /**
+             * @description Identificador funcional del usuario (p. ej. email corporativo).
+             * @example persona@demo.local
+             */
+            identifier: string;
+        };
+        ResetPasswordDto: {
+            /**
+             * @description Token de un solo uso recibido por correo (reset o activacion).
+             * @example Zm9vYmFyYmF6cXV4...
+             */
+            token: string;
+            /**
+             * @description Nueva contrasena en claro (minimo 8 caracteres).
+             * @example nueva-contrasena-123
+             */
+            newPassword: string;
         };
         AuditEventResponseDto: {
             /**
@@ -4404,6 +4474,71 @@ export interface operations {
             };
         };
     };
+    AuthResetController_forgotPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordDto"];
+            };
+        };
+        responses: {
+            /** @description Solicitud recibida (respuesta identica exista o no el usuario). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Datos de entrada invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthResetController_resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordDto"];
+            };
+        };
+        responses: {
+            /** @description Contrasena actualizada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token invalido o contrasena demasiado corta. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token caducado o ya utilizado. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     AuditController_findMany: {
         parameters: {
             query?: {
@@ -4882,6 +5017,40 @@ export interface operations {
             };
             /** @description Datos de entrada invalidos o id no UUID. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuario no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserInviteController_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invitacion emitida y enviada. */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

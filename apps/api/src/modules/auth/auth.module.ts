@@ -1,6 +1,8 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from '../../database/prisma.module';
+import { AuditModule } from '../audit/audit.module';
+import { MailModule } from '../mail/mail.module';
 import { ACTOR_RESOLVER } from './actor-resolver';
 import { DevActorResolver, getAuthMode, isJwtMode } from './dev-actor.resolver';
 import { JwtActorResolver } from './jwt-actor.resolver';
@@ -10,6 +12,9 @@ import { MeController } from './me.controller';
 import { DevActorsController } from './dev-actors.controller';
 import { AuthLoginController } from './auth-login.controller';
 import { AuthLoginService } from './auth-login.service';
+import { AuthResetController } from './auth-reset.controller';
+import { AuthResetService } from './auth-reset.service';
+import { AuthTokenService } from './auth-token.service';
 
 const JWT_MODE_AUTH = 'jwt';
 
@@ -43,16 +48,25 @@ function resolveJwtSecret(): string | undefined {
 @Module({
   imports: [
     PrismaModule,
+    MailModule,
+    forwardRef(() => AuditModule),
     JwtModule.registerAsync({
       // Secreto SIEMPRE desde el entorno; valida arranque en modo jwt.
       useFactory: () => ({ secret: resolveJwtSecret() }),
     }),
   ],
-  controllers: [MeController, DevActorsController, AuthLoginController],
+  controllers: [
+    MeController,
+    DevActorsController,
+    AuthLoginController,
+    AuthResetController,
+  ],
   providers: [
     DevActorResolver,
     JwtActorResolver,
     AuthLoginService,
+    AuthTokenService,
+    AuthResetService,
     {
       provide: ACTOR_RESOLVER,
       useFactory: (dev: DevActorResolver, jwt: JwtActorResolver) =>
@@ -62,6 +76,7 @@ function resolveJwtSecret(): string | undefined {
     CurrentUserGuard,
     RolesGuard,
   ],
-  exports: [ACTOR_RESOLVER, CurrentUserGuard, RolesGuard],
+  // AuthTokenService se exporta para que UserModule (invitacion) lo consuma.
+  exports: [ACTOR_RESOLVER, CurrentUserGuard, RolesGuard, AuthTokenService],
 })
 export class AuthModule {}

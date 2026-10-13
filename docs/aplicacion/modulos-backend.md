@@ -28,12 +28,17 @@ por `AUTH_MODE`: `dev-header` (header `X-Actor-Id`) y `jwt` (login real).
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | POST | `/auth/login` | Autentica por `identifier` y contraseña, devuelve un JWT (ruta pública). |
+| POST | `/auth/forgot-password` | Solicita el reestablecimiento de contraseña; responde `204` exista o no el usuario (ruta pública). |
+| POST | `/auth/reset-password` | Define una nueva contraseña consumiendo un token de reset o de activación (`204`; `400` token/contraseña inválidos, `410` token caducado/usado). |
 | GET | `/dev/actors` | Lista usuarios activos para el selector de desarrollo (solo con `AUTH_MODE=dev-header`; si no, `404`). |
 | GET | `/me/permissions` | Permisos del usuario actual: rol, alcance y módulos permitidos. |
 
 Reglas relevantes: el login real vive solo en modo `jwt`; el selector dev solo existe
 en modo `dev-header`. La lógica de carga del actor y sus grants es común a ambos modos
-(no se duplica la autorización).
+(no se duplica la autorización). `forgot-password`/`reset-password` usan tokens de un
+solo uso (`AuthToken`): el valor en claro solo viaja en el correo y en BD se guarda su
+SHA-256; el envío del correo ocurre fuera de la transacción (ver
+`autenticacion-autorizacion.md`).
 
 ## user — Identidades funcionales
 
@@ -45,6 +50,7 @@ Administra las identidades funcionales de las personas del área. Solo `JEFE_ARE
 | GET | `/users/:id` | Obtiene un usuario con sus grants (solo JEFE_AREA). |
 | POST | `/users` | Crea una identidad funcional (solo JEFE_AREA). |
 | PATCH | `/users/:id` | Edita `name`/`active` (solo JEFE_AREA). |
+| POST | `/users/:id/invite` | Emite y envía la invitación de activación; el reenvío invalida el enlace previo (solo JEFE_AREA; `204`, `404` si no existe). |
 
 ## grant — Concesión de permisos (rol × proceso)
 

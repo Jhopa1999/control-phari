@@ -140,9 +140,38 @@ model User {
   requestsBlocked              Request[]          @relation("RequestBlockedBy")
   requestsBlockResolved        Request[]          @relation("RequestBlockedResolvedBy")
 
+  // Mail-fase1 (FEAT-002): tokens de un solo uso para reset de contrasena e
+  // invitacion/activacion. Se borran en cascada si se elimina el usuario.
+  authTokens AuthToken[]
+
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
   @@map("users")
+}
+
+/// Token de un solo uso para flujos de credencial por correo (reset de
+/// contrasena e invitacion/activacion). El token en claro (crypto.randomBytes
+/// >=32 bytes, alta entropia) viaja SOLO en el correo; en BD se guarda unicamente
+/// su SHA-256 (`tokenHash`): al ser aleatorio y de alta entropia, un hash rapido
+/// como sha256 es suficiente para evitar lookups por el valor en claro y no se
+/// necesita bcrypt (bcrypt protege contrasenas elegidas por personas, de baja
+/// entropia y vulnerables a fuerza bruta, lo que aqui no aplica). `purpose`
+/// distingue el flujo (PASSWORD_RESET / USER_INVITATION); `usedAt` marca el
+/// consumo (un solo uso) y `expiresAt` la caducidad.
+model AuthToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  purpose   String
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("auth_tokens")
 }
 
 /// Catalogo cerrado de 3 perfiles. El `code` gobierna la logica de

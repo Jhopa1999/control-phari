@@ -101,6 +101,65 @@
         ]
       }
     },
+    "/auth/forgot-password": {
+      "post": {
+        "operationId": "AuthResetController_forgotPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Solicitud recibida (respuesta identica exista o no el usuario)."
+          },
+          "400": {
+            "description": "Datos de entrada invalidos."
+          }
+        },
+        "summary": "Solicita el reestablecimiento de contrasena. Responde 204 exista o no el usuario (no revela existencia).",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "operationId": "AuthResetController_resetPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Contrasena actualizada."
+          },
+          "400": {
+            "description": "Token invalido o contrasena demasiado corta."
+          },
+          "410": {
+            "description": "Token caducado o ya utilizado."
+          }
+        },
+        "summary": "Define una nueva contrasena consumiendo un token de reset o de activacion de cuenta.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/audit-events": {
       "get": {
         "operationId": "AuditController_findMany",
@@ -641,6 +700,36 @@
           }
         },
         "summary": "Edita name/active (solo JEFE_AREA).",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/invite": {
+      "post": {
+        "operationId": "UserInviteController_invite",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Invitacion emitida y enviada."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Usuario no encontrado."
+          }
+        },
+        "summary": "Emite y envia la invitacion de activacion para un usuario (solo JEFE_AREA). El reenvio invalida el enlace previo.",
         "tags": [
           "users"
         ]
@@ -5473,6 +5562,42 @@
           "accessToken",
           "expiresIn",
           "user"
+        ]
+      },
+      "ForgotPasswordDto": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional del usuario (p. ej. email corporativo).",
+            "example": "persona@demo.local",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "identifier"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token de un solo uso recibido por correo (reset o activacion).",
+            "example": "Zm9vYmFyYmF6cXV4...",
+            "maxLength": 512
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "Nueva contrasena en claro (minimo 8 caracteres).",
+            "example": "nueva-contrasena-123",
+            "minLength": 8,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "token",
+          "newPassword"
         ]
       },
       "AuditEventResponseDto": {
