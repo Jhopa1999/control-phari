@@ -1,0 +1,27 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "NIT",
+      "location": "§5.5(b) transacción REPLACE — actualización de cabecera",
+      "problem": "El paso (b) escribe { periodStart, periodEnd, commitmentDate, risks, mitigations } sin fijar qué ocurre cuando el documento trae esos campos ausentes vs null. Como REPLACE actúa sobre la fila de plan preexistente, un undefined dejaría el valor viejo mientras null lo borraría, lo que es incoherente con una semántica de reemplazo completo.",
+      "fix": "Declarar en §5.5(b) que la cabecera se reemplaza completa: todo campo ausente u opcional del documento se persiste como null (periodStart: dto.plan.periodStart ?? null, etc.), coherente con SUP-2 (sin merge parcial)."
+    },
+    {
+      "id": 2,
+      "severity": "NIT",
+      "location": "FR-2.9 vs §4.1/§5.6 — commitmentDate",
+      "problem": "FR-2.9 enumera 'periodos, riesgos, mitigaciones' sin nombrar commitmentDate, pero §4.1 lo muestra en el JSON y §5.6 lo declara en PlanDocumentHeaderDto. Lectura ambigua sobre si la fecha de compromiso se importa. Verificado que commitmentDate es columna nullable de Plan y editable por el CRUD, así que importarla es correcto.",
+      "fix": "Redactar FR-2.9 como 'periodos (incluida commitmentDate), riesgos y mitigaciones' para eliminar la ambigüedad."
+    },
+    {
+      "id": 3,
+      "severity": "NIT",
+      "location": "§7.1/§7.4 y apps/web/src/lib/api-client.ts — reexport de tipos",
+      "problem": "El helper tipado de §7.1 referencia PlanDocument e ImportPlanResult como alias reexportados, pero esos alias aún no existen; si no se añaden, el helper no compila. El patrón de reexport (components['schemas']['XxxDto'] con alias corto) existe y es correcto.",
+      "fix": "Tras regenerar el contrato (§7.4), añadir en api-client.ts: export type PlanDocument = components['schemas']['PlanDocumentDto']; y export type ImportPlanResult = components['schemas']['ImportPlanResultDto']; en el bloque de Fase 3 (plan)."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\plan-import-export\\design-review.md"
+}

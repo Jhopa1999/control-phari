@@ -1,0 +1,27 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "NIT",
+      "title": "El diseño cita el patrón NonNullable del frontend como idéntico, pero el frontend aplica un solo NonNullable y no extrae objectType",
+      "location": "Caso borde 'Enum del contrato ampliado'",
+      "fix": "Matizar la redacción: seguir el criterio del frontend (envolver query opcional con NonNullable) extendiéndolo al miembro objectType también opcional. La expresión de código del diseño ya es correcta."
+    },
+    {
+      "id": 2,
+      "severity": "NIT",
+      "title": "El enum objectType del contrato (4 valores) está documentado en docs/README.md como desalineado del backend real (26 valores); el diseño no lo menciona",
+      "location": "Tool audit.events.list y caso borde 'Enum del contrato ampliado'",
+      "fix": "Añadir nota: docs/README.md registra como pendiente alinear el @ApiQuery del backend a los 26 OBJECT_TYPES; cuando ocurra y se regenere el contrato, el check de equivalencia romperá typecheck:mcp a propósito, forzando a actualizar el z.enum. Es comportamiento deseado, no un fallo."
+    },
+    {
+      "id": 3,
+      "severity": "NIT",
+      "title": "expiresIn se recibe pero no se parsea; conviene anclarlo para evitar que un implementador intente parsear el formato humano",
+      "location": "Sección 'Renovación del token JWT'",
+      "fix": "Añadir una línea: expiresIn se recibe pero no se parsea ni se usa en esta iteración; la caducidad se detecta reactivamente por el 401 del backend."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\mcp-server\\design-review.md"
+}

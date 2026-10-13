@@ -1,0 +1,7 @@
+{
+  "task_id": "task-plan-import-export",
+  "task_description": "Añadir importar/exportar plan en el módulo Planificación: endpoint export (JSON autocontenido con refs locales) + endpoint import (REPLACE atómico que reaplica reglas de hito/ciclo/gate de estado editable), helpers puros compartidos (milestone, cycle), DTOs class-validator, anotaciones OpenAPI, regeneración de contrato + api-client, y frontend (helpers exportPlan/importPlan/downloadPlanDocument/parsePlanDocumentFile, downloadTasksCsv, botones + ConfirmDialog en plan-view.tsx). Diseño aprobado en design.md.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

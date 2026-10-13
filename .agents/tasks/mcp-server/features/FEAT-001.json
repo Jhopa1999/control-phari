@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Scaffold del workspace apps/mcp + PASO 0 (fijar versiones del SDK y zod) + gate de factibilidad del SDK. Deja un servidor MCP mínimo que compila, arranca por stdio y resuelve tanto el SDK como @plantilla-portales/api-client. Base para todas las features siguientes. Debe hacerse primero.",
+  "status": "completed",
+  "steps": [
+    "Crear apps/mcp/package.json: name '@plantilla-portales/mcp', version '0.1.0', private true, type 'module', main './dist/index.js'. Scripts: build 'tsc -p tsconfig.json', typecheck 'tsc --noEmit -p tsconfig.json', start 'node dist/index.js'. dependencies: '@plantilla-portales/api-client': '*' y, PINEADAS SIN rango '^', el último estable de '@modelcontextprotocol/sdk' y de 'zod' compatibles con Node 20.9+ (PASO 0: elegir e instalar la versión concreta). devDependencies: 'typescript': '5.9.3', '@types/node': '26.6.4' (igual que apps/api).",
+    "Crear apps/mcp/tsconfig.json partiendo del estilo de packages/api-client/tsconfig.json (target ES2021, strict, esModuleInterop, skipLibCheck, forceConsistentCasingInFileNames, noUnusedLocals, noUnusedParameters, outDir './dist', rootDir './src', include ['src/**/*.ts'], exclude ['node_modules','dist']) PERO con 'module': 'nodenext' y 'moduleResolution': 'nodenext' (el MCP se ejecuta con Node y debe resolver los exports ESM del SDK), lib ['ES2021'].",
+    "Registrar en docs/README.md las versiones elegidas del SDK y zod (sección de versiones instaladas), coherente con la regla del steering de no hardcodear versiones salvo necesidad.",
+    "Crear apps/mcp/src/index.ts MÍNIMO: importar McpServer de '@modelcontextprotocol/sdk/server/mcp.js' y StdioServerTransport de '@modelcontextprotocol/sdk/server/stdio.js'; importar createApiClient de '@plantilla-portales/api-client' (para probar la resolución del workspace dep); crear un McpServer vacío, conectar StdioServerTransport y mantener el proceso vivo (sin tools todavía). Todo logging a stderr.",
+    "Ejecutar 'npm install' en la raíz del worktree para enlazar el nuevo workspace."
+  ],
+  "acceptance_criteria": [
+    "'npm install' en la raíz del worktree instala apps/mcp sin errores y crea el symlink de @plantilla-portales/mcp en node_modules.",
+    "Las versiones de @modelcontextprotocol/sdk y zod están pineadas sin rango en apps/mcp/package.json y registradas en docs/README.md.",
+    "'npm run build:api-client' seguido de 'npm run typecheck --workspace apps/mcp' pasa en modo estricto resolviendo el SDK Y api-client sin errores de módulo.",
+    "'npm run build --workspace apps/mcp' genera apps/mcp/dist/index.js y 'node apps/mcp/dist/index.js' arranca sin crash."
+  ],
+  "verification": [
+    "cd al worktree y ejecutar 'npm install'",
+    "'npm run build:api-client'",
+    "'npm run typecheck --workspace apps/mcp'",
+    "'npm run build --workspace apps/mcp'",
+    "Arrancar 'node apps/mcp/dist/index.js' con MCP_API_BASE_URL de prueba y confirmar que no sale error, luego terminarlo",
+    "Si nodenext no resolviera los exports del SDK (improbable y distinto del fallo por api-client sin build), cambiar a moduleResolution 'bundler' y re-verificar; nodenext es el valor por defecto"
+  ],
+  "blocked_reason": null,
+  "findings": "VERSIONES PINEADAS (sin rango ^) en apps/mcp/package.json: @modelcontextprotocol/sdk = 1.32.1 (linea v1 estable, engines node >=18, OK con Node 20.9+; la linea v2 era preliminar y se descarto). zod = 4.6.7 (ultimo estable; el peer del SDK admite ^3.25 || ^4.0). Dev: typescript 5.9.3 y @types/node 26.6.4 (igual que apps/api). Registradas en docs/README.md seccion 'Servidor MCP (apps/mcp)'. moduleResolution: NO hizo falta cambiar nodenext por bundler; 'nodenext' resolvio tanto el SDK como @plantilla-portales/api-client en typecheck, build y runtime. El import del SDK usa rutas con sufijo .js explicito ('@modelcontextprotocol/sdk/server/mcp.js' y '.../server/stdio.js'), obligatorio con nodenext. FIX DE RAIZ EN packages/api-client (fuera de apps/mcp, aprobado por el padre del workflow): su dist ESM emitia imports relativos SIN extension (from './client'), que Node ESM rechaza con ERR_MODULE_NOT_FOUND; el MCP es el primer consumidor que lo ejecuta bajo Node (apps/web lo bundlea via Next y lo toleraba). Se corrigio anadiendo '.js' a los imports relativos de src/index.ts y src/client.ts y poniendo module/moduleResolution='nodenext' en packages/api-client/tsconfig.json. Es solo resolucion de modulos; NO cambia contrato ni firmas publicas. Verificado: typecheck:web en VERDE (frontend no roto); build:web solo falla por falta de NEXT_PUBLIC_API_BASE_URL en el entorno (prerender), no por el fix. El fix sobrevive a contracts:generate porque el generador solo reescribe src/generated/schema.d.ts (puros tipos, sin imports relativos); los 2 archivos editados son fuente a mano. API DE ARRANQUE DEL SDK confirmada para las features siguientes: new McpServer({ name, version }) desde '@modelcontextprotocol/sdk/server/mcp.js', new StdioServerTransport() desde '.../server/stdio.js', await server.connect(transport). Smoke test (stdio, sin backend vivo): initialize responde handshake valido; tools/list devuelve -32601 Method not found PORQUE aun no hay tools registradas (el server no anuncia la capability 'tools' hasta que FEAT-002+ agregue la primera). stdout reservado al protocolo; todo logging a stderr (patron logStderr en index.ts). PRECONDICION DE VERIFICACION para toda feature del MCP: ejecutar 'npm run build:api-client' ANTES de 'npm run typecheck --workspace apps/mcp' porque el exports de api-client apunta solo a dist. Scripts raiz anadidos/extendidos: build (+build:mcp al final), typecheck (+apps/mcp), build:mcp, typecheck:mcp; la lista workspaces y los scripts existentes NO se tocaron. Detalle completo en .agents/tasks/mcp-server/verification.md."
+}

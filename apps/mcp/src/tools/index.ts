@@ -12,6 +12,7 @@ import { registerRequestTools } from './request.js';
 import { registerPlanTools } from './plan.js';
 import { registerAuditTools } from './audit.js';
 import { registerPortfolioTools } from './portfolio.js';
+import { registerGovernanceTools } from './governance.js';
 
 /**
  * Registra TODAS las tools en el server, invocando cada registrador de módulo.
@@ -27,4 +28,5 @@ export function registerAll(ctx: McpContext): void {
   registerPlanTools(ctx);
   registerAuditTools(ctx);
   registerPortfolioTools(ctx);
+  registerGovernanceTools(ctx);
 }

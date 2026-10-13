@@ -1,0 +1,7 @@
+{
+  "task_id": "task-mcp-server",
+  "task_description": "Implementar un servidor MCP (apps/mcp, paquete @plantilla-portales/mcp) sobre transporte stdio que expone un conjunto representativo de tools mapeadas 1:1 a operaciones reales del contrato OpenAPI de control-phari, reutilizando @plantilla-portales/api-client. Capa delgada: sin lógica de negocio ni autorización. Identidad por variables de entorno (modos dev-header y jwt), traducción de errores, README y .env.example, e integración mínima en el package.json raíz. Basado en el diseño APROBADO.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null
+}

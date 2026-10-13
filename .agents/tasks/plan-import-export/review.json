@@ -1,0 +1,11 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "severity": "NIT",
+      "location": "apps/web/src/app/seguimiento/plan/plan-view.tsx (renderPlanActions)",
+      "problem": "El boton «Importar plan» se renderiza solo dentro de `canEdit ? (...)`, por lo que queda OCULTO cuando el plan no es editable (EN_AUTORIZACION/AUTORIZADO). El design §7.3 (tabla de afordances) especifica que debe estar VISIBLE con cualquier plan cargado y solo DESHABILITADO cuando no es `canEdit`, para que el usuario descubra la capacidad; la plan.md paso 11 tambien dice «visible siempre, habilitado solo con canEdit». Es puramente cosmetico: el gate real sigue siendo el 409 del backend y el resto del flujo (ConfirmActions, parse, toast con result.message, refreshPlanData) es correcto.",
+      "fix": "Renderizar siempre el boton «Importar plan» (fuera del `canEdit ?`) y deshabilitarlo con `disabled={!canEdit || busy}`, agregando un DisabledReason cuando `!canEdit` (p. ej. «Solo puedes importar sobre un plan en borrador o devuelto.»), igual que el patron de «Exportar tareas». Mantener el `<input type=file>` oculto asociado. No cambia ninguna regla de negocio."
+    }
+  ]
+}

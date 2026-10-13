@@ -1,0 +1,27 @@
+{
+  "project_type": "Monorepo npm workspaces: Next.js frontend (apps/web), NestJS backend (apps/api), cliente TypeScript generado desde OpenAPI (packages/api-client). Se añade un nuevo workspace apps/mcp (servidor Model Context Protocol sobre stdio).",
+  "language": "TypeScript 5.9.3 (modo estricto)",
+  "build_system": "npm workspaces. Cada workspace tiene su propio script build/typecheck. api-client es ESM (type: module, moduleResolution bundler) y su build es 'tsc -p tsconfig.json && node ./scripts/copy-schema.mjs'. apps/api es CommonJS (NestJS, nest build). El MCP se ejecuta con 'node dist/index.js', por eso usa module/moduleResolution nodenext para resolver los exports ESM del SDK.",
+  "test_framework": "Raíz: Jest vía apps/api (test:unit) y Playwright (test:e2e). Para apps/mcp (ESM puro) se prefiere el runner nativo de Node (node --test) si configurar Jest-ESM añade fricción; documentar la decisión. NO tocar el agregado test:unit (sigue siendo solo apps/api).",
+  "build_command": "Desde la raíz del worktree: 'npm run build:api-client' (precondición) y luego 'npm run build:mcp'. El agregado 'npm run build' corre api -> api-client -> web -> mcp.",
+  "test_command": "'npm run typecheck' (agregado, incluye MCP tras añadir typecheck:mcp) y 'npm run test --workspace apps/mcp' para las unit del MCP.",
+  "verification_instructions": "Orden obligatorio desde la raíz del worktree: (1) npm install; (2) npm run build:api-client (precondición del typecheck del MCP, porque el exports de api-client solo apunta a dist); (3) npm run typecheck (agregado, incluye MCP); (4) npm run build:mcp. Smoke: arrancar 'node apps/mcp/dist/index.js' con MCP_API_BASE_URL y MCP_ACTOR_ID, enviar por stdin los mensajes JSON-RPC MCP 'initialize' y 'tools/list', y confirmar handshake + lista completa de tools (cada una con inputSchema), SIN backend vivo (login lazy). Limpiar cualquier temporal; no dejar .env reales versionados.",
+  "snapshot_or_generated_files": "packages/api-client/src/generated/schema.d.ts se genera con 'npm run contracts:generate' desde apps/api/openapi/openapi.json. El MCP NO regenera contratos; solo consume el api-client ya construido. No se tocan snapshots en esta tarea.",
+  "environment_constraints": "Node >= 20.9.0 (engines de la raíz). El código del MCP solo usa APIs de Node 20.9+. stdout está RESERVADO al protocolo MCP: todo logging va a stderr. Existe package-lock.json en la raíz del worktree. No crear archivos .env reales; solo .env.example con placeholders vacíos para secretos.",
+  "contribution_requirements": "Steering 00-estandar-portales: MCP es capa delgada, sin lógica de negocio, sin autorización, sin validación de dominio, sin Prisma ni PostgreSQL; reutiliza @plantilla-portales/api-client; no hardcodea config (todo por env); TypeScript estricto, evitar 'any'; no romper comandos existentes; antes de dar por terminado debe compilar y pasar validaciones. NO modificar la lista 'workspaces' del package.json raíz ni ningún script existente salvo extender 'build' y 'typecheck' y añadir 'build:mcp'/'typecheck:mcp'.",
+  "key_patterns": "Identidad: apps/web/src/lib/api-client.ts inyecta UNA sola cabecera vía api.use({ onRequest }) (X-Actor-Id en dev-header, Authorization: Bearer en jwt) y lanza error si falta la base URL. Éxito de toda llamada openapi-fetch = result.error == null (NUNCA por status code; login responde 200, no 201). POST /auth/login NO tiene requestBody tipado en el contrato: tipar localmente 'interface LoginBody { identifier: string; password: string }' (única excepción documentada) y tipar la respuesta con components['schemas']['LoginResponseDto']. Tipos de dominio SIEMPRE derivados del contrato (components['schemas'][...], paths[...]). audit objectType: NonNullable<NonNullable<paths['/audit-events']['get']['parameters']['query']>['objectType']> para la comprobación de equivalencia.",
+  "relevant_files": [
+    "apps/web/src/lib/api-client.ts (patrón de middleware de identidad a replicar)",
+    "packages/api-client/src/index.ts (exporta createApiClient, paths, components, operations)",
+    "packages/api-client/src/client.ts (createApiClient devuelve Client<paths> de openapi-fetch, expone .use())",
+    "packages/api-client/package.json (ESM, exports solo a dist -> precondición de build antes del typecheck del MCP)",
+    "packages/api-client/tsconfig.json (estilo base del tsconfig: strict, noUnusedLocals/Parameters, outDir dist, rootDir src; PERO el MCP usa nodenext en vez de bundler)",
+    "apps/api/package.json (estilo de scripts build/typecheck; @types/node 26.6.4, typescript 5.9.3)",
+    "apps/api/openapi/openapi.json (contrato: fuente de verdad de rutas/tipos; todas las rutas mapeadas verificadas)",
+    ".env.example (raíz, estilo de placeholders y variables de identidad AUTH_MODE/JWT_*)",
+    "apps/web/.env.example (NEXT_PUBLIC_API_BASE_URL, NEXT_PUBLIC_AUTH_MODE)",
+    "docs/README.md (registrar versiones del SDK/zod; nota de pendiente objectType 4 vs 26 valores)",
+    "package.json (raíz: workspaces ['apps/*','packages/*'] ya cubre apps/mcp; build/typecheck a extender)"
+  ],
+  "directory_structure": "apps/web (Next.js), apps/api (NestJS + openapi/openapi.json), packages/api-client (cliente generado ESM), docs/README.md (documentación), .env.example (raíz). Nuevo: apps/mcp/{package.json,tsconfig.json,.env.example,README.md,src/{index.ts,config.ts,api.ts,errors.ts,server.ts,tools/{index.ts,health.ts,catalog.ts,process.ts,user.ts,grant.ts,request.ts,plan.ts,audit.ts,portfolio.ts}}}."
+}
