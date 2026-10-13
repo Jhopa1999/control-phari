@@ -1070,14 +1070,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Triage de la solicitud.",
+            "description": "Triage de la solicitud y candidatos elegibles como responsable.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TriageResponseDto"
-                  }
+                  "$ref": "#/components/schemas/TriageContextResponseDto"
                 }
               }
             }
@@ -6238,10 +6235,16 @@
             "nullable": true,
             "description": "Esfuerzo total (horas)."
           },
-          "mainResponsible": {
+          "mainResponsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Id del responsable principal (lider de proceso)."
+          },
+          "mainResponsibleName": {
             "type": "string",
             "nullable": true,
-            "description": "Responsable principal."
+            "description": "Nombre del responsable principal resuelto."
           },
           "dependencies": {
             "type": "string",
@@ -6279,12 +6282,53 @@
           "sizeCode",
           "dataAvailabilityCode",
           "totalEffortHours",
-          "mainResponsible",
+          "mainResponsibleUserId",
+          "mainResponsibleName",
           "dependencies",
           "notes",
           "decidedAt",
           "decidedByUserId",
           "createdAt"
+        ]
+      },
+      "EligibleResponsibleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id del candidato."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del candidato."
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "TriageContextResponseDto": {
+        "type": "object",
+        "properties": {
+          "triages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TriageResponseDto"
+            }
+          },
+          "eligibleResponsibles": {
+            "description": "Candidatos elegibles como responsable principal (lideres del proceso principal; o su equipo si no hay lider).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EligibleResponsibleDto"
+            }
+          }
+        },
+        "required": [
+          "triages",
+          "eligibleResponsibles"
         ]
       },
       "CreateTriageDto": {
@@ -6324,10 +6368,10 @@
             "description": "Esfuerzo total (horas).",
             "minimum": 0
           },
-          "mainResponsible": {
+          "mainResponsibleUserId": {
             "type": "string",
-            "description": "Responsable principal.",
-            "maxLength": 255
+            "format": "uuid",
+            "description": "Responsable principal: id de un lider del proceso principal de la solicitud."
           },
           "dependencies": {
             "type": "string",

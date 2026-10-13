@@ -37,6 +37,9 @@ export type CreateRequest = components['schemas']['CreateRequestDto'];
 export type UpdateRequest = components['schemas']['UpdateRequestDto'];
 export type Triage = components['schemas']['TriageResponseDto'];
 export type CreateTriage = components['schemas']['CreateTriageDto'];
+export type TriageContext = components['schemas']['TriageContextResponseDto'];
+export type EligibleResponsible =
+  components['schemas']['EligibleResponsibleDto'];
 export type PriorityEvaluation =
   components['schemas']['PriorityEvaluationResponseDto'];
 export type CreatePriorityEvaluation =

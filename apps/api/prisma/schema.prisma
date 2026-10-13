@@ -93,8 +93,11 @@ model User {
   grants      Grant[]
   auditEvents AuditEvent[]
 
-  // Fase 2 (flujo de demanda): actor que registro cada decision.
-  triages             Triage[]
+  // Fase 2 (flujo de demanda): actor que registro cada decision y, por
+  // separado, triages donde la persona es responsable principal (segunda FK a
+  // User, por eso ambas relaciones Triage->User llevan `name`).
+  triages                  Triage[]             @relation("TriageDecidedBy")
+  triagesAsMainResponsible Triage[]             @relation("TriageMainResponsible")
   priorityEvaluations PriorityEvaluation[]
   approvals           Approval[]
 
@@ -304,7 +307,7 @@ model Triage {
   sizeCode             String?  @map("size_code")
   dataAvailabilityCode String?  @map("data_availability_code")
   totalEffortHours     Int?     @map("total_effort_hours")
-  mainResponsible      String?  @map("main_responsible")
+  mainResponsibleUserId String? @map("main_responsible_user_id") @db.Uuid
   decision             String
   decidedAt            DateTime @default(now()) @map("decided_at")
   decidedByUserId      String   @map("decided_by_user_id") @db.Uuid
@@ -313,11 +316,13 @@ model Triage {
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
-  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  decidedBy User    @relation(fields: [decidedByUserId], references: [id], onDelete: Restrict)
+  request         Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  decidedBy       User    @relation("TriageDecidedBy", fields: [decidedByUserId], references: [id], onDelete: Restrict)
+  mainResponsible User?   @relation("TriageMainResponsible", fields: [mainResponsibleUserId], references: [id], onDelete: Restrict)
 
   @@index([requestId])
   @@index([decidedByUserId])
+  @@index([mainResponsibleUserId])
   @@map("triages")
 }
 

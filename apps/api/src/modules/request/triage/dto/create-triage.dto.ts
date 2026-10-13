@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -62,12 +63,15 @@ export class CreateTriageDto {
   @Min(0)
   totalEffortHours?: number;
 
-  @ApiPropertyOptional({ type: String, description: 'Responsable principal.', maxLength: 255 })
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description:
+      'Responsable principal: id de un lider del proceso principal de la solicitud.',
+  })
   @IsOptional()
-  @Transform(trim)
-  @IsString()
-  @MaxLength(255)
-  mainResponsible?: string;
+  @IsUUID()
+  mainResponsibleUserId?: string;
 
   @ApiPropertyOptional({ type: String, description: 'Dependencias.', maxLength: 2000 })
   @IsOptional()

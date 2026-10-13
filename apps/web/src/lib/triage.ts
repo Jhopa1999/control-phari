@@ -1,4 +1,4 @@
-import { api, type CreateTriage, type Triage } from './api-client';
+import { api, type CreateTriage, type Triage, type TriageContext } from './api-client';
 
 /**
  * Error de dominio del modulo de triage, con mensaje entendible para el usuario.
@@ -29,24 +29,46 @@ function messageForStatus(status: number): string {
   }
 }
 
-function toTriageError(status: number | undefined): TriageError {
+/**
+ * Extrae un mensaje accionable del cuerpo de error de NestJS cuando venga
+ * ({ message }); si no, cae al mapeo por status. Permite propagar el mensaje
+ * especifico del 400 de responsable no elegible (design §5.2).
+ */
+function messageFromBody(body: unknown): string | undefined {
+  if (typeof body !== 'object' || body === null) return undefined;
+  const message = (body as { message?: unknown }).message;
+  if (typeof message === 'string' && message.trim() !== '') return message;
+  if (Array.isArray(message)) {
+    const first = message.find((m) => typeof m === 'string' && m.trim() !== '');
+    if (typeof first === 'string') return first;
+  }
+  return undefined;
+}
+
+function toTriageError(
+  status: number | undefined,
+  body?: unknown,
+): TriageError {
   if (status === undefined) {
     return new TriageError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new TriageError(messageForStatus(status), status);
+  return new TriageError(messageFromBody(body) ?? messageForStatus(status), status);
 }
 
-/** Historico de triage de una solicitud (GET /requests/:id/triage). */
-export async function listTriage(requestId: string): Promise<Triage[]> {
+/**
+ * Contexto de triage de una solicitud (GET /requests/:id/triage): el triage
+ * (0 o 1 fila en Fase 2) y los candidatos elegibles como responsable principal.
+ */
+export async function listTriage(requestId: string): Promise<TriageContext> {
   try {
     const { data, error, response } = await api.GET(
       '/requests/{id}/triage',
       { params: { path: { id: requestId } } },
     );
     if (error || !data) {
-      throw toTriageError(response.status);
+      throw toTriageError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -66,7 +88,7 @@ export async function createTriage(
       { params: { path: { id: requestId } }, body: input },
     );
     if (error || !data) {
-      throw toTriageError(response.status);
+      throw toTriageError(response.status, error);
     }
     return data;
   } catch (err) {

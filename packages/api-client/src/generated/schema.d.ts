@@ -2086,8 +2086,13 @@ export interface components {
             dataAvailabilityCode: string | null;
             /** @description Esfuerzo total (horas). */
             totalEffortHours: number | null;
-            /** @description Responsable principal. */
-            mainResponsible: string | null;
+            /**
+             * Format: uuid
+             * @description Id del responsable principal (lider de proceso).
+             */
+            mainResponsibleUserId: string | null;
+            /** @description Nombre del responsable principal resuelto. */
+            mainResponsibleName: string | null;
             /** @description Dependencias. */
             dependencies: string | null;
             /** @description Observaciones. */
@@ -2108,6 +2113,20 @@ export interface components {
              */
             createdAt: string;
         };
+        EligibleResponsibleDto: {
+            /**
+             * Format: uuid
+             * @description Id del candidato.
+             */
+            id: string;
+            /** @description Nombre del candidato. */
+            name: string;
+        };
+        TriageContextResponseDto: {
+            triages: components["schemas"]["TriageResponseDto"][];
+            /** @description Candidatos elegibles como responsable principal (lideres del proceso principal; o su equipo si no hay lider). */
+            eligibleResponsibles: components["schemas"]["EligibleResponsibleDto"][];
+        };
         CreateTriageDto: {
             /**
              * @description Decision del triage.
@@ -2126,8 +2145,11 @@ export interface components {
             dataAvailabilityCode?: string;
             /** @description Esfuerzo total (horas). */
             totalEffortHours?: number;
-            /** @description Responsable principal. */
-            mainResponsible?: string;
+            /**
+             * Format: uuid
+             * @description Responsable principal: id de un lider del proceso principal de la solicitud.
+             */
+            mainResponsibleUserId?: string;
             /** @description Dependencias. */
             dependencies?: string;
             /** @description Observaciones. */
@@ -5116,13 +5138,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Triage de la solicitud. */
+            /** @description Triage de la solicitud y candidatos elegibles como responsable. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TriageResponseDto"][];
+                    "application/json": components["schemas"]["TriageContextResponseDto"];
                 };
             };
             /** @description Rol insuficiente. */

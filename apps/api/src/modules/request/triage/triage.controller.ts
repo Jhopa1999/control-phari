@@ -16,6 +16,7 @@ import {
 } from '@nestjs/swagger';
 import { TriageService } from './triage.service';
 import { CreateTriageDto } from './dto/create-triage.dto';
+import { TriageContextResponseDto } from './dto/triage-context-response.dto';
 import { TriageResponseDto } from './dto/triage-response.dto';
 import { CurrentActor } from '../../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../../auth/current-actor';
@@ -38,7 +39,11 @@ export class TriageController {
   @Get()
   @ApiOperation({ summary: 'Triage de la solicitud (0 o 1 fila en Fase 2).' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Triage de la solicitud.', type: [TriageResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'Triage de la solicitud y candidatos elegibles como responsable.',
+    type: TriageContextResponseDto,
+  })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Solicitud fuera de alcance.' })
   findForRequest(

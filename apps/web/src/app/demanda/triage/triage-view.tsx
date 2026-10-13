@@ -31,14 +31,19 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import type { CatalogItem, Process, Request } from '@/lib/api-client';
+import type {
+  CatalogItem,
+  EligibleResponsible,
+  Process,
+  Request,
+} from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
 import { listCatalogItems } from '@/lib/catalog';
 import { formatCount } from '@/lib/format';
 import { listRequests } from '@/lib/requests';
 import { isPrioritizable, isTriageable } from '@/lib/request-state';
 import { listProcesses } from '@/lib/team';
-import { createTriage, TriageError } from '@/lib/triage';
+import { createTriage, listTriage, TriageError } from '@/lib/triage';
 import { useRequestIdParam } from '@/lib/use-request-param';
 
 type LoadState = 'loading' | 'success' | 'error';
@@ -68,7 +73,7 @@ interface TriageFormValues {
   sizeCode: string;
   dataAvailabilityCode: string;
   totalEffortHours: string;
-  mainResponsible: string;
+  mainResponsibleUserId: string;
   dependencies: string;
   notes: string;
   decision: Decision | '';
@@ -84,7 +89,7 @@ const EMPTY_FORM: TriageFormValues = {
   sizeCode: '',
   dataAvailabilityCode: '',
   totalEffortHours: '',
-  mainResponsible: '',
+  mainResponsibleUserId: '',
   dependencies: '',
   notes: '',
   decision: '',
@@ -147,18 +152,36 @@ export function TriageView(): React.ReactElement {
   const [selectedId, setSelectedId] = React.useState('');
   const selectedRef = React.useRef(selectedId);
   selectedRef.current = selectedId;
+  const [eligibleResponsibles, setEligibleResponsibles] = React.useState<
+    EligibleResponsible[]
+  >([]);
   const [form, setForm] = React.useState<TriageFormValues>(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const effortRef = React.useRef<HTMLInputElement>(null);
 
-  // Fija la selección y reinicia el formulario (sin cambios respecto a hoy).
+  // Fija la selección, reinicia el formulario y carga los candidatos a
+  // responsable principal de esa solicitud (dependen de su proceso principal).
+  // La carga es tolerante a fallo (como `processes`): si falla, el desplegable
+  // queda con solo «Sin especificar» y el campo sigue siendo opcional.
   const selectRequest = React.useCallback((id: string) => {
     setSelectedId(id);
     setForm(EMPTY_FORM);
     setFieldErrors({});
     setFormError(null);
+    if (!id) {
+      setEligibleResponsibles([]);
+      return;
+    }
+    void listTriage(id)
+      .then((ctx) => {
+        // Evita condiciones de carrera si la selección cambió mientras cargaba.
+        if (selectedRef.current === id) setEligibleResponsibles(ctx.eligibleResponsibles);
+      })
+      .catch(() => {
+        if (selectedRef.current === id) setEligibleResponsibles([]);
+      });
   }, []);
 
   const load = React.useCallback(async () => {
@@ -253,7 +276,7 @@ export function TriageView(): React.ReactElement {
         sizeCode: selectedOrUndefined(form.sizeCode),
         dataAvailabilityCode: selectedOrUndefined(form.dataAvailabilityCode),
         totalEffortHours: effort !== undefined && Number.isFinite(effort) ? effort : undefined,
-        mainResponsible: trimOrUndefined(form.mainResponsible),
+        mainResponsibleUserId: selectedOrUndefined(form.mainResponsibleUserId),
         dependencies: trimOrUndefined(form.dependencies),
         notes: trimOrUndefined(form.notes),
       });
@@ -415,7 +438,26 @@ export function TriageView(): React.ReactElement {
         <div className="grid gap-4">
           <h3 className="text-sm font-semibold">Responsable y dependencias</h3>
           <Field id="triage-responsible" label="Responsable principal">
-            <Input value={form.mainResponsible} onChange={(e) => update('mainResponsible', e.target.value)} />
+            {(control) => (
+              <Select
+                value={form.mainResponsibleUserId || NONE}
+                onValueChange={(v) =>
+                  update('mainResponsibleUserId', v === NONE ? '' : v)
+                }
+              >
+                <SelectTrigger {...control}>
+                  <SelectValue placeholder="Sin especificar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Sin especificar</SelectItem>
+                  {eligibleResponsibles.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </Field>
           <Field id="triage-dependencies" label="Dependencias">
             <Textarea value={form.dependencies} onChange={(e) => update('dependencies', e.target.value)} />

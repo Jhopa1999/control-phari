@@ -29,8 +29,20 @@ export class TriageResponseDto {
   @ApiProperty({ type: Number, nullable: true, description: 'Esfuerzo total (horas).' })
   totalEffortHours!: number | null;
 
-  @ApiProperty({ type: String, nullable: true, description: 'Responsable principal.' })
-  mainResponsible!: string | null;
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Id del responsable principal (lider de proceso).',
+  })
+  mainResponsibleUserId!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Nombre del responsable principal resuelto.',
+  })
+  mainResponsibleName!: string | null;
 
   @ApiProperty({ type: String, nullable: true, description: 'Dependencias.' })
   dependencies!: string | null;

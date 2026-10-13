@@ -1,0 +1,24 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "severity": "NIT",
+      "location": "design.md §5.2, §6, §4 — apps/web/src/lib/triage.ts::listTriage",
+      "problem": "El GET /requests/:id/triage cambia la forma del cuerpo de TriageResponseDto[] a TriageContextResponseDto ({ triages, eligibleResponsibles }). listTriage hace hoy 'return data' tipado como Triage[]; hay que reescribir el cuerpo, no solo la firma. La redacción '(o expone eligibleResponsibles)' deja una micro-ambigüedad sobre si listTriage devuelve el contexto o se añade una función nueva. No bloquea: §5.2 ya fija el comportamiento observable y listTriage no tiene consumidores en el front hoy.",
+      "fix": "Repurponer listTriage para devolver Promise<TriageContext> (components['schemas']['TriageContextResponseDto']) y que triage-view.tsx lea c.eligibleResponsibles al seleccionar la solicitud, con .catch(() => []) como ya se hace con processes."
+    },
+    {
+      "severity": "NIT",
+      "location": "design.md §Overview, §1.2",
+      "problem": "El diseño afirma como 'confirmado' que la base está reseteada a un solo Request (FIBI, REGISTRADA) sin filas en triages. Es un hecho de runtime no verificable desde el repo. El seed sí confirma un grant LIDER_PROCESO en FIBI, por lo que el desplegable tendría candidatos.",
+      "fix": "Antes de migrar, confirmar SELECT count(*) FROM triages = 0 (o aceptar que las filas pierden main_responsible, lo cual el diseño ya autoriza por ser dato de prueba). Sin cambio de diseño; verificación operativa."
+    },
+    {
+      "severity": "NIT",
+      "location": "design.md §5.2 — apps/web/src/app/demanda/triage/triage-view.tsx",
+      "problem": "El responsable usa hoy la forma de elemento de <Field> (<Field><Input/></Field>), mientras renderCatalogSelect usa la forma render-prop (control => <SelectTrigger {...control}>). Migrar al <Select> con el patrón de renderCatalogSelect requiere usar la variante render-prop para conservar aria-describedby/accesibilidad.",
+      "fix": "Reutilizar la estructura de renderCatalogSelect (NONE -> 'Sin especificar' + SelectItem value={c.id} label c.name) con items=eligibleResponsibles y estado form.mainResponsibleUserId."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\triage-responsible-fk\\design-review.md"
+}
