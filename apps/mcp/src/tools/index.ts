@@ -1,16 +1,30 @@
 /**
  * Agregador de tools del MCP. Centraliza el registro de todas las tools de
- * dominio. Por ahora está vacío: FEAT-003 lo poblará invocando cada
- * register<Modulo>Tools(ctx) (health, catalog, process, user, grant, request,
- * plan, audit, portfolio).
+ * dominio, cada una mapeada 1:1 a operaciones reales del contrato OpenAPI.
  */
 import type { McpContext } from '../server.js';
+import { registerHealthTools } from './health.js';
+import { registerCatalogTools } from './catalog.js';
+import { registerProcessTools } from './process.js';
+import { registerUserTools } from './user.js';
+import { registerGrantTools } from './grant.js';
+import { registerRequestTools } from './request.js';
+import { registerPlanTools } from './plan.js';
+import { registerAuditTools } from './audit.js';
+import { registerPortfolioTools } from './portfolio.js';
 
 /**
- * Registra TODAS las tools en el server. Hoy no registra ninguna; se mantiene la
- * firma estable para que index.ts la invoque y FEAT-003 solo tenga que añadir
- * las llamadas a los registradores de cada módulo.
+ * Registra TODAS las tools en el server, invocando cada registrador de módulo.
+ * El orden no afecta el comportamiento (cada módulo registra sus propias tools).
  */
-export function registerAll(_ctx: McpContext): void {
-  // FEAT-003: registerHealthTools(_ctx), registerCatalogTools(_ctx), etc.
+export function registerAll(ctx: McpContext): void {
+  registerHealthTools(ctx);
+  registerCatalogTools(ctx);
+  registerProcessTools(ctx);
+  registerUserTools(ctx);
+  registerGrantTools(ctx);
+  registerRequestTools(ctx);
+  registerPlanTools(ctx);
+  registerAuditTools(ctx);
+  registerPortfolioTools(ctx);
 }
