@@ -1059,27 +1059,32 @@ export function PlanView(): React.ReactElement {
             </DisabledReason>
           ) : null}
         </div>
-        {canEdit ? (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              onClick={() => importInputRef.current?.click()}
-            >
-              <Upload aria-hidden="true" />
-              Importar plan
-            </Button>
-            <input
-              ref={importInputRef}
-              type="file"
-              accept="application/json,.json"
-              className="hidden"
-              onChange={(event) => void handleImportFileChange(event)}
-            />
-          </>
-        ) : null}
+        <div className="flex flex-col items-start gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            unavailable={!canEdit}
+            disabled={canEdit && busy}
+            aria-describedby={!canEdit ? 'plan-import-reason' : undefined}
+            onClick={() => importInputRef.current?.click()}
+          >
+            <Upload aria-hidden="true" />
+            Importar plan
+          </Button>
+          {!canEdit ? (
+            <DisabledReason id="plan-import-reason">
+              Solo puedes importar sobre un plan en borrador o devuelto.
+            </DisabledReason>
+          ) : null}
+        </div>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(event) => void handleImportFileChange(event)}
+        />
       </div>
     );
   }
