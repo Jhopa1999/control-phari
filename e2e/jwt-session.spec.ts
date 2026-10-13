@@ -8,7 +8,9 @@ import type { AuthUser } from '../apps/web/src/lib/api-client'; // solo tipo: el
  * (c) /login con sesión válida lleva a /inicio;
  * (d) ?expired=1 muestra el aviso de sesión expirada;
  * (e) un `next` externo se ignora y lleva a /inicio del mismo origen;
- * (f) cerrar sesión lleva a /login sin `next` y una recarga no la recupera.
+ * (f) cerrar sesión lleva a /login sin `next` y una recarga no la recupera;
+ * (g) credenciales incorrectas muestran el error genérico y no guardan sesión;
+ * (h) sin sesión, una ruta protegida no pide sus datos ni muestra su contenido.
  *
  * Solo corre con E2E_AUTH_MODE=jwt y con la API (AUTH_MODE=jwt) y la web
  * (NEXT_PUBLIC_AUTH_MODE=jwt) ya levantadas: fuera de CI Playwright reutiliza
@@ -187,4 +189,37 @@ test('cerrar sesión lleva a /login sin next y una recarga no la recupera', asyn
   await expect(loginForm(page)).toBeVisible();
   await expect(loginHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/login');
+});
+test('credenciales incorrectas muestran el error y no inician sesión', async ({
+  page,
+}) => {
+  await page.goto('/login');
+  await page.locator('#identifier').fill(IDENTIFIER);
+  await page.locator('#password').fill(`${PASSWORD}-incorrecta`);
+  await page.getByRole('button', { name: 'Ingresar' }).click();
+  // Mensaje genérico: no revela si el usuario existe.
+  await expect(page.getByText('Usuario o contraseña incorrectos.')).toBeVisible();
+  await expect(loginForm(page)).toBeVisible();
+  await expect(page).toHaveURL('/login');
+  expect(
+    await page.evaluate(() => window.localStorage.getItem('authToken')),
+  ).toBeNull();
+});
+test('sin sesión, una ruta protegida no pide sus datos ni muestra su contenido', async ({
+  page,
+}) => {
+  const auditRequests: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/audit-events') {
+      auditRequests.push(request.url());
+    }
+  });
+  await page.goto('/gobierno/auditoria');
+  await settled(page);
+  await expect(loginForm(page)).toBeVisible();
+  await expect(page).toHaveURL('/login?next=%2Fgobierno%2Fauditoria');
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Auditoría' }),
+  ).toHaveCount(0);
+  expect(auditRequests).toEqual([]);
 });
