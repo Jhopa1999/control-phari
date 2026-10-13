@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Frontend (apps/web, Next.js App Router): wrappers tipados del api-client generado para forgot/reset, pantallas /olvide-contrasena, /restablecer-contrasena y /activar-cuenta, y enlace 'Olvidaste tu contrasena?' en el login. Consume el contrato regenerado por FEAT-002 (depende de FEAT-002). No toca backend ni Prisma.",
+  "status": "pending",
+  "steps": [
+    "Crear apps/web/src/lib/password-reset.ts siguiendo el patron de apps/web/src/lib/catalog.ts y auth.ts: usar `api` y tipos de @plantilla-portales/api-client (components['schemas'][...]) sin duplicar tipos; traducir errores con toApiError de lib/api-error.ts (o clase propia). Funciones: requestPasswordReset({ identifier }) -> api.POST('/auth/forgot-password', { body }); setPasswordWithToken({ token, newPassword }) -> api.POST('/auth/reset-password', { body }). Como las respuestas son 204 sin cuerpo, tratar la ausencia de data como exito (no exigir data). Si el contrato generado dejara requestBody?: never para estos POST, aplicar un unico cast localizado y comentado `body: x as never` (patron ya usado en lib/auth.ts), no duplicar el contrato.",
+    "Crear apps/web/src/app/olvide-contrasena/page.tsx + componente cliente de formulario: campo identifier, al enviar llama requestPasswordReset, SIEMPRE muestra mensaje generico 'Si existe una cuenta, enviaremos un correo con instrucciones' (no revela existencia), estados loading/enviado/error, enlace a /login. Usar Field, FormError, Button, Card, InlineNotice. Metadata title. Suspense si usa useSearchParams.",
+    "Crear apps/web/src/app/restablecer-contrasena/page.tsx + componente cliente: lee ?token= con useSearchParams; form nueva contrasena + confirmacion (validacion cliente: longitud minima y coincidencia), al enviar llama setPasswordWithToken({ token, newPassword }); estados loading/exito/error; en exito muestra confirmacion y enlace a /login; si no hay token o el backend responde 400/410 muestra mensaje claro (token invalido o expirado) sin JSON crudo. Patron accesible del login-form.tsx (noValidate, role=alert, aria-invalid).",
+    "Crear apps/web/src/app/activar-cuenta/page.tsx + componente cliente: misma logica que restablecer-contrasena (lee ?token=, llama setPasswordWithToken) pero con copy de 'activar cuenta'/'establecer tu contrasena'. Reutilizar el componente de formulario comun si es practico (parametrizar textos) para no duplicar logica.",
+    "Editar apps/web/src/app/login/login-form.tsx: anadir un enlace 'Olvidaste tu contrasena?' que navega a /olvide-contrasena (usar next/link), ubicado de forma accesible dentro del formulario/card sin romper el layout ni el flujo de envio existente."
+  ],
+  "acceptance_criteria": [
+    "apps/web/src/lib/password-reset.ts usa el api-client generado y traduce errores a espanol sin exponer JSON crudo; no declara tipos manuales del contrato.",
+    "Existen las rutas /olvide-contrasena, /restablecer-contrasena y /activar-cuenta con los estados loading/exito/error y enlaces a login.",
+    "El formulario de olvido muestra siempre un mensaje generico que no revela si la cuenta existe.",
+    "El login tiene un enlace 'Olvidaste tu contrasena?' hacia /olvide-contrasena.",
+    "Las pantallas usan los componentes compartidos (Field, FormError, Button, Card, InlineNotice)."
+  ],
+  "verification": [
+    "Desde la raiz del worktree: `npm run typecheck:web` compila sin errores.",
+    "Desde la raiz del worktree: `npm run build:web` compila el frontend contra los tipos del api-client regenerado por FEAT-002."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
