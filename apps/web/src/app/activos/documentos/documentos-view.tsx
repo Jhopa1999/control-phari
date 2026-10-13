@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Download, Eye, FileText, Plus, RotateCcwClock } from 'lucide-react';
+import { Download, Eye, FileText, Pencil, Plus, RotateCcwClock } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   CellTitle,
@@ -393,18 +393,26 @@ export function DocumentosView(): React.ReactElement {
         key: 'view',
         label: 'Ver',
         icon: Eye,
+        iconOnly: true,
         placement: 'inline',
         onSelect: () => openView(doc),
         disabled: !doc.currentVersion,
         disabledReason: doc.currentVersion ? undefined : 'Aún no tiene versiones.',
       },
-      { key: 'edit', label: 'Editar', onSelect: () => void openEdit(doc), placement: 'inline' },
+      {
+        key: 'edit',
+        label: 'Editar',
+        icon: Pencil,
+        iconOnly: true,
+        placement: 'inline',
+        onSelect: () => void openEdit(doc),
+      },
       {
         key: 'history',
         label: 'Historial',
         icon: RotateCcwClock,
         onSelect: () => openHistory(doc),
-        placement: 'inline',
+        placement: 'menu',
       },
       {
         key: 'download',
