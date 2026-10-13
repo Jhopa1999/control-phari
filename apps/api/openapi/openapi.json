@@ -1738,6 +1738,96 @@
         ]
       }
     },
+    "/requests/{requestId}/plan/export": {
+      "get": {
+        "operationId": "PlanController_exportPlan",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documento del plan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDocumentDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          }
+        },
+        "summary": "Exporta el plan a un documento JSON portable (solo lectura).",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/requests/{requestId}/plan/import": {
+      "post": {
+        "operationId": "PlanController_importPlan",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan importado (reemplazado).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPlanResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Documento invalido (kind/version/ref/ciclo/hito)."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          },
+          "409": {
+            "description": "El plan no esta en borrador ni devuelto."
+          }
+        },
+        "summary": "Importa un plan desde un documento (reemplaza el contenido actual).",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
     "/requests/{requestId}/plan/submit": {
       "post": {
         "operationId": "PlanController_submit",
@@ -7173,6 +7263,263 @@
           "canSubmit",
           "pendings",
           "futureCategories"
+        ]
+      },
+      "PlanDocumentHeaderDto": {
+        "type": "object",
+        "properties": {
+          "periodStart": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Inicio del periodo."
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fin del periodo."
+          },
+          "commitmentDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de compromiso."
+          },
+          "risks": {
+            "type": "string",
+            "nullable": true,
+            "description": "Riesgos del plan.",
+            "maxLength": 4000
+          },
+          "mitigations": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mitigaciones del plan.",
+            "maxLength": 4000
+          }
+        }
+      },
+      "PlanDocumentTaskDto": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "description": "Referencia local unica dentro del documento.",
+            "maxLength": 128
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la tarea.",
+            "maxLength": 255
+          },
+          "isMilestone": {
+            "type": "boolean",
+            "description": "Indica si la tarea es un hito."
+          },
+          "estimateHours": {
+            "type": "number",
+            "nullable": true,
+            "description": "Estimacion en horas (hito => 0).",
+            "minimum": 0
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de inicio planificada."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de fin/vencimiento."
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Descripcion/alcance.",
+            "maxLength": 4000
+          },
+          "acceptanceCriteria": {
+            "type": "string",
+            "nullable": true,
+            "description": "Criterios de aceptacion.",
+            "maxLength": 4000
+          },
+          "frameworkPhaseRequired": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fase de framework requerida.",
+            "maxLength": 255
+          },
+          "evidenceUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Evidencia como URL/texto.",
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "ref",
+          "title",
+          "isMilestone"
+        ]
+      },
+      "PlanDocumentPhaseDto": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "type": "number",
+            "description": "Orden 0-based de la fase.",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la fase.",
+            "maxLength": 255
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de inicio de la fase."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de fin de la fase."
+          },
+          "deliverable": {
+            "type": "string",
+            "nullable": true,
+            "description": "Entregable de la fase.",
+            "maxLength": 2000
+          },
+          "tasks": {
+            "description": "Tareas de la fase.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanDocumentTaskDto"
+            }
+          }
+        },
+        "required": [
+          "order",
+          "name",
+          "tasks"
+        ]
+      },
+      "PlanDocumentDependencyDto": {
+        "type": "object",
+        "properties": {
+          "dependentRef": {
+            "type": "string",
+            "description": "ref de la tarea dependiente.",
+            "maxLength": 128
+          },
+          "predecessorRef": {
+            "type": "string",
+            "description": "ref de la tarea predecesora.",
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "dependentRef",
+          "predecessorRef"
+        ]
+      },
+      "PlanDocumentDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "Marcador de tipo de documento.",
+            "enum": [
+              "control-phari-plan"
+            ]
+          },
+          "formatVersion": {
+            "type": "string",
+            "description": "Version del formato del documento.",
+            "enum": [
+              "1.0"
+            ]
+          },
+          "plan": {
+            "description": "Cabecera del plan.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanDocumentHeaderDto"
+              }
+            ]
+          },
+          "phases": {
+            "description": "Fases ordenadas con sus tareas.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanDocumentPhaseDto"
+            }
+          },
+          "dependencies": {
+            "description": "Dependencias entre tareas por referencia local.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanDocumentDependencyDto"
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "formatVersion",
+          "plan",
+          "phases",
+          "dependencies"
+        ]
+      },
+      "ImportPlanResultDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud del plan importado."
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Plan destino de la importacion."
+          },
+          "replaced": {
+            "type": "boolean",
+            "description": "Siempre true: el contenido anterior fue reemplazado."
+          },
+          "phasesCreated": {
+            "type": "number",
+            "description": "Fases creadas."
+          },
+          "tasksCreated": {
+            "type": "number",
+            "description": "Tareas creadas."
+          },
+          "dependenciesCreated": {
+            "type": "number",
+            "description": "Dependencias creadas."
+          },
+          "message": {
+            "type": "string",
+            "description": "Resumen legible del reemplazo."
+          }
+        },
+        "required": [
+          "requestId",
+          "planId",
+          "replaced",
+          "phasesCreated",
+          "tasksCreated",
+          "dependenciesCreated",
+          "message"
         ]
       },
       "SubmitPlanDto": {

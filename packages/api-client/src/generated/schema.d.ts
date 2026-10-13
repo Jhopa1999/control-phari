@@ -479,6 +479,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests/{requestId}/plan/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exporta el plan a un documento JSON portable (solo lectura). */
+        get: operations["PlanController_exportPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{requestId}/plan/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Importa un plan desde un documento (reemplaza el contenido actual). */
+        post: operations["PlanController_importPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/requests/{requestId}/plan/submit": {
         parameters: {
             query?: never;
@@ -2571,6 +2605,121 @@ export interface components {
             pendings: components["schemas"]["PlanGuidePendingDto"][];
             /** @description Categorias gancho de fases futuras (siempre 0 pendientes hoy). */
             futureCategories: string[];
+        };
+        PlanDocumentHeaderDto: {
+            /**
+             * Format: date-time
+             * @description Inicio del periodo.
+             */
+            periodStart?: string | null;
+            /**
+             * Format: date-time
+             * @description Fin del periodo.
+             */
+            periodEnd?: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de compromiso.
+             */
+            commitmentDate?: string | null;
+            /** @description Riesgos del plan. */
+            risks?: string | null;
+            /** @description Mitigaciones del plan. */
+            mitigations?: string | null;
+        };
+        PlanDocumentTaskDto: {
+            /** @description Referencia local unica dentro del documento. */
+            ref: string;
+            /** @description Titulo de la tarea. */
+            title: string;
+            /** @description Indica si la tarea es un hito. */
+            isMilestone: boolean;
+            /** @description Estimacion en horas (hito => 0). */
+            estimateHours?: number | null;
+            /**
+             * Format: date-time
+             * @description Fecha de inicio planificada.
+             */
+            startDate?: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de fin/vencimiento.
+             */
+            endDate?: string | null;
+            /** @description Descripcion/alcance. */
+            description?: string | null;
+            /** @description Criterios de aceptacion. */
+            acceptanceCriteria?: string | null;
+            /** @description Fase de framework requerida. */
+            frameworkPhaseRequired?: string | null;
+            /** @description Evidencia como URL/texto. */
+            evidenceUrl?: string | null;
+        };
+        PlanDocumentPhaseDto: {
+            /** @description Orden 0-based de la fase. */
+            order: number;
+            /** @description Nombre de la fase. */
+            name: string;
+            /**
+             * Format: date-time
+             * @description Fecha de inicio de la fase.
+             */
+            startDate?: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de fin de la fase.
+             */
+            endDate?: string | null;
+            /** @description Entregable de la fase. */
+            deliverable?: string | null;
+            /** @description Tareas de la fase. */
+            tasks: components["schemas"]["PlanDocumentTaskDto"][];
+        };
+        PlanDocumentDependencyDto: {
+            /** @description ref de la tarea dependiente. */
+            dependentRef: string;
+            /** @description ref de la tarea predecesora. */
+            predecessorRef: string;
+        };
+        PlanDocumentDto: {
+            /**
+             * @description Marcador de tipo de documento.
+             * @enum {string}
+             */
+            kind: "control-phari-plan";
+            /**
+             * @description Version del formato del documento.
+             * @enum {string}
+             */
+            formatVersion: "1.0";
+            /** @description Cabecera del plan. */
+            plan: components["schemas"]["PlanDocumentHeaderDto"];
+            /** @description Fases ordenadas con sus tareas. */
+            phases: components["schemas"]["PlanDocumentPhaseDto"][];
+            /** @description Dependencias entre tareas por referencia local. */
+            dependencies: components["schemas"]["PlanDocumentDependencyDto"][];
+        };
+        ImportPlanResultDto: {
+            /**
+             * Format: uuid
+             * @description Solicitud del plan importado.
+             */
+            requestId: string;
+            /**
+             * Format: uuid
+             * @description Plan destino de la importacion.
+             */
+            planId: string;
+            /** @description Siempre true: el contenido anterior fue reemplazado. */
+            replaced: boolean;
+            /** @description Fases creadas. */
+            phasesCreated: number;
+            /** @description Tareas creadas. */
+            tasksCreated: number;
+            /** @description Dependencias creadas. */
+            dependenciesCreated: number;
+            /** @description Resumen legible del reemplazo. */
+            message: string;
         };
         SubmitPlanDto: Record<string, never>;
         AuthorizePlanDto: Record<string, never>;
@@ -5794,6 +5943,96 @@ export interface operations {
             };
             /** @description Plan inexistente o fuera de alcance. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_exportPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Documento del plan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDocumentDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_importPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanDocumentDto"];
+            };
+        };
+        responses: {
+            /** @description Plan importado (reemplazado). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPlanResultDto"];
+                };
+            };
+            /** @description Documento invalido (kind/version/ref/ciclo/hito). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El plan no esta en borrador ni devuelto. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

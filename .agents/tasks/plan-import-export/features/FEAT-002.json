@@ -1,0 +1,23 @@
+{
+  "id": "FEAT-002",
+  "type": "chore",
+  "description": "Regenerar el contrato OpenAPI y el cliente tipado tras los endpoints/DTOs de FEAT-001, y reexportar los alias de tipo en el frontend. Depende de FEAT-001 (los DTOs deben existir). FEAT-003 depende de este (usa PlanDocument/ImportPlanResult). Leer context.json y este archivo PRIMERO.",
+  "status": "completed",
+  "steps": [
+    "Ejecutar `npm run contracts:generate` en la raíz (corre openapi:generate que escribe apps/api/openapi/openapi.json, luego api-client:generate que escribe packages/api-client/src/generated/schema.d.ts). Confirmar que components['schemas'] incluye PlanDocumentDto e ImportPlanResultDto.",
+    "Editar apps/web/src/lib/api-client.ts: en el bloque Fase 3 (plan) añadir `export type PlanDocument = components['schemas']['PlanDocumentDto'];` y `export type ImportPlanResult = components['schemas']['ImportPlanResultDto'];`.",
+    "Ejecutar `npm run build:api-client` para recompilar la dist que importa apps/web."
+  ],
+  "acceptance_criteria": [
+    "apps/api/openapi/openapi.json y packages/api-client/src/generated/schema.d.ts contienen PlanDocumentDto e ImportPlanResultDto (incluida la ruta GET /requests/{requestId}/plan/export y POST /requests/{requestId}/plan/import).",
+    "`npm run typecheck:api-client` termina sin errores.",
+    "Los alias PlanDocument e ImportPlanResult resuelven en apps/web/src/lib/api-client.ts (`npm run typecheck:web` no falla por tipos faltantes)."
+  ],
+  "verification": [
+    "npm run contracts:generate",
+    "npm run build:api-client",
+    "npm run typecheck:api-client"
+  ],
+  "blocked_reason": null,
+  "findings": "Contrato regenerado y cliente recompilado. Verificado contracts:generate, build:api-client y typecheck:api-client (todo verde).\n\nPARA FEAT-003 (frontend):\n- Alias de tipo ya disponibles en apps/web/src/lib/api-client.ts (bloque Fase 3, tras MyWorkItem): `PlanDocument = components['schemas']['PlanDocumentDto']` e `ImportPlanResult = components['schemas']['ImportPlanResultDto']`. Importar desde '@/lib/api-client' (o la ruta relativa habitual) en plan.ts/plan-view.tsx; NO redeclarar los tipos.\n- Rutas tipadas presentes en el cliente: GET '/requests/{requestId}/plan/export' (respuesta 200 application/json = PlanDocumentDto) y POST '/requests/{requestId}/plan/import' (requestBody application/json = PlanDocumentDto; respuesta 200 = ImportPlanResultDto). Usar api.GET/api.POST con esas paths.\n- Forma de PlanDocument: { kind, formatVersion, plan: PlanDocumentHeaderDto, phases: PlanDocumentPhaseDto[], dependencies: PlanDocumentDependencyDto[] } (ver schema.d.ts para campos opcionales nullable). ImportPlanResult expone requestId, planId, replaced, phasesCreated, tasksCreated, dependenciesCreated y message (mostrar message tal cual al usuario).\n- dist de packages/api-client ya recompilada (schema copiado a dist/generated), apps/web la ve."
+}

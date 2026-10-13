@@ -67,6 +67,8 @@ export type PlanGuide = components['schemas']['PlanGuideDto'];
 export type PlanGuidePending = components['schemas']['PlanGuidePendingDto'];
 export type ReturnPlan = components['schemas']['ReturnPlanDto'];
 export type MyWorkItem = components['schemas']['MyWorkItemDto'];
+export type PlanDocument = components['schemas']['PlanDocumentDto'];
+export type ImportPlanResult = components['schemas']['ImportPlanResultDto'];
 /** Estado de una tarea (TaskStatus del backend, design 1.3). */
 export type TaskStatus = UpdateTaskStatus['status'];
 // --- Fase 4 (capacidad y asignaciones): tipos derivados del contrato OpenAPI ---
