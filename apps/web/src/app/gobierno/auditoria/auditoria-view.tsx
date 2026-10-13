@@ -258,8 +258,9 @@ export function AuditoriaView(): React.ReactElement {
 
       {state === 'success' && capped ? (
         <InlineNotice tone="info">
-          Se muestran los 500 eventos más recientes de tu alcance. Usa el filtro Objeto para acotar
-          la búsqueda.
+          {objectFilter === ALL
+            ? 'Se muestran los 500 eventos más recientes de tu alcance. Usa el filtro Objeto para acotar la búsqueda.'
+            : 'Se muestran los 500 eventos más recientes de tu alcance para este objeto.'}
         </InlineNotice>
       ) : null}
 

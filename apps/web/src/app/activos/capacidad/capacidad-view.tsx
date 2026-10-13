@@ -235,10 +235,15 @@ export function CapacidadView(): React.ReactElement {
       const message = messageOf(err);
       setDispError(message);
       toast.error(message);
-      // Ante 409, ofrecer editar la existente (SCR-17).
+      // Ante 409, ofrecer editar la existente (SCR-17). Se cierra el diálogo de
+      // alta: su overlay modal taparía la acción del toast y dos diálogos a la
+      // vez rompen la reconciliación. El toast explica el motivo y la acción
+      // reabre el diálogo ya en modo edición.
       if (err instanceof CapacityError && err.status === 409 && !dispEditing) {
         const existing = availability.find((a) => a.userId === values.userId);
         if (existing) {
+          setDispOpen(false);
+          setDispEditing(null);
           toast('Ya hay disponibilidad para esa persona y mes.', {
             action: {
               label: 'Editar la existente',

@@ -94,6 +94,29 @@ test('«Objeto» consulta al servidor con el contrato y el tope no se presenta c
   await expect(page.getByText('500 eventos más recientes', { exact: true })).toBeVisible();
 });
 
+test('con «Objeto» elegido y el tope alcanzado, el aviso no pide usar el filtro', async ({
+  page,
+}) => {
+  await page.route('**/audit-events?**', async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const objectType = new URL(route.request().url()).searchParams.get('objectType');
+    const response = await route.fetch();
+    await route.fulfill({ response, json: fakeEvents(500, objectType ?? 'PROCESS') });
+  });
+  await page.goto('/gobierno/auditoria');
+  await expect(
+    page.getByText('Usa el filtro Objeto para acotar la búsqueda.', { exact: false }),
+  ).toBeVisible();
+  await page.getByRole('combobox', { name: 'Objeto' }).click();
+  await page.getByRole('listbox').getByRole('option', { name: 'Usuario' }).click();
+  await expect(
+    page.getByText('Se muestran los 500 eventos más recientes de tu alcance para este objeto.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByText('Usa el filtro Objeto', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('500 eventos más recientes', { exact: true })).toBeVisible();
+});
 test('una respuesta anterior que llega tarde no pisa la del filtro elegido', async ({
   page,
 }) => {
