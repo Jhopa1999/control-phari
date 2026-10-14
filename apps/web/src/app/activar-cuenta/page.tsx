@@ -35,9 +35,7 @@ export default function ActivateAccountPage(): React.ReactElement {
             description: 'Establece tu contraseña para activar tu cuenta.',
             submitLabel: 'Activar cuenta',
             submittingLabel: 'Activando…',
-            successTitle: 'Cuenta activada',
-            successMessage:
-              'Tu cuenta quedó activa. Ya puedes iniciar sesión con tu nueva contraseña.',
+            redirectingMessage: 'Cuenta activada, entrando…',
           }}
         />
       </React.Suspense>

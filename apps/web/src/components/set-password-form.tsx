@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Field, FormError } from '@/components/field';
 import { InlineNotice } from '@/components/inline-notice';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useActor } from '@/lib/actor-context';
+import { getAuthMode } from '@/lib/auth-mode';
 import { ApiError, setPasswordWithToken } from '@/lib/password-reset';
+import { postLoginPath } from '@/lib/safe-redirect';
 
 /**
  * Longitud minima de contrasena validada en el cliente. Coincide con el minimo
@@ -39,10 +42,8 @@ export interface SetPasswordCopy {
   submitLabel: string;
   /** Texto del boton durante el envio. */
   submittingLabel: string;
-  /** Titulo del aviso de exito. */
-  successTitle: string;
-  /** Cuerpo del aviso de exito. */
-  successMessage: string;
+  /** Aviso accesible mientras se inicia sesion y se redirige al modulo. */
+  redirectingMessage: string;
 }
 
 /**
@@ -55,16 +56,25 @@ export interface SetPasswordCopy {
  * campo con error y limpieza al editar. Los fallos del backend van al FormError
  * traducidos (400: token invalido o contrasena corta; 410: token caducado o ya
  * usado), sin exponer JSON crudo.
+ *
+ * En exito ya no deja al usuario en una pantalla con boton «Ir a iniciar
+ * sesion»: en modo jwt inicia sesion con la respuesta del backend y redirige al
+ * modulo (`postLoginPath`); en dev-header (que no requiere login) redirige
+ * directo a /inicio. Mientras redirige muestra un aviso accesible
+ * (role="status") en lugar de un boton.
  */
 export function SetPasswordForm({ copy }: { copy: SetPasswordCopy }): React.ReactElement {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const { login } = useActor();
   const token = searchParams.get('token') ?? '';
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [formError, setFormError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
-  const [done, setDone] = React.useState(false);
+  // En el camino feliz no se vuelve a «hecho»: el formulario esta navegando.
+  const [redirecting, setRedirecting] = React.useState(false);
   const newPasswordRef = React.useRef<HTMLInputElement>(null);
   const confirmPasswordRef = React.useRef<HTMLInputElement>(null);
 
@@ -92,8 +102,20 @@ export function SetPasswordForm({ copy }: { copy: SetPasswordCopy }): React.Reac
     }
     setSubmitting(true);
     try {
-      await setPasswordWithToken({ token, newPassword });
-      setDone(true);
+      const result = await setPasswordWithToken({ token, newPassword });
+      // Aviso accesible antes de navegar; no se re-habilita el formulario en el
+      // camino feliz (el componente deja de montarse tras la redireccion).
+      setRedirecting(true);
+      if (getAuthMode() === 'jwt') {
+        // Misma sesion que el login real: persiste token+usuario y carga permisos.
+        login(result.accessToken, result.user);
+        // `replace` para que el back no vuelva a la pantalla del token consumido.
+        router.replace(postLoginPath(searchParams));
+      } else {
+        // dev-header no requiere login jwt (identidad por X-Actor-Id); se ignora
+        // cualquier `next` a proposito y se va directo al modulo de entrada.
+        router.replace('/inicio');
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 410) {
         setFormError('El enlace ha caducado o ya fue utilizado. Solicita uno nuevo.');
@@ -117,15 +139,10 @@ export function SetPasswordForm({ copy }: { copy: SetPasswordCopy }): React.Reac
         <CardDescription>{copy.description}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 p-6 pt-0">
-        {done ? (
-          <>
-            <InlineNotice tone="success" role="status" title={copy.successTitle}>
-              {copy.successMessage}
-            </InlineNotice>
-            <Button asChild size="lg" className="w-full">
-              <Link href="/login">Ir a iniciar sesión</Link>
-            </Button>
-          </>
+        {redirecting ? (
+          <InlineNotice tone="success" role="status">
+            {copy.redirectingMessage}
+          </InlineNotice>
         ) : token.length === 0 ? (
           <>
             <InlineNotice tone="danger" role="alert">

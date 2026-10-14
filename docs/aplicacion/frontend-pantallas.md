@@ -23,8 +23,8 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | `/` | Raíz | Punto de entrada de la app (redirección/arranque). |
 | `/login` | Inicio de sesión | Autenticación del usuario (modo JWT); enlaza a *¿Olvidaste tu contraseña?*. |
 | `/olvide-contrasena` | Recuperar contraseña | Solicita el reestablecimiento (`POST /auth/forgot-password`); muestra siempre un mensaje genérico que no revela si la cuenta existe. Pública. |
-| `/restablecer-contrasena` | Restablecer contraseña | Define una nueva contraseña con el token del correo (`?token=`, `POST /auth/reset-password`). Pública. |
-| `/activar-cuenta` | Activar cuenta | Establece la contraseña inicial de una cuenta invitada con el token del correo (`?token=`, mismo `POST /auth/reset-password`). Pública. |
+| `/restablecer-contrasena` | Restablecer contraseña | Define una nueva contraseña con el token del correo (`?token=`, `POST /auth/reset-password`). Al confirmar inicia sesión automáticamente y redirige al módulo (`/inicio` o `next` seguro), sin volver a `/login`. Pública. |
+| `/activar-cuenta` | Activar cuenta | Establece la contraseña inicial de una cuenta invitada con el token del correo (`?token=`, mismo `POST /auth/reset-password`). Al confirmar la cuenta queda activa, inicia sesión automáticamente y redirige a `/inicio`. Pública. |
 | `/inicio` | Panel del área | Tablero de inicio del actor (menú: *Panel del área*, `dashboard`). |
 | `/mi-trabajo` | Mi trabajo | Tareas asignadas al usuario actual; enlaza al detalle de tarea (menú: *Mi trabajo*, `assigned`). |
 

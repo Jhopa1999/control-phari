@@ -2,6 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthResetService } from './auth-reset.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { LoginResponseDto } from './dto/login-response.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 
 /**
@@ -33,16 +34,20 @@ export class AuthResetController {
   }
 
   @Post('reset-password')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Define una nueva contrasena consumiendo un token de reset o de activacion de cuenta.',
+      'Define una nueva contrasena consumiendo un token de reset o de activacion de cuenta y devuelve la sesion para entrar directamente.',
   })
   @ApiBody({ type: ResetPasswordDto })
-  @ApiResponse({ status: 204, description: 'Contrasena actualizada.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Contrasena actualizada; devuelve la sesion para entrar directamente.',
+    type: LoginResponseDto,
+  })
   @ApiResponse({ status: 400, description: 'Token invalido o contrasena demasiado corta.' })
   @ApiResponse({ status: 410, description: 'Token caducado o ya utilizado.' })
-  resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
+  resetPassword(@Body() dto: ResetPasswordDto): Promise<LoginResponseDto> {
     return this.authResetService.resetPassword(dto);
   }
 }

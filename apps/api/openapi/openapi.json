@@ -144,8 +144,15 @@
           }
         },
         "responses": {
-          "204": {
-            "description": "Contrasena actualizada."
+          "200": {
+            "description": "Contrasena actualizada; devuelve la sesion para entrar directamente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponseDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Token invalido o contrasena demasiado corta."
@@ -154,7 +161,7 @@
             "description": "Token caducado o ya utilizado."
           }
         },
-        "summary": "Define una nueva contrasena consumiendo un token de reset o de activacion de cuenta.",
+        "summary": "Define una nueva contrasena consumiendo un token de reset o de activacion de cuenta y devuelve la sesion para entrar directamente.",
         "tags": [
           "auth"
         ]

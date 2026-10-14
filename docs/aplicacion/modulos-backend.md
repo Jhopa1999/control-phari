@@ -29,7 +29,7 @@ por `AUTH_MODE`: `dev-header` (header `X-Actor-Id`) y `jwt` (login real).
 | --- | --- | --- |
 | POST | `/auth/login` | Autentica por `identifier` y contraseña, devuelve un JWT (ruta pública). |
 | POST | `/auth/forgot-password` | Solicita el reestablecimiento de contraseña; responde `204` exista o no el usuario (ruta pública). |
-| POST | `/auth/reset-password` | Define una nueva contraseña consumiendo un token de reset o de activación (`204`; `400` token/contraseña inválidos, `410` token caducado/usado). |
+| POST | `/auth/reset-password` | Define una nueva contraseña consumiendo un token de reset o de activación y devuelve la sesión del login para entrar directo (`200` con `LoginResponseDto`; `400` token/contraseña inválidos, `410` token caducado/usado). |
 | GET | `/dev/actors` | Lista usuarios activos para el selector de desarrollo (solo con `AUTH_MODE=dev-header`; si no, `404`). |
 | GET | `/me/permissions` | Permisos del usuario actual: rol, alcance y módulos permitidos. |
 

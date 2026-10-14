@@ -34,10 +34,13 @@ claro viaja solo en el correo y en BD se guarda únicamente su SHA-256
   exista o no el usuario** (no revela existencia, mismo criterio que el login). Si el
   usuario existe y está activo, emite un token `PASSWORD_RESET` y envía el correo con el
   enlace `APP_WEB_URL/restablecer-contrasena?token=...`.
-- `POST /auth/reset-password` (`204`): define una nueva contraseña consumiendo un token.
+- `POST /auth/reset-password` (`200`): define una nueva contraseña consumiendo un token.
   Acepta tokens `PASSWORD_RESET` **y** `USER_INVITATION`, por lo que también completa la
-  activación de cuenta invitada. Token inválido/purpose no permitido → `400`; token
-  caducado o ya usado → `410`; contraseña por debajo del mínimo → `400`.
+  activación de cuenta invitada. En caso de éxito devuelve la **misma sesión que el login**
+  (`LoginResponseDto`: `{ accessToken, expiresIn, user }`), reutilizando la emisión de JWT
+  del login, de modo que el usuario queda autenticado y entra directo sin volver a iniciar
+  sesión. Token inválido/purpose no permitido → `400`; token caducado o ya usado → `410`;
+  contraseña por debajo del mínimo → `400`.
 - `POST /users/{id}/invite` (`204`): protegido por `JEFE_AREA`. Emite un token
   `USER_INVITATION` y envía la invitación con el enlace `APP_WEB_URL/activar-cuenta?
   token=...`. El reenvío invalida el token previo no usado (queda un único enlace

@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { PrismaService } from '../../database/prisma.service';
+import type { UserModel } from '../../generated/prisma/models/User';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { verifyPassword } from './password-hash';
@@ -41,6 +42,21 @@ export class AuthLoginService {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
+    return this.issueSessionForUser(user);
+  }
+
+  /**
+   * Emite una sesion (JWT + usuario) para un usuario ya autenticado. UNICA
+   * fuente de emision de JWT del modulo: la reutiliza tanto el login (tras
+   * validar credenciales) como el reset/activacion (tras consumir el token),
+   * para no duplicar ni la firma del token ni la construccion del DTO.
+   *
+   * Solo lee `id`, `name` e `identifier` del usuario (un `Pick`), de modo que
+   * la firma no acarrea campos sensibles como `passwordHash`.
+   */
+  async issueSessionForUser(
+    user: Pick<UserModel, 'id' | 'name' | 'identifier'>,
+  ): Promise<LoginResponseDto> {
     const expiresIn = process.env.JWT_EXPIRES_IN ?? DEFAULT_EXPIRES_IN;
     // `expiresIn` llega como string de configuracion (env); los tipos de
     // @nestjs/jwt esperan el formato de jsonwebtoken (p. ej. '8h'). Se tipa la

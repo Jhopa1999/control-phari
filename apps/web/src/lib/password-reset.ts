@@ -1,4 +1,5 @@
 import { api } from './api-client';
+import type { LoginResponse } from './api-client';
 import type { components } from '@plantilla-portales/api-client';
 import { ApiError, toApiError } from './api-error';
 
@@ -39,20 +40,26 @@ export async function requestPasswordReset(
  * El mismo endpoint sirve para el reset de contrasena y para la activacion de
  * cuenta (el backend acepta ambos propositos de token).
  *
- * Respuesta 204 sin cuerpo -> el exito es la ausencia de `error`. Los codigos
- * se traducen a mensajes de negocio: 400 (token invalido o contrasena corta) y
- * 410 (token caducado o ya usado) se diferencian para la UI.
+ * En exito el backend responde 200 con la MISMA sesion que el login
+ * (`LoginResponse`: { accessToken, expiresIn, user }), de modo que el llamador
+ * puede iniciar sesion directamente. Por eso el exito exige `data` (ausencia de
+ * `error` y cuerpo presente), a diferencia de forgot-password. Los codigos de
+ * fallo se traducen a mensajes de negocio en el componente: 400 (token invalido
+ * o contrasena corta) y 410 (token caducado o ya usado) se diferencian por el
+ * `ApiError.status`. `response?.status` es opcional porque un fallo de red deja
+ * `response` indefinido y debe degradar al mensaje generico sin lanzar.
  */
 export async function setPasswordWithToken(
   input: ResetPasswordInput,
-): Promise<void> {
+): Promise<LoginResponse> {
   try {
-    const { error, response } = await api.POST('/auth/reset-password', {
+    const { data, error, response } = await api.POST('/auth/reset-password', {
       body: input,
     });
-    if (error) {
-      throw toApiError(response.status);
+    if (error || !data) {
+      throw toApiError(response?.status);
     }
+    return data;
   } catch (err) {
     if (err instanceof ApiError) throw err;
     throw toApiError(undefined);

@@ -34,9 +34,7 @@ export default function ResetPasswordPage(): React.ReactElement {
             description: 'Define una nueva contraseña para tu cuenta.',
             submitLabel: 'Guardar contraseña',
             submittingLabel: 'Guardando…',
-            successTitle: 'Contraseña actualizada',
-            successMessage:
-              'Tu contraseña se actualizó. Ya puedes iniciar sesión con la nueva.',
+            redirectingMessage: 'Contraseña actualizada, entrando…',
           }}
         />
       </React.Suspense>

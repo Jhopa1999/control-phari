@@ -98,7 +98,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Define una nueva contrasena consumiendo un token de reset o de activacion de cuenta. */
+        /** Define una nueva contrasena consumiendo un token de reset o de activacion de cuenta y devuelve la sesion para entrar directamente. */
         post: operations["AuthResetController_resetPassword"];
         delete?: never;
         options?: never;
@@ -4516,12 +4516,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Contrasena actualizada. */
-            204: {
+            /** @description Contrasena actualizada; devuelve la sesion para entrar directamente. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LoginResponseDto"];
+                };
             };
             /** @description Token invalido o contrasena demasiado corta. */
             400: {

@@ -2,10 +2,12 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
+import { AuthLoginService } from './auth-login.service';
 import { AuthTokenPurpose } from './auth-token-purpose';
 import { AuthTokenService } from './auth-token.service';
 import { parseTtlMs } from './auth-token.util';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { LoginResponseDto } from './dto/login-response.dto';
 import { RESET_PASSWORD_MIN_LENGTH, ResetPasswordDto } from './dto/reset-password.dto';
 import { hashPassword } from './password-hash';
 
@@ -39,6 +41,7 @@ export class AuthResetService {
     private readonly audit: AuditService,
     private readonly mail: MailService,
     private readonly authTokenService: AuthTokenService,
+    private readonly authLoginService: AuthLoginService,
   ) {}
 
   /** Vigencia configurada del token de reset, en milisegundos. */
@@ -103,36 +106,48 @@ export class AuthResetService {
    * Aplica una nueva contrasena consumiendo un token valido (reset o
    * activacion). Valida la longitud minima, consume el token y actualiza el
    * passwordHash dentro de una unica transaccion; audita el cambio.
+   *
+   * En exito emite y devuelve la MISMA sesion que el login
+   * (`LoginResponseDto`) reutilizando `AuthLoginService.issueSessionForUser`,
+   * de modo que el usuario queda autenticado tras restablecer o activar su
+   * cuenta. La identidad sale del usuario duenno del token
+   * (`tx.user.update(...)`), no de ningun dato externo. La firma del JWT es una
+   * operacion en memoria y se hace FUERA de la transaccion para no alargarla
+   * (mismo criterio que el envio SMTP en forgotPassword).
    */
-  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+  async resetPassword(dto: ResetPasswordDto): Promise<LoginResponseDto> {
     if (dto.newPassword.length < this.passwordMinLength()) {
       throw new BadRequestException(PASSWORD_TOO_SHORT);
     }
 
     const passwordHash = await hashPassword(dto.newPassword);
 
-    await this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       const authToken = await this.authTokenService.consume(
         tx,
         dto.token,
         RESET_ALLOWED_PURPOSES,
       );
 
-      const updated = await tx.user.update({
+      const user = await tx.user.update({
         where: { id: authToken.userId },
         data: { passwordHash },
       });
 
       await this.audit.record(tx, {
-        actorUserId: updated.id,
+        actorUserId: user.id,
         action: 'UPDATE',
         objectType: 'USER',
-        objectId: updated.id,
+        objectId: user.id,
         scopeProcessId: null,
         before: null,
         after: null,
       });
+
+      return user;
     });
+
+    return this.authLoginService.issueSessionForUser(updated);
   }
 
   /** Construye la URL del frontend (APP_WEB_URL + ruta + token). */

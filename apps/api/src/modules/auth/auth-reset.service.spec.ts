@@ -2,6 +2,7 @@ import { BadRequestException, GoneException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
+import { AuthLoginService } from './auth-login.service';
 import { AuthResetService } from './auth-reset.service';
 import { AuthTokenPurpose } from './auth-token-purpose';
 import { AuthTokenService } from './auth-token.service';
@@ -39,6 +40,12 @@ function createMocks() {
   const issue = authTokenService.issue as unknown as jest.Mock;
   const consume = authTokenService.consume as unknown as jest.Mock;
 
+  const authLoginService = {
+    issueSessionForUser: jest.fn(),
+  } as unknown as AuthLoginService;
+  const issueSessionForUser =
+    authLoginService.issueSessionForUser as unknown as jest.Mock;
+
   return {
     prisma,
     user,
@@ -49,6 +56,8 @@ function createMocks() {
     authTokenService,
     issue,
     consume,
+    authLoginService,
+    issueSessionForUser,
   };
 }
 
@@ -74,6 +83,7 @@ describe('AuthResetService', () => {
       mocks.audit,
       mocks.mail,
       mocks.authTokenService,
+      mocks.authLoginService,
     );
     process.env.APP_WEB_URL = 'http://localhost:3000';
     delete process.env.PASSWORD_RESET_TTL;
@@ -156,11 +166,19 @@ describe('AuthResetService', () => {
   });
 
   describe('resetPassword', () => {
-    it('token valido actualiza passwordHash, consume el token y audita', async () => {
-      mocks.consume.mockResolvedValue({ id: 't1', userId: 'u1' });
-      mocks.user.update.mockResolvedValue(makeUser({ passwordHash: 'hashed-password' }));
+    const SESSION = {
+      accessToken: 'signed.jwt.token',
+      expiresIn: '8h',
+      user: { id: 'u1', name: 'Persona', identifier: 'persona@demo.local' },
+    };
 
-      await service.resetPassword({
+    it('token de reset actualiza passwordHash, consume el token, audita y devuelve la sesion del duenno', async () => {
+      mocks.consume.mockResolvedValue({ id: 't1', userId: 'u1' });
+      const updated = makeUser({ passwordHash: 'hashed-password' });
+      mocks.user.update.mockResolvedValue(updated);
+      mocks.issueSessionForUser.mockResolvedValue(SESSION);
+
+      const result = await service.resetPassword({
         token: 'plain-token',
         newPassword: 'contrasena-larga',
       });
@@ -176,9 +194,32 @@ describe('AuthResetService', () => {
         data: { passwordHash: 'hashed-password' },
       });
       expect(mocks.auditRecord).toHaveBeenCalledTimes(1);
+      // La sesion se emite para el usuario actualizado (duenno del token).
+      expect(mocks.issueSessionForUser).toHaveBeenCalledTimes(1);
+      expect(mocks.issueSessionForUser).toHaveBeenCalledWith(updated);
+      expect(result).toEqual(SESSION);
     });
 
-    it('token invalido (400) se propaga sin actualizar', async () => {
+    it('token de activacion (USER_INVITATION) tambien devuelve la sesion del duenno', async () => {
+      mocks.consume.mockResolvedValue({ id: 't2', userId: 'u1' });
+      const updated = makeUser({ passwordHash: 'hashed-password' });
+      mocks.user.update.mockResolvedValue(updated);
+      mocks.issueSessionForUser.mockResolvedValue(SESSION);
+
+      const result = await service.resetPassword({
+        token: 'activation-token',
+        newPassword: 'contrasena-larga',
+      });
+
+      // El mismo endpoint acepta reset y activacion (ambos purposes permitidos).
+      expect(mocks.consume.mock.calls[0][2]).toContain(
+        AuthTokenPurpose.USER_INVITATION,
+      );
+      expect(mocks.issueSessionForUser).toHaveBeenCalledWith(updated);
+      expect(result).toEqual(SESSION);
+    });
+
+    it('token invalido (400) se propaga sin actualizar ni emitir sesion', async () => {
       mocks.consume.mockRejectedValue(new BadRequestException());
 
       await expect(
@@ -188,9 +229,10 @@ describe('AuthResetService', () => {
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(mocks.user.update).not.toHaveBeenCalled();
+      expect(mocks.issueSessionForUser).not.toHaveBeenCalled();
     });
 
-    it('token expirado o usado (410) se propaga sin actualizar', async () => {
+    it('token expirado o usado (410) se propaga sin actualizar ni emitir sesion', async () => {
       mocks.consume.mockRejectedValue(new GoneException());
 
       await expect(
@@ -200,14 +242,16 @@ describe('AuthResetService', () => {
         }),
       ).rejects.toBeInstanceOf(GoneException);
       expect(mocks.user.update).not.toHaveBeenCalled();
+      expect(mocks.issueSessionForUser).not.toHaveBeenCalled();
     });
 
-    it('contrasena mas corta que el minimo lanza 400 sin consumir token', async () => {
+    it('contrasena mas corta que el minimo lanza 400 sin consumir token ni emitir sesion', async () => {
       await expect(
         service.resetPassword({ token: 'plain-token', newPassword: 'corta' }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(mocks.consume).not.toHaveBeenCalled();
       expect(mocks.user.update).not.toHaveBeenCalled();
+      expect(mocks.issueSessionForUser).not.toHaveBeenCalled();
     });
   });
 });

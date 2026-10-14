@@ -55,6 +55,44 @@ describe('AuthLoginService', () => {
     );
   });
 
+  describe('issueSessionForUser', () => {
+    const user = { id: 'u1', name: 'Ana Jefa', identifier: 'jefe@demo.local' };
+
+    afterEach(() => {
+      delete process.env.JWT_EXPIRES_IN;
+    });
+
+    it('firma el token con sub=identifier y arma el DTO con expiresIn por defecto', async () => {
+      delete process.env.JWT_EXPIRES_IN;
+      mocks.signAsync.mockResolvedValue('signed.jwt.token');
+
+      const result = await service.issueSessionForUser(user);
+
+      expect(result).toEqual({
+        accessToken: 'signed.jwt.token',
+        expiresIn: '8h',
+        user: { id: 'u1', name: 'Ana Jefa', identifier: 'jefe@demo.local' },
+      });
+      expect(mocks.signAsync).toHaveBeenCalledWith(
+        { sub: 'jefe@demo.local' },
+        { expiresIn: '8h' },
+      );
+    });
+
+    it('respeta JWT_EXPIRES_IN cuando esta configurado', async () => {
+      process.env.JWT_EXPIRES_IN = '2h';
+      mocks.signAsync.mockResolvedValue('signed.jwt.token');
+
+      const result = await service.issueSessionForUser(user);
+
+      expect(result.expiresIn).toBe('2h');
+      expect(mocks.signAsync).toHaveBeenCalledWith(
+        { sub: 'jefe@demo.local' },
+        { expiresIn: '2h' },
+      );
+    });
+  });
+
   it('contrasena incorrecta -> UnauthorizedException y no firma token', async () => {
     mocks.findFirst.mockResolvedValue(await makeDbUser('dev1234'));
 

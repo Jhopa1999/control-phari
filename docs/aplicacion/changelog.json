@@ -22,6 +22,16 @@
       "trigger_file": "apps/web/src/app/olvide-contrasena/page.tsx",
       "updated_docs": ["docs/aplicacion/frontend-pantallas.md"],
       "summary": "Se documentaron las pantallas públicas /olvide-contrasena, /restablecer-contrasena y /activar-cuenta y el enlace de recuperación en el login."
+    },
+    {
+      "timestamp": "2026-10-08T00:00:00Z",
+      "trigger_file": "apps/api/src/modules/auth/auth-reset.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "POST /auth/reset-password ahora responde 200 con la sesión del login (auto-login tras restablecer/activar); las pantallas /restablecer-contrasena y /activar-cuenta inician sesión y redirigen a /inicio."
     }
   ]
 }
