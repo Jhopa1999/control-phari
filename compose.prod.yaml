@@ -41,6 +41,12 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PORT: "3001"
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # Autenticacion: en produccion AUTH_MODE=jwt y el secreto viene del
+      # entorno (.env.production). Sin estas variables el backend no puede
+      # firmar los JWT de /auth/login.
+      AUTH_MODE: ${AUTH_MODE:-jwt}
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,6 +69,9 @@ services:
       args:
         # Produccion: el navegador consume la API via mismo dominio (/api).
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+        # Modo de autenticacion del frontend: debe coincidir con AUTH_MODE del
+        # backend. En produccion "jwt" (login + Authorization: Bearer).
+        NEXT_PUBLIC_AUTH_MODE: ${NEXT_PUBLIC_AUTH_MODE:-jwt}
     restart: unless-stopped
     depends_on:
       - api

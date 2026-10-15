@@ -8,6 +8,19 @@ import { useActor } from '@/lib/actor-context';
 import { postLoginPath } from '@/lib/safe-redirect';
 /** Ruta publica de login. */
 const LOGIN_ROUTE = '/login';
+/**
+ * Rutas publicas que NO requieren sesion (modo jwt). Ademas de `/login`, el
+ * flujo de credencial por correo: recuperar contrasena, restablecerla con el
+ * token del correo y activar una cuenta invitada. Sin esto el guard las trata
+ * como protegidas y rebota a `/login?next=...`, impidiendo recuperar la
+ * contrasena justamente a quien no puede iniciar sesion.
+ */
+const PUBLIC_ROUTES = new Set<string>([
+  LOGIN_ROUTE,
+  '/olvide-contrasena',
+  '/restablecer-contrasena',
+  '/activar-cuenta',
+]);
 /** Destino por defecto tras iniciar sesion: no hace falta enviarlo en `next`. */
 const HOME_ROUTE = '/inicio';
 /**
@@ -64,6 +77,7 @@ export function RouteGuard({
     state,
   } = useActor();
   const isLoginRoute = pathname === LOGIN_ROUTE;
+  const isPublicRoute = PUBLIC_ROUTES.has(pathname);
   React.useEffect(() => {
     if (authMode !== 'jwt') return;
     if (!identityReady) return;
@@ -76,6 +90,10 @@ export function RouteGuard({
       }
       return;
     }
+    // Resto de rutas publicas (recuperar/restablecer/activar): accesibles sin
+    // sesion y sin redirigir. A diferencia de /login, no se expulsa al usuario
+    // autenticado (puede restablecer su propia contrasena ya logueado).
+    if (isPublicRoute) return;
     if (isAuthenticated) return;
     // La busqueda se lee aqui (no con useSearchParams) para no obligar a
     // envolver toda la app en un Suspense desde el layout.
@@ -93,6 +111,7 @@ export function RouteGuard({
     authMode,
     identityReady,
     isLoginRoute,
+    isPublicRoute,
     isAuthenticated,
     state,
     pathname,
@@ -122,6 +141,15 @@ export function RouteGuard({
     }
     // /login sin sesion (o tras 401, que ya limpio la sesion): sin shell, pero
     // con el landmark principal que en las demas rutas aporta el shell (§11.2).
+    return (
+      <main id="contenido" tabIndex={-1} className="focus:outline-none">
+        {children}
+      </main>
+    );
+  }
+  // Resto de rutas publicas (recuperar/restablecer/activar): se muestran tal
+  // cual, con o sin sesion, sin shell y con el landmark principal (§11.2).
+  if (isPublicRoute) {
     return (
       <main id="contenido" tabIndex={-1} className="focus:outline-none">
         {children}

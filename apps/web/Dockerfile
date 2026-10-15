@@ -21,6 +21,11 @@ FROM deps AS build
 # API mediante el mismo dominio bajo /api (Nginx hace el proxy).
 ARG NEXT_PUBLIC_API_BASE_URL=/api
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+# Modo de autenticacion del frontend. Debe coincidir con el AUTH_MODE del
+# backend. En produccion es "jwt" (login + Authorization: Bearer). Tambien es
+# publica: Next la incrusta en el bundle del cliente durante el build.
+ARG NEXT_PUBLIC_AUTH_MODE=dev-header
+ENV NEXT_PUBLIC_AUTH_MODE=${NEXT_PUBLIC_AUTH_MODE}
 ENV NEXT_TELEMETRY_DISABLED=1
 # El frontend consume el api-client (workspace); se construye primero.
 COPY packages/api-client/ packages/api-client/
