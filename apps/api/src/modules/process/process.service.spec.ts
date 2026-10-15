@@ -59,6 +59,7 @@ function jefe(): CurrentActor {
     roleCodes: new Set([RoleCode.JEFE_AREA]),
     scopedProcessIds: new Set(['p1', 'p2']),
     isJefeArea: true,
+    isAdmin: false,
   };
 }
 
@@ -71,6 +72,7 @@ function noJefe(scoped: string[]): CurrentActor {
     roleCodes: new Set([RoleCode.LIDER_PROCESO]),
     scopedProcessIds: new Set(scoped),
     isJefeArea: false,
+    isAdmin: false,
   };
 }
 

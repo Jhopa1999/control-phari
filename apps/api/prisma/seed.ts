@@ -65,7 +65,10 @@ const PROCESSES: Array<{
   },
 ];
 
-const USERS: Array<{ identifier: string; name: string }> = [
+const USERS: Array<{ identifier: string; name: string; isAdmin?: boolean }> = [
+  // Admin de SISTEMA inicial (design h): sembrado directo (no por invitacion)
+  // para no quedar bloqueados sin SMTP. isAdmin=true; no necesita grants.
+  { identifier: 'admin@demo.local', name: 'Alex Admin', isAdmin: true },
   { identifier: 'jefe@demo.local', name: 'Ana Jefa' },
   { identifier: 'lider.bi@demo.local', name: 'Beto Lider BI' },
   { identifier: 'integrante.bi@demo.local', name: 'Carla Integrante BI' },
@@ -317,7 +320,11 @@ async function main(): Promise<void> {
     if (existing) {
       await prisma.user.update({
         where: { id: existing.id },
-        data: { name: user.name, passwordHash: devPasswordHash },
+        data: {
+          name: user.name,
+          passwordHash: devPasswordHash,
+          isAdmin: user.isAdmin ?? false,
+        },
       });
     } else {
       await prisma.user.create({
@@ -325,6 +332,7 @@ async function main(): Promise<void> {
           identifier: user.identifier,
           name: user.name,
           passwordHash: devPasswordHash,
+          isAdmin: user.isAdmin ?? false,
         },
       });
     }

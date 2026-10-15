@@ -47,6 +47,21 @@ services:
       AUTH_MODE: ${AUTH_MODE:-jwt}
       JWT_SECRET: ${JWT_SECRET:-}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      # Clave de cifrado de secretos de configuracion (password SMTP en BD).
+      # 32 bytes base64 (openssl rand -base64 32). Obligatoria SOLO al leer/
+      # escribir el password SMTP; el API arranca sin ella.
+      SETTINGS_ENCRYPTION_KEY: ${SETTINGS_ENCRYPTION_KEY:-}
+      # Correo (SMTP): OPCIONAL. Se configura en runtime desde administracion
+      # (fuente BD > entorno). Si se definen aqui, sirven de fallback de entorno.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
+      # URL base del frontend para enlaces de reset/invitacion (unica fuente).
+      APP_WEB_URL: ${APP_WEB_URL:-}
     depends_on:
       postgres:
         condition: service_healthy

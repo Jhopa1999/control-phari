@@ -17,7 +17,7 @@ import type { McpContext } from '../server.js';
 import { runApiTool } from './shared.js';
 
 /** Valores de objectType que admite esta tool (restricción local más estricta). */
-const OBJECT_TYPES = ['PROCESS', 'USER', 'GRANT', 'CATALOG_ITEM'] as const;
+const OBJECT_TYPES = ['PROCESS', 'USER', 'GRANT', 'CATALOG_ITEM', 'SMTP_CONFIG'] as const;
 
 /** Tipo del enum objectType tal como lo declara el contrato OpenAPI. */
 type ContractObjectType = NonNullable<

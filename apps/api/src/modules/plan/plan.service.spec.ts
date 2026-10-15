@@ -60,6 +60,7 @@ function lider(scoped: string[] = ['p1']): CurrentActor {
     roleCodes: new Set([RoleCode.LIDER_PROCESO]),
     scopedProcessIds: new Set(scoped),
     isJefeArea: false,
+    isAdmin: false,
   };
 }
 

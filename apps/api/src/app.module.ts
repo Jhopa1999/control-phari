@@ -13,6 +13,7 @@ import { CoordinationModule } from './modules/coordination/coordination.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 import { GovernanceModule } from './modules/governance/governance.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
+import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { PortfolioModule } from './modules/portfolio/portfolio.module';
     KnowledgeModule,
     GovernanceModule,
     PortfolioModule,
+    SystemSettingsModule,
   ],
 })
 export class AppModule {}

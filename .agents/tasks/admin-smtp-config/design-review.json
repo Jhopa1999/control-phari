@@ -1,0 +1,83 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "HIGH",
+      "title": "appWebUrl queda en dos fuentes sin reconciliar: reset/invite seguiran leyendo process.env.APP_WEB_URL",
+      "where": "design.md secciones (b)/(e)/(g) y 'Env / Docker'; verificado contra auth-reset.service.ts y user-invite.service.ts (buildUrl usa process.env.APP_WEB_URL)",
+      "fix": "O bien sacar appWebUrl de SmtpConfig y dejar APP_WEB_URL (env) como unica fuente (recomendado), o bien especificar que auth-reset.service y user-invite.service resuelven la URL base via MailConfigResolver (BD>env) y listarlos como servicios modificados con pruebas del enlace desde BD."
+    },
+    {
+      "id": 2,
+      "severity": "HIGH",
+      "title": "La resolucion dinamica exige refactorizar MailService (constructor con MAIL_TRANSPORTER/MAIL_CONFIG), no solo el provider",
+      "where": "design.md seccion (d); verificado contra mail.service.ts (inyeccion por constructor) y mail.module.ts (registra mailConfigProvider/mailTransporterProvider)",
+      "fix": "Reescribir (d): MailService sin inyectar MAIL_TRANSPORTER/MAIL_CONFIG, dependiendo del resolver y construyendo el transporter por envio; actualizar mail.module.ts; migrar las pruebas que hoy inyectan el doble via MAIL_TRANSPORTER (mockear resolver o nodemailer.createTransport)."
+    },
+    {
+      "id": "2b",
+      "severity": "MEDIUM",
+      "title": "formatFrom()/buildText/buildHtml dependen de this.config; con resolucion por envio deben recibir la MailConfig como argumento",
+      "where": "design.md seccion (d); mail.service.ts (formatFrom usa this.config)",
+      "fix": "Definir firmas nuevas que pasen la MailConfig resuelta a formatFrom/build*/send* (p. ej. send* resuelve cfg, construye transporter y usa formatFrom(cfg))."
+    },
+    {
+      "id": 3,
+      "severity": "MEDIUM",
+      "title": "isEnabled() no basta para preservar contratos; falta precisar el punto de decision enviar-vs-loguear en reset/invite",
+      "where": "design.md seccion (d); auth-reset.service.forgotPassword e user-invite.service.invite llaman mail.send* sin consultar isEnabled()",
+      "fix": "Fijar que send* resuelven config internamente y, si es null, registran warn con el enlace y retornan void sin lanzar; isEnabled() queda como helper para el endpoint test/UI, no como gate en los flujos. Asi forgot-password sigue 204 y reset-password 200."
+    },
+    {
+      "id": 4,
+      "severity": "MEDIUM",
+      "title": "La variante no estricta de loadMailConfig no existe y su firma/completitud no estan definidas; inconsistencia user/password opcional vs obligatorio",
+      "where": "design.md seccion (d) punto 2; mail.config.ts (solo loadMailConfig que lanza; SMTP_USER/SMTP_PASSWORD obligatorias) vs modelo SmtpConfig (username/password opcionales)",
+      "fix": "Definir loadMailConfigOrNull(): MailConfig | null y su regla de completitud reconciliando que campos son obligatorios en env y BD (recomendado: host/port/from/appWebUrl obligatorios; user/pass opcionales en ambas fuentes)."
+    },
+    {
+      "id": 5,
+      "severity": "MEDIUM",
+      "title": "Endpoint/UI de promocion a ADMIN marcado como 'abierto / a criterio' — requisito sin cerrar",
+      "where": "design.md secciones (h), 'SUPUESTOS NO VERIFICADOS' y plan paso 9",
+      "fix": "Decidir en el diseno: definir PATCH /admin/users/:id/admin-flag @Roles(ADMIN) con DTO { isAdmin: boolean }, auditoria objectType 'USER' y Swagger; o declararlo inequivocamente fuera de alcance confirmando que el seed del admin inicial satisface el requisito 'que exista el rol admin'."
+    },
+    {
+      "id": 6,
+      "severity": "MEDIUM",
+      "title": "AuditObjectType es union cerrado: anadir 'SMTP_CONFIG' es obligatorio si se audita; el diseno lo deja opcional/ambiguo",
+      "where": "design.md seccion (e) 'Nota auditoria'; verificado contra audit.service.ts (union cerrado; AuditRecordInput.objectType lo tipa) y schema.prisma (AuditEvent.objectId String sin FK)",
+      "fix": "Decidir auditar (recomendado) y listar como cambio obligatorio anadir 'SMTP_CONFIG' al union AuditObjectType (y opcional al @ApiQuery de audit.controller.ts); objectId = id del singleton, scopeProcessId null, action UPDATE."
+    },
+    {
+      "id": 7,
+      "severity": "MEDIUM",
+      "title": "Convencion para 'limpiar' el password subespecificada y a medio escribir (password vs clearPassword)",
+      "where": "design.md seccion (e) UpdateSmtpConfigDto.password",
+      "fix": "Especificar reglas deterministas: password ausente conserva; password no vacio cifra/reemplaza; clearPassword true pone passwordCiphertext null; definir que pasa si llegan ambos (rechazar 400 o prioridad documentada). Reflejar en DTO/@ApiProperty."
+    },
+    {
+      "id": 8,
+      "severity": "MEDIUM",
+      "title": "La semantica de source ('db'|'env'|'none') y de la fila incompleta en BD no esta definida de forma consistente",
+      "where": "design.md secciones (e) GET y (d) resolucion",
+      "fix": "Definir: GET refleja los campos de la fila de BD si existe (para editarla) y source indica de donde saldria el envio ahora (db si completa, env si cae a env, none si nada); documentar el caso 'fila incompleta en BD'."
+    },
+    {
+      "id": 9,
+      "severity": "NIT",
+      "title": "El diseno afirma que ModuleKey/RoleCode se reflejan en el contrato; allowedModules es string[] en OpenAPI y ModuleKey del front es manual",
+      "where": "design.md seccion (i); verificado contra my-permissions-response.dto.ts (@ApiProperty type [String]) y navigation.ts (union ModuleKey manual, MODULE_LABELS Record<ModuleKey,string>)",
+      "fix": "Corregir (i): el contrato NO tipa ModuleKey; anadir 'systemSettings' manualmente al union ModuleKey y a MODULE_LABELS del front, ademas de a MODULE_MATRIX/ModuleKey del backend."
+    },
+    {
+      "id": 10,
+      "severity": "NIT",
+      "title": "Falta especificar @Type(() => Number) para port en el DTO bajo ValidationPipe transform",
+      "where": "design.md seccion (e) UpdateSmtpConfigDto.port; app.config.ts ValidationPipe({ transform: true })",
+      "fix": "Anotar port con @Type(() => Number) + @IsInt() @Min(1) @Max(65535) por robustez, coherente con otros DTOs."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\analistabi2\\Desarrollo\\control-phari\\.agents\\tasks\\admin-smtp-config/design-review.md"
+}

@@ -189,7 +189,8 @@
                 "PROCESS",
                 "USER",
                 "GRANT",
-                "CATALOG_ITEM"
+                "CATALOG_ITEM",
+                "SMTP_CONFIG"
               ],
               "type": "string"
             }
@@ -5376,6 +5377,191 @@
           "portfolio"
         ]
       }
+    },
+    "/admin/smtp-config": {
+      "get": {
+        "operationId": "SmtpConfigController_getCurrent",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Estado SMTP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmtpConfigResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Estado de la configuracion SMTP (solo ADMIN). Nunca incluye el password; devuelve passwordSet y source.",
+        "tags": [
+          "admin-smtp"
+        ]
+      },
+      "patch": {
+        "operationId": "SmtpConfigController_update",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSmtpConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuracion guardada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmtpConfigResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o combinacion password/clearPassword no permitida."
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Crea o actualiza la configuracion SMTP singleton (solo ADMIN). Reglas de password: ausente conserva, no vacio cifra, \"\" invalido, clearPassword limpia.",
+        "tags": [
+          "admin-smtp"
+        ]
+      }
+    },
+    "/admin/smtp-config/test": {
+      "post": {
+        "operationId": "SmtpConfigController_test",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmtpTestRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado de la prueba.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmtpTestResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Direccion destino invalida."
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Envia un correo de prueba con la configuracion efectiva (BD>env). Devuelve { ok, message } sin secretos.",
+        "tags": [
+          "admin-smtp"
+        ]
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "operationId": "AdminUsersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Usuarios.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminUserResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista usuarios con su flag isAdmin (solo ADMIN).",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/admin/users/{id}/admin-flag": {
+      "patch": {
+        "operationId": "AdminUsersController_setAdminFlag",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAdminFlagDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Flag actualizado."
+          },
+          "400": {
+            "description": "No puede degradar al ultimo administrador activo."
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Usuario no encontrado."
+          }
+        },
+        "summary": "Promueve/degrada a un usuario como ADMIN de sistema (solo ADMIN). No permite degradar al ultimo admin activo.",
+        "tags": [
+          "admin-users"
+        ]
+      }
     }
   },
   "info": {
@@ -5436,7 +5622,8 @@
             "enum": [
               "JEFE_AREA",
               "LIDER_PROCESO",
-              "INTEGRANTE"
+              "INTEGRANTE",
+              "ADMIN"
             ],
             "description": "Rol del grant."
           },
@@ -6057,7 +6244,8 @@
             "enum": [
               "JEFE_AREA",
               "LIDER_PROCESO",
-              "INTEGRANTE"
+              "INTEGRANTE",
+              "ADMIN"
             ],
             "description": "Rol a conceder."
           },
@@ -10941,6 +11129,191 @@
           "initialCommitmentDate",
           "blocked",
           "blockedReason"
+        ]
+      },
+      "SmtpConfigResponseDto": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string",
+            "nullable": true,
+            "description": "Host SMTP guardado (null si no hay fila)."
+          },
+          "port": {
+            "type": "number",
+            "nullable": true,
+            "description": "Puerto SMTP guardado."
+          },
+          "secure": {
+            "type": "boolean",
+            "description": "SSL directo (465) vs STARTTLS."
+          },
+          "username": {
+            "type": "string",
+            "nullable": true,
+            "description": "Usuario SMTP guardado (opcional)."
+          },
+          "passwordSet": {
+            "type": "boolean",
+            "description": "Hay un password guardado (nunca se devuelve el valor)."
+          },
+          "fromAddress": {
+            "type": "string",
+            "nullable": true,
+            "description": "Direccion remitente guardada."
+          },
+          "fromName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre visible del remitente."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "db",
+              "env",
+              "none"
+            ],
+            "description": "Fuente efectiva del envio: 'db' (fila completa), 'env' (cae al entorno), 'none' (correo deshabilitado)."
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ultima actualizacion (ISO) o null."
+          }
+        },
+        "required": [
+          "host",
+          "port",
+          "secure",
+          "username",
+          "passwordSet",
+          "fromAddress",
+          "fromName",
+          "source",
+          "updatedAt"
+        ]
+      },
+      "UpdateSmtpConfigDto": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string",
+            "description": "Host del servidor SMTP.",
+            "maxLength": 255
+          },
+          "port": {
+            "type": "number",
+            "description": "Puerto SMTP (1-65535).",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "secure": {
+            "type": "boolean",
+            "description": "true = SSL directo (465); false = STARTTLS (587). Default false."
+          },
+          "username": {
+            "type": "string",
+            "description": "Usuario SMTP (opcional; relays sin auth lo omiten).",
+            "maxLength": 255
+          },
+          "password": {
+            "type": "string",
+            "description": "Password SMTP (write-only). Ausente conserva el actual; valor no vacio lo reemplaza (cifrado); cadena vacia es invalida (usar clearPassword)."
+          },
+          "clearPassword": {
+            "type": "boolean",
+            "description": "true limpia el password guardado. No combinar con un password no vacio."
+          },
+          "fromAddress": {
+            "type": "string",
+            "description": "Direccion remitente (MAIL_FROM).",
+            "maxLength": 320
+          },
+          "fromName": {
+            "type": "string",
+            "description": "Nombre visible del remitente (opcional).",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "host",
+          "port",
+          "fromAddress"
+        ]
+      },
+      "SmtpTestRequestDto": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Direccion destino del correo de prueba."
+          }
+        },
+        "required": [
+          "to"
+        ]
+      },
+      "SmtpTestResultDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "La prueba de envio tuvo exito."
+          },
+          "message": {
+            "type": "string",
+            "description": "Mensaje legible del resultado (sin secretos ni stack)."
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ]
+      },
+      "AdminUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo."
+          },
+          "isAdmin": {
+            "type": "boolean",
+            "description": "Es ADMIN de sistema."
+          }
+        },
+        "required": [
+          "id",
+          "identifier",
+          "name",
+          "active",
+          "isAdmin"
+        ]
+      },
+      "SetAdminFlagDto": {
+        "type": "object",
+        "properties": {
+          "isAdmin": {
+            "type": "boolean",
+            "description": "true promueve a ADMIN de sistema; false degrada."
+          }
+        },
+        "required": [
+          "isAdmin"
         ]
       }
     }

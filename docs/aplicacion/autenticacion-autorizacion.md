@@ -81,6 +81,15 @@ autorización:
 La tabla `roles` espeja estos mismos códigos. No son administrables como las maestras
 de negocio.
 
+Además existe el rol de **sistema** `ADMIN`, GLOBAL e independiente del área: no se
+concede por grant ni por proceso y no tiene fila en `roles`. Su único origen es la columna
+booleana `User.isAdmin`; cuando es `true`, `load-actor.ts` añade `RoleCode.ADMIN` a
+`roleCodes` sin ampliar `scopedProcessIds`, de modo que `@Roles(ADMIN)` funciona igual que
+con los demás roles. `ADMIN` es ortogonal a `JEFE_AREA`: un admin sin grants no es jefe, y
+un jefe sin `isAdmin` no ve la configuración del sistema. El actor expone `isAdmin:
+boolean`. Se siembra un administrador inicial (`admin@demo.local`); los demás se gestionan
+con `PATCH /admin/users/:id/admin-flag` (no se puede degradar al último admin activo).
+
 ## Grants y alcance
 
 Un **grant** asigna a un usuario un rol dentro de un proceso (`Grant`: `userId` ×
@@ -138,6 +147,11 @@ de verdad** compartida con el frontend: el menú usa las mismas claves para filt
 | `audit` | ✓ (alcance propio) | ✓ | ✓ |
 | `team` | — | — | ✓ |
 | `permissions` | ✓ | ✓ | ✓ |
+| `systemSettings` | — | — | — |
+
+> `systemSettings` (configuración del sistema: SMTP y administradores) es exclusivo del
+> rol de **sistema** `ADMIN`: ninguno de los roles de área lo ve. `MODULE_MATRIX` tiene
+> por tanto 22 claves; un `JEFE_AREA` ve todas menos `systemSettings`.
 
 `allowedModulesFor(roles)` deriva la unión de módulos visibles para el actor; un módulo
 se muestra si alguno de sus roles lo permite. `GET /me/permissions` devuelve rol,

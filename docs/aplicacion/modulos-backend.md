@@ -367,3 +367,36 @@ service.
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/audit-events` | Lista eventos de auditoría con alcance por rol (filtros `objectType`, `take` ≤ 500). |
+
+## system-settings — Administración de sistema (rol ADMIN)
+
+Configuración técnica del sistema, reservada al rol de sistema `ADMIN`. Agrupa la
+configuración SMTP en runtime y la gestión de administradores. Todos los endpoints se
+protegen a nivel de clase con `@UseGuards(CurrentUserGuard, RolesGuard)` + `@Roles(ADMIN)`.
+
+Configuración SMTP (`smtp-config.controller.ts`), base `/admin/smtp-config`:
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| GET | `/admin/smtp-config` | Estado de la configuración (nunca el password; devuelve `passwordSet` y `source`). 200 siempre, aunque no haya fila. |
+| PATCH | `/admin/smtp-config` | Crea/actualiza la fila singleton. PATCH (no PUT) por el CORS del backend. |
+| POST | `/admin/smtp-config/test` | Envía un correo de prueba con la configuración efectiva; devuelve `{ ok, message }` sin secretos ni stack. |
+
+Reglas clave: el password se guarda cifrado (AES-256-GCM, `settings-crypto.ts`, clave
+`SETTINGS_ENCRYPTION_KEY`) y nunca se devuelve. Convención del password al actualizar:
+ausente conserva; valor no vacío cifra y reemplaza; cadena vacía `''` → `400` (usar
+`clearPassword`); `clearPassword:true` limpia; password no vacío + `clearPassword` → `400`.
+La resolución efectiva del correo es BD > entorno > ninguna (`MailConfigResolver` del
+módulo mail); `APP_WEB_URL` siempre proviene del entorno, nunca de la BD. Cada cambio se
+audita como `SMTP_CONFIG` sin registrar el password ni el ciphertext.
+
+Administradores del sistema (`admin-users.controller.ts`), base `/admin/users`:
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| GET | `/admin/users` | Lista usuarios con su flag `isAdmin`. |
+| PATCH | `/admin/users/:id/admin-flag` | Promueve/degrada a un usuario como ADMIN. `404` si no existe. |
+
+Reglas clave: no se permite degradar al último administrador activo (`400`). El cambio se
+audita como `USER`. El flag `isAdmin` NO se expone en el DTO del módulo `user`, para que un
+`JEFE_AREA` no pueda autopromoverse.

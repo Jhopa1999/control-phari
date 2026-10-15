@@ -48,6 +48,7 @@ function integrante(scoped: string[] = ['p1']): CurrentActor {
     roleCodes: new Set([RoleCode.INTEGRANTE]),
     scopedProcessIds: new Set(scoped),
     isJefeArea: false,
+    isAdmin: false,
   };
 }
 

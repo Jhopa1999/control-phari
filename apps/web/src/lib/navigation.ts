@@ -13,6 +13,7 @@ import {
   Inbox,
   KeyRound,
   LayoutDashboard,
+  Mail,
   ListFilter,
   ListTodo,
   ListTree,
@@ -61,7 +62,8 @@ export type ModuleKey =
   | 'review'
   | 'audit'
   | 'team'
-  | 'permissions';
+  | 'permissions'
+  | 'systemSettings';
 
 export interface NavItem {
   href: string;
@@ -82,7 +84,7 @@ export interface NavGroup {
 }
 
 /**
- * Menú del portal: 7 grupos y 23 ítems. «Tareas» (/seguimiento/tareas) no es un
+ * Menú del portal: 7 grupos y 24 ítems. «Tareas» (/seguimiento/tareas) no es un
  * ítem porque es una página de detalle sin listado: se llega desde Mi trabajo y
  * Planificación, y «Mi trabajo» queda activo en ella. /catalogs sigue fuera del
  * menú, operativa, y marca «Maestras».
@@ -169,6 +171,12 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: ListTree,
         activeFor: ['/catalogs'],
       },
+      {
+        href: '/administracion/configuracion-smtp',
+        label: 'Configuracion SMTP',
+        moduleKey: 'systemSettings',
+        icon: Mail,
+      },
     ],
   },
 ];
@@ -200,9 +208,10 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   permissions: 'Mis permisos',
   team: 'Equipo y permisos',
   admin: 'Maestras',
+  systemSettings: 'Configuración del sistema',
 };
 
-/** Las 21 claves de módulo, sin repetidos, en el orden de MODULE_LABELS. */
+/** Las 22 claves de módulo, sin repetidos, en el orden de MODULE_LABELS. */
 export const MODULE_ORDER: readonly ModuleKey[] = Object.keys(MODULE_LABELS) as ModuleKey[];
 
 /** Grupos con sus ítems permitidos; los grupos que quedan vacíos no se devuelven. */

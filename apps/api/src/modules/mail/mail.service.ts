@@ -1,65 +1,101 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import type { MailConfig } from './mail.config';
-import {
-  MAIL_CONFIG,
-  MAIL_TRANSPORTER,
-} from './mail-transporter.provider';
+import { MailConfigResolver } from './mail-config.resolver';
 import type {
   PasswordResetPayload,
   UserInvitationPayload,
 } from './mail.types';
-
 /**
- * Servicio de correo transaccional. Recibe por DI el transporter (token
- * MAIL_TRANSPORTER) y la MailConfig (token MAIL_CONFIG). Construye correos en
- * espanol con HTML inline sobrio mas fallback de texto plano, sin motor de
- * plantillas. No loguea secretos ni contenido sensible.
+ * Servicio de correo transaccional. Resuelve la configuracion en RUNTIME con
+ * `MailConfigResolver` (BD > entorno > ninguna) y construye el transporter POR
+ * ENVIO, de modo que un cambio del ADMIN surte efecto sin reiniciar y el API
+ * ARRANCA aunque no haya SMTP (design d.4/d.5).
+ *
+ * Degradacion sin romper contratos: si NO hay config (`resolve()===null`),
+ * `sendPasswordReset`/`sendUserInvitation` registran un `warn` con el enlace
+ * (sin secretos) y retornan SIN lanzar. Asi los flujos que los invocan fuera de
+ * transaccion (reset 204 / invitacion) no se rompen por ausencia de SMTP. Un
+ * fallo REAL de SMTP con config presente se propaga como antes.
+ *
+ * Nunca loguea secretos (user/password) ni el contenido completo del correo.
  */
 @Injectable()
 export class MailService {
-  constructor(
-    @Inject(MAIL_TRANSPORTER) private readonly transporter: Transporter,
-    @Inject(MAIL_CONFIG) private readonly config: MailConfig,
-  ) {}
-
-  /** Envia el correo de reestablecimiento de contrasena. */
+  private readonly logger = new Logger(MailService.name);
+  constructor(private readonly resolver: MailConfigResolver) {}
+  /**
+   * Helper SOLO para el endpoint de prueba y la UI: indica si hay correo
+   * habilitado. NO se usa como gate de reset/invite (esos degradan sin lanzar).
+   */
+  async isEnabled(): Promise<boolean> {
+    return (await this.resolver.resolve()) !== null;
+  }
+  /** Envia el correo de reestablecimiento de contrasena (o degrada si no hay SMTP). */
   async sendPasswordReset(payload: PasswordResetPayload): Promise<void> {
+    const cfg = await this.resolver.resolve();
+    if (cfg === null) {
+      this.logDisabled('reestablecimiento de contrasena', payload.to, payload.resetUrl);
+      return;
+    }
     const subject = 'Reestablecimiento de contrasena';
     const intro =
       'Recibimos una solicitud para reestablecer la contrasena de tu cuenta.';
     const action = 'Reestablecer contrasena';
-    await this.transporter.sendMail({
-      from: this.formatFrom(),
+    await this.createTransport(cfg).sendMail({
+      from: this.formatFrom(cfg),
       to: payload.to,
       subject,
       text: this.buildText(payload.name, intro, action, payload.resetUrl, payload.expiresLabel),
       html: this.buildHtml(payload.name, intro, action, payload.resetUrl, payload.expiresLabel),
     });
   }
-
-  /** Envia el correo de invitacion a un usuario nuevo. */
+  /** Envia el correo de invitacion a un usuario nuevo (o degrada si no hay SMTP). */
   async sendUserInvitation(payload: UserInvitationPayload): Promise<void> {
+    const cfg = await this.resolver.resolve();
+    if (cfg === null) {
+      this.logDisabled('invitacion de usuario', payload.to, payload.inviteUrl);
+      return;
+    }
     const subject = 'Invitacion para activar tu cuenta';
     const intro =
       'Se creo una cuenta para ti. Activa tu acceso y define tu contrasena.';
     const action = 'Activar cuenta';
-    await this.transporter.sendMail({
-      from: this.formatFrom(),
+    await this.createTransport(cfg).sendMail({
+      from: this.formatFrom(cfg),
       to: payload.to,
       subject,
       text: this.buildText(payload.name, intro, action, payload.inviteUrl, payload.expiresLabel),
       html: this.buildHtml(payload.name, intro, action, payload.inviteUrl, payload.expiresLabel),
     });
   }
-
-  /** Construye el remitente usando MAIL_FROM_NAME cuando esta definido. */
-  private formatFrom(): string {
-    return this.config.fromName
-      ? `"${this.config.fromName}" <${this.config.from}>`
-      : this.config.from;
+  /**
+   * Construye un transporter efimero para un envio concreto. Solo pasa `auth`
+   * cuando hay usuario (relays sin autenticacion lo omiten).
+   */
+  createTransport(cfg: MailConfig): Transporter {
+    return nodemailer.createTransport({
+      host: cfg.host,
+      port: cfg.port,
+      secure: cfg.secure,
+      auth: cfg.user ? { user: cfg.user, pass: cfg.password } : undefined,
+    });
   }
-
+  /**
+   * Registra que el correo esta deshabilitado, dejando constancia del enlace
+   * para no bloquear el flujo. NO imprime secretos (user/password). El enlace
+   * es de un solo uso y vigencia corta (riesgo documentado).
+   */
+  private logDisabled(kind: string, to: string, url: string): void {
+    this.logger.warn(
+      `Correo deshabilitado (sin SMTP configurado): no se envio ${kind} a ${to}. Enlace generado: ${url}`,
+    );
+  }
+  /** Construye el remitente usando el nombre visible cuando esta definido. */
+  private formatFrom(cfg: MailConfig): string {
+    return cfg.fromName ? `"${cfg.fromName}" <${cfg.from}>` : cfg.from;
+  }
   /** Cuerpo de texto plano (fallback). */
   private buildText(
     name: string,
@@ -80,7 +116,6 @@ export class MailService {
       'Si no esperabas este correo, puedes ignorarlo.',
     ].join('\n');
   }
-
   /** Cuerpo HTML inline sobrio. */
   private buildHtml(
     name: string,

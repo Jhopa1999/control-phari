@@ -1543,6 +1543,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/smtp-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Estado de la configuracion SMTP (solo ADMIN). Nunca incluye el password; devuelve passwordSet y source. */
+        get: operations["SmtpConfigController_getCurrent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Crea o actualiza la configuracion SMTP singleton (solo ADMIN). Reglas de password: ausente conserva, no vacio cifra, "" invalido, clearPassword limpia. */
+        patch: operations["SmtpConfigController_update"];
+        trace?: never;
+    };
+    "/admin/smtp-config/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Envia un correo de prueba con la configuracion efectiva (BD>env). Devuelve { ok, message } sin secretos. */
+        post: operations["SmtpConfigController_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista usuarios con su flag isAdmin (solo ADMIN). */
+        get: operations["AdminUsersController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/admin-flag": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Promueve/degrada a un usuario como ADMIN de sistema (solo ADMIN). No permite degradar al ultimo admin activo. */
+        patch: operations["AdminUsersController_setAdminFlag"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1578,7 +1647,7 @@ export interface components {
              * @description Rol del grant.
              * @enum {string}
              */
-            roleCode: "JEFE_AREA" | "LIDER_PROCESO" | "INTEGRANTE";
+            roleCode: "JEFE_AREA" | "LIDER_PROCESO" | "INTEGRANTE" | "ADMIN";
             /**
              * @description Etiqueta visible del rol.
              * @example Lider de proceso
@@ -1984,7 +2053,7 @@ export interface components {
              * @description Rol a conceder.
              * @enum {string}
              */
-            roleCode: "JEFE_AREA" | "LIDER_PROCESO" | "INTEGRANTE";
+            roleCode: "JEFE_AREA" | "LIDER_PROCESO" | "INTEGRANTE" | "ADMIN";
             /**
              * Format: uuid
              * @description Id del proceso del grant.
@@ -4364,6 +4433,76 @@ export interface components {
             /** @description Motivo del bloqueo o null. */
             blockedReason: string | null;
         };
+        SmtpConfigResponseDto: {
+            /** @description Host SMTP guardado (null si no hay fila). */
+            host: string | null;
+            /** @description Puerto SMTP guardado. */
+            port: number | null;
+            /** @description SSL directo (465) vs STARTTLS. */
+            secure: boolean;
+            /** @description Usuario SMTP guardado (opcional). */
+            username: string | null;
+            /** @description Hay un password guardado (nunca se devuelve el valor). */
+            passwordSet: boolean;
+            /** @description Direccion remitente guardada. */
+            fromAddress: string | null;
+            /** @description Nombre visible del remitente. */
+            fromName: string | null;
+            /**
+             * @description Fuente efectiva del envio: 'db' (fila completa), 'env' (cae al entorno), 'none' (correo deshabilitado).
+             * @enum {string}
+             */
+            source: "db" | "env" | "none";
+            /** @description Ultima actualizacion (ISO) o null. */
+            updatedAt: string | null;
+        };
+        UpdateSmtpConfigDto: {
+            /** @description Host del servidor SMTP. */
+            host: string;
+            /** @description Puerto SMTP (1-65535). */
+            port: number;
+            /** @description true = SSL directo (465); false = STARTTLS (587). Default false. */
+            secure?: boolean;
+            /** @description Usuario SMTP (opcional; relays sin auth lo omiten). */
+            username?: string;
+            /** @description Password SMTP (write-only). Ausente conserva el actual; valor no vacio lo reemplaza (cifrado); cadena vacia es invalida (usar clearPassword). */
+            password?: string;
+            /** @description true limpia el password guardado. No combinar con un password no vacio. */
+            clearPassword?: boolean;
+            /** @description Direccion remitente (MAIL_FROM). */
+            fromAddress: string;
+            /** @description Nombre visible del remitente (opcional). */
+            fromName?: string;
+        };
+        SmtpTestRequestDto: {
+            /** @description Direccion destino del correo de prueba. */
+            to: string;
+        };
+        SmtpTestResultDto: {
+            /** @description La prueba de envio tuvo exito. */
+            ok: boolean;
+            /** @description Mensaje legible del resultado (sin secretos ni stack). */
+            message: string;
+        };
+        AdminUserResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /** @description Identificador funcional. */
+            identifier: string;
+            /** @description Nombre visible. */
+            name: string;
+            /** @description Estado activo. */
+            active: boolean;
+            /** @description Es ADMIN de sistema. */
+            isAdmin: boolean;
+        };
+        SetAdminFlagDto: {
+            /** @description true promueve a ADMIN de sistema; false degrada. */
+            isAdmin: boolean;
+        };
     };
     responses: never;
     parameters: never;
@@ -4546,7 +4685,7 @@ export interface operations {
             query?: {
                 /** @description Maximo de eventos (acotado a 500). */
                 take?: number;
-                objectType?: "PROCESS" | "USER" | "GRANT" | "CATALOG_ITEM";
+                objectType?: "PROCESS" | "USER" | "GRANT" | "CATALOG_ITEM" | "SMTP_CONFIG";
             };
             header?: never;
             path?: never;
@@ -9393,6 +9532,216 @@ export interface operations {
             };
             /** @description Rol insuficiente. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SmtpConfigController_getCurrent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estado SMTP. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmtpConfigResponseDto"];
+                };
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SmtpConfigController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSmtpConfigDto"];
+            };
+        };
+        responses: {
+            /** @description Configuracion guardada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmtpConfigResponseDto"];
+                };
+            };
+            /** @description Datos invalidos o combinacion password/clearPassword no permitida. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SmtpConfigController_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SmtpTestRequestDto"];
+            };
+        };
+        responses: {
+            /** @description Resultado de la prueba. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SmtpTestResultDto"];
+                };
+            };
+            /** @description Direccion destino invalida. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usuarios. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserResponseDto"][];
+                };
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminUsersController_setAdminFlag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAdminFlagDto"];
+            };
+        };
+        responses: {
+            /** @description Flag actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No puede degradar al ultimo administrador activo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuario no encontrado. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -26,7 +26,8 @@ export type ModuleKey =
   | 'review'
   | 'audit'
   | 'team'
-  | 'permissions';
+  | 'permissions'
+  | 'systemSettings';
 
 /**
  * Matriz de modulos -> roles permitidos. Reproduce LITERALMENTE la "Matriz de
@@ -79,6 +80,10 @@ export const MODULE_MATRIX: Record<ModuleKey, readonly RoleCode[]> = {
   audit: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
   team: [RoleCode.JEFE_AREA],
   permissions: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  // Rol de SISTEMA: SOLO ADMIN (design f). No se reutiliza 'admin' (Maestras,
+  // de JEFE_AREA): este modulo es la configuracion tecnica del sistema (SMTP,
+  // administradores) y queda fuera del alcance del jefe de area.
+  systemSettings: [RoleCode.ADMIN],
 };
 
 /** Todas las claves de modulo, en orden de declaracion. */

@@ -13,6 +13,7 @@ function makeActor(roles: RoleCode[]): CurrentActor {
     roleCodes: new Set(roles),
     scopedProcessIds: new Set(),
     isJefeArea: roles.includes(RoleCode.JEFE_AREA),
+    isAdmin: false,
   };
 }
 

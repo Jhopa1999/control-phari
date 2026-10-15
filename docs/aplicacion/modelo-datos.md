@@ -31,6 +31,8 @@ Proceso del área (BI, Integraciones, IA) y la coordinación multiproceso FMAA.
 Identidad funcional de una persona (no es credencial por sí misma).
 - Campos clave: `identifier`, `name`, `active`, `passwordHash?` (solo lo usa el login
   JWT; nunca se expone).
+- `isAdmin` (`is_admin`, default `false`): rol de sistema ADMIN, global e
+  independiente de los grants por proceso.
 - Restricciones: único `identifier`; índice por `active`.
 - Relaciones: grants, y numerosas FKs como actor/responsable/autor en los flujos
   (triage, planes, tareas, disponibilidad, diarios, reuniones, activos, gobierno…).
@@ -64,6 +66,18 @@ SHA-256.
   (SHA-256), `expiresAt`, `usedAt?` (marca el consumo de un solo uso), `createdAt`.
 - Relaciones: `User` (`onDelete: Cascade`).
 - Índices: por `userId`, `tokenHash`.
+### SmtpConfig (`smtp_config`)
+Configuración SMTP editable en runtime (fila única / singleton). Permite al ADMIN cambiar
+el servidor de correo sin tocar `.env` ni reconstruir.
+- Campos clave: `host`, `port`, `secure` (default `false`), `username?`,
+  `passwordCiphertext?` (`password_ciphertext`), `fromAddress` (`from_address`),
+  `fromName?` (`from_name`), `updatedByUserId?` (`updated_by_user_id`).
+- El password se guarda **cifrado** (AES-256-GCM, formato `iv.tag.ciphertext` base64) con
+  la clave `SETTINGS_ENCRYPTION_KEY`; nunca en claro ni devuelto al frontend.
+- La URL base del frontend (`APP_WEB_URL`) NO se persiste aquí: es responsabilidad del
+  entorno.
+- Relaciones: `updatedBy` → `User` (`onDelete: SetNull`).
+
 
 ## Flujo de demanda
 

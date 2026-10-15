@@ -43,7 +43,8 @@ export type AuditObjectType =
   | 'DOCUMENT_VERSION'
   | 'GATE_CHECK'
   | 'GATE_PENDING_ITEM'
-  | 'VALIDATION_RECORD';
+  | 'VALIDATION_RECORD'
+  | 'SMTP_CONFIG';
 
 /** Verbos de mutacion registrados (design 1.2 / 4.2.1). */
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'REVOKE';

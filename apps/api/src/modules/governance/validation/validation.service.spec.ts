@@ -16,6 +16,7 @@ const JEFE: CurrentActor = {
   roleCodes: new Set([RoleCode.JEFE_AREA]),
   scopedProcessIds: new Set(),
   isJefeArea: true,
+  isAdmin: false,
 };
 
 function makeRequest(overrides: Partial<Record<string, unknown>> = {}) {

@@ -19,6 +19,7 @@ const JEFE: CurrentActor = {
   roleCodes: new Set([RoleCode.JEFE_AREA]),
   scopedProcessIds: new Set(),
   isJefeArea: true,
+  isAdmin: false,
 };
 
 type Mocks = {

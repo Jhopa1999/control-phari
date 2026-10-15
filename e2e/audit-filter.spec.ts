@@ -68,6 +68,7 @@ test('«Objeto» consulta al servidor con el contrato y el tope no se presenta c
     'Usuario',
     'Asignación de rol',
     'Elemento de maestra',
+    'Configuración SMTP',
   ]);
 
   const filtered = page.waitForRequest(

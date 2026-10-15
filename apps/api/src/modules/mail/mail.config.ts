@@ -1,67 +1,68 @@
 /**
- * Configuracion del modulo de correo. Se lee EXCLUSIVAMENTE del entorno
- * (nunca hardcodeada). Si falta una variable obligatoria, se lanza un Error
- * que NOMBRA la variable ausente pero NUNCA imprime su valor ni ningun
- * secreto (mismo patron que PrismaService y resolveJwtSecret en auth.module).
+ * Configuracion del modulo de correo. Puede provenir del ENTORNO
+ * (loadMailConfigOrNull) o de la BD (MailConfigResolver, modulo mail). En AMBAS
+ * fuentes la obligatoriedad es uniforme (design d.2):
+ * - Obligatorios para una config "completa/enviable": host, port, from
+ *   (MAIL_FROM) y appWebUrl. `appWebUrl` SIEMPRE proviene de env (APP_WEB_URL),
+ *   nunca de la BD (design d.1).
+ * - Opcionales: secure (default false), user/password (relays sin auth),
+ *   fromName.
+ *
+ * Nunca se imprime el valor de un secreto; si falta algo, se nombra la variable
+ * sin exponer su contenido.
  */
 export interface MailConfig {
   readonly host: string;
   readonly port: number;
   readonly secure: boolean;
-  readonly user: string;
-  readonly password: string;
+  /** Usuario SMTP; opcional (algunos relays no autentican). */
+  readonly user?: string;
+  /** Password SMTP; opcional. En BD viaja cifrado y se descifra al resolver. */
+  readonly password?: string;
   readonly from: string;
   /** Nombre visible opcional del remitente (p. ej. "Notificaciones"). */
   readonly fromName?: string;
   /** URL base del frontend para construir enlaces (reset, invitacion). */
   readonly appWebUrl: string;
 }
-
-/** Variables obligatorias; su ausencia hace fallar el arranque. */
-const REQUIRED_VARS = [
-  'SMTP_HOST',
-  'SMTP_PORT',
-  'SMTP_USER',
-  'SMTP_PASSWORD',
-  'MAIL_FROM',
-  'APP_WEB_URL',
-] as const;
-
-function requireVar(name: (typeof REQUIRED_VARS)[number]): string {
-  const value = process.env[name];
-  if (!value || value.trim() === '') {
-    // Mensaje claro que nombra la variable, SIN exponer valores ni secretos.
-    throw new Error(
-      `Mail configuration missing: la variable de entorno ${name} no esta definida.`,
-    );
-  }
-  return value;
-}
-
 /**
- * Lee y valida la configuracion de correo del entorno. SMTP_PORT se parsea a
- * numero; SMTP_SECURE se interpreta como booleano desde 'true'/'false'.
+ * Lee la configuracion de correo del ENTORNO SIN lanzar (design d.2/d.3). Una
+ * config es "completa" (enviable) si SMTP_HOST, SMTP_PORT (entero > 0),
+ * MAIL_FROM y APP_WEB_URL estan presentes. En ese caso devuelve MailConfig con
+ * user/password/secure/fromName segun existan. Si falta cualquier obligatorio
+ * (o SMTP_PORT no es un entero valido) devuelve `null` = "correo deshabilitado
+ * via entorno". NUNCA imprime valores.
  */
-export function loadMailConfig(): MailConfig {
-  const host = requireVar('SMTP_HOST');
-  const portRaw = requireVar('SMTP_PORT');
-  const user = requireVar('SMTP_USER');
-  const password = requireVar('SMTP_PASSWORD');
-  const from = requireVar('MAIL_FROM');
-  const appWebUrl = requireVar('APP_WEB_URL');
-
+export function loadMailConfigOrNull(): MailConfig | null {
+  const host = nonEmpty(process.env.SMTP_HOST);
+  const portRaw = nonEmpty(process.env.SMTP_PORT);
+  const from = nonEmpty(process.env.MAIL_FROM);
+  const appWebUrl = nonEmpty(process.env.APP_WEB_URL);
+  if (!host || !portRaw || !from || !appWebUrl) {
+    return null;
+  }
   const port = Number(portRaw);
   if (!Number.isInteger(port) || port <= 0) {
-    throw new Error(
-      'Mail configuration invalid: la variable de entorno SMTP_PORT debe ser un entero positivo.',
-    );
+    // Puerto invalido => tratado como ausente => config no enviable.
+    return null;
   }
-
   const secure = process.env.SMTP_SECURE?.trim().toLowerCase() === 'true';
-
-  const fromNameRaw = process.env.MAIL_FROM_NAME?.trim();
-  const fromName =
-    fromNameRaw && fromNameRaw !== '' ? fromNameRaw : undefined;
-
-  return { host, port, secure, user, password, from, fromName, appWebUrl };
+  const user = nonEmpty(process.env.SMTP_USER);
+  const password = nonEmpty(process.env.SMTP_PASSWORD);
+  const fromName = nonEmpty(process.env.MAIL_FROM_NAME);
+  return {
+    host,
+    port,
+    secure,
+    ...(user ? { user } : {}),
+    ...(password ? { password } : {}),
+    from,
+    ...(fromName ? { fromName } : {}),
+    appWebUrl,
+  };
+}
+/** Devuelve el valor recortado si no es vacio, o undefined. */
+function nonEmpty(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed && trimmed !== '' ? trimmed : undefined;
 }

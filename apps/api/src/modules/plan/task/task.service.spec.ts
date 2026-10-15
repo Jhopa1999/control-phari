@@ -51,6 +51,7 @@ function actorWith(role: RoleCode, userId = 'u1'): CurrentActor {
     roleCodes: new Set([role]),
     scopedProcessIds: new Set(['p1']),
     isJefeArea: role === RoleCode.JEFE_AREA,
+    isAdmin: false,
   };
 }
 

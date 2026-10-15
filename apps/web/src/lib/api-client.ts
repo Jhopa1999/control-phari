@@ -137,6 +137,15 @@ export type ChangeDocumentStatus =
   components['schemas']['ChangeDocumentStatusDto'];
 /** Estado destino valido de un documento (DocStatus). */
 export type DocumentStatus = ChangeDocumentStatus['targetStatus'];
+// --- Administracion de sistema (rol ADMIN + SMTP en runtime) ---
+export type SmtpConfig = components['schemas']['SmtpConfigResponseDto'];
+export type UpdateSmtpConfig = components['schemas']['UpdateSmtpConfigDto'];
+export type SmtpTestRequest = components['schemas']['SmtpTestRequestDto'];
+export type SmtpTestResult = components['schemas']['SmtpTestResultDto'];
+export type AdminUser = components['schemas']['AdminUserResponseDto'];
+export type SetAdminFlag = components['schemas']['SetAdminFlagDto'];
+/** Fuente efectiva de la configuracion SMTP (db | env | none). */
+export type SmtpConfigSource = SmtpConfig['source'];
 /**
  * Clave de localStorage donde el selector de usuario (dev) guarda el
  * identifier del actor actual. Mecanismo exclusivo de desarrollo (design 3.2).

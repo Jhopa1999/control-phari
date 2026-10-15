@@ -62,3 +62,24 @@ y sus **documentos**, y una capa de **auditoría** que registra cada mutación r
 - `apps/web` (Next.js) es presentación: consume la API, filtra el menú de forma
   cosmética y no contiene reglas de negocio.
 - PostgreSQL es la persistencia transaccional.
+
+## Administración del sistema (rol ADMIN)
+Existe un rol de **sistema** `ADMIN` (origen: `User.isAdmin`), separado de los roles de
+área (`JEFE_AREA`/`LIDER_PROCESO`/`INTEGRANTE`). El administrador configura el sistema
+desde `/administracion/configuracion-smtp`:
+- **SMTP en runtime**: host, puerto, seguridad, usuario, contraseña (write-only, cifrada
+  en BD) y remitente, con prueba de envío. La resolución efectiva es BD > entorno >
+  ninguna; sin configuración, los correos de invitación/reset se registran en el log (con
+  el enlace) y **no** rompen los contratos de `/auth/forgot-password` ni
+  `/auth/reset-password`.
+- **Administradores del sistema**: marcar/desmarcar `isAdmin` por usuario (no se puede
+  degradar al último admin activo).
+
+Notas de operación:
+- `SETTINGS_ENCRYPTION_KEY` (32 bytes base64, `openssl rand -base64 32`) cifra el password
+  SMTP guardado en BD. Es obligatoria SOLO al leer/escribir ese password; **el API arranca
+  sin SMTP ni esta variable**. Si se pierde/rota, el password guardado deja de poder
+  descifrarse y hay que reconfigurarlo.
+- `APP_WEB_URL` (entorno) sigue siendo la única fuente de la URL base de los enlaces.
+- Usuario administrador inicial del seed de desarrollo: `admin@demo.local` (contraseña dev
+  `dev1234`, a cambiar). No necesita grants: su rol es global.

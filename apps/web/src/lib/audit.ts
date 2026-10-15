@@ -20,6 +20,7 @@ const AUDIT_OBJECT_TYPE_FILTER: Record<AuditObjectType, true> = {
   USER: true,
   GRANT: true,
   CATALOG_ITEM: true,
+  SMTP_CONFIG: true,
 };
 
 export const AUDIT_OBJECT_TYPE_OPTIONS = Object.keys(
@@ -60,6 +61,7 @@ const AUDIT_OBJECT_LABELS: Record<string, string> = {
   TASK_DEPENDENCY: 'Dependencia de tarea',
   TRIAGE: 'Triage',
   USER: 'Usuario',
+  SMTP_CONFIG: 'Configuración SMTP',
   VALIDATION_RECORD: 'Validación',
   WEEKLY_REPORT: 'Reporte semanal',
 };

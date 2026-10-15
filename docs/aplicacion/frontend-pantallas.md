@@ -74,6 +74,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | `/administracion/revision` | Aprobaciones | Cola de aprobación: aprobar el compromiso o devolver a triage (menú grupo *Demanda* como *Aprobaciones*, `review`). |
 | `/administracion/frameworks` | Controles | Ciclo de control de gobierno (gates GC1–GC5) y validaciones (menú grupo *Gobierno* como *Controles*, `frameworks`). |
 | `/administracion/maestras` | Maestras | Administrar las maestras/catálogos (`admin`); también marca activa la ruta `/catalogs`. |
+| `/administracion/configuracion-smtp` | Configuración SMTP | Configurar el servidor SMTP en runtime (host, puerto, remitente, contraseña write-only) con prueba de envío, y gestionar los administradores del sistema (toggle `isAdmin`). Solo rol ADMIN (`systemSettings`). |
 
 ## Catálogos (`/catalogs`) — funcionalidad base
 

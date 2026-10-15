@@ -87,6 +87,10 @@ model User {
   // Nullable: dev-header no lo usa y las filas existentes no lo tienen; no es
   // credencial en modo dev. Nunca se expone en DTOs ni respuestas.
   passwordHash String? @map("password_hash")
+  // Rol de SISTEMA/GLOBAL (design a). Admin tecnico independiente de los grants
+  // por proceso: no se concede por Grant ni por proceso. Es la UNICA fuente de
+  // RoleCode.ADMIN (load-actor). Default false, aditivo y back-compat.
+  isAdmin    Boolean  @default(false) @map("is_admin")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
@@ -142,6 +146,9 @@ model User {
 
   // Mail-fase1 (FEAT-002): tokens de un solo uso para reset de contrasena e
   // invitacion/activacion. Se borran en cascada si se elimina el usuario.
+  // SmtpConfig: filas de configuracion SMTP actualizadas por este usuario (FK
+  // updated_by_user_id, onDelete SetNull). Relacion inversa requerida por Prisma.
+  smtpConfigsUpdated SmtpConfig[]
   authTokens AuthToken[]
 
   @@unique([identifier], name: "user_identifier_unique")
@@ -995,4 +1002,26 @@ model ValidationRecord {
   @@index([blocking])
   @@index([blockingResolved])
   @@map("validation_records")
+}
+
+/// Configuracion SMTP en runtime (singleton: fila unica). Permite al ADMIN
+/// editar el servidor de correo sin tocar .env ni reconstruir. El password se
+/// guarda CIFRADO (AES-256-GCM, formato iv.tag.ciphertext base64) en
+/// password_ciphertext; NUNCA en claro ni devuelto al frontend. La URL base
+/// del front (APP_WEB_URL) NO se persiste aqui: sigue siendo del entorno (d.1).
+model SmtpConfig {
+  id                 String   @id @default(uuid()) @db.Uuid
+  host               String
+  port               Int
+  secure             Boolean  @default(false)
+  username           String?
+  passwordCiphertext String?  @map("password_ciphertext")
+  fromAddress        String   @map("from_address")
+  fromName           String?  @map("from_name")
+  updatedByUserId    String?  @map("updated_by_user_id") @db.Uuid
+  updatedBy          User?    @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("smtp_config")
 }

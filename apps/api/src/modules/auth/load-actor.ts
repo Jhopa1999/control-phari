@@ -1,7 +1,6 @@
 import { PrismaService } from '../../database/prisma.service';
 import { ActorGrant, CurrentActor } from './current-actor';
 import { RoleCode, ROLE_CODES } from './role-code';
-
 /**
  * Carga el actor (User + grants activos) y lo mapea a CurrentActor. Es la UNICA
  * fuente de la logica de autorizacion (grants/roles/alcance): la reutilizan
@@ -19,13 +18,15 @@ export async function loadActorByIdentifier(
   if (!normalized) {
     return null;
   }
-
   // `identifier` tiene un unique con nombre custom (`user_identifier_unique`)
   // en schema.prisma. Con Prisma 7 ese unique de un solo campo no es
   // consultable de forma estable por `findUnique` (el motor exige la clave
   // compuesta `user_identifier_unique`, que a su vez el runtime rechaza segun
   // el estado del client generado). Se resuelve por `findFirst`, el mismo
   // patron que ya usa el seed para estas claves naturales con nombre custom.
+  // El `include grants` (sin `select` explicito) ya trae `user.isAdmin` tras
+  // la migracion add_admin_and_smtp_config; no hay que tocar la forma de la
+  // query.
   const user = await prisma.user.findFirst({
     where: { identifier: normalized },
     include: {
@@ -35,15 +36,12 @@ export async function loadActorByIdentifier(
       },
     },
   });
-
   if (!user || !user.active) {
     return null;
   }
-
   const grants: ActorGrant[] = [];
   const roleCodes = new Set<RoleCode>();
   const scopedProcessIds = new Set<string>();
-
   for (const grant of user.grants) {
     const roleCode = toRoleCode(grant.role.code);
     if (roleCode === null) {
@@ -61,7 +59,14 @@ export async function loadActorByIdentifier(
     roleCodes.add(roleCode);
     scopedProcessIds.add(grant.processId);
   }
-
+  // ADMIN es rol de SISTEMA/GLOBAL: su origen es la columna booleana
+  // `user.isAdmin`, NO un grant por proceso. Se inyecta en `roleCodes` para que
+  // @Roles(ADMIN)/RolesGuard funcionen igual que con los demas roles, pero NO
+  // se agrega ningun processId a `scopedProcessIds` (el alcance global no es
+  // por proceso). Asi un ADMIN sin grants no obtiene JEFE_AREA ni ve procesos.
+  if (user.isAdmin) {
+    roleCodes.add(RoleCode.ADMIN);
+  }
   return {
     userId: user.id,
     name: user.name,
@@ -70,9 +75,9 @@ export async function loadActorByIdentifier(
     roleCodes,
     scopedProcessIds,
     isJefeArea: roleCodes.has(RoleCode.JEFE_AREA),
+    isAdmin: user.isAdmin,
   };
 }
-
 /** Convierte un code de la BD a RoleCode tipado, o null si no pertenece al conjunto. */
 function toRoleCode(code: string): RoleCode | null {
   return (ROLE_CODES as readonly string[]).includes(code)

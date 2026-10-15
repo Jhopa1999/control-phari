@@ -228,16 +228,16 @@ test.describe('navigation', () => {
     return item;
   };
 
-  test('MODULE_ORDER tiene las 21 claves del backend, sin repetidos, y cada una su etiqueta', () => {
-    expect(MODULE_ORDER).toHaveLength(21);
-    expect(new Set(MODULE_ORDER).size).toBe(21);
+  test('MODULE_ORDER tiene las 22 claves del backend, sin repetidos, y cada una su etiqueta', () => {
+    expect(MODULE_ORDER).toHaveLength(22);
+    expect(new Set(MODULE_ORDER).size).toBe(22);
     expect([...MODULE_ORDER].sort()).toEqual([...MODULE_KEYS].sort());
     for (const key of MODULE_ORDER) {
       expect(MODULE_LABELS[key], key).toBeTruthy();
     }
   });
 
-  test('los href del menú son exactamente las 23 rutas de §8.5, en sus 7 grupos', () => {
+  test('los href del menu son exactamente las 24 rutas de §8.5, en sus 7 grupos', () => {
     // Protege las URLs: el rediseño reagrupa el menú, pero ninguna ruta cambia.
     expect(allItems().map((item) => item.href)).toEqual([
       '/inicio',
@@ -263,6 +263,7 @@ test.describe('navigation', () => {
       '/gobierno/mis-permisos',
       '/gobierno/equipo',
       '/administracion/maestras',
+      '/administracion/configuracion-smtp',
     ]);
     expect(NAV_GROUPS.map((group) => group.label)).toEqual([
       null,
