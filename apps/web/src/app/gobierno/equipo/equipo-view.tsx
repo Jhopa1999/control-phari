@@ -36,6 +36,7 @@ import {
   listUsers,
   revokeGrant,
 } from '@/lib/team';
+import { assignableRolesFor } from '@/lib/role-hierarchy';
 import { CreateGrantDialog } from './create-grant-dialog';
 import { CreateUserDialog } from './create-user-dialog';
 
@@ -131,6 +132,14 @@ export function EquipoView(): React.ReactElement {
 
   const usersById = React.useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
   const processesById = React.useMemo(() => new Map(processes.map((p) => [p.id, p])), [processes]);
+
+  // Roles que el actor puede asignar segun su jerarquia (roleCodes de
+  // /me/permissions). Solo estos aparecen en el selector; el backend es la
+  // autoridad (POST /grants responde 403 ante un rol igual o superior).
+  const assignableRoles = React.useMemo(
+    () => assignableRolesFor(permissions?.roleCodes ?? []),
+    [permissions],
+  );
 
   function userName(id: string): string {
     return usersById.get(id)?.name ?? 'Usuario fuera de tu alcance';
@@ -242,8 +251,12 @@ export function EquipoView(): React.ReactElement {
     return grantsHeadingRef.current;
   }
 
-  const canAssign = users.length > 0 && processes.length > 0;
+  const canAssign = users.length > 0 && processes.length > 0 && assignableRoles.length > 0;
   const assignUnavailable = state === 'success' && !canAssign;
+  const assignReason =
+    assignableRoles.length === 0
+      ? 'Tu rol no permite asignar roles.'
+      : 'Necesitas al menos un usuario y un proceso para asignar roles.';
 
   const headerActions = (
     <>
@@ -265,7 +278,7 @@ export function EquipoView(): React.ReactElement {
         )}
         {assignUnavailable ? (
           <DisabledReason id={ASSIGN_REASON_ID} className="max-w-xs md:text-right">
-            Necesitas al menos un usuario y un proceso para asignar roles.
+            {assignReason}
           </DisabledReason>
         ) : null}
       </div>
@@ -461,6 +474,7 @@ export function EquipoView(): React.ReactElement {
         users={users}
         processes={processes}
         roleLabels={ROLE_LABELS}
+        assignableRoles={assignableRoles}
         errorMessage={grantError}
         onSubmit={handleCreateGrant}
       />

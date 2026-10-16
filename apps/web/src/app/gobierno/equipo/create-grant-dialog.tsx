@@ -21,8 +21,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Process, User } from '@/lib/api-client';
+import type { AssignableRoleCode } from '@/lib/role-hierarchy';
 
-type RoleCode = 'JEFE_AREA' | 'LIDER_PROCESO' | 'INTEGRANTE';
+type RoleCode = AssignableRoleCode;
 type FieldKey = 'userId' | 'roleCode' | 'processId';
 
 interface GrantFormValues {
@@ -38,6 +39,12 @@ interface CreateGrantDialogProps {
   users: User[];
   processes: Process[];
   roleLabels: Record<RoleCode, string>;
+  /**
+   * Roles que el actor puede asignar, derivados de roleCodes de
+   * /me/permissions (jerarquia estricta). Solo estos aparecen en el selector;
+   * el backend sigue siendo la autoridad (POST /grants responde 403).
+   */
+  assignableRoles: readonly RoleCode[];
   /** Error del backend (p. ej. rol ya asignado); el padre lo limpia al abrir. */
   errorMessage: string | null;
   /** Devuelve true si la asignación fue exitosa (el formulario se limpia). */
@@ -46,7 +53,6 @@ interface CreateGrantDialogProps {
 
 const FORM_ID = 'grant-form';
 const FORM_ERROR_ID = `${FORM_ID}-error`;
-const ROLE_CODES: RoleCode[] = ['JEFE_AREA', 'LIDER_PROCESO', 'INTEGRANTE'];
 const EMPTY: GrantFormValues = { userId: '', roleCode: '', processId: '' };
 const NO_MISSING: Record<FieldKey, boolean> = { userId: false, roleCode: false, processId: false };
 const FIELD_ORDER: readonly FieldKey[] = ['userId', 'roleCode', 'processId'];
@@ -56,8 +62,8 @@ const FIELD_IDS: Record<FieldKey, string> = {
   processId: 'grant-process',
 };
 
-function isRoleCode(value: string): value is RoleCode {
-  return (ROLE_CODES as string[]).includes(value);
+function hasRole(roles: readonly RoleCode[], value: string): value is RoleCode {
+  return (roles as readonly string[]).includes(value);
 }
 
 /**
@@ -72,6 +78,7 @@ export function CreateGrantDialog({
   users,
   processes,
   roleLabels,
+  assignableRoles,
   errorMessage,
   onSubmit,
 }: CreateGrantDialogProps): React.ReactElement {
@@ -161,14 +168,14 @@ export function CreateGrantDialog({
                 <Select
                   value={values.roleCode}
                   onValueChange={(value) => {
-                    if (isRoleCode(value)) update('roleCode', value);
+                    if (hasRole(assignableRoles, value)) update('roleCode', value);
                   }}
                 >
                   <SelectTrigger {...control} {...invalidProps('roleCode')}>
                     <SelectValue placeholder="Elige un rol" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLE_CODES.map((code) => (
+                    {assignableRoles.map((code) => (
                       <SelectItem key={code} value={code}>
                         {roleLabels[code]}
                       </SelectItem>

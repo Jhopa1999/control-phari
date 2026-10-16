@@ -11,16 +11,39 @@ export type AuditObjectType = NonNullable<AuditEventsQuery['objectType']>;
 
 /**
  * Opciones del filtro «Objeto». El Record es exhaustivo: si el contrato añade o
- * quita un valor, el typecheck falla aquí. Hoy el contrato declara solo 4,
- * porque el @ApiQuery de audit.controller.ts los fija, aunque el DTO de la API
- * acepta más (pendiente documentado en docs/README.md).
+ * quita un valor, el typecheck falla aquí, de modo que las opciones siempre
+ * coinciden con lo que acepta el @ApiQuery de audit.controller.ts (OBJECT_TYPES
+ * del DTO). SMTP_CONFIG no está entre ellos: el backend no lo admite como filtro
+ * y ofrecerlo devolvería 400.
  */
 const AUDIT_OBJECT_TYPE_FILTER: Record<AuditObjectType, true> = {
   PROCESS: true,
+  AREA: true,
   USER: true,
   GRANT: true,
   CATALOG_ITEM: true,
-  SMTP_CONFIG: true,
+  REQUEST: true,
+  TRIAGE: true,
+  PRIORITY_EVALUATION: true,
+  APPROVAL: true,
+  PLAN: true,
+  PLAN_PHASE: true,
+  TASK: true,
+  TASK_DEPENDENCY: true,
+  MONTHLY_AVAILABILITY: true,
+  ASSIGNMENT: true,
+  DAILY_LOG: true,
+  DAILY_LOG_ACTIVITY: true,
+  WEEKLY_REPORT: true,
+  ISSUE: true,
+  MEETING: true,
+  COMMITMENT: true,
+  ASSET: true,
+  DOCUMENT: true,
+  DOCUMENT_VERSION: true,
+  GATE_CHECK: true,
+  GATE_PENDING_ITEM: true,
+  VALIDATION_RECORD: true,
 };
 
 export const AUDIT_OBJECT_TYPE_OPTIONS = Object.keys(

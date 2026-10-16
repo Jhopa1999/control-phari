@@ -68,6 +68,15 @@
       "trigger_file": "apps/api/src/modules/grant/grant.service.ts",
       "updated_docs": ["docs/aplicacion/autenticacion-autorizacion.md"],
       "summary": "Se documento la jerarquia de asignacion de roles (role-hierarchy, canAssignRole: ADMIN>JEFE_AREA>LIDER_PROCESO>INTEGRANTE) y el alcance por proceso en grants: endpoints de grants/users abiertos a ADMIN/JEFE_AREA/LIDER_PROCESO, roleCode ADMIN => 403, fuera de alcance => 403 (ADMIN exento), y lectura sin filtro para ADMIN."
+    },
+    {
+      "timestamp": "2026-10-16T08:00:00Z",
+      "trigger_file": "apps/web/src/lib/navigation.ts",
+      "updated_docs": [
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md"
+      ],
+      "summary": "Se documentaron las pantallas /administracion/areas (solo ADMIN) y /administracion/procesos (ADMIN o JEFE_AREA), las claves de modulo areas y processesAdmin (MODULE_MATRIX ahora 24 claves), roleCodes en GET /me/permissions para ofrecer solo los roles asignables en Equipo, y el menu con 26 items."
     }
   ]
 }

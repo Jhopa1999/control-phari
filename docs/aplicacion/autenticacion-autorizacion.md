@@ -156,10 +156,20 @@ de verdad** compartida con el frontend: el menú usa las mismas claves para filt
 | `team` | — | — | ✓ |
 | `permissions` | ✓ | ✓ | ✓ |
 | `systemSettings` | — | — | — |
+| `areas` | — | — | — |
+| `processesAdmin` | — | — | ✓ |
 
-> `systemSettings` (configuración del sistema: SMTP y administradores) es exclusivo del
-> rol de **sistema** `ADMIN`: ninguno de los roles de área lo ve. `MODULE_MATRIX` tiene
-> por tanto 22 claves; un `JEFE_AREA` ve todas menos `systemSettings`.
+> `systemSettings` (configuración del sistema: SMTP y administradores) y `areas`
+> (gestión de áreas organizativas) son exclusivos del rol de **sistema** `ADMIN`:
+> ningún rol de área los ve. `processesAdmin` (administración de procesos) lo ven
+> `ADMIN` y `JEFE_AREA`. `MODULE_MATRIX` tiene por tanto 24 claves; un `JEFE_AREA` ve
+> todas menos `systemSettings` y `areas`.
+
+`GET /me/permissions` también devuelve `roleCodes` (los códigos de rol efectivos del
+actor, incluido `ADMIN` si aplica); el frontend los usa para ofrecer en «Equipo y
+permisos» únicamente los roles que el actor puede asignar según la jerarquía, pero el
+backend sigue siendo la autoridad (`POST /grants` responde `403` ante un rol igual o
+superior).
 
 `allowedModulesFor(roles)` deriva la unión de módulos visibles para el actor; un módulo
 se muestra si alguno de sus roles lo permite. `GET /me/permissions` devuelve rol,

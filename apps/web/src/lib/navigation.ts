@@ -8,6 +8,7 @@ import {
   FileText,
   FolderKanban,
   FolderOpen,
+  FolderTree,
   Gauge,
   Handshake,
   Inbox,
@@ -63,7 +64,9 @@ export type ModuleKey =
   | 'audit'
   | 'team'
   | 'permissions'
-  | 'systemSettings';
+  | 'systemSettings'
+  | 'areas'
+  | 'processesAdmin';
 
 export interface NavItem {
   href: string;
@@ -84,7 +87,7 @@ export interface NavGroup {
 }
 
 /**
- * Menú del portal: 7 grupos y 24 ítems. «Tareas» (/seguimiento/tareas) no es un
+ * Menú del portal: 7 grupos y 26 ítems. «Tareas» (/seguimiento/tareas) no es un
  * ítem porque es una página de detalle sin listado: se llega desde Mi trabajo y
  * Planificación, y «Mi trabajo» queda activo en ella. /catalogs sigue fuera del
  * menú, operativa, y marca «Maestras».
@@ -172,6 +175,18 @@ export const NAV_GROUPS: NavGroup[] = [
         activeFor: ['/catalogs'],
       },
       {
+        href: '/administracion/areas',
+        label: 'Áreas',
+        moduleKey: 'areas',
+        icon: FolderTree,
+      },
+      {
+        href: '/administracion/procesos',
+        label: 'Procesos',
+        moduleKey: 'processesAdmin',
+        icon: FolderKanban,
+      },
+      {
         href: '/administracion/configuracion-smtp',
         label: 'Configuracion SMTP',
         moduleKey: 'systemSettings',
@@ -209,9 +224,11 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   team: 'Equipo y permisos',
   admin: 'Maestras',
   systemSettings: 'Configuración del sistema',
+  areas: 'Áreas',
+  processesAdmin: 'Procesos',
 };
 
-/** Las 22 claves de módulo, sin repetidos, en el orden de MODULE_LABELS. */
+/** Las 24 claves de módulo, sin repetidos, en el orden de MODULE_LABELS. */
 export const MODULE_ORDER: readonly ModuleKey[] = Object.keys(MODULE_LABELS) as ModuleKey[];
 
 /** Grupos con sus ítems permitidos; los grupos que quedan vacíos no se devuelven. */

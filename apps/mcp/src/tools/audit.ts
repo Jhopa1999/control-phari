@@ -6,18 +6,50 @@
  *   - take: entero positivo acotado a 500. El contrato lo tipa como number sin
  *     límite; aquí se aplica una restricción LOCAL más estricta (el backend
  *     también acota a 500). Es una restricción de forma, no de dominio.
- *   - objectType: enum de 4 valores. Debe mantenerse equivalente al enum del
- *     contrato; la salvaguarda de abajo rompe el typecheck del MCP A PROPÓSITO
- *     si el contrato diverge (ver docs/README.md: pendiente ampliar a los 26
- *     valores de OBJECT_TYPES; cuando ocurra, actualizar este z.enum).
+ *   - objectType: enum equivalente al del contrato OpenAPI (OBJECT_TYPES del
+ *     DTO). La salvaguarda de abajo rompe el typecheck del MCP A PROPÓSITO si el
+ *     contrato diverge; cuando eso ocurre, hay que actualizar este z.enum para
+ *     volver a igualarlo (es justo lo que se hace aquí).
  */
 import { z } from 'zod';
 import type { paths } from '@plantilla-portales/api-client';
 import type { McpContext } from '../server.js';
 import { runApiTool } from './shared.js';
 
-/** Valores de objectType que admite esta tool (restricción local más estricta). */
-const OBJECT_TYPES = ['PROCESS', 'USER', 'GRANT', 'CATALOG_ITEM', 'SMTP_CONFIG'] as const;
+/**
+ * Valores de objectType que admite esta tool. Debe coincidir EXACTAMENTE con el
+ * enum del contrato OpenAPI (OBJECT_TYPES del DTO): la salvaguarda de abajo lo
+ * garantiza en compilación.
+ */
+const OBJECT_TYPES = [
+  'PROCESS',
+  'AREA',
+  'USER',
+  'GRANT',
+  'CATALOG_ITEM',
+  'REQUEST',
+  'TRIAGE',
+  'PRIORITY_EVALUATION',
+  'APPROVAL',
+  'PLAN',
+  'PLAN_PHASE',
+  'TASK',
+  'TASK_DEPENDENCY',
+  'MONTHLY_AVAILABILITY',
+  'ASSIGNMENT',
+  'DAILY_LOG',
+  'DAILY_LOG_ACTIVITY',
+  'WEEKLY_REPORT',
+  'ISSUE',
+  'MEETING',
+  'COMMITMENT',
+  'ASSET',
+  'DOCUMENT',
+  'DOCUMENT_VERSION',
+  'GATE_CHECK',
+  'GATE_PENDING_ITEM',
+  'VALIDATION_RECORD',
+] as const;
 
 /** Tipo del enum objectType tal como lo declara el contrato OpenAPI. */
 type ContractObjectType = NonNullable<
@@ -33,7 +65,7 @@ type LocalObjectType = (typeof OBJECT_TYPES)[number];
  * tipo _EquivalenceDiff deja de ser `never` y Expect<...> FALLA el typecheck:mcp
  * a propósito (su constraint `T extends never` se viola). Esto obliga a revisar
  * y actualizar el z.enum cuando el contrato cambie (comportamiento deseado, no
- * un fallo). Ver docs/README.md (pendiente ampliar a los 26 OBJECT_TYPES).
+ * un fallo). Hoy OBJECT_TYPES iguala el enum del contrato (27 valores).
  */
 // Valores que están en un lado pero no en el otro; `never` si son equivalentes.
 type _EquivalenceDiff =
