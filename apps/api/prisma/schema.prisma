@@ -34,6 +34,25 @@ model CatalogItem {
   @@map("catalog_items")
 }
 
+/// Area organizativa (p. ej. Analitica) que agrupa procesos. `code` es estable
+/// y unico. Sigue las convenciones de CatalogItem/Process.
+model Area {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String
+  name      String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  processes Process[]
+
+  @@unique([code], name: "area_code_unique")
+  @@index([active])
+  @@index([sortOrder])
+  @@map("areas")
+}
+
 /// Proceso de gestion del area (BI, Integraciones, IA) y la coordinacion
 /// multiproceso FMAA. `code` es estable y se almacena en MAYUSCULAS.
 model Process {
@@ -42,11 +61,13 @@ model Process {
   name      String
   framework String?
   kind      String
+  areaId    String   @map("area_id") @db.Uuid
   active    Boolean  @default(true)
   sortOrder Int      @default(0) @map("sort_order")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  area        Area         @relation(fields: [areaId], references: [id], onDelete: Restrict)
   grants      Grant[]
   auditEvents AuditEvent[]
 

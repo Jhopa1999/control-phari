@@ -19,13 +19,20 @@ Maestra genérica reutilizable (no es una maestra de negocio concreta).
 - Campos clave: `catalog`, `code`, `label`, `active`, `sortOrder`.
 - Restricciones: único `(catalog, code)`; índices por `catalog`, `active`, `sortOrder`.
 
+### Area (`areas`)
+Área organizativa (p. ej. Analítica) que agrupa procesos.
+- Campos clave: `code` (único, estable), `name`, `active`, `sortOrder`.
+- Restricciones: único `code`; índices por `active`, `sortOrder`.
+- Relaciones: `processes` (1:N con `Process`).
+
 ### Process (`processes`)
 Proceso del área (BI, Integraciones, IA) y la coordinación multiproceso FMAA.
-- Campos clave: `code` (MAYÚSCULAS, estable), `name`, `framework?`, `kind`, `active`,
-  `sortOrder`.
+- Campos clave: `code` (MAYÚSCULAS, estable), `name`, `framework?`, `kind`, `areaId`
+  (FK requerida al `Area`), `active`, `sortOrder`.
 - Restricciones: único `code`; índices por `active`, `sortOrder`.
-- Relaciones: raíz de alcance de casi todo (grants, requests, tasks, assignments,
-  diarios, semanales, novedades, reuniones, compromisos, activos, eventos de auditoría).
+- Relaciones: `area` → `Area` (`onDelete: Restrict`); raíz de alcance de casi todo
+  (grants, requests, tasks, assignments, diarios, semanales, novedades, reuniones,
+  compromisos, activos, eventos de auditoría).
 
 ### User (`users`)
 Identidad funcional de una persona (no es credencial por sí misma).
@@ -298,3 +305,8 @@ el service, por ejemplo: `ACTIVITY_CLASS`, `ISSUE_TYPE`, `RECORD_STATE`,
 9. `20261009200659_add_user_password_hash`
 10. `20261013055736_triage_main_responsible_fk`
 11. `20261013170314_create_auth_tokens`
+12. `20261015162802_add_admin_and_smtp_config`
+13. `20261016050441_add_area_and_process_area_nullable`
+14. `20261016050442_backfill_analitica_area` (SQL idempotente escrito a mano: crea el
+    área `ANALITICA` y asigna a ella los procesos sin área)
+15. `20261016050516_make_process_area_required` (`area_id` pasa a `NOT NULL`)
