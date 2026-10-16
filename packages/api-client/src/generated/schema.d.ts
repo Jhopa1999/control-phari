@@ -159,6 +159,42 @@ export interface paths {
         patch: operations["CatalogController_update"];
         trace?: never;
     };
+    "/areas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista areas. */
+        get: operations["AreaController_findMany"];
+        put?: never;
+        /** Crea un area (solo ADMIN). */
+        post: operations["AreaController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/areas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtiene un area por id. */
+        get: operations["AreaController_findOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita name/active/sortOrder (solo ADMIN). */
+        patch: operations["AreaController_update"];
+        trace?: never;
+    };
     "/processes": {
         parameters: {
             query?: never;
@@ -169,7 +205,7 @@ export interface paths {
         /** Lista procesos (jefe: todos; no-jefe: solo su alcance). */
         get: operations["ProcessController_findMany"];
         put?: never;
-        /** Crea un proceso (solo JEFE_AREA). */
+        /** Crea un proceso (ADMIN o JEFE_AREA). */
         post: operations["ProcessController_create"];
         delete?: never;
         options?: never;
@@ -191,7 +227,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Edita name/framework/active/sortOrder (solo JEFE_AREA). */
+        /** Edita name/framework/active/sortOrder (ADMIN o JEFE_AREA). */
         patch: operations["ProcessController_update"];
         trace?: never;
     };
@@ -255,10 +291,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista grants del alcance del jefe (solo JEFE_AREA). */
+        /** Lista grants del alcance del actor (ADMIN ve todos). */
         get: operations["GrantController_findMany"];
         put?: never;
-        /** Concede un grant (solo JEFE_AREA). */
+        /** Concede un grant (segun jerarquia y alcance del actor). */
         post: operations["GrantController_create"];
         delete?: never;
         options?: never;
@@ -276,7 +312,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Revoca un grant (soft; solo JEFE_AREA). */
+        /** Revoca un grant (soft; segun jerarquia y alcance del actor). */
         delete: operations["GrantController_revoke"];
         options?: never;
         head?: never;
@@ -1681,6 +1717,8 @@ export interface components {
              *     ]
              */
             allowedModules: string[];
+            /** @description Codigos de rol efectivos del actor (incluye ADMIN si aplica). */
+            roleCodes: ("JEFE_AREA" | "LIDER_PROCESO" | "INTEGRANTE" | "ADMIN")[];
         };
         DevActorResponseDto: {
             /**
@@ -1871,6 +1909,68 @@ export interface components {
              */
             sortOrder?: number;
         };
+        AreaResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * @description Codigo estable.
+             * @example ANALITICA
+             */
+            code: string;
+            /**
+             * @description Nombre del area.
+             * @example Analitica
+             */
+            name: string;
+            /**
+             * @description Estado activo.
+             * @example true
+             */
+            active: boolean;
+            /**
+             * @description Orden de presentacion.
+             * @example 1
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ultima actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateAreaDto: {
+            /**
+             * @description Codigo estable del area (se normaliza a MAYUSCULAS).
+             * @example ANALITICA
+             */
+            code: string;
+            /**
+             * @description Nombre del area.
+             * @example Analitica
+             */
+            name: string;
+            /**
+             * @description Orden de presentacion. Por defecto 0.
+             * @example 1
+             */
+            sortOrder?: number;
+        };
+        UpdateAreaDto: {
+            /** @description Nombre del area. */
+            name?: string;
+            /** @description Estado activo del area. */
+            active?: boolean;
+            /** @description Orden de presentacion. */
+            sortOrder?: number;
+        };
         ProcessResponseDto: {
             /**
              * Format: uuid
@@ -1897,6 +1997,11 @@ export interface components {
              * @example PROCESS
              */
             kind: string;
+            /**
+             * Format: uuid
+             * @description Area a la que pertenece.
+             */
+            areaId: string;
             /**
              * @description Estado activo.
              * @example true
@@ -1929,6 +2034,11 @@ export interface components {
              * @example BI
              */
             name: string;
+            /**
+             * Format: uuid
+             * @description Area a la que pertenece el proceso.
+             */
+            areaId: string;
             /**
              * @description Marco asociado observado.
              * @example INS-006
@@ -4689,7 +4799,7 @@ export interface operations {
             query?: {
                 /** @description Maximo de eventos (acotado a 500). */
                 take?: number;
-                objectType?: "PROCESS" | "USER" | "GRANT" | "CATALOG_ITEM" | "SMTP_CONFIG";
+                objectType?: "PROCESS" | "AREA" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD";
             };
             header?: never;
             path?: never;
@@ -4869,6 +4979,156 @@ export interface operations {
                 content?: never;
             };
             /** @description Elemento no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AreaController_findMany: {
+        parameters: {
+            query?: {
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Listado de areas. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AreaResponseDto"][];
+                };
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AreaController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAreaDto"];
+            };
+        };
+        responses: {
+            /** @description Area creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AreaResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe el code. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AreaController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Area encontrada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AreaResponseDto"];
+                };
+            };
+            /** @description No existe. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AreaController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAreaDto"];
+            };
+        };
+        responses: {
+            /** @description Area actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AreaResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos o id no UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Area no encontrada. */
             404: {
                 headers: {
                     [name: string]: unknown;

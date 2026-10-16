@@ -32,6 +32,7 @@ export class MeController {
         roleName: grant.roleName,
       })),
       allowedModules: allowedModulesFor(actor.roleCodes),
+      roleCodes: Array.from(actor.roleCodes),
     };
   }
 }

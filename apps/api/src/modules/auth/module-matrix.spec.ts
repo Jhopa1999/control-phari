@@ -5,7 +5,7 @@ import {
 } from './module-matrix';
 import { RoleCode } from './role-code';
 describe('MODULE_MATRIX / allowedModulesFor', () => {
-  it('expone exactamente las 22 claves (21 de design 3.3 + systemSettings)', () => {
+  it('expone exactamente las 24 claves (21 de design 3.3 + systemSettings + areas + processesAdmin)', () => {
     expect(MODULE_KEYS).toEqual([
       'demandOverview',
       'dashboard',
@@ -29,6 +29,8 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
       'team',
       'permissions',
       'systemSettings',
+      'areas',
+      'processesAdmin',
     ]);
   });
   it('admin y team solo son para JEFE_AREA (specs/10)', () => {
@@ -52,10 +54,23 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
       expect(allowedModulesFor([role])).not.toContain('systemSettings');
     }
   });
-  it('ADMIN solo habilita systemSettings (rol de sistema, no de area)', () => {
-    // ADMIN es un rol global para la configuracion tecnica; no concede los
-    // modulos de negocio (esos salen de los grants por proceso).
-    expect(allowedModulesFor([RoleCode.ADMIN])).toEqual(['systemSettings']);
+  it('ADMIN habilita solo modulos de sistema/administracion, no los de negocio', () => {
+    // ADMIN es un rol global de administracion: concede systemSettings, areas y
+    // processesAdmin; los modulos de negocio salen de los grants por proceso.
+    expect(allowedModulesFor([RoleCode.ADMIN])).toEqual([
+      'systemSettings',
+      'areas',
+      'processesAdmin',
+    ]);
+  });
+  it('areas es SOLO para ADMIN; processesAdmin para ADMIN y JEFE_AREA', () => {
+    expect(allowedModulesFor([RoleCode.ADMIN])).toContain('areas');
+    expect(allowedModulesFor([RoleCode.JEFE_AREA])).not.toContain('areas');
+    expect(allowedModulesFor([RoleCode.ADMIN])).toContain('processesAdmin');
+    expect(allowedModulesFor([RoleCode.JEFE_AREA])).toContain('processesAdmin');
+    expect(allowedModulesFor([RoleCode.LIDER_PROCESO])).not.toContain(
+      'processesAdmin',
+    );
   });
   it('coincide con la matriz literal de specs/10 para el INTEGRANTE', () => {
     // Matriz de modulos configurada (columna Integrante) de
@@ -128,11 +143,14 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
     expect(combined).toContain('admin'); // de jefe
     expect(combined).toContain('requests'); // comun
   });
-  it('el jefe ve todos los modulos de area (todos MENOS systemSettings)', () => {
-    // systemSettings es exclusivo de ADMIN: el jefe de area NO es ADMIN, por lo
-    // que ve todos los modulos de la matriz excepto ese.
+  it('el jefe ve todos los modulos de area (todos MENOS systemSettings y areas)', () => {
+    // systemSettings y areas son exclusivos de ADMIN: el jefe de area NO es
+    // ADMIN, por lo que ve todos los modulos de la matriz excepto esos dos
+    // (processesAdmin SI lo ve, porque gestiona los procesos de su area).
     expect(allowedModulesFor([RoleCode.JEFE_AREA])).toEqual(
-      MODULE_KEYS.filter((key) => key !== 'systemSettings'),
+      MODULE_KEYS.filter(
+        (key) => key !== 'systemSettings' && key !== 'areas',
+      ),
     );
   });
   it('ADMIN + JEFE_AREA ven todos los modulos (incluido systemSettings)', () => {

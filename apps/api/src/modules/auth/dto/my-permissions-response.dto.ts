@@ -43,4 +43,11 @@ export class MyPermissionsResponseDto {
     example: ['permissions', 'audit', 'admin'],
   })
   allowedModules!: ModuleKey[];
+
+  @ApiProperty({
+    enum: RoleCode,
+    isArray: true,
+    description: 'Codigos de rol efectivos del actor (incluye ADMIN si aplica).',
+  })
+  roleCodes!: RoleCode[];
 }

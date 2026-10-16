@@ -46,6 +46,12 @@ const ROLES: Array<{ code: string; name: string }> = [
   { code: 'INTEGRANTE', name: 'Integrante' },
 ];
 
+// Areas organizativas. Se siembran PRIMERO porque Process.areaId es NOT NULL y
+// referencia a Area. Por ahora solo Analitica; el admin podra crear mas.
+const AREAS: Array<{ code: string; name: string; sortOrder: number }> = [
+  { code: 'ANALITICA', name: 'Analitica', sortOrder: 0 },
+];
+
 const PROCESSES: Array<{
   code: string;
   name: string;
@@ -73,6 +79,13 @@ const USERS: Array<{ identifier: string; name: string; isAdmin?: boolean }> = [
   { identifier: 'lider.bi@demo.local', name: 'Beto Lider BI' },
   { identifier: 'integrante.bi@demo.local', name: 'Carla Integrante BI' },
   { identifier: 'lider.ia@demo.local', name: 'Diego Lider IA' },
+  // Admin de SISTEMA solicitado por el negocio. Se siembra junto a
+  // admin@demo.local (ambos conviven); no se elimina el admin sintetico.
+  {
+    identifier: 'jhonatan.pacheco@pharitechservices.com',
+    name: 'Jhonatan Pacheco',
+    isAdmin: true,
+  },
 ];
 
 /** Grants que ejercitan los controles negativos de `10`. */
@@ -293,13 +306,42 @@ async function main(): Promise<void> {
     }
   }
 
-  // Procesos. Idempotente por `code` unico (mismo patron que Roles).
+  // Areas. Se siembran ANTES que los procesos porque Process.areaId es NOT
+  // NULL. Idempotente por `code` unico (mismo patron que Roles).
+  for (const area of AREAS) {
+    const existing = await prisma.area.findFirst({ where: { code: area.code } });
+    if (existing) {
+      await prisma.area.update({
+        where: { id: existing.id },
+        data: { name: area.name, sortOrder: area.sortOrder },
+      });
+    } else {
+      await prisma.area.create({
+        data: { code: area.code, name: area.name, sortOrder: area.sortOrder },
+      });
+    }
+  }
+
+  // Resolver el id del area Analitica para asignarla a todos los procesos
+  // sembrados (escritura directa del campo areaId, sin pasar por DTO/API).
+  const analiticaArea = await prisma.area.findFirst({
+    where: { code: 'ANALITICA' },
+  });
+  if (!analiticaArea) {
+    throw new Error(
+      'Seed invalido: no se resolvio el area ANALITICA requerida por los procesos.',
+    );
+  }
+
+  // Procesos. Idempotente por `code` unico (mismo patron que Roles). Todos los
+  // procesos del seed pertenecen al area Analitica (areaId directo).
   for (const proc of PROCESSES) {
     const data = {
       name: proc.name,
       framework: proc.framework,
       kind: proc.kind,
       sortOrder: proc.sortOrder,
+      areaId: analiticaArea.id,
     };
     const existing = await prisma.process.findFirst({ where: { code: proc.code } });
     if (existing) {
@@ -383,7 +425,8 @@ async function main(): Promise<void> {
     });
   }
 
-  const [roles, processes, users, grants] = await Promise.all([
+  const [areas, roles, processes, users, grants] = await Promise.all([
+    prisma.area.count(),
     prisma.role.count(),
     prisma.process.count(),
     prisma.user.count(),
@@ -392,7 +435,7 @@ async function main(): Promise<void> {
 
   // eslint-disable-next-line no-console
   console.log(
-    `Seed OK: ${roles} roles, ${processes} procesos, ${users} usuarios, ${grants} grants, ${CATALOG_ITEMS.length} maestras.`,
+    `Seed OK: ${areas} areas, ${roles} roles, ${processes} procesos, ${users} usuarios, ${grants} grants, ${CATALOG_ITEMS.length} maestras.`,
   );
 }
 

@@ -187,10 +187,32 @@
             "schema": {
               "enum": [
                 "PROCESS",
+                "AREA",
                 "USER",
                 "GRANT",
                 "CATALOG_ITEM",
-                "SMTP_CONFIG"
+                "REQUEST",
+                "TRIAGE",
+                "PRIORITY_EVALUATION",
+                "APPROVAL",
+                "PLAN",
+                "PLAN_PHASE",
+                "TASK",
+                "TASK_DEPENDENCY",
+                "MONTHLY_AVAILABILITY",
+                "ASSIGNMENT",
+                "DAILY_LOG",
+                "DAILY_LOG_ACTIVITY",
+                "WEEKLY_REPORT",
+                "ISSUE",
+                "MEETING",
+                "COMMITMENT",
+                "ASSET",
+                "DOCUMENT",
+                "DOCUMENT_VERSION",
+                "GATE_CHECK",
+                "GATE_PENDING_ITEM",
+                "VALIDATION_RECORD"
               ],
               "type": "string"
             }
@@ -391,6 +413,164 @@
         ]
       }
     },
+    "/areas": {
+      "get": {
+        "operationId": "AreaController_findMany",
+        "parameters": [
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de areas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AreaResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          }
+        },
+        "summary": "Lista areas.",
+        "tags": [
+          "areas"
+        ]
+      },
+      "post": {
+        "operationId": "AreaController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAreaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Area creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AreaResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "Ya existe el code."
+          }
+        },
+        "summary": "Crea un area (solo ADMIN).",
+        "tags": [
+          "areas"
+        ]
+      }
+    },
+    "/areas/{id}": {
+      "get": {
+        "operationId": "AreaController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Area encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AreaResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe."
+          }
+        },
+        "summary": "Obtiene un area por id.",
+        "tags": [
+          "areas"
+        ]
+      },
+      "patch": {
+        "operationId": "AreaController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAreaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Area actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AreaResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos o id no UUID."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Area no encontrada."
+          }
+        },
+        "summary": "Edita name/active/sortOrder (solo ADMIN).",
+        "tags": [
+          "areas"
+        ]
+      }
+    },
     "/processes": {
       "get": {
         "operationId": "ProcessController_findMany",
@@ -473,7 +653,7 @@
             "description": "Ya existe el code."
           }
         },
-        "summary": "Crea un proceso (solo JEFE_AREA).",
+        "summary": "Crea un proceso (ADMIN o JEFE_AREA).",
         "tags": [
           "processes"
         ]
@@ -555,7 +735,7 @@
             "description": "Proceso no encontrado."
           }
         },
-        "summary": "Edita name/framework/active/sortOrder (solo JEFE_AREA).",
+        "summary": "Edita name/framework/active/sortOrder (ADMIN o JEFE_AREA).",
         "tags": [
           "processes"
         ]
@@ -790,7 +970,7 @@
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Lista grants del alcance del jefe (solo JEFE_AREA).",
+        "summary": "Lista grants del alcance del actor (ADMIN ve todos).",
         "tags": [
           "grants"
         ]
@@ -832,7 +1012,7 @@
             "description": "El grant ya existe y esta activo."
           }
         },
-        "summary": "Concede un grant (solo JEFE_AREA).",
+        "summary": "Concede un grant (segun jerarquia y alcance del actor).",
         "tags": [
           "grants"
         ]
@@ -869,7 +1049,7 @@
             "description": "Grant no encontrado."
           }
         },
-        "summary": "Revoca un grant (soft; solo JEFE_AREA).",
+        "summary": "Revoca un grant (soft; segun jerarquia y alcance del actor).",
         "tags": [
           "grants"
         ]
@@ -5677,6 +5857,19 @@
             "items": {
               "type": "string"
             }
+          },
+          "roleCodes": {
+            "type": "array",
+            "description": "Codigos de rol efectivos del actor (incluye ADMIN si aplica).",
+            "items": {
+              "type": "string",
+              "enum": [
+                "JEFE_AREA",
+                "LIDER_PROCESO",
+                "INTEGRANTE",
+                "ADMIN"
+              ]
+            }
           }
         },
         "required": [
@@ -5684,7 +5877,8 @@
           "name",
           "identifier",
           "grants",
-          "allowedModules"
+          "allowedModules",
+          "roleCodes"
         ]
       },
       "DevActorResponseDto": {
@@ -5976,6 +6170,101 @@
           }
         }
       },
+      "AreaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "code": {
+            "type": "string",
+            "description": "Codigo estable.",
+            "example": "ANALITICA"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del area.",
+            "example": "Analitica"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo.",
+            "example": true
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden de presentacion.",
+            "example": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "active",
+          "sortOrder",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateAreaDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Codigo estable del area (se normaliza a MAYUSCULAS).",
+            "example": "ANALITICA",
+            "maxLength": 50
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del area.",
+            "example": "Analitica",
+            "maxLength": 255
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden de presentacion. Por defecto 0.",
+            "minimum": 0,
+            "example": 1
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "UpdateAreaDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del area.",
+            "maxLength": 255
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo del area."
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden de presentacion.",
+            "minimum": 0
+          }
+        }
+      },
       "ProcessResponseDto": {
         "type": "object",
         "properties": {
@@ -6005,6 +6294,11 @@
             "description": "Tipo de proceso.",
             "example": "PROCESS"
           },
+          "areaId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Area a la que pertenece."
+          },
           "active": {
             "type": "boolean",
             "description": "Estado activo.",
@@ -6032,6 +6326,7 @@
           "name",
           "framework",
           "kind",
+          "areaId",
           "active",
           "sortOrder",
           "createdAt",
@@ -6052,6 +6347,11 @@
             "description": "Nombre del proceso.",
             "example": "BI",
             "maxLength": 255
+          },
+          "areaId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Area a la que pertenece el proceso."
           },
           "framework": {
             "type": "string",
@@ -6077,7 +6377,8 @@
         },
         "required": [
           "code",
-          "name"
+          "name",
+          "areaId"
         ]
       },
       "UpdateProcessDto": {
