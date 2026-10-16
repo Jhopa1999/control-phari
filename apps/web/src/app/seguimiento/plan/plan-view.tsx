@@ -57,9 +57,10 @@ import type {
   PlanPhase,
   Request,
   Task,
+  TaskStatus,
 } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
-import { formatDateOnly, formatHours, formatPercent } from '@/lib/format';
+import { formatDateOnly, formatHours } from '@/lib/format';
 import {
   PlanError,
   createPlan,
@@ -83,12 +84,16 @@ import {
   downloadTasksCsv,
   listPlanTasks,
   taskStatusLabel,
+  updateTask,
+  updateTaskStatus,
 } from '@/lib/tasks';
 import { useClientTable } from '@/lib/use-client-table';
 import { useRequestIdParam } from '@/lib/use-request-param';
 import { listCoordinationPeople } from '@/lib/worklog';
 import { PhaseDialog } from './phase-dialog';
 import { TaskDialog } from './task-dialog';
+import { TaskResponsibleControl } from './task-responsible-control';
+import { TaskStatusControl } from './task-status-control';
 
 type LoadState = 'loading' | 'success' | 'error';
 /** idle: sin solicitud elegida; missing: la solicitud aún no tiene plan (404). */
@@ -176,6 +181,10 @@ export function PlanView(): React.ReactElement {
   const [planState, setPlanState] = React.useState<PlanLoadState>('idle');
   const [busy, setBusy] = React.useState(false);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
+  // Distingue el fallo de carga de una lista legitimamente vacia (design 3.6.1).
+  const [peopleState, setPeopleState] = React.useState<LoadState>('loading');
+  // Fila con una accion de edicion en linea en curso (una a la vez).
+  const [rowBusyId, setRowBusyId] = React.useState<string | null>(null);
 
   // --- Filtros de la lista de tareas ---
   const [q, setQ] = React.useState('');
@@ -241,16 +250,24 @@ export function PlanView(): React.ReactElement {
     void loadRequests();
   }, [loadRequests, actorId, permissionsLoaded, planAllowed]);
 
-  // Personas para la columna Responsable; si falla, la columna muestra «—».
+  // Personas para el selector de Responsable. peopleState distingue el fallo de
+  // carga (motivo "No se pudieron cargar las personas") de una lista
+  // legítimamente vacía (design §3.6.1): listCoordinationPeople LANZA ante un
+  // fallo HTTP/red, no devuelve [].
   React.useEffect(() => {
     if (!permissionsLoaded || !planAllowed) return;
     let active = true;
+    setPeopleState('loading');
     void listCoordinationPeople()
       .then((data) => {
-        if (active) setPeople(data);
+        if (!active) return;
+        setPeople(data);
+        setPeopleState('success');
       })
       .catch(() => {
-        if (active) setPeople([]);
+        if (!active) return;
+        setPeople([]);
+        setPeopleState('error');
       });
     return () => {
       active = false;
@@ -333,6 +350,60 @@ export function PlanView(): React.ReactElement {
       toast.error(messageOf(err));
     }
   }, [plan, selectedId]);
+
+  // Recarga SOLO la guía tras un cambio de estado ya confirmado por el backend.
+  // Best-effort: su fallo no revierte la fila ni muestra toast (a diferencia de
+  // refreshPlanData, que sí avisa). La guía depende del estado de las tareas.
+  const refreshGuideOnly = React.useCallback(async () => {
+    if (!selectedId) return;
+    try {
+      const g = await getPlanGuide(selectedId);
+      setGuide(g);
+    } catch {
+      // best-effort tras un cambio ya confirmado.
+    }
+  }, [selectedId]);
+
+  // Cambio de estado en línea (PATCH /tasks/{id}/status). Optimista con
+  // reconciliación: pinta el nuevo estado, lo reemplaza por la tarea del backend
+  // al tener éxito, revierte y avisa en error (design §3.7). Usa solo rowBusyId
+  // (no bloquea toda la tabla); guarda `if (busy)` como defensa en profundidad.
+  async function handleInlineStatusChange(task: Task, next: TaskStatus) {
+    if (busy) return;
+    setRowBusyId(task.id);
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: next } : t)));
+    try {
+      const updated = await updateTaskStatus(task.id, { status: next });
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      toast.success('Estado de la tarea actualizado.');
+      await refreshGuideOnly();
+    } catch (err) {
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+      toast.error(messageOf(err));
+    } finally {
+      setRowBusyId(null);
+    }
+  }
+
+  // Reasignación de responsable en línea (PATCH /tasks/{id}). Optimista con
+  // reconciliación; no refresca la guía (reasignar no la cambia).
+  async function handleInlineResponsibleChange(task: Task, userId: string) {
+    if (busy) return;
+    setRowBusyId(task.id);
+    setTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, responsibleUserId: userId } : t)),
+    );
+    try {
+      const updated = await updateTask(task.id, { responsibleUserId: userId });
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      toast.success('Responsable actualizado.');
+    } catch (err) {
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+      toast.error(messageOf(err));
+    } finally {
+      setRowBusyId(null);
+    }
+  }
 
   async function handleCreatePlan() {
     if (!selectedId) return;
@@ -520,6 +591,17 @@ export function PlanView(): React.ReactElement {
     [requests, selectedId],
   );
   const canEdit = plan?.status === 'BORRADOR' || plan?.status === 'DEVUELTO';
+  // Rol de gestión del plan (jefe/líder): en la mesa de plan el actor siempre lo
+  // es (el módulo plan no admite INTEGRANTE), así que el chequeo por integrante
+  // del control de estado es defensa en profundidad; el backend es el control real.
+  const isPlanManager = (permissions?.grants ?? []).some(
+    (g) => g.roleCode === 'JEFE_AREA' || g.roleCode === 'LIDER_PROCESO',
+  );
+  // Fila ocupada: el busy global bloquea toda la tabla; rowBusyId, su propia fila.
+  const inlineBusy = React.useCallback(
+    (taskId: string) => busy || rowBusyId === taskId,
+    [busy, rowBusyId],
+  );
 
   function openNewPhase(): void {
     setPhaseDialog({ open: true, phase: null });
@@ -908,11 +990,20 @@ export function PlanView(): React.ReactElement {
                     {phaseNameById.get(task.phaseId) ?? '—'}
                   </TableCell>
                   <TableCell className="min-w-36">
-                    {task.responsibleUserId === null ? (
-                      <span className="text-warning">Sin asignar</span>
-                    ) : (
-                      (personNameById.get(task.responsibleUserId) ?? '—')
-                    )}
+                    <TaskResponsibleControl
+                      value={task.responsibleUserId}
+                      people={people}
+                      loadError={peopleState === 'error'}
+                      busy={rowBusyId === task.id}
+                      disabled={!canEdit || permissions === null || inlineBusy(task.id)}
+                      disabledReason={
+                        !canEdit && plan
+                          ? `El plan está ${planStatePhrase(plan.status)}; las fases y tareas no se pueden editar.`
+                          : undefined
+                      }
+                      taskTitle={task.title}
+                      onChange={(userId) => handleInlineResponsibleChange(task, userId)}
+                    />
                   </TableCell>
                   <TableCell className="whitespace-nowrap tabular-nums">{formatDateOnly(task.startDate)}</TableCell>
                   <TableCell className="whitespace-nowrap tabular-nums">{formatDateOnly(task.endDate)}</TableCell>
@@ -921,13 +1012,26 @@ export function PlanView(): React.ReactElement {
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{task.predecessors.length}</TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <span className="inline-flex items-center gap-2">
-                      <StatusBadge kind="task" value={task.status} />
-                      <span className="text-meta tabular-nums text-muted-foreground">
-                        <span className="sr-only">avance </span>
-                        {formatPercent(task.progress)}
-                      </span>
-                    </span>
+                    <TaskStatusControl
+                      status={task.status}
+                      progress={task.progress}
+                      busy={rowBusyId === task.id}
+                      disabled={
+                        !canEdit ||
+                        permissions === null ||
+                        inlineBusy(task.id) ||
+                        (!isPlanManager && task.responsibleUserId !== permissions?.userId)
+                      }
+                      disabledReason={
+                        !canEdit && plan
+                          ? `El plan está ${planStatePhrase(plan.status)}; las fases y tareas no se pueden editar.`
+                          : !isPlanManager && task.responsibleUserId !== permissions?.userId
+                            ? 'Solo puedes cambiar el estado de tus propias tareas.'
+                            : undefined
+                      }
+                      taskTitle={task.title}
+                      onChange={(next) => handleInlineStatusChange(task, next)}
+                    />
                   </TableCell>
                   {canEdit ? (
                     <RowActionsCell>

@@ -35,6 +35,7 @@ import {
   taskStatusLabel,
   updateTaskStatus,
 } from '@/lib/tasks';
+import { nextTaskStatuses } from '@/lib/task-transitions';
 
 type LoadState = 'loading' | 'success' | 'error' | 'empty';
 type FieldKey = 'nextStatus' | 'progress';
@@ -43,16 +44,6 @@ type FieldErrors = Partial<Record<FieldKey, string>>;
 /** Id del formulario: el FormError lleva `task-status-form-error`. */
 const FORM_ID = 'task-status-form';
 const NO_TRANSITIONS_REASON_ID = 'task-status-reason';
-
-/** Transiciones permitidas (espejo de design 1.3). Solo guía la UI; el control
- * real es server-side (el backend rechaza una transición no permitida con 409). */
-const ALLOWED_TRANSITIONS: Record<string, TaskStatus[]> = {
-  POR_HACER: ['EN_CURSO', 'BLOQUEADA'],
-  EN_CURSO: ['POR_HACER', 'BLOQUEADA', 'EN_REVISION'],
-  BLOQUEADA: ['POR_HACER', 'EN_CURSO'],
-  EN_REVISION: ['EN_CURSO', 'BLOQUEADA', 'TERMINADA'],
-  TERMINADA: ['EN_CURSO'],
-};
 
 function messageOf(err: unknown): string {
   return err instanceof PlanError ? err.message : 'Ocurrió un error inesperado.';
@@ -247,7 +238,7 @@ export function TareasView(): React.ReactElement {
   }
 
   const blocking = task.predecessors.some((p) => p.status !== 'TERMINADA' || !p.accepted);
-  const transitions = ALLOWED_TRANSITIONS[task.status] ?? [];
+  const transitions = nextTaskStatuses(task.status as TaskStatus);
   const noTransitions = transitions.length === 0;
   const statusLabel = taskStatusLabel(task.status);
 
