@@ -17,6 +17,9 @@ export class ProcessResponseDto {
   @ApiProperty({ type: String, description: 'Tipo de proceso.', example: 'PROCESS' })
   kind!: string;
 
+  @ApiProperty({ type: String, format: 'uuid', description: 'Area a la que pertenece.' })
+  areaId!: string;
+
   @ApiProperty({ type: Boolean, description: 'Estado activo.', example: true })
   active!: boolean;
 

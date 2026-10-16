@@ -7,7 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { AuditService } from './audit.service';
 import { AuditEventResponseDto } from './dto/audit-event-response.dto';
-import { ListAuditEventsDto } from './dto/list-audit-events.dto';
+import { ListAuditEventsDto, OBJECT_TYPES } from './dto/list-audit-events.dto';
 import { CurrentActor } from '../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../auth/current-actor';
 import { CurrentUserGuard } from '../auth/current-user.guard';
@@ -24,7 +24,7 @@ export class AuditController {
 
   @Get()
   @ApiOperation({ summary: 'Lista eventos de auditoria con alcance por rol.' })
-  @ApiQuery({ name: 'objectType', required: false, enum: ['PROCESS', 'USER', 'GRANT', 'CATALOG_ITEM', 'SMTP_CONFIG'] })
+  @ApiQuery({ name: 'objectType', required: false, enum: OBJECT_TYPES })
   @ApiQuery({ name: 'take', required: false, type: Number, description: 'Maximo de eventos (acotado a 500).' })
   @ApiResponse({ status: 200, description: 'Eventos visibles para el actor.', type: [AuditEventResponseDto] })
   @ApiResponse({ status: 401, description: 'No hay un usuario actual valido.' })

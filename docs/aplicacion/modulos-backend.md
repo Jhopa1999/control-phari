@@ -66,19 +66,38 @@ Solo `JEFE_AREA`; la lectura se filtra al alcance del jefe.
 Reglas: conceder un grant ya activo → `409`; revocar es *soft* (conserva trazabilidad)
 y queda registrado en auditoría con acción `CREATE`/`REVOKE`.
 
-## process — Procesos del área
+## area — Áreas organizativas
 
-Administra los procesos (BI, Integraciones, IA y la coordinación FMAA). Lectura para
-todos (filtrada por alcance a quien no es jefe); escritura solo `JEFE_AREA`.
+Administra las áreas (p. ej. Analítica) que agrupan procesos. Lectura para cualquier
+actor; escritura solo `ADMIN` (rol de sistema).
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/processes` | Lista procesos (jefe: todos; no-jefe: solo su alcance). |
-| GET | `/processes/:id` | Obtiene un proceso por id (`404` fuera de alcance). |
-| POST | `/processes` | Crea un proceso (solo JEFE_AREA). |
-| PATCH | `/processes/:id` | Edita `name`/`framework`/`active`/`sortOrder` (solo JEFE_AREA). |
+| GET | `/areas` | Lista áreas (filtro opcional `active`). |
+| GET | `/areas/:id` | Obtiene un área por id (`404` si no existe). |
+| POST | `/areas` | Crea un área (solo ADMIN). |
+| PATCH | `/areas/:id` | Edita `name`/`active`/`sortOrder` (solo ADMIN). |
 
-Reglas: `code` es único (`409` si se repite al crear).
+Reglas: `code` se normaliza a MAYÚSCULAS y es único (`409` si se repite al crear); el
+`code` no es editable (enviarlo en el PATCH → `400`). Cada alta/edición se audita como
+`AREA` (sin proceso de alcance).
+
+## process — Procesos del área
+
+Administra los procesos (BI, Integraciones, IA y la coordinación FMAA), cada uno
+asociado a un área. Lectura para todos (filtrada por alcance a quien no es jefe ni
+admin; `ADMIN` y `JEFE_AREA` ven todos); escritura para `ADMIN` o `JEFE_AREA`.
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| GET | `/processes` | Lista procesos (jefe/admin: todos; no-jefe: solo su alcance). |
+| GET | `/processes/:id` | Obtiene un proceso por id (`404` fuera de alcance). |
+| POST | `/processes` | Crea un proceso (ADMIN o JEFE_AREA). |
+| PATCH | `/processes/:id` | Edita `name`/`framework`/`active`/`sortOrder` (ADMIN o JEFE_AREA). |
+
+Reglas: `code` es único (`409` si se repite al crear); al crear, `areaId` es requerido
+(UUID) y debe apuntar a un área existente (`404` si no existe). El `areaId` no se edita
+en el PATCH.
 
 ## catalog — Maestras genéricas (funcionalidad base)
 

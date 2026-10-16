@@ -3,6 +3,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { AreaModule } from './modules/area/area.module';
 import { ProcessModule } from './modules/process/process.module';
 import { UserModule } from './modules/user/user.module';
 import { GrantModule } from './modules/grant/grant.module';
@@ -21,6 +22,7 @@ import { SystemSettingsModule } from './modules/system-settings/system-settings.
     AuthModule,
     AuditModule,
     CatalogModule,
+    AreaModule,
     ProcessModule,
     UserModule,
     GrantModule,

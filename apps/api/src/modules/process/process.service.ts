@@ -34,6 +34,7 @@ export class ProcessService {
       name: process.name,
       framework: process.framework,
       kind: process.kind,
+      areaId: process.areaId,
       active: process.active,
       sortOrder: process.sortOrder,
     };
@@ -45,7 +46,7 @@ export class ProcessService {
    * - no-jefe: filtra por scopedProcessIds (404 natural fuera de alcance).
    */
   private scopeWhere(actor: CurrentActor): Prisma.ProcessWhereInput {
-    if (actor.isJefeArea) {
+    if (actor.isAdmin || actor.isJefeArea) {
       return {};
     }
     return { id: { in: Array.from(actor.scopedProcessIds) } };
@@ -88,6 +89,13 @@ export class ProcessService {
     const code = this.normalizeKey(dto.code);
     const kind = dto.kind ?? ProcessKind.PROCESS;
 
+    const area = await this.prisma.area.findUnique({
+      where: { id: dto.areaId },
+    });
+    if (!area) {
+      throw new NotFoundException(`Area "${dto.areaId}" no encontrada.`);
+    }
+
     try {
       return await this.prisma.$transaction(async (tx) => {
         const created = await tx.process.create({
@@ -95,6 +103,7 @@ export class ProcessService {
             code,
             name: dto.name,
             kind,
+            areaId: dto.areaId,
             ...(dto.framework !== undefined ? { framework: dto.framework } : {}),
             ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
           },

@@ -8,8 +8,9 @@ import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
  * incluirlo aqui, o el filtro ?objectType= de GET /audit-events lo rechaza con
  * 400 pese a que el evento si se registra.
  */
-const OBJECT_TYPES = [
+export const OBJECT_TYPES = [
   'PROCESS',
+  'AREA',
   'USER',
   'GRANT',
   'CATALOG_ITEM',

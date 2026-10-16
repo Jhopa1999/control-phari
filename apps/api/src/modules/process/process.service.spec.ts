@@ -14,6 +14,10 @@ type ProcessDelegateMock = {
   update: jest.Mock;
 };
 
+type AreaDelegateMock = {
+  findUnique: jest.Mock;
+};
+
 function createMocks() {
   const process: ProcessDelegateMock = {
     findMany: jest.fn(),
@@ -22,8 +26,11 @@ function createMocks() {
     create: jest.fn(),
     update: jest.fn(),
   };
+  const area: AreaDelegateMock = {
+    findUnique: jest.fn(),
+  };
   // $transaction ejecuta el callback con el propio prisma mock como tx.
-  const prismaObj: Record<string, unknown> = { process };
+  const prismaObj: Record<string, unknown> = { process, area };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
     cb(prismaObj),
   );
@@ -31,7 +38,7 @@ function createMocks() {
 
   const audit = { record: jest.fn() } as unknown as AuditService;
   const auditRecord = audit.record as unknown as jest.Mock;
-  return { prisma, process, audit, auditRecord };
+  return { prisma, process, area, audit, auditRecord };
 }
 
 function makeProcess(overrides: Record<string, unknown> = {}) {
@@ -42,6 +49,7 @@ function makeProcess(overrides: Record<string, unknown> = {}) {
     name: 'BI',
     framework: 'INS-006',
     kind: 'PROCESS',
+    areaId: 'a1',
     active: true,
     sortOrder: 0,
     createdAt: now,
@@ -60,6 +68,19 @@ function jefe(): CurrentActor {
     scopedProcessIds: new Set(['p1', 'p2']),
     isJefeArea: true,
     isAdmin: false,
+  };
+}
+
+function admin(): CurrentActor {
+  return {
+    userId: 'ua',
+    name: 'Admin',
+    identifier: 'admin@demo.local',
+    grants: [],
+    roleCodes: new Set([RoleCode.ADMIN]),
+    scopedProcessIds: new Set(),
+    isJefeArea: false,
+    isAdmin: true,
   };
 }
 
@@ -106,6 +127,13 @@ describe('ProcessService', () => {
       const where = mocks.process.findMany.mock.calls[0][0].where;
       expect(where.id).toEqual({ in: ['p1'] });
     });
+
+    it('admin no filtra por proceso (ve todos los procesos)', async () => {
+      mocks.process.findMany.mockResolvedValue([]);
+      await service.findMany(admin(), {});
+      const where = mocks.process.findMany.mock.calls[0][0].where;
+      expect(where.id).toBeUndefined();
+    });
   });
 
   describe('findOne', () => {
@@ -124,17 +152,26 @@ describe('ProcessService', () => {
       const where = mocks.process.findFirst.mock.calls[0][0].where;
       expect(where.AND).toEqual([{ id: 'p1' }, {}]);
     });
+
+    it('admin obtiene cualquier proceso (where sin filtro de alcance)', async () => {
+      mocks.process.findFirst.mockResolvedValue(makeProcess());
+      await service.findOne(admin(), 'p1');
+      const where = mocks.process.findFirst.mock.calls[0][0].where;
+      expect(where.AND).toEqual([{ id: 'p1' }, {}]);
+    });
   });
 
   describe('create', () => {
-    it('normaliza code a MAYUSCULAS, aplica default kind y audita CREATE', async () => {
+    it('normaliza code a MAYUSCULAS, aplica default kind, incluye areaId y audita CREATE', async () => {
       const created = makeProcess({ id: 'pnew', code: 'FINEW', kind: 'PROCESS' });
+      mocks.area.findUnique.mockResolvedValue({ id: 'a1' });
       mocks.process.create.mockResolvedValue(created);
 
-      await service.create(jefe(), { code: 'finew', name: 'Nuevo' });
+      await service.create(jefe(), { code: 'finew', name: 'Nuevo', areaId: 'a1' });
 
       expect(mocks.process.create.mock.calls[0][0].data.code).toBe('FINEW');
       expect(mocks.process.create.mock.calls[0][0].data.kind).toBe('PROCESS');
+      expect(mocks.process.create.mock.calls[0][0].data.areaId).toBe('a1');
       expect(mocks.auditRecord).toHaveBeenCalledTimes(1);
       const audited = mocks.auditRecord.mock.calls[0][1];
       expect(audited).toMatchObject({
@@ -144,12 +181,22 @@ describe('ProcessService', () => {
         scopeProcessId: 'pnew',
         before: null,
       });
+      expect(audited.after.areaId).toBe('a1');
+    });
+
+    it('404 si el areaId no existe (sin crear)', async () => {
+      mocks.area.findUnique.mockResolvedValue(null);
+      await expect(
+        service.create(jefe(), { code: 'FINEW', name: 'Nuevo', areaId: 'aX' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(mocks.process.create).not.toHaveBeenCalled();
     });
 
     it('traduce P2002 a ConflictException', async () => {
+      mocks.area.findUnique.mockResolvedValue({ id: 'a1' });
       mocks.process.create.mockRejectedValue(uniqueViolation());
       await expect(
-        service.create(jefe(), { code: 'FIBI', name: 'BI' }),
+        service.create(jefe(), { code: 'FIBI', name: 'BI', areaId: 'a1' }),
       ).rejects.toBeInstanceOf(ConflictException);
     });
   });

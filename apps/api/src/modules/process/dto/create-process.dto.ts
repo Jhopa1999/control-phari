@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -47,6 +48,14 @@ export class CreateProcessDto {
   @IsNotEmpty()
   @MaxLength(255)
   name!: string;
+
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    description: 'Area a la que pertenece el proceso.',
+  })
+  @IsUUID()
+  areaId!: string;
 
   @ApiPropertyOptional({
     type: String,

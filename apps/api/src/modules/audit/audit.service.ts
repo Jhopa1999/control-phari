@@ -19,6 +19,7 @@ import { ListAuditEventsDto } from './dto/list-audit-events.dto';
  */
 export type AuditObjectType =
   | 'PROCESS'
+  | 'AREA'
   | 'USER'
   | 'GRANT'
   | 'CATALOG_ITEM'

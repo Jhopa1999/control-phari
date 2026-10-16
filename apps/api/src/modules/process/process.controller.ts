@@ -66,8 +66,8 @@ export class ProcessController {
   }
 
   @Post()
-  @Roles(RoleCode.JEFE_AREA)
-  @ApiOperation({ summary: 'Crea un proceso (solo JEFE_AREA).' })
+  @Roles(RoleCode.ADMIN, RoleCode.JEFE_AREA)
+  @ApiOperation({ summary: 'Crea un proceso (ADMIN o JEFE_AREA).' })
   @ApiBody({ type: CreateProcessDto })
   @ApiResponse({ status: 201, description: 'Proceso creado.', type: ProcessResponseDto })
   @ApiResponse({ status: 400, description: 'Datos de entrada invalidos.' })
@@ -81,8 +81,8 @@ export class ProcessController {
   }
 
   @Patch(':id')
-  @Roles(RoleCode.JEFE_AREA)
-  @ApiOperation({ summary: 'Edita name/framework/active/sortOrder (solo JEFE_AREA).' })
+  @Roles(RoleCode.ADMIN, RoleCode.JEFE_AREA)
+  @ApiOperation({ summary: 'Edita name/framework/active/sortOrder (ADMIN o JEFE_AREA).' })
   @ApiBody({ type: UpdateProcessDto })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Proceso actualizado.', type: ProcessResponseDto })

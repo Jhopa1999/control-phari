@@ -56,6 +56,12 @@
       "trigger_file": "apps/api/prisma/schema.prisma",
       "updated_docs": ["docs/aplicacion/modelo-datos.md"],
       "summary": "Se documento el modelo Area (areas) y la FK requerida Process.areaId (onDelete Restrict), con las migraciones add_area_and_process_area_nullable, backfill_analitica_area (idempotente) y make_process_area_required."
+    },
+    {
+      "timestamp": "2026-10-16T06:00:00Z",
+      "trigger_file": "apps/api/src/modules/area/area.controller.ts",
+      "updated_docs": ["docs/aplicacion/modulos-backend.md"],
+      "summary": "Se documento el modulo area (/areas GET/POST/PATCH, escritura solo ADMIN) y los cambios de process: areaId requerido al crear, lectura completa para ADMIN y escritura abierta a ADMIN o JEFE_AREA."
     }
   ]
 }
