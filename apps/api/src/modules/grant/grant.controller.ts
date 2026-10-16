@@ -29,18 +29,21 @@ import { Roles } from '../auth/roles.decorator';
 import { RoleCode } from '../auth/role-code';
 
 /**
- * API REST de Grant. Concesion/revocacion = Plano B (solo JEFE_AREA); lectura
- * filtrada por el alcance del jefe (design 4.2). El lider NO concede grants.
+ * API REST de Grant. La jerarquia de asignacion/alcance se aplica en el
+ * servicio (canAssignRole + alcance por proceso): ADMIN, JEFE_AREA y
+ * LIDER_PROCESO pueden entrar al endpoint, y el servicio decide que roles
+ * puede conceder/revocar cada actor y sobre que procesos. La lectura se filtra
+ * por alcance (ADMIN ve todo; el resto solo sus procesos).
  */
 @ApiTags('grants')
 @Controller('grants')
 @UseGuards(CurrentUserGuard, RolesGuard)
-@Roles(RoleCode.JEFE_AREA)
+@Roles(RoleCode.ADMIN, RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO)
 export class GrantController {
   constructor(private readonly grantService: GrantService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lista grants del alcance del jefe (solo JEFE_AREA).' })
+  @ApiOperation({ summary: 'Lista grants del alcance del actor (ADMIN ve todos).' })
   @ApiQuery({ name: 'userId', required: false, format: 'uuid' })
   @ApiQuery({ name: 'processId', required: false, format: 'uuid' })
   @ApiQuery({ name: 'active', required: false, type: Boolean })
@@ -54,7 +57,7 @@ export class GrantController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Concede un grant (solo JEFE_AREA).' })
+  @ApiOperation({ summary: 'Concede un grant (segun jerarquia y alcance del actor).' })
   @ApiBody({ type: CreateGrantDto })
   @ApiResponse({ status: 201, description: 'Grant creado o reactivado.', type: GrantResponseDto })
   @ApiResponse({ status: 400, description: 'Datos de entrada invalidos.' })
@@ -69,7 +72,7 @@ export class GrantController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Revoca un grant (soft; solo JEFE_AREA).' })
+  @ApiOperation({ summary: 'Revoca un grant (soft; segun jerarquia y alcance del actor).' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Grant revocado (devuelve el actualizado).', type: GrantResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })

@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
@@ -52,6 +53,19 @@ function jefe(): CurrentActor {
   };
 }
 
+function admin(): CurrentActor {
+  return {
+    userId: 'ua',
+    name: 'Alex Admin',
+    identifier: 'admin@demo.local',
+    grants: [],
+    roleCodes: new Set([RoleCode.ADMIN]),
+    scopedProcessIds: new Set(),
+    isJefeArea: false,
+    isAdmin: true,
+  };
+}
+
 function makeGrant(overrides: Record<string, unknown> = {}) {
   const now = new Date('2026-01-01T00:00:00.000Z');
   return {
@@ -82,15 +96,59 @@ describe('GrantService', () => {
   });
 
   describe('findMany', () => {
-    it('filtra siempre por scopedProcessIds del jefe', async () => {
+    it('filtra por scopedProcessIds del actor no-admin', async () => {
       mocks.grant.findMany.mockResolvedValue([]);
       await service.findMany(jefe(), {});
       const where = mocks.grant.findMany.mock.calls[0][0].where;
       expect(where.processId).toEqual({ in: ['p1', 'p2'] });
     });
+
+    it('ADMIN ve todos los grants (sin filtro de proceso)', async () => {
+      mocks.grant.findMany.mockResolvedValue([]);
+      await service.findMany(admin(), {});
+      const where = mocks.grant.findMany.mock.calls[0][0].where;
+      expect(where.processId).toBeUndefined();
+    });
   });
 
   describe('create', () => {
+    it('roleCode ADMIN -> 403 (jerarquia evaluada antes que el Role, no 500)', async () => {
+      await expect(
+        service.create(jefe(), { ...dto, roleCode: RoleCode.ADMIN }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      // No se llega a resolver el Role: la jerarquia corta primero.
+      expect(mocks.role.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('rol no dominado por el actor -> 403', async () => {
+      // JEFE_AREA (rango 3) no puede asignar JEFE_AREA (rango 3).
+      await expect(
+        service.create(jefe(), { ...dto, roleCode: RoleCode.JEFE_AREA }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mocks.role.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('proceso fuera del alcance (no-admin) -> 403', async () => {
+      mocks.role.findFirst.mockResolvedValue({ id: 'r1', code: dto.roleCode });
+      mocks.user.findUnique.mockResolvedValue({ id: 'u1' });
+      mocks.process.findUnique.mockResolvedValue({ id: 'pX' });
+      await expect(
+        service.create(jefe(), { ...dto, processId: 'pX' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('ADMIN esta exento del alcance por proceso', async () => {
+      mocks.role.findFirst.mockResolvedValue({ id: 'r1', code: dto.roleCode });
+      mocks.user.findUnique.mockResolvedValue({ id: 'u1' });
+      mocks.process.findUnique.mockResolvedValue({ id: 'pX' });
+      mocks.grant.findUnique.mockResolvedValue(null);
+      mocks.grant.create.mockResolvedValue(makeGrant({ processId: 'pX' }));
+
+      await service.create(admin(), { ...dto, processId: 'pX' });
+
+      expect(mocks.grant.create).toHaveBeenCalledTimes(1);
+    });
+
     it('roleCode sin fila Role -> 500 generico', async () => {
       mocks.role.findFirst.mockResolvedValue(null);
       await expect(service.create(jefe(), dto)).rejects.toBeInstanceOf(
@@ -173,7 +231,9 @@ describe('GrantService', () => {
     });
 
     it('revoca (soft) con AuditEvent REVOKE', async () => {
-      mocks.grant.findUnique.mockResolvedValue(makeGrant({ active: true }));
+      mocks.grant.findUnique.mockResolvedValue(
+        makeGrant({ active: true, role: { code: RoleCode.LIDER_PROCESO } }),
+      );
       mocks.grant.update.mockResolvedValue(makeGrant({ active: false }));
 
       await service.revoke(jefe(), 'g1');
@@ -185,6 +245,50 @@ describe('GrantService', () => {
       expect(audited.action).toBe('REVOKE');
       expect(audited.before).toEqual({ active: true });
       expect(audited.after).toEqual({ active: false });
+    });
+
+    it('rol no dominado por el actor -> 403', async () => {
+      // JEFE_AREA no puede revocar un grant de rol JEFE_AREA.
+      mocks.grant.findUnique.mockResolvedValue(
+        makeGrant({ role: { code: RoleCode.JEFE_AREA } }),
+      );
+      await expect(service.revoke(jefe(), 'g1')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(mocks.grant.update).not.toHaveBeenCalled();
+    });
+
+    it('role.code invalido (fuera del conjunto) -> 403', async () => {
+      mocks.grant.findUnique.mockResolvedValue(
+        makeGrant({ role: { code: 'DESCONOCIDO' } }),
+      );
+      await expect(service.revoke(jefe(), 'g1')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(mocks.grant.update).not.toHaveBeenCalled();
+    });
+
+    it('proceso fuera del alcance (no-admin) -> 403', async () => {
+      mocks.grant.findUnique.mockResolvedValue(
+        makeGrant({ processId: 'pX', role: { code: RoleCode.LIDER_PROCESO } }),
+      );
+      await expect(service.revoke(jefe(), 'g1')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(mocks.grant.update).not.toHaveBeenCalled();
+    });
+
+    it('ADMIN esta exento del alcance por proceso al revocar', async () => {
+      mocks.grant.findUnique.mockResolvedValue(
+        makeGrant({ processId: 'pX', role: { code: RoleCode.JEFE_AREA } }),
+      );
+      mocks.grant.update.mockResolvedValue(
+        makeGrant({ processId: 'pX', active: false }),
+      );
+
+      await service.revoke(admin(), 'g1');
+
+      expect(mocks.grant.update).toHaveBeenCalledTimes(1);
     });
   });
 });

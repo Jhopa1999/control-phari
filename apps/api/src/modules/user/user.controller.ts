@@ -27,13 +27,13 @@ import { Roles } from '../auth/roles.decorator';
 import { RoleCode } from '../auth/role-code';
 
 /**
- * API REST de User (entidad Plano B: administracion de area). Todas las rutas
- * exigen JEFE_AREA (design 2.4 / 4.2).
+ * API REST de User (entidad Plano B: administracion de area). Acceden ADMIN,
+ * JEFE_AREA y LIDER_PROCESO; la jerarquia de creacion la aplica el servicio.
  */
 @ApiTags('users')
 @Controller('users')
 @UseGuards(CurrentUserGuard, RolesGuard)
-@Roles(RoleCode.JEFE_AREA)
+@Roles(RoleCode.ADMIN, RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 

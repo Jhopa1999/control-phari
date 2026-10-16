@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -9,6 +10,8 @@ import { Prisma } from '../../generated/prisma/client';
 import type { GrantModel } from '../../generated/prisma/models/Grant';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
+import { toRoleCode } from '../auth/role-code';
+import { canAssignRole } from '../auth/role-hierarchy';
 import { CreateGrantDto } from './dto/create-grant.dto';
 import { ListGrantsDto } from './dto/list-grants.dto';
 
@@ -27,9 +30,11 @@ export class GrantService {
     actor: CurrentActor,
     filters: ListGrantsDto,
   ): Promise<GrantModel[]> {
-    const where: Prisma.GrantWhereInput = {
-      processId: { in: Array.from(actor.scopedProcessIds) },
-    };
+    // ADMIN ve todos los grants (alcance global); el resto solo los de los
+    // procesos dentro de su alcance.
+    const where: Prisma.GrantWhereInput = actor.isAdmin
+      ? {}
+      : { processId: { in: Array.from(actor.scopedProcessIds) } };
     if (filters.userId !== undefined) {
       where.userId = filters.userId;
     }
@@ -50,6 +55,15 @@ export class GrantService {
    * POST /grants: algoritmo exacto de design 4.2.1.
    */
   async create(actor: CurrentActor, dto: CreateGrantDto): Promise<GrantModel> {
+    // 0) Jerarquia de asignacion (FINDING 1): se valida ANTES de resolver el
+    //    Role, para que un roleCode no asignable (p. ej. ADMIN) devuelva 403 y
+    //    no un 500 por fila Role ausente.
+    if (!canAssignRole(actor, dto.roleCode)) {
+      throw new ForbiddenException(
+        'No puedes asignar un rol igual o superior al tuyo.',
+      );
+    }
+
     // 1) roleCode -> Role. `code` es unico; se usa findFirst (el @@unique de un
     //    solo campo con nombre custom no es usable como findUnique en Prisma 7).
     const role = await this.prisma.role.findFirst({
@@ -73,6 +87,14 @@ export class GrantService {
     }
     if (!process) {
       throw new NotFoundException(`Proceso "${dto.processId}" no encontrado.`);
+    }
+
+    // 2.5) Alcance por proceso: un actor no-admin solo concede grants en
+    //      procesos dentro de su alcance. ADMIN esta exento (alcance global).
+    if (!actor.isAdmin && !actor.scopedProcessIds.has(dto.processId)) {
+      throw new ForbiddenException(
+        'No tienes alcance sobre el proceso indicado.',
+      );
     }
 
     // 3) Buscar grant por (userId, roleId, processId).
@@ -134,9 +156,29 @@ export class GrantService {
    * (design 4.2.1). 404 si no existe. Devuelve el grant actualizado (200).
    */
   async revoke(actor: CurrentActor, id: string): Promise<GrantModel> {
-    const existing = await this.prisma.grant.findUnique({ where: { id } });
+    const existing = await this.prisma.grant.findUnique({
+      where: { id },
+      include: { role: true },
+    });
     if (!existing) {
       throw new NotFoundException(`Grant "${id}" no encontrado.`);
+    }
+
+    // Jerarquia: solo se revoca un grant cuyo rol este dominado por el actor.
+    // Un code de rol fuera del conjunto cerrado (toRoleCode === null) no es
+    // asignable/dominable -> 403.
+    const targetRole = toRoleCode(existing.role.code);
+    if (targetRole === null || !canAssignRole(actor, targetRole)) {
+      throw new ForbiddenException(
+        'No puedes revocar un grant de un rol igual o superior al tuyo.',
+      );
+    }
+
+    // Alcance por proceso: el actor no-admin solo revoca dentro de su alcance.
+    if (!actor.isAdmin && !actor.scopedProcessIds.has(existing.processId)) {
+      throw new ForbiddenException(
+        'No tienes alcance sobre el proceso indicado.',
+      );
     }
 
     return this.prisma.$transaction(async (tx) => {

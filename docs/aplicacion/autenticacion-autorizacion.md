@@ -95,15 +95,23 @@ con `PATCH /admin/users/:id/admin-flag` (no se puede degradar al último admin a
 Un **grant** asigna a un usuario un rol dentro de un proceso (`Grant`: `userId` ×
 `roleId` × `processId`, único). Es el corazón del alcance:
 
-- Solo `JEFE_AREA` concede/revoca grants (`grant.controller.ts`), y la lectura se
-  filtra al alcance del jefe (procesos donde él tiene grant).
+- Al endpoint de grants acceden `ADMIN`, `JEFE_AREA` y `LIDER_PROCESO`
+  (`grant.controller.ts`); la jerarquía y el alcance los decide el service.
+- **Jerarquía de asignación** (`auth/role-hierarchy.ts`): cada rol tiene un rango
+  (`ADMIN=4`, `JEFE_AREA=3`, `LIDER_PROCESO=2`, `INTEGRANTE=1`). Un actor solo concede o
+  revoca un grant cuyo rol esté **estrictamente por debajo** de su rango máximo
+  (`canAssignRole`). Conceder/revocar un rol igual o superior → `403`. Por eso un
+  `roleCode ADMIN` responde `403` (la jerarquía se evalúa **antes** de resolver el rol,
+  no `500`).
+- **Alcance por proceso**: un actor no-admin solo concede/revoca grants en procesos
+  dentro de su `scopedProcessIds`; fuera de alcance → `403`. `ADMIN` está exento
+  (alcance global).
 - Conceder un grant ya activo → `409`; conceder uno revocado lo reactiva.
 - Revocar es *soft* (`active=false`), para conservar trazabilidad.
 - Cada alta/baja queda en auditoría (`AuditEvent` con acción `CREATE`/`REVOKE`).
 
-El **alcance por proceso** se aplica dentro de cada service: un `JEFE_AREA` ve todo
-(`{}`); el resto solo las filas cuyo proceso esté en `scopedProcessIds`. Una fila fuera
-de alcance responde `404` (no revela su existencia).
+En la **lectura** de grants (`findMany`): `ADMIN` ve todos (`{}`); el resto solo las
+filas cuyo proceso esté en `scopedProcessIds`.
 
 ## Guards: cómo se protege cada endpoint
 

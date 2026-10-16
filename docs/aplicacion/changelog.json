@@ -62,6 +62,12 @@
       "trigger_file": "apps/api/src/modules/area/area.controller.ts",
       "updated_docs": ["docs/aplicacion/modulos-backend.md"],
       "summary": "Se documento el modulo area (/areas GET/POST/PATCH, escritura solo ADMIN) y los cambios de process: areaId requerido al crear, lectura completa para ADMIN y escritura abierta a ADMIN o JEFE_AREA."
+    },
+    {
+      "timestamp": "2026-10-16T07:00:00Z",
+      "trigger_file": "apps/api/src/modules/grant/grant.service.ts",
+      "updated_docs": ["docs/aplicacion/autenticacion-autorizacion.md"],
+      "summary": "Se documento la jerarquia de asignacion de roles (role-hierarchy, canAssignRole: ADMIN>JEFE_AREA>LIDER_PROCESO>INTEGRANTE) y el alcance por proceso en grants: endpoints de grants/users abiertos a ADMIN/JEFE_AREA/LIDER_PROCESO, roleCode ADMIN => 403, fuera de alcance => 403 (ADMIN exento), y lectura sin filtro para ADMIN."
     }
   ]
 }

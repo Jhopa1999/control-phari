@@ -1,6 +1,6 @@
 import { PrismaService } from '../../database/prisma.service';
 import { ActorGrant, CurrentActor } from './current-actor';
-import { RoleCode, ROLE_CODES } from './role-code';
+import { RoleCode, toRoleCode } from './role-code';
 /**
  * Carga el actor (User + grants activos) y lo mapea a CurrentActor. Es la UNICA
  * fuente de la logica de autorizacion (grants/roles/alcance): la reutilizan
@@ -77,10 +77,4 @@ export async function loadActorByIdentifier(
     isJefeArea: roleCodes.has(RoleCode.JEFE_AREA),
     isAdmin: user.isAdmin,
   };
-}
-/** Convierte un code de la BD a RoleCode tipado, o null si no pertenece al conjunto. */
-function toRoleCode(code: string): RoleCode | null {
-  return (ROLE_CODES as readonly string[]).includes(code)
-    ? (code as RoleCode)
-    : null;
 }

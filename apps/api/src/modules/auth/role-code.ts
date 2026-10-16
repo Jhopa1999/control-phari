@@ -18,3 +18,10 @@ export enum RoleCode {
 }
 /** Todos los codes validos, util para validaciones y pruebas. */
 export const ROLE_CODES: readonly RoleCode[] = Object.values(RoleCode);
+
+/** Convierte un code de la BD a RoleCode tipado, o null si no pertenece al conjunto. */
+export function toRoleCode(code: string): RoleCode | null {
+  return (ROLE_CODES as readonly string[]).includes(code)
+    ? (code as RoleCode)
+    : null;
+}
