@@ -32,7 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useActor } from '@/lib/actor-context';
-import type { AdminUser, SmtpConfig, UpdateSmtpConfig } from '@/lib/api-client';
+import type { AdminUser, SmtpConfig, SmtpTestResult, UpdateSmtpConfig } from '@/lib/api-client';
 import {
   ApiError,
   getSmtpConfig,
@@ -63,7 +63,7 @@ function messageOf(err: unknown): string {
  * campo APP_WEB_URL (lo gestiona el entorno, design d.1).
  */
 export function ConfiguracionSmtpView(): React.ReactElement {
-  const { permissions, allowedModules } = useActor();
+  const { permissions, allowedModules, authUser } = useActor();
   const permissionsLoaded = permissions !== null;
   const settingsAllowed = allowedModules.has('systemSettings');
   const [config, setConfig] = React.useState<SmtpConfig | null>(null);
@@ -85,6 +85,8 @@ export function ConfiguracionSmtpView(): React.ReactElement {
   const [testOpen, setTestOpen] = React.useState(false);
   const [testTo, setTestTo] = React.useState('');
   const [testing, setTesting] = React.useState(false);
+  // Resultado de la ultima prueba (panel persistente que no se desvanece).
+  const [lastTest, setLastTest] = React.useState<SmtpTestResult | null>(null);
   // Administradores del sistema.
   const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>([]);
   const [togglingId, setTogglingId] = React.useState<string | null>(null);
@@ -185,6 +187,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
     setTesting(true);
     try {
       const result = await testSmtp(testTo.trim());
+      setLastTest(result);
       if (result.ok) {
         toast.success(result.message);
         setTestOpen(false);
@@ -192,7 +195,9 @@ export function ConfiguracionSmtpView(): React.ReactElement {
         toast.error(result.message);
       }
     } catch (err) {
-      toast.error(messageOf(err));
+      const message = messageOf(err);
+      setLastTest({ ok: false, message });
+      toast.error(message);
     } finally {
       setTesting(false);
     }
@@ -262,6 +267,16 @@ export function ConfiguracionSmtpView(): React.ReactElement {
     );
   } else {
     const source = config?.source ?? 'none';
+    // Avisos de coherencia (ayuda visual en el frontend, NO bloquean Guardar):
+    // la logica de negocio y el envio real los decide el backend.
+    const portNum = Number(port);
+    const warnSecure587 = secure && portNum === 587;
+    const warnInsecure465 = !secure && portNum === 465;
+    const fromDomain =
+      fromAddress.includes('@') ? fromAddress.split('@').pop() ?? '' : '';
+    const userDomain = username.includes('@') ? username.split('@').pop() ?? '' : '';
+    const warnDomainMismatch =
+      fromDomain !== '' && userDomain !== '' && fromDomain !== userDomain;
     content = (
       <>
         <Section
@@ -321,8 +336,33 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   checked={secure}
                   onChange={(e) => setSecure(e.target.checked)}
                 />
-                Conexion segura (SSL directo, puerto 465). Si usas STARTTLS (587) dejala desmarcada.
+                Puerto 465 = marca esta casilla (SSL directo). Puerto 587 = dejala desmarcada
+                (STARTTLS).
               </label>
+              {warnSecure587 ? (
+                <InlineNotice
+                  tone="warning"
+                  role="status"
+                  title="Revisa la conexion segura."
+                >
+                  <p className="text-muted-foreground">
+                    El puerto 587 suele usar STARTTLS. Si la prueba falla, desmarca la casilla de
+                    conexion segura.
+                  </p>
+                </InlineNotice>
+              ) : null}
+              {warnInsecure465 ? (
+                <InlineNotice
+                  tone="warning"
+                  role="status"
+                  title="Revisa la conexion segura."
+                >
+                  <p className="text-muted-foreground">
+                    El puerto 465 suele requerir SSL directo. Si la prueba falla, marca la casilla de
+                    conexion segura.
+                  </p>
+                </InlineNotice>
+              ) : null}
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
                   id="smtp-username"
@@ -416,6 +456,19 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   />
                 </Field>
               </div>
+              {warnDomainMismatch ? (
+                <InlineNotice
+                  tone="warning"
+                  role="status"
+                  title="El remitente y el usuario tienen dominios distintos."
+                >
+                  <p className="text-muted-foreground">
+                    El correo remitente y el usuario autenticado pertenecen a dominios diferentes.
+                    Office365 suele rechazar el envio (SendAsDenied); usa un remitente del mismo
+                    dominio que la cuenta autenticada.
+                  </p>
+                </InlineNotice>
+              ) : null}
               <div className="flex flex-wrap gap-3">
                 <Button type="submit" loading={saving}>
                   Guardar configuracion
@@ -424,7 +477,8 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    setTestTo(fromAddress.trim());
+                    const adminEmail = authUser?.identifier ?? '';
+                    setTestTo(fromAddress.trim() || adminEmail);
                     setTestOpen(true);
                   }}
                 >
@@ -433,6 +487,23 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                 </Button>
               </div>
             </form>
+            {lastTest !== null ? (
+              <InlineNotice
+                tone={lastTest.ok ? 'success' : 'danger'}
+                role={lastTest.ok ? 'status' : 'alert'}
+                title={lastTest.ok ? 'Conexion verificada' : 'La prueba fallo'}
+              >
+                <p>{lastTest.message}</p>
+                {lastTest.hint ? (
+                  <p className="text-muted-foreground">{lastTest.hint}</p>
+                ) : null}
+                {lastTest.code ? (
+                  <p className="text-meta text-muted-foreground">
+                    Codigo SMTP: {lastTest.code}
+                  </p>
+                ) : null}
+              </InlineNotice>
+            ) : null}
           </div>
         </Section>
         <Section
@@ -496,12 +567,17 @@ export function ConfiguracionSmtpView(): React.ReactElement {
           <DialogHeader>
             <DialogTitle>Probar envio de correo</DialogTitle>
             <DialogDescription>
-              Enviaremos un correo de prueba con la configuracion efectiva (base de datos o
-              entorno).
+              Te enviaremos un correo de prueba a esta direccion para confirmar que la configuracion
+              funciona.
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
-            <Field id="smtp-test-to" label="Direccion de destino" required>
+            <Field
+              id="smtp-test-to"
+              label="Correo donde recibir la prueba"
+              required
+              help="Usa un buzon al que tengas acceso para confirmar que llega."
+            >
               <Input
                 type="email"
                 value={testTo}

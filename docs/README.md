@@ -668,6 +668,27 @@ Detalle operativo completo en `docs/deployment.md`. Resumen técnico:
   apunta solo a `dist`, así que hay que ejecutar `npm run build:api-client`
   antes de `npm run typecheck --workspace apps/mcp`.
 
+### Administracion: configuracion SMTP (UX y errores de prueba)
+
+- La pantalla de administracion `Configuracion del sistema`
+  (`apps/web/src/app/administracion/configuracion-smtp`) permite probar el envio
+  de un correo. Los errores del backend se traducen a mensajes legibles: el
+  helper puro `apps/api/src/modules/system-settings/classify-smtp-error.ts`
+  corta el volcado de diagnostico de Office365 y produce `message` + `hint`
+  (sugerencia accionable) + `code` (codigo SMTP de 3 digitos). `message`/`hint`
+  nunca incluyen el bloque de diagnostico, el hostname, el stack ni
+  credenciales; `test()` sigue devolviendo HTTP 200 (ok:false en fallo) sin
+  lanzar.
+- El resultado de la ultima prueba se muestra en un panel de estado persistente
+  (`InlineNotice`) que no se desvanece solo: verde (tone success, role status)
+  si la conexion se verifico, rojo (tone danger, role alert) si fallo, con
+  `message`, `hint` y `code` cuando existan. Se conserva el toast.
+- Avisos de coherencia inline (puerto/conexion segura: 465 vs 587; y remitente
+  con dominio distinto al usuario autenticado, que Office365 suele rechazar como
+  SendAsDenied). Decision: la coherencia es solo ayuda visual en el frontend;
+  NO bloquea Guardar y el backend NO expone warnings (la verdad del envio la
+  decide el servidor SMTP en la prueba real).
+
 ## Decisiones pendientes
 
 - Estrategia de autenticacion e identidad.
