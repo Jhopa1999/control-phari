@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
 import { MailConfigResolver } from '../mail/mail-config.resolver';
+import { classifySmtpError } from './classify-smtp-error';
 import { encryptSecret } from './settings-crypto';
 import { SmtpConfigResponseDto } from './dto/smtp-config-response.dto';
 import { SmtpTestRequestDto } from './dto/smtp-test-request.dto';
@@ -149,11 +150,12 @@ export class SmtpConfigService {
       return { ok: true, message: `Correo de prueba enviado a ${dto.to}.` };
     } catch (error) {
       // Mensaje breve y legible; NUNCA el stack ni credenciales.
-      const detail =
-        error instanceof Error && error.message ? error.message : 'error desconocido';
+      const c = classifySmtpError(error);
       return {
         ok: false,
-        message: `No se pudo enviar el correo de prueba: ${detail}`,
+        message: c.message,
+        ...(c.hint ? { hint: c.hint } : {}),
+        ...(c.code ? { code: c.code } : {}),
       };
     }
   }

@@ -152,15 +152,19 @@ describe('SmtpConfigService', () => {
     expect(res.ok).toBe(true);
     expect(sendMail).toHaveBeenCalledTimes(1);
   });
-  it('test con fallo de SMTP => ok:false sin stack ni credenciales', async () => {
+  it('test con fallo de SMTP => ok:false con mensaje amable, sin stack ni credenciales', async () => {
     const cfg = { host: 'h', port: 25, secure: false, from: 'f@d.local', appWebUrl: 'http://x', user: 'u', password: 'secreta' };
     const { service, mail } = makeDeps({ resolve: cfg });
     (mail.createTransport as jest.Mock).mockReturnValue({
-      sendMail: jest.fn().mockRejectedValue(new Error('connection refused')),
+      sendMail: jest.fn().mockRejectedValue(
+        Object.assign(new Error('connect ECONNREFUSED 1.2.3.4:587 secreta'), {
+          code: 'ECONNREFUSED',
+        }),
+      ),
     });
     const res = await service.test({ to: 'dest@demo.local' });
     expect(res.ok).toBe(false);
-    expect(res.message).toContain('connection refused');
-    expect(res.message).not.toContain('secreta');
+    expect(res.message).toBe('No se pudo conectar con el servidor SMTP.');
+    expect(JSON.stringify(res)).not.toContain('secreta');
   });
 });

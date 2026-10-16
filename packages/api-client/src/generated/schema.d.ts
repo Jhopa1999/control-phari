@@ -4483,6 +4483,10 @@ export interface components {
             ok: boolean;
             /** @description Mensaje legible del resultado (sin secretos ni stack). */
             message: string;
+            /** @description Sugerencia accionable para resolver el fallo (sin secretos ni stack). */
+            hint?: string;
+            /** @description Codigo SMTP de 3 digitos asociado al fallo, si lo hubo. */
+            code?: string;
         };
         AdminUserResponseDto: {
             /**

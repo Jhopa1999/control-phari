@@ -44,6 +44,12 @@
         "docs/aplicacion/README.md"
       ],
       "summary": "Se documentaron el rol de sistema ADMIN (User.isAdmin, modulo systemSettings) y la configuracion SMTP en runtime: modulo system-settings (/admin/smtp-config[/test], /admin/users[/:id/admin-flag]), modelo SmtpConfig, y la pantalla /administracion/configuracion-smtp."
+    },
+    {
+      "timestamp": "2026-10-16T12:00:00Z",
+      "trigger_file": "apps/api/src/modules/system-settings/smtp-config.service.ts",
+      "updated_docs": ["docs/aplicacion/modulos-backend.md"],
+      "summary": "POST /admin/smtp-config/test ahora traduce los errores crudos del servidor (volcado de Office365) a mensajes legibles via classify-smtp-error.ts y anade hint?/code? opcionales al resultado, siempre 200 y sin secretos ni stack."
     }
   ]
 }

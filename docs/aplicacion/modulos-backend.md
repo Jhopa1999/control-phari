@@ -380,7 +380,7 @@ Configuración SMTP (`smtp-config.controller.ts`), base `/admin/smtp-config`:
 | --- | --- | --- |
 | GET | `/admin/smtp-config` | Estado de la configuración (nunca el password; devuelve `passwordSet` y `source`). 200 siempre, aunque no haya fila. |
 | PATCH | `/admin/smtp-config` | Crea/actualiza la fila singleton. PATCH (no PUT) por el CORS del backend. |
-| POST | `/admin/smtp-config/test` | Envía un correo de prueba con la configuración efectiva; devuelve `{ ok, message }` sin secretos ni stack. |
+| POST | `/admin/smtp-config/test` | Envía un correo de prueba con la configuración efectiva; responde 200 (nunca lanza) con `{ ok, message }` y, en fallo, `hint?`/`code?` opcionales. Los errores crudos del servidor (p. ej. el volcado de diagnóstico de Office365) se traducen a mensajes legibles vía `classify-smtp-error.ts`, sin secretos ni stack. |
 
 Reglas clave: el password se guarda cifrado (AES-256-GCM, `settings-crypto.ts`, clave
 `SETTINGS_ENCRYPTION_KEY`) y nunca se devuelve. Convención del password al actualizar:
