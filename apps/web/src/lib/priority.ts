@@ -33,13 +33,33 @@ function messageForStatus(status: number): string {
   }
 }
 
-function toPriorityError(status: number | undefined): PriorityError {
+/**
+ * Extrae un mensaje accionable del cuerpo de error de NestJS ({ message }); si
+ * no, cae al mapeo por status. Permite propagar el 409 legible del gate de
+ * activo base ('Asocia un activo a la solicitud en el triage antes de
+ * priorizarla.') en lugar del mensaje genérico (FEAT-003).
+ */
+function messageFromBody(body: unknown): string | undefined {
+  if (typeof body !== 'object' || body === null) return undefined;
+  const message = (body as { message?: unknown }).message;
+  if (typeof message === 'string' && message.trim() !== '') return message;
+  if (Array.isArray(message)) {
+    const first = message.find((m) => typeof m === 'string' && m.trim() !== '');
+    if (typeof first === 'string') return first;
+  }
+  return undefined;
+}
+
+function toPriorityError(
+  status: number | undefined,
+  body?: unknown,
+): PriorityError {
   if (status === undefined) {
     return new PriorityError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new PriorityError(messageForStatus(status), status);
+  return new PriorityError(messageFromBody(body) ?? messageForStatus(status), status);
 }
 
 /** Historico de evaluaciones (GET /requests/:id/priority). La vigente es la ultima. */
@@ -75,7 +95,7 @@ export async function createPriorityEvaluation(
       { params: { path: { id: requestId } }, body: input },
     );
     if (error || !data) {
-      throw toPriorityError(response.status);
+      throw toPriorityError(response.status, error);
     }
     return data;
   } catch (err) {

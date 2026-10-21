@@ -1,4 +1,11 @@
-import { api, type CreateTriage, type Triage, type TriageContext } from './api-client';
+import {
+  api,
+  type AssociateAsset,
+  type CreateTriage,
+  type Request,
+  type Triage,
+  type TriageContext,
+} from './api-client';
 
 /**
  * Error de dominio del modulo de triage, con mensaje entendible para el usuario.
@@ -85,6 +92,30 @@ export async function createTriage(
   try {
     const { data, error, response } = await api.POST(
       '/requests/{id}/triage',
+      { params: { path: { id: requestId } }, body: input },
+    );
+    if (error || !data) {
+      throw toTriageError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof TriageError) throw err;
+    throw toTriageError(undefined);
+  }
+}
+
+/**
+ * Asocia el activo base de una solicitud (POST /requests/:id/asset): activo
+ * existente (assetId) XOR datos de uno nuevo (newAsset). Propaga el mensaje
+ * legible del backend en 400/409 (p. ej. estado no asociable o XOR invalido).
+ */
+export async function associateAsset(
+  requestId: string,
+  input: AssociateAsset,
+): Promise<Request> {
+  try {
+    const { data, error, response } = await api.POST(
+      '/requests/{id}/asset',
       { params: { path: { id: requestId } }, body: input },
     );
     if (error || !data) {

@@ -317,6 +317,12 @@ export function ActivosView(): React.ReactElement {
   function rowActions(asset: Asset): RowAction[] {
     const actions: RowAction[] = [
       { key: 'edit', label: 'Editar', onSelect: () => openEdit(asset), placement: 'inline' },
+      {
+        key: 'history',
+        label: 'Ver historial',
+        href: `/activos/catalogo/${asset.id}/historial`,
+        placement: 'menu',
+      },
     ];
     const transition = canChangeStatus(asset) ? transitionOf(asset.status) : null;
     if (transition) {

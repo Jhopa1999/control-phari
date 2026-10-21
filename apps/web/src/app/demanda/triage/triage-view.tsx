@@ -32,12 +32,14 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import type {
+  Asset,
   CatalogItem,
   EligibleResponsible,
   Process,
   Request,
 } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
+import { listAssets } from '@/lib/assets';
 import { listCatalogItems } from '@/lib/catalog';
 import { formatCount } from '@/lib/format';
 import { listRequests } from '@/lib/requests';
@@ -45,6 +47,7 @@ import { isPrioritizable, isTriageable } from '@/lib/request-state';
 import { listProcesses } from '@/lib/team';
 import { createTriage, listTriage, TriageError } from '@/lib/triage';
 import { useRequestIdParam } from '@/lib/use-request-param';
+import { AssetBasePanel } from './asset-base-panel';
 
 type LoadState = 'loading' | 'success' | 'error';
 type Decision = 'CONTINUAR' | 'DEVOLVER' | 'RECHAZAR';
@@ -105,6 +108,17 @@ const NONE = '__none__';
 const PENDING_NOUN = { one: 'pendiente de triage', other: 'pendientes de triage' };
 const GROUPS: RequestPickerGroup[] = [{ label: 'Pendientes de triage', match: isTriageable }];
 
+/**
+ * Estados que admiten asociar/cambiar el activo base (gate server-side de
+ * FEAT-002). Fuera de estos, el backend responde 409.
+ */
+const ASSET_ASSOCIABLE_STATES: readonly string[] = [
+  'REGISTRADA',
+  'EN_TRIAGE',
+  'BACKLOG_PRIORIZADO',
+  'DEVUELTA',
+];
+
 function trimOrUndefined(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
@@ -144,6 +158,7 @@ export function TriageView(): React.ReactElement {
   const { requestId: urlId, setRequestId } = useRequestIdParam();
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
+  const [assets, setAssets] = React.useState<Asset[]>([]);
   const [catalogs, setCatalogs] = React.useState<CatalogsByFamily>({});
   const [state, setState] = React.useState<LoadState>('loading');
   const [loadError, setLoadError] = React.useState<string | null>(null);
@@ -187,9 +202,10 @@ export function TriageView(): React.ReactElement {
   const load = React.useCallback(async () => {
     setState('loading');
     try {
-      const [reqs, procs, ...families] = await Promise.all([
+      const [reqs, procs, assts, ...families] = await Promise.all([
         listRequests(),
         listProcesses().catch(() => [] as Process[]),
+        listAssets().catch(() => [] as Asset[]),
         ...CATALOG_FAMILIES.map((catalog) =>
           listCatalogItems({ catalog, active: true }).catch(() => [] as CatalogItem[]),
         ),
@@ -200,6 +216,7 @@ export function TriageView(): React.ReactElement {
       });
       setRequests(reqs);
       setProcesses(procs);
+      setAssets(assts);
       setCatalogs(byFamily);
       setState('success');
       // Regla 3 de §7.9.1: si la solicitud elegida ya no está, se limpia.
@@ -245,6 +262,54 @@ export function TriageView(): React.ReactElement {
   const processName = selected
     ? (processes.find((p) => p.id === selected.mainProcessId)?.name ?? null)
     : null;
+  const assetName = selected?.assetId
+    ? (assets.find((a) => a.id === selected.assetId)?.name ?? 'Activo fuera de tu alcance')
+    : null;
+
+  /** Lleva el foco al control «Activo base» (acción del requisito). */
+  function focusAssetPanel(): void {
+    const panel = document.getElementById('triage-asset-base');
+    if (!panel) return;
+    panel.scrollIntoView({ block: 'nearest' });
+    const focusable = panel.querySelector<HTMLElement>(
+      'button:not([disabled]), [role="radio"], input, [role="combobox"]',
+    );
+    focusable?.focus();
+  }
+
+  /**
+   * Requisito «activo base» materializado en el panel de requisitos (Opción A,
+   * solo pending/met). No evalúa reglas nuevas: refleja selected.assetId y el
+   * estado operativo que el backend ya controla.
+   */
+  function assetRequirement(request: Request): RequirementItem {
+    if (request.assetId !== null) {
+      return {
+        id: 'asset-base',
+        label: 'Activo base asociado',
+        status: 'met',
+        detail: assetName,
+      };
+    }
+    if (request.operationalState === 'REGISTRADA') {
+      return {
+        id: 'asset-base',
+        label: 'Asociar un activo base',
+        status: 'pending',
+        action: {
+          label: 'Asociar activo',
+          disabled: true,
+          disabledReason: 'Primero registra el triage (Continuar).',
+        },
+      };
+    }
+    return {
+      id: 'asset-base',
+      label: 'Asociar un activo base',
+      status: 'pending',
+      action: { label: 'Asociar activo', onClick: focusAssetPanel },
+    };
+  }
 
   function update<K extends keyof TriageFormValues>(key: K, value: TriageFormValues[K]): void {
     setForm((f) => ({ ...f, [key]: value }));
@@ -551,15 +616,32 @@ export function TriageView(): React.ReactElement {
         {selected ? (
           <div className="grid gap-6 xl:grid-cols-[minmax(0,45rem)_minmax(18rem,1fr)] xl:items-start">
             <div className="min-w-0">{isTriageable(selected) ? renderForm() : renderBlock(selected)}</div>
-            <section
-              aria-labelledby="triage-facts-title"
-              className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4"
-            >
-              <h2 id="triage-facts-title" className="text-base font-semibold">
-                Ficha de la solicitud
-              </h2>
-              <RequestFacts request={selected} processName={processName} />
-            </section>
+            <div className="flex min-w-0 flex-col gap-6">
+              <section
+                aria-labelledby="triage-facts-title"
+                className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4"
+              >
+                <h2 id="triage-facts-title" className="text-base font-semibold">
+                  Ficha de la solicitud
+                </h2>
+                <RequestFacts request={selected} processName={processName} />
+              </section>
+              <RequirementsPanel
+                id="triage-asset-requirement"
+                title="Falta el activo base"
+                description="La solicitud necesita un activo base para poder priorizarse."
+                doneTitle="Activo base listo"
+                items={[assetRequirement(selected)]}
+              />
+              {ASSET_ASSOCIABLE_STATES.includes(selected.operationalState) ? (
+                <AssetBasePanel
+                  request={selected}
+                  processName={processName}
+                  disabled={selected.operationalState === 'REGISTRADA'}
+                  onAssociated={() => void load()}
+                />
+              ) : null}
+            </div>
           </div>
         ) : (
           <div className="rounded-lg border bg-card">

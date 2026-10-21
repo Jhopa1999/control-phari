@@ -89,6 +89,12 @@
       "trigger_file": "apps/api/src/modules/request/triage/triage.controller.ts",
       "updated_docs": ["docs/aplicacion/modulos-backend.md"],
       "summary": "Se documentaron POST /requests/:id/asset (asocia el activo base, existente o nuevo, solo en estados tempranos), GET /assets/:id/requests (historial de solicitudes por activo) y el gate de priorizacion que exige activo asociado (sin assetId => 409)."
+    },
+    {
+      "timestamp": "2026-10-21T06:00:00Z",
+      "trigger_file": "apps/web/src/app/activos/catalogo/[id]/historial/page.tsx",
+      "updated_docs": ["docs/aplicacion/frontend-pantallas.md"],
+      "summary": "Se documentaron el control 'Activo base' en la pantalla /demanda/triage (asociar activo existente o nuevo, requisito para priorizar), la nueva ruta de solo lectura /activos/catalogo/[id]/historial (historial de solicitudes por activo) y la accion 'Ver historial' en el catalogo de activos."
     }
   ]
 }

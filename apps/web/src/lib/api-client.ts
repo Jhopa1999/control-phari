@@ -40,6 +40,9 @@ export type CreateRequest = components['schemas']['CreateRequestDto'];
 export type UpdateRequest = components['schemas']['UpdateRequestDto'];
 export type Triage = components['schemas']['TriageResponseDto'];
 export type CreateTriage = components['schemas']['CreateTriageDto'];
+export type AssociateAsset = components['schemas']['AssociateAssetDto'];
+export type AssetRequestHistoryItem =
+  components['schemas']['AssetRequestHistoryItemDto'];
 export type TriageContext = components['schemas']['TriageContextResponseDto'];
 export type EligibleResponsible =
   components['schemas']['EligibleResponsibleDto'];

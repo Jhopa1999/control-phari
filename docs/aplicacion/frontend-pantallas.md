@@ -33,7 +33,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | Ruta | Pantalla | Qué permite hacer |
 | --- | --- | --- |
 | `/demanda/solicitudes` | Solicitudes | Registrar y consultar solicitudes de demanda (menú grupo *Demanda*, `requests`). |
-| `/demanda/triage` | Triage | Clasificar la solicitud y decidir su ruta (`triage`). |
+| `/demanda/triage` | Triage | Clasificar la solicitud, decidir su ruta y asociar su **activo base** (existente o nuevo bajo el proceso principal), requisito para priorizar (`triage`). |
 | `/demanda/priorizacion` | Priorización | Evaluar con los criterios ponderados y ordenar el backlog (`priority`). |
 | `/demanda/resumen` | Indicadores | Panorama/indicadores de demanda (menú grupo *Ejecución* como *Indicadores*, `demandOverview`). |
 
@@ -56,7 +56,8 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | Ruta | Pantalla | Qué permite hacer |
 | --- | --- | --- |
 | `/activos/capacidad` | Capacidad | Registrar disponibilidad y asignaciones de horas por mes (menú grupo *Ejecución* como *Capacidad*, `capacity`). |
-| `/activos/catalogo` | Activos | Inventario de activos analíticos (menú grupo *Activos y conocimiento*, `asset`). |
+| `/activos/catalogo` | Activos | Inventario de activos analíticos; cada fila ofrece la acción *Ver historial* (menú grupo *Activos y conocimiento*, `asset`). |
+| `/activos/catalogo/[id]/historial` | Historial por activo | Vista de solo lectura de las solicitudes que tienen el activo como base, con su estado y proceso, ordenadas por fecha de registro; se llega desde la acción *Ver historial* del catálogo (no es ítem de menú, `asset`). |
 | `/activos/documentos` | Documentos | Documentación Markdown versionada de los activos (`docs`). |
 
 ## Gobierno (`/gobierno/*`)

@@ -1,6 +1,7 @@
 import {
   api,
   type Asset,
+  type AssetRequestHistoryItem,
   type ChangeAssetStatus,
   type CreateAsset,
   type UpdateAsset,
@@ -100,6 +101,27 @@ export async function updateAsset(
     const { data, error, response } = await api.PATCH('/assets/{id}', {
       params: { path: { id } },
       body: input,
+    });
+    if (error || !data) {
+      throw toAssetError(response.status);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof AssetError) throw err;
+    throw toAssetError(undefined);
+  }
+}
+
+/**
+ * Historial de solicitudes asociadas a un activo (GET /assets/:id/requests),
+ * ordenado por fecha de registro descendente. El backend filtra por alcance.
+ */
+export async function listAssetRequests(
+  assetId: string,
+): Promise<AssetRequestHistoryItem[]> {
+  try {
+    const { data, error, response } = await api.GET('/assets/{id}/requests', {
+      params: { path: { id: assetId } },
     });
     if (error || !data) {
       throw toAssetError(response.status);
