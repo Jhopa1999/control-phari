@@ -22,6 +22,7 @@ import { UpdateAssetDto } from './dto/update-asset.dto';
 import { ListAssetsDto } from './dto/list-assets.dto';
 import { ChangeAssetStatusDto } from './dto/change-asset-status.dto';
 import { AssetResponseDto } from './dto/asset-response.dto';
+import { AssetRequestHistoryItemDto } from './dto/asset-request-history-item.dto';
 import { CurrentActor } from '../../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../../auth/current-actor';
 import { CurrentUserGuard } from '../../auth/current-user.guard';
@@ -79,6 +80,19 @@ export class AssetController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.assetService.get(actor, id);
+  }
+
+  @Get(':id/requests')
+  @ApiOperation({ summary: 'Historial de solicitudes que tienen este activo como base.' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Solicitudes del activo.', type: [AssetRequestHistoryItemDto] })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Activo fuera de alcance.' })
+  listRequests(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.assetService.listRequests(actor, id);
   }
 
   @Patch(':id')

@@ -129,6 +129,14 @@ export class PriorityService {
       );
     }
 
+    // Gate de activo base (FEAT-002): no se puede salir del triage sin un
+    // activo asociado. 409 sin mutacion si la Request no tiene assetId.
+    if (request.assetId === null) {
+      throw new ConflictException(
+        'Asocia un activo a la solicitud en el triage antes de priorizarla.',
+      );
+    }
+
     // Transicion a BACKLOG_PRIORIZADO (desde EN_TRIAGE o idempotente en estado).
     const nextState = this.state.assertTransition(
       request.operationalState,

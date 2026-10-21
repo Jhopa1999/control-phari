@@ -17,6 +17,7 @@ import { UpdateAssetDto } from './dto/update-asset.dto';
 import { ListAssetsDto } from './dto/list-assets.dto';
 import { ChangeAssetStatusDto } from './dto/change-asset-status.dto';
 import { AssetResponseDto } from './dto/asset-response.dto';
+import { AssetRequestHistoryItemDto } from './dto/asset-request-history-item.dto';
 
 /** Mapa codigo de maestra -> familia (catalog) para la validacion del body. */
 const CATALOG_FAMILY: Record<string, string> = {
@@ -182,6 +183,36 @@ export class AssetService {
   async get(actor: CurrentActor, id: string): Promise<AssetResponseDto> {
     const row = await this.requireInScope(actor, id);
     return this.toResponse(row);
+  }
+
+  /**
+   * Historial de solicitudes que tienen este activo como base (FEAT-002),
+   * ordenado de la mas reciente a la mas antigua. 404 si el activo esta fuera
+   * del alcance de lectura del actor.
+   */
+  async listRequests(
+    actor: CurrentActor,
+    id: string,
+  ): Promise<AssetRequestHistoryItemDto[]> {
+    await this.requireInScope(actor, id);
+    const rows = await this.prisma.request.findMany({
+      where: { assetId: id },
+      orderBy: [{ registeredAt: 'desc' }, { createdAt: 'desc' }],
+      select: {
+        id: true,
+        title: true,
+        registeredAt: true,
+        operationalState: true,
+        mainProcessId: true,
+      },
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      registeredAt: row.registeredAt,
+      operationalState: row.operationalState,
+      mainProcessId: row.mainProcessId,
+    }));
   }
 
   async create(

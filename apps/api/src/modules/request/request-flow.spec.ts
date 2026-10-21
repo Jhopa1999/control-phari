@@ -8,6 +8,7 @@ import { RequestStateService } from './request-state.service';
 import { TriageService } from './triage/triage.service';
 import { PriorityService } from './priority/priority.service';
 import { ApprovalService } from './approval/approval.service';
+import { AssetService } from '../knowledge/asset/asset.service';
 import { CreatePriorityEvaluationDto } from './priority/dto/create-priority-evaluation.dto';
 
 /**
@@ -15,21 +16,36 @@ import { CreatePriorityEvaluationDto } from './priority/dto/create-priority-eval
  * Un unico mock mantiene el estado de la Request y el triage vigente para
  * recorrer el camino completo con los tres services reales.
  */
-function createFlowMocks(initialState: string) {
+function createFlowMocks(
+  initialState: string,
+  initialAssetId: string | null = 'asset-1',
+) {
   const request = {
     id: 'r1',
     mainProcessId: 'p1',
     operationalState: initialState,
+    assetId: initialAssetId,
   };
   let currentTriage: { decision: string } | null = null;
 
   const prismaObj: Record<string, unknown> = {
     request: {
       findFirst: jest.fn(async () => ({ ...request })),
-      update: jest.fn(async ({ data }: { data: { operationalState: string } }) => {
-        request.operationalState = data.operationalState;
-        return { ...request };
-      }),
+      update: jest.fn(
+        async ({
+          data,
+        }: {
+          data: { operationalState?: string; assetId?: string | null };
+        }) => {
+          if (data.operationalState !== undefined) {
+            request.operationalState = data.operationalState;
+          }
+          if (data.assetId !== undefined) {
+            request.assetId = data.assetId;
+          }
+          return { ...request, participants: [] };
+        },
+      ),
     },
     triage: {
       findFirst: jest.fn(async () => (currentTriage ? { ...currentTriage } : null)),
@@ -88,13 +104,19 @@ function createFlowMocks(initialState: string) {
   const prisma = prismaObj as unknown as PrismaService;
   const audit = { record: jest.fn() } as unknown as AuditService;
   const state = new RequestStateService(prisma);
+  // Activo "existente" para la asociacion; el service solo usa su id.
+  const assetService = {
+    get: jest.fn(async (_actor: unknown, id: string) => ({ id })),
+    create: jest.fn(async () => ({ id: 'asset-nuevo' })),
+  } as unknown as AssetService;
   return {
     request,
     prisma,
     prismaObj,
     audit,
     state,
-    triage: new TriageService(prisma, audit, state),
+    assetService,
+    triage: new TriageService(prisma, audit, state, assetService),
     priority: new PriorityService(prisma, audit, state),
     approval: new ApprovalService(prisma, audit, state),
   };
@@ -163,6 +185,35 @@ describe('Flujo de demanda (design §5)', () => {
     // Re-aprobar -> COMPROMETIDA.
     await f.approval.create(a, 'r1', { decision: 'APROBAR' });
     expect(f.request.operationalState).toBe(RequestState.COMPROMETIDA);
+  });
+
+  it('priorizar sin activo asociado -> 409 (gate FEAT-002)', async () => {
+    const f = createFlowMocks(RequestState.REGISTRADA, null);
+    const a = lider();
+
+    await f.triage.create(a, 'r1', { decision: 'CONTINUAR' });
+    expect(f.request.operationalState).toBe(RequestState.EN_TRIAGE);
+
+    await expect(f.priority.create(a, 'r1', evalDto)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    // Sigue sin activo y en EN_TRIAGE (gate no muta).
+    expect(f.request.assetId).toBeNull();
+    expect(f.request.operationalState).toBe(RequestState.EN_TRIAGE);
+  });
+
+  it('asociar activo -> habilita priorizar hasta BACKLOG', async () => {
+    const f = createFlowMocks(RequestState.REGISTRADA, null);
+    const a = lider();
+
+    await f.triage.create(a, 'r1', { decision: 'CONTINUAR' });
+    expect(f.request.operationalState).toBe(RequestState.EN_TRIAGE);
+
+    await f.triage.associateAsset(a, 'r1', { assetId: 'asset-x' });
+    expect(f.request.assetId).toBe('asset-x');
+
+    await f.priority.create(a, 'r1', evalDto);
+    expect(f.request.operationalState).toBe(RequestState.BACKLOG_PRIORIZADO);
   });
 
   it('monotonia del compromiso: re-priorizar sobre COMPROMETIDA -> 409 (no revierte)', async () => {

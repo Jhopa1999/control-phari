@@ -408,6 +408,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests/{id}/asset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Asocia el activo base de la solicitud (existente XOR nuevo); requisito para priorizar. */
+        post: operations["TriageController_associateAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/requests/{id}/priority": {
         parameters: {
             query?: never;
@@ -420,6 +437,181 @@ export interface paths {
         put?: never;
         /** Guarda una evaluacion (requiere triage=Continuar y estado valido). */
         post: operations["PriorityController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista activos en alcance (filtros opcionales). */
+        get: operations["AssetController_list"];
+        put?: never;
+        /** Crea un activo (nace BORRADOR; integrante solo propone). */
+        post: operations["AssetController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de un activo. */
+        get: operations["AssetController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita atributos de un activo (no el estado). */
+        patch: operations["AssetController_update"];
+        trace?: never;
+    };
+    "/assets/{id}/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historial de solicitudes que tienen este activo como base. */
+        get: operations["AssetController_listRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assets/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cambia el estado de un activo (transicion valida). */
+        post: operations["AssetController_changeStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista documentos en alcance (filtros opcionales, sin contenido). */
+        get: operations["DocumentController_list"];
+        put?: never;
+        /** Crea un documento + version 1 (contenido Markdown). */
+        post: operations["DocumentController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Metadatos del documento + version vigente (sin contenido). */
+        get: operations["DocumentController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita metadatos del documento (titulo/categoria; no estado ni contenido). */
+        patch: operations["DocumentController_update"];
+        trace?: never;
+    };
+    "/documents/{id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historial de versiones (sin contenido). */
+        get: operations["DocumentController_listVersions"];
+        put?: never;
+        /** Editar contenido = crear una nueva version (AC-020). */
+        post: operations["DocumentController_createVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{id}/versions/{versionId}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Contenido Markdown de una version (preview/descarga). */
+        get: operations["DocumentController_getVersionContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Contenido Markdown de la version vigente (atajo). */
+        get: operations["DocumentController_getCurrentContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cambia el estado del documento (transicion valida; lider/jefe). */
+        post: operations["DocumentController_changeStatus"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1142,164 +1334,6 @@ export interface paths {
         put?: never;
         /** Transiciona el estado de un compromiso (maquina minima). */
         post: operations["CommitmentController_transition"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/assets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista activos en alcance (filtros opcionales). */
-        get: operations["AssetController_list"];
-        put?: never;
-        /** Crea un activo (nace BORRADOR; integrante solo propone). */
-        post: operations["AssetController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/assets/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Detalle de un activo. */
-        get: operations["AssetController_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Edita atributos de un activo (no el estado). */
-        patch: operations["AssetController_update"];
-        trace?: never;
-    };
-    "/assets/{id}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Cambia el estado de un activo (transicion valida). */
-        post: operations["AssetController_changeStatus"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista documentos en alcance (filtros opcionales, sin contenido). */
-        get: operations["DocumentController_list"];
-        put?: never;
-        /** Crea un documento + version 1 (contenido Markdown). */
-        post: operations["DocumentController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Metadatos del documento + version vigente (sin contenido). */
-        get: operations["DocumentController_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Edita metadatos del documento (titulo/categoria; no estado ni contenido). */
-        patch: operations["DocumentController_update"];
-        trace?: never;
-    };
-    "/documents/{id}/versions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Historial de versiones (sin contenido). */
-        get: operations["DocumentController_listVersions"];
-        put?: never;
-        /** Editar contenido = crear una nueva version (AC-020). */
-        post: operations["DocumentController_createVersion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{id}/versions/{versionId}/content": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Contenido Markdown de una version (preview/descarga). */
-        get: operations["DocumentController_getVersionContent"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{id}/content": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Contenido Markdown de la version vigente (atajo). */
-        get: operations["DocumentController_getCurrentContent"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/documents/{id}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Cambia el estado del documento (transicion valida; lider/jefe). */
-        post: operations["DocumentController_changeStatus"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2443,6 +2477,38 @@ export interface components {
             /** @description Observaciones. */
             notes?: string;
         };
+        NewAssetInputDto: {
+            /** @description Nombre del activo (requerido). */
+            name: string;
+            /**
+             * Format: uuid
+             * @description Dueno/responsable (usuario).
+             */
+            ownerUserId?: string;
+            /** @description Tipo (maestra ASSET_TYPE). */
+            typeCode?: string;
+            /** @description Tecnologia (maestra TECHNOLOGY). */
+            technologyCode?: string;
+            /** @description Fuente (maestra SOURCE). */
+            sourceCode?: string;
+            /** @description Frecuencia (maestra FREQUENCY). */
+            frequencyCode?: string;
+            /** @description Referencia documental/repositorio. */
+            documentationRef?: string;
+            /** @description Descripcion funcional. */
+            functionalDescription?: string;
+            /** @description Dependencias/observaciones. */
+            dependencies?: string;
+        };
+        AssociateAssetDto: {
+            /**
+             * Format: uuid
+             * @description Activo existente a asociar (excluyente con newAsset).
+             */
+            assetId?: string;
+            /** @description Datos de un activo nuevo a crear y asociar (excluyente con assetId). */
+            newAsset?: components["schemas"]["NewAssetInputDto"];
+        };
         PriorityEvaluationResponseDto: {
             /**
              * Format: uuid
@@ -2511,6 +2577,237 @@ export interface components {
             reuse: number;
             /** @description Justificacion de la evaluacion. */
             justification?: string;
+        };
+        AssetResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Proceso del activo.
+             */
+            processId: string;
+            /**
+             * Format: uuid
+             * @description Solicitud de origen.
+             */
+            requestId: string | null;
+            /**
+             * Format: uuid
+             * @description Dueno/responsable.
+             */
+            ownerUserId: string | null;
+            /** @description Nombre del activo. */
+            name: string;
+            /** @description Estado (AssetStatus). */
+            status: string;
+            /** @description Tipo (maestra ASSET_TYPE). */
+            typeCode: string | null;
+            /** @description Tecnologia (maestra TECHNOLOGY). */
+            technologyCode: string | null;
+            /** @description Fuente (maestra SOURCE). */
+            sourceCode: string | null;
+            /** @description Frecuencia (maestra FREQUENCY). */
+            frequencyCode: string | null;
+            documentationRef: string | null;
+            functionalDescription: string | null;
+            dependencies: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateAssetDto: {
+            /**
+             * Format: uuid
+             * @description Proceso del activo (requerido).
+             */
+            processId: string;
+            /** @description Nombre del activo (requerido). */
+            name: string;
+            /**
+             * Format: uuid
+             * @description Solicitud de origen.
+             */
+            requestId?: string;
+            /**
+             * Format: uuid
+             * @description Dueno/responsable (usuario).
+             */
+            ownerUserId?: string;
+            /** @description Tipo (maestra ASSET_TYPE). */
+            typeCode?: string;
+            /** @description Tecnologia (maestra TECHNOLOGY). */
+            technologyCode?: string;
+            /** @description Fuente (maestra SOURCE). */
+            sourceCode?: string;
+            /** @description Frecuencia (maestra FREQUENCY). */
+            frequencyCode?: string;
+            /** @description Referencia documental/repositorio. */
+            documentationRef?: string;
+            /** @description Descripcion funcional. */
+            functionalDescription?: string;
+            /** @description Dependencias/observaciones. */
+            dependencies?: string;
+        };
+        AssetRequestHistoryItemDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la solicitud.
+             */
+            id: string;
+            /** @description Titulo de la solicitud. */
+            title: string;
+            /**
+             * Format: date-time
+             * @description Fecha de registro.
+             */
+            registeredAt: string;
+            /** @description Estado operativo (read-only, derivado). */
+            operationalState: string;
+            /**
+             * Format: uuid
+             * @description Proceso principal.
+             */
+            mainProcessId: string;
+        };
+        UpdateAssetDto: {
+            /** @description Nombre del activo. */
+            name?: string;
+            /**
+             * Format: uuid
+             * @description Solicitud de origen (null para desligar).
+             */
+            requestId?: string | null;
+            /**
+             * Format: uuid
+             * @description Dueno/responsable (null para desligar).
+             */
+            ownerUserId?: string | null;
+            /** @description Tipo (maestra ASSET_TYPE). */
+            typeCode?: string;
+            /** @description Tecnologia (maestra TECHNOLOGY). */
+            technologyCode?: string;
+            /** @description Fuente (maestra SOURCE). */
+            sourceCode?: string;
+            /** @description Frecuencia (maestra FREQUENCY). */
+            frequencyCode?: string;
+            /** @description Referencia documental/repositorio. */
+            documentationRef?: string;
+            /** @description Descripcion funcional. */
+            functionalDescription?: string;
+            /** @description Dependencias/observaciones. */
+            dependencies?: string;
+        };
+        ChangeAssetStatusDto: {
+            /**
+             * @description Estado destino.
+             * @enum {string}
+             */
+            targetStatus: "BORRADOR" | "ACTIVO" | "RETIRADO";
+            /** @description Motivo del cambio. */
+            reason?: string;
+        };
+        DocumentCurrentVersionDto: {
+            /** Format: uuid */
+            id: string;
+            /** @description Numero de version correlativo. */
+            versionNumber: number;
+            /**
+             * Format: uuid
+             * @description Autor de la version.
+             */
+            authorUserId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DocumentResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Activo del documento.
+             */
+            assetId: string;
+            /** @description Titulo. */
+            title: string;
+            /** @description Categoria (maestra DOC_CATEGORY). */
+            categoryCode: string | null;
+            /** @description Estado (DocStatus). */
+            status: string;
+            /** @description Resumen de la version vigente (sin contenido). */
+            currentVersion: components["schemas"]["DocumentCurrentVersionDto"] | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateDocumentDto: {
+            /**
+             * Format: uuid
+             * @description Activo del documento (requerido).
+             */
+            assetId: string;
+            /** @description Titulo del documento (requerido). */
+            title: string;
+            /** @description Categoria (maestra DOC_CATEGORY). */
+            categoryCode?: string;
+            /** @description Contenido Markdown de la version 1. */
+            content: string;
+        };
+        UpdateDocumentDto: {
+            /** @description Titulo del documento. */
+            title?: string;
+            /** @description Categoria (maestra DOC_CATEGORY; null para desligar). */
+            categoryCode?: string | null;
+        };
+        CreateDocumentVersionDto: {
+            /** @description Contenido Markdown de la nueva version. */
+            content: string;
+        };
+        DocumentVersionResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Documento al que pertenece.
+             */
+            documentId: string;
+            /** @description Numero de version correlativo. */
+            versionNumber: number;
+            /**
+             * Format: uuid
+             * @description Autor de la version.
+             */
+            authorUserId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DocumentContentResponseDto: {
+            /**
+             * Format: uuid
+             * @description Documento.
+             */
+            documentId: string;
+            /**
+             * Format: uuid
+             * @description Version del contenido.
+             */
+            versionId: string;
+            /** @description Numero de version. */
+            versionNumber: number;
+            /** @description Titulo del documento. */
+            title: string;
+            /** @description Contenido Markdown. */
+            content: string;
+        };
+        ChangeDocumentStatusDto: {
+            /**
+             * @description Estado destino.
+             * @enum {string}
+             */
+            targetStatus: "BORRADOR" | "VIGENTE" | "ARCHIVADA";
+            /** @description Motivo del cambio. */
+            reason?: string;
         };
         MyWorkItemDto: {
             /**
@@ -3894,216 +4191,6 @@ export interface components {
             result?: string;
             /** @description Bloqueos. */
             blockers?: string;
-        };
-        AssetResponseDto: {
-            /** Format: uuid */
-            id: string;
-            /**
-             * Format: uuid
-             * @description Proceso del activo.
-             */
-            processId: string;
-            /**
-             * Format: uuid
-             * @description Solicitud de origen.
-             */
-            requestId: string | null;
-            /**
-             * Format: uuid
-             * @description Dueno/responsable.
-             */
-            ownerUserId: string | null;
-            /** @description Nombre del activo. */
-            name: string;
-            /** @description Estado (AssetStatus). */
-            status: string;
-            /** @description Tipo (maestra ASSET_TYPE). */
-            typeCode: string | null;
-            /** @description Tecnologia (maestra TECHNOLOGY). */
-            technologyCode: string | null;
-            /** @description Fuente (maestra SOURCE). */
-            sourceCode: string | null;
-            /** @description Frecuencia (maestra FREQUENCY). */
-            frequencyCode: string | null;
-            documentationRef: string | null;
-            functionalDescription: string | null;
-            dependencies: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        CreateAssetDto: {
-            /**
-             * Format: uuid
-             * @description Proceso del activo (requerido).
-             */
-            processId: string;
-            /** @description Nombre del activo (requerido). */
-            name: string;
-            /**
-             * Format: uuid
-             * @description Solicitud de origen.
-             */
-            requestId?: string;
-            /**
-             * Format: uuid
-             * @description Dueno/responsable (usuario).
-             */
-            ownerUserId?: string;
-            /** @description Tipo (maestra ASSET_TYPE). */
-            typeCode?: string;
-            /** @description Tecnologia (maestra TECHNOLOGY). */
-            technologyCode?: string;
-            /** @description Fuente (maestra SOURCE). */
-            sourceCode?: string;
-            /** @description Frecuencia (maestra FREQUENCY). */
-            frequencyCode?: string;
-            /** @description Referencia documental/repositorio. */
-            documentationRef?: string;
-            /** @description Descripcion funcional. */
-            functionalDescription?: string;
-            /** @description Dependencias/observaciones. */
-            dependencies?: string;
-        };
-        UpdateAssetDto: {
-            /** @description Nombre del activo. */
-            name?: string;
-            /**
-             * Format: uuid
-             * @description Solicitud de origen (null para desligar).
-             */
-            requestId?: string | null;
-            /**
-             * Format: uuid
-             * @description Dueno/responsable (null para desligar).
-             */
-            ownerUserId?: string | null;
-            /** @description Tipo (maestra ASSET_TYPE). */
-            typeCode?: string;
-            /** @description Tecnologia (maestra TECHNOLOGY). */
-            technologyCode?: string;
-            /** @description Fuente (maestra SOURCE). */
-            sourceCode?: string;
-            /** @description Frecuencia (maestra FREQUENCY). */
-            frequencyCode?: string;
-            /** @description Referencia documental/repositorio. */
-            documentationRef?: string;
-            /** @description Descripcion funcional. */
-            functionalDescription?: string;
-            /** @description Dependencias/observaciones. */
-            dependencies?: string;
-        };
-        ChangeAssetStatusDto: {
-            /**
-             * @description Estado destino.
-             * @enum {string}
-             */
-            targetStatus: "BORRADOR" | "ACTIVO" | "RETIRADO";
-            /** @description Motivo del cambio. */
-            reason?: string;
-        };
-        DocumentCurrentVersionDto: {
-            /** Format: uuid */
-            id: string;
-            /** @description Numero de version correlativo. */
-            versionNumber: number;
-            /**
-             * Format: uuid
-             * @description Autor de la version.
-             */
-            authorUserId: string;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        DocumentResponseDto: {
-            /** Format: uuid */
-            id: string;
-            /**
-             * Format: uuid
-             * @description Activo del documento.
-             */
-            assetId: string;
-            /** @description Titulo. */
-            title: string;
-            /** @description Categoria (maestra DOC_CATEGORY). */
-            categoryCode: string | null;
-            /** @description Estado (DocStatus). */
-            status: string;
-            /** @description Resumen de la version vigente (sin contenido). */
-            currentVersion: components["schemas"]["DocumentCurrentVersionDto"] | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        CreateDocumentDto: {
-            /**
-             * Format: uuid
-             * @description Activo del documento (requerido).
-             */
-            assetId: string;
-            /** @description Titulo del documento (requerido). */
-            title: string;
-            /** @description Categoria (maestra DOC_CATEGORY). */
-            categoryCode?: string;
-            /** @description Contenido Markdown de la version 1. */
-            content: string;
-        };
-        UpdateDocumentDto: {
-            /** @description Titulo del documento. */
-            title?: string;
-            /** @description Categoria (maestra DOC_CATEGORY; null para desligar). */
-            categoryCode?: string | null;
-        };
-        CreateDocumentVersionDto: {
-            /** @description Contenido Markdown de la nueva version. */
-            content: string;
-        };
-        DocumentVersionResponseDto: {
-            /** Format: uuid */
-            id: string;
-            /**
-             * Format: uuid
-             * @description Documento al que pertenece.
-             */
-            documentId: string;
-            /** @description Numero de version correlativo. */
-            versionNumber: number;
-            /**
-             * Format: uuid
-             * @description Autor de la version.
-             */
-            authorUserId: string;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        DocumentContentResponseDto: {
-            /**
-             * Format: uuid
-             * @description Documento.
-             */
-            documentId: string;
-            /**
-             * Format: uuid
-             * @description Version del contenido.
-             */
-            versionId: string;
-            /** @description Numero de version. */
-            versionNumber: number;
-            /** @description Titulo del documento. */
-            title: string;
-            /** @description Contenido Markdown. */
-            content: string;
-        };
-        ChangeDocumentStatusDto: {
-            /**
-             * @description Estado destino.
-             * @enum {string}
-             */
-            targetStatus: "BORRADOR" | "VIGENTE" | "ARCHIVADA";
-            /** @description Motivo del cambio. */
-            reason?: string;
         };
         GatePendingItemResponseDto: {
             /**
@@ -5945,6 +6032,60 @@ export interface operations {
             };
         };
     };
+    TriageController_associateAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssociateAssetDto"];
+            };
+        };
+        responses: {
+            /** @description Activo asociado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestResponseDto"];
+                };
+            };
+            /** @description Datos invalidos o ambos/ninguno de activo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud o activo fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La solicitud no admite asociar activo en su estado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     PriorityController_findForRequest: {
         parameters: {
             query?: never;
@@ -6028,6 +6169,630 @@ export interface operations {
             };
             /** @description Sin triage=Continuar o estado no admite priorizar. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Activos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetResponseDto"][];
+                };
+            };
+            /** @description Filtros invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAssetDto"];
+            };
+        };
+        responses: {
+            /** @description Activo creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Proceso fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Activo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Activo fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAssetDto"];
+            };
+        };
+        responses: {
+            /** @description Activo actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Activo fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetController_listRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Solicitudes del activo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetRequestHistoryItemDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Activo fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssetController_changeStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeAssetStatusDto"];
+            };
+        };
+        responses: {
+            /** @description Estado actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetResponseDto"];
+                };
+            };
+            /** @description Transicion no permitida. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Activo fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Documentos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponseDto"][];
+                };
+            };
+            /** @description Filtros invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDocumentDto"];
+            };
+        };
+        responses: {
+            /** @description Documento creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Activo fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflicto de concurrencia. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Documento. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Documento fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDocumentDto"];
+            };
+        };
+        responses: {
+            /** @description Documento actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Documento fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentController_listVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Versiones. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentVersionResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Documento fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentController_createVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDocumentVersionDto"];
+            };
+        };
+        responses: {
+            /** @description Version creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Documento fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflicto de concurrencia. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentController_getVersionContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: unknown;
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contenido de la version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentContentResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Documento o version fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentController_getCurrentContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contenido vigente. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentContentResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Documento fuera de alcance o sin contenido. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentController_changeStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeDocumentStatusDto"];
+            };
+        };
+        responses: {
+            /** @description Estado actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponseDto"];
+                };
+            };
+            /** @description Transicion no permitida. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Documento fuera de alcance. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8531,594 +9296,6 @@ export interface operations {
                 content?: never;
             };
             /** @description Compromiso fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AssetController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Activos. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssetResponseDto"][];
-                };
-            };
-            /** @description Filtros invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AssetController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateAssetDto"];
-            };
-        };
-        responses: {
-            /** @description Activo creado. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssetResponseDto"];
-                };
-            };
-            /** @description Datos invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Proceso fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AssetController_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Activo. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssetResponseDto"];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Activo fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AssetController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateAssetDto"];
-            };
-        };
-        responses: {
-            /** @description Activo actualizado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssetResponseDto"];
-                };
-            };
-            /** @description Datos invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Activo fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AssetController_changeStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChangeAssetStatusDto"];
-            };
-        };
-        responses: {
-            /** @description Estado actualizado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssetResponseDto"];
-                };
-            };
-            /** @description Transicion no permitida. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Activo fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    DocumentController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Documentos. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentResponseDto"][];
-                };
-            };
-            /** @description Filtros invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    DocumentController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateDocumentDto"];
-            };
-        };
-        responses: {
-            /** @description Documento creado. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentResponseDto"];
-                };
-            };
-            /** @description Datos invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Activo fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Conflicto de concurrencia. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    DocumentController_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Documento. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentResponseDto"];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Documento fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    DocumentController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateDocumentDto"];
-            };
-        };
-        responses: {
-            /** @description Documento actualizado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentResponseDto"];
-                };
-            };
-            /** @description Datos invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Documento fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    DocumentController_listVersions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Versiones. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentVersionResponseDto"][];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Documento fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    DocumentController_createVersion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateDocumentVersionDto"];
-            };
-        };
-        responses: {
-            /** @description Version creada. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentResponseDto"];
-                };
-            };
-            /** @description Datos invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Documento fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Conflicto de concurrencia. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    DocumentController_getVersionContent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                versionId: unknown;
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Contenido de la version. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentContentResponseDto"];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Documento o version fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    DocumentController_getCurrentContent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Contenido vigente. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentContentResponseDto"];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Documento fuera de alcance o sin contenido. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    DocumentController_changeStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChangeDocumentStatusDto"];
-            };
-        };
-        responses: {
-            /** @description Estado actualizado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentResponseDto"];
-                };
-            };
-            /** @description Transicion no permitida. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Documento fuera de alcance. */
             404: {
                 headers: {
                     [name: string]: unknown;

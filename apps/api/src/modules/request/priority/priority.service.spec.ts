@@ -37,8 +37,11 @@ function lider(scoped: string[] = ['p1']): CurrentActor {
   };
 }
 
-function makeRequest(state: string) {
-  return { id: 'r1', mainProcessId: 'p1', operationalState: state };
+function makeRequest(
+  state: string,
+  assetId: string | null = 'asset-1',
+) {
+  return { id: 'r1', mainProcessId: 'p1', operationalState: state, assetId };
 }
 
 const dto: CreatePriorityEvaluationDto = {
@@ -173,5 +176,35 @@ describe('PriorityService', () => {
         ConflictException,
       );
     }
+  });
+
+  it('sin activo asociado (assetId null) -> 409 sin mutacion (gate FEAT-002)', async () => {
+    (m.prismaObj.request as any).findFirst.mockResolvedValue(
+      makeRequest(RequestState.EN_TRIAGE, null),
+    );
+    (m.prismaObj.triage as any).findFirst.mockResolvedValue({ decision: 'CONTINUAR' });
+    await expect(service.create(lider(), 'r1', dto)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect((m.prismaObj.priorityEvaluation as any).create).not.toHaveBeenCalled();
+    expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
+  });
+
+  it('con activo asociado (assetId != null) -> prioriza y pasa a BACKLOG', async () => {
+    (m.prismaObj.request as any).findFirst.mockResolvedValue(
+      makeRequest(RequestState.EN_TRIAGE, 'asset-1'),
+    );
+    (m.prismaObj.triage as any).findFirst.mockResolvedValue({ decision: 'CONTINUAR' });
+    (m.prismaObj.priorityEvaluation as any).create.mockResolvedValue(
+      mockCreatedEvaluation(100),
+    );
+    (m.prismaObj.request as any).update.mockResolvedValue(
+      makeRequest(RequestState.BACKLOG_PRIORIZADO),
+    );
+
+    await service.create(lider(), 'r1', dto);
+    expect((m.prismaObj.request as any).update.mock.calls[0][0].data).toEqual({
+      operationalState: RequestState.BACKLOG_PRIORIZADO,
+    });
   });
 });

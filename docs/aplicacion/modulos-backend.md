@@ -133,6 +133,11 @@ triage/priorización/aprobación exigen `JEFE_AREA` o `LIDER_PROCESO`.
 | --- | --- | --- |
 | GET | `/requests/:id/triage` | Triage de la solicitud (0 o 1 fila) y candidatos a responsable. |
 | POST | `/requests/:id/triage` | Registra el triage (solo desde `REGISTRADA`; segundo POST → `409`). |
+| POST | `/requests/:id/asset` | Asocia el activo base: existente (`assetId`) o nuevo (`newAsset`), uno solo (`400` si ambos o ninguno); solo en estados tempranos (`409` fuera). |
+
+Asociar activo reutiliza el módulo de activos: un activo existente puede ser de otro
+proceso; uno nuevo nace bajo el proceso principal de la solicitud. También `JEFE_AREA`/
+`LIDER_PROCESO` (más `ADMIN`).
 
 ### Priorización (`priority/priority.controller.ts`)
 
@@ -150,7 +155,8 @@ triage/priorización/aprobación exigen `JEFE_AREA` o `LIDER_PROCESO`.
 | POST | `/requests/:id/approval` | Aprueba (→ *Comprometida*) o devuelve (→ *En triage*, motivo requerido). |
 
 Reglas clave: el triage solo se registra desde `REGISTRADA`; priorizar exige triage con
-decisión "Continuar"; aprobar exige que la solicitud esté en backlog priorizado;
+decisión "Continuar", un estado válido y un activo base asociado (sin `assetId` → `409`
+sin mutación); aprobar exige que la solicitud esté en backlog priorizado;
 devolver exige motivo. El estado operativo lo escribe solo el helper de transición, no
 un update libre.
 
@@ -322,6 +328,7 @@ en el service.
 | GET | `/assets` | Lista activos en alcance (filtros opcionales). |
 | POST | `/assets` | Crea un activo (nace BORRADOR; el integrante solo propone). |
 | GET | `/assets/:id` | Detalle de un activo. |
+| GET | `/assets/:id/requests` | Historial de solicitudes que tienen el activo como base (más reciente primero). |
 | PATCH | `/assets/:id` | Edita atributos de un activo (no el estado). |
 | POST | `/assets/:id/status` | Cambia el estado de un activo (transición válida). |
 

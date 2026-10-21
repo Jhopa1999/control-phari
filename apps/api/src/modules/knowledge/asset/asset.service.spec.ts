@@ -20,7 +20,7 @@ function createMocks() {
       update: jest.fn(),
     },
     user: { findFirst: jest.fn() },
-    request: { findFirst: jest.fn() },
+    request: { findFirst: jest.fn(), findMany: jest.fn() },
     catalogItem: { findFirst: jest.fn() },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
@@ -232,5 +232,55 @@ describe('AssetService', () => {
     await expect(
       m.service.changeStatus(lider(), 'a1', { targetStatus: 'BORRADOR' }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  describe('listRequests (historial por activo, FEAT-002)', () => {
+    it('activo fuera de alcance -> 404', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.listRequests(integrante(), 'ajeno'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(m.prismaObj.request.findMany).not.toHaveBeenCalled();
+    });
+
+    it('sin solicitudes -> array vacio', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.request.findMany.mockResolvedValue([]);
+      const res = await m.service.listRequests(lider(), 'a1');
+      expect(res).toEqual([]);
+    });
+
+    it('ordenado por registeredAt desc e incluye operationalState', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.request.findMany.mockResolvedValue([
+        {
+          id: 'r2',
+          title: 'Modelo analitico',
+          registeredAt: new Date('2025-03-02T00:00:00.000Z'),
+          operationalState: 'EN_TRIAGE',
+          mainProcessId: 'p1',
+        },
+        {
+          id: 'r1',
+          title: 'Creacion de API',
+          registeredAt: new Date('2025-03-01T00:00:00.000Z'),
+          operationalState: 'BACKLOG_PRIORIZADO',
+          mainProcessId: 'p1',
+        },
+      ]);
+
+      const res = await m.service.listRequests(lider(), 'a1');
+
+      // El where filtra por el activo y el orderBy prioriza registeredAt desc.
+      expect(m.prismaObj.request.findMany.mock.calls[0][0].where).toEqual({
+        assetId: 'a1',
+      });
+      expect(m.prismaObj.request.findMany.mock.calls[0][0].orderBy).toEqual([
+        { registeredAt: 'desc' },
+        { createdAt: 'desc' },
+      ]);
+      expect(res.map((r) => r.id)).toEqual(['r2', 'r1']);
+      expect(res[0].operationalState).toBe('EN_TRIAGE');
+    });
   });
 });

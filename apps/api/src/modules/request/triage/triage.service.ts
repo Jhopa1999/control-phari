@@ -9,11 +9,26 @@ import type { RequestModel } from '../../../generated/prisma/models/Request';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
+import { AssetService } from '../../knowledge/asset/asset.service';
+import { RequestResponseDto } from '../dto/request-response.dto';
 import { RequestState } from '../request-state';
 import { RequestStateService } from '../request-state.service';
+import { AssociateAssetDto } from './dto/associate-asset.dto';
 import { CreateTriageDto } from './dto/create-triage.dto';
 import { TriageContextResponseDto } from './dto/triage-context-response.dto';
 import { TriageResponseDto } from './dto/triage-response.dto';
+
+/**
+ * Estados de la Request en los que se admite asociar/cambiar el activo base
+ * (FEAT-002): el triage y los estados tempranos a los que puede regresar antes
+ * de priorizarse. Fuera de este conjunto -> 409 (no se reasigna el activo una
+ * vez priorizada o comprometida).
+ */
+const ASSET_ASSOCIABLE_STATES: readonly string[] = [
+  RequestState.EN_TRIAGE,
+  RequestState.BACKLOG_PRIORIZADO,
+  RequestState.DEVUELTA,
+];
 
 /**
  * Mensaje accionable del 400 cuando el responsable principal referenciado no es
@@ -56,6 +71,7 @@ export class TriageService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly state: RequestStateService,
+    private readonly assetService: AssetService,
   ) {}
 
   private snapshot(triage: TriageWithResponsible): Prisma.InputJsonValue {
@@ -276,5 +292,94 @@ export class TriageService {
     });
 
     return this.toResponse(created);
+  }
+
+  /**
+   * Asocia el activo base de la solicitud durante el triage (FEAT-002).
+   * Exactamente UNA opcion: `assetId` (activo existente, puede ser de otro
+   * proceso) XOR `newAsset` (crea uno bajo el proceso principal reutilizando
+   * AssetService). Solo en estados tempranos (ASSET_ASSOCIABLE_STATES); fuera
+   * -> 409. Escribe `Request.assetId` y audita UPDATE REQUEST en una
+   * $transaction. Devuelve el RequestResponseDto reconstruido.
+   */
+  async associateAsset(
+    actor: CurrentActor,
+    requestId: string,
+    dto: AssociateAssetDto,
+  ): Promise<RequestResponseDto> {
+    const request = await this.state.requireInScope(actor, requestId);
+
+    if (!ASSET_ASSOCIABLE_STATES.includes(request.operationalState)) {
+      throw new ConflictException(
+        'La solicitud no admite asociar un activo en su estado actual.',
+      );
+    }
+
+    const hasExisting = dto.assetId !== undefined;
+    const hasNew = dto.newAsset !== undefined;
+    if (hasExisting === hasNew) {
+      throw new BadRequestException(
+        'Indica un activo existente o los datos de uno nuevo, pero no ambos.',
+      );
+    }
+
+    // Existente: reutiliza AssetService.get (404 si no accesible; admite un
+    // activo de otro proceso). Nuevo: crea bajo el proceso principal via
+    // AssetService.create, SIN pasar requestId (la asociacion la escribe este
+    // service sobre la Request).
+    const assetId = hasExisting
+      ? (await this.assetService.get(actor, dto.assetId!)).id
+      : (
+          await this.assetService.create(actor, {
+            processId: request.mainProcessId,
+            name: dto.newAsset!.name,
+            ...(dto.newAsset!.ownerUserId !== undefined
+              ? { ownerUserId: dto.newAsset!.ownerUserId }
+              : {}),
+            ...(dto.newAsset!.typeCode !== undefined
+              ? { typeCode: dto.newAsset!.typeCode }
+              : {}),
+            ...(dto.newAsset!.technologyCode !== undefined
+              ? { technologyCode: dto.newAsset!.technologyCode }
+              : {}),
+            ...(dto.newAsset!.sourceCode !== undefined
+              ? { sourceCode: dto.newAsset!.sourceCode }
+              : {}),
+            ...(dto.newAsset!.frequencyCode !== undefined
+              ? { frequencyCode: dto.newAsset!.frequencyCode }
+              : {}),
+            ...(dto.newAsset!.documentationRef !== undefined
+              ? { documentationRef: dto.newAsset!.documentationRef }
+              : {}),
+            ...(dto.newAsset!.functionalDescription !== undefined
+              ? { functionalDescription: dto.newAsset!.functionalDescription }
+              : {}),
+            ...(dto.newAsset!.dependencies !== undefined
+              ? { dependencies: dto.newAsset!.dependencies }
+              : {}),
+          })
+        ).id;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.request.update({
+        where: { id: requestId },
+        data: { assetId },
+        include: { participants: true },
+      });
+
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'UPDATE',
+        objectType: 'REQUEST',
+        objectId: requestId,
+        scopeProcessId: request.mainProcessId,
+        before: { assetId: request.assetId },
+        after: { assetId: row.assetId },
+      });
+
+      return row;
+    });
+
+    return this.state.buildResponse(updated);
   }
 }

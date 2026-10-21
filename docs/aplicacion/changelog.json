@@ -83,6 +83,12 @@
       "trigger_file": "apps/api/prisma/schema.prisma",
       "updated_docs": ["docs/aplicacion/modelo-datos.md"],
       "summary": "Se documento el activo base de la solicitud: nuevo campo Request.assetId (nullable, indice assetId) con la relacion N:1 'RequestAsset' hacia Asset (onDelete Restrict) y su inversa Asset.requestsAssociated, mas el nombrado de la relacion de origen 'AssetOriginRequest' (Asset.request / Request.assets)."
+    },
+    {
+      "timestamp": "2026-10-21T05:00:00Z",
+      "trigger_file": "apps/api/src/modules/request/triage/triage.controller.ts",
+      "updated_docs": ["docs/aplicacion/modulos-backend.md"],
+      "summary": "Se documentaron POST /requests/:id/asset (asocia el activo base, existente o nuevo, solo en estados tempranos), GET /assets/:id/requests (historial de solicitudes por activo) y el gate de priorizacion que exige activo asociado (sin assetId => 409)."
     }
   ]
 }

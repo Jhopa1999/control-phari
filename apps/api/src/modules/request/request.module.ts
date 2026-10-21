@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../database/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
+import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { RequestController } from './request.controller';
 import { RequestService } from './request.service';
 import { RequestStateService } from './request-state.service';
@@ -19,7 +20,7 @@ import { ApprovalService } from './approval/approval.service';
  * AuthModule y AuditModule como los modulos de Fase 1.
  */
 @Module({
-  imports: [PrismaModule, AuthModule, AuditModule],
+  imports: [PrismaModule, AuthModule, AuditModule, KnowledgeModule],
   // ApprovalController va ANTES que RequestController: su ruta estatica
   // GET /requests/pending-approval debe registrarse antes que la parametrica
   // GET /requests/:id del RequestController (que comparte el prefijo

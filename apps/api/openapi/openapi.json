@@ -1420,6 +1420,59 @@
         ]
       }
     },
+    "/requests/{id}/asset": {
+      "post": {
+        "operationId": "TriageController_associateAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssociateAssetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Activo asociado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o ambos/ninguno de activo."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud o activo fuera de alcance."
+          },
+          "409": {
+            "description": "La solicitud no admite asociar activo en su estado."
+          }
+        },
+        "summary": "Asocia el activo base de la solicitud (existente XOR nuevo); requisito para priorizar.",
+        "tags": [
+          "triage"
+        ]
+      }
+    },
     "/requests/{id}/priority": {
       "get": {
         "operationId": "PriorityController_findForRequest",
@@ -1508,6 +1561,632 @@
         "summary": "Guarda una evaluacion (requiere triage=Continuar y estado valido).",
         "tags": [
           "priority"
+        ]
+      }
+    },
+    "/assets": {
+      "get": {
+        "operationId": "AssetController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Activos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssetResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista activos en alcance (filtros opcionales).",
+        "tags": [
+          "assets"
+        ]
+      },
+      "post": {
+        "operationId": "AssetController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Activo creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Proceso fuera de alcance."
+          }
+        },
+        "summary": "Crea un activo (nace BORRADOR; integrante solo propone).",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/assets/{id}": {
+      "get": {
+        "operationId": "AssetController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Activo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Activo fuera de alcance."
+          }
+        },
+        "summary": "Detalle de un activo.",
+        "tags": [
+          "assets"
+        ]
+      },
+      "patch": {
+        "operationId": "AssetController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAssetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Activo actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Activo fuera de alcance."
+          }
+        },
+        "summary": "Edita atributos de un activo (no el estado).",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/assets/{id}/requests": {
+      "get": {
+        "operationId": "AssetController_listRequests",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitudes del activo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssetRequestHistoryItemDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Activo fuera de alcance."
+          }
+        },
+        "summary": "Historial de solicitudes que tienen este activo como base.",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/assets/{id}/status": {
+      "post": {
+        "operationId": "AssetController_changeStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeAssetStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Transicion no permitida."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Activo fuera de alcance."
+          }
+        },
+        "summary": "Cambia el estado de un activo (transicion valida).",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/documents": {
+      "get": {
+        "operationId": "DocumentController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Documentos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista documentos en alcance (filtros opcionales, sin contenido).",
+        "tags": [
+          "documents"
+        ]
+      },
+      "post": {
+        "operationId": "DocumentController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Documento creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Activo fuera de alcance."
+          },
+          "409": {
+            "description": "Conflicto de concurrencia."
+          }
+        },
+        "summary": "Crea un documento + version 1 (contenido Markdown).",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{id}": {
+      "get": {
+        "operationId": "DocumentController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Documento fuera de alcance."
+          }
+        },
+        "summary": "Metadatos del documento + version vigente (sin contenido).",
+        "tags": [
+          "documents"
+        ]
+      },
+      "patch": {
+        "operationId": "DocumentController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Documento actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Documento fuera de alcance."
+          }
+        },
+        "summary": "Edita metadatos del documento (titulo/categoria; no estado ni contenido).",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{id}/versions": {
+      "post": {
+        "operationId": "DocumentController_createVersion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDocumentVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Version creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Documento fuera de alcance."
+          },
+          "409": {
+            "description": "Conflicto de concurrencia."
+          }
+        },
+        "summary": "Editar contenido = crear una nueva version (AC-020).",
+        "tags": [
+          "documents"
+        ]
+      },
+      "get": {
+        "operationId": "DocumentController_listVersions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versiones.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentVersionResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Documento fuera de alcance."
+          }
+        },
+        "summary": "Historial de versiones (sin contenido).",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{id}/versions/{versionId}/content": {
+      "get": {
+        "operationId": "DocumentController_getVersionContent",
+        "parameters": [
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contenido de la version.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentContentResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Documento o version fuera de alcance."
+          }
+        },
+        "summary": "Contenido Markdown de una version (preview/descarga).",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{id}/content": {
+      "get": {
+        "operationId": "DocumentController_getCurrentContent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contenido vigente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentContentResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Documento fuera de alcance o sin contenido."
+          }
+        },
+        "summary": "Contenido Markdown de la version vigente (atajo).",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{id}/status": {
+      "post": {
+        "operationId": "DocumentController_changeStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeDocumentStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Transicion no permitida."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Documento fuera de alcance."
+          }
+        },
+        "summary": "Cambia el estado del documento (transicion valida; lider/jefe).",
+        "tags": [
+          "documents"
         ]
       }
     },
@@ -4136,592 +4815,6 @@
         ]
       }
     },
-    "/assets": {
-      "get": {
-        "operationId": "AssetController_list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Activos.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AssetResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Filtros invalidos."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          }
-        },
-        "summary": "Lista activos en alcance (filtros opcionales).",
-        "tags": [
-          "assets"
-        ]
-      },
-      "post": {
-        "operationId": "AssetController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAssetDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Activo creado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Proceso fuera de alcance."
-          }
-        },
-        "summary": "Crea un activo (nace BORRADOR; integrante solo propone).",
-        "tags": [
-          "assets"
-        ]
-      }
-    },
-    "/assets/{id}": {
-      "get": {
-        "operationId": "AssetController_get",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Activo.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Activo fuera de alcance."
-          }
-        },
-        "summary": "Detalle de un activo.",
-        "tags": [
-          "assets"
-        ]
-      },
-      "patch": {
-        "operationId": "AssetController_update",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAssetDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Activo actualizado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Activo fuera de alcance."
-          }
-        },
-        "summary": "Edita atributos de un activo (no el estado).",
-        "tags": [
-          "assets"
-        ]
-      }
-    },
-    "/assets/{id}/status": {
-      "post": {
-        "operationId": "AssetController_changeStatus",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangeAssetStatusDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Estado actualizado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Transicion no permitida."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Activo fuera de alcance."
-          }
-        },
-        "summary": "Cambia el estado de un activo (transicion valida).",
-        "tags": [
-          "assets"
-        ]
-      }
-    },
-    "/documents": {
-      "get": {
-        "operationId": "DocumentController_list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Documentos.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DocumentResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Filtros invalidos."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          }
-        },
-        "summary": "Lista documentos en alcance (filtros opcionales, sin contenido).",
-        "tags": [
-          "documents"
-        ]
-      },
-      "post": {
-        "operationId": "DocumentController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateDocumentDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Documento creado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Activo fuera de alcance."
-          },
-          "409": {
-            "description": "Conflicto de concurrencia."
-          }
-        },
-        "summary": "Crea un documento + version 1 (contenido Markdown).",
-        "tags": [
-          "documents"
-        ]
-      }
-    },
-    "/documents/{id}": {
-      "get": {
-        "operationId": "DocumentController_get",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Documento.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Documento fuera de alcance."
-          }
-        },
-        "summary": "Metadatos del documento + version vigente (sin contenido).",
-        "tags": [
-          "documents"
-        ]
-      },
-      "patch": {
-        "operationId": "DocumentController_update",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateDocumentDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Documento actualizado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Documento fuera de alcance."
-          }
-        },
-        "summary": "Edita metadatos del documento (titulo/categoria; no estado ni contenido).",
-        "tags": [
-          "documents"
-        ]
-      }
-    },
-    "/documents/{id}/versions": {
-      "post": {
-        "operationId": "DocumentController_createVersion",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateDocumentVersionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Version creada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Documento fuera de alcance."
-          },
-          "409": {
-            "description": "Conflicto de concurrencia."
-          }
-        },
-        "summary": "Editar contenido = crear una nueva version (AC-020).",
-        "tags": [
-          "documents"
-        ]
-      },
-      "get": {
-        "operationId": "DocumentController_listVersions",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Versiones.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DocumentVersionResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Documento fuera de alcance."
-          }
-        },
-        "summary": "Historial de versiones (sin contenido).",
-        "tags": [
-          "documents"
-        ]
-      }
-    },
-    "/documents/{id}/versions/{versionId}/content": {
-      "get": {
-        "operationId": "DocumentController_getVersionContent",
-        "parameters": [
-          {
-            "name": "versionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Contenido de la version.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentContentResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Documento o version fuera de alcance."
-          }
-        },
-        "summary": "Contenido Markdown de una version (preview/descarga).",
-        "tags": [
-          "documents"
-        ]
-      }
-    },
-    "/documents/{id}/content": {
-      "get": {
-        "operationId": "DocumentController_getCurrentContent",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Contenido vigente.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentContentResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Documento fuera de alcance o sin contenido."
-          }
-        },
-        "summary": "Contenido Markdown de la version vigente (atajo).",
-        "tags": [
-          "documents"
-        ]
-      }
-    },
-    "/documents/{id}/status": {
-      "post": {
-        "operationId": "DocumentController_changeStatus",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangeDocumentStatusDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Estado actualizado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Transicion no permitida."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Documento fuera de alcance."
-          }
-        },
-        "summary": "Cambia el estado del documento (transicion valida; lider/jefe).",
-        "tags": [
-          "documents"
-        ]
-      }
-    },
     "/requests/{id}/gates": {
       "get": {
         "operationId": "GateCheckController_getForRequest",
@@ -7106,6 +7199,73 @@
           "decision"
         ]
       },
+      "NewAssetInputDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del activo (requerido).",
+            "maxLength": 300
+          },
+          "ownerUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Dueno/responsable (usuario)."
+          },
+          "typeCode": {
+            "type": "string",
+            "description": "Tipo (maestra ASSET_TYPE)."
+          },
+          "technologyCode": {
+            "type": "string",
+            "description": "Tecnologia (maestra TECHNOLOGY)."
+          },
+          "sourceCode": {
+            "type": "string",
+            "description": "Fuente (maestra SOURCE)."
+          },
+          "frequencyCode": {
+            "type": "string",
+            "description": "Frecuencia (maestra FREQUENCY)."
+          },
+          "documentationRef": {
+            "type": "string",
+            "description": "Referencia documental/repositorio.",
+            "maxLength": 2000
+          },
+          "functionalDescription": {
+            "type": "string",
+            "description": "Descripcion funcional.",
+            "maxLength": 20000
+          },
+          "dependencies": {
+            "type": "string",
+            "description": "Dependencias/observaciones.",
+            "maxLength": 20000
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "AssociateAssetDto": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Activo existente a asociar (excluyente con newAsset)."
+          },
+          "newAsset": {
+            "description": "Datos de un activo nuevo a crear y asociar (excluyente con assetId).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NewAssetInputDto"
+              }
+            ]
+          }
+        }
+      },
       "PriorityEvaluationResponseDto": {
         "type": "object",
         "properties": {
@@ -7265,6 +7425,497 @@
           "dataAvailability",
           "feasibility",
           "reuse"
+        ]
+      },
+      "AssetResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso del activo."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Solicitud de origen."
+          },
+          "ownerUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Dueno/responsable."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del activo."
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado (AssetStatus)."
+          },
+          "typeCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tipo (maestra ASSET_TYPE)."
+          },
+          "technologyCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tecnologia (maestra TECHNOLOGY)."
+          },
+          "sourceCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fuente (maestra SOURCE)."
+          },
+          "frequencyCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Frecuencia (maestra FREQUENCY)."
+          },
+          "documentationRef": {
+            "type": "string",
+            "nullable": true
+          },
+          "functionalDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "dependencies": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "processId",
+          "requestId",
+          "ownerUserId",
+          "name",
+          "status",
+          "typeCode",
+          "technologyCode",
+          "sourceCode",
+          "frequencyCode",
+          "documentationRef",
+          "functionalDescription",
+          "dependencies",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateAssetDto": {
+        "type": "object",
+        "properties": {
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso del activo (requerido)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del activo (requerido).",
+            "maxLength": 300
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud de origen."
+          },
+          "ownerUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Dueno/responsable (usuario)."
+          },
+          "typeCode": {
+            "type": "string",
+            "description": "Tipo (maestra ASSET_TYPE)."
+          },
+          "technologyCode": {
+            "type": "string",
+            "description": "Tecnologia (maestra TECHNOLOGY)."
+          },
+          "sourceCode": {
+            "type": "string",
+            "description": "Fuente (maestra SOURCE)."
+          },
+          "frequencyCode": {
+            "type": "string",
+            "description": "Frecuencia (maestra FREQUENCY)."
+          },
+          "documentationRef": {
+            "type": "string",
+            "description": "Referencia documental/repositorio.",
+            "maxLength": 2000
+          },
+          "functionalDescription": {
+            "type": "string",
+            "description": "Descripcion funcional.",
+            "maxLength": 20000
+          },
+          "dependencies": {
+            "type": "string",
+            "description": "Dependencias/observaciones.",
+            "maxLength": 20000
+          }
+        },
+        "required": [
+          "processId",
+          "name"
+        ]
+      },
+      "AssetRequestHistoryItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador de la solicitud."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la solicitud."
+          },
+          "registeredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de registro."
+          },
+          "operationalState": {
+            "type": "string",
+            "description": "Estado operativo (read-only, derivado)."
+          },
+          "mainProcessId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso principal."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "registeredAt",
+          "operationalState",
+          "mainProcessId"
+        ]
+      },
+      "UpdateAssetDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del activo.",
+            "maxLength": 300
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Solicitud de origen (null para desligar)."
+          },
+          "ownerUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Dueno/responsable (null para desligar)."
+          },
+          "typeCode": {
+            "type": "string",
+            "description": "Tipo (maestra ASSET_TYPE)."
+          },
+          "technologyCode": {
+            "type": "string",
+            "description": "Tecnologia (maestra TECHNOLOGY)."
+          },
+          "sourceCode": {
+            "type": "string",
+            "description": "Fuente (maestra SOURCE)."
+          },
+          "frequencyCode": {
+            "type": "string",
+            "description": "Frecuencia (maestra FREQUENCY)."
+          },
+          "documentationRef": {
+            "type": "string",
+            "description": "Referencia documental/repositorio.",
+            "maxLength": 2000
+          },
+          "functionalDescription": {
+            "type": "string",
+            "description": "Descripcion funcional.",
+            "maxLength": 20000
+          },
+          "dependencies": {
+            "type": "string",
+            "description": "Dependencias/observaciones.",
+            "maxLength": 20000
+          }
+        }
+      },
+      "ChangeAssetStatusDto": {
+        "type": "object",
+        "properties": {
+          "targetStatus": {
+            "type": "string",
+            "enum": [
+              "BORRADOR",
+              "ACTIVO",
+              "RETIRADO"
+            ],
+            "description": "Estado destino."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo del cambio.",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "targetStatus"
+        ]
+      },
+      "DocumentCurrentVersionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionNumber": {
+            "type": "number",
+            "description": "Numero de version correlativo."
+          },
+          "authorUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Autor de la version."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "versionNumber",
+          "authorUserId",
+          "createdAt"
+        ]
+      },
+      "DocumentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Activo del documento."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo."
+          },
+          "categoryCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Categoria (maestra DOC_CATEGORY)."
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado (DocStatus)."
+          },
+          "currentVersion": {
+            "nullable": true,
+            "description": "Resumen de la version vigente (sin contenido).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DocumentCurrentVersionDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "assetId",
+          "title",
+          "categoryCode",
+          "status",
+          "currentVersion",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateDocumentDto": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Activo del documento (requerido)."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo del documento (requerido).",
+            "maxLength": 300
+          },
+          "categoryCode": {
+            "type": "string",
+            "description": "Categoria (maestra DOC_CATEGORY)."
+          },
+          "content": {
+            "type": "string",
+            "description": "Contenido Markdown de la version 1.",
+            "maxLength": 200000
+          }
+        },
+        "required": [
+          "assetId",
+          "title",
+          "content"
+        ]
+      },
+      "UpdateDocumentDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titulo del documento.",
+            "maxLength": 300
+          },
+          "categoryCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Categoria (maestra DOC_CATEGORY; null para desligar)."
+          }
+        }
+      },
+      "CreateDocumentVersionDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Contenido Markdown de la nueva version.",
+            "maxLength": 200000
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "DocumentVersionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Documento al que pertenece."
+          },
+          "versionNumber": {
+            "type": "number",
+            "description": "Numero de version correlativo."
+          },
+          "authorUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Autor de la version."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "documentId",
+          "versionNumber",
+          "authorUserId",
+          "createdAt"
+        ]
+      },
+      "DocumentContentResponseDto": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Documento."
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Version del contenido."
+          },
+          "versionNumber": {
+            "type": "number",
+            "description": "Numero de version."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo del documento."
+          },
+          "content": {
+            "type": "string",
+            "description": "Contenido Markdown."
+          }
+        },
+        "required": [
+          "documentId",
+          "versionId",
+          "versionNumber",
+          "title",
+          "content"
+        ]
+      },
+      "ChangeDocumentStatusDto": {
+        "type": "object",
+        "properties": {
+          "targetStatus": {
+            "type": "string",
+            "enum": [
+              "BORRADOR",
+              "VIGENTE",
+              "ARCHIVADA"
+            ],
+            "description": "Estado destino."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo del cambio.",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "targetStatus"
         ]
       },
       "MyWorkItemDto": {
@@ -9973,462 +10624,6 @@
             "maxLength": 2000
           }
         }
-      },
-      "AssetResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "processId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Proceso del activo."
-          },
-          "requestId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true,
-            "description": "Solicitud de origen."
-          },
-          "ownerUserId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true,
-            "description": "Dueno/responsable."
-          },
-          "name": {
-            "type": "string",
-            "description": "Nombre del activo."
-          },
-          "status": {
-            "type": "string",
-            "description": "Estado (AssetStatus)."
-          },
-          "typeCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Tipo (maestra ASSET_TYPE)."
-          },
-          "technologyCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Tecnologia (maestra TECHNOLOGY)."
-          },
-          "sourceCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Fuente (maestra SOURCE)."
-          },
-          "frequencyCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Frecuencia (maestra FREQUENCY)."
-          },
-          "documentationRef": {
-            "type": "string",
-            "nullable": true
-          },
-          "functionalDescription": {
-            "type": "string",
-            "nullable": true
-          },
-          "dependencies": {
-            "type": "string",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "processId",
-          "requestId",
-          "ownerUserId",
-          "name",
-          "status",
-          "typeCode",
-          "technologyCode",
-          "sourceCode",
-          "frequencyCode",
-          "documentationRef",
-          "functionalDescription",
-          "dependencies",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "CreateAssetDto": {
-        "type": "object",
-        "properties": {
-          "processId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Proceso del activo (requerido)."
-          },
-          "name": {
-            "type": "string",
-            "description": "Nombre del activo (requerido).",
-            "maxLength": 300
-          },
-          "requestId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Solicitud de origen."
-          },
-          "ownerUserId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Dueno/responsable (usuario)."
-          },
-          "typeCode": {
-            "type": "string",
-            "description": "Tipo (maestra ASSET_TYPE)."
-          },
-          "technologyCode": {
-            "type": "string",
-            "description": "Tecnologia (maestra TECHNOLOGY)."
-          },
-          "sourceCode": {
-            "type": "string",
-            "description": "Fuente (maestra SOURCE)."
-          },
-          "frequencyCode": {
-            "type": "string",
-            "description": "Frecuencia (maestra FREQUENCY)."
-          },
-          "documentationRef": {
-            "type": "string",
-            "description": "Referencia documental/repositorio.",
-            "maxLength": 2000
-          },
-          "functionalDescription": {
-            "type": "string",
-            "description": "Descripcion funcional.",
-            "maxLength": 20000
-          },
-          "dependencies": {
-            "type": "string",
-            "description": "Dependencias/observaciones.",
-            "maxLength": 20000
-          }
-        },
-        "required": [
-          "processId",
-          "name"
-        ]
-      },
-      "UpdateAssetDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Nombre del activo.",
-            "maxLength": 300
-          },
-          "requestId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true,
-            "description": "Solicitud de origen (null para desligar)."
-          },
-          "ownerUserId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true,
-            "description": "Dueno/responsable (null para desligar)."
-          },
-          "typeCode": {
-            "type": "string",
-            "description": "Tipo (maestra ASSET_TYPE)."
-          },
-          "technologyCode": {
-            "type": "string",
-            "description": "Tecnologia (maestra TECHNOLOGY)."
-          },
-          "sourceCode": {
-            "type": "string",
-            "description": "Fuente (maestra SOURCE)."
-          },
-          "frequencyCode": {
-            "type": "string",
-            "description": "Frecuencia (maestra FREQUENCY)."
-          },
-          "documentationRef": {
-            "type": "string",
-            "description": "Referencia documental/repositorio.",
-            "maxLength": 2000
-          },
-          "functionalDescription": {
-            "type": "string",
-            "description": "Descripcion funcional.",
-            "maxLength": 20000
-          },
-          "dependencies": {
-            "type": "string",
-            "description": "Dependencias/observaciones.",
-            "maxLength": 20000
-          }
-        }
-      },
-      "ChangeAssetStatusDto": {
-        "type": "object",
-        "properties": {
-          "targetStatus": {
-            "type": "string",
-            "enum": [
-              "BORRADOR",
-              "ACTIVO",
-              "RETIRADO"
-            ],
-            "description": "Estado destino."
-          },
-          "reason": {
-            "type": "string",
-            "description": "Motivo del cambio.",
-            "maxLength": 2000
-          }
-        },
-        "required": [
-          "targetStatus"
-        ]
-      },
-      "DocumentCurrentVersionDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "versionNumber": {
-            "type": "number",
-            "description": "Numero de version correlativo."
-          },
-          "authorUserId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Autor de la version."
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "versionNumber",
-          "authorUserId",
-          "createdAt"
-        ]
-      },
-      "DocumentResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "assetId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Activo del documento."
-          },
-          "title": {
-            "type": "string",
-            "description": "Titulo."
-          },
-          "categoryCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Categoria (maestra DOC_CATEGORY)."
-          },
-          "status": {
-            "type": "string",
-            "description": "Estado (DocStatus)."
-          },
-          "currentVersion": {
-            "nullable": true,
-            "description": "Resumen de la version vigente (sin contenido).",
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DocumentCurrentVersionDto"
-              }
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "assetId",
-          "title",
-          "categoryCode",
-          "status",
-          "currentVersion",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "CreateDocumentDto": {
-        "type": "object",
-        "properties": {
-          "assetId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Activo del documento (requerido)."
-          },
-          "title": {
-            "type": "string",
-            "description": "Titulo del documento (requerido).",
-            "maxLength": 300
-          },
-          "categoryCode": {
-            "type": "string",
-            "description": "Categoria (maestra DOC_CATEGORY)."
-          },
-          "content": {
-            "type": "string",
-            "description": "Contenido Markdown de la version 1.",
-            "maxLength": 200000
-          }
-        },
-        "required": [
-          "assetId",
-          "title",
-          "content"
-        ]
-      },
-      "UpdateDocumentDto": {
-        "type": "object",
-        "properties": {
-          "title": {
-            "type": "string",
-            "description": "Titulo del documento.",
-            "maxLength": 300
-          },
-          "categoryCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Categoria (maestra DOC_CATEGORY; null para desligar)."
-          }
-        }
-      },
-      "CreateDocumentVersionDto": {
-        "type": "object",
-        "properties": {
-          "content": {
-            "type": "string",
-            "description": "Contenido Markdown de la nueva version.",
-            "maxLength": 200000
-          }
-        },
-        "required": [
-          "content"
-        ]
-      },
-      "DocumentVersionResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "documentId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Documento al que pertenece."
-          },
-          "versionNumber": {
-            "type": "number",
-            "description": "Numero de version correlativo."
-          },
-          "authorUserId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Autor de la version."
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "documentId",
-          "versionNumber",
-          "authorUserId",
-          "createdAt"
-        ]
-      },
-      "DocumentContentResponseDto": {
-        "type": "object",
-        "properties": {
-          "documentId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Documento."
-          },
-          "versionId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Version del contenido."
-          },
-          "versionNumber": {
-            "type": "number",
-            "description": "Numero de version."
-          },
-          "title": {
-            "type": "string",
-            "description": "Titulo del documento."
-          },
-          "content": {
-            "type": "string",
-            "description": "Contenido Markdown."
-          }
-        },
-        "required": [
-          "documentId",
-          "versionId",
-          "versionNumber",
-          "title",
-          "content"
-        ]
-      },
-      "ChangeDocumentStatusDto": {
-        "type": "object",
-        "properties": {
-          "targetStatus": {
-            "type": "string",
-            "enum": [
-              "BORRADOR",
-              "VIGENTE",
-              "ARCHIVADA"
-            ],
-            "description": "Estado destino."
-          },
-          "reason": {
-            "type": "string",
-            "description": "Motivo del cambio.",
-            "maxLength": 2000
-          }
-        },
-        "required": [
-          "targetStatus"
-        ]
       },
       "GatePendingItemResponseDto": {
         "type": "object",

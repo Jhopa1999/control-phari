@@ -30,5 +30,9 @@ import { DocumentStateService } from './document/document-state.service';
     AssetService,
     DocumentService,
   ],
+  // AssetService se exporta para que RequestModule (triage) reutilice la logica
+  // de activos en la asociacion del triage (FEAT-002). KnowledgeModule NO
+  // importa RequestModule, de modo que no se forma ciclo de dependencias.
+  exports: [AssetService],
 })
 export class KnowledgeModule {}
