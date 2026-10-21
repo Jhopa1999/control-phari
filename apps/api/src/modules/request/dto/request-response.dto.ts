@@ -45,6 +45,14 @@ export class RequestResponseDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Proceso principal.' })
   mainProcessId!: string;
 
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Activo al que pertenece la solicitud (P1) o null.',
+  })
+  assetId!: string | null;
+
   @ApiProperty({ type: String, description: 'Estado operativo (read-only, derivado).' })
   operationalState!: string;
 

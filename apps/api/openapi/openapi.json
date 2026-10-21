@@ -6634,6 +6634,12 @@
             "format": "uuid",
             "description": "Proceso principal."
           },
+          "assetId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Activo al que pertenece la solicitud (P1) o null."
+          },
           "operationalState": {
             "type": "string",
             "description": "Estado operativo (read-only, derivado)."
@@ -6693,6 +6699,7 @@
           "referenceUrl",
           "expectedResult",
           "mainProcessId",
+          "assetId",
           "operationalState",
           "initialCommitmentDate",
           "changeJustification",

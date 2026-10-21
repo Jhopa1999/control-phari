@@ -2215,6 +2215,11 @@ export interface components {
              * @description Proceso principal.
              */
             mainProcessId: string;
+            /**
+             * Format: uuid
+             * @description Activo al que pertenece la solicitud (P1) o null.
+             */
+            assetId: string | null;
             /** @description Estado operativo (read-only, derivado). */
             operationalState: string;
             /**

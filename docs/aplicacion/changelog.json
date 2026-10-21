@@ -77,6 +77,12 @@
         "docs/aplicacion/autenticacion-autorizacion.md"
       ],
       "summary": "Se documentaron las pantallas /administracion/areas (solo ADMIN) y /administracion/procesos (ADMIN o JEFE_AREA), las claves de modulo areas y processesAdmin (MODULE_MATRIX ahora 24 claves), roleCodes en GET /me/permissions para ofrecer solo los roles asignables en Equipo, y el menu con 26 items."
+    },
+    {
+      "timestamp": "2026-10-21T04:05:00Z",
+      "trigger_file": "apps/api/prisma/schema.prisma",
+      "updated_docs": ["docs/aplicacion/modelo-datos.md"],
+      "summary": "Se documento el activo base de la solicitud: nuevo campo Request.assetId (nullable, indice assetId) con la relacion N:1 'RequestAsset' hacia Asset (onDelete Restrict) y su inversa Asset.requestsAssociated, mas el nombrado de la relacion de origen 'AssetOriginRequest' (Asset.request / Request.assets)."
     }
   ]
 }

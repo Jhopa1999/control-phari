@@ -6,19 +6,16 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import type { RequestModel } from '../../generated/prisma/models/Request';
-import type { RequestParticipantModel } from '../../generated/prisma/models/RequestParticipant';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ListRequestsDto } from './dto/list-requests.dto';
 import { RequestResponseDto } from './dto/request-response.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
-import { RequestStateService } from './request-state.service';
-
-/** Request con sus participantes (shape de lectura comun del service). */
-type RequestWithParticipants = RequestModel & {
-  participants: RequestParticipantModel[];
-};
+import {
+  RequestStateService,
+  RequestWithParticipants,
+} from './request-state.service';
 
 /**
  * CRUD de Request con alcance por `mainProcessId` (design §2.5). Sigue el patron
@@ -63,44 +60,6 @@ export class RequestService {
         ? request.initialCommitmentDate.toISOString()
         : null,
       changeJustification: request.changeJustification,
-    };
-  }
-
-  /**
-   * Compone el RequestResponseDto con el triage vigente (decision) y la ultima
-   * evaluacion (score + etiqueta), segun el contrato de vigencia (design §3.4).
-   */
-  private async toResponse(
-    request: RequestWithParticipants,
-  ): Promise<RequestResponseDto> {
-    const triage = await this.state.currentTriage(request.id);
-    const evaluation = await this.state.currentPriorityEvaluation(request.id);
-
-    return {
-      id: request.id,
-      title: request.title,
-      registeredAt: request.registeredAt,
-      requesterArea: request.requesterArea,
-      requesterName: request.requesterName,
-      functionalOwner: request.functionalOwner,
-      targetDate: request.targetDate,
-      referenceUrl: request.referenceUrl,
-      expectedResult: request.expectedResult,
-      mainProcessId: request.mainProcessId,
-      operationalState: request.operationalState,
-      initialCommitmentDate: request.initialCommitmentDate,
-      changeJustification: request.changeJustification,
-      currentTriageDecision: triage ? triage.decision : null,
-      currentScore: evaluation ? evaluation.score : null,
-      priorityLabel: evaluation
-        ? this.state.priorityLabel(evaluation.score)
-        : null,
-      participants: request.participants.map((p) => ({
-        id: p.id,
-        processId: p.processId,
-      })),
-      createdAt: request.createdAt,
-      updatedAt: request.updatedAt,
     };
   }
 
@@ -169,13 +128,15 @@ export class RequestService {
     });
 
     return Promise.all(
-      requests.map((r) => this.toResponse(r as RequestWithParticipants)),
+      requests.map((r) =>
+        this.state.buildResponse(r as RequestWithParticipants),
+      ),
     );
   }
 
   async findOne(actor: CurrentActor, id: string): Promise<RequestResponseDto> {
     const request = await this.requireInScope(actor, id);
-    return this.toResponse(request);
+    return this.state.buildResponse(request);
   }
 
   async create(
@@ -254,7 +215,7 @@ export class RequestService {
       return request as RequestWithParticipants;
     });
 
-    return this.toResponse(created);
+    return this.state.buildResponse(created);
   }
 
   async update(
@@ -329,6 +290,6 @@ export class RequestService {
       return request as RequestWithParticipants;
     });
 
-    return this.toResponse(updated);
+    return this.state.buildResponse(updated);
   }
 }

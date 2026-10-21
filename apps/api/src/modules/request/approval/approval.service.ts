@@ -12,7 +12,10 @@ import {
   RequestResponseDto,
 } from '../dto/request-response.dto';
 import { RequestState } from '../request-state';
-import { RequestStateService } from '../request-state.service';
+import {
+  RequestStateService,
+  RequestWithParticipants,
+} from '../request-state.service';
 import {
   ApprovalDecision,
   CreateApprovalDto,
@@ -92,38 +95,9 @@ export class ApprovalService {
     });
 
     return Promise.all(
-      requests.map(async (request) => {
-        const triage = await this.state.currentTriage(request.id);
-        const evaluation = await this.state.currentPriorityEvaluation(
-          request.id,
-        );
-        return {
-          id: request.id,
-          title: request.title,
-          registeredAt: request.registeredAt,
-          requesterArea: request.requesterArea,
-          requesterName: request.requesterName,
-          functionalOwner: request.functionalOwner,
-          targetDate: request.targetDate,
-          referenceUrl: request.referenceUrl,
-          expectedResult: request.expectedResult,
-          mainProcessId: request.mainProcessId,
-          operationalState: request.operationalState,
-          initialCommitmentDate: request.initialCommitmentDate,
-          changeJustification: request.changeJustification,
-          currentTriageDecision: triage ? triage.decision : null,
-          currentScore: evaluation ? evaluation.score : null,
-          priorityLabel: evaluation
-            ? this.state.priorityLabel(evaluation.score)
-            : null,
-          participants: request.participants.map((p) => ({
-            id: p.id,
-            processId: p.processId,
-          })),
-          createdAt: request.createdAt,
-          updatedAt: request.updatedAt,
-        } satisfies RequestResponseDto;
-      }),
+      requests.map((request) =>
+        this.state.buildResponse(request as RequestWithParticipants),
+      ),
     );
   }
 

@@ -284,6 +284,9 @@ model Request {
   operationalState      String    @default("REGISTRADA") @map("operational_state")
   initialCommitmentDate DateTime? @map("initial_commitment_date")
   changeJustification   String?   @map("change_justification")
+  // Activo base de la solicitud (P1, aditivo): activo sobre el que se trabaja la
+  // solicitud; nullable hasta que la mesa lo asocie en el triage.
+  assetId               String?   @map("asset_id") @db.Uuid
   // Fase 7 (gobierno · design §2.5, aditivo): ruta proporcional del marco §6
   // (catalogo GOVERNANCE_ROUTE, nullable hasta que el lider la elija) y el flag
   // transversal de bloqueo (D-B7/MEDIUM-1). El bloqueo convive con
@@ -320,8 +323,13 @@ model Request {
   commitmentsRelated   Commitment[]       @relation("CommitmentRelatedRequest")
   commitmentsAsProject Commitment[]       @relation("CommitmentRelatedProjectRequest")
 
+  // Activo base de la solicitud (P1): relacion N:1 nombrada hacia el activo
+  // sobre el que se trabaja. onDelete Restrict: no se borra un activo con
+  // solicitudes asociadas.
+  asset Asset? @relation("RequestAsset", fields: [assetId], references: [id], onDelete: Restrict)
+
   // Fase 6 (activos): activos cuya solicitud de origen es esta Request.
-  assets Asset[]
+  assets Asset[] @relation("AssetOriginRequest")
 
   // Fase 7 (gobierno): gates de control, validaciones y FK del flag de bloqueo.
   gateChecks        GateCheck[]
@@ -334,6 +342,7 @@ model Request {
   @@index([registeredAt])
   @@index([governanceRoute])
   @@index([blockedAt])
+  @@index([assetId])
   @@map("requests")
 }
 
@@ -856,8 +865,11 @@ model Asset {
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   process Process  @relation(fields: [processId], references: [id], onDelete: Restrict)
-  request Request? @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  request Request? @relation("AssetOriginRequest", fields: [requestId], references: [id], onDelete: Restrict)
   owner   User?    @relation("AssetOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+
+  // Solicitudes que tienen este activo como base (P1, inversa de Request.asset).
+  requestsAssociated Request[] @relation("RequestAsset")
 
   documents          Document[]
   dailyLogActivities DailyLogActivity[]

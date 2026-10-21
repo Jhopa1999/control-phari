@@ -8,9 +8,11 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import type { RequestModel } from '../../generated/prisma/models/Request';
+import type { RequestParticipantModel } from '../../generated/prisma/models/RequestParticipant';
 import type { TriageModel } from '../../generated/prisma/models/Triage';
 import type { PriorityEvaluationModel } from '../../generated/prisma/models/PriorityEvaluation';
 import { CurrentActor } from '../auth/current-actor';
+import { RequestResponseDto } from './dto/request-response.dto';
 import {
   isImplementedTransition,
   isRequestState,
@@ -20,6 +22,11 @@ import {
 /** Decisiones de triage (design §1.2). */
 export const TRIAGE_DECISIONS = ['CONTINUAR', 'DEVOLVER', 'RECHAZAR'] as const;
 export type TriageDecision = (typeof TRIAGE_DECISIONS)[number];
+
+/** Request con sus participantes (shape de lectura comun del modulo). */
+export type RequestWithParticipants = RequestModel & {
+  participants: RequestParticipantModel[];
+};
 
 /**
  * Pesos de los 8 criterios de prioridad (design §1.4, suman 100). El orden fija
@@ -81,6 +88,44 @@ export class RequestStateService {
       throw new NotFoundException(`Solicitud "${id}" no encontrada.`);
     }
     return request;
+  }
+
+  /**
+   * Compone el RequestResponseDto con el triage vigente (decision) y la ultima
+   * evaluacion (score + etiqueta), segun el contrato de vigencia (design §3.4).
+   * Helper compartido del modulo request/: incluye el activo base (`assetId`).
+   */
+  async buildResponse(
+    request: RequestWithParticipants,
+  ): Promise<RequestResponseDto> {
+    const triage = await this.currentTriage(request.id);
+    const evaluation = await this.currentPriorityEvaluation(request.id);
+
+    return {
+      id: request.id,
+      title: request.title,
+      registeredAt: request.registeredAt,
+      requesterArea: request.requesterArea,
+      requesterName: request.requesterName,
+      functionalOwner: request.functionalOwner,
+      targetDate: request.targetDate,
+      referenceUrl: request.referenceUrl,
+      expectedResult: request.expectedResult,
+      mainProcessId: request.mainProcessId,
+      assetId: request.assetId,
+      operationalState: request.operationalState,
+      initialCommitmentDate: request.initialCommitmentDate,
+      changeJustification: request.changeJustification,
+      currentTriageDecision: triage ? triage.decision : null,
+      currentScore: evaluation ? evaluation.score : null,
+      priorityLabel: evaluation ? this.priorityLabel(evaluation.score) : null,
+      participants: request.participants.map((p) => ({
+        id: p.id,
+        processId: p.processId,
+      })),
+      createdAt: request.createdAt,
+      updatedAt: request.updatedAt,
+    };
   }
 
   /**

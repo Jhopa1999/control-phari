@@ -92,16 +92,20 @@ el servidor de correo sin tocar `.env` ni reconstruir.
 Ficha de la demanda; núcleo del flujo.
 - Campos clave: `title`, `registeredAt`, datos del solicitante (`requesterArea?`,
   `requesterName?`, `functionalOwner?`), `targetDate?`, `referenceUrl?`,
-  `expectedResult?`, `mainProcessId`, `operationalState` (default `REGISTRADA`),
+  `expectedResult?`, `mainProcessId`, `assetId?` (activo base sobre el que se
+  trabaja la solicitud, P1; nullable hasta que la mesa lo asocie),
+  `operationalState` (default `REGISTRADA`),
   `initialCommitmentDate?`, `changeJustification?`.
 - Campos de gobierno (fase 7): `governanceRoute?`, flag de bloqueo transversal
   (`blockedReason?`, `blockedAt?`, `blockedByUserId?`, `blockedResolvedAt?`,
   `blockedResolvedByUserId?`).
 - Restricciones/índices: por `mainProcessId`, `operationalState`, `registeredAt`,
-  `governanceRoute`, `blockedAt`.
-- Relaciones: `mainProcess`, participantes, triages, evaluaciones de prioridad,
+  `governanceRoute`, `blockedAt`, `assetId`.
+- Relaciones: `mainProcess`, `asset?` (activo base, N:1 con `onDelete: Restrict`,
+  relación `RequestAsset`), participantes, triages, evaluaciones de prioridad,
   aprobaciones, `plan?` (1:1 efectivo), asignaciones, actividades/novedades/reuniones/
-  compromisos relacionados, activos, gates y validaciones de gobierno.
+  compromisos relacionados, activos de origen (`assets`, relación
+  `AssetOriginRequest`), gates y validaciones de gobierno.
 
 ### RequestParticipant (`request_participants`)
 Puente N:M `Request ↔ Process` (procesos participantes); el proceso principal siempre
@@ -231,6 +235,10 @@ físico: retiro = cambio de estado.
   `sourceCode?`, `frequencyCode?`), `documentationRef?`, `functionalDescription?`,
   `dependencies?`.
 - Índices: por `processId`, `requestId`, `status`, `typeCode`.
+- Relaciones: `process`, `request?` (solicitud de origen, relación
+  `AssetOriginRequest`), `owner?`, `requestsAssociated` (solicitudes que usan este
+  activo como base, inversa de `Request.asset`, relación `RequestAsset`), documentos,
+  actividades de bitácora y novedades.
 
 ### Document (`documents`)
 Metadatos de un documento Markdown; FK requerida al activo. El contenido vive en las
