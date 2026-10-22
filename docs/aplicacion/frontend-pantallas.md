@@ -32,7 +32,8 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 
 | Ruta | Pantalla | Qué permite hacer |
 | --- | --- | --- |
-| `/demanda/solicitudes` | Solicitudes | Registrar y consultar solicitudes de demanda (menú grupo *Demanda*, `requests`). |
+| `/demanda/solicitudes` | Solicitudes | Registrar y consultar solicitudes de demanda; cada fila ofrece la acción *Ver detalle* que abre la ficha de la solicitud (menú grupo *Demanda*, `requests`). |
+| `/demanda/solicitudes/[id]` | Detalle de la solicitud | Ficha de **solo lectura** que reúne el recorrido completo de la solicitud en un stepper vertical con todas las etapas visibles (Solicitud, Triage, Priorización, Aprobación/Compromiso, Planificación, Gobierno y validación, Estabilización/Cierre); cada etapa muestra su estado derivado y, cuando el módulo y el estado lo permiten, un enlace *Ir a actuar* hacia la bandeja correspondiente. Se llega desde la acción *Ver detalle* de Solicitudes (no es ítem de menú, `requests`). |
 | `/demanda/triage` | Triage | Clasificar la solicitud, decidir su ruta y asociar su **activo base** (existente o nuevo bajo el proceso principal), requisito para priorizar (`triage`). |
 | `/demanda/priorizacion` | Priorización | Evaluar con los criterios ponderados y ordenar el backlog (`priority`). |
 | `/demanda/resumen` | Indicadores | Panorama/indicadores de demanda (menú grupo *Ejecución* como *Indicadores*, `demandOverview`). |
