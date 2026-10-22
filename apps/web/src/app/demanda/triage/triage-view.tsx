@@ -676,6 +676,16 @@ export function TriageView(): React.ReactElement {
           groups={GROUPS}
           helper={formatCount(pendingCount, PENDING_NOUN)}
           summary={selected ? <RequestSummary request={selected} show={['state', 'registered']} /> : null}
+          actions={
+            selected && allowedModules.has('requests') ? (
+              <Link
+                href={`/demanda/solicitudes/${encodeURIComponent(selected.id)}`}
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                Ver ficha completa
+              </Link>
+            ) : null
+          }
         />
         {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
         {selected ? (

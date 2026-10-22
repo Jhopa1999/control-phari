@@ -1332,6 +1332,16 @@ export function PlanView(): React.ReactElement {
               </div>
             ) : null
           }
+          actions={
+            selected && allowedModules.has('requests') ? (
+              <Link
+                href={`/demanda/solicitudes/${encodeURIComponent(selected.id)}`}
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                Ver ficha completa
+              </Link>
+            ) : null
+          }
         />
         {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
         {selected ? (
