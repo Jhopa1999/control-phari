@@ -17,15 +17,20 @@ import {
   type RequestPickerGroup,
 } from '@/components/request-context-bar';
 import { RequirementsPanel, type RequirementItem } from '@/components/requirements-panel';
+import { DescriptionList, type DescriptionItem } from '@/components/description-list';
 import { PriorityBadge, StatusBadge } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { SegmentedRadio } from '@/components/ui/segmented-radio';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import type { Process, Request } from '@/lib/api-client';
+import type { PriorityEvaluation, Process, Request } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
-import { formatCount } from '@/lib/format';
-import { PriorityError, createPriorityEvaluation } from '@/lib/priority';
+import { formatCount, formatDateTime } from '@/lib/format';
+import {
+  PriorityError,
+  createPriorityEvaluation,
+  listPriorityEvaluations,
+} from '@/lib/priority';
 import { listRequests } from '@/lib/requests';
 import { isPrioritizable, isTriageable } from '@/lib/request-state';
 import { parseBand, PRIORITY_BAND_COPY } from '@/lib/status-presentation';
@@ -114,14 +119,37 @@ export function PriorizacionView(): React.ReactElement {
   const [justification, setJustification] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  // Última evaluación registrada de la solicitud elegida (la vigente), para
+  // mostrar el detalle de lo que se registró cuando la etapa ya está hecha.
+  const [currentEvaluation, setCurrentEvaluation] =
+    React.useState<PriorityEvaluation | null>(null);
 
-  // Fija la selección y reinicia el formulario (sin cambios respecto a hoy).
-  const selectRequest = React.useCallback((id: string) => {
-    setSelectedId(id);
-    setScores(emptyScores());
-    setJustification('');
-    setFormError(null);
+  // Carga la evaluación vigente (la última del histórico) de una solicitud.
+  // Tolerante a fallo: si falla, el detalle simplemente no se muestra.
+  const loadCurrentEvaluation = React.useCallback((id: string) => {
+    void listPriorityEvaluations(id)
+      .then((list) => {
+        // Evita condiciones de carrera si la selección cambió mientras cargaba.
+        if (selectedRef.current !== id) return;
+        setCurrentEvaluation(list.length > 0 ? list[list.length - 1] : null);
+      })
+      .catch(() => {
+        if (selectedRef.current === id) setCurrentEvaluation(null);
+      });
   }, []);
+
+  // Fija la selección, reinicia el formulario y carga la evaluación vigente.
+  const selectRequest = React.useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      setScores(emptyScores());
+      setJustification('');
+      setFormError(null);
+      setCurrentEvaluation(null);
+      if (id) loadCurrentEvaluation(id);
+    },
+    [loadCurrentEvaluation],
+  );
 
   const load = React.useCallback(async () => {
     setState('loading');
@@ -209,6 +237,8 @@ export function PriorizacionView(): React.ReactElement {
       );
       // Reset solo en éxito (AC-031). Recarga para reflejar score y estado.
       setJustification('');
+      // La respuesta del POST ya es la evaluación recién registrada (la vigente).
+      setCurrentEvaluation(saved);
       await load();
     } catch (err) {
       const message = err instanceof PriorityError ? err.message : 'Ocurrió un error inesperado.';
@@ -262,6 +292,44 @@ export function PriorizacionView(): React.ReactElement {
         description="Se prioriza una solicitud con triage Continuar que está En triage o en Backlog priorizado. Elige una del grupo «Listas para priorizar»."
         items={items}
       />
+    );
+  }
+
+  /**
+   * Detalle de la priorización vigente (solo lectura): score y banda, las ocho
+   * valoraciones tal como se guardaron y la justificación. Aparece cuando la
+   * solicitud ya tiene una evaluación registrada, bajo el formulario o el panel
+   * de requisitos.
+   */
+  function renderEvaluationDetail(evaluation: PriorityEvaluation): React.ReactElement {
+    const criterionItems: DescriptionItem[] = CRITERIA.map((c) => ({
+      term: `${c.label} (peso ${c.weight}${NBSP}%)`,
+      value: `${evaluation[c.key]} / 5`,
+    }));
+    return (
+      <section
+        aria-labelledby="priority-detail-title"
+        className="flex min-w-0 flex-col gap-4 rounded-lg border bg-card p-4"
+      >
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h2 id="priority-detail-title" className="text-base font-semibold">
+            Detalle de la priorización registrada
+          </h2>
+          <PriorityBadge
+            variant="full"
+            score={evaluation.score}
+            label={evaluation.thresholdLabel}
+          />
+        </div>
+        <DescriptionList items={criterionItems} columns={2} />
+        <DescriptionList
+          items={[
+            { term: 'Justificación', value: evaluation.justification, span: 2 },
+            { term: 'Fecha de evaluación', value: formatDateTime(evaluation.evaluatedAt) },
+          ]}
+          columns={2}
+        />
+      </section>
     );
   }
 
@@ -405,7 +473,14 @@ export function PriorizacionView(): React.ReactElement {
         {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
         {selected ? (
           <div className="grid gap-6 xl:grid-cols-[minmax(0,45rem)_minmax(18rem,1fr)] xl:items-start">
-            <div className="min-w-0">{isPrioritizable(selected) ? renderForm() : renderBlock(selected)}</div>
+            <div className="flex min-w-0 flex-col gap-6">
+              {isPrioritizable(selected) ? renderForm() : renderBlock(selected)}
+              {/* El detalle solo aparece cuando ya se cargó la evaluación vigente
+                  de esta solicitud. */}
+              {currentEvaluation && currentEvaluation.requestId === selected.id
+                ? renderEvaluationDetail(currentEvaluation)
+                : null}
+            </div>
             <section
               aria-labelledby="priority-facts-title"
               className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4"

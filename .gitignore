@@ -49,5 +49,11 @@ Thumbs.db
 # Worktrees de git (nunca versionar árboles de trabajo)
 .worktrees/
 
+# Artefactos de workflows/agentes (design, plan, review, verification por tarea)
+.agents/
+
+# Log accidental de contracts:generate redirigido a archivo
+contracts.txt
+
 # Config local de Kiro con secretos/rutas de máquina (no versionar)
 .kiro/settings/

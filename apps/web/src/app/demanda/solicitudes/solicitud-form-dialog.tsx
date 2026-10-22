@@ -25,8 +25,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Process, Request, RequestParticipant } from '@/lib/api-client';
-import { formatDate } from '@/lib/format';
+import type { Approval, Process, Request, RequestParticipant } from '@/lib/api-client';
+import { listApprovals } from '@/lib/approval';
+import { formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export interface SolicitudFormValues {
@@ -102,6 +103,56 @@ function GroupHeading({ children }: { children: React.ReactNode }): React.ReactE
   return <h3 className="text-sm font-semibold">{children}</h3>;
 }
 
+/** Presentación legible de la decisión de aprobación (no inventa estados nuevos). */
+function approvalDecision(decision: string): { label: string; variant: 'success' | 'warning' | 'neutral' } {
+  if (decision === 'APROBAR') return { label: 'Aprobada', variant: 'success' };
+  if (decision === 'DEVOLVER') return { label: 'Devuelta', variant: 'warning' };
+  return { label: decision, variant: 'neutral' };
+}
+
+/**
+ * Historial de aprobación de la solicitud (solo lectura), de la más reciente a
+ * la más antigua. Deja ver lo registrado en la etapa de aprobación: la
+ * decisión, el motivo cuando fue devuelta y la fecha. Una solicitud puede tener
+ * varias filas (devuelta y luego aprobada tras re-priorizar).
+ */
+function ApprovalHistory({ approvals }: { approvals: Approval[] }): React.ReactElement {
+  const ordered = [...approvals].sort(
+    (a, b) => new Date(b.decidedAt).getTime() - new Date(a.decidedAt).getTime(),
+  );
+  return (
+    <div className="grid gap-4">
+      <GroupHeading>Aprobación</GroupHeading>
+      <ul className="flex flex-col gap-3">
+        {ordered.map((approval) => {
+          const decision = approvalDecision(approval.decision);
+          return (
+            <li key={approval.id} className="flex flex-col gap-1.5 rounded-md border p-3">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <Badge variant={decision.variant}>{decision.label}</Badge>
+                <span className="text-meta text-muted-foreground">
+                  {formatDateTime(approval.decidedAt)}
+                </span>
+              </div>
+              <p className="flex flex-wrap items-center gap-1.5 text-meta text-muted-foreground">
+                <StatusBadge kind="request" value={approval.previousState} />
+                <span aria-hidden="true">→</span>
+                <StatusBadge kind="request" value={approval.resultingState} />
+              </p>
+              {approval.reason ? (
+                <p className="text-sm whitespace-pre-wrap wrap-break-word">
+                  <span className="text-muted-foreground">Motivo: </span>
+                  {approval.reason}
+                </p>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 /**
  * Ficha de una solicitud (design §11.5), en un diálogo lg con los campos por
  * grupos. Crear envía mainProcessId; editar envía changeJustification y no
@@ -119,6 +170,9 @@ export function SolicitudFormDialog({
   const isEdit = Boolean(editing);
   const [values, setValues] = React.useState<SolicitudFormValues>(emptyValues());
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
+  // Historial de decisiones de aprobación de la solicitud en edición (0 o más).
+  // Solo lectura: deja ver lo registrado en la etapa de aprobación.
+  const [approvals, setApprovals] = React.useState<Approval[]>([]);
   const titleRef = React.useRef<HTMLInputElement>(null);
   const processRef = React.useRef<HTMLButtonElement>(null);
 
@@ -128,7 +182,15 @@ export function SolicitudFormDialog({
   React.useEffect(() => {
     if (!open) return;
     setFieldErrors({});
+    setApprovals([]);
     if (editing) {
+      // Carga el historial de aprobación (tolerante a fallo); race-safe por id.
+      const editingId = editing.id;
+      void listApprovals(editingId)
+        .then((list) => setApprovals((prev) => (editingId === editing.id ? list : prev)))
+        .catch(() => {
+          /* Sin historial visible si falla; la ficha sigue usable. */
+        });
       setValues({
         title: editing.title,
         mainProcessId: editing.mainProcessId,
@@ -420,6 +482,10 @@ export function SolicitudFormDialog({
                 </Field>
               </div>
             ) : null}
+
+            {/* Detalle de lo registrado en la etapa de aprobación (solo lectura),
+                visible cuando la solicitud ya tiene al menos una decisión. */}
+            {isEdit && approvals.length > 0 ? <ApprovalHistory approvals={approvals} /> : null}
 
             <FormError id={FORM_ID} message={errorMessage} />
           </DialogBody>

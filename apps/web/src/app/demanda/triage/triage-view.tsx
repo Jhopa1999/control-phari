@@ -18,6 +18,7 @@ import {
   type RequestPickerGroup,
 } from '@/components/request-context-bar';
 import { RequirementsPanel, type RequirementItem } from '@/components/requirements-panel';
+import { DescriptionList, type DescriptionItem } from '@/components/description-list';
 import { StatusBadge } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,11 +38,12 @@ import type {
   EligibleResponsible,
   Process,
   Request,
+  Triage,
 } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
 import { listAssets } from '@/lib/assets';
 import { listCatalogItems } from '@/lib/catalog';
-import { formatCount } from '@/lib/format';
+import { formatCount, formatDateTime } from '@/lib/format';
 import { listRequests } from '@/lib/requests';
 import { isPrioritizable, isTriageable } from '@/lib/request-state';
 import { listProcesses } from '@/lib/team';
@@ -170,6 +172,9 @@ export function TriageView(): React.ReactElement {
   const [eligibleResponsibles, setEligibleResponsibles] = React.useState<
     EligibleResponsible[]
   >([]);
+  // Triage ya registrado de la solicitud elegida (0 o 1 fila en Fase 2), para
+  // mostrar el detalle de lo decidido cuando la etapa ya está completada.
+  const [registeredTriage, setRegisteredTriage] = React.useState<Triage | null>(null);
   const [form, setForm] = React.useState<TriageFormValues>(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [submitting, setSubmitting] = React.useState(false);
@@ -185,6 +190,7 @@ export function TriageView(): React.ReactElement {
     setForm(EMPTY_FORM);
     setFieldErrors({});
     setFormError(null);
+    setRegisteredTriage(null);
     if (!id) {
       setEligibleResponsibles([]);
       return;
@@ -192,10 +198,17 @@ export function TriageView(): React.ReactElement {
     void listTriage(id)
       .then((ctx) => {
         // Evita condiciones de carrera si la selección cambió mientras cargaba.
-        if (selectedRef.current === id) setEligibleResponsibles(ctx.eligibleResponsibles);
+        if (selectedRef.current !== id) return;
+        setEligibleResponsibles(ctx.eligibleResponsibles);
+        // En Fase 2 hay 0 o 1 triage; guardamos el registrado (si existe) para
+        // mostrar su detalle cuando la etapa ya está completada.
+        setRegisteredTriage(ctx.triages[0] ?? null);
       })
       .catch(() => {
-        if (selectedRef.current === id) setEligibleResponsibles([]);
+        if (selectedRef.current === id) {
+          setEligibleResponsibles([]);
+          setRegisteredTriage(null);
+        }
       });
   }, []);
 
@@ -393,6 +406,50 @@ export function TriageView(): React.ReactElement {
     );
   }
 
+  /** Etiqueta visible de un code de catálogo; si no se encuentra, el propio code. */
+  function catalogLabel(family: string, code: string | null): string | null {
+    if (!code) return null;
+    const item = (catalogs[family] ?? []).find((c) => c.code === code);
+    return item?.label ?? code;
+  }
+
+  /**
+   * Detalle de lo registrado en el triage (solo lectura), para cuando la etapa
+   * ya está completada. Se muestra junto al ítem «Triage registrado». Los codes
+   * de catálogo se traducen a su etiqueta visible; los valores vacíos caen a «—».
+   */
+  function renderTriageDetail(triage: Triage): React.ReactElement {
+    const items: DescriptionItem[] = [
+      { term: 'Ruta', value: catalogLabel('TRIAGE_ROUTE', triage.routeCode) },
+      { term: 'Tipo de demanda', value: catalogLabel('DEMAND_TYPE', triage.demandTypeCode) },
+      { term: 'Criticidad', value: catalogLabel('CRITICALITY', triage.criticalityCode) },
+      { term: 'Tamaño', value: catalogLabel('TRIAGE_SIZE', triage.sizeCode) },
+      {
+        term: 'Disponibilidad de datos',
+        value: catalogLabel('DATA_AVAILABILITY', triage.dataAvailabilityCode),
+      },
+      {
+        term: 'Esfuerzo (horas)',
+        value: triage.totalEffortHours === null ? null : String(triage.totalEffortHours),
+      },
+      { term: 'Responsable principal', value: triage.mainResponsibleName },
+      { term: 'Fecha de decisión', value: formatDateTime(triage.decidedAt) },
+      { term: 'Dependencias', value: triage.dependencies, span: 2 },
+      { term: 'Observaciones', value: triage.notes, span: 2 },
+    ];
+    return (
+      <section
+        aria-labelledby="triage-detail-title"
+        className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4"
+      >
+        <h2 id="triage-detail-title" className="text-base font-semibold">
+          Detalle del triage registrado
+        </h2>
+        <DescriptionList items={items} columns={2} />
+      </section>
+    );
+  }
+
   function renderBlock(request: Request): React.ReactElement {
     if (request.currentTriageDecision) {
       // (a) Ya tiene triage: el único ítem está cumplido y el panel se pinta sin pendientes.
@@ -417,13 +474,21 @@ export function TriageView(): React.ReactElement {
             : undefined,
       };
       return (
-        <RequirementsPanel
-          id="triage-block"
-          title={doneTitle}
-          doneTitle={doneTitle}
-          doneDescription="El triage se registra una sola vez, cuando la solicitud está Registrada."
-          items={[item]}
-        />
+        <div className="flex flex-col gap-6">
+          <RequirementsPanel
+            id="triage-block"
+            title={doneTitle}
+            doneTitle={doneTitle}
+            doneDescription="El triage se registra una sola vez, cuando la solicitud está Registrada."
+            items={[item]}
+          />
+          {/* El detalle solo aparece cuando ya se cargó el triage de esta
+              solicitud; mientras llega, el ítem de arriba ya confirma que está
+              registrado. */}
+          {registeredTriage && registeredTriage.requestId === request.id
+            ? renderTriageDetail(registeredTriage)
+            : null}
+        </div>
       );
     }
     // (b) Sin triage y en otro estado.
