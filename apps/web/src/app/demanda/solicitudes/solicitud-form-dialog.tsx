@@ -133,6 +133,11 @@ function ApprovalHistory({ approvals }: { approvals: Approval[] }): React.ReactE
                 <span className="text-meta text-muted-foreground">
                   {formatDateTime(approval.decidedAt)}
                 </span>
+                {approval.decidedByName ? (
+                  <span className="text-meta text-muted-foreground">
+                    Decidido por {approval.decidedByName}
+                  </span>
+                ) : null}
               </div>
               <p className="flex flex-wrap items-center gap-1.5 text-meta text-muted-foreground">
                 <StatusBadge kind="request" value={approval.previousState} />

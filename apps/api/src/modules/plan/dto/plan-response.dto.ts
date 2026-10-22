@@ -32,11 +32,25 @@ export class PlanResponseDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Usuario que envio.' })
   submittedByUserId!: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Nombre de quien envio resuelto.',
+  })
+  submittedByName!: string | null;
+
   @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Fecha de autorizacion.' })
   authorizedAt!: Date | null;
 
   @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Usuario que autorizo.' })
   authorizedByUserId!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Nombre de quien autorizo resuelto.',
+  })
+  authorizedByName!: string | null;
 
   @ApiProperty({ type: String, nullable: true, description: 'Motivo de la ultima devolucion.' })
   returnReason!: string | null;

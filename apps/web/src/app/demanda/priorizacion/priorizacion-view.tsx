@@ -326,6 +326,7 @@ export function PriorizacionView(): React.ReactElement {
           items={[
             { term: 'Justificación', value: evaluation.justification, span: 2 },
             { term: 'Fecha de evaluación', value: formatDateTime(evaluation.evaluatedAt) },
+            { term: 'Evaluado por', value: evaluation.evaluatedByName },
           ]}
           columns={2}
         />

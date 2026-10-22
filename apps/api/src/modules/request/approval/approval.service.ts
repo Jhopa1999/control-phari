@@ -22,6 +22,19 @@ import {
 } from './dto/create-approval.dto';
 import { ApprovalResponseDto } from './dto/approval-response.dto';
 
+/**
+ * Payload de Approval con la relacion `decidedBy` incluida (solo id+name),
+ * para resolver el nombre de quien decidio sin exponer el UUID crudo ni usar
+ * `any` (mismo molde que Triage.mainResponsible).
+ */
+type ApprovalWithDecider = Prisma.ApprovalGetPayload<{
+  include: { decidedBy: { select: { id: true; name: true } } };
+}>;
+
+const DECIDER_INCLUDE = {
+  decidedBy: { select: { id: true, name: true } },
+} as const;
+
 /** Mapa decision de aprobacion -> estado resultante (design §2.4). */
 const DECISION_TO_STATE: Record<ApprovalDecision, RequestState> = {
   APROBAR: RequestState.COMPROMETIDA,
@@ -62,7 +75,7 @@ export class ApprovalService {
     };
   }
 
-  private toResponse(approval: ApprovalModel): ApprovalResponseDto {
+  private toResponse(approval: ApprovalWithDecider): ApprovalResponseDto {
     return {
       id: approval.id,
       requestId: approval.requestId,
@@ -72,6 +85,7 @@ export class ApprovalService {
       resultingState: approval.resultingState,
       decidedAt: approval.decidedAt,
       decidedByUserId: approval.decidedByUserId,
+      decidedByName: approval.decidedBy?.name ?? null,
       createdAt: approval.createdAt,
     };
   }
@@ -110,6 +124,7 @@ export class ApprovalService {
     const approvals = await this.prisma.approval.findMany({
       where: { requestId },
       orderBy: { decidedAt: 'desc' },
+      include: DECIDER_INCLUDE,
     });
     return approvals.map((a) => this.toResponse(a));
   }
@@ -149,6 +164,7 @@ export class ApprovalService {
           decidedByUserId: actor.userId,
           ...(dto.reason !== undefined ? { reason: dto.reason } : {}),
         },
+        include: DECIDER_INCLUDE,
       });
 
       await this.audit.record(tx, {

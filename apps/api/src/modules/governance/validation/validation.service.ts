@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import type { ValidationRecordModel } from '../../../generated/prisma/models/ValidationRecord';
+import { Prisma } from '../../../generated/prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RequestStateService } from '../../request/request-state.service';
@@ -12,6 +12,25 @@ import { GovernanceScopeService } from '../governance-scope.service';
 import { CreateValidationDto } from './dto/create-validation.dto';
 import { ResolveBlockingDto } from './dto/resolve-blocking.dto';
 import { ValidationResponseDto } from './dto/validation-response.dto';
+
+/**
+ * Payload de ValidationRecord con las relaciones `executedBy` y
+ * `blockingResolvedBy` incluidas (solo id+name), para resolver los nombres del
+ * ejecutor y de quien resolvio el bloqueo sin exponer el UUID crudo ni usar
+ * `any` (mismo molde que Triage.mainResponsible). `blockingResolvedBy` es
+ * nullable; si el id es null, la relacion viene null -> nombre null.
+ */
+type ValidationWithUsers = Prisma.ValidationRecordGetPayload<{
+  include: {
+    executedBy: { select: { id: true; name: true } };
+    blockingResolvedBy: { select: { id: true; name: true } };
+  };
+}>;
+
+const VALIDATION_USERS_INCLUDE = {
+  executedBy: { select: { id: true, name: true } },
+  blockingResolvedBy: { select: { id: true, name: true } },
+} as const;
 
 /**
  * Registro de validaciones/evidencias (design §3.4, marco §7). Registrar NO
@@ -29,7 +48,7 @@ export class ValidationService {
     private readonly state: RequestStateService,
   ) {}
 
-  private toResponse(record: ValidationRecordModel): ValidationResponseDto {
+  private toResponse(record: ValidationWithUsers): ValidationResponseDto {
     return {
       id: record.id,
       requestId: record.requestId,
@@ -43,10 +62,12 @@ export class ValidationService {
       blockingResolved: record.blockingResolved,
       blockingResolvedAt: record.blockingResolvedAt,
       blockingResolvedByUserId: record.blockingResolvedByUserId,
+      blockingResolvedByName: record.blockingResolvedBy?.name ?? null,
       evidenceRef: record.evidenceRef,
       evidenceDocumentId: record.evidenceDocumentId,
       evidenceDocumentVersionId: record.evidenceDocumentVersionId,
       executedByUserId: record.executedByUserId,
+      executedByName: record.executedBy?.name ?? null,
       executedAt: record.executedAt,
       notes: record.notes,
       createdAt: record.createdAt,
@@ -63,6 +84,7 @@ export class ValidationService {
     const records = await this.prisma.validationRecord.findMany({
       where: { requestId },
       orderBy: { executedAt: 'desc' },
+      include: VALIDATION_USERS_INCLUDE,
     });
     return records.map((r) => this.toResponse(r));
   }
@@ -127,6 +149,7 @@ export class ValidationService {
             : {}),
           ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
         },
+        include: VALIDATION_USERS_INCLUDE,
       });
       await this.audit.record(tx, {
         actorUserId: actor.userId,
@@ -184,6 +207,7 @@ export class ValidationService {
           blockingResolvedAt: new Date(),
           blockingResolvedByUserId: actor.userId,
         },
+        include: VALIDATION_USERS_INCLUDE,
       });
       await this.audit.record(tx, {
         actorUserId: actor.userId,

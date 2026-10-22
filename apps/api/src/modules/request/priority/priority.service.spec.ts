@@ -55,7 +55,10 @@ const dto: CreatePriorityEvaluationDto = {
   reuse: 5,
 };
 
-function mockCreatedEvaluation(score: number) {
+function mockCreatedEvaluation(
+  score: number,
+  evaluatedBy: { id: string; name: string } | null = { id: 'ul', name: 'Beto' },
+) {
   return {
     id: 'e1',
     requestId: 'r1',
@@ -71,6 +74,7 @@ function mockCreatedEvaluation(score: number) {
     justification: null,
     evaluatedAt: new Date(),
     evaluatedByUserId: 'ul',
+    evaluatedBy,
     createdAt: new Date(),
   };
 }
@@ -104,6 +108,11 @@ describe('PriorityService', () => {
     expect(res.thresholdLabel).toBe(
       'P1 · Primera consideracion para compromiso',
     );
+    // Nombre del evaluador resuelto desde la relacion incluida en la query.
+    expect(res.evaluatedByName).toBe('Beto');
+    expect(
+      (m.prismaObj.priorityEvaluation as any).create.mock.calls[0][0].include,
+    ).toMatchObject({ evaluatedBy: { select: { id: true, name: true } } });
     expect((m.prismaObj.request as any).update.mock.calls[0][0].data).toEqual({
       operationalState: RequestState.BACKLOG_PRIORIZADO,
     });
@@ -114,6 +123,22 @@ describe('PriorityService', () => {
       objectType: 'PRIORITY_EVALUATION',
       scopeProcessId: 'p1',
     });
+  });
+
+  it('sin relacion evaluatedBy -> evaluatedByName null', async () => {
+    (m.prismaObj.request as any).findFirst.mockResolvedValue(
+      makeRequest(RequestState.EN_TRIAGE),
+    );
+    (m.prismaObj.triage as any).findFirst.mockResolvedValue({ decision: 'CONTINUAR' });
+    (m.prismaObj.priorityEvaluation as any).create.mockResolvedValue(
+      mockCreatedEvaluation(100, null),
+    );
+    (m.prismaObj.request as any).update.mockResolvedValue(
+      makeRequest(RequestState.BACKLOG_PRIORIZADO),
+    );
+
+    const res = await service.create(lider(), 'r1', dto);
+    expect(res.evaluatedByName).toBeNull();
   });
 
   it('re-POST sobre BACKLOG mantiene BACKLOG (idempotente en estado)', async () => {

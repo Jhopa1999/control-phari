@@ -47,6 +47,13 @@ export class PriorityEvaluationResponseDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Usuario que evaluo.' })
   evaluatedByUserId!: string;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Nombre del evaluador resuelto.',
+  })
+  evaluatedByName!: string | null;
+
   @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de creacion.' })
   createdAt!: Date;
 }

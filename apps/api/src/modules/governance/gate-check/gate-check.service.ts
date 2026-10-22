@@ -275,6 +275,18 @@ export class GateCheckService {
       );
     }
 
+    // Resuelve el nombre de quien decidio el control sin exponer el UUID crudo.
+    // Solo consulta cuando hay decididor (GC1-GC3 derivados no lo tienen), por
+    // lo que no introduce un N+1 real: los gates sin decidir no hacen query.
+    const decidedByName = gate.decidedByUserId
+      ? ((
+          await this.prisma.user.findUnique({
+            where: { id: gate.decidedByUserId },
+            select: { name: true },
+          })
+        )?.name ?? null)
+      : null;
+
     return {
       id: gate.id,
       requestId: gate.requestId,
@@ -286,6 +298,7 @@ export class GateCheckService {
       waiverReason: gate.waiverReason,
       decidedAt: gate.decidedAt,
       decidedByUserId: gate.decidedByUserId,
+      decidedByName,
       pendingItems: pendingItems.map((p) => this.pendingToResponse(p)),
       validationSummary,
       createdAt: gate.createdAt,

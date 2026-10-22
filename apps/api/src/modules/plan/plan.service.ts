@@ -34,6 +34,24 @@ import { applyMilestoneRule } from './task/milestone';
  * mutacion + AuditService.record(tx,...) con scopeProcessId=request.mainProcessId
  * en una $transaction. No duplica la maquina de Request (reusa RequestStateService).
  */
+/**
+ * Payload de Plan con las relaciones `submittedBy` y `authorizedBy` incluidas
+ * (solo id+name), para resolver los nombres de quien envio/autorizo sin exponer
+ * el UUID crudo ni usar `any` (mismo molde que Triage.mainResponsible). Cada
+ * relacion es nullable; si el id es null, la relacion viene null -> nombre null.
+ */
+type PlanWithUsers = Prisma.PlanGetPayload<{
+  include: {
+    submittedBy: { select: { id: true; name: true } };
+    authorizedBy: { select: { id: true; name: true } };
+  };
+}>;
+
+const PLAN_USERS_INCLUDE = {
+  submittedBy: { select: { id: true, name: true } },
+  authorizedBy: { select: { id: true, name: true } },
+} as const;
+
 @Injectable()
 export class PlanService {
   constructor(
@@ -44,7 +62,7 @@ export class PlanService {
     private readonly guide: PlanGuideService,
   ) {}
 
-  private toResponse(plan: PlanModel): PlanResponseDto {
+  private toResponse(plan: PlanWithUsers): PlanResponseDto {
     return {
       id: plan.id,
       requestId: plan.requestId,
@@ -56,8 +74,10 @@ export class PlanService {
       status: plan.status,
       submittedAt: plan.submittedAt,
       submittedByUserId: plan.submittedByUserId,
+      submittedByName: plan.submittedBy?.name ?? null,
       authorizedAt: plan.authorizedAt,
       authorizedByUserId: plan.authorizedByUserId,
+      authorizedByName: plan.authorizedBy?.name ?? null,
       returnReason: plan.returnReason,
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,
@@ -118,6 +138,7 @@ export class PlanService {
           ...(dto.risks !== undefined ? { risks: dto.risks } : {}),
           ...(dto.mitigations !== undefined ? { mitigations: dto.mitigations } : {}),
         },
+        include: PLAN_USERS_INCLUDE,
       });
 
       await this.audit.record(tx, {
@@ -157,7 +178,15 @@ export class PlanService {
     requestId: string,
   ): Promise<PlanResponseDto> {
     const { plan } = await this.planState.requirePlanInScope(actor, requestId);
-    return this.toResponse(plan);
+    // `requirePlanInScope` (servicio de estado compartido) devuelve el plano sin
+    // relaciones; se re-lee con include para resolver los nombres sin cambiar su
+    // firma. El plan existe (ya validado en alcance), por eso el findFirst no es
+    // null.
+    const full = await this.prisma.plan.findFirst({
+      where: { id: plan.id },
+      include: PLAN_USERS_INCLUDE,
+    });
+    return this.toResponse(full as PlanWithUsers);
   }
 
   /** Edita datos del plan (no `status`). Audita UPDATE PLAN (design §3.3). */
@@ -179,7 +208,11 @@ export class PlanService {
     if (dto.mitigations !== undefined) data.mitigations = dto.mitigations;
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      const next = await tx.plan.update({ where: { id: plan.id }, data });
+      const next = await tx.plan.update({
+        where: { id: plan.id },
+        data,
+        include: PLAN_USERS_INCLUDE,
+      });
       await this.audit.record(tx, {
         actorUserId: actor.userId,
         action: 'UPDATE',
@@ -235,6 +268,7 @@ export class PlanService {
       const next = await tx.plan.update({
         where: { id: plan.id },
         data: { status: nextStatus, submittedAt: new Date(), submittedByUserId: actor.userId },
+        include: PLAN_USERS_INCLUDE,
       });
 
       await this.audit.record(tx, {
@@ -278,6 +312,7 @@ export class PlanService {
       const next = await tx.plan.update({
         where: { id: plan.id },
         data: { status: nextStatus, authorizedAt: new Date(), authorizedByUserId: actor.userId },
+        include: PLAN_USERS_INCLUDE,
       });
 
       await this.audit.record(tx, {
@@ -338,6 +373,7 @@ export class PlanService {
       const next = await tx.plan.update({
         where: { id: plan.id },
         data: { status: nextStatus, returnReason: dto.reason },
+        include: PLAN_USERS_INCLUDE,
       });
 
       await this.audit.record(tx, {

@@ -1085,9 +1085,15 @@ export function PlanView(): React.ReactElement {
         term: 'Enviado a autorización',
         value: formatDateTime(current.submittedAt),
       });
+      if (current.submittedByName) {
+        milestones.push({ term: 'Enviado por', value: current.submittedByName });
+      }
     }
     if (current.authorizedAt) {
       milestones.push({ term: 'Autorizado', value: formatDateTime(current.authorizedAt) });
+      if (current.authorizedByName) {
+        milestones.push({ term: 'Autorizado por', value: current.authorizedByName });
+      }
     }
 
     // Ficha del plan: solo campos con valor.

@@ -32,6 +32,7 @@ type Mocks = {
   gatePendingItem: { findMany: jest.Mock };
   validationRecord: { findMany: jest.Mock };
   request: { findFirst: jest.Mock; update: jest.Mock };
+  user: { findUnique: jest.Mock };
   auditRecord: jest.Mock;
   service: GateCheckService;
 };
@@ -81,12 +82,15 @@ function setup(): Mocks {
   const gatePendingItem = { findMany: jest.fn().mockResolvedValue([]) };
   const validationRecord = { findMany: jest.fn().mockResolvedValue([]) };
   const request = { findFirst: jest.fn(), update: jest.fn() };
+  // Resolucion del nombre de quien decidio un control (solo cuando hay FK).
+  const user = { findUnique: jest.fn().mockResolvedValue({ name: 'Decididor' }) };
 
   const prismaObj: Record<string, unknown> = {
     gateCheck,
     gatePendingItem,
     validationRecord,
     request,
+    user,
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaObj));
   const prisma = prismaObj as unknown as PrismaService;
@@ -104,6 +108,7 @@ function setup(): Mocks {
     gatePendingItem,
     validationRecord,
     request,
+    user,
     auditRecord,
     service,
   };
@@ -138,6 +143,9 @@ describe('GateCheckService', () => {
       expect(byCode[GateCode.GC1].status).toBe(GateStatus.CUMPLIDO);
       expect(byCode[GateCode.GC2].status).toBe(GateStatus.CUMPLIDO);
       expect(byCode[GateCode.GC3].status).toBe(GateStatus.CUMPLIDO);
+      // Gates derivados sin decididor: decidedByName null y sin consultar User.
+      expect(byCode[GateCode.GC1].decidedByName).toBeNull();
+      expect(m.user.findUnique).not.toHaveBeenCalled();
     });
 
     it('EXPLORACION fuerza GC4 a NO_APLICA (no autoriza produccion)', async () => {
@@ -280,8 +288,14 @@ describe('GateCheckService', () => {
       ]);
       m.request.update.mockResolvedValue({ operationalState: RequestState.EN_ESTABILIZACION });
 
-      await m.service.approve(JEFE, 'req-1', 'GC4', {});
+      const result = await m.service.approve(JEFE, 'req-1', 'GC4', {});
 
+      // El gate decidido resuelve el nombre de quien decidio desde su FK.
+      expect(result.decidedByName).toBe('Decididor');
+      expect(m.user.findUnique).toHaveBeenCalledWith({
+        where: { id: JEFE.userId },
+        select: { name: true },
+      });
       expect(m.request.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: { operationalState: RequestState.EN_ESTABILIZACION },

@@ -26,6 +26,13 @@ export class ApprovalResponseDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Usuario que decidio.' })
   decidedByUserId!: string;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Nombre de quien decidio resuelto.',
+  })
+  decidedByName!: string | null;
+
   @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de creacion.' })
   createdAt!: Date;
 }

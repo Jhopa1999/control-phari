@@ -118,6 +118,7 @@ describe('ValidationService', () => {
         evidenceDocumentId: null,
         evidenceDocumentVersionId: null,
         executedByUserId: BASE_DTO.executedByUserId,
+        executedBy: { id: BASE_DTO.executedByUserId, name: 'Eje Cutor' },
         executedAt: new Date(BASE_DTO.executedAt),
         notes: null,
         createdAt: new Date(),
@@ -127,6 +128,14 @@ describe('ValidationService', () => {
       const result = await m.service.create(JEFE, 'req-1', { ...BASE_DTO });
 
       expect(result.id).toBe('v-1');
+      // Nombre del ejecutor resuelto desde la relacion incluida en la query; sin
+      // relacion blockingResolvedBy -> nombre null.
+      expect(result.executedByName).toBe('Eje Cutor');
+      expect(result.blockingResolvedByName).toBeNull();
+      expect(m.validationRecord.create.mock.calls[0][0].include).toMatchObject({
+        executedBy: { select: { id: true, name: true } },
+        blockingResolvedBy: { select: { id: true, name: true } },
+      });
       // No se escribe operationalState: el mock de request no tiene update.
       expect(m.auditRecord).toHaveBeenCalledWith(
         expect.anything(),
@@ -183,10 +192,12 @@ describe('ValidationService', () => {
         blockingResolved: true,
         blockingResolvedAt: new Date(),
         blockingResolvedByUserId: JEFE.userId,
+        blockingResolvedBy: { id: JEFE.userId, name: 'Ana Jefa' },
         evidenceRef: null,
         evidenceDocumentId: null,
         evidenceDocumentVersionId: null,
         executedByUserId: BASE_DTO.executedByUserId,
+        executedBy: { id: BASE_DTO.executedByUserId, name: 'Eje Cutor' },
         executedAt: new Date(),
         notes: null,
         createdAt: new Date(),
@@ -197,9 +208,15 @@ describe('ValidationService', () => {
 
       expect(result.blockingResolved).toBe(true);
       expect(result.blockingResolvedByUserId).toBe(JEFE.userId);
+      // Nombre de quien resolvio el bloqueo resuelto desde la relacion incluida.
+      expect(result.blockingResolvedByName).toBe('Ana Jefa');
       const updateArg = m.validationRecord.update.mock.calls[0][0];
       expect(updateArg.data).toMatchObject({ blockingResolved: true });
       expect(updateArg.data.blockingResolvedAt).toBeInstanceOf(Date);
+      expect(updateArg.include).toMatchObject({
+        executedBy: { select: { id: true, name: true } },
+        blockingResolvedBy: { select: { id: true, name: true } },
+      });
     });
 
     it('rechaza (400) si el registro no es un defecto bloqueante', async () => {

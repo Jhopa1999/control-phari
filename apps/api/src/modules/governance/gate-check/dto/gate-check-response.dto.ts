@@ -86,6 +86,13 @@ export class GateCheckResponseDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Usuario que decidio.' })
   decidedByUserId!: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Nombre de quien decidio el control resuelto.',
+  })
+  decidedByName!: string | null;
+
   @ApiProperty({ type: [GatePendingItemResponseDto], description: 'Faltantes del gate.' })
   pendingItems!: GatePendingItemResponseDto[];
 

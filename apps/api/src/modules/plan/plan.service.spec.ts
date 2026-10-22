@@ -68,7 +68,13 @@ function makeRequest(state: string) {
   return { id: 'r1', mainProcessId: 'p1', operationalState: state };
 }
 
-function makePlan(status: string) {
+function makePlan(
+  status: string,
+  users: {
+    submittedBy?: { id: string; name: string } | null;
+    authorizedBy?: { id: string; name: string } | null;
+  } = {},
+) {
   return {
     id: 'plan1',
     requestId: 'r1',
@@ -80,8 +86,10 @@ function makePlan(status: string) {
     status,
     submittedAt: null,
     submittedByUserId: null,
+    submittedBy: users.submittedBy ?? null,
     authorizedAt: null,
     authorizedByUserId: null,
+    authorizedBy: users.authorizedBy ?? null,
     returnReason: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -149,6 +157,50 @@ describe('PlanService', () => {
     });
   });
 
+  describe('findByRequest', () => {
+    it('re-lee el plan con include y resuelve submitted/authorized', async () => {
+      (m.planState.requirePlanInScope as jest.Mock).mockResolvedValue({
+        plan: makePlan(PlanStatus.AUTORIZADO),
+        requestId: 'r1',
+        mainProcessId: 'p1',
+        requestState: RequestState.EN_EJECUCION,
+      });
+      (m.prismaObj.plan as any).findFirst.mockResolvedValue(
+        makePlan(PlanStatus.AUTORIZADO, {
+          submittedBy: { id: 'u1', name: 'Enviador' },
+          authorizedBy: { id: 'u2', name: 'Autorizador' },
+        }),
+      );
+
+      const res = await service.findByRequest(lider(), 'r1');
+
+      expect(res.submittedByName).toBe('Enviador');
+      expect(res.authorizedByName).toBe('Autorizador');
+      expect((m.prismaObj.plan as any).findFirst.mock.calls[0][0].include).toMatchObject(
+        {
+          submittedBy: { select: { id: true, name: true } },
+          authorizedBy: { select: { id: true, name: true } },
+        },
+      );
+    });
+
+    it('sin relaciones -> nombres null', async () => {
+      (m.planState.requirePlanInScope as jest.Mock).mockResolvedValue({
+        plan: makePlan(PlanStatus.BORRADOR),
+        requestId: 'r1',
+        mainProcessId: 'p1',
+        requestState: RequestState.EN_PLANIFICACION,
+      });
+      (m.prismaObj.plan as any).findFirst.mockResolvedValue(
+        makePlan(PlanStatus.BORRADOR),
+      );
+
+      const res = await service.findByRequest(lider(), 'r1');
+      expect(res.submittedByName).toBeNull();
+      expect(res.authorizedByName).toBeNull();
+    });
+  });
+
   describe('submit (AC-007)', () => {
     it('rechaza 409 cuando la guia tiene pendientes', async () => {
       (m.planState.requirePlanInScope as jest.Mock).mockResolvedValue({
@@ -184,12 +236,22 @@ describe('PlanService', () => {
         futureCategories: [],
       });
       (m.prismaObj.plan as any).update.mockResolvedValue(
-        makePlan(PlanStatus.EN_AUTORIZACION),
+        makePlan(PlanStatus.EN_AUTORIZACION, {
+          submittedBy: { id: 'ul', name: 'Enviador' },
+        }),
       );
 
       const res = await service.submit(lider(), 'r1');
 
       expect(res.status).toBe(PlanStatus.EN_AUTORIZACION);
+      // Nombre de quien envio resuelto desde la relacion incluida en la query.
+      expect(res.submittedByName).toBe('Enviador');
+      expect((m.prismaObj.plan as any).update.mock.calls[0][0].include).toMatchObject(
+        {
+          submittedBy: { select: { id: true, name: true } },
+          authorizedBy: { select: { id: true, name: true } },
+        },
+      );
       expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
         action: 'UPDATE',
         objectType: 'PLAN',
@@ -205,7 +267,11 @@ describe('PlanService', () => {
         mainProcessId: 'p1',
         requestState: RequestState.EN_PLANIFICACION,
       });
-      (m.prismaObj.plan as any).update.mockResolvedValue(makePlan(PlanStatus.AUTORIZADO));
+      (m.prismaObj.plan as any).update.mockResolvedValue(
+        makePlan(PlanStatus.AUTORIZADO, {
+          authorizedBy: { id: 'ul', name: 'Autorizador' },
+        }),
+      );
       (m.prismaObj.request as any).update.mockResolvedValue(
         makeRequest(RequestState.EN_EJECUCION),
       );
@@ -213,6 +279,9 @@ describe('PlanService', () => {
       const res = await service.authorize(lider(), 'r1');
 
       expect(res.status).toBe(PlanStatus.AUTORIZADO);
+      // Nombre de quien autorizo resuelto; sin envio -> submittedByName null.
+      expect(res.authorizedByName).toBe('Autorizador');
+      expect(res.submittedByName).toBeNull();
       expect((m.prismaObj.request as any).update.mock.calls[0][0].data).toEqual({
         operationalState: RequestState.EN_EJECUCION,
       });

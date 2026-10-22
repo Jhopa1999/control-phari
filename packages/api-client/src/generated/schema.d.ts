@@ -2311,6 +2311,8 @@ export interface components {
              * @description Usuario que decidio.
              */
             decidedByUserId: string;
+            /** @description Nombre de quien decidio resuelto. */
+            decidedByName: string | null;
             /**
              * Format: date-time
              * @description Fecha de creacion.
@@ -2552,6 +2554,8 @@ export interface components {
              * @description Usuario que evaluo.
              */
             evaluatedByUserId: string;
+            /** @description Nombre del evaluador resuelto. */
+            evaluatedByName: string | null;
             /**
              * Format: date-time
              * @description Fecha de creacion.
@@ -3090,6 +3094,8 @@ export interface components {
              * @description Usuario que envio.
              */
             submittedByUserId: string | null;
+            /** @description Nombre de quien envio resuelto. */
+            submittedByName: string | null;
             /**
              * Format: date-time
              * @description Fecha de autorizacion.
@@ -3100,6 +3106,8 @@ export interface components {
              * @description Usuario que autorizo.
              */
             authorizedByUserId: string | null;
+            /** @description Nombre de quien autorizo resuelto. */
+            authorizedByName: string | null;
             /** @description Motivo de la ultima devolucion. */
             returnReason: string | null;
             /**
@@ -4278,6 +4286,8 @@ export interface components {
              * @description Usuario que decidio.
              */
             decidedByUserId: string | null;
+            /** @description Nombre de quien decidio el control resuelto. */
+            decidedByName: string | null;
             /** @description Faltantes del gate. */
             pendingItems: components["schemas"]["GatePendingItemResponseDto"][];
             /** @description Resumen de validaciones (solo GC4; null en los demas). */
@@ -4404,6 +4414,8 @@ export interface components {
              * @description Usuario que resolvio el bloqueo.
              */
             blockingResolvedByUserId: string | null;
+            /** @description Nombre de quien resolvio el bloqueo resuelto. */
+            blockingResolvedByName: string | null;
             /** @description URL/nota de evidencia. */
             evidenceRef: string | null;
             /**
@@ -4421,6 +4433,8 @@ export interface components {
              * @description Ejecutor.
              */
             executedByUserId: string;
+            /** @description Nombre del ejecutor resuelto. */
+            executedByName: string | null;
             /**
              * Format: date-time
              * @description Fecha de ejecucion.

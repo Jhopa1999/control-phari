@@ -6965,6 +6965,11 @@
             "format": "uuid",
             "description": "Usuario que decidio."
           },
+          "decidedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre de quien decidio resuelto."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -6980,6 +6985,7 @@
           "resultingState",
           "decidedAt",
           "decidedByUserId",
+          "decidedByName",
           "createdAt"
         ]
       },
@@ -7455,6 +7461,11 @@
             "format": "uuid",
             "description": "Usuario que evaluo."
           },
+          "evaluatedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del evaluador resuelto."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -7477,6 +7488,7 @@
           "justification",
           "evaluatedAt",
           "evaluatedByUserId",
+          "evaluatedByName",
           "createdAt"
         ]
       },
@@ -8528,6 +8540,11 @@
             "nullable": true,
             "description": "Usuario que envio."
           },
+          "submittedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre de quien envio resuelto."
+          },
           "authorizedAt": {
             "type": "string",
             "format": "date-time",
@@ -8539,6 +8556,11 @@
             "format": "uuid",
             "nullable": true,
             "description": "Usuario que autorizo."
+          },
+          "authorizedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre de quien autorizo resuelto."
           },
           "returnReason": {
             "type": "string",
@@ -8567,8 +8589,10 @@
           "status",
           "submittedAt",
           "submittedByUserId",
+          "submittedByName",
           "authorizedAt",
           "authorizedByUserId",
+          "authorizedByName",
           "returnReason",
           "createdAt",
           "updatedAt"
@@ -10893,6 +10917,11 @@
             "nullable": true,
             "description": "Usuario que decidio."
           },
+          "decidedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre de quien decidio el control resuelto."
+          },
           "pendingItems": {
             "description": "Faltantes del gate.",
             "type": "array",
@@ -10932,6 +10961,7 @@
           "waiverReason",
           "decidedAt",
           "decidedByUserId",
+          "decidedByName",
           "pendingItems",
           "validationSummary",
           "createdAt",
@@ -11162,6 +11192,11 @@
             "nullable": true,
             "description": "Usuario que resolvio el bloqueo."
           },
+          "blockingResolvedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre de quien resolvio el bloqueo resuelto."
+          },
           "evidenceRef": {
             "type": "string",
             "nullable": true,
@@ -11183,6 +11218,11 @@
             "type": "string",
             "format": "uuid",
             "description": "Ejecutor."
+          },
+          "executedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del ejecutor resuelto."
           },
           "executedAt": {
             "type": "string",
@@ -11218,10 +11258,12 @@
           "blockingResolved",
           "blockingResolvedAt",
           "blockingResolvedByUserId",
+          "blockingResolvedByName",
           "evidenceRef",
           "evidenceDocumentId",
           "evidenceDocumentVersionId",
           "executedByUserId",
+          "executedByName",
           "executedAt",
           "notes",
           "createdAt",

@@ -38,6 +38,13 @@ export class ValidationResponseDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Usuario que resolvio el bloqueo.' })
   blockingResolvedByUserId!: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Nombre de quien resolvio el bloqueo resuelto.',
+  })
+  blockingResolvedByName!: string | null;
+
   @ApiProperty({ type: String, nullable: true, description: 'URL/nota de evidencia.' })
   evidenceRef!: string | null;
 
@@ -49,6 +56,13 @@ export class ValidationResponseDto {
 
   @ApiProperty({ type: String, format: 'uuid', description: 'Ejecutor.' })
   executedByUserId!: string;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Nombre del ejecutor resuelto.',
+  })
+  executedByName!: string | null;
 
   @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de ejecucion.' })
   executedAt!: Date;

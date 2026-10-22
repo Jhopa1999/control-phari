@@ -54,7 +54,12 @@ function makeRequest(state: string) {
   return { id: 'r1', mainProcessId: 'p1', operationalState: state };
 }
 
-function mockApproval(decision: string, resultingState: string, reason: string | null = null) {
+function mockApproval(
+  decision: string,
+  resultingState: string,
+  reason: string | null = null,
+  decidedBy: { id: string; name: string } | null = { id: 'ul', name: 'Beto' },
+) {
   return {
     id: 'a1',
     requestId: 'r1',
@@ -64,6 +69,7 @@ function mockApproval(decision: string, resultingState: string, reason: string |
     resultingState,
     decidedAt: new Date(),
     decidedByUserId: 'ul',
+    decidedBy,
     createdAt: new Date(),
   };
 }
@@ -96,6 +102,11 @@ describe('ApprovalService', () => {
       resultingState: RequestState.COMPROMETIDA,
     });
     expect(res.resultingState).toBe(RequestState.COMPROMETIDA);
+    // Nombre de quien decidio resuelto desde la relacion incluida en la query.
+    expect(res.decidedByName).toBe('Beto');
+    expect(
+      (m.prismaObj.approval as any).create.mock.calls[0][0].include,
+    ).toMatchObject({ decidedBy: { select: { id: true, name: true } } });
     expect((m.prismaObj.request as any).update.mock.calls[0][0].data).toEqual({
       operationalState: RequestState.COMPROMETIDA,
     });
@@ -105,6 +116,21 @@ describe('ApprovalService', () => {
       objectType: 'APPROVAL',
       scopeProcessId: 'p1',
     });
+  });
+
+  it('sin relacion decidedBy -> decidedByName null', async () => {
+    (m.prismaObj.request as any).findFirst.mockResolvedValue(
+      makeRequest(RequestState.BACKLOG_PRIORIZADO),
+    );
+    (m.prismaObj.approval as any).create.mockResolvedValue(
+      mockApproval('APROBAR', RequestState.COMPROMETIDA, null, null),
+    );
+    (m.prismaObj.request as any).update.mockResolvedValue(
+      makeRequest(RequestState.COMPROMETIDA),
+    );
+
+    const res = await service.create(lider(), 'r1', { decision: 'APROBAR' });
+    expect(res.decidedByName).toBeNull();
   });
 
   it('DEVOLVER con motivo -> EN_TRIAGE (destino determinista, previousState=BACKLOG)', async () => {

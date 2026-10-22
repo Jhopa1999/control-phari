@@ -22,6 +22,19 @@ const PRIORITY_ALLOWED_STATES: readonly string[] = [
 const CONTINUAR: TriageDecision = 'CONTINUAR';
 
 /**
+ * Payload de PriorityEvaluation con la relacion `evaluatedBy` incluida (solo
+ * id+name), para resolver el nombre del evaluador sin exponer el UUID crudo ni
+ * usar `any` (mismo molde que Triage.mainResponsible).
+ */
+type PriorityEvaluationWithEvaluator = Prisma.PriorityEvaluationGetPayload<{
+  include: { evaluatedBy: { select: { id: true; name: true } } };
+}>;
+
+const EVALUATOR_INCLUDE = {
+  evaluatedBy: { select: { id: true, name: true } },
+} as const;
+
+/**
  * Gestiona la evaluacion de prioridad (design §2.3). Gate: triage vigente =
  * CONTINUAR Y estado in {EN_TRIAGE, BACKLOG_PRIORIZADO} (si no 409 sin
  * mutacion). Calcula el score en backend, persiste la evaluacion (1:N) y lleva
@@ -68,7 +81,7 @@ export class PriorityService {
   }
 
   private toResponse(
-    evaluation: PriorityEvaluationModel,
+    evaluation: PriorityEvaluationWithEvaluator,
   ): PriorityEvaluationResponseDto {
     return {
       id: evaluation.id,
@@ -86,6 +99,7 @@ export class PriorityService {
       justification: evaluation.justification,
       evaluatedAt: evaluation.evaluatedAt,
       evaluatedByUserId: evaluation.evaluatedByUserId,
+      evaluatedByName: evaluation.evaluatedBy?.name ?? null,
       createdAt: evaluation.createdAt,
     };
   }
@@ -102,6 +116,7 @@ export class PriorityService {
     const evaluations = await this.prisma.priorityEvaluation.findMany({
       where: { requestId },
       orderBy: { evaluatedAt: 'desc' },
+      include: EVALUATOR_INCLUDE,
     });
     return evaluations.map((e) => this.toResponse(e));
   }
@@ -163,6 +178,7 @@ export class PriorityService {
             ? { justification: dto.justification }
             : {}),
         },
+        include: EVALUATOR_INCLUDE,
       });
 
       await this.audit.record(tx, {

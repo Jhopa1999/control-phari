@@ -109,6 +109,7 @@ export function PrioridadDetalle({
   }));
   const items: DescriptionItem[] = [
     { term: 'Fecha', value: formatDateTime(evaluation.evaluatedAt) },
+    { term: 'Evaluado por', value: evaluation.evaluatedByName },
     ...criterios,
     { term: 'Justificación', value: evaluation.justification, span: 2 },
   ];
@@ -149,6 +150,7 @@ export function AprobacionDetalle({
         const items: DescriptionItem[] = [
           { term: 'Decisión', value: approvalDecisionLabel(approval.decision) },
           { term: 'Fecha', value: formatDateTime(approval.decidedAt) },
+          { term: 'Decidido por', value: approval.decidedByName },
           {
             term: 'Transición',
             value: (
@@ -188,7 +190,9 @@ export function PlanDetalle({ plan }: { plan: Plan }): React.ReactElement {
       value: <StatusBadge kind="plan" value={plan.status} />,
     },
     { term: 'Enviado a autorización', value: formatDateTime(plan.submittedAt) },
+    { term: 'Enviado por', value: plan.submittedByName },
     { term: 'Autorizado', value: formatDateTime(plan.authorizedAt) },
+    { term: 'Autorizado por', value: plan.authorizedByName },
   ];
   if (plan.status === 'DEVUELTO' && plan.returnReason) {
     items.push({ term: 'Motivo de la devolución', value: plan.returnReason, span: 2 });
@@ -274,6 +278,11 @@ export function GobiernoDetalle({
                 {gate.conditionText ? (
                   <span className="text-meta text-muted-foreground">{gate.conditionText}</span>
                 ) : null}
+                {gate.decidedByName ? (
+                  <span className="text-meta text-muted-foreground">
+                    Decidido por {gate.decidedByName}
+                  </span>
+                ) : null}
               </div>
               <StatusBadge kind="gate" value={gate.status} />
             </li>
@@ -303,6 +312,7 @@ export function GobiernoDetalle({
                 { term: 'Versión', value: orDash(record.version) },
                 { term: 'Ambiente', value: orDash(record.environment) },
                 { term: 'Fecha', value: formatDateTime(record.executedAt) },
+                { term: 'Ejecutado por', value: record.executedByName },
                 {
                   term: 'Defecto bloqueante',
                   value: record.blocking ? (
@@ -315,6 +325,12 @@ export function GobiernoDetalle({
                   ),
                 },
               ];
+              if (record.blocking && record.blockingResolved) {
+                items.push({
+                  term: 'Resuelto por',
+                  value: record.blockingResolvedByName,
+                });
+              }
               return (
                 <li key={record.id} className="rounded-lg border bg-surface-subtle p-3">
                   <DescriptionList items={items} columns={2} />
