@@ -85,6 +85,49 @@ function messageOf(err: unknown): string {
   return err instanceof CapacityError ? err.message : 'Ocurrió un error inesperado.';
 }
 
+/**
+ * Umbral de visualización para marcar «holgura» (persona poco cargada): tiene
+ * disponibilidad registrada y usa la mitad o menos de sus horas. Es un criterio
+ * de PRESENTACIÓN del front (ayuda a detectar a quién se le puede asignar más),
+ * NO un estado de dominio: el backend solo decide OK/SOBRECARGA/etc.
+ */
+const HOLGURA_UTILIZACION_MAX = 50;
+
+interface CapacitySignals {
+  sobrecargados: number;
+  holgura: number;
+  sinDisponibilidad: number;
+  total: number;
+}
+
+/** Cuenta las señales del resumen para la tira de un vistazo (opción de usabilidad). */
+function countSignals(rows: CapacitySummaryRow[]): CapacitySignals {
+  let sobrecargados = 0;
+  let holgura = 0;
+  let sinDisponibilidad = 0;
+  for (const row of rows) {
+    if (row.sobrecargado || row.estado === 'SOBRECARGA') {
+      sobrecargados += 1;
+    } else if (row.estado === 'SIN_DISPONIBILIDAD') {
+      sinDisponibilidad += 1;
+    } else if (row.utilizacion !== null && row.utilizacion <= HOLGURA_UTILIZACION_MAX) {
+      holgura += 1;
+    }
+  }
+  return { sobrecargados, holgura, sinDisponibilidad, total: rows.length };
+}
+
+/** ¿La persona está poco cargada? (mismo criterio de presentación que la tira). */
+function tieneHolgura(row: CapacitySummaryRow): boolean {
+  return (
+    !row.sobrecargado &&
+    row.estado !== 'SOBRECARGA' &&
+    row.estado !== 'SIN_DISPONIBILIDAD' &&
+    row.utilizacion !== null &&
+    row.utilizacion <= HOLGURA_UTILIZACION_MAX
+  );
+}
+
 function trimOrUndefined(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
@@ -183,6 +226,8 @@ export function CapacidadView(): React.ReactElement {
     defaultSort: null,
     pageSize: null,
   });
+
+  const signals = React.useMemo(() => countSignals(summary), [summary]);
 
   const processName = React.useCallback(
     (id: string) => processes.find((p) => p.id === id)?.name ?? id,
@@ -402,6 +447,33 @@ export function CapacidadView(): React.ReactElement {
       </details>
 
       <Section title="Resumen de carga">
+        {/* Tira de señales de un vistazo: cuántas personas están sobrecargadas,
+            con holgura (poco cargadas) o sin disponibilidad este mes. Ayuda a
+            detectar a quién redistribuir sin recorrer toda la tabla. */}
+        {state === 'success' && summary.length > 0 ? (
+          <div
+            aria-label="Resumen de señales de carga del equipo"
+            className="flex flex-wrap items-center gap-2 text-sm"
+          >
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-danger-border bg-danger-subtle px-2.5 py-1 text-danger">
+              <span className="font-semibold tabular-nums">{signals.sobrecargados}</span>
+              {signals.sobrecargados === 1 ? 'persona sobrecargada' : 'personas sobrecargadas'}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-muted-foreground">
+              <span className="font-semibold tabular-nums text-foreground">{signals.holgura}</span>
+              {signals.holgura === 1 ? 'persona con holgura' : 'personas con holgura'}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-muted-foreground">
+              <span className="font-semibold tabular-nums text-foreground">
+                {signals.sinDisponibilidad}
+              </span>
+              sin disponibilidad
+            </span>
+            <span className="text-meta text-muted-foreground">
+              {`de ${signals.total} ${signals.total === 1 ? 'persona' : 'personas'} en tu alcance`}
+            </span>
+          </div>
+        ) : null}
         <DataView
           state={sectionState(summary.length === 0)}
           loading={{ rows: 4, columns: 8 }}
@@ -456,9 +528,21 @@ export function CapacidadView(): React.ReactElement {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {summaryTable.pageRows.map((row) => (
-                <TableRow key={row.userId}>
-                  <TableCell className="min-w-40 font-medium">{row.userName}</TableCell>
+              {summaryTable.pageRows.map((row) => {
+                const sobrecargada = row.sobrecargado || row.estado === 'SOBRECARGA';
+                return (
+                <TableRow
+                  key={row.userId}
+                  className={cn(sobrecargada && 'bg-danger-subtle/50')}
+                >
+                  <TableCell className="min-w-40 font-medium">
+                    <span className="inline-flex flex-wrap items-center gap-1.5">
+                      {row.userName}
+                      {tieneHolgura(row) ? (
+                        <Badge variant="outline">Holgura</Badge>
+                      ) : null}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-right whitespace-nowrap tabular-nums">
                     {hoursOrDash(row.disponible)}
                   </TableCell>
@@ -519,7 +603,8 @@ export function CapacidadView(): React.ReactElement {
                     )}
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </DataView>
