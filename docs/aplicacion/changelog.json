@@ -95,6 +95,12 @@
       "trigger_file": "apps/web/src/app/activos/catalogo/[id]/historial/page.tsx",
       "updated_docs": ["docs/aplicacion/frontend-pantallas.md"],
       "summary": "Se documentaron el control 'Activo base' en la pantalla /demanda/triage (asociar activo existente o nuevo, requisito para priorizar), la nueva ruta de solo lectura /activos/catalogo/[id]/historial (historial de solicitudes por activo) y la accion 'Ver historial' en el catalogo de activos."
+    },
+    {
+      "timestamp": "2026-10-21T07:00:00Z",
+      "trigger_file": "apps/web/src/app/demanda/solicitudes/[id]/page.tsx",
+      "updated_docs": ["docs/aplicacion/frontend-pantallas.md"],
+      "summary": "Se documento la nueva ruta de solo lectura /demanda/solicitudes/[id] (ficha de detalle de la solicitud con stepper vertical de todas las etapas y enlaces 'Ir a actuar' gated por modulo y estado) y la accion 'Ver detalle' en la pantalla de Solicitudes."
     }
   ]
 }

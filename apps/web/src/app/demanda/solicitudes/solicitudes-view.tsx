@@ -204,6 +204,12 @@ export function SolicitudesView(): React.ReactElement {
   function rowActions(r: Request): RowAction[] {
     const id = encodeURIComponent(r.id);
     const actions: RowAction[] = [
+      {
+        key: 'detail',
+        label: 'Ver detalle',
+        href: `/demanda/solicitudes/${id}`,
+        placement: 'menu',
+      },
       { key: 'edit', label: 'Editar ficha', onSelect: () => openEdit(r), placement: 'menu' },
     ];
     if (allowedModules.has('triage') && isTriageable(r)) {
