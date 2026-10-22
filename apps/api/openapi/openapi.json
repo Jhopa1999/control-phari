@@ -5838,12 +5838,133 @@
     }
   },
   "info": {
-    "title": "Plantilla Portales API",
-    "description": "API estandar para portales internos",
+    "title": "API Control PHARI",
+    "description": "API del portal interno Control PHARI para la gestion de solicitudes, planes, gobernanza y recursos del area.",
     "version": "0.1.0",
     "contact": {}
   },
-  "tags": [],
+  "tags": [
+    {
+      "name": "users",
+      "description": "Gestion de usuarios e identidades funcionales (solo JEFE_AREA)."
+    },
+    {
+      "name": "auth",
+      "description": "Autenticacion: inicio de sesion, restablecimiento y activacion de contrasena."
+    },
+    {
+      "name": "audit",
+      "description": "Eventos de auditoria del sistema, con alcance segun el rol."
+    },
+    {
+      "name": "health",
+      "description": "Estado de salud del servicio."
+    },
+    {
+      "name": "capacity",
+      "description": "Capacidad del equipo: disponibilidad y asignacion de horas por persona y mes."
+    },
+    {
+      "name": "requests",
+      "description": "Solicitudes: registro y ficha dentro del alcance del actor."
+    },
+    {
+      "name": "triage",
+      "description": "Triage de solicitudes."
+    },
+    {
+      "name": "priority",
+      "description": "Priorizacion de solicitudes."
+    },
+    {
+      "name": "approval",
+      "description": "Aprobacion de solicitudes."
+    },
+    {
+      "name": "grants",
+      "description": "Concesion de permisos (grants) a usuarios dentro del alcance del jefe."
+    },
+    {
+      "name": "processes",
+      "description": "Procesos de negocio (solo JEFE_AREA)."
+    },
+    {
+      "name": "catalog-items",
+      "description": "Maestras y catalogos configurables."
+    },
+    {
+      "name": "plan",
+      "description": "Planes asociados a las solicitudes."
+    },
+    {
+      "name": "plan-phases",
+      "description": "Fases de un plan."
+    },
+    {
+      "name": "tasks",
+      "description": "Tareas del plan."
+    },
+    {
+      "name": "task-dependencies",
+      "description": "Dependencias entre tareas."
+    },
+    {
+      "name": "governance-gates",
+      "description": "Compuertas de gobernanza (gates) de las solicitudes."
+    },
+    {
+      "name": "governance-validations",
+      "description": "Validaciones de gobernanza de las solicitudes."
+    },
+    {
+      "name": "worklog",
+      "description": "Registro de trabajo (worklog)."
+    },
+    {
+      "name": "commitments",
+      "description": "Compromisos de coordinacion."
+    },
+    {
+      "name": "meetings",
+      "description": "Reuniones y sus participantes."
+    },
+    {
+      "name": "issues",
+      "description": "Incidencias (issues) y sus transiciones."
+    },
+    {
+      "name": "assets",
+      "description": "Activos de conocimiento."
+    },
+    {
+      "name": "documents",
+      "description": "Documentos y sus versiones."
+    },
+    {
+      "name": "portfolio",
+      "description": "Portafolio de solicitudes dentro del alcance."
+    },
+    {
+      "name": "area-control",
+      "description": "Control de area."
+    },
+    {
+      "name": "admin-smtp",
+      "description": "Administracion de la configuracion SMTP (solo ADMIN)."
+    },
+    {
+      "name": "admin-users",
+      "description": "Administracion de usuarios y su rol de ADMIN (solo ADMIN)."
+    },
+    {
+      "name": "me",
+      "description": "Datos del usuario autenticado y sus capacidades/menu."
+    },
+    {
+      "name": "dev",
+      "description": "Utilidades de desarrollo (solo activas en modo dev)."
+    }
+  ],
   "servers": [],
   "components": {
     "schemas": {
