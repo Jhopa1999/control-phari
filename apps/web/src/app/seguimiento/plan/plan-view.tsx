@@ -90,9 +90,12 @@ import {
   updateTaskStatus,
 } from '@/lib/tasks';
 import { useClientTable } from '@/lib/use-client-table';
+import { usePlanTasksView } from '@/lib/use-plan-tasks-view';
 import { useRequestIdParam } from '@/lib/use-request-param';
 import { listCoordinationPeople } from '@/lib/worklog';
+import { SegmentedRadio } from '@/components/ui/segmented-radio';
 import { PhaseDialog } from './phase-dialog';
+import { PlanTasksKanban } from './plan-tasks-kanban';
 import { TaskDialog } from './task-dialog';
 import { TaskResponsibleControl } from './task-responsible-control';
 import { TaskStatusControl } from './task-status-control';
@@ -160,6 +163,9 @@ function planStatePhrase(status: string): string {
 export function PlanView(): React.ReactElement {
   const { actorId, permissions, allowedModules } = useActor();
   const { requestId: urlId, setRequestId } = useRequestIdParam();
+  // Presentación de la sección «Tareas»: tabla (por defecto) o kanban. Solo
+  // cambia la vista; datos, filtros y acciones son los mismos.
+  const { view: tasksView, setView: setTasksView } = usePlanTasksView();
   const permissionsLoaded = permissions !== null;
   const planAllowed = allowedModules.has('plan');
   // Un 403 del plan lleva al mismo aviso que no tener el módulo.
@@ -891,8 +897,36 @@ export function PlanView(): React.ReactElement {
     else if (taskTable.filtered === 0) viewState = 'no-results';
     else viewState = 'ready';
 
+    // Motivo del responsable deshabilitado (plan no editable): se calcula aquí
+    // una sola vez y se pasa al kanban para no duplicar `planStatePhrase`.
+    const responsibleDisabledReason =
+      !canEdit && plan
+        ? `El plan está ${planStatePhrase(plan.status)}; las fases y tareas no se pueden editar.`
+        : undefined;
+
     return (
-      <Section title="Tareas" headingRef={tasksHeadingRef}>
+      <Section
+        title="Tareas"
+        headingRef={tasksHeadingRef}
+        actions={
+          <div className="flex items-center gap-2">
+            <span id="plan-tasks-view-label" className="text-meta text-muted-foreground">
+              Vista
+            </span>
+            <SegmentedRadio
+              id="plan-tasks-view"
+              name="plan-tasks-view"
+              labelledBy="plan-tasks-view-label"
+              value={tasksView}
+              onValueChange={(value) => setTasksView(value === 'kanban' ? 'kanban' : 'table')}
+              options={[
+                { value: 'table', label: 'Tabla' },
+                { value: 'kanban', label: 'Kanban' },
+              ]}
+            />
+          </div>
+        }
+      >
         <Toolbar
           label="Filtros de tareas"
           end={<ResultCount loading={false} total={taskTable.total} filtered={taskTable.filtered} noun={TASK_NOUN} />}
@@ -948,6 +982,30 @@ export function PlanView(): React.ReactElement {
           </div>
         </Toolbar>
 
+        {tasksView === 'kanban' ? (
+          <PlanTasksKanban
+            tasks={taskTable.pageRows}
+            plan={plan!}
+            people={people}
+            peopleState={peopleState}
+            permissions={permissions}
+            isPlanManager={isPlanManager}
+            canEdit={canEdit}
+            phaseNameById={phaseNameById}
+            initialPhaseId={initialPhaseId}
+            inlineBusy={inlineBusy}
+            rowBusyId={rowBusyId}
+            busy={busy}
+            deletingId={deletingId}
+            viewState={viewState}
+            responsibleDisabledReason={responsibleDisabledReason}
+            onInlineStatusChange={handleInlineStatusChange}
+            onInlineResponsibleChange={handleInlineResponsibleChange}
+            onNewTask={openNewTask}
+            onEditTask={openEditTask}
+            onRequestDeleteTask={requestDeleteTask}
+          />
+        ) : (
         <DataView
           state={viewState}
           empty={{
@@ -1014,22 +1072,27 @@ export function PlanView(): React.ReactElement {
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{task.predecessors.length}</TableCell>
                   <TableCell className="whitespace-nowrap">
+                    {/*
+                      Cambiar estado NO depende de `canEdit` (plan editable): el
+                      backend (TaskService.changeStatus) solo exige ser el
+                      responsable —o jefe/líder— y una transición válida, nunca
+                      que el plan esté en borrador/devuelto. Así los miembros
+                      actualizan sus estados también en ejecución. Misma
+                      expresión en la tabla y en el kanban (fuente única).
+                    */}
                     <TaskStatusControl
                       status={task.status}
                       progress={task.progress}
                       busy={rowBusyId === task.id}
                       disabled={
-                        !canEdit ||
                         permissions === null ||
                         inlineBusy(task.id) ||
                         (!isPlanManager && task.responsibleUserId !== permissions?.userId)
                       }
                       disabledReason={
-                        !canEdit && plan
-                          ? `El plan está ${planStatePhrase(plan.status)}; las fases y tareas no se pueden editar.`
-                          : !isPlanManager && task.responsibleUserId !== permissions?.userId
-                            ? 'Solo puedes cambiar el estado de tus propias tareas.'
-                            : undefined
+                        !isPlanManager && task.responsibleUserId !== permissions?.userId
+                          ? 'Solo puedes cambiar el estado de tus propias tareas.'
+                          : undefined
                       }
                       taskTitle={task.title}
                       onChange={(next) => handleInlineStatusChange(task, next)}
@@ -1066,6 +1129,7 @@ export function PlanView(): React.ReactElement {
             </TableBody>
           </Table>
         </DataView>
+        )}
       </Section>
     );
   }
