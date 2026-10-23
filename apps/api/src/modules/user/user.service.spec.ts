@@ -13,6 +13,8 @@ type UserDelegateMock = {
   update: jest.Mock;
 };
 
+class OtherError extends Error {}
+
 function createMocks() {
   const user: UserDelegateMock = {
     findMany: jest.fn(),
@@ -79,6 +81,27 @@ describe('UserService', () => {
     expect(arg.orderBy).toEqual({ name: 'asc' });
   });
 
+  describe('findOne', () => {
+    it('devuelve el usuario con sus grants cuando existe', async () => {
+      const withGrants = makeUser({ grants: [] });
+      mocks.user.findUnique.mockResolvedValue(withGrants);
+
+      const res = await service.findOne('u1');
+
+      expect(res).toBe(withGrants);
+      const arg = mocks.user.findUnique.mock.calls[0][0];
+      expect(arg.where).toEqual({ id: 'u1' });
+      expect(arg.include).toMatchObject({ grants: expect.any(Object) });
+    });
+
+    it('404 si el usuario no existe', async () => {
+      mocks.user.findUnique.mockResolvedValue(null);
+      await expect(service.findOne('uX')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+  });
+
   describe('create', () => {
     it('audita CREATE con scopeProcessId null', async () => {
       const created = makeUser({ id: 'unew' });
@@ -105,6 +128,15 @@ describe('UserService', () => {
       await expect(
         service.create(jefe(), { identifier: 'dup@demo.local', name: 'X' }),
       ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('re-lanza un error ajeno a P2002 sin traducirlo a 409', async () => {
+      const boom = new OtherError('fallo inesperado');
+      mocks.user.create.mockRejectedValue(boom);
+      await expect(
+        service.create(jefe(), { identifier: 'x@demo.local', name: 'X' }),
+      ).rejects.toBe(boom);
+      expect(mocks.auditRecord).not.toHaveBeenCalled();
     });
   });
 

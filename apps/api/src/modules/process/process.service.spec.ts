@@ -134,6 +134,14 @@ describe('ProcessService', () => {
       const where = mocks.process.findMany.mock.calls[0][0].where;
       expect(where.id).toBeUndefined();
     });
+
+    it('aplica los filtros opcionales active y kind al where', async () => {
+      mocks.process.findMany.mockResolvedValue([]);
+      await service.findMany(jefe(), { active: false, kind: 'PROCESS' } as any);
+      const where = mocks.process.findMany.mock.calls[0][0].where;
+      expect(where.active).toBe(false);
+      expect(where.kind).toBe('PROCESS');
+    });
   });
 
   describe('findOne', () => {
@@ -198,6 +206,15 @@ describe('ProcessService', () => {
       await expect(
         service.create(jefe(), { code: 'FIBI', name: 'BI', areaId: 'a1' }),
       ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('re-lanza un error ajeno a P2002 sin traducirlo a 409', async () => {
+      const boom = new Error('fallo de BD');
+      mocks.area.findUnique.mockResolvedValue({ id: 'a1' });
+      mocks.process.create.mockRejectedValue(boom);
+      await expect(
+        service.create(jefe(), { code: 'FIBI', name: 'BI', areaId: 'a1' }),
+      ).rejects.toBe(boom);
     });
   });
 

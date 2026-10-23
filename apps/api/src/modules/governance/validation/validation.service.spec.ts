@@ -19,6 +19,31 @@ const JEFE: CurrentActor = {
   isAdmin: false,
 };
 
+function grantFor(
+  processId: string,
+  roleCode: RoleCode,
+): CurrentActor['grants'][number] {
+  return {
+    processId,
+    processCode: processId.toUpperCase(),
+    processName: processId,
+    roleCode,
+    roleName: roleCode,
+  };
+}
+
+/** Lider con alcance en `proc-1` (ve/gestiona ese proceso). */
+const LIDER: CurrentActor = {
+  userId: 'u-lider',
+  name: 'Beto Lider',
+  identifier: 'lider@demo.local',
+  grants: [grantFor('proc-1', RoleCode.LIDER_PROCESO)],
+  roleCodes: new Set([RoleCode.LIDER_PROCESO]),
+  scopedProcessIds: new Set(['proc-1']),
+  isJefeArea: false,
+  isAdmin: false,
+};
+
 function makeRequest(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: 'req-1',
@@ -97,6 +122,55 @@ const BASE_DTO = {
 };
 
 describe('ValidationService', () => {
+  describe('findForRequest', () => {
+    it('lista el historial en alcance ordenado por executedAt desc', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(makeRequest());
+      m.validationRecord.findMany.mockResolvedValue([
+        {
+          id: 'v-1',
+          requestId: 'req-1',
+          gateCheckId: null,
+          validationTypeCode: 'FUNCIONAL_ACEPTACION',
+          testCase: 'TC-1',
+          version: null,
+          environment: null,
+          resultCode: 'APROBADA',
+          blocking: false,
+          blockingResolved: false,
+          blockingResolvedAt: null,
+          blockingResolvedByUserId: null,
+          blockingResolvedBy: null,
+          evidenceRef: null,
+          evidenceDocumentId: null,
+          evidenceDocumentVersionId: null,
+          executedByUserId: BASE_DTO.executedByUserId,
+          executedBy: { id: BASE_DTO.executedByUserId, name: 'Eje Cutor' },
+          executedAt: new Date(),
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+
+      const res = await m.service.findForRequest(JEFE, 'req-1');
+
+      expect(res).toHaveLength(1);
+      expect(res[0].executedByName).toBe('Eje Cutor');
+      const arg = m.validationRecord.findMany.mock.calls[0][0];
+      expect(arg.where).toEqual({ requestId: 'req-1' });
+      expect(arg.orderBy).toEqual({ executedAt: 'desc' });
+    });
+
+    it('404 si la Request esta fuera del alcance de lectura', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.findForRequest(LIDER, 'req-x'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
   describe('create (registrar != aprobar, BR-008)', () => {
     it('registra la validacion sin cambiar estado ni aprobar gate', async () => {
       const m = setup();
@@ -166,6 +240,88 @@ describe('ValidationService', () => {
           evidenceDocumentVersionId: '33333333-3333-3333-3333-333333333333',
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rechaza (400) una version de evidencia inexistente', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(makeRequest());
+      m.document.findUnique.mockResolvedValue({ asset: { processId: 'proc-1' } });
+      m.documentVersion.findUnique.mockResolvedValue(null);
+
+      await expect(
+        m.service.create(JEFE, 'req-1', {
+          ...BASE_DTO,
+          evidenceDocumentId: '22222222-2222-2222-2222-222222222222',
+          evidenceDocumentVersionId: '33333333-3333-3333-3333-333333333333',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('404 si el documento de evidencia no existe', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(makeRequest());
+      m.document.findUnique.mockResolvedValue(null);
+
+      await expect(
+        m.service.create(JEFE, 'req-1', {
+          ...BASE_DTO,
+          evidenceDocumentId: '22222222-2222-2222-2222-222222222222',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('404 si el documento de evidencia esta fuera del alcance del lider', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(makeRequest());
+      // El activo del documento cuelga de un proceso ajeno al alcance del lider.
+      m.document.findUnique.mockResolvedValue({ asset: { processId: 'proc-AJENO' } });
+
+      await expect(
+        m.service.create(LIDER, 'req-1', {
+          ...BASE_DTO,
+          evidenceDocumentId: '22222222-2222-2222-2222-222222222222',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('permite documento de evidencia dentro del alcance del lider', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(makeRequest());
+      m.document.findUnique.mockResolvedValue({ asset: { processId: 'proc-1' } });
+      m.validationRecord.create.mockResolvedValue({
+        id: 'v-2',
+        requestId: 'req-1',
+        gateCheckId: null,
+        validationTypeCode: 'FUNCIONAL_ACEPTACION',
+        testCase: 'TC-1',
+        version: null,
+        environment: null,
+        resultCode: 'APROBADA',
+        blocking: false,
+        blockingResolved: false,
+        blockingResolvedAt: null,
+        blockingResolvedByUserId: null,
+        blockingResolvedBy: null,
+        evidenceRef: null,
+        evidenceDocumentId: '22222222-2222-2222-2222-222222222222',
+        evidenceDocumentVersionId: null,
+        executedByUserId: BASE_DTO.executedByUserId,
+        executedBy: { id: BASE_DTO.executedByUserId, name: 'Eje Cutor' },
+        executedAt: new Date(BASE_DTO.executedAt),
+        notes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const res = await m.service.create(LIDER, 'req-1', {
+        ...BASE_DTO,
+        evidenceDocumentId: '22222222-2222-2222-2222-222222222222',
+      });
+
+      expect(res.id).toBe('v-2');
+      expect(res.evidenceDocumentId).toBe(
+        '22222222-2222-2222-2222-222222222222',
+      );
     });
   });
 

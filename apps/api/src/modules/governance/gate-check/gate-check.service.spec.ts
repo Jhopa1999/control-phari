@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
@@ -29,7 +34,12 @@ type Mocks = {
     update: jest.Mock;
     findUnique: jest.Mock;
   };
-  gatePendingItem: { findMany: jest.Mock };
+  gatePendingItem: {
+    findMany: jest.Mock;
+    findFirst: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+  };
   validationRecord: { findMany: jest.Mock };
   request: { findFirst: jest.Mock; update: jest.Mock };
   user: { findUnique: jest.Mock };
@@ -79,7 +89,12 @@ function setup(): Mocks {
     update: jest.fn(),
     findUnique: jest.fn(),
   };
-  const gatePendingItem = { findMany: jest.fn().mockResolvedValue([]) };
+  const gatePendingItem = {
+    findMany: jest.fn().mockResolvedValue([]),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  };
   const validationRecord = { findMany: jest.fn().mockResolvedValue([]) };
   const request = { findFirst: jest.fn(), update: jest.fn() };
   // Resolucion del nombre de quien decidio un control (solo cuando hay FK).
@@ -339,6 +354,269 @@ describe('GateCheckService', () => {
         waiverReason: 'motivo',
       });
       expect(result.status).toBe(GateStatus.NO_APLICA);
+    });
+  });
+
+  describe('parseGateCode / alcance de gestor', () => {
+    it('rechaza (400) un gateCode desconocido antes de tocar BD', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(makeRequest());
+
+      await expect(
+        m.service.addPendingItem(JEFE, 'req-1', 'GC9', { description: 'x' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('403 si el actor no es gestor del proceso principal de la Request', async () => {
+      const m = setup();
+      const LIDER_AJENO: CurrentActor = {
+        userId: 'u-lider',
+        name: 'Beto',
+        identifier: 'lider@demo.local',
+        grants: [
+          {
+            processId: 'proc-OTRO',
+            processCode: 'OTRO',
+            processName: 'Otro',
+            roleCode: RoleCode.LIDER_PROCESO,
+            roleName: RoleCode.LIDER_PROCESO,
+          },
+        ],
+        roleCodes: new Set([RoleCode.LIDER_PROCESO]),
+        scopedProcessIds: new Set(['proc-1', 'proc-OTRO']),
+        isJefeArea: false,
+        isAdmin: false,
+      };
+      m.request.findFirst.mockResolvedValue(makeRequest());
+
+      await expect(
+        m.service.addPendingItem(LIDER_AJENO, 'req-1', 'GC1', {
+          description: 'x',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
+
+  describe('pendientes (addPendingItem / resolvePendingItem)', () => {
+    it('addPendingItem crea el faltante y audita CREATE', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(makeRequest());
+      stubUpsert(m.gateCheck);
+      m.gateCheck.findUnique.mockResolvedValue(makeGate(GateCode.GC1));
+      m.gatePendingItem.create.mockResolvedValue({
+        id: 'item-1',
+        gateCheckId: 'gate-GC1',
+        description: 'Falta evidencia',
+        ownerUserId: null,
+        reviewDate: null,
+        resolved: false,
+        resolvedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const res = await m.service.addPendingItem(JEFE, 'req-1', 'GC1', {
+        description: 'Falta evidencia',
+      });
+
+      expect(res.id).toBe('item-1');
+      expect(res.resolved).toBe(false);
+      expect(m.auditRecord).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          objectType: 'GATE_PENDING_ITEM',
+          action: 'CREATE',
+        }),
+      );
+    });
+
+    it('resolvePendingItem 404 si el faltante no pertenece al gate', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(makeRequest());
+      m.gateCheck.findUnique.mockResolvedValue(makeGate(GateCode.GC1));
+      m.gatePendingItem.findFirst.mockResolvedValue(null);
+
+      await expect(
+        m.service.resolvePendingItem(JEFE, 'req-1', 'GC1', 'item-x', {
+          resolved: true,
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('resolvePendingItem marca resuelto (resolvedAt Date) y audita UPDATE', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(makeRequest());
+      m.gateCheck.findUnique.mockResolvedValue(makeGate(GateCode.GC1));
+      m.gatePendingItem.findFirst.mockResolvedValue({
+        id: 'item-1',
+        gateCheckId: 'gate-GC1',
+        resolved: false,
+      });
+      m.gatePendingItem.update.mockResolvedValue({
+        id: 'item-1',
+        gateCheckId: 'gate-GC1',
+        description: 'd',
+        ownerUserId: 'owner-1',
+        reviewDate: new Date(),
+        resolved: true,
+        resolvedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const res = await m.service.resolvePendingItem(
+        JEFE,
+        'req-1',
+        'GC1',
+        'item-1',
+        {
+          resolved: true,
+          description: 'd',
+          ownerUserId: 'owner-1',
+          reviewDate: '2026-02-01T00:00:00.000Z',
+        },
+      );
+
+      expect(res.resolved).toBe(true);
+      const data = m.gatePendingItem.update.mock.calls[0][0].data;
+      expect(data.resolved).toBe(true);
+      expect(data.resolvedAt).toBeInstanceOf(Date);
+      expect(data.owner).toEqual({ connect: { id: 'owner-1' } });
+      expect(data.reviewDate).toBeInstanceOf(Date);
+    });
+
+    it('resolvePendingItem con resolved:false limpia resolvedAt (null)', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(makeRequest());
+      m.gateCheck.findUnique.mockResolvedValue(makeGate(GateCode.GC1));
+      m.gatePendingItem.findFirst.mockResolvedValue({
+        id: 'item-1',
+        gateCheckId: 'gate-GC1',
+        resolved: true,
+      });
+      m.gatePendingItem.update.mockResolvedValue({
+        id: 'item-1',
+        gateCheckId: 'gate-GC1',
+        description: 'd',
+        ownerUserId: null,
+        reviewDate: null,
+        resolved: false,
+        resolvedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await m.service.resolvePendingItem(JEFE, 'req-1', 'GC1', 'item-1', {
+        resolved: false,
+      });
+
+      const data = m.gatePendingItem.update.mock.calls[0][0].data;
+      expect(data.resolved).toBe(false);
+      expect(data.resolvedAt).toBeNull();
+    });
+  });
+
+  describe('advanceStage request-validation / confirm-stabilization', () => {
+    it('request-validation mueve EN_EJECUCION -> EN_VALIDACION', async () => {
+      const m = setup();
+      m.request.findFirst
+        .mockResolvedValueOnce(
+          makeRequest({ operationalState: RequestState.EN_EJECUCION }),
+        )
+        .mockResolvedValue(
+          makeRequest({ operationalState: RequestState.EN_VALIDACION }),
+        );
+      m.request.update.mockResolvedValue({});
+      stubUpsert(m.gateCheck);
+
+      await m.service.advanceStage(JEFE, 'req-1', 'request-validation');
+
+      expect(m.request.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { operationalState: RequestState.EN_VALIDACION },
+        }),
+      );
+    });
+
+    it('confirm-stabilization mueve EN_ESTABILIZACION -> OPERATIVA', async () => {
+      const m = setup();
+      m.request.findFirst
+        .mockResolvedValueOnce(
+          makeRequest({ operationalState: RequestState.EN_ESTABILIZACION }),
+        )
+        .mockResolvedValue(
+          makeRequest({ operationalState: RequestState.OPERATIVA }),
+        );
+      m.request.update.mockResolvedValue({});
+      stubUpsert(m.gateCheck);
+
+      await m.service.advanceStage(JEFE, 'req-1', 'confirm-stabilization');
+
+      expect(m.request.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { operationalState: RequestState.OPERATIVA },
+        }),
+      );
+    });
+  });
+
+  describe('setRoute', () => {
+    it('valida el code en catalogo, persiste la ruta y audita', async () => {
+      const m = setup();
+      m.request.findFirst
+        .mockResolvedValueOnce(
+          makeRequest({ governanceRoute: GOVERNANCE_ROUTE.COMPLETA }),
+        )
+        .mockResolvedValue(
+          makeRequest({ governanceRoute: GOVERNANCE_ROUTE.SIMPLIFICADA }),
+        );
+      // assertCatalogCode consulta catalogItem.findFirst.
+      (m.prisma as any).catalogItem = { findFirst: jest.fn() };
+      const prismaAny = m.prisma as any;
+      prismaAny.catalogItem.findFirst.mockResolvedValue({ id: 'c-1' });
+      m.request.update.mockResolvedValue({});
+      stubUpsert(m.gateCheck);
+
+      await m.service.setRoute(JEFE, 'req-1', {
+        route: GOVERNANCE_ROUTE.SIMPLIFICADA,
+      });
+
+      expect(m.request.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { governanceRoute: GOVERNANCE_ROUTE.SIMPLIFICADA },
+        }),
+      );
+      expect(m.auditRecord).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ objectType: 'REQUEST', action: 'UPDATE' }),
+      );
+    });
+  });
+
+  describe('gateToResponse: nombre del decididor nulo', () => {
+    it('decidedByName null cuando el User existe sin nombre resoluble', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(
+        makeRequest({ operationalState: RequestState.LISTA_PARA_LIBERAR }),
+      );
+      stubUpsert(m.gateCheck);
+      m.gateCheck.findUnique.mockResolvedValue(makeGate(GateCode.GC4));
+      m.validationRecord.findMany.mockResolvedValue([
+        {
+          blocking: false,
+          blockingResolved: false,
+          validationTypeCode: 'FUNCIONAL_ACEPTACION',
+          resultCode: 'APROBADA',
+        },
+      ]);
+      m.request.update.mockResolvedValue({
+        operationalState: RequestState.EN_ESTABILIZACION,
+      });
+      // El User existe pero findUnique lo devuelve null -> decidedByName null.
+      m.user.findUnique.mockResolvedValue(null);
+
+      const res = await m.service.approve(JEFE, 'req-1', 'GC4', {});
+      expect(res.decidedByName).toBeNull();
     });
   });
 

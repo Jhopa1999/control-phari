@@ -902,6 +902,78 @@ describe('CapacityService', () => {
     });
   });
 
+  describe('listAssignments: filtros opcionales intersectan el alcance', () => {
+    it('jefe: processId/userId/requestId se aplican directo al where', async () => {
+      (m.prismaObj.assignment as any).findMany.mockResolvedValue([]);
+      await service.listAssignments(jefe(), {
+        month: '2025-03',
+        processId: 'pX',
+        userId: 'uX',
+        requestId: 'rX',
+      } as any);
+      const where = (m.prismaObj.assignment as any).findMany.mock.calls[0][0]
+        .where;
+      expect(where.processId).toBe('pX');
+      expect(where.userId).toBe('uX');
+      expect(where.requestId).toBe('rX');
+    });
+
+    it('lider: processId se intersecta con scopedProcessIds (no amplia)', async () => {
+      (m.prismaObj.grant as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.assignment as any).findMany.mockResolvedValue([]);
+      await service.listAssignments(lider(['p1']), {
+        month: '2025-03',
+        // Pide un proceso fuera de su alcance: la interseccion queda vacia.
+        processId: 'pFUERA',
+      } as any);
+      const where = (m.prismaObj.assignment as any).findMany.mock.calls[0][0]
+        .where;
+      expect(where.processId).toEqual({ in: [] });
+    });
+
+    it('lider: userId pedido se intersecta con scopedUserIds', async () => {
+      (m.prismaObj.grant as any).findMany.mockResolvedValue([{ userId: 'uA' }]);
+      (m.prismaObj.assignment as any).findMany.mockResolvedValue([]);
+      await service.listAssignments(lider(['p1']), {
+        month: '2025-03',
+        userId: 'uA',
+      } as any);
+      const where = (m.prismaObj.assignment as any).findMany.mock.calls[0][0]
+        .where;
+      expect(where.userId).toEqual({ in: ['uA'] });
+    });
+  });
+
+  describe('updateAssignment: cambios de processId y religado de requestId', () => {
+    it('jefe reasigna processId (valida alcance) y religa requestId (valida)', async () => {
+      (m.prismaObj.assignment as any).findFirst.mockResolvedValue(
+        assignmentRow({ processId: 'p1', requestId: null }),
+      );
+      (m.prismaObj.process as any).findFirst.mockResolvedValue({ id: 'p2' });
+      (m.prismaObj.request as any).findFirst.mockResolvedValue({ id: 'r-new' });
+      (m.prismaObj.assignment as any).update.mockResolvedValue(
+        assignmentRow({ processId: 'p2', requestId: 'r-new' }),
+      );
+
+      const res = await service.updateAssignment(jefe(), 'as1', {
+        processId: 'p2',
+        requestId: 'r-new',
+        committedHours: 20,
+        description: 'nota',
+      } as any);
+
+      // Se valido el proceso y la solicitud destino.
+      expect((m.prismaObj.process as any).findFirst).toHaveBeenCalled();
+      expect((m.prismaObj.request as any).findFirst).toHaveBeenCalled();
+      const data = (m.prismaObj.assignment as any).update.mock.calls[0][0].data;
+      expect(data.processId).toBe('p2');
+      expect(data.requestId).toBe('r-new');
+      expect(data.committedHours).toBe(20);
+      expect(data.description).toBe('nota');
+      expect(res.processId).toBe('p2');
+    });
+  });
+
   describe('alcance de escritura del integrante con proceso', () => {
     it('integrante con grant en p1 crea disponibilidad de otra persona de p1 -> 403', async () => {
       // Comparte proceso con el objetivo, pero sigue siendo "solo la suya".
