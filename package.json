@@ -44,6 +44,7 @@
     "docker:prod:logs": "docker compose -f compose.prod.yaml --env-file .env.production logs -f"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.63.0"
   },
   "allowScripts": {
