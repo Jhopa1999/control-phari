@@ -173,4 +173,188 @@ describe('IssueService', () => {
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  describe('create: campos opcionales y relatedTask', () => {
+    it('crea con todos los opcionales (incluye targetDate y resolver)', async () => {
+      m.prismaObj.request.findFirst.mockResolvedValue({ id: 'r1' });
+      m.prismaObj.issue.create.mockImplementation(({ data }: any) =>
+        Promise.resolve(issueRow(data)),
+      );
+      const res = await m.service.create(integrante(), {
+        processId: 'p1',
+        date: '2025-03-10',
+        title: 'Falla completa',
+        typeCode: 'RIESGO',
+        relatedRequestId: '11111111-1111-1111-1111-111111111111',
+        relatedAssetRef: 'ACTIVO-1',
+        detail: 'detalle',
+        impact: 'alto',
+        resolverUserId: 'ur',
+        targetDate: '2025-04-01',
+        resolution: 'pendiente',
+      });
+      expect(res.typeCode).toBe('RIESGO');
+      expect(res.targetDate).toBe('2025-04-01');
+      expect(res.resolverUserId).toBe('ur');
+      expect(res.impact).toBe('alto');
+    });
+
+    it('relatedTask visible: valida traversal phase.plan.request', async () => {
+      m.prismaObj.task.findFirst.mockResolvedValue({
+        id: 't1',
+        phase: { planId: 'pl1' },
+      });
+      m.prismaObj.plan.findFirst.mockResolvedValue({ requestId: 'r1' });
+      m.prismaObj.request.findFirst.mockResolvedValue({ id: 'r1' });
+      m.prismaObj.issue.create.mockImplementation(({ data }: any) =>
+        Promise.resolve(issueRow(data)),
+      );
+      const res = await m.service.create(integrante(), {
+        processId: 'p1',
+        date: '2025-03-10',
+        title: 'con tarea',
+        relatedTaskId: '22222222-2222-2222-2222-222222222222',
+      });
+      expect(res.relatedTaskId).toBe('22222222-2222-2222-2222-222222222222');
+    });
+
+    it('relatedTask inexistente -> 404', async () => {
+      m.prismaObj.task.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.create(integrante(), {
+          processId: 'p1',
+          date: '2025-03-10',
+          title: 'con tarea',
+          relatedTaskId: '22222222-2222-2222-2222-222222222222',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('relatedTask con plan inexistente -> 404', async () => {
+      m.prismaObj.task.findFirst.mockResolvedValue({
+        id: 't1',
+        phase: { planId: 'pl1' },
+      });
+      m.prismaObj.plan.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.create(integrante(), {
+          processId: 'p1',
+          date: '2025-03-10',
+          title: 'con tarea',
+          relatedTaskId: '22222222-2222-2222-2222-222222222222',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('relatedTask con request no visible -> 404', async () => {
+      m.prismaObj.task.findFirst.mockResolvedValue({
+        id: 't1',
+        phase: { planId: 'pl1' },
+      });
+      m.prismaObj.plan.findFirst.mockResolvedValue({ requestId: 'r1' });
+      m.prismaObj.request.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.create(integrante(), {
+          processId: 'p1',
+          date: '2025-03-10',
+          title: 'con tarea',
+          relatedTaskId: '22222222-2222-2222-2222-222222222222',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('update', () => {
+    it('actualiza campos y targetDate; audita before/after', async () => {
+      m.prismaObj.issue.findFirst.mockResolvedValue(issueRow());
+      m.prismaObj.issue.update.mockImplementation(({ data }: any) =>
+        Promise.resolve(issueRow({ ...data })),
+      );
+      const res = await m.service.update(integrante(), 'is1', {
+        title: 'editada',
+        typeCode: 'RIESGO',
+        detail: 'd',
+        impact: 'i',
+        resolverUserId: 'ur',
+        targetDate: '2025-05-01',
+        resolution: 'ok',
+        relatedAssetRef: 'A-1',
+      });
+      expect(res.title).toBe('editada');
+      expect(res.targetDate).toBe('2025-05-01');
+      const auditCall = m.auditRecord.mock.calls[0][1];
+      expect(auditCall.before).not.toBeNull();
+      expect(auditCall.after).not.toBeNull();
+    });
+
+    it(':id fuera de alcance -> 404', async () => {
+      m.prismaObj.issue.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.update(integrante(), 'ajeno', { title: 'x' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('update con relatedRequestId no visible -> 404', async () => {
+      m.prismaObj.issue.findFirst.mockResolvedValue(issueRow());
+      m.prismaObj.request.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.update(integrante(), 'is1', {
+          relatedRequestId: '11111111-1111-1111-1111-111111111111',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('update con relatedTask no visible -> 404', async () => {
+      m.prismaObj.issue.findFirst.mockResolvedValue(issueRow());
+      m.prismaObj.task.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.update(integrante(), 'is1', {
+          relatedTaskId: '22222222-2222-2222-2222-222222222222',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('list', () => {
+    it('aplica filtros state/typeCode/processId', async () => {
+      m.prismaObj.issue.findMany.mockResolvedValue([issueRow()]);
+      const res = await m.service.list(integrante(), {
+        state: 'EN_CURSO',
+        typeCode: 'BLOQUEO',
+        processId: 'p1',
+      } as any);
+      expect(res).toHaveLength(1);
+      const and = m.prismaObj.issue.findMany.mock.calls[0][0].where.AND;
+      expect(and).toContainEqual({ state: 'EN_CURSO' });
+      expect(and).toContainEqual({ typeCode: 'BLOQUEO' });
+      expect(and).toContainEqual({ processId: 'p1' });
+    });
+
+    it('sin filtros devuelve solo alcance', async () => {
+      m.prismaObj.issue.findMany.mockResolvedValue([]);
+      const res = await m.service.list(integrante(), {} as any);
+      expect(res).toEqual([]);
+      const and = m.prismaObj.issue.findMany.mock.calls[0][0].where.AND;
+      expect(and).toHaveLength(1);
+    });
+  });
+
+  describe('remove', () => {
+    it('elimina y audita DELETE con after null', async () => {
+      m.prismaObj.issue.findFirst.mockResolvedValue(issueRow());
+      m.prismaObj.issue.delete.mockResolvedValue(issueRow());
+      await m.service.remove(integrante(), 'is1');
+      expect(m.prismaObj.issue.delete).toHaveBeenCalledWith({
+        where: { id: 'is1' },
+      });
+      expect(m.auditRecord.mock.calls[0][1].after).toBeNull();
+    });
+
+    it(':id fuera de alcance -> 404', async () => {
+      m.prismaObj.issue.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.remove(integrante(), 'ajeno'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
 });

@@ -49,6 +49,16 @@ describe('PlanStateService', () => {
         service.assertPlanTransition(PlanStatus.BORRADOR, PlanStatus.EN_AUTORIZACION),
       ).toBe(PlanStatus.EN_AUTORIZACION);
     });
+    it('arista de tarea permitida se resuelve', () => {
+      expect(
+        service.assertTaskTransition(TaskStatus.POR_HACER, TaskStatus.EN_CURSO),
+      ).toBe(TaskStatus.EN_CURSO);
+    });
+    it('estado de origen de tarea invalido -> 500', () => {
+      expect(() =>
+        service.assertTaskTransition('NO_EXISTE', TaskStatus.EN_CURSO),
+      ).toThrow('TaskStatus');
+    });
   });
 
   describe('requirePlanInScope (precaucion Prisma 7 §1.1)', () => {
@@ -76,6 +86,119 @@ describe('PlanStateService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
       // No llega a consultar el plan si la Request esta fuera de alcance.
       expect(prisma.plan.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('Request en alcance pero sin plan -> 404', async () => {
+      prisma.request.findFirst.mockResolvedValue({
+        id: 'r1',
+        mainProcessId: 'p1',
+        operationalState: 'EN_PLANIFICACION',
+      });
+      prisma.plan.findFirst.mockResolvedValue(null);
+      await expect(
+        service.requirePlanInScope(lider(), 'r1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('jefe usa where de alcance vacio', async () => {
+      const jefe: CurrentActor = {
+        userId: 'uj',
+        name: 'Jefa',
+        identifier: 'jefe@demo.local',
+        grants: [],
+        roleCodes: new Set([RoleCode.JEFE_AREA]),
+        scopedProcessIds: new Set<string>(),
+        isJefeArea: true,
+        isAdmin: false,
+      };
+      prisma.request.findFirst.mockResolvedValue({
+        id: 'r1',
+        mainProcessId: 'p9',
+        operationalState: 'EN_PLANIFICACION',
+      });
+      prisma.plan.findFirst.mockResolvedValue({ id: 'plan1', requestId: 'r1' });
+      await service.requirePlanInScope(jefe, 'r1');
+      const where = prisma.request.findFirst.mock.calls[0][0].where;
+      expect(where.AND).toContainEqual({});
+    });
+  });
+
+  describe('requirePlanByIdInScope', () => {
+    it('resuelve plan->request y devuelve mainProcessId', async () => {
+      prisma.plan.findFirst.mockResolvedValue({ id: 'plan1', requestId: 'r1' });
+      prisma.request.findFirst.mockResolvedValue({
+        id: 'r1',
+        mainProcessId: 'p1',
+        operationalState: 'EN_PLANIFICACION',
+      });
+      const res = await service.requirePlanByIdInScope(lider(), 'plan1');
+      expect(res.requestId).toBe('r1');
+      expect(res.mainProcessId).toBe('p1');
+    });
+
+    it('plan inexistente -> 404', async () => {
+      prisma.plan.findFirst.mockResolvedValue(null);
+      await expect(
+        service.requirePlanByIdInScope(lider(), 'planX'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('request del plan fuera de alcance -> 404', async () => {
+      prisma.plan.findFirst.mockResolvedValue({ id: 'plan1', requestId: 'r1' });
+      prisma.request.findFirst.mockResolvedValue(null);
+      await expect(
+        service.requirePlanByIdInScope(lider(['pX']), 'plan1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('requireTaskInScope', () => {
+    it('sube task->phase->plan->request y devuelve tarea sin phase', async () => {
+      prisma.task.findFirst.mockResolvedValue({
+        id: 't1',
+        title: 'Tarea',
+        status: 'POR_HACER',
+        phase: { planId: 'plan1' },
+      });
+      prisma.plan.findFirst.mockResolvedValue({ requestId: 'r1' });
+      prisma.request.findFirst.mockResolvedValue({
+        id: 'r1',
+        mainProcessId: 'p1',
+      });
+      const res = await service.requireTaskInScope(lider(), 't1');
+      expect(res.planId).toBe('plan1');
+      expect(res.requestId).toBe('r1');
+      expect((res.task as any).phase).toBeUndefined();
+    });
+
+    it('tarea inexistente -> 404', async () => {
+      prisma.task.findFirst.mockResolvedValue(null);
+      await expect(
+        service.requireTaskInScope(lider(), 'tX'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('plan de la tarea inexistente -> 404', async () => {
+      prisma.task.findFirst.mockResolvedValue({
+        id: 't1',
+        phase: { planId: 'plan1' },
+      });
+      prisma.plan.findFirst.mockResolvedValue(null);
+      await expect(
+        service.requireTaskInScope(lider(), 't1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('request de la tarea fuera de alcance -> 404', async () => {
+      prisma.task.findFirst.mockResolvedValue({
+        id: 't1',
+        phase: { planId: 'plan1' },
+      });
+      prisma.plan.findFirst.mockResolvedValue({ requestId: 'r1' });
+      prisma.request.findFirst.mockResolvedValue(null);
+      await expect(
+        service.requireTaskInScope(lider(['pX']), 't1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 

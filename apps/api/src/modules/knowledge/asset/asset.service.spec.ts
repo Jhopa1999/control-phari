@@ -283,4 +283,128 @@ describe('AssetService', () => {
       expect(res[0].operationalState).toBe('EN_TRIAGE');
     });
   });
+
+  describe('list', () => {
+    it('aplica filtros processId/requestId/status y take', async () => {
+      m.prismaObj.asset.findMany.mockResolvedValue([assetRow()]);
+      const res = await m.service.list(lider(), {
+        processId: 'p1',
+        requestId: 'r1',
+        status: 'BORRADOR',
+        take: 5,
+      } as any);
+      expect(res).toHaveLength(1);
+      const call = m.prismaObj.asset.findMany.mock.calls[0][0];
+      expect(call.where.AND).toContainEqual({ processId: 'p1' });
+      expect(call.where.AND).toContainEqual({ requestId: 'r1' });
+      expect(call.where.AND).toContainEqual({ status: 'BORRADOR' });
+      expect(call.take).toBe(5);
+    });
+
+    it('sin filtros devuelve solo alcance (sin take)', async () => {
+      m.prismaObj.asset.findMany.mockResolvedValue([]);
+      const res = await m.service.list(lider(), {} as any);
+      expect(res).toEqual([]);
+      const call = m.prismaObj.asset.findMany.mock.calls[0][0];
+      expect(call.where.AND).toHaveLength(1);
+      expect(call.take).toBeUndefined();
+    });
+  });
+
+  describe('get', () => {
+    it('devuelve el activo en alcance', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      const res = await m.service.get(lider(), 'a1');
+      expect(res.id).toBe('a1');
+    });
+  });
+
+  describe('create: campos opcionales y conflicto', () => {
+    it('crea con owner/request/maestras validos y todos los opcionales', async () => {
+      m.prismaObj.user.findFirst.mockResolvedValue({ id: 'uo' });
+      m.prismaObj.request.findFirst.mockResolvedValue({ id: 'r1' });
+      m.prismaObj.catalogItem.findFirst.mockResolvedValue({ id: 'c1' });
+      m.prismaObj.asset.create.mockImplementation(({ data }: any) =>
+        Promise.resolve(assetRow(data)),
+      );
+      const res = await m.service.create(lider(), {
+        processId: 'p1',
+        name: 'Completo',
+        ownerUserId: '11111111-1111-1111-1111-111111111111',
+        requestId: '22222222-2222-2222-2222-222222222222',
+        typeCode: 'T',
+        technologyCode: 'TE',
+        sourceCode: 'S',
+        frequencyCode: 'F',
+        documentationRef: 'ref',
+        functionalDescription: 'desc',
+        dependencies: 'dep',
+      });
+      expect(res.ownerUserId).toBe('11111111-1111-1111-1111-111111111111');
+      expect(res.documentationRef).toBe('ref');
+    });
+
+    it('P2002 en create -> 409', async () => {
+      const { Prisma } = require('../../../generated/prisma/client');
+      m.prismaObj.asset.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('dup', {
+          code: 'P2002',
+          clientVersion: 'x',
+        }),
+      );
+      const { ConflictException } = require('@nestjs/common');
+      await expect(
+        m.service.create(lider(), { processId: 'p1', name: 'Activo' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('error no-P2002 en create se propaga', async () => {
+      const boom = new Error('db down');
+      m.prismaObj.asset.create.mockRejectedValue(boom);
+      await expect(
+        m.service.create(lider(), { processId: 'p1', name: 'Activo' }),
+      ).rejects.toBe(boom);
+    });
+  });
+
+  describe('update', () => {
+    it('actualiza metadatos sin mover estado y audita UPDATE', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.user.findFirst.mockResolvedValue({ id: 'uo' });
+      m.prismaObj.request.findFirst.mockResolvedValue({ id: 'r1' });
+      m.prismaObj.catalogItem.findFirst.mockResolvedValue({ id: 'c1' });
+      m.prismaObj.asset.update.mockImplementation(({ data }: any) =>
+        Promise.resolve(assetRow(data)),
+      );
+      const res = await m.service.update(lider(), 'a1', {
+        name: 'Renombrado',
+        ownerUserId: '11111111-1111-1111-1111-111111111111',
+        requestId: '22222222-2222-2222-2222-222222222222',
+        typeCode: 'T',
+        dependencies: 'd',
+      });
+      expect(res.name).toBe('Renombrado');
+      expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
+        action: 'UPDATE',
+        objectType: 'ASSET',
+      });
+    });
+
+    it(':id fuera de alcance -> 404', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.update(lider(), 'ajeno', { name: 'x' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('owner invalido en update -> 400', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.user.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.update(lider(), 'a1', {
+          ownerUserId: '11111111-1111-1111-1111-111111111111',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
 });

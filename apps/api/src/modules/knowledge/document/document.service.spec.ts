@@ -341,5 +341,191 @@ describe('DocumentService', () => {
       expect(res.content).toBe('contenido');
       expect(res.versionNumber).toBe(1);
     });
+
+    it('getVersionContent con versionId inexistente -> 404', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(docRow());
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.documentVersion.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.getVersionContent(lider(), 'd1', 'vX'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('getCurrentContent devuelve la version vigente', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(
+        docRow({ currentVersionId: 'v1' }),
+      );
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.documentVersion.findFirst.mockResolvedValue(versionRow());
+      const res = await m.service.getCurrentContent(lider(), 'd1');
+      expect(res.content).toBe('contenido');
+    });
+
+    it('getCurrentContent sin currentVersionId -> 404', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(
+        docRow({ currentVersionId: null }),
+      );
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      await expect(
+        m.service.getCurrentContent(lider(), 'd1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('getCurrentContent con puntero colgante (version no hallada) -> 404', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(
+        docRow({ currentVersionId: 'v1' }),
+      );
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.documentVersion.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.getCurrentContent(lider(), 'd1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('requireDocumentInScope: activo del documento no hallado (defensivo) -> 404', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(docRow());
+      m.prismaObj.asset.findFirst.mockResolvedValue(null);
+      await expect(m.service.get(lider(), 'd1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('listVersions devuelve versiones ordenadas', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(docRow());
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.documentVersion.findMany.mockResolvedValue([
+        versionRow({ id: 'v2', versionNumber: 2 }),
+        versionRow(),
+      ]);
+      const res = await m.service.listVersions(lider(), 'd1');
+      expect(res.map((v) => v.versionNumber)).toEqual([2, 1]);
+    });
+  });
+
+  describe('list', () => {
+    it('aplica filtros processId/requestId/assetId/status/q y take', async () => {
+      m.prismaObj.document.findMany.mockResolvedValue([docRow()]);
+      const res = await m.service.list(lider(), {
+        processId: 'p1',
+        requestId: 'r1',
+        assetId: 'a1',
+        status: 'BORRADOR',
+        q: 'manual',
+        take: 10,
+      } as any);
+      expect(res).toHaveLength(1);
+      const call = m.prismaObj.document.findMany.mock.calls[0][0];
+      const and = call.where.AND;
+      expect(and).toContainEqual({ assetId: 'a1' });
+      expect(and).toContainEqual({ status: 'BORRADOR' });
+      expect(and).toContainEqual({
+        title: { contains: 'manual', mode: 'insensitive' },
+      });
+      // Filtros de activo embebidos.
+      const assetFilter = and.find((c: any) => c.asset);
+      expect(assetFilter.asset.AND).toContainEqual({ processId: 'p1' });
+      expect(assetFilter.asset.AND).toContainEqual({ requestId: 'r1' });
+      expect(call.take).toBe(10);
+    });
+
+    it('sin filtros devuelve solo alcance (sin take)', async () => {
+      m.prismaObj.document.findMany.mockResolvedValue([]);
+      const res = await m.service.list(lider(), {} as any);
+      expect(res).toEqual([]);
+      const call = m.prismaObj.document.findMany.mock.calls[0][0];
+      expect(call.take).toBeUndefined();
+    });
+  });
+
+  describe('updateDocument', () => {
+    it('actualiza title/categoryCode y audita UPDATE', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(docRow());
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.document.update.mockImplementation(({ data }: any) =>
+        Promise.resolve(docRow({ ...data })),
+      );
+      const res = await m.service.updateDocument(lider(), 'd1', {
+        title: 'Renombrado',
+        categoryCode: 'MANUAL',
+      });
+      expect(res.title).toBe('Renombrado');
+      expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
+        action: 'UPDATE',
+        objectType: 'DOCUMENT',
+      });
+    });
+
+    it('integrante con activo ACTIVO -> 403', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(docRow());
+      m.prismaObj.asset.findFirst.mockResolvedValue(
+        assetRow({ status: 'ACTIVO' }),
+      );
+      await expect(
+        m.service.updateDocument(integrante(), 'd1', { title: 'x' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
+
+  describe('createDocument / createVersion: errores adicionales', () => {
+    it('createDocument P2002 -> 409', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.document.create.mockRejectedValue(p2002());
+      await expect(
+        m.service.createDocument(lider(), {
+          assetId: 'a1',
+          title: 'Doc',
+          content: 'c',
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('createDocument error no-P2002 se propaga', async () => {
+      const boom = new Error('db down');
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.document.create.mockRejectedValue(boom);
+      await expect(
+        m.service.createDocument(lider(), {
+          assetId: 'a1',
+          title: 'Doc',
+          content: 'c',
+        }),
+      ).rejects.toBe(boom);
+    });
+
+    it('createVersion sin versiones previas inicia en 1 (max null)', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(
+        docRow({ status: 'VIGENTE' }),
+      );
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.documentVersion.aggregate.mockResolvedValue({
+        _max: { versionNumber: null },
+      });
+      m.prismaObj.documentVersion.create.mockResolvedValue(versionRow());
+      m.prismaObj.document.update.mockResolvedValue(
+        docRow({ status: 'VIGENTE', currentVersionId: 'v1' }),
+      );
+      await m.service.createVersion(lider(), 'd1', { content: 'c' });
+      expect(m.prismaObj.documentVersion.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ versionNumber: 1 }),
+        }),
+      );
+    });
+
+    it('createVersion error no-P2002 se propaga sin reintento', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(
+        docRow({ status: 'VIGENTE' }),
+      );
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.documentVersion.aggregate.mockResolvedValue({
+        _max: { versionNumber: 1 },
+      });
+      const boom = new Error('db down');
+      m.prismaObj.documentVersion.create.mockRejectedValue(boom);
+      await expect(
+        m.service.createVersion(lider(), 'd1', { content: 'c' }),
+      ).rejects.toBe(boom);
+      expect(m.prismaObj.documentVersion.create).toHaveBeenCalledTimes(1);
+    });
   });
 });

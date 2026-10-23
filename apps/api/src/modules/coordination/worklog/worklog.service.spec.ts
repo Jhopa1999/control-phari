@@ -613,5 +613,297 @@ describe('WorklogService', () => {
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
+
+    it('error no-P2002 se re-lanza tal cual', async () => {
+      const boom = new Error('db down');
+      (m.prismaObj.dailyLog as any).create.mockRejectedValue(boom);
+      await expect(
+        m.service.createDailyLog(integrante(['p1']), {
+          processId: 'p1',
+          date: '2025-03-10',
+        }),
+      ).rejects.toBe(boom);
+    });
+  });
+
+  // --- addActivity: clasificacion invalida y campos opcionales -----------
+
+  describe('addActivity · casos adicionales', () => {
+    beforeEach(() => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(dailyLogRow());
+      (m.prismaObj.dailyLogActivity as any).create.mockImplementation(
+        ({ data }: any) => Promise.resolve(activityRow(data)),
+      );
+    });
+
+    it('clasificacion desconocida -> 400 (default)', async () => {
+      await expect(
+        m.service.addActivity(integrante(['p1']), 'dl1', {
+          classificationCode: 'NO_EXISTE' as any,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('crea con todos los campos opcionales (incluye nextStepDate)', async () => {
+      const res = await m.service.addActivity(integrante(['p1']), 'dl1', {
+        classificationCode: 'INTERNA',
+        hours: 4,
+        description: 'desc',
+        result: 'res',
+        activityStatus: 'EN_CURSO',
+        evidenceUrl: 'http://x',
+        nextStep: 'seguir',
+        nextStepDate: '2025-03-15',
+      });
+      expect(res.hours).toBe(4);
+      expect(res.nextStepDate).toBe('2025-03-15');
+      expect(res.evidenceUrl).toBe('http://x');
+    });
+
+    it('diario padre fuera de alcance -> 404', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.addActivity(integrante(['p1']), 'ajeno', {
+          classificationCode: 'INTERNA',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  // --- updateDailyLog / removeDailyLog -----------------------------------
+
+  describe('updateDailyLog', () => {
+    it('actualiza dayNotes y recarga con actividades', async () => {
+      (m.prismaObj.dailyLog as any).findFirst
+        .mockResolvedValueOnce(dailyLogRow())
+        .mockResolvedValueOnce(dailyLogRow({ dayNotes: 'nuevas notas' }));
+      (m.prismaObj.dailyLog as any).update.mockResolvedValue(
+        dailyLogRow({ dayNotes: 'nuevas notas' }),
+      );
+      const res = await m.service.updateDailyLog(integrante(['p1']), 'dl1', {
+        dayNotes: 'nuevas notas',
+      });
+      expect(res.dayNotes).toBe('nuevas notas');
+      expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
+        action: 'UPDATE',
+        objectType: 'DAILY_LOG',
+      });
+    });
+
+    it(':id fuera de alcance -> 404', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.updateDailyLog(integrante(['p1']), 'ajeno', {}),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('removeDailyLog', () => {
+    it('elimina y audita DELETE con after null', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(dailyLogRow());
+      (m.prismaObj.dailyLog as any).delete.mockResolvedValue(dailyLogRow());
+      await m.service.removeDailyLog(integrante(['p1']), 'dl1');
+      expect((m.prismaObj.dailyLog as any).delete).toHaveBeenCalledWith({
+        where: { id: 'dl1' },
+      });
+      expect(m.auditRecord.mock.calls[0][1].after).toBeNull();
+    });
+
+    it(':id fuera de alcance -> 404', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.removeDailyLog(integrante(['p1']), 'ajeno'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  // --- updateActivity / removeActivity -----------------------------------
+
+  describe('updateActivity', () => {
+    it('revalida clasificacion con merge y actualiza campos', async () => {
+      (m.prismaObj.dailyLogActivity as any).findFirst.mockResolvedValue(
+        activityRow({ classificationCode: 'INTERNA' }),
+      );
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(dailyLogRow());
+      (m.prismaObj.dailyLogActivity as any).update.mockImplementation(
+        ({ data }: any) =>
+          Promise.resolve(activityRow({ classificationCode: 'INTERNA', ...data })),
+      );
+      const res = await m.service.updateActivity(integrante(['p1']), 'a1', {
+        description: 'editada',
+        hours: 2,
+      });
+      expect(res.description).toBe('editada');
+      expect(res.hours).toBe(2);
+      expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
+        action: 'UPDATE',
+        objectType: 'DAILY_LOG_ACTIVITY',
+      });
+    });
+
+    it('cambiar a PLANIFICADA sin proyecto/tarea (merge) -> 400', async () => {
+      (m.prismaObj.dailyLogActivity as any).findFirst.mockResolvedValue(
+        activityRow({ classificationCode: 'INTERNA' }),
+      );
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(dailyLogRow());
+      await expect(
+        m.service.updateActivity(integrante(['p1']), 'a1', {
+          classificationCode: 'PLANIFICADA',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('actividad inexistente -> 404', async () => {
+      (m.prismaObj.dailyLogActivity as any).findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.updateActivity(integrante(['p1']), 'ajena', { hours: 1 }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('diario padre de la actividad fuera de alcance -> 404', async () => {
+      (m.prismaObj.dailyLogActivity as any).findFirst.mockResolvedValue(
+        activityRow(),
+      );
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.updateActivity(integrante(['p1']), 'a1', { hours: 1 }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('removeActivity', () => {
+    it('elimina y audita DELETE DAILY_LOG_ACTIVITY', async () => {
+      (m.prismaObj.dailyLogActivity as any).findFirst.mockResolvedValue(
+        activityRow(),
+      );
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(dailyLogRow());
+      (m.prismaObj.dailyLogActivity as any).delete.mockResolvedValue(
+        activityRow(),
+      );
+      await m.service.removeActivity(integrante(['p1']), 'a1');
+      expect((m.prismaObj.dailyLogActivity as any).delete).toHaveBeenCalledWith({
+        where: { id: 'a1' },
+      });
+      expect(m.auditRecord.mock.calls[0][1].after).toBeNull();
+    });
+
+    it('actividad inexistente -> 404', async () => {
+      (m.prismaObj.dailyLogActivity as any).findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.removeActivity(integrante(['p1']), 'ajena'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  // --- Semanales: list / get / create / update / submit -------------------
+
+  describe('weeklyReports CRUD', () => {
+    it('listWeeklyReports aplica filtros weekStart/processId y omite consolidacion', async () => {
+      (m.prismaObj.weeklyReport as any).findMany.mockResolvedValue([weeklyRow()]);
+      const res = await m.service.listWeeklyReports(integrante(['p1']), {
+        weekStart: '2025-03-12',
+        processId: 'p1',
+      } as any);
+      expect(res[0].consolidation).toBeNull();
+      const and = (m.prismaObj.weeklyReport as any).findMany.mock.calls[0][0]
+        .where.AND;
+      expect(and).toContainEqual({ processId: 'p1' });
+      // weekStart normalizado a lunes.
+      const wsFilter = and.find((c: any) => c.weekStart);
+      expect(wsFilter.weekStart.toISOString()).toBe('2025-03-10T00:00:00.000Z');
+    });
+
+    it('getWeeklyReport :id fuera de alcance -> 404', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.getWeeklyReport(integrante(['p1']), 'ajeno'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('createWeeklyReport con todos los campos y consolidacion', async () => {
+      (m.prismaObj.weeklyReport as any).create.mockImplementation(
+        ({ data }: any) => Promise.resolve(weeklyRow(data)),
+      );
+      (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([]);
+      const res = await m.service.createWeeklyReport(integrante(['p1']), {
+        processId: 'p1',
+        weekStart: '2025-03-10',
+        results: 'r',
+        proposals: 'p',
+        blockers: 'b',
+        commitmentsText: 'c',
+        decisions: 'd',
+      });
+      expect(res.results).toBe('r');
+      expect(res.consolidation).toMatchObject({ hasBacking: false });
+      expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
+        action: 'CREATE',
+        objectType: 'WEEKLY_REPORT',
+      });
+    });
+
+    it('createWeeklyReport re-lanza error no-P2002', async () => {
+      const boom = new Error('db down');
+      (m.prismaObj.weeklyReport as any).create.mockRejectedValue(boom);
+      await expect(
+        m.service.createWeeklyReport(integrante(['p1']), {
+          processId: 'p1',
+          weekStart: '2025-03-10',
+        }),
+      ).rejects.toBe(boom);
+    });
+
+    it('updateWeeklyReport actualiza campos y audita UPDATE', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(weeklyRow());
+      (m.prismaObj.weeklyReport as any).update.mockImplementation(
+        ({ data }: any) => Promise.resolve(weeklyRow(data)),
+      );
+      (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([]);
+      const res = await m.service.updateWeeklyReport(integrante(['p1']), 'wr1', {
+        results: 'actualizado',
+        proposals: 'pp',
+        blockers: 'bb',
+        commitmentsText: 'cc',
+        decisions: 'dd',
+      });
+      expect(res.results).toBe('actualizado');
+      expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
+        action: 'UPDATE',
+        objectType: 'WEEKLY_REPORT',
+      });
+    });
+
+    it('updateWeeklyReport :id fuera de alcance -> 404', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.updateWeeklyReport(integrante(['p1']), 'ajeno', {}),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('submitWeeklyReport BORRADOR -> ENVIADO ok', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(weeklyRow());
+      (m.prismaObj.weeklyReport as any).update.mockResolvedValue(
+        weeklyRow({ status: 'ENVIADO', submittedAt: now }),
+      );
+      (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([]);
+      const res = await m.service.submitWeeklyReport(integrante(['p1']), 'wr1');
+      expect(res.status).toBe('ENVIADO');
+    });
+
+    it('submitWeeklyReport ya ENVIADO -> 409', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(
+        weeklyRow({ status: 'ENVIADO' }),
+      );
+      await expect(
+        m.service.submitWeeklyReport(integrante(['p1']), 'wr1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('submitWeeklyReport :id fuera de alcance -> 404', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.submitWeeklyReport(integrante(['p1']), 'ajeno'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
   });
 });
