@@ -2,7 +2,7 @@
 
 > Documento generado a partir del código. Mantener sincronizado con los cambios en `apps/api` y `apps/web`.
 
-Fecha de generación: 2026-10-13
+Fecha de generación: 2026-10-14
 
 Esta carpeta documenta **la aplicación de negocio real** construida sobre la plantilla
 de portales internos. No describe la plantilla base: para eso están `README.md`,
@@ -62,6 +62,67 @@ y sus **documentos**, y una capa de **auditoría** que registra cada mutación r
 - `apps/web` (Next.js) es presentación: consume la API, filtra el menú de forma
   cosmética y no contiene reglas de negocio.
 - PostgreSQL es la persistencia transaccional.
+
+## Sincronía de documentación
+
+Para que esta documentación no quede atrás respecto al código, el repositorio
+cuenta con un **aviso automático y no bloqueante** de sincronía.
+
+**Qué dispara la advertencia.** Un cambio "toca dominio" si modifica algún
+archivo bajo:
+
+- `apps/api/src/modules/**`
+- `apps/web/src/app/**`
+- `apps/web/src/components/**`
+
+Un cambio "toca documentación de la aplicación" si modifica algún archivo bajo
+`docs/aplicacion/**`. Si un conjunto de cambios toca dominio pero **no** toca
+`docs/aplicacion/**`, el mecanismo emite una **advertencia** (no falla el
+build).
+
+**En CI.** El workflow `.github/workflows/ci.yml` incluye un job independiente
+`docs-sync` que corre **solo en `pull_request`**. Compara la base y el head del
+PR e invoca el script de abajo; si detecta documentación desincronizada, emite
+una anotación `::warning::` de GitHub Actions y un resumen en el PR. El job
+**siempre termina en éxito**: avisa, no bloquea. No modifica el job `verify`.
+
+**En local.** El mismo script se puede correr a mano. Compara dos puntos de git
+(por defecto el commit anterior; o un rango explícito por variables de entorno):
+
+```bash
+# Rango explícito (p. ej. la rama base y la actual):
+DOCS_SYNC_BASE=origin/main DOCS_SYNC_HEAD=HEAD node scripts/check-docs-sync.mjs
+
+# Sin variables: compara HEAD~1..HEAD
+node scripts/check-docs-sync.mjs
+```
+
+En PowerShell (Windows):
+
+```powershell
+$env:DOCS_SYNC_BASE = "origin/main"; $env:DOCS_SYNC_HEAD = "HEAD"
+node scripts/check-docs-sync.mjs
+```
+
+El script (`scripts/check-docs-sync.mjs`) es Node puro, sin dependencias nuevas,
+y por defecto siempre sale con código 0. Admite `--strict` para endurecerlo
+(salir con código 1 ante una advertencia) si en el futuro el equipo quisiera
+convertirlo en bloqueante; el job de CI lo usa **sin** `--strict`.
+
+**Cómo actuar ante la advertencia.** No es un error: es un recordatorio. Ante
+ella, o bien **actualizas** la documentación afectada en `docs/aplicacion/**`
+(README, `modulos-backend.md`, `modelo-datos.md`, `frontend-pantallas.md` o
+`autenticacion-autorizacion.md`) para reflejar el cambio real del código, o bien
+**justificas** por qué el cambio no la necesita (refactor interno, formato,
+renombre sin impacto en endpoints/modelo/pantallas).
+
+**Relación con el hook de Kiro.** El hook `PostFileSave`
+`actualizar-docs-aplicacion.json` ya propone, al guardar un controller/service,
+`schema.prisma`, una `page.tsx` o `navigation.ts`, revisar y actualizar
+`docs/aplicacion/**`. Ese hook actúa **al guardar**; el job `docs-sync` es la
+**red de seguridad en el PR** que avisa si esa actualización se omitió. Son
+complementarios y no se pisan: uno asiste durante la edición, el otro verifica
+al integrar.
 
 ## Administración del sistema (rol ADMIN)
 Existe un rol de **sistema** `ADMIN` (origen: `User.isAdmin`), separado de los roles de

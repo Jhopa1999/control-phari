@@ -92,3 +92,31 @@ jobs:
           path: playwright-report/
           retention-days: 7
           if-no-files-found: ignore
+
+  # Aviso (no bloqueante) de sincronia de documentacion. Job INDEPENDIENTE de
+  # "verify": no toca el pipeline verde existente. Solo corre en pull_request
+  # (en push a main no hay una base de PR clara). Siempre termina en exito; si
+  # el PR toca dominio sin tocar docs/aplicacion, emite ::warning:: y un resumen.
+  docs-sync:
+    name: Sincronia de documentacion (aviso)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Historia completa: el script compara base..head del PR.
+          fetch-depth: 0
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verificar sincronia de documentacion (solo aviso)
+        env:
+          DOCS_SYNC_BASE: ${{ github.event.pull_request.base.sha }}
+          DOCS_SYNC_HEAD: ${{ github.event.pull_request.head.sha }}
+        # El script nunca falla por defecto (sin --strict): solo avisa.
+        run: node scripts/check-docs-sync.mjs
