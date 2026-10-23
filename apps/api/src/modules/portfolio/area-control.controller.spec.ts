@@ -4,6 +4,7 @@ import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import { RolesGuard } from '../auth/roles.guard';
 import { AreaControlController } from './area-control.controller';
+import { AreaControlService } from './area-control.service';
 import { PortfolioController } from './portfolio.controller';
 
 function actor(roles: RoleCode[]): CurrentActor {
@@ -91,5 +92,28 @@ describe('AreaControl / Portfolio guards (RolesGuard por ruta)', () => {
       );
       expect(guard.canActivate(ctx)).toBe(true);
     });
+  });
+});
+
+describe('AreaControlController (delegacion)', () => {
+  const svc = {
+    indicators: jest.fn().mockResolvedValue('indicators'),
+    demandSummary: jest.fn().mockResolvedValue('demandSummary'),
+  } as unknown as AreaControlService;
+  const controller = new AreaControlController(svc);
+  const a = actor([RoleCode.JEFE_AREA]);
+
+  it('indicators delega actor y query', async () => {
+    const query = {} as never;
+    await expect(controller.indicators(a, query)).resolves.toBe('indicators');
+    expect(svc.indicators).toHaveBeenCalledWith(a, query);
+  });
+
+  it('demandSummary delega actor y query', async () => {
+    const query = {} as never;
+    await expect(controller.demandSummary(a, query)).resolves.toBe(
+      'demandSummary',
+    );
+    expect(svc.demandSummary).toHaveBeenCalledWith(a, query);
   });
 });
