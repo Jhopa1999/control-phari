@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { LoggerModule } from 'nestjs-pino';
+import { buildLoggerModuleOptions } from './observability/logger.config';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuditModule } from './modules/audit/audit.module';
@@ -18,6 +20,7 @@ import { SystemSettingsModule } from './modules/system-settings/system-settings.
 
 @Module({
   imports: [
+    LoggerModule.forRoot(buildLoggerModuleOptions()),
     HealthModule,
     AuthModule,
     AuditModule,

@@ -23,6 +23,38 @@
         ]
       }
     },
+    "/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "El servicio esta listo (PostgreSQL responde).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "El servicio NO esta listo (PostgreSQL no responde). No se exponen detalles internos del error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Readiness: comprueba las dependencias criticas del servicio.",
+        "tags": [
+          "health"
+        ]
+      }
+    },
     "/me/permissions": {
       "get": {
         "operationId": "MeController_getPermissions",
@@ -6010,6 +6042,48 @@
         "required": [
           "status",
           "service",
+          "timestamp"
+        ]
+      },
+      "ReadinessChecksDto": {
+        "type": "object",
+        "properties": {
+          "database": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ],
+            "example": "up",
+            "description": "Estado de la conexion a PostgreSQL."
+          }
+        },
+        "required": [
+          "database"
+        ]
+      },
+      "ReadinessResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_ready"
+            ],
+            "example": "ready"
+          },
+          "checks": {
+            "$ref": "#/components/schemas/ReadinessChecksDto"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "checks",
           "timestamp"
         ]
       },

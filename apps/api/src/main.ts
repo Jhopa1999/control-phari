@@ -2,6 +2,7 @@ import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { buildOpenApiConfig, configureApp } from './app.config';
 
@@ -15,7 +16,15 @@ loadEnv({ path: path.resolve(__dirname, '../../../.env') });
 const DEFAULT_PORT = 3001;
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // bufferLogs retiene los logs de arranque hasta que pino queda activo como
+  // logger de la app, de modo que nada se escribe con el logger por defecto.
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+
+  // Activar pino (nestjs-pino) como logger de la aplicacion. Esto es runtime
+  // HTTP puro y vive SOLO en main.ts: el generador de OpenAPI crea la app con
+  // { logger: false } y nunca llega aqui, de modo que el contrato sigue siendo
+  // determinista.
+  app.useLogger(app.get(Logger));
 
   // Configuracion compartida con el generador de OpenAPI.
   configureApp(app);
@@ -29,8 +38,7 @@ async function bootstrap(): Promise<void> {
 
   const port = Number(process.env.PORT) || DEFAULT_PORT;
   await app.listen(port);
-  // eslint-disable-next-line no-console
-  console.log(`API escuchando en http://localhost:${port}`);
+  app.get(Logger).log(`API escuchando en http://localhost:${port}`);
 }
 
 void bootstrap();

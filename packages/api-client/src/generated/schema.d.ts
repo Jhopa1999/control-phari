@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Readiness: comprueba las dependencias criticas del servicio. */
+        get: operations["HealthController_ready"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/permissions": {
         parameters: {
             query?: never;
@@ -1694,6 +1711,24 @@ export interface components {
             status: "ok";
             /** @example plantilla-portales-api */
             service: string;
+            /** Format: date-time */
+            timestamp: string;
+        };
+        ReadinessChecksDto: {
+            /**
+             * @description Estado de la conexion a PostgreSQL.
+             * @example up
+             * @enum {string}
+             */
+            database: "up" | "down";
+        };
+        ReadinessResponseDto: {
+            /**
+             * @example ready
+             * @enum {string}
+             */
+            status: "ready" | "not_ready";
+            checks: components["schemas"]["ReadinessChecksDto"];
             /** Format: date-time */
             timestamp: string;
         };
@@ -4766,6 +4801,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponseDto"];
+                };
+            };
+        };
+    };
+    HealthController_ready: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El servicio esta listo (PostgreSQL responde). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadinessResponseDto"];
+                };
+            };
+            /** @description El servicio NO esta listo (PostgreSQL no responde). No se exponen detalles internos del error. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadinessResponseDto"];
                 };
             };
         };

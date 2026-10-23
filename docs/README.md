@@ -730,6 +730,33 @@ Detalle operativo completo en `docs/deployment.md`. Resumen técnico:
   respuesta (campos y valores de `PortfolioItemResponseDto`) es idéntica, el
   contrato OpenAPI NO cambia y no se añaden índices nuevos porque `Request` ya
   tiene los índices que cubren el alcance y el orden.
+- Decisión D-OBS (observabilidad del backend · Fase C): el backend usa
+  `nestjs-pino` como `LoggerService` de NestJS para logging estructurado. En
+  producción emite JSON; en desarrollo puede emitir salida legible
+  (`pino-pretty`). La correlación de peticiones y el log por petición (método,
+  ruta, status, duración, request id) los resuelve `pino-http` (lo arrastra
+  `nestjs-pino`): cada petición reutiliza la cabecera entrante `x-request-id`
+  si viene o genera un UUID, y ese id se devuelve en la respuesta como
+  `x-request-id`. Los logs censuran cabeceras sensibles (`authorization`,
+  `cookie`) y NO registran el cuerpo de la petición (secretos fuera del log).
+  La activación del logger (`app.useLogger`) vive SOLO en `main.ts`; el
+  generador de OpenAPI crea la app con `{ logger: false }`, por lo que el
+  contrato sigue siendo determinista. Variables de entorno (no secretas): `LOG_LEVEL`
+  (`fatal|error|warn|info|debug|trace|silent`, default `info`) y `LOG_PRETTY`
+  (`true` → salida legible en dev; cualquier otro valor → JSON), documentadas
+  en `.env.example` y `.env.production.example`. Readiness: nuevo endpoint
+  `GET /health/ready` que hace un ping a PostgreSQL (`SELECT 1` vía
+  `PrismaService`) y responde 200 (`status: ready`, `database: up`) o 503
+  (`status: not_ready`, `database: down`, sin exponer el error interno). El
+  `GET /health` existente (liveness) NO cambia. Versiones pineadas (sin rango
+  `^`/`~`) en `apps/api/package.json`:
+  - `nestjs-pino`: **4.4.0** (línea 4.x a propósito: la 5.x exige Node
+    `>=22.12.0`, por encima del floor `>=20.9.0` del monorepo).
+  - `pino`: **9.13.1**.
+  - `pino-pretty`: **13.2.0** (devDependency; solo para la salida legible en
+    desarrollo).
+  - `pino-http`: lo resuelve `nestjs-pino@4` de forma transitiva (10.5.0); no se
+    declara por separado.
 
 ## Decisiones pendientes
 
