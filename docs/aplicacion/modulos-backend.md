@@ -392,7 +392,7 @@ service.
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/audit-events` | Lista eventos de auditoría con alcance por rol (filtros `objectType`, `take` ≤ 500). |
+| GET | `/audit-events` | Lista paginada de eventos con alcance por rol. Filtros `objectType` y `action`; paginación `page`/`pageSize` (pageSize ≤ 100, por defecto 25). Devuelve `{ data, page, pageSize, total, hasMore }`; el alcance por rol se aplica antes de paginar. |
 
 ## system-settings — Administración de sistema (rol ADMIN)
 

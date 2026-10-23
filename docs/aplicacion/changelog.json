@@ -101,6 +101,16 @@
       "trigger_file": "apps/web/src/app/demanda/solicitudes/[id]/page.tsx",
       "updated_docs": ["docs/aplicacion/frontend-pantallas.md"],
       "summary": "Se documento la nueva ruta de solo lectura /demanda/solicitudes/[id] (ficha de detalle de la solicitud con stepper vertical de todas las etapas y enlaces 'Ir a actuar' gated por modulo y estado) y la accion 'Ver detalle' en la pantalla de Solicitudes."
+    },
+    {
+      "timestamp": "2026-10-23T02:45:00Z",
+      "trigger_file": "apps/api/src/modules/audit/audit.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Se documento la paginacion real en servidor de GET /audit-events (page/pageSize <=100, respuesta { data, page, pageSize, total, hasMore } con el alcance por rol aplicado antes de paginar), el filtro action, los tres indices nuevos de AuditEvent por (campo, createdAt desc) y la pantalla /gobierno/auditoria con filtros Objeto/Accion y paginacion contra el servidor."
     }
   ]
 }

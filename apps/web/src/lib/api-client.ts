@@ -23,7 +23,10 @@ export type UpdateUser = components['schemas']['UpdateUserDto'];
 export type Grant = components['schemas']['GrantResponseDto'];
 export type CreateGrant = components['schemas']['CreateGrantDto'];
 export type AuditEvent = components['schemas']['AuditEventResponseDto'];
-/** Query de GET /audit-events (objectType y take), tal como la declara el contrato. */
+/** Pagina de auditoria { data, page, pageSize, total, hasMore } del contrato. */
+export type PaginatedAuditEvents =
+  components['schemas']['PaginatedAuditEventsResponseDto'];
+/** Query de GET /audit-events (objectType, action, page, pageSize) del contrato. */
 export type AuditEventsQuery = NonNullable<
   paths['/audit-events']['get']['parameters']['query']
 >;

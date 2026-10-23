@@ -6,8 +6,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AuditService } from './audit.service';
-import { AuditEventResponseDto } from './dto/audit-event-response.dto';
-import { ListAuditEventsDto, OBJECT_TYPES } from './dto/list-audit-events.dto';
+import {
+  AUDIT_ACTIONS,
+  ListAuditEventsDto,
+  OBJECT_TYPES,
+} from './dto/list-audit-events.dto';
+import { PaginatedAuditEventsResponseDto } from './dto/paginated-audit-events-response.dto';
 import { CurrentActor } from '../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../auth/current-actor';
 import { CurrentUserGuard } from '../auth/current-user.guard';
@@ -25,8 +29,10 @@ export class AuditController {
   @Get()
   @ApiOperation({ summary: 'Lista eventos de auditoria con alcance por rol.' })
   @ApiQuery({ name: 'objectType', required: false, enum: OBJECT_TYPES })
-  @ApiQuery({ name: 'take', required: false, type: Number, description: 'Maximo de eventos (acotado a 500).' })
-  @ApiResponse({ status: 200, description: 'Eventos visibles para el actor.', type: [AuditEventResponseDto] })
+  @ApiQuery({ name: 'action', required: false, enum: AUDIT_ACTIONS })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Pagina (1-based). Por defecto 1.' })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, description: 'Tamano de pagina (acotado a 100). Por defecto 25.' })
+  @ApiResponse({ status: 200, description: 'Pagina de eventos visibles para el actor.', type: PaginatedAuditEventsResponseDto })
   @ApiResponse({ status: 401, description: 'No hay un usuario actual valido.' })
   findMany(
     @CurrentActor() actor: CurrentActorType,

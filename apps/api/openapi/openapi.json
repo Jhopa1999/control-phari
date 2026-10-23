@@ -172,12 +172,35 @@
         "operationId": "AuditController_findMany",
         "parameters": [
           {
-            "name": "take",
+            "name": "pageSize",
             "required": false,
             "in": "query",
-            "description": "Maximo de eventos (acotado a 500).",
+            "description": "Tamano de pagina (acotado a 100). Por defecto 25.",
             "schema": {
               "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Pagina (1-based). Por defecto 1.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "CREATE",
+                "UPDATE",
+                "DELETE",
+                "REVOKE"
+              ],
+              "type": "string"
             }
           },
           {
@@ -220,14 +243,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Eventos visibles para el actor.",
+            "description": "Pagina de eventos visibles para el actor.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AuditEventResponseDto"
-                  }
+                  "$ref": "#/components/schemas/PaginatedAuditEventsResponseDto"
                 }
               }
             }
@@ -6264,6 +6284,43 @@
           "before",
           "after",
           "createdAt"
+        ]
+      },
+      "PaginatedAuditEventsResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Eventos de la pagina, los mas recientes primero.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventResponseDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "description": "Pagina actual (1-based).",
+            "example": 1
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Tamano de pagina aplicado (acotado a 100).",
+            "example": 25
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de eventos en alcance para el filtro vigente."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Hay al menos una pagina mas despues de esta."
+          }
+        },
+        "required": [
+          "data",
+          "page",
+          "pageSize",
+          "total",
+          "hasMore"
         ]
       },
       "CreateCatalogItemDto": {

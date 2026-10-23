@@ -5,11 +5,9 @@ import { History } from 'lucide-react';
 import {
   DataTablePagination,
   ResultCount,
-  SortableTableHead,
 } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { Field } from '@/components/field';
-import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActionsCell } from '@/components/row-actions';
@@ -32,61 +30,59 @@ import {
 } from '@/components/ui/table';
 import type { AuditEvent, CoordinationPerson, Process } from '@/lib/api-client';
 import {
-  AUDIT_ACTION_LABELS,
+  AUDIT_ACTION_OPTIONS,
   AUDIT_OBJECT_TYPE_OPTIONS,
-  AUDIT_TAKE,
   auditActionLabel,
   auditObjectLabel,
   listAuditEvents,
+  type AuditAction,
   type AuditObjectType,
 } from '@/lib/audit';
 import { formatDateTime } from '@/lib/format';
-import { compareDate, compareText, type Comparator, type SortState } from '@/lib/table-sort';
 import { listProcesses } from '@/lib/team';
-import { useClientTable } from '@/lib/use-client-table';
+import type { ClientTablePageSize } from '@/lib/use-client-table';
 import { listCoordinationPeople } from '@/lib/worklog';
 import { VerCambioDialog, type AuditEventDetails } from './ver-cambio-dialog';
 
 type LoadState = 'loading' | 'success' | 'error';
-type SortKey = 'createdAt' | 'action' | 'objectType';
 
 /** Centinela de «Todos» / «Todas» en los filtros. */
 const ALL = 'ALL';
 const NOUN = { one: 'evento', other: 'eventos' };
-/** Con el tope alcanzado, el total no es el total de la consulta (design §24.2). */
-const CAPPED_NOUN = { one: 'evento más reciente', other: 'eventos más recientes' };
-const DEFAULT_SORT: SortState<SortKey> = { key: 'createdAt', direction: 'desc' };
-const COMPARATORS: Record<SortKey, Comparator<AuditEvent>> = {
-  createdAt: (a, b, direction) => compareDate(a.createdAt, b.createdAt, direction),
-  action: (a, b, direction) => compareText(auditActionLabel(a.action), auditActionLabel(b.action), direction),
-  objectType: (a, b, direction) =>
-    compareText(auditObjectLabel(a.objectType), auditObjectLabel(b.objectType), direction),
-};
-const ACTION_OPTIONS = Object.keys(AUDIT_ACTION_LABELS);
+const DEFAULT_PAGE_SIZE: ClientTablePageSize = 25;
 
 function isObjectType(value: string): value is AuditObjectType {
   return (AUDIT_OBJECT_TYPE_OPTIONS as readonly string[]).includes(value);
 }
 
+function isAction(value: string): value is AuditAction {
+  return (AUDIT_ACTION_OPTIONS as readonly string[]).includes(value);
+}
+
 /**
- * Auditoría (design §11.19 y §24.2, patrón A). «Objeto» es un filtro de
- * servidor: al cambiarlo se vuelve a pedir la lista con objectType, así el tope
- * de 500 se calcula sobre la consulta ya filtrada. «Acción» solo acota lo que
- * se muestra, porque el servidor no lo admite.
+ * Auditoría (design §11.19 y §24.2, patrón A). «Objeto» y «Acción» son filtros
+ * de servidor: al cambiarlos se vuelve a pedir la lista con objectType/action.
+ * La paginación es real en el servidor (page/pageSize); el backend aplica el
+ * alcance por rol antes de paginar y devuelve { data, page, pageSize, total,
+ * hasMore }. El orden lo fija el servidor (createdAt desc), por eso los
+ * encabezados no son ordenables.
  */
 export function AuditoriaView(): React.ReactElement {
   const [events, setEvents] = React.useState<AuditEvent[]>([]);
+  const [total, setTotal] = React.useState(0);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [objectFilter, setObjectFilter] = React.useState<AuditObjectType | typeof ALL>(ALL);
-  const [actionFilter, setActionFilter] = React.useState(ALL);
+  const [actionFilter, setActionFilter] = React.useState<AuditAction | typeof ALL>(ALL);
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState<ClientTablePageSize>(DEFAULT_PAGE_SIZE);
   const [selected, setSelected] = React.useState<AuditEvent | null>(null);
   const objectFilterRef = React.useRef<HTMLButtonElement>(null);
 
   // Número de la última consulta de eventos: una respuesta que llega después de
-  // otra más nueva (cambio de Objeto o «Limpiar filtros» en curso) se descarta.
+  // otra más nueva (cambio de filtro o de página en curso) se descarta.
   const requestRef = React.useRef(0);
   // Procesos y personas no dependen del filtro: se piden una vez y solo se
   // vuelven a pedir si fallaron (por ejemplo, tras «Reintentar»).
@@ -107,17 +103,30 @@ export function AuditoriaView(): React.ReactElement {
   }, []);
 
   const load = React.useCallback(
-    async (objectType: AuditObjectType | typeof ALL) => {
+    async (
+      objectType: AuditObjectType | typeof ALL,
+      action: AuditAction | typeof ALL,
+      requestedPage: number,
+      requestedPageSize: ClientTablePageSize,
+    ) => {
       const requestId = ++requestRef.current;
       setState('loading');
       try {
         // Procesos y personas solo dan nombres legibles: si fallan, no bloquean la auditoría.
-        const [ev] = await Promise.all([
-          listAuditEvents(objectType === ALL ? {} : { objectType }),
+        const [result] = await Promise.all([
+          listAuditEvents({
+            page: requestedPage,
+            pageSize: requestedPageSize,
+            ...(objectType === ALL ? {} : { objectType }),
+            ...(action === ALL ? {} : { action }),
+          }),
           loadLookups(),
         ]);
         if (requestId !== requestRef.current) return;
-        setEvents(ev);
+        setEvents(result.data);
+        setTotal(result.total);
+        // El servidor acota page/pageSize; se refleja lo aplicado realmente.
+        setPage(result.page);
         setState('success');
       } catch (err) {
         if (requestId !== requestRef.current) return;
@@ -129,7 +138,7 @@ export function AuditoriaView(): React.ReactElement {
   );
 
   React.useEffect(() => {
-    void load(ALL);
+    void load(ALL, ALL, 1, DEFAULT_PAGE_SIZE);
   }, [load]);
 
   const processById = React.useMemo(() => new Map(processes.map((p) => [p.id, p])), [processes]);
@@ -148,33 +157,41 @@ export function AuditoriaView(): React.ReactElement {
     };
   }
 
-  const capped = events.length === AUDIT_TAKE;
-  const noun = capped ? CAPPED_NOUN : NOUN;
   const hasFilters = objectFilter !== ALL || actionFilter !== ALL;
-  const filter = React.useCallback(
-    (event: AuditEvent) => actionFilter === ALL || event.action === actionFilter,
-    [actionFilter],
-  );
-  const table = useClientTable({
-    rows: events,
-    filter,
-    comparators: COMPARATORS,
-    defaultSort: DEFAULT_SORT,
-    resetKey: JSON.stringify([objectFilter, actionFilter]),
-    pageSize: 25,
-  });
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = total === 0 ? 0 : from + events.length - 1;
 
   function handleObjectChange(value: string): void {
     const next = isObjectType(value) ? value : ALL;
     setObjectFilter(next);
-    void load(next);
+    setPage(1);
+    void load(next, actionFilter, 1, pageSize);
+  }
+
+  function handleActionChange(value: string): void {
+    const next = isAction(value) ? value : ALL;
+    setActionFilter(next);
+    setPage(1);
+    void load(objectFilter, next, 1, pageSize);
+  }
+
+  function handlePageChange(next: number): void {
+    setPage(next);
+    void load(objectFilter, actionFilter, next, pageSize);
+  }
+
+  function handlePageSizeChange(next: ClientTablePageSize): void {
+    setPageSize(next);
+    setPage(1);
+    void load(objectFilter, actionFilter, 1, next);
   }
 
   function clearFilters(): void {
-    const reload = objectFilter !== ALL;
     setObjectFilter(ALL);
     setActionFilter(ALL);
-    if (reload) void load(ALL);
+    setPage(1);
+    void load(ALL, ALL, 1, pageSize);
     // «Limpiar filtros» desaparece: el foco pasa al filtro Objeto (NIT 4, plan D9).
     objectFilterRef.current?.focus();
   }
@@ -182,8 +199,8 @@ export function AuditoriaView(): React.ReactElement {
   let viewState: DataViewState;
   if (state === 'loading') viewState = 'loading';
   else if (state === 'error') viewState = 'error';
-  else if (table.total === 0 && !hasFilters) viewState = 'empty';
-  else if (table.filtered === 0) viewState = 'no-results';
+  else if (total === 0 && !hasFilters) viewState = 'empty';
+  else if (total === 0) viewState = 'no-results';
   else viewState = 'ready';
 
   return (
@@ -197,9 +214,9 @@ export function AuditoriaView(): React.ReactElement {
             {state !== 'error' ? (
               <ResultCount
                 loading={state === 'loading'}
-                total={table.total}
-                filtered={table.filtered}
-                noun={noun}
+                total={total}
+                filtered={total}
+                noun={NOUN}
               />
             ) : null}
             {hasFilters ? (
@@ -235,17 +252,17 @@ export function AuditoriaView(): React.ReactElement {
         <Field
           id="aud-filtro-accion"
           label="Acción"
-          help="Acota lo que se muestra; no cambia la consulta."
+          help="Vuelve a consultar al servidor."
           className="w-full sm:w-auto"
         >
           {(control) => (
-            <Select value={actionFilter} onValueChange={setActionFilter}>
+            <Select value={actionFilter} onValueChange={handleActionChange}>
               <SelectTrigger {...control} className="w-full sm:w-44">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>Todas</SelectItem>
-                {ACTION_OPTIONS.map((code) => (
+                {AUDIT_ACTION_OPTIONS.map((code) => (
                   <SelectItem key={code} value={code}>
                     {auditActionLabel(code)}
                   </SelectItem>
@@ -256,21 +273,13 @@ export function AuditoriaView(): React.ReactElement {
         </Field>
       </Toolbar>
 
-      {state === 'success' && capped ? (
-        <InlineNotice tone="info">
-          {objectFilter === ALL
-            ? 'Se muestran los 500 eventos más recientes de tu alcance. Usa el filtro Objeto para acotar la búsqueda.'
-            : 'Se muestran los 500 eventos más recientes de tu alcance para este objeto.'}
-        </InlineNotice>
-      ) : null}
-
       <DataView
         state={viewState}
         loading={{ rows: 8, columns: 6 }}
         error={{
           title: 'No fue posible cargar la auditoría.',
           message: errorMessage,
-          onRetry: () => void load(objectFilter),
+          onRetry: () => void load(objectFilter, actionFilter, page, pageSize),
         }}
         empty={{
           icon: History,
@@ -281,31 +290,16 @@ export function AuditoriaView(): React.ReactElement {
         <Table density="compact" scrollLabel="Tabla de eventos de auditoría">
           <TableHeader>
             <TableRow>
-              <SortableTableHead
-                label="Fecha"
-                sortKey="createdAt"
-                sort={table.sort}
-                onSort={table.toggleSort}
-              />
+              <TableHead>Fecha</TableHead>
               <TableHead>Actor</TableHead>
               <TableHead>Proceso</TableHead>
-              <SortableTableHead
-                label="Acción"
-                sortKey="action"
-                sort={table.sort}
-                onSort={table.toggleSort}
-              />
-              <SortableTableHead
-                label="Objeto"
-                sortKey="objectType"
-                sort={table.sort}
-                onSort={table.toggleSort}
-              />
+              <TableHead>Acción</TableHead>
+              <TableHead>Objeto</TableHead>
               <TableHead className="text-right">Cambio</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {table.pageRows.map((event) => {
+            {events.map((event) => {
               const { actorName } = detailsOf(event);
               return (
                 <TableRow key={event.id}>
@@ -345,15 +339,15 @@ export function AuditoriaView(): React.ReactElement {
         </Table>
         <DataTablePagination
           id="aud-paginacion"
-          page={table.page}
-          pageCount={table.pageCount}
-          from={table.from}
-          to={table.to}
-          filtered={table.filtered}
-          pageSize={table.pageSize ?? 25}
-          onPageChange={table.setPage}
-          onPageSizeChange={table.setPageSize}
-          noun={noun}
+          page={page}
+          pageCount={pageCount}
+          from={from}
+          to={to}
+          filtered={total}
+          pageSize={pageSize}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          noun={NOUN}
         />
       </DataView>
 

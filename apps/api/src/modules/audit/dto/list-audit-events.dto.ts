@@ -38,9 +38,14 @@ export const OBJECT_TYPES = [
   'VALIDATION_RECORD',
 ] as const;
 
+/** Verbos de mutacion filtrables (design 1.2 / 4.2.1). */
+export const AUDIT_ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'REVOKE'] as const;
+
 /**
- * Filtros opcionales para GET /audit-events. `take` lo acota el service a <=
- * 500 (design 4.2); aqui se valida como entero positivo.
+ * Filtros y paginacion de GET /audit-events. Estilo page/pageSize 1-based; el
+ * service acota pageSize a <= 100 y nunca devuelve ilimitado (design 4.2 /
+ * Fase B). Los filtros opcionales INTERSECTAN el alcance por rol, nunca lo
+ * amplian.
  */
 export class ListAuditEventsDto {
   @ApiPropertyOptional({
@@ -52,15 +57,36 @@ export class ListAuditEventsDto {
   objectType?: (typeof OBJECT_TYPES)[number];
 
   @ApiPropertyOptional({
+    enum: AUDIT_ACTIONS,
+    description: 'Filtra por verbo de la mutacion.',
+  })
+  @IsOptional()
+  @IsIn(AUDIT_ACTIONS)
+  action?: (typeof AUDIT_ACTIONS)[number];
+
+  @ApiPropertyOptional({
     type: Number,
-    description: 'Maximo de eventos a devolver (el servidor acota a 500).',
+    description: 'Pagina a devolver (1-based). Por defecto 1.',
     minimum: 1,
-    maximum: 500,
+    default: 1,
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(500)
-  take?: number;
+  page?: number;
+
+  @ApiPropertyOptional({
+    type: Number,
+    description: 'Tamano de pagina. Por defecto 25; el servidor lo acota a 100.',
+    minimum: 1,
+    maximum: 100,
+    default: 25,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  pageSize?: number;
 }

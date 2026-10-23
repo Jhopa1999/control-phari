@@ -1855,6 +1855,24 @@ export interface components {
              */
             createdAt: string;
         };
+        PaginatedAuditEventsResponseDto: {
+            /** @description Eventos de la pagina, los mas recientes primero. */
+            data: components["schemas"]["AuditEventResponseDto"][];
+            /**
+             * @description Pagina actual (1-based).
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Tamano de pagina aplicado (acotado a 100).
+             * @example 25
+             */
+            pageSize: number;
+            /** @description Total de eventos en alcance para el filtro vigente. */
+            total: number;
+            /** @description Hay al menos una pagina mas despues de esta. */
+            hasMore: boolean;
+        };
         CreateCatalogItemDto: {
             /**
              * @description Maestra a la que pertenece la opcion (se normaliza a MAYUSCULAS).
@@ -4903,8 +4921,11 @@ export interface operations {
     AuditController_findMany: {
         parameters: {
             query?: {
-                /** @description Maximo de eventos (acotado a 500). */
-                take?: number;
+                /** @description Tamano de pagina (acotado a 100). Por defecto 25. */
+                pageSize?: number;
+                /** @description Pagina (1-based). Por defecto 1. */
+                page?: number;
+                action?: "CREATE" | "UPDATE" | "DELETE" | "REVOKE";
                 objectType?: "PROCESS" | "AREA" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD";
             };
             header?: never;
@@ -4913,13 +4934,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Eventos visibles para el actor. */
+            /** @description Pagina de eventos visibles para el actor. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuditEventResponseDto"][];
+                    "application/json": components["schemas"]["PaginatedAuditEventsResponseDto"];
                 };
             };
             /** @description No hay un usuario actual valido. */

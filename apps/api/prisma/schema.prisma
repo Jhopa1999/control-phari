@@ -259,6 +259,10 @@ model AuditEvent {
   @@index([actorUserId])
   @@index([scopeProcessId])
   @@index([createdAt])
+  // Fase B: respaldan la lectura de auditoria (filtro + orden createdAt desc).
+  @@index([objectType, createdAt(sort: Desc)])
+  @@index([actorUserId, createdAt(sort: Desc)])
+  @@index([scopeProcessId, createdAt(sort: Desc)])
   @@map("audit_events")
 }
 

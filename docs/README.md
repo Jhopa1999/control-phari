@@ -378,12 +378,15 @@ defecto de la plantilla.
   rol de revisión se ve un aviso de rol y solo la ruta actual. «Registrar
   validación» abre un diálogo con los mismos ids `val-*`; el ejecutor se elige
   entre las personas en alcance (`/coordination/people`) o se escribe su id.
-  Auditoría (`/gobierno/auditoria`) envía el filtro «Objeto» al servidor
-  (`objectType`) y pide siempre `take=500` (`AUDIT_TAKE` en `lib/audit.ts`);
-  «Acción» solo acota lo que se muestra. Si llegan 500 eventos, un aviso dice
-  que son los más recientes y el conteo habla de «eventos más recientes». Las
-  opciones de «Objeto» salen del tipo generado del contrato con un `Record`
-  exhaustivo: si el contrato cambia, el typecheck falla. Mis permisos
+  Auditoría (`/gobierno/auditoria`) envía los filtros «Objeto» (`objectType`) y
+  «Acción» (`action`) al servidor y pagina contra el servidor
+  (`page`/`pageSize`): no hay tope fijo de 500 ni aviso de «eventos más
+  recientes». El backend aplica el alcance por rol antes de paginar y devuelve
+  `{ data, page, pageSize, total, hasMore }`; la vista usa `total` en el conteo
+  y en `DataTablePagination`. El orden lo fija el servidor (createdAt desc), por
+  eso los encabezados no son ordenables. Las opciones de «Objeto» y «Acción»
+  salen de tipos generados del contrato con `Record` exhaustivos: si el contrato
+  cambia, el typecheck falla. Mis permisos
   (`/gobierno/mis-permisos`) muestra identidad, roles y módulos con
   `MODULE_ORDER`/`MODULE_LABELS`. Equipo y permisos (`/gobierno/equipo`)
   llama «rol asignado» a lo que la API llama grant; revocar pide
@@ -689,6 +692,23 @@ Detalle operativo completo en `docs/deployment.md`. Resumen técnico:
   NO bloquea Guardar y el backend NO expone warnings (la verdad del envio la
   decide el servidor SMTP en la prueba real).
 
+### Paginación en el servidor (Fase B · estilo page/pageSize)
+
+- Decisión D1: cuando un listado necesita paginación real en el servidor se
+  adopta el estilo `page`/`pageSize` 1-based con respuesta envuelta
+  `{ data, page, pageSize, total, hasMore }`. En el backend: `skip =
+  (page - 1) * pageSize`, `take = pageSize`, `total = count({ where })` con el
+  MISMO `where` que `findMany`, y `hasMore = page * pageSize < total`. El
+  alcance por rol se arma primero y la paginación va DESPUÉS, de modo que
+  `total` y `hasMore` se calculan sobre lo que el actor puede ver y nunca se
+  exponen filas fuera de alcance. `pageSize` se acota a un máximo (100 en
+  auditoría), nunca ilimitado; por defecto 25.
+- Primer uso: GET `/audit-events` (auditoría). Se materializa un DTO concreto
+  por recurso (`PaginatedAuditEventsResponseDto`) con `@ApiProperty` de tipo
+  explícito en cada campo, porque el generador de OpenAPI corre con `tsx` sin el
+  plugin de Swagger y no infiere genéricos. Los filtros «Objeto» (`objectType`)
+  y «Acción» (`action`) viajan al servidor e INTERSECTAN el alcance.
+
 ## Decisiones pendientes
 
 - Estrategia de autenticacion e identidad.
@@ -706,8 +726,6 @@ Detalle operativo completo en `docs/deployment.md`. Resumen técnico:
     acepta 26 (`OBJECT_TYPES`). Alinearlo y regenerar contratos
     (`npm run contracts:generate`) amplía el filtro «Objeto» sin tocar el
     frontend más que el `Record` de `lib/audit.ts`, que el typecheck señalará.
-  - Auditoría, paginación en el servidor: hoy la consulta devuelve como
-    máximo los 500 eventos más recientes, sin total ni páginas; la UI lo avisa.
   - Equipo, columna Rol: `GET /grants` no devuelve el código ni el nombre del
     rol, así que la tabla «Roles asignados» no puede mostrarlo.
   - Textos de la API sin tildes (mensajes de error, `roleName`,

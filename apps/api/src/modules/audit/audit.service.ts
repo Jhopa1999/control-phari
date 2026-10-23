@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
-import type { AuditEventModel } from '../../generated/prisma/models/AuditEvent';
 import { RoleCode } from '../auth/role-code';
 import { CurrentActor } from '../auth/current-actor';
+import type { AuditEventModel } from '../../generated/prisma/models/AuditEvent';
 import { ListAuditEventsDto } from './dto/list-audit-events.dto';
+import { AuditEventResponseDto } from './dto/audit-event-response.dto';
+import { PaginatedAuditEventsResponseDto } from './dto/paginated-audit-events-response.dto';
 
 /**
  * Tipos de objeto auditables. Fase 1 (design 6.2): PROCESS, USER, GRANT,
@@ -61,8 +63,9 @@ export interface AuditRecordInput {
   after: Prisma.InputJsonValue | null;
 }
 
-/** Tope de eventos devueltos por la consulta de UI (design 4.2 / 1.2). */
-const MAX_AUDIT_TAKE = 500;
+/** Tamanos de pagina de la consulta de UI (design 4.2 / 1.2). */
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
 
 @Injectable()
 export class AuditService {
@@ -104,12 +107,15 @@ export class AuditService {
    *   scopedProcessIds) MAS sus propios eventos sin proceso (los que el genero,
    *   p. ej. su disponibilidad), para no perder su propia actividad de area.
    * - INTEGRANTE: solo sus propios eventos (actorUserId); nunca auditoria ajena.
-   * Orden createdAt desc; take fijado por el service a <= 500.
+   * La paginacion (page/pageSize) se aplica DESPUES del alcance: el MISMO where
+   * alimenta findMany y count, de modo que total y hasMore se calculan sobre el
+   * alcance y los filtros vigentes, sin exponer filas fuera de alcance. Orden
+   * createdAt desc; pageSize acotado a <= 100, nunca ilimitado.
    */
   async findMany(
     actor: CurrentActor,
     filters: ListAuditEventsDto,
-  ): Promise<AuditEventModel[]> {
+  ): Promise<PaginatedAuditEventsResponseDto> {
     const where: Prisma.AuditEventWhereInput = {};
 
     if (actor.roleCodes.has(RoleCode.JEFE_AREA)) {
@@ -129,15 +135,51 @@ export class AuditService {
       where.objectType = filters.objectType;
     }
 
-    const take =
-      filters.take !== undefined
-        ? Math.min(filters.take, MAX_AUDIT_TAKE)
-        : MAX_AUDIT_TAKE;
+    if (filters.action !== undefined) {
+      where.action = filters.action;
+    }
 
-    return this.prisma.auditEvent.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take,
-    });
+    const pageSize = Math.min(filters.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const page = filters.page ?? 1;
+    const skip = (page - 1) * pageSize;
+
+    // count y findMany comparten el MISMO where (alcance + filtros): el total y
+    // hasMore se calculan sobre lo que el actor puede ver, nunca sobre todo.
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.auditEvent.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      this.prisma.auditEvent.count({ where }),
+    ]);
+
+    return {
+      data: rows.map(toResponseDto),
+      page,
+      pageSize,
+      total,
+      hasMore: page * pageSize < total,
+    };
   }
+}
+
+/**
+ * Proyecta una fila de Prisma al contrato HTTP. before/after son Json (objeto,
+ * null o, en teoria, escalar); el contrato los expone como objeto nullable, que
+ * es lo que registran las mutaciones (siempre objeto o null).
+ */
+function toResponseDto(row: AuditEventModel): AuditEventResponseDto {
+  return {
+    id: row.id,
+    actorUserId: row.actorUserId,
+    action: row.action,
+    objectType: row.objectType,
+    objectId: row.objectId,
+    scopeProcessId: row.scopeProcessId,
+    before: row.before as Record<string, unknown> | null,
+    after: row.after as Record<string, unknown> | null,
+    createdAt: row.createdAt,
+  };
 }

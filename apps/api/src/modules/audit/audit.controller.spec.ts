@@ -24,7 +24,7 @@ describe('AuditController (delegacion)', () => {
 
   it('findMany delega actor y filtros', async () => {
     const a = actor();
-    const filters = { take: 10 } as never;
+    const filters = { page: 1, pageSize: 25, action: 'CREATE' } as never;
     await expect(controller.findMany(a, filters)).resolves.toBe('findMany');
     expect(svc.findMany).toHaveBeenCalledWith(a, filters);
   });

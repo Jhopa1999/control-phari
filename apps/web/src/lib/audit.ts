@@ -1,4 +1,8 @@
-import { api, type AuditEvent, type AuditEventsQuery } from './api-client';
+import {
+  api,
+  type AuditEventsQuery,
+  type PaginatedAuditEvents,
+} from './api-client';
 import { ApiError, toApiError } from './api-error';
 
 export { ApiError };
@@ -50,13 +54,30 @@ export const AUDIT_OBJECT_TYPE_OPTIONS = Object.keys(
   AUDIT_OBJECT_TYPE_FILTER,
 ) as AuditObjectType[];
 
-/** Etiquetas de las acciones auditadas (design §11.19). */
-export const AUDIT_ACTION_LABELS: Record<string, string> = {
+/**
+ * Acciones que el filtro «Acción» puede enviar al servidor, derivadas del
+ * contrato generado; no se escriben a mano.
+ */
+export type AuditAction = NonNullable<AuditEventsQuery['action']>;
+
+/**
+ * Etiquetas de las acciones auditadas (design §11.19). El Record es exhaustivo
+ * sobre AuditAction: si el contrato añade o quita un verbo, el typecheck falla
+ * aquí, de modo que las opciones del filtro «Acción» siempre coinciden con lo
+ * que acepta el @ApiQuery de audit.controller.ts (AUDIT_ACTIONS del DTO).
+ */
+const AUDIT_ACTION_LABEL_MAP: Record<AuditAction, string> = {
   CREATE: 'Creación',
   UPDATE: 'Actualización',
   DELETE: 'Eliminación',
   REVOKE: 'Revocación',
 };
+
+export const AUDIT_ACTION_LABELS: Record<string, string> = AUDIT_ACTION_LABEL_MAP;
+
+export const AUDIT_ACTION_OPTIONS = Object.keys(
+  AUDIT_ACTION_LABEL_MAP,
+) as AuditAction[];
 
 /** Etiquetas de los 26 tipos de objeto, solo para mostrar (design §11.19). */
 const AUDIT_OBJECT_LABELS: Record<string, string> = {
@@ -103,27 +124,31 @@ export function auditObjectLabel(code: string): string {
   return labelFrom(AUDIT_OBJECT_LABELS, code);
 }
 
-/** Tope de eventos por consulta: el máximo que admite el servidor. */
-export const AUDIT_TAKE = 500;
-
-export interface AuditFilters {
+export interface AuditQuery {
+  page: number;
+  pageSize: number;
   objectType?: AuditObjectType;
+  action?: AuditAction;
 }
 
 /**
- * Eventos de auditoría visibles para el actor (GET /audit-events), los más
- * recientes primero. El alcance (propio para integrante, por proceso para
- * líder y jefe) lo aplica el backend; siempre se piden AUDIT_TAKE eventos.
+ * Página de eventos de auditoría visibles para el actor (GET /audit-events),
+ * los más recientes primero. El alcance (propio para integrante, por proceso
+ * para líder y jefe) y la paginación los aplica el backend, que devuelve
+ * { data, page, pageSize, total, hasMore }. Objeto y Acción son filtros de
+ * servidor: viajan en la consulta, no acotan solo en cliente.
  */
 export async function listAuditEvents(
-  filters: AuditFilters = {},
-): Promise<AuditEvent[]> {
+  query: AuditQuery,
+): Promise<PaginatedAuditEvents> {
   try {
     const { data, error, response } = await api.GET('/audit-events', {
       params: {
         query: {
-          ...(filters.objectType ? { objectType: filters.objectType } : {}),
-          take: AUDIT_TAKE,
+          page: query.page,
+          pageSize: query.pageSize,
+          ...(query.objectType ? { objectType: query.objectType } : {}),
+          ...(query.action ? { action: query.action } : {}),
         },
       },
     });

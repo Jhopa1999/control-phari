@@ -62,7 +62,9 @@ Registro append-only de cada mutación (inmutable, sin `updatedAt`).
 - Campos clave: `actorUserId?`, `action`, `objectType`, `objectId`, `scopeProcessId?`,
   `before?` (JSON), `after?` (JSON), `createdAt`.
 - Restricciones/índices: por `(objectType, objectId)`, `actorUserId`, `scopeProcessId`,
-  `createdAt`.
+  `createdAt` y, para la lectura paginada (filtro + orden `createdAt` desc),
+  `(objectType, createdAt desc)`, `(actorUserId, createdAt desc)` y
+  `(scopeProcessId, createdAt desc)`.
 
 ### AuthToken (`auth_tokens`)
 Token de un solo uso para los flujos de credencial por correo (reestablecimiento de

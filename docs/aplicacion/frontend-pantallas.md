@@ -65,7 +65,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 
 | Ruta | Pantalla | Qué permite hacer |
 | --- | --- | --- |
-| `/gobierno/auditoria` | Auditoría | Consultar la bitácora de eventos de auditoría (menú grupo *Gobierno*, `audit`). |
+| `/gobierno/auditoria` | Auditoría | Consultar la bitácora de eventos de auditoría con filtros «Objeto» y «Acción» y paginación contra el servidor (menú grupo *Gobierno*, `audit`). |
 | `/gobierno/mis-permisos` | Mis permisos | Ver el rol, el alcance y los módulos permitidos del propio usuario (`permissions`). |
 | `/gobierno/equipo` | Equipo y permisos | Gestionar usuarios y conceder/revocar grants (menú grupo *Administración*, `team`). |
 
