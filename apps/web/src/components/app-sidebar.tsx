@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Info, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { BrandMark, BrandName } from '@/components/brand';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -336,6 +337,9 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
           <BrandMark />
           <BrandName className="rail:sr-only" />
         </Link>
+        {/* En riel (solo escritorio) se oculta para no estrechar la columna; el
+            control sigue disponible en la barra móvil y en el menú expandido. */}
+        <ThemeToggle className="ml-auto rail:hidden" />
       </div>
 
       <nav

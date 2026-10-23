@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTheme } from 'next-themes';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
 
 // Variables de sonner mapeadas a los tokens del sistema (globals.css).
@@ -23,14 +24,16 @@ const toasterStyle = {
 } as React.CSSProperties;
 
 /**
- * Toaster de notificaciones (sonner) con etiquetas en español.
- * Tema claro fijo, como el resto del portal: cuando exista modo oscuro, `theme`
- * debe seguir al tema activo.
+ * Toaster de notificaciones (sonner) con etiquetas en español. El tema sigue al
+ * tema activo (next-themes): `useTheme().theme` devuelve 'light' | 'dark' |
+ * 'system', valores que acepta `ToasterProps['theme']`; con 'system' sonner
+ * resuelve por `prefers-color-scheme`.
  */
 function Toaster(props: ToasterProps) {
+  const { theme = 'system' } = useTheme();
   return (
     <Sonner
-      theme="light"
+      theme={theme as ToasterProps['theme']}
       position="bottom-right"
       richColors
       closeButton

@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { RouteGuard } from '@/components/route-guard';
+import { ThemeProvider } from '@/components/theme-provider';
 import { ActorProvider } from '@/lib/actor-context';
 import './globals.css';
 
@@ -21,14 +22,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }): React.ReactElement {
   return (
-    <html lang="es" className={inter.variable}>
+    // suppressHydrationWarning: next-themes escribe la clase de tema en <html>
+    // antes de la hidratación (script anti-flash), lo que difiere del HTML del
+    // servidor solo en ese atributo.
+    <html lang="es" className={inter.variable} suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <ActorProvider>
-          <TooltipProvider delayDuration={300}>
-            <RouteGuard>{children}</RouteGuard>
-          </TooltipProvider>
-        </ActorProvider>
-        <Toaster />
+        <ThemeProvider>
+          <ActorProvider>
+            <TooltipProvider delayDuration={300}>
+              <RouteGuard>{children}</RouteGuard>
+            </TooltipProvider>
+          </ActorProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
