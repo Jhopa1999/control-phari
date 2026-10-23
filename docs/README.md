@@ -708,6 +708,28 @@ Detalle operativo completo en `docs/deployment.md`. Resumen técnico:
   explícito en cada campo, porque el generador de OpenAPI corre con `tsx` sin el
   plugin de Swagger y no infiere genéricos. Los filtros «Objeto» (`objectType`)
   y «Acción» (`action`) viajan al servidor e INTERSECTAN el alcance.
+- Decisión D5 (capacidad · cálculo en cliente, sin N+1): el resumen de carga
+  (`CapacityService.summary`, GET `/capacity/summary`) se mantiene agregado en
+  memoria de la API, no en SQL. Su cardinalidad está acotada por
+  `scopedUserIds` (el equipo del área del actor, no el universo) y la consulta
+  hace un número FIJO de queries sin N+1 (availability + assignment + task del
+  plan + user, más la extra de detección fuera de alcance solo para el líder),
+  todas con `select` acotado. El volumen no crece con el número de filas sino con
+  el número de personas del alcance, así que no se traslada el cálculo a la base
+  ni se añaden índices nuevos. No cambia el contrato.
+- Decisión D6 (portafolio · cliente + eliminación del N+1): el listado del
+  portafolio (`PortfolioService.list`, GET `/portfolio`) sigue resolviendo la
+  banda y el filtro «band» post-query en cliente —la banda no es columna— y
+  mantiene la paginación 25-en-25 en cliente, porque el cuello de botella real
+  no era el tamaño de página sino el patrón 1+N que consultaba la evaluación de
+  prioridad vigente una vez por request. Se reemplaza ese bucle por UNA sola
+  `priorityEvaluation.findMany({ where: { requestId: { in: ids } }, orderBy:
+  { evaluatedAt: 'desc' } })` y un `Map` que conserva la primera aparición por
+  `requestId` (la vigente, mismo criterio que
+  `RequestStateService.currentPriorityEvaluation`): de 1+N consultas a 2. La
+  respuesta (campos y valores de `PortfolioItemResponseDto`) es idéntica, el
+  contrato OpenAPI NO cambia y no se añaden índices nuevos porque `Request` ya
+  tiene los índices que cubren el alcance y el orden.
 
 ## Decisiones pendientes
 

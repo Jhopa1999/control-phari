@@ -8,10 +8,10 @@ import { PortfolioService } from './portfolio.service';
 function createMocks() {
   const prismaObj: Record<string, unknown> = {
     request: { findMany: jest.fn() },
+    priorityEvaluation: { findMany: jest.fn() },
   };
   const prisma = prismaObj as unknown as PrismaService;
   const state = {
-    currentPriorityEvaluation: jest.fn(),
     priorityBand: jest.fn(),
     priorityLabel: jest.fn(),
   } as unknown as RequestStateService;
@@ -77,14 +77,14 @@ describe('PortfolioService', () => {
   beforeEach(() => {
     m = createMocks();
     service = new PortfolioService(m.prisma, m.state, m.scope);
-    (m.state.currentPriorityEvaluation as jest.Mock).mockResolvedValue(null);
+    (m.prismaObj.priorityEvaluation as any).findMany.mockResolvedValue([]);
   });
 
   it('mapea banda/label desde la evaluacion vigente (P1)', async () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([requestRow()]);
-    (m.state.currentPriorityEvaluation as jest.Mock).mockResolvedValue({
-      score: 85,
-    });
+    (m.prismaObj.priorityEvaluation as any).findMany.mockResolvedValue([
+      { requestId: 'r1', score: 85, evaluatedAt: new Date('2025-03-02') },
+    ]);
     (m.state.priorityBand as jest.Mock).mockReturnValue('P1');
     (m.state.priorityLabel as jest.Mock).mockReturnValue('P1 · etiqueta');
 
@@ -98,7 +98,7 @@ describe('PortfolioService', () => {
 
   it('SIN_PRIORIZAR: banda/label/score null cuando no hay evaluacion vigente', async () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([requestRow()]);
-    (m.state.currentPriorityEvaluation as jest.Mock).mockResolvedValue(null);
+    (m.prismaObj.priorityEvaluation as any).findMany.mockResolvedValue([]);
 
     const [item] = await service.list(jefe(), {});
     expect(item.priorityBand).toBeNull();
@@ -145,9 +145,10 @@ describe('PortfolioService', () => {
       requestRow({ id: 'r1' }),
       requestRow({ id: 'r2' }),
     ]);
-    (m.state.currentPriorityEvaluation as jest.Mock)
-      .mockResolvedValueOnce(null) // r1 -> SIN_PRIORIZAR
-      .mockResolvedValueOnce({ score: 85 }); // r2 -> P1
+    // r1 sin evaluacion -> SIN_PRIORIZAR; r2 con score 85 -> P1.
+    (m.prismaObj.priorityEvaluation as any).findMany.mockResolvedValue([
+      { requestId: 'r2', score: 85, evaluatedAt: new Date('2025-03-02') },
+    ]);
     (m.state.priorityBand as jest.Mock).mockReturnValue('P1');
     (m.state.priorityLabel as jest.Mock).mockReturnValue('P1');
 

@@ -70,11 +70,30 @@ export class PortfolioService {
       },
     });
 
+    // Evaluaciones de prioridad vigentes en UNA sola consulta en lote (antes
+    // 1+N: un currentPriorityEvaluation por request). Mismo criterio de vigencia
+    // que RequestStateService.currentPriorityEvaluation (design §11 D4: la ultima
+    // por `evaluatedAt`). Al venir ordenadas desc por `evaluatedAt`, la PRIMERA
+    // aparicion por `requestId` es la vigente; se conservan solo esas en el Map.
+    const requestIds = requests.map((req) => req.id);
+    const evaluations = await this.prisma.priorityEvaluation.findMany({
+      where: { requestId: { in: requestIds } },
+      orderBy: { evaluatedAt: 'desc' },
+    });
+    const currentEvaluationByRequest = new Map<string, { score: number }>();
+    for (const evaluation of evaluations) {
+      if (!currentEvaluationByRequest.has(evaluation.requestId)) {
+        currentEvaluationByRequest.set(evaluation.requestId, {
+          score: evaluation.score,
+        });
+      }
+    }
+
     const items: PortfolioItemResponseDto[] = [];
     for (const req of requests) {
       // Banda post-query sobre la evaluacion vigente: null si SIN_PRIORIZAR; el
       // helper priorityBand nunca devuelve null (solo se llama si hay score).
-      const evaluation = await this.state.currentPriorityEvaluation(req.id);
+      const evaluation = currentEvaluationByRequest.get(req.id) ?? null;
       const hasEvaluation = evaluation !== null;
       const priorityBand = hasEvaluation
         ? this.state.priorityBand(evaluation.score)

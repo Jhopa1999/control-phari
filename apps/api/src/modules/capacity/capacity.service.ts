@@ -500,6 +500,16 @@ export class CapacityService {
 
   // --- Resumen de carga ----------------------------------------------------
 
+  /**
+   * Resumen de carga por persona/mes (design §2). Decision D5 (capacidad:
+   * calculo en cliente): el agregado se mantiene en memoria de la API porque su
+   * cardinalidad esta acotada por `scopedUserIds` (tamaño del equipo del area, no
+   * del universo) y la consulta hace un numero FIJO de queries sin N+1
+   * (availability + assignment + task del plan + user, mas la extra de deteccion
+   * fuera de alcance solo para el lider), todas con `select` acotado. No hay
+   * bucle que consulte por persona, de modo que el volumen no crece con el numero
+   * de filas sino con el numero de personas del alcance. No cambia el contrato.
+   */
   async summary(
     actor: CurrentActor,
     query: SummaryQueryDto,
