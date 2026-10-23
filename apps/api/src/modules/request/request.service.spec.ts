@@ -37,6 +37,19 @@ function lider(scoped: string[] = ['p1']): CurrentActor {
   };
 }
 
+function jefe(): CurrentActor {
+  return {
+    userId: 'uj',
+    name: 'Jefa',
+    identifier: 'jefe@demo.local',
+    grants: [],
+    roleCodes: new Set([RoleCode.JEFE_AREA]),
+    scopedProcessIds: new Set<string>(),
+    isJefeArea: true,
+    isAdmin: false,
+  };
+}
+
 function makeRequestRow(overrides: Record<string, unknown> = {}) {
   const now = new Date('2026-01-01T00:00:00.000Z');
   return {
@@ -132,6 +145,34 @@ describe('RequestService', () => {
       await expect(
         service.create(lider(['p1']), { title: 'S', mainProcessId: 'pX' }),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('findMany', () => {
+    it('jefe de area: scopeWhere {} (sin filtro de alcance)', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([]);
+      await service.findMany(jefe(), {});
+      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
+      expect(where).toEqual({});
+    });
+
+    it('no-jefe: scopeWhere filtra por scopedProcessIds', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([]);
+      await service.findMany(lider(['p1', 'p2']), {});
+      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
+      expect(where.mainProcessId).toEqual({ in: ['p1', 'p2'] });
+    });
+
+    it('aplica filtros state y mainProcessId al where', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([makeRequestRow()]);
+      const res = await service.findMany(jefe(), {
+        state: 'EN_EJECUCION' as any,
+        mainProcessId: 'p9',
+      });
+      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
+      expect(where.operationalState).toBe('EN_EJECUCION');
+      expect(where.mainProcessId).toBe('p9');
+      expect(res).toHaveLength(1);
     });
   });
 

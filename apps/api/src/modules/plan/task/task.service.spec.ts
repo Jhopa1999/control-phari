@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { AuditService } from '../../audit/audit.service';
@@ -271,6 +272,203 @@ describe('TaskService', () => {
     });
   });
 
+  describe('findForPlan (filtros §3.4)', () => {
+    it('sin filtros -> where base solo por plan', async () => {
+      (m.prismaObj.task as any).findMany.mockResolvedValue([]);
+      await service.findForPlan(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 'plan1', {});
+      expect(m.planState.requirePlanByIdInScope).toHaveBeenCalledWith(
+        expect.anything(),
+        'plan1',
+      );
+      const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
+      expect(where).toEqual({ phase: { planId: 'plan1' } });
+    });
+
+    it('aplica phaseId, status, mine="true" y q al where', async () => {
+      (m.prismaObj.task as any).findMany.mockResolvedValue([]);
+      await service.findForPlan(actorWith(RoleCode.INTEGRANTE, 'u1'), 'plan1', {
+        phaseId: 'ph9',
+        status: TaskStatus.EN_CURSO,
+        mine: 'true',
+        q: 'auditoria',
+      });
+      const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
+      expect(where.phaseId).toBe('ph9');
+      expect(where.status).toBe(TaskStatus.EN_CURSO);
+      expect(where.responsibleUserId).toBe('u1');
+      expect(where.title).toEqual({ contains: 'auditoria', mode: 'insensitive' });
+    });
+
+    it('q vacio y mine distinto de "true" no agregan filtros', async () => {
+      (m.prismaObj.task as any).findMany.mockResolvedValue([]);
+      await service.findForPlan(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 'plan1', {
+        mine: 'false',
+        q: '',
+      });
+      const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
+      expect(where.responsibleUserId).toBeUndefined();
+      expect(where.title).toBeUndefined();
+    });
+
+    it('mapea las tareas a respuesta con predecesoras', async () => {
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        {
+          ...makeTask({ id: 'tA' }),
+          dependenciesAsDependent: [
+            {
+              predecessor: { id: 'tB', title: 'Previa', status: 'TERMINADA', accepted: true },
+            },
+          ],
+        },
+      ]);
+      const res = await service.findForPlan(
+        actorWith(RoleCode.LIDER_PROCESO, 'ul'),
+        'plan1',
+        {},
+      );
+      expect(res).toHaveLength(1);
+      expect(res[0].predecessors).toEqual([
+        { id: 'tB', title: 'Previa', status: 'TERMINADA', accepted: true },
+      ]);
+    });
+  });
+
+  describe('findOne', () => {
+    it('task fuera de existencia tras scope -> 404', async () => {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task: makeTask(),
+        planId: 'plan1',
+        requestId: 'r1',
+        mainProcessId: 'p1',
+      });
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.findOne(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('task existente -> respuesta mapeada', async () => {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task: makeTask(),
+        planId: 'plan1',
+        requestId: 'r1',
+        mainProcessId: 'p1',
+      });
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(
+        makeTaskWithDeps({ id: 't1' }),
+      );
+
+      const res = await service.findOne(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1');
+      expect(res.id).toBe('t1');
+      expect(res.predecessors).toEqual([]);
+    });
+  });
+
+  describe('create (fase inexistente)', () => {
+    it('fase no encontrada -> 404 sin tocar planState ni crear', async () => {
+      (m.prismaObj.planPhase as any).findFirst.mockResolvedValue(null);
+      await expect(
+        service.create(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 'phX', {
+          title: 'T',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(m.planState.requirePlanByIdInScope).not.toHaveBeenCalled();
+      expect((m.prismaObj.task as any).create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('update (§2.4 regla hito + connect + auditoria)', () => {
+    function scopeTask(task: Record<string, unknown>) {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task,
+        planId: 'plan1',
+        requestId: 'r1',
+        mainProcessId: 'p1',
+      });
+    }
+
+    it('cambia responsable y proceso via connect; audita UPDATE', async () => {
+      scopeTask(makeTask({ id: 't1' }));
+      (m.prismaObj.task as any).update.mockResolvedValue(makeTask({ id: 't1' }));
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(makeTaskWithDeps({ id: 't1' }));
+
+      await service.update(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1', {
+        title: 'Renombrada',
+        responsibleUserId: 'u2',
+        processId: 'p2',
+        description: 'desc',
+        acceptanceCriteria: 'AC',
+        frameworkPhaseRequired: 'PLANIFICACION',
+        evidenceUrl: 'https://ev',
+      });
+
+      const data = (m.prismaObj.task as any).update.mock.calls[0][0].data;
+      expect(data.title).toBe('Renombrada');
+      expect(data.responsible).toEqual({ connect: { id: 'u2' } });
+      expect(data.process).toEqual({ connect: { id: 'p2' } });
+      expect(data.description).toBe('desc');
+      expect(data.acceptanceCriteria).toBe('AC');
+      expect(data.frameworkPhaseRequired).toBe('PLANIFICACION');
+      expect(data.evidenceUrl).toBe('https://ev');
+      // No se tocaron campos de la regla hito.
+      expect(data.estimateHours).toBeUndefined();
+      expect(data.startDate).toBeUndefined();
+      expect(data.endDate).toBeUndefined();
+      expect((m.audit.record as jest.Mock).mock.calls[0][1]).toMatchObject({
+        action: 'UPDATE',
+        objectType: 'TASK',
+        objectId: 't1',
+        scopeProcessId: 'p1',
+      });
+    });
+
+    it('convertir en hito con horas>0 -> 400', async () => {
+      scopeTask(makeTask({ id: 't1', isMilestone: false, estimateHours: null }));
+      await expect(
+        service.update(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1', {
+          isMilestone: true,
+          estimateHours: 8,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect((m.prismaObj.task as any).update).not.toHaveBeenCalled();
+    });
+
+    it('convertir en hito valido -> normaliza estimateHours a 0 y copia fecha', async () => {
+      scopeTask(makeTask({ id: 't1', isMilestone: false, estimateHours: null }));
+      (m.prismaObj.task as any).update.mockResolvedValue(makeTask({ id: 't1', isMilestone: true }));
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(makeTaskWithDeps({ id: 't1' }));
+
+      await service.update(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1', {
+        isMilestone: true,
+        estimateHours: 0,
+        startDate: '2025-02-10',
+      });
+
+      const data = (m.prismaObj.task as any).update.mock.calls[0][0].data;
+      expect(data.isMilestone).toBe(true);
+      expect(data.estimateHours).toBe(0);
+      expect(data.startDate).toEqual(data.endDate);
+    });
+
+    it('actualizar solo fechas recalcula columnas sin tocar isMilestone', async () => {
+      scopeTask(makeTask({ id: 't1', isMilestone: false, estimateHours: 3 }));
+      (m.prismaObj.task as any).update.mockResolvedValue(makeTask({ id: 't1' }));
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(makeTaskWithDeps({ id: 't1' }));
+
+      await service.update(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1', {
+        startDate: '2025-03-01',
+        endDate: '2025-03-05',
+      });
+
+      const data = (m.prismaObj.task as any).update.mock.calls[0][0].data;
+      expect(data.isMilestone).toBeUndefined();
+      expect(data.estimateHours).toBe(3);
+      expect(data.startDate).toEqual(new Date('2025-03-01'));
+      expect(data.endDate).toEqual(new Date('2025-03-05'));
+    });
+  });
+
   describe('myWork', () => {
     it('filtra por responsibleUserId del actor y alcance de proceso (no-jefe)', async () => {
       (m.prismaObj.task as any).findMany.mockResolvedValue([]);
@@ -278,6 +476,83 @@ describe('TaskService', () => {
       const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
       expect(where.responsibleUserId).toBe('u1');
       expect(where.phase.plan.request).toEqual({ mainProcessId: { in: ['p1'] } });
+    });
+
+    it('jefe de area: sin filtro de alcance (request where {}) y mapea items', async () => {
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        {
+          ...makeTask({ id: 'tW' }),
+          phase: {
+            id: 'ph1',
+            name: 'Fase 1',
+            planId: 'plan1',
+            plan: { requestId: 'r1', request: { title: 'Sol' } },
+          },
+        },
+      ]);
+      const res = await service.myWork(actorWith(RoleCode.JEFE_AREA, 'uj'));
+      const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
+      expect(where.responsibleUserId).toBe('uj');
+      expect(where.phase.plan.request).toEqual({});
+      expect(res[0]).toMatchObject({
+        taskId: 'tW',
+        phaseName: 'Fase 1',
+        requestId: 'r1',
+        requestTitle: 'Sol',
+      });
+    });
+  });
+
+  describe('changeStatus (progress y evidenceUrl opcionales)', () => {
+    it('propaga progress y evidenceUrl al update', async () => {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task: makeTask({ responsibleUserId: 'u1', status: TaskStatus.POR_HACER }),
+        planId: 'plan1',
+        requestId: 'r1',
+        mainProcessId: 'p1',
+      });
+      (m.prismaObj.task as any).update.mockResolvedValue(
+        makeTask({ status: TaskStatus.EN_CURSO }),
+      );
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(
+        makeTaskWithDeps({ status: TaskStatus.EN_CURSO }),
+      );
+
+      await service.changeStatus(actorWith(RoleCode.INTEGRANTE, 'u1'), 't1', {
+        status: TaskStatus.EN_CURSO,
+        progress: 40,
+        evidenceUrl: 'https://ev',
+      });
+
+      const data = (m.prismaObj.task as any).update.mock.calls[0][0].data;
+      expect(data.progress).toBe(40);
+      expect(data.evidenceUrl).toBe('https://ev');
+    });
+  });
+
+  describe('accept (retirar aceptacion)', () => {
+    it('accepted=false -> disconnect de acceptedBy y audita', async () => {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task: makeTask({ status: TaskStatus.TERMINADA, accepted: true }),
+        planId: 'plan1',
+        requestId: 'r1',
+        mainProcessId: 'p1',
+      });
+      (m.prismaObj.task as any).update.mockResolvedValue(
+        makeTask({ status: TaskStatus.TERMINADA, accepted: false }),
+      );
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(
+        makeTaskWithDeps({ status: TaskStatus.TERMINADA, accepted: false }),
+      );
+
+      await service.accept(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1', {
+        accepted: false,
+      });
+
+      const data = (m.prismaObj.task as any).update.mock.calls[0][0].data;
+      expect(data.accepted).toBe(false);
+      expect(data.acceptedAt).toBeNull();
+      expect(data.acceptedBy).toEqual({ disconnect: true });
     });
   });
 });
