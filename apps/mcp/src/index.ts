@@ -4,7 +4,7 @@
  *   2. construye el cliente de API con identidad (api.ts),
  *   3. crea el server y el contexto { server, api } (server.ts),
  *   4. registra las tools (tools/index.ts),
- *   5. conecta el transporte stdio.
+ *   5. conecta el transporte según MCP_TRANSPORT (stdio default | http).
  *
  * El arranque SOLO falla por configuración faltante (fatal, lo gestiona
  * config.ts). Un fallo de login NO es fatal: el login es perezoso y la
@@ -13,26 +13,48 @@
  * stdout está reservado al protocolo MCP: todo logging va a stderr.
  */
 import { loadConfig } from './config.js';
+import type { McpConfig } from './config.js';
 import { createMcpApi } from './api.js';
-import { createServer, connectStdio } from './server.js';
+import { createServer, connectStdio, connectHttp } from './server.js';
 import { registerAll } from './tools/index.js';
 
 function logStderr(message: string): void {
   process.stderr.write(`${message}\n`);
 }
 
+/** Arranque stdio (comportamiento histórico, sin cambios). */
+async function startStdio(config: McpConfig): Promise<void> {
+  const api = createMcpApi(config);
+  const ctx = createServer(api);
+  registerAll(ctx);
+  await connectStdio(ctx);
+  logStderr('MCP server conectado por stdio.');
+}
+
+/**
+ * Arranque HTTP: levanta el listener de red. La identidad llega por petición
+ * (Bearer); connectHttp construye un server + api-client por sesión. El proceso
+ * queda vivo escuchando. NO se registra ningún token ni secreto.
+ */
+async function startHttp(config: McpConfig): Promise<void> {
+  if (config.http === undefined) {
+    throw new Error('transporte http sin configuración http.');
+  }
+  await connectHttp(config);
+  const { host, port } = config.http;
+  logStderr(`MCP server escuchando HTTP en ${host}:${port}`);
+}
+
 async function main(): Promise<void> {
   // Fail-fast: termina el proceso con código != 0 si falta config obligatoria.
   const config = loadConfig();
 
-  const api = createMcpApi(config);
-  const ctx = createServer(api);
+  if (config.transport === 'http') {
+    await startHttp(config);
+    return;
+  }
 
-  registerAll(ctx);
-
-  await connectStdio(ctx);
-
-  logStderr('MCP server conectado por stdio.');
+  await startStdio(config);
 }
 
 main().catch((error: unknown) => {

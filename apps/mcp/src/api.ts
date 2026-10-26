@@ -12,6 +12,7 @@ import type { components } from '@plantilla-portales/api-client';
 import type { Client, Middleware } from 'openapi-fetch';
 import type { paths } from '@plantilla-portales/api-client';
 import type { Identity, McpConfig } from './config.js';
+import { getCurrentHttpToken } from './http/token-store.js';
 
 /** Respuesta de POST /auth/login, derivada del contrato OpenAPI. */
 type LoginResponse = components['schemas']['LoginResponseDto'];
@@ -77,8 +78,12 @@ export function createMcpApi(config: McpConfig): McpApi {
       }
       return;
     }
-    // dev-header
-    request.headers.set('X-Actor-Id', identity.actorId);
+    if (identity.mode === 'dev-header') {
+      request.headers.set('X-Actor-Id', identity.actorId);
+      return;
+    }
+    // identity.mode === 'http' nunca llega aquí: createMcpApi es solo stdio.
+    // La identidad HTTP la gestiona createHttpMcpApi (token por petición).
   }
 
   const identityMiddleware: Middleware = {
@@ -112,6 +117,47 @@ export function createMcpApi(config: McpConfig): McpApi {
 
   function canRelogin(): boolean {
     return identity.mode === 'jwt' && identity.kind === 'login';
+  }
+
+  return { client, login, canRelogin };
+}
+
+/**
+ * Construye una `McpApi` para modo HTTP, POR SESIÓN. Cada sesión obtiene su
+ * PROPIO cliente (su propio middleware), de modo que no hay estado de token
+ * compartido entre sesiones. La identidad se toma del token Bearer de la
+ * petición actual, leído del `httpTokenStore` (ver http/token-store.ts):
+ *
+ * - `onRequest` fija `Authorization: Bearer <token>` con el token del frame
+ *   ALS actual. Si no hay token en el frame (petición sin Authorization) no se
+ *   añade cabecera; de todos modos el handler HTTP rechaza con 401 antes de
+ *   llegar aquí, y el backend respondería 401.
+ * - `login()` devuelve false: en HTTP no hay credenciales en memoria.
+ * - `canRelogin()` devuelve false: el token es por petición; un 401 lo resuelve
+ *   el cliente renovando su propio token, no el servidor.
+ *
+ * NUNCA registra el valor del token.
+ */
+export function createHttpMcpApi(config: McpConfig): McpApi {
+  const client = createApiClient({ baseUrl: config.baseUrl });
+
+  const identityMiddleware: Middleware = {
+    onRequest({ request }) {
+      const token = getCurrentHttpToken();
+      if (token) {
+        request.headers.set('Authorization', `Bearer ${token}`);
+      }
+      return request;
+    },
+  };
+  client.use(identityMiddleware);
+
+  async function login(): Promise<boolean> {
+    return false;
+  }
+
+  function canRelogin(): boolean {
+    return false;
   }
 
   return { client, login, canRelogin };

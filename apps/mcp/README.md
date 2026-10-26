@@ -1,8 +1,9 @@
 # @plantilla-portales/mcp
 
-Servidor **Model Context Protocol** (transporte **stdio**) de la plantilla de
-portales. Expone, como _tools_ MCP, las operaciones del backend (`apps/api`)
-mapeadas **1:1** al contrato OpenAPI, para que un LLM pueda operar el portal.
+Servidor **Model Context Protocol** de la plantilla de portales. Soporta dos
+transportes: **stdio** (local, por defecto) y **HTTP** (por red, ver más abajo).
+Expone, como _tools_ MCP, las operaciones del backend (`apps/api`) mapeadas
+**1:1** al contrato OpenAPI, para que un LLM pueda operar el portal.
 
 Es una **capa delgada**: no contiene lógica de negocio, ni autorización, ni
 validación de dominio, ni accede a Prisma/PostgreSQL. Toda esa responsabilidad
@@ -24,13 +25,18 @@ versionarse.
 | Variable                | Obligatoria              | Descripción                                                                 |
 | ----------------------- | ------------------------ | --------------------------------------------------------------------------- |
 | `MCP_API_BASE_URL`      | Sí                       | URL base de `apps/api` (sin credenciales). Si falta, el proceso aborta.     |
-| `MCP_AUTH_MODE`         | No (default `dev-header`)| `jwt` activa autenticación real; cualquier otro valor se trata `dev-header`.|
-| `MCP_ACTOR_ID`          | Sí en `dev-header`       | Identidad enviada en la cabecera `X-Actor-Id`.                              |
-| `MCP_API_TOKEN`         | Vía (a) en `jwt`         | JWT ya emitido. **Secreto.** No admite re-login ante 401.                   |
-| `MCP_LOGIN_IDENTIFIER`  | Vía (b) en `jwt`         | Identificador para `POST /auth/login` (login perezoso).                     |
-| `MCP_LOGIN_PASSWORD`    | Vía (b) en `jwt`         | Contraseña para el login. **Secreto.**                                      |
+| `MCP_TRANSPORT`         | No (default `stdio`)     | `stdio` (local) o `http` (red). Solo `http` activa HTTP. Ver sección HTTP.  |
+| `MCP_AUTH_MODE`         | No (default `dev-header`)| Solo stdio. `jwt` activa autenticación real; otro valor se trata `dev-header`.|
+| `MCP_ACTOR_ID`          | Sí en `dev-header`       | Solo stdio. Identidad enviada en la cabecera `X-Actor-Id`.                  |
+| `MCP_API_TOKEN`         | Vía (a) en `jwt`         | Solo stdio. JWT ya emitido. **Secreto.** No admite re-login ante 401.       |
+| `MCP_LOGIN_IDENTIFIER`  | Vía (b) en `jwt`         | Solo stdio. Identificador para `POST /auth/login` (login perezoso).         |
+| `MCP_LOGIN_PASSWORD`    | Vía (b) en `jwt`         | Solo stdio. Contraseña para el login. **Secreto.**                          |
+| `MCP_HTTP_HOST`         | No (default `0.0.0.0`)   | Solo http. Host del listener HTTP.                                          |
+| `MCP_HTTP_PORT`         | No (default `3002`)      | Solo http. Puerto del listener HTTP.                                        |
 
-El `MCP_AUTH_MODE` debe coincidir con el `AUTH_MODE` del backend.
+El `MCP_AUTH_MODE` debe coincidir con el `AUTH_MODE` del backend. En modo `http`
+la identidad llega por petición (`Authorization: Bearer`) y las variables de
+identidad de stdio se ignoran.
 
 ## Modos de identidad
 
@@ -126,3 +132,99 @@ printf '%s\n' \
 La respuesta a `initialize` anuncia `serverInfo` y la de `tools/list` lista
 todas las tools, cada una con su `inputSchema` (JSON Schema). El logging de
 arranque sale por stderr; stdout contiene solo las respuestas JSON-RPC.
+
+## Transporte HTTP (uso por red)
+
+Además del transporte **stdio** (local, por defecto, **sin cambios**), el MCP
+puede exponerse por **HTTP (Streamable HTTP)** para que un equipo lo use por red
+sin instalar nada. Se activa con `MCP_TRANSPORT=http`.
+
+| Variable        | Default   | Descripción                                            |
+| --------------- | --------- | ------------------------------------------------------ |
+| `MCP_TRANSPORT` | `stdio`   | `stdio` (local) o `http` (red). Solo `http` activa HTTP.|
+| `MCP_HTTP_HOST` | `0.0.0.0` | Host del listener HTTP (solo en modo `http`).          |
+| `MCP_HTTP_PORT` | `3002`    | Puerto del listener HTTP (solo en modo `http`).        |
+
+Diferencias clave del modo HTTP:
+
+- **Identidad por persona (Bearer por petición).** Cada petición debe traer
+  `Authorization: Bearer <token>`. El MCP reenvía **ese** token al backend para
+  **esa** sesión/petición. No hay token a nivel de proceso: dos usuarios
+  concurrentes nunca comparten identidad.
+- **Sin Authorization => 401.** Una petición sin `Bearer` válido recibe un error
+  JSON-RPC `401 Unauthorized`; **nunca** se usa un usuario por defecto.
+- **`dev-header` es solo de stdio.** En HTTP la identidad es siempre el `Bearer`
+  por petición (producción `AUTH_MODE=jwt`). `MCP_ACTOR_ID`, `MCP_API_TOKEN` y
+  `MCP_LOGIN_*` se **ignoran** en HTTP.
+- **El token nunca se registra** (ni stdout ni stderr). stdout sigue reservado;
+  los diagnósticos HTTP van a stderr sin el valor del token.
+- **stdio no cambia**: mismo comportamiento, misma identidad por entorno.
+
+### Smoke test HTTP en local (sin Docker)
+
+```powershell
+$env:MCP_TRANSPORT = "http"
+$env:MCP_API_BASE_URL = "http://localhost:3001"
+$env:MCP_HTTP_HOST = "127.0.0.1"
+$env:MCP_HTTP_PORT = "3002"
+node apps/mcp/dist/index.js   # en otra terminal, deja el server escuchando
+```
+
+```powershell
+# (a) initialize CON Bearer -> 200 + cabecera Mcp-Session-Id
+$init = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"0.0.0"}}}'
+$init | Out-File -Encoding utf8 init.json
+curl.exe -i -X POST http://127.0.0.1:3002/ `
+  -H "Content-Type: application/json" `
+  -H "Accept: application/json, text/event-stream" `
+  -H "Authorization: Bearer <tu-token>" --data '@init.json'
+
+# (b) initialize SIN Authorization -> HTTP 401 (JSON-RPC error, sin usuario por defecto)
+curl.exe -i -X POST http://127.0.0.1:3002/ `
+  -H "Content-Type: application/json" `
+  -H "Accept: application/json, text/event-stream" --data '@init.json'
+```
+
+El login al backend es **perezoso**, así que el handshake y `tools/list`
+funcionan sin un backend vivo; una **invocación** real de tool sí requiere la API
+corriendo y un token válido (ese token delimita el alcance por rol de la
+persona).
+
+### Configuración del cliente Kiro (MCP por red)
+
+Para usar el MCP publicado por red (ver despliegue abajo), el cliente NO pone
+ninguna ruta local: solo la URL y su `Bearer`.
+
+```json
+{
+  "mcpServers": {
+    "control-phari": {
+      "url": "http://192.168.0.116:8080/mcp",
+      "headers": {
+        "Authorization": "Bearer <TU_TOKEN_PERSONAL>"
+      }
+    }
+  }
+}
+```
+
+Cómo obtiene cada persona su token: hace `POST /api/auth/login` con su
+identificador y contraseña y copia el `accessToken` de la respuesta. Por
+ejemplo:
+
+```bash
+curl -X POST http://192.168.0.116:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"identifier":"tu-usuario","password":"tu-contraseña"}'
+# -> { "accessToken": "<TU_TOKEN_PERSONAL>", "expiresIn": ... }
+```
+
+Cada persona usa **su** token (su rol y permisos); nunca se comparte entre
+usuarios. Si el token caduca (401), la persona vuelve a hacer login y actualiza
+su configuración.
+
+### Despliegue del MCP por red (producción, bajo Nginx `/mcp`)
+
+El servicio `mcp` se publica detrás de Nginx en `/mcp` (ver `compose.prod.yaml`
+e `infra/nginx/nginx.conf`). No publica puerto al host: solo Nginx habla con él,
+que reenvía `Authorization` tal cual. Ver `docs/deployment.md`.

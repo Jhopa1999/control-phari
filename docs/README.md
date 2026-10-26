@@ -671,6 +671,32 @@ Detalle operativo completo en `docs/deployment.md`. Resumen técnico:
   apunta solo a `dist`, así que hay que ejecutar `npm run build:api-client`
   antes de `npm run typecheck --workspace apps/mcp`.
 
+### Servidor MCP: transporte HTTP por red (apps/mcp)
+
+- Nuevo transporte **HTTP (Streamable HTTP)** además del stdio existente
+  (inalterado). Se selecciona con `MCP_TRANSPORT=http` (default `stdio`); en http
+  se leen `MCP_HTTP_HOST` (default `0.0.0.0`) y `MCP_HTTP_PORT` (default `3002`),
+  validados fail-fast en `config.ts`. Documentado en `apps/mcp/.env.example`
+  (sin secretos).
+- **Identidad por persona:** en http cada petición trae
+  `Authorization: Bearer <token>` y el MCP lo reenvía al backend para esa
+  sesión/petición mediante un `AsyncLocalStorage` (`src/http/token-store.ts`) +
+  un api-client por sesión (`createHttpMcpApi` en `src/api.ts`). No hay token a
+  nivel de proceso: dos usuarios concurrentes no mezclan identidad (probado en
+  `src/__tests__/http-token.test.ts`). Sin `Bearer` válido => HTTP 401 JSON-RPC,
+  nunca un usuario por defecto. El token nunca se registra; stdout sigue
+  reservado y los diagnósticos http van a stderr. `dev-header` es solo de stdio.
+- Usa el `StreamableHTTPServerTransport` del SDK MCP 1.32.1 (que ya incluye
+  `@hono/node-server`): **no se añadió ninguna dependencia** a `apps/mcp`. Las
+  pruebas siguen en `node --test` (sin Jest). `src/http/http-server.ts` levanta
+  el listener con el módulo `http` nativo (sesión stateful por `Mcp-Session-Id`).
+- Producción: `apps/mcp/Dockerfile` (multi-stage, Node 24, necesita el
+  api-client compilado) y servicio `mcp` en `compose.prod.yaml`
+  (`MCP_API_BASE_URL=http://api:3001`, sin puerto publicado al host). Nginx añade
+  `upstream mcp_upstream` y `location /mcp/` (SSE-aware: `proxy_buffering off`,
+  `proxy_read_timeout 3600s`, reenvía `Authorization`). Ver
+  `apps/mcp/README.md` y `docs/deployment.md` para la config del cliente Kiro.
+
 ### Administracion: configuracion SMTP (UX y errores de prueba)
 
 - La pantalla de administracion `Configuracion del sistema`

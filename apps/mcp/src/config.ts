@@ -15,6 +15,35 @@
  */
 export type McpAuthMode = 'jwt' | 'dev-header';
 
+/**
+ * Transporte del servidor MCP. `stdio` (default) mantiene el comportamiento
+ * actual byte-a-byte (identidad por entorno, un solo proceso local). `http`
+ * añade un listener de red donde la identidad llega POR PETICIÓN en la cabecera
+ * `Authorization: Bearer` (una persona por token). Solo el valor exacto `http`
+ * selecciona HTTP; cualquier otro valor o su ausencia cae en `stdio`.
+ */
+export type McpTransport = 'stdio' | 'http';
+
+/** Valores por defecto del listener HTTP (sin hardcodear en el código cliente). */
+const DEFAULT_HTTP_HOST = '0.0.0.0';
+const DEFAULT_HTTP_PORT = 3002;
+
+/** Configuración del listener HTTP (solo presente en modo `http`). */
+export interface HttpConfig {
+  readonly host: string;
+  readonly port: number;
+}
+
+/**
+ * Identidad en modo HTTP: no hay identidad a nivel de proceso. El token Bearer
+ * de cada petición es la identidad y se propaga por `httpTokenStore` (ver
+ * http/token-store.ts). Este miembro existe para que el tipo `Identity` sea
+ * total; el código de identidad stdio nunca hace match contra él.
+ */
+export interface HttpIdentity {
+  readonly mode: 'http';
+}
+
 /** Identidad vía cabecera de desarrollo (X-Actor-Id). */
 export interface DevHeaderIdentity {
   readonly mode: 'dev-header';
@@ -38,14 +67,22 @@ export interface JwtLoginIdentity {
   readonly password: string;
 }
 
-export type Identity = DevHeaderIdentity | JwtTokenIdentity | JwtLoginIdentity;
+export type Identity =
+  | DevHeaderIdentity
+  | JwtTokenIdentity
+  | JwtLoginIdentity
+  | HttpIdentity;
 
 /** Configuración tipada e inmutable del servidor MCP. */
 export interface McpConfig {
+  /** Transporte seleccionado (`stdio` default | `http`). */
+  readonly transport: McpTransport;
   /** URL base de la API (sin credenciales). */
   readonly baseUrl: string;
-  /** Identidad resuelta a partir del modo de autenticación. */
+  /** Identidad resuelta a partir del modo de autenticación / transporte. */
   readonly identity: Identity;
+  /** Configuración del listener HTTP (solo en modo `http`). */
+  readonly http?: HttpConfig;
 }
 
 /**
@@ -78,6 +115,54 @@ export function loadConfig(): McpConfig {
     fatalConfigError('falta MCP_API_BASE_URL (URL base de la API).');
   }
 
+  // Solo el valor exacto 'http' selecciona HTTP; lo demás cae en stdio.
+  const transport: McpTransport =
+    readEnv('MCP_TRANSPORT') === 'http' ? 'http' : 'stdio';
+
+  if (transport === 'http') {
+    return loadHttpConfig(baseUrl);
+  }
+
+  return loadStdioConfig(baseUrl);
+}
+
+/**
+ * Carga la configuración del transporte HTTP. La identidad llega POR PETICIÓN
+ * (Bearer), así que NO se exigen MCP_ACTOR_ID / MCP_API_TOKEN / credenciales de
+ * login: se ignoran en http. Solo valida el host/puerto del listener.
+ */
+function loadHttpConfig(baseUrl: string): McpConfig {
+  const host = readEnv('MCP_HTTP_HOST') ?? DEFAULT_HTTP_HOST;
+  const port = parseHttpPort(readEnv('MCP_HTTP_PORT'));
+  return {
+    transport: 'http',
+    baseUrl,
+    identity: { mode: 'http' },
+    http: { host, port },
+  };
+}
+
+/**
+ * Parsea y valida MCP_HTTP_PORT. Debe ser un entero en 1..65535; cualquier
+ * valor no numérico o fuera de rango es fatal (fail-fast). Si está ausente usa
+ * el default.
+ */
+function parseHttpPort(raw: string | undefined): number {
+  if (raw === undefined) return DEFAULT_HTTP_PORT;
+  const port = Number(raw);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    fatalConfigError(
+      `MCP_HTTP_PORT inválido ("${raw}"): debe ser un entero entre 1 y 65535.`,
+    );
+  }
+  return port;
+}
+
+/**
+ * Carga la configuración del transporte stdio (comportamiento histórico, sin
+ * cambios): identidad por entorno (dev-header o jwt) validada fail-fast.
+ */
+function loadStdioConfig(baseUrl: string): McpConfig {
   // Mismo criterio que el frontend: solo 'jwt' exacto activa JWT.
   const mode: McpAuthMode =
     readEnv('MCP_AUTH_MODE') === 'jwt' ? 'jwt' : 'dev-header';
@@ -89,19 +174,28 @@ export function loadConfig(): McpConfig {
         'en modo dev-header falta MCP_ACTOR_ID (identidad para la cabecera X-Actor-Id).',
       );
     }
-    return { baseUrl, identity: { mode: 'dev-header', actorId } };
+    return {
+      transport: 'stdio',
+      baseUrl,
+      identity: { mode: 'dev-header', actorId },
+    };
   }
 
   // mode === 'jwt': exige UNA vía de credencial.
   const token = readEnv('MCP_API_TOKEN');
   if (token) {
-    return { baseUrl, identity: { mode: 'jwt', kind: 'token', token } };
+    return {
+      transport: 'stdio',
+      baseUrl,
+      identity: { mode: 'jwt', kind: 'token', token },
+    };
   }
 
   const identifier = readEnv('MCP_LOGIN_IDENTIFIER');
   const password = readEnv('MCP_LOGIN_PASSWORD');
   if (identifier && password) {
     return {
+      transport: 'stdio',
       baseUrl,
       identity: { mode: 'jwt', kind: 'login', identifier, password },
     };

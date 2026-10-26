@@ -19,6 +19,9 @@ const CONFIG_ENV_VARS = [
   'MCP_API_TOKEN',
   'MCP_LOGIN_IDENTIFIER',
   'MCP_LOGIN_PASSWORD',
+  'MCP_TRANSPORT',
+  'MCP_HTTP_HOST',
+  'MCP_HTTP_PORT',
 ] as const;
 
 /** Error que sustituye a process.exit para capturar el fail-fast en tests. */
@@ -75,8 +78,19 @@ describe('loadConfig', () => {
     process.env.MCP_API_BASE_URL = 'http://localhost:3001';
     process.env.MCP_ACTOR_ID = 'jefe@demo.local';
     const config = loadConfig();
+    assert.equal(config.transport, 'stdio');
     assert.equal(config.baseUrl, 'http://localhost:3001');
     assert.deepEqual(config.identity, { mode: 'dev-header', actorId: 'jefe@demo.local' });
+    assert.equal(config.http, undefined);
+  });
+
+  it('transport es stdio por defecto cuando MCP_TRANSPORT no es "http"', () => {
+    process.env.MCP_API_BASE_URL = 'http://localhost:3001';
+    process.env.MCP_ACTOR_ID = 'jefe@demo.local';
+    process.env.MCP_TRANSPORT = 'otro';
+    assert.equal(loadConfig().transport, 'stdio');
+    process.env.MCP_TRANSPORT = 'STDIO';
+    assert.equal(loadConfig().transport, 'stdio');
   });
 
   it('trata cualquier modo distinto de "jwt" como dev-header', () => {
@@ -141,6 +155,60 @@ describe('loadConfig', () => {
     process.env.MCP_API_BASE_URL = 'http://localhost:3001';
     process.env.MCP_AUTH_MODE = 'jwt';
     process.env.MCP_LOGIN_IDENTIFIER = 'user@demo';
+    assert.throws(() => loadConfig(), (e: unknown) => e instanceof ExitError && e.code === 1);
+  });
+});
+
+describe('loadConfig (transporte http)', () => {
+  it('selecciona http con MCP_TRANSPORT=http y exige solo MCP_API_BASE_URL', () => {
+    process.env.MCP_API_BASE_URL = 'http://localhost:3001';
+    process.env.MCP_TRANSPORT = 'http';
+    // NO se define MCP_ACTOR_ID ni ninguna credencial: http no las exige.
+    const config = loadConfig();
+    assert.equal(config.transport, 'http');
+    assert.equal(config.baseUrl, 'http://localhost:3001');
+    assert.deepEqual(config.identity, { mode: 'http' });
+  });
+
+  it('usa host 0.0.0.0 y puerto 3002 por defecto en http', () => {
+    process.env.MCP_API_BASE_URL = 'http://localhost:3001';
+    process.env.MCP_TRANSPORT = 'http';
+    const config = loadConfig();
+    assert.deepEqual(config.http, { host: '0.0.0.0', port: 3002 });
+  });
+
+  it('respeta MCP_HTTP_HOST y MCP_HTTP_PORT explícitos', () => {
+    process.env.MCP_API_BASE_URL = 'http://localhost:3001';
+    process.env.MCP_TRANSPORT = 'http';
+    process.env.MCP_HTTP_HOST = '127.0.0.1';
+    process.env.MCP_HTTP_PORT = '4000';
+    const config = loadConfig();
+    assert.deepEqual(config.http, { host: '127.0.0.1', port: 4000 });
+  });
+
+  it('sigue exigiendo MCP_API_BASE_URL en http (exit 1 si falta)', () => {
+    process.env.MCP_TRANSPORT = 'http';
+    assert.throws(() => loadConfig(), (e: unknown) => e instanceof ExitError && e.code === 1);
+  });
+
+  it('falla (exit 1) con MCP_HTTP_PORT no numérico', () => {
+    process.env.MCP_API_BASE_URL = 'http://localhost:3001';
+    process.env.MCP_TRANSPORT = 'http';
+    process.env.MCP_HTTP_PORT = 'abc';
+    assert.throws(() => loadConfig(), (e: unknown) => e instanceof ExitError && e.code === 1);
+  });
+
+  it('falla (exit 1) con MCP_HTTP_PORT fuera de rango', () => {
+    process.env.MCP_API_BASE_URL = 'http://localhost:3001';
+    process.env.MCP_TRANSPORT = 'http';
+    process.env.MCP_HTTP_PORT = '70000';
+    assert.throws(() => loadConfig(), (e: unknown) => e instanceof ExitError && e.code === 1);
+  });
+
+  it('falla (exit 1) con MCP_HTTP_PORT no entero', () => {
+    process.env.MCP_API_BASE_URL = 'http://localhost:3001';
+    process.env.MCP_TRANSPORT = 'http';
+    process.env.MCP_HTTP_PORT = '3002.5';
     assert.throws(() => loadConfig(), (e: unknown) => e instanceof ExitError && e.code === 1);
   });
 });

@@ -33,3 +33,9 @@ export async function connectStdio(ctx: McpContext): Promise<void> {
   const transport = new StdioServerTransport();
   await ctx.server.connect(transport);
 }
+
+// El transporte HTTP vive en http/http-server.ts para no acoplar el armazón
+// stdio. Se re-exporta aquí para que index.ts sea el único llamador de
+// transportes.
+export { connectHttp } from './http/http-server.js';
+export type { HttpTransportHandle } from './http/http-server.js';

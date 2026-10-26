@@ -13,23 +13,26 @@ Internet
  Nginx (:80, único punto público)
    |  /        -> web  (Next.js, :3000, interno)
    |  /api/    -> api  (NestJS, :3001, interno)  [se quita el prefijo /api]
+   |  /mcp/    -> mcp  (MCP HTTP, :3002, interno) [se quita el prefijo /mcp]
    v
  api  ----> postgres (:5432, solo red interna de Compose)
+ mcp  ----> api (http://api:3001, solo red interna de Compose)
 ```
 
 - Solo **Nginx** publica un puerto al host (80; 443 cuando se configure HTTPS).
-- `web`, `api` y `postgres` **no** publican puertos al host.
+- `web`, `api`, `mcp` y `postgres` **no** publican puertos al host.
 - `api` se conecta a PostgreSQL por el nombre de servicio `postgres:5432`.
 - El navegador consume la API por el mismo dominio bajo `/api` (lo resuelve
   Nginx), por lo que normalmente **no hace falta CORS** en producción.
 
 Archivos:
 
-- `apps/api/Dockerfile`, `apps/web/Dockerfile` — multi-stage, Node 24
-  (`node:24-bookworm-slim`), usuario no-root, sin secretos en la imagen.
+- `apps/api/Dockerfile`, `apps/web/Dockerfile`, `apps/mcp/Dockerfile` —
+  multi-stage, Node 24 (`node:24-bookworm-slim`), usuario no-root, sin secretos
+  en la imagen.
 - `infra/nginx/nginx.conf` — reverse proxy (se monta en
   `/etc/nginx/conf.d/default.conf`).
-- `compose.prod.yaml` — orquesta nginx + web + api + postgres.
+- `compose.prod.yaml` — orquesta nginx + web + api + mcp + postgres.
 - `.env.production.example` — plantilla de variables (copiar a `.env.production`).
 
 El `compose.yaml` de la raíz sigue siendo **solo para desarrollo** y no se toca.
@@ -79,6 +82,12 @@ npm run docker:prod:migrate
 # 8. Validar
 curl http://localhost/            # Next.js (redirige a /catalogs)
 curl http://localhost/api/health  # NestJS -> { "status": "ok", ... }
+# MCP por red (requiere un token de usuario real; ver sección "MCP por red"):
+curl -i -X POST http://localhost/mcp/ \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"c","version":"0"}}}'
+#     Sin Authorization => HTTP 401 (correcto). Con "Authorization: Bearer <token>" => 200 + Mcp-Session-Id.
 ```
 
 Las migraciones usan `prisma migrate deploy` (nunca `migrate dev` en
@@ -115,6 +124,33 @@ una migración compensatoria. No se implementa blue/green todavía.
 `server` comentado de ejemplo para HTTPS. Para producción real: terminar TLS en
 Nginx con certificados de Let's Encrypt (Certbot), montando los certificados en
 el contenedor. **Nunca** versionar llaves privadas ni certificados.
+
+## MCP por red (`/mcp`)
+
+El servicio `mcp` expone el servidor Model Context Protocol por **HTTP
+(Streamable HTTP)** para que el equipo lo use por red sin instalar nada. Nginx
+lo publica en `/mcp` (quita el prefijo con la barra final de `proxy_pass`) y
+reenvía `Authorization` tal cual al upstream.
+
+- El servicio corre con `MCP_TRANSPORT=http`, `MCP_HTTP_PORT=3002`,
+  `MCP_API_BASE_URL=http://api:3001` (red interna de Compose) y
+  `MCP_AUTH_MODE=jwt`. **No publica puerto al host**: solo Nginx habla con él.
+- **Identidad por persona:** cada petición debe traer
+  `Authorization: Bearer <token>`. El MCP reenvía ese token al backend para esa
+  sesión; nunca se comparte identidad entre usuarios. Sin `Bearer` válido => 401.
+- Para la configuración del cliente Kiro (URL `http://<host>:<HTTP_PORT>/mcp` +
+  cabecera `Authorization: Bearer`) y cómo cada persona obtiene su token con
+  `POST /api/auth/login`, ver `apps/mcp/README.md` (sección "Transporte HTTP").
+
+Validación de la configuración de Nginx (sintaxis), con el stack levantado:
+
+```bash
+docker compose -f compose.prod.yaml --env-file .env.production exec nginx nginx -t
+```
+
+> Nota: `nginx -t` solo resuelve los nombres de upstream (`web`, `api`, `mcp`)
+> cuando corre dentro de la red de Compose con los servicios arriba; fuera de
+> ella fallará por DNS aunque la sintaxis sea correcta.
 
 ## Backups
 

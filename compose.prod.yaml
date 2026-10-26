@@ -102,12 +102,44 @@ services:
       retries: 5
       start_period: 20s
 
+  mcp:
+    build:
+      context: .
+      dockerfile: apps/mcp/Dockerfile
+    restart: unless-stopped
+    environment:
+      # Transporte por red. La identidad llega POR PETICION (Authorization:
+      # Bearer); no hay token a nivel de proceso. No se hornean secretos.
+      MCP_TRANSPORT: http
+      MCP_HTTP_PORT: "3002"
+      # El MCP habla con el API por el nombre del servicio en la red interna de
+      # compose (NO /api, NO localhost).
+      MCP_API_BASE_URL: http://api:3001
+      # En produccion la identidad es JWT (Bearer por persona).
+      MCP_AUTH_MODE: jwt
+    depends_on:
+      - api
+    # No se publica puerto al host: solo Nginx habla con el MCP (via /mcp).
+    # Healthcheck: comprueba que el listener HTTP acepta conexiones TCP. No hace
+    # una peticion MCP (requeriria un POST valido con sesion y Bearer).
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('net').connect(3002,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
     depends_on:
       - web
       - api
+      - mcp
     ports:
       # Unico punto publico.
       - "${HTTP_PORT:-80}:80"
