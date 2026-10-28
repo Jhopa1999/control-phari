@@ -87,6 +87,29 @@ el servidor de correo sin tocar `.env` ni reconstruir.
   entorno.
 - Relaciones: `updatedBy` → `User` (`onDelete: SetNull`).
 
+### AiGlobalConfig (`ai_global_config`)
+Configuración global de IA editable en runtime (fila única / singleton). El ADMIN enciende
+o apaga la IA y elige el modo de credenciales sin tocar código. Arranca apagada.
+- Campos clave: `enabled` (default `false`), `credentialMode` (`credential_mode`, default
+  `iam-role`; otro valor: `access-keys`), `awsAccessKeyId?` (`aws_access_key_id`),
+  `awsSecretAccessKeyCipher?` (`aws_secret_access_key_ciphertext`), `updatedByUserId?`
+  (`updated_by_user_id`).
+- En modo `access-keys` el secret se guarda **cifrado** (AES-256-GCM, formato
+  `iv.tag.ciphertext` base64) con la clave `SETTINGS_ENCRYPTION_KEY`; nunca en claro ni
+  devuelto al frontend. En modo `iam-role` no se guardan claves (el SDK resuelve el rol de
+  la instancia).
+- Relaciones: `updatedBy` → `User` (`onDelete: SetNull`, relación `AiGlobalConfigUpdatedBy`).
+
+### AiAgentConfig (`ai_agent_config`)
+Configuración por agente de IA (uno por `code`, p. ej. `TRIAGE`). Todo editable desde el
+Admin. Arranca apagado. No guarda secretos (las credenciales viven en `AiGlobalConfig`).
+- Campos clave: `code` (único), `displayName` (`display_name`), `enabled` (default
+  `false`), `region` (default `us-east-2`), `model`, `basePrompt` (`base_prompt`, texto),
+  `temperature` (default `0.2`), `maxTokens` (`max_tokens`, default `1024`), `timeoutMs`
+  (`timeout_ms`, default `20000`), `updatedByUserId?` (`updated_by_user_id`).
+- Restricciones/índices: `code` único e indexado.
+- Relaciones: `updatedBy` → `User` (`onDelete: SetNull`, relación `AiAgentConfigUpdatedBy`).
+
 
 ## Flujo de demanda
 
@@ -320,3 +343,6 @@ el service, por ejemplo: `ACTIVITY_CLASS`, `ISSUE_TYPE`, `RECORD_STATE`,
 14. `20261016050442_backfill_analitica_area` (SQL idempotente escrito a mano: crea el
     área `ANALITICA` y asigna a ella los procesos sin área)
 15. `20261016050516_make_process_area_required` (`area_id` pasa a `NOT NULL`)
+16. `20261021040316_activo_base_solicitudes` (añade `requests.asset_id` + FK a `assets`)
+17. `20261023023235_add_audit_event_query_indexes` (índices de lectura paginada de auditoría)
+18. `20261028010201_ai_config` (crea `ai_global_config` y `ai_agent_config`, aditiva)

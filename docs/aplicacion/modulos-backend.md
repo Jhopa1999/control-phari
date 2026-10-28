@@ -426,3 +426,40 @@ Administradores del sistema (`admin-users.controller.ts`), base `/admin/users`:
 Reglas clave: no se permite degradar al último administrador activo (`400`). El cambio se
 audita como `USER`. El flag `isAdmin` NO se expone en el DTO del módulo `user`, para que un
 `JEFE_AREA` no pueda autopromoverse.
+
+## ai — Agentes de IA (Fase 1: triage que sugiere)
+
+Integra IA (AWS Bedrock, familia Anthropic Claude) de forma **100% administrable desde la
+plataforma**: credenciales, encendido/apagado, modelo, región y prompt se gestionan desde
+el Admin, no desde código. La IA **arranca apagada**. El cliente de Bedrock vive aislado
+tras una interfaz (`bedrock.client.ts`, token de inyección `BEDROCK_CLIENT`), de modo que
+el resto del backend no depende del SDK y se puede sustituir por un doble en pruebas. El
+catálogo de modelos permitidos es una lista **cerrada** (`bedrock-model-catalog.ts`); un
+modelo fuera del catálogo → `400`.
+
+Configuración de IA (`ai-config.controller.ts`), base `/admin/ai`, solo `ADMIN`
+(`@UseGuards(CurrentUserGuard, RolesGuard)` + `@Roles(ADMIN)`, PATCH no PUT):
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| GET | `/admin/ai/config` | Estado global + lista de agentes. Nunca incluye el secret ni el ciphertext (solo `secretSet` y `accessKeyIdLast4`). |
+| PATCH | `/admin/ai/config` | Actualiza la configuración global (encendido, modo de credenciales, claves). Regla determinista del secret como en SMTP. |
+| GET | `/admin/ai/agents/:code` | Configuración de un agente por `code` (p. ej. `TRIAGE`). `404` si no existe. |
+| PATCH | `/admin/ai/agents/:code` | Actualiza un agente (encendido, región, modelo, prompt, temperatura, tokens, timeout). Valida el modelo contra el catálogo → `400`. |
+| POST | `/admin/ai/agents/:code/test` | Prueba la conexión con Bedrock; responde `{ ok, message }` sin secretos ni stack. En modo `access-keys` descifra el secret solo en ese momento; si falla → `{ ok:false }`. |
+
+Sugerencia de triage (`triage-suggestion.controller.ts`), base `/requests/:id`, roles
+`JEFE_AREA`, `LIDER_PROCESO`, `ADMIN`:
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| POST | `/requests/:id/ai/triage-suggestion` | Sugiere (no persiste) campos de triage, banda de prioridad `P1`–`P4` y posibles duplicados. Reutiliza el alcance por proceso (`404` fuera de alcance). Degrada: apagado → `409` sin invocar Bedrock, descifrado fallido → `409`, timeout → `503`, fallo de dependencia → `503`, salida no‑JSON o que no valida → `422`. Nunca persiste ni devuelve `500` con stack. |
+
+Reglas clave: el secret de AWS se guarda cifrado (AES‑256‑GCM, se reutiliza
+`settings-crypto.ts` de system-settings vía `ai-crypto.ts`, misma clave
+`SETTINGS_ENCRYPTION_KEY`); el contrato del secret es determinista (ausente conserva, no
+vacío cifra, `''` → `400`, `clearCredentials` limpia y no se combina con un secret no
+vacío). En modo `iam-role` no se guardan claves (el SDK resuelve el rol de la instancia).
+La sugerencia valida cada `suggested*Code` contra las maestras activas (code inválido →
+`null` + nota) y descarta duplicados cuyo `requestId` no estaba en el contexto. Los cambios
+de configuración se auditan como `AI_CONFIG`.

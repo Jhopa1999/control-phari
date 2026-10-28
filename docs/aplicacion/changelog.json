@@ -111,6 +111,15 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Se documento la paginacion real en servidor de GET /audit-events (page/pageSize <=100, respuesta { data, page, pageSize, total, hasMore } con el alcance por rol aplicado antes de paginar), el filtro action, los tres indices nuevos de AuditEvent por (campo, createdAt desc) y la pantalla /gobierno/auditoria con filtros Objeto/Accion y paginacion contra el servidor."
+    },
+    {
+      "timestamp": "2026-10-28T01:30:00Z",
+      "trigger_file": "apps/api/prisma/schema.prisma",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md"
+      ],
+      "summary": "Se documento el modulo ai (Fase 1): config de IA en /admin/ai/config y /admin/ai/agents/:code[/test] (solo ADMIN, sin exponer secretos) y POST /requests/:id/ai/triage-suggestion (sugiere sin persistir, roles de triage, degradacion 409/422/503), mas los modelos AiGlobalConfig (ai_global_config) y AiAgentConfig (ai_agent_config) y la migracion aditiva ai_config."
     }
   ]
 }

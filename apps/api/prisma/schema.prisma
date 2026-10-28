@@ -100,20 +100,20 @@ model Process {
 /// Identidad funcional de una persona del area. NO es credencial: no hay
 /// password, token ni sesion (la autenticacion real es una capa separada).
 model User {
-  id         String   @id @default(uuid()) @db.Uuid
-  identifier String
-  name       String
-  active     Boolean  @default(true)
+  id           String   @id @default(uuid()) @db.Uuid
+  identifier   String
+  name         String
+  active       Boolean  @default(true)
   // Hash bcrypt de la credencial, usado solo por la autenticacion real (JWT).
   // Nullable: dev-header no lo usa y las filas existentes no lo tienen; no es
   // credencial en modo dev. Nunca se expone en DTOs ni respuestas.
-  passwordHash String? @map("password_hash")
+  passwordHash String?  @map("password_hash")
   // Rol de SISTEMA/GLOBAL (design a). Admin tecnico independiente de los grants
   // por proceso: no se concede por Grant ni por proceso. Es la UNICA fuente de
   // RoleCode.ADMIN (load-actor). Default false, aditivo y back-compat.
-  isAdmin    Boolean  @default(false) @map("is_admin")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  isAdmin      Boolean  @default(false) @map("is_admin")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   grants      Grant[]
   auditEvents AuditEvent[]
@@ -123,8 +123,8 @@ model User {
   // User, por eso ambas relaciones Triage->User llevan `name`).
   triages                  Triage[]             @relation("TriageDecidedBy")
   triagesAsMainResponsible Triage[]             @relation("TriageMainResponsible")
-  priorityEvaluations PriorityEvaluation[]
-  approvals           Approval[]
+  priorityEvaluations      PriorityEvaluation[]
+  approvals                Approval[]
 
   // Fase 3 (plan): planes enviados/autorizados y tareas de las que es
   // responsable o que acepto. Cada relacion usa un `name` distinto porque hay
@@ -158,19 +158,26 @@ model User {
   // Fase 7 (gobierno de la demanda): decisiones de gate, faltantes a cargo,
   // validaciones ejecutadas/resueltas y bloqueos de Request. Cada relacion usa
   // `name` propio porque hay mas de una FK User por modelo (Prisma lo exige).
-  gateChecksDecided            GateCheck[]        @relation("GateCheckDecider")
-  gatePendingOwned             GatePendingItem[]  @relation("GatePendingOwner")
-  validationsExecuted          ValidationRecord[] @relation("ValidationExecutor")
-  validationsBlockingResolved  ValidationRecord[] @relation("ValidationBlockingResolver")
-  requestsBlocked              Request[]          @relation("RequestBlockedBy")
-  requestsBlockResolved        Request[]          @relation("RequestBlockedResolvedBy")
+  gateChecksDecided           GateCheck[]        @relation("GateCheckDecider")
+  gatePendingOwned            GatePendingItem[]  @relation("GatePendingOwner")
+  validationsExecuted         ValidationRecord[] @relation("ValidationExecutor")
+  validationsBlockingResolved ValidationRecord[] @relation("ValidationBlockingResolver")
+  requestsBlocked             Request[]          @relation("RequestBlockedBy")
+  requestsBlockResolved       Request[]          @relation("RequestBlockedResolvedBy")
 
   // Mail-fase1 (FEAT-002): tokens de un solo uso para reset de contrasena e
   // invitacion/activacion. Se borran en cascada si se elimina el usuario.
   // SmtpConfig: filas de configuracion SMTP actualizadas por este usuario (FK
   // updated_by_user_id, onDelete SetNull). Relacion inversa requerida por Prisma.
   smtpConfigsUpdated SmtpConfig[]
-  authTokens AuthToken[]
+  authTokens         AuthToken[]
+
+  // IA Fase 1 (FEAT-001): configuracion global y de agentes de IA actualizadas
+  // por este usuario. Dos modelos (AiGlobalConfig, AiAgentConfig) apuntan a User
+  // por updated_by_user_id, por eso cada relacion inversa lleva `name` propio
+  // (Prisma exige nombres distintos para desambiguar). onDelete SetNull.
+  aiGlobalConfigsUpdated AiGlobalConfig[] @relation("AiGlobalConfigUpdatedBy")
+  aiAgentConfigsUpdated  AiAgentConfig[]  @relation("AiAgentConfigUpdatedBy")
 
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
@@ -275,35 +282,35 @@ model AuditEvent {
 /// `operationalState` es un enum logico derivado/read-only: solo lo escribe el
 /// helper de transicion de RequestStateService, nunca un update/DTO libre.
 model Request {
-  id                    String    @id @default(uuid()) @db.Uuid
-  title                 String
-  registeredAt          DateTime  @default(now()) @map("registered_at")
-  requesterArea         String?   @map("requester_area")
-  requesterName         String?   @map("requester_name")
-  functionalOwner       String?   @map("functional_owner")
-  targetDate            DateTime? @map("target_date")
-  referenceUrl          String?   @map("reference_url")
-  expectedResult        String?   @map("expected_result")
-  mainProcessId         String    @map("main_process_id") @db.Uuid
-  operationalState      String    @default("REGISTRADA") @map("operational_state")
-  initialCommitmentDate DateTime? @map("initial_commitment_date")
-  changeJustification   String?   @map("change_justification")
+  id                      String    @id @default(uuid()) @db.Uuid
+  title                   String
+  registeredAt            DateTime  @default(now()) @map("registered_at")
+  requesterArea           String?   @map("requester_area")
+  requesterName           String?   @map("requester_name")
+  functionalOwner         String?   @map("functional_owner")
+  targetDate              DateTime? @map("target_date")
+  referenceUrl            String?   @map("reference_url")
+  expectedResult          String?   @map("expected_result")
+  mainProcessId           String    @map("main_process_id") @db.Uuid
+  operationalState        String    @default("REGISTRADA") @map("operational_state")
+  initialCommitmentDate   DateTime? @map("initial_commitment_date")
+  changeJustification     String?   @map("change_justification")
   // Activo base de la solicitud (P1, aditivo): activo sobre el que se trabaja la
   // solicitud; nullable hasta que la mesa lo asocie en el triage.
-  assetId               String?   @map("asset_id") @db.Uuid
+  assetId                 String?   @map("asset_id") @db.Uuid
   // Fase 7 (gobierno · design §2.5, aditivo): ruta proporcional del marco §6
   // (catalogo GOVERNANCE_ROUTE, nullable hasta que el lider la elija) y el flag
   // transversal de bloqueo (D-B7/MEDIUM-1). El bloqueo convive con
   // `operationalState` (no lo reemplaza) y aplica en cualquier etapa:
   // "Request bloqueada" = blockedAt != null AND blockedResolvedAt == null.
-  governanceRoute        String?   @map("governance_route")
-  blockedReason          String?   @map("blocked_reason")
-  blockedAt              DateTime? @map("blocked_at")
-  blockedByUserId        String?   @map("blocked_by_user_id") @db.Uuid
-  blockedResolvedAt      DateTime? @map("blocked_resolved_at")
-  blockedResolvedByUserId String?  @map("blocked_resolved_by_user_id") @db.Uuid
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  governanceRoute         String?   @map("governance_route")
+  blockedReason           String?   @map("blocked_reason")
+  blockedAt               DateTime? @map("blocked_at")
+  blockedByUserId         String?   @map("blocked_by_user_id") @db.Uuid
+  blockedResolvedAt       DateTime? @map("blocked_resolved_at")
+  blockedResolvedByUserId String?   @map("blocked_resolved_by_user_id") @db.Uuid
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
 
   mainProcess         Process              @relation("RequestMainProcess", fields: [mainProcessId], references: [id], onDelete: Restrict)
   participants        RequestParticipant[]
@@ -369,22 +376,22 @@ model RequestParticipant {
 /// Triage: clasificacion y decision de ruta (BR-004, SCR-04). Tabla 1:N por
 /// extensibilidad futura; en Fase 2 el gate solo admite un Triage por Request.
 model Triage {
-  id                   String   @id @default(uuid()) @db.Uuid
-  requestId            String   @map("request_id") @db.Uuid
-  routeCode            String?  @map("route_code")
-  demandTypeCode       String?  @map("demand_type_code")
-  criticalityCode      String?  @map("criticality_code")
-  sizeCode             String?  @map("size_code")
-  dataAvailabilityCode String?  @map("data_availability_code")
-  totalEffortHours     Int?     @map("total_effort_hours")
-  mainResponsibleUserId String? @map("main_responsible_user_id") @db.Uuid
-  decision             String
-  decidedAt            DateTime @default(now()) @map("decided_at")
-  decidedByUserId      String   @map("decided_by_user_id") @db.Uuid
-  dependencies         String?
-  notes                String?
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default(uuid()) @db.Uuid
+  requestId             String   @map("request_id") @db.Uuid
+  routeCode             String?  @map("route_code")
+  demandTypeCode        String?  @map("demand_type_code")
+  criticalityCode       String?  @map("criticality_code")
+  sizeCode              String?  @map("size_code")
+  dataAvailabilityCode  String?  @map("data_availability_code")
+  totalEffortHours      Int?     @map("total_effort_hours")
+  mainResponsibleUserId String?  @map("main_responsible_user_id") @db.Uuid
+  decision              String
+  decidedAt             DateTime @default(now()) @map("decided_at")
+  decidedByUserId       String   @map("decided_by_user_id") @db.Uuid
+  dependencies          String?
+  notes                 String?
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   request         Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
   decidedBy       User    @relation("TriageDecidedBy", fields: [decidedByUserId], references: [id], onDelete: Restrict)
@@ -1061,4 +1068,48 @@ model SmtpConfig {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("smtp_config")
+}
+
+/// Configuracion GLOBAL de IA (singleton: fila unica) — IA Fase 1 (FEAT-001).
+/// Permite al ADMIN encender/apagar la IA y elegir el modo de credenciales sin
+/// tocar codigo. En modo `access-keys` el secret se guarda CIFRADO (AES-256-GCM,
+/// formato iv.tag.ciphertext base64) en aws_secret_access_key_ciphertext; NUNCA
+/// en claro ni devuelto al frontend. En modo `iam-role` no se guardan claves (el
+/// SDK resuelve el rol de la instancia). Arranca APAGADA (enabled=false).
+model AiGlobalConfig {
+  id                       String   @id @default(uuid()) @db.Uuid
+  enabled                  Boolean  @default(false)
+  credentialMode           String   @default("iam-role") @map("credential_mode")
+  awsAccessKeyId           String?  @map("aws_access_key_id")
+  awsSecretAccessKeyCipher String?  @map("aws_secret_access_key_ciphertext")
+  updatedByUserId          String?  @map("updated_by_user_id") @db.Uuid
+  updatedBy                User?    @relation("AiGlobalConfigUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_global_config")
+}
+
+/// Configuracion por AGENTE de IA (uno por `code`, p. ej. TRIAGE) — IA Fase 1
+/// (FEAT-001). Todo es editable desde el Admin: modelo, region, prompt base,
+/// temperatura, tokens y timeout. Arranca APAGADO (enabled=false). No guarda
+/// secretos (las credenciales viven en AiGlobalConfig, un solo lugar).
+model AiAgentConfig {
+  id              String   @id @default(uuid()) @db.Uuid
+  code            String   @unique
+  displayName     String   @map("display_name")
+  enabled         Boolean  @default(false)
+  region          String   @default("us-east-2")
+  model           String
+  basePrompt      String   @map("base_prompt") @db.Text
+  temperature     Float    @default(0.2)
+  maxTokens       Int      @default(1024) @map("max_tokens")
+  timeoutMs       Int      @default(20000) @map("timeout_ms")
+  updatedByUserId String?  @map("updated_by_user_id") @db.Uuid
+  updatedBy       User?    @relation("AiAgentConfigUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([code])
+  @@map("ai_agent_config")
 }

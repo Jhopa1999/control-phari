@@ -18,6 +18,7 @@ import { config as loadEnv } from 'dotenv';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { hashPassword } from '../src/modules/auth/password-hash';
+import { DEFAULT_TRIAGE_MODEL } from '../src/modules/ai/bedrock-model-catalog';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 loadEnv({ path: path.resolve(here, '../../../.env') });
@@ -37,6 +38,41 @@ const prisma = new PrismaClient({ adapter });
 // que, con AUTH_MODE=jwt, POST /auth/login funcione con los usuarios dev. El
 // modo dev-header NO usa esta credencial (sigue resolviendo por X-Actor-Id).
 const DEV_PASSWORD = 'dev1234';
+
+// IA Fase 1 (FEAT-001): modelo semilla del agente de triage. Es el default del
+// catalogo cerrado (Claude Haiku); el ADMIN puede cambiarlo por cualquier otro
+// del catalogo desde la plataforma, sin tocar codigo.
+const TRIAGE_SEED_MODEL = DEFAULT_TRIAGE_MODEL;
+
+// Prompt base semilla del agente de triage. Instruye a la IA a SUGERIR (no
+// decidir): salida JSON estricta, elegir SOLO entre los codes provistos en el
+// contexto y referenciar SOLO los requestId del contexto como posibles
+// duplicados. Editable desde el Admin.
+const TRIAGE_BASE_PROMPT = [
+  'Eres un asistente de triage para un portal de gestion de demanda.',
+  'Tu tarea es SUGERIR (no decidir) la clasificacion de una solicitud a partir',
+  'de su ficha y del contexto que se te entrega. El humano confirma: tus',
+  'sugerencias son orientativas.',
+  '',
+  'Reglas estrictas:',
+  '- Responde UNICAMENTE con un objeto JSON valido, sin texto adicional, sin',
+  '  markdown y sin comentarios.',
+  '- Para cada campo suggested*Code elige EXCLUSIVAMENTE un code presente en',
+  '  catalogOptions de su maestra correspondiente; si ninguno aplica, usa null.',
+  '  No inventes codes.',
+  '- tentativePriorityBand debe ser uno de "P1", "P2", "P3", "P4" o null.',
+  '- possibleDuplicates solo puede referenciar requestId presentes en',
+  '  duplicateCandidates del contexto; no inventes solicitudes.',
+  '- missingInformation es una lista de textos breves con la informacion que',
+  '  falte para decidir.',
+  '',
+  'El objeto JSON debe tener exactamente estas claves:',
+  'suggestedRouteCode, suggestedDemandTypeCode, suggestedCriticalityCode,',
+  'suggestedSizeCode, suggestedDataAvailabilityCode (string o null),',
+  'tentativePriorityBand (string o null), priorityRationale (string),',
+  'possibleDuplicates (array de { requestId, title, confidence, reason }),',
+  'missingInformation (array de strings), model (string), agentCode (string).',
+].join('\n');
 
 // --- Datos sinteticos -------------------------------------------------------
 
@@ -424,6 +460,36 @@ async function main(): Promise<void> {
       create: { userId, roleId, processId, active: true },
     });
   }
+
+  // IA Fase 1 (FEAT-001): configuracion inicial APAGADA, idempotente. La IA no
+  // hace nada hasta que el ADMIN la encienda desde la plataforma.
+  // - AiGlobalConfig es singleton: no tiene clave natural, se resuelve por
+  //   findFirst y se crea solo si no existe (no se pisa lo que el admin cambie).
+  // - AiAgentConfig (code='TRIAGE') por code unico (upsert idempotente).
+  const existingAiGlobal = await prisma.aiGlobalConfig.findFirst();
+  if (!existingAiGlobal) {
+    await prisma.aiGlobalConfig.create({
+      data: { enabled: false, credentialMode: 'iam-role' },
+    });
+  }
+
+  await prisma.aiAgentConfig.upsert({
+    where: { code: 'TRIAGE' },
+    // Re-ejecutar no reactiva ni cambia la config que el admin haya tocado: solo
+    // asegura la existencia de la fila. Por eso update es vacio.
+    update: {},
+    create: {
+      code: 'TRIAGE',
+      displayName: 'Agente de triage',
+      enabled: false,
+      region: 'us-east-2',
+      model: TRIAGE_SEED_MODEL,
+      basePrompt: TRIAGE_BASE_PROMPT,
+      temperature: 0.2,
+      maxTokens: 1024,
+      timeoutMs: 20000,
+    },
+  });
 
   const [areas, roles, processes, users, grants] = await Promise.all([
     prisma.area.count(),
