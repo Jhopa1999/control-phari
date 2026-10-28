@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { AuditService } from '../audit/audit.service';
+import { MailService } from '../mail/mail.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import {
@@ -41,6 +42,13 @@ import { ListOccurrencesDto } from './dto/list-occurrences.dto';
 import { OccurrenceResponseDto } from './dto/occurrence-response.dto';
 import { PaginatedOccurrencesResponseDto } from './dto/paginated-occurrences-response.dto';
 import { CompleteOccurrenceDto } from './dto/complete-occurrence.dto';
+import { ComplianceQueryDto } from './dto/compliance-query.dto';
+import {
+  ComplianceByActivityDto,
+  ComplianceByResponsibleDto,
+  ComplianceMetricsDto,
+  ComplianceResponseDto,
+} from './dto/compliance-response.dto';
 
 /** Catalogo del tipo de actividad (sembrado por FEAT-001). */
 const ACTIVITY_TYPE_CATALOG = 'RECURRING_ACTIVITY_TYPE';
@@ -69,6 +77,12 @@ export interface OverdueResult {
   readonly occurrencesMarkedOverdue: number;
 }
 
+/** Resultado de una pasada de envio de recordatorios (FEAT-003). */
+export interface ReminderResult {
+  /** Ocurrencias para las que se intento el recordatorio en esta pasada. */
+  readonly remindersSent: number;
+}
+
 /**
  * Logica reutilizable del motor de actividades recurrentes (FEAT-001, design
  * §2). Sin crons ni HTTP aqui: el scheduler (cron) y el controller (endpoint
@@ -94,6 +108,7 @@ export class RecurringActivityService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly mail: MailService,
   ) {
     this.config = loadRecurringActivityConfig();
   }
@@ -162,6 +177,20 @@ export class RecurringActivityService {
         continue;
       }
 
+      // Las ocurrencias YA existentes de este conjunto de fechas (idempotencia):
+      // createMany skipDuplicates no dice cuales inserto, asi que calculamos las
+      // NUEVAS = targetDates - existentes, para avisar solo de las que nacen.
+      const existing = await this.prisma.recurringActivityOccurrence.findMany({
+        where: { activityId: activity.id, targetDate: { in: targetDates } },
+        select: { targetDate: true },
+      });
+      const existingKeys = new Set(
+        existing.map((o) => o.targetDate.getTime()),
+      );
+      const newDates = targetDates.filter(
+        (d) => !existingKeys.has(d.getTime()),
+      );
+
       const result = await this.prisma.recurringActivityOccurrence.createMany({
         data: targetDates.map((targetDate) => ({
           activityId: activity.id,
@@ -177,12 +206,148 @@ export class RecurringActivityService {
       });
 
       occurrencesCreated += result.count;
+
+      // Aviso "nueva" por cada ocurrencia recien nacida. El correo NO debe
+      // romper la generacion: degrada sin SMTP y cualquier fallo se registra y
+      // se ignora (la fila ya quedo creada).
+      for (const targetDate of newDates) {
+        await this.notifyOccurrence(activity, targetDate, 'nueva');
+      }
     }
 
     return {
       activitiesProcessed: activities.length,
       occurrencesCreated,
     };
+  }
+
+  /**
+   * Recorre las ocurrencias PENDIENTE/EN_CURSO cuyo dia objetivo esta dentro de
+   * la ventana de recordatorio (targetDate - hoy <= reminderDays) y que aun no
+   * tienen recordatorio enviado (reminderSentAt null), envia el aviso
+   * "recordatorio" y marca reminderSentAt. Idempotente: una segunda pasada no
+   * reenvia porque reminderSentAt ya quedo establecido. El correo degrada sin
+   * SMTP y nunca aborta el marcado.
+   */
+  async sendDueReminders(now: Date = new Date()): Promise<ReminderResult> {
+    const todayUtc = this.today(now);
+    const windowEnd = addDaysUtc(todayUtc, this.config.reminderDays);
+
+    const occurrences = await this.prisma.recurringActivityOccurrence.findMany({
+      where: {
+        status: {
+          in: [OccurrenceStatus.PENDIENTE, OccurrenceStatus.EN_CURSO],
+        },
+        reminderSentAt: null,
+        targetDate: { lte: windowEnd },
+        activity: { active: true },
+      },
+      include: { activity: true },
+    });
+
+    let remindersSent = 0;
+    for (const occurrence of occurrences) {
+      await this.notifyOccurrence(
+        occurrence.activity,
+        occurrence.targetDate,
+        'recordatorio',
+      );
+      // Marca el recordatorio como enviado aunque el SMTP degrade: el aviso se
+      // "intento" y no debe reintentarse en cada pasada (idempotencia por marca).
+      await this.prisma.recurringActivityOccurrence.update({
+        where: { id: occurrence.id },
+        data: { reminderSentAt: now },
+      });
+      remindersSent += 1;
+    }
+
+    return { remindersSent };
+  }
+
+  /**
+   * Resuelve los destinatarios de una definicion y envia el aviso por correo de
+   * una ocurrencia (FEAT-003). Responsable USER -> la persona (identifier es el
+   * correo); responsable AREA -> usuarios distintos con grant ACTIVO en algun
+   * proceso de ESA area (regla inversa). Degrada sin SMTP y captura cualquier
+   * error para no romper la generacion ni el recordatorio.
+   */
+  private async notifyOccurrence(
+    activity: ActivityRow,
+    targetDate: Date,
+    kind: 'nueva' | 'recordatorio',
+  ): Promise<void> {
+    try {
+      const recipients = await this.resolveRecipients(activity);
+      if (recipients.length === 0) {
+        return;
+      }
+      const activityUrl = this.recurringActivitiesUrl();
+      const targetDateLabel = targetDate.toISOString().slice(0, 10);
+      for (const recipient of recipients) {
+        await this.mail.sendRecurringActivityNotice({
+          to: recipient.identifier,
+          name: recipient.name,
+          kind,
+          activityTitle: activity.title,
+          targetDateLabel,
+          activityUrl,
+        });
+      }
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo enviar el aviso (${kind}) de la actividad ${activity.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  /**
+   * Destinatarios de una definicion: la persona responsable (USER) o los
+   * usuarios activos del area responsable (AREA, via grants activos en procesos
+   * de esa area). Usa el identifier como correo (patron de invitacion).
+   */
+  private async resolveRecipients(
+    activity: ActivityRow,
+  ): Promise<Array<{ identifier: string; name: string }>> {
+    if (
+      activity.responsibleKind === ResponsibleKind.USER &&
+      activity.responsibleUserId !== null
+    ) {
+      const user = await this.prisma.user.findFirst({
+        where: { id: activity.responsibleUserId, active: true },
+        select: { identifier: true, name: true },
+      });
+      return user ? [user] : [];
+    }
+    if (
+      activity.responsibleKind === ResponsibleKind.AREA &&
+      activity.responsibleAreaId !== null
+    ) {
+      const grants = await this.prisma.grant.findMany({
+        where: {
+          active: true,
+          process: { areaId: activity.responsibleAreaId },
+          user: { active: true },
+        },
+        select: { user: { select: { id: true, identifier: true, name: true } } },
+      });
+      const byId = new Map<string, { identifier: string; name: string }>();
+      for (const grant of grants) {
+        byId.set(grant.user.id, {
+          identifier: grant.user.identifier,
+          name: grant.user.name,
+        });
+      }
+      return Array.from(byId.values());
+    }
+    return [];
+  }
+
+  /** URL de la seccion de actividades recurrentes del frontend (APP_WEB_URL). */
+  private recurringActivitiesUrl(): string {
+    const base = (process.env.APP_WEB_URL ?? '').replace(/\/+$/, '');
+    return `${base}/actividades-recurrentes`;
   }
 
   /**
@@ -855,6 +1020,111 @@ export class RecurringActivityService {
     return this.toOccurrenceResponse(updated);
   }
 
+  // ----- Panel de cumplimiento (FEAT-003, JEFE_AREA/ADMIN) -----------------
+
+  /**
+   * Agrega el cumplimiento de las ocurrencias en una ventana de fechas (design
+   * FEAT-003). Solo JEFE_AREA/ADMIN: ADMIN sin restriccion; JEFE_AREA acotado a
+   * sus areas (por area responsable o por usuario responsable con grant alli).
+   * Clasifica cada ocurrencia en a tiempo / a destiempo / vencida / pendiente y
+   * devuelve totales mas desgloses por actividad y por responsable.
+   */
+  async getCompliance(
+    actor: CurrentActor,
+    filters: ComplianceQueryDto,
+  ): Promise<ComplianceResponseDto> {
+    if (!this.isManager(actor)) {
+      throw new ForbiddenException(
+        'Solo jefe de area o admin pueden ver el panel de cumplimiento.',
+      );
+    }
+
+    const areaIds = Array.from(await this.actorAreaIds(actor));
+    const scopeFilter = await this.buildOccurrenceScopeFilter(
+      actor,
+      'all',
+      areaIds,
+    );
+
+    const activityConditions: Prisma.RecurringActivityWhereInput[] = [scopeFilter];
+    if (filters.responsibleUserId !== undefined) {
+      activityConditions.push({ responsibleUserId: filters.responsibleUserId });
+    }
+    if (filters.responsibleAreaId !== undefined) {
+      activityConditions.push({ responsibleAreaId: filters.responsibleAreaId });
+    }
+
+    const where: Prisma.RecurringActivityOccurrenceWhereInput = {
+      activity: { AND: activityConditions },
+    };
+    const fromDate =
+      filters.from !== undefined ? this.toCalendarDate(filters.from) : null;
+    const toDate =
+      filters.to !== undefined ? this.toCalendarDate(filters.to) : null;
+    if (fromDate !== null || toDate !== null) {
+      where.targetDate = {};
+      if (fromDate !== null) where.targetDate.gte = fromDate;
+      if (toDate !== null) where.targetDate.lte = toDate;
+    }
+
+    const rows = await this.prisma.recurringActivityOccurrence.findMany({
+      where,
+      include: { activity: true },
+    });
+
+    const totals = emptyMetrics();
+    const byActivity = new Map<string, ComplianceByActivityDto>();
+    const byResponsible = new Map<string, ComplianceByResponsibleDto>();
+
+    for (const row of rows) {
+      const bucket = classifyOccurrence(row.status, row.completedAt, row.targetDate);
+      addToMetrics(totals, bucket);
+
+      // Agregado por actividad.
+      let activityRow = byActivity.get(row.activityId);
+      if (!activityRow) {
+        activityRow = {
+          activityId: row.activityId,
+          activityTitle: row.activity.title,
+          cadence: row.activity.cadence,
+          responsibleKind: row.activity.responsibleKind,
+          responsibleUserId: row.activity.responsibleUserId,
+          responsibleAreaId: row.activity.responsibleAreaId,
+          metrics: emptyMetrics(),
+        };
+        byActivity.set(row.activityId, activityRow);
+      }
+      addToMetrics(activityRow.metrics, bucket);
+
+      // Agregado por responsable (clave estable por kind + id).
+      const responsibleKey =
+        row.activity.responsibleKind === ResponsibleKind.USER
+          ? `USER:${row.activity.responsibleUserId ?? ''}`
+          : `AREA:${row.activity.responsibleAreaId ?? ''}`;
+      let responsibleRow = byResponsible.get(responsibleKey);
+      if (!responsibleRow) {
+        responsibleRow = {
+          responsibleKind: row.activity.responsibleKind,
+          responsibleUserId: row.activity.responsibleUserId,
+          responsibleAreaId: row.activity.responsibleAreaId,
+          metrics: emptyMetrics(),
+        };
+        byResponsible.set(responsibleKey, responsibleRow);
+      }
+      addToMetrics(responsibleRow.metrics, bucket);
+    }
+
+    return {
+      from: fromDate !== null ? fromDate.toISOString() : null,
+      to: toDate !== null ? toDate.toISOString() : null,
+      totals,
+      byActivity: Array.from(byActivity.values()).sort((a, b) =>
+        a.activityTitle.localeCompare(b.activityTitle),
+      ),
+      byResponsible: Array.from(byResponsible.values()),
+    };
+  }
+
   /** Valida f->t; 409 ConflictException si no esta permitida. */
   private assertOccurrenceTransition(from: string, to: OccurrenceStatus): void {
     if (!isOccurrenceStatus(from)) {
@@ -918,6 +1188,48 @@ export class RecurringActivityService {
     }
     throw new NotFoundException('La ocurrencia no existe o esta fuera de tu alcance.');
   }
+}
+
+/** Bucket de clasificacion de cumplimiento de una ocurrencia. */
+type ComplianceBucket = 'onTime' | 'late' | 'overdue' | 'pending';
+
+/** Metricas de cumplimiento en cero. */
+function emptyMetrics(): ComplianceMetricsDto {
+  return { onTime: 0, late: 0, overdue: 0, pending: 0, total: 0 };
+}
+
+/** Suma 1 al bucket correspondiente y al total. */
+function addToMetrics(metrics: ComplianceMetricsDto, bucket: ComplianceBucket): void {
+  metrics[bucket] += 1;
+  metrics.total += 1;
+}
+
+/**
+ * Clasifica una ocurrencia para el panel de cumplimiento: COMPLETADA a tiempo
+ * (completedAt <= targetDate) o a destiempo (completedAt > targetDate), VENCIDA
+ * = overdue, y PENDIENTE/EN_CURSO = pending. Las fechas son @db.Date a
+ * medianoche UTC; completedAt es un instante: "a tiempo" si el dia de completado
+ * no supera el dia objetivo (se compara al final del dia objetivo).
+ */
+function classifyOccurrence(
+  status: string,
+  completedAt: Date | null,
+  targetDate: Date,
+): ComplianceBucket {
+  if (status === OccurrenceStatus.COMPLETADA) {
+    if (completedAt === null) {
+      // Completada sin marca de tiempo: se cuenta como a tiempo (sin evidencia
+      // de retraso). No deberia ocurrir (complete siempre setea completedAt).
+      return 'onTime';
+    }
+    // Fin del dia objetivo (23:59:59.999 UTC) como limite de "a tiempo".
+    const deadline = targetDate.getTime() + 24 * 60 * 60 * 1000 - 1;
+    return completedAt.getTime() <= deadline ? 'onTime' : 'late';
+  }
+  if (status === OccurrenceStatus.VENCIDA) {
+    return 'overdue';
+  }
+  return 'pending';
 }
 
 /** Suma `days` dias a un Date de calendario (medianoche UTC) sin tocar la zona. */

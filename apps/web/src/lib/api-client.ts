@@ -169,6 +169,19 @@ export type OccurrenceStatus = RecurringOccurrence['status'];
 export type RecurringOccurrencesQuery = NonNullable<
   paths['/recurring-activities/occurrences']['get']['parameters']['query']
 >;
+// --- Actividades recurrentes (FEAT-003): panel de cumplimiento ---
+export type RecurringCompliance =
+  components['schemas']['ComplianceResponseDto'];
+export type RecurringComplianceMetrics =
+  components['schemas']['ComplianceMetricsDto'];
+export type RecurringComplianceByActivity =
+  components['schemas']['ComplianceByActivityDto'];
+export type RecurringComplianceByResponsible =
+  components['schemas']['ComplianceByResponsibleDto'];
+/** Query de GET /recurring-activities/compliance del contrato. */
+export type RecurringComplianceQuery = NonNullable<
+  paths['/recurring-activities/compliance']['get']['parameters']['query']
+>;
 // --- Administracion de sistema (rol ADMIN + SMTP en runtime) ---
 export type SmtpConfig = components['schemas']['SmtpConfigResponseDto'];
 export type UpdateSmtpConfig = components['schemas']['UpdateSmtpConfigDto'];

@@ -304,7 +304,9 @@ Instancia concreta de una definición para un día objetivo; es lo que una perso
 y marca como completada.
 - Campos clave: `activityId`, `targetDate` (`@db.Date`), `status` (valor lógico
   `OccurrenceStatus`, inicial `PENDIENTE`), `completedAt?`, `completedByUserId?`,
-  `completionComment?`, `periodLabel?` (etiqueta legible del período, p. ej. `2024-W03`).
+  `completionComment?`, `periodLabel?` (etiqueta legible del período, p. ej. `2024-W03`),
+  `reminderSentAt?` (marca de envío del recordatorio por correo; si está puesta, el cron
+  de recordatorio no reenvía).
 - Relaciones: `activity` (`onDelete: Cascade`), `completedBy` (`onDelete: Restrict`).
 - Unicidad: `(activityId, targetDate)` único — el motor genera con `skipDuplicates`, así
   que es idempotente y no duplica la ocurrencia de un mismo día.
@@ -363,3 +365,5 @@ de los activos.
 18. `20261028021002_recurring_activities` (actividades recurrentes: tablas
     `recurring_activities` y `recurring_activity_occurrences`, con un `CHECK` escrito a
     mano que garantiza exactamente un responsable —persona o área—)
+19. `20261028115118_occurrence_reminder_sent_at` (añade la columna aditiva
+    `reminder_sent_at` a `recurring_activity_occurrences` para los recordatorios por correo)

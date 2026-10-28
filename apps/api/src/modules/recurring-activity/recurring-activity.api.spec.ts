@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { MailService } from '../mail/mail.service';
 import { RecurringActivityService } from './recurring-activity.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
@@ -76,6 +77,12 @@ function createAuditMock(): AuditService & { record: jest.Mock } {
   };
 }
 
+function createMailMock(): MailService & { sendRecurringActivityNotice: jest.Mock } {
+  return {
+    sendRecurringActivityNotice: jest.fn().mockResolvedValue(undefined),
+  } as unknown as MailService & { sendRecurringActivityNotice: jest.Mock };
+}
+
 function actor(overrides: Partial<CurrentActor> = {}): CurrentActor {
   return {
     userId: 'actor-1',
@@ -139,7 +146,7 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
     withConfigEnv();
     prisma = createPrismaMock();
     audit = createAuditMock();
-    service = new RecurringActivityService(prisma, audit);
+    service = new RecurringActivityService(prisma, audit, createMailMock());
   });
 
   describe('createActivity (validaciones + gestion por area)', () => {

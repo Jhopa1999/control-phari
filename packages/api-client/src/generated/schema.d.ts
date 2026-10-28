@@ -1734,6 +1734,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/recurring-activities/compliance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Panel de cumplimiento: agregados a tiempo/destiempo/vencidas por actividad y responsable (jefe/admin). */
+        get: operations["RecurringActivityController_compliance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recurring-activities/{id}": {
         parameters: {
             query?: never;
@@ -4997,6 +5014,77 @@ export interface components {
              * @description Fecha de actualizacion.
              */
             updatedAt: string;
+        };
+        ComplianceMetricsDto: {
+            /** @description Completadas a tiempo (completedAt <= targetDate). */
+            onTime: number;
+            /** @description Completadas a destiempo (completedAt > targetDate). */
+            late: number;
+            /** @description Vencidas (estado VENCIDA, no completadas). */
+            overdue: number;
+            /** @description Pendientes o en curso dentro de plazo. */
+            pending: number;
+            /** @description Total de ocurrencias del grupo en la ventana. */
+            total: number;
+        };
+        ComplianceByActivityDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la definicion.
+             */
+            activityId: string;
+            /** @description Titulo de la definicion. */
+            activityTitle: string;
+            /** @description Cadencia de la definicion (Recurrence). */
+            cadence: string;
+            /** @description Tipo de responsable (USER/AREA). */
+            responsibleKind: string;
+            /**
+             * Format: uuid
+             * @description Usuario responsable (si USER).
+             */
+            responsibleUserId: string | null;
+            /**
+             * Format: uuid
+             * @description Area responsable (si AREA).
+             */
+            responsibleAreaId: string | null;
+            /** @description Metricas agregadas de la actividad. */
+            metrics: components["schemas"]["ComplianceMetricsDto"];
+        };
+        ComplianceByResponsibleDto: {
+            /** @description Tipo de responsable (USER/AREA). */
+            responsibleKind: string;
+            /**
+             * Format: uuid
+             * @description Usuario responsable (si USER).
+             */
+            responsibleUserId: string | null;
+            /**
+             * Format: uuid
+             * @description Area responsable (si AREA).
+             */
+            responsibleAreaId: string | null;
+            /** @description Metricas agregadas del responsable. */
+            metrics: components["schemas"]["ComplianceMetricsDto"];
+        };
+        ComplianceResponseDto: {
+            /**
+             * Format: date-time
+             * @description Inicio de la ventana aplicada (o null si abierta).
+             */
+            from: string | null;
+            /**
+             * Format: date-time
+             * @description Fin de la ventana aplicada (o null si abierta).
+             */
+            to: string | null;
+            /** @description Totales de toda la ventana en alcance. */
+            totals: components["schemas"]["ComplianceMetricsDto"];
+            /** @description Desglose por actividad. */
+            byActivity: components["schemas"]["ComplianceByActivityDto"][];
+            /** @description Desglose por responsable. */
+            byResponsible: components["schemas"]["ComplianceByResponsibleDto"][];
         };
         UpdateRecurringActivityDto: {
             /** @description Titulo de la actividad. */
@@ -10736,6 +10824,40 @@ export interface operations {
             };
             /** @description Responsable incoherente o fechas invalidas. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecurringActivityController_compliance: {
+        parameters: {
+            query?: {
+                responsibleAreaId?: string;
+                responsibleUserId?: string;
+                /** @description Dia objetivo hasta (inclusive). */
+                to?: string;
+                /** @description Dia objetivo desde (inclusive). */
+                from?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Agregados de cumplimiento. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComplianceResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

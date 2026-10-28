@@ -1,5 +1,6 @@
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { MailService } from '../mail/mail.service';
 import { RecurringActivityService } from './recurring-activity.service';
 import { OccurrenceStatus } from './occurrence-status';
 import { Recurrence } from './recurrence';
@@ -7,6 +8,13 @@ import { Recurrence } from './recurrence';
 /** Audit mockeado: el motor (generacion/vencidas) no audita, pero el service lo requiere en el constructor. */
 function createAuditMock(): AuditService {
   return { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+}
+
+/** Mail mockeado: el aviso degrada sin SMTP; aqui solo cuenta las llamadas. */
+function createMailMock(): MailService & { sendRecurringActivityNotice: jest.Mock } {
+  return {
+    sendRecurringActivityNotice: jest.fn().mockResolvedValue(undefined),
+  } as unknown as MailService & { sendRecurringActivityNotice: jest.Mock };
 }
 
 /** Define las variables de entorno del motor para un test determinista. */
@@ -20,7 +28,11 @@ interface PrismaMock {
   recurringActivityOccurrence: {
     createMany: jest.Mock;
     updateMany: jest.Mock;
+    findMany: jest.Mock;
+    update: jest.Mock;
   };
+  user: { findFirst: jest.Mock };
+  grant: { findMany: jest.Mock };
 }
 
 function createPrismaMock(): PrismaService & PrismaMock {
@@ -29,7 +41,13 @@ function createPrismaMock(): PrismaService & PrismaMock {
     recurringActivityOccurrence: {
       createMany: jest.fn(),
       updateMany: jest.fn(),
+      // Por defecto no hay ocurrencias previas: todo targetDate es "nuevo".
+      findMany: jest.fn().mockResolvedValue([]),
+      update: jest.fn().mockResolvedValue({}),
     },
+    // Sin responsable resoluble por defecto: notifyOccurrence no envia nada.
+    user: { findFirst: jest.fn().mockResolvedValue(null) },
+    grant: { findMany: jest.fn().mockResolvedValue([]) },
   };
   return prisma as unknown as PrismaService & PrismaMock;
 }
@@ -62,7 +80,7 @@ describe('RecurringActivityService', () => {
   beforeEach(() => {
     withConfigEnv();
     prisma = createPrismaMock();
-    service = new RecurringActivityService(prisma, createAuditMock());
+    service = new RecurringActivityService(prisma, createAuditMock(), createMailMock());
   });
 
   describe('generateDueOccurrences (idempotencia por createMany skipDuplicates)', () => {

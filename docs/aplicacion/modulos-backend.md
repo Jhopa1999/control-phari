@@ -458,6 +458,14 @@ operaciones idempotentes que corren como crons in-process (`@nestjs/schedule`,
   `(activityId, targetDate)`; correrla dos veces no duplica.
 - Marcado de vencidas: pasa a VENCIDA las ocurrencias PENDIENTE/EN_CURSO cuyo
   `targetDate` ya quedó en el pasado (`updateMany` filtrado por estado, idempotente).
+- Recordatorios por correo: un tercer cron busca ocurrencias PENDIENTE/EN_CURSO cuyo día
+  objetivo está dentro de la ventana `RECURRING_ACTIVITY_REMINDER_DAYS` (por defecto 3) y
+  cuyo `reminderSentAt` sigue en `null`, envía el aviso y marca `reminderSentAt` (no
+  reenvía: idempotente por la marca). Al nacer una ocurrencia en la generación también se
+  envía un aviso "nueva". Ambos avisos reutilizan `MailService` y **degradan sin lanzar**
+  si no hay SMTP configurado, de modo que la generación y el recordatorio nunca se rompen.
+  Destinatarios: la persona responsable (USER) o, para responsable AREA, los usuarios con
+  grant activo en algún proceso de esa área (regla inversa).
 
 El "hoy" se calcula como el día local de la zona configurada
 (`RECURRING_ACTIVITY_TIMEZONE`, por defecto `America/Lima`), para no correr el día por la
@@ -473,6 +481,7 @@ La API REST se reparte en dos controllers delgados que delegan en el service:
 | POST | `/recurring-activities/run-generation` | Dispara manualmente la generación de ocurrencias debidas (solo ADMIN). |
 | POST | `/recurring-activities` | Crea una definición (JEFE_AREA/ADMIN). |
 | GET | `/recurring-activities` | Lista las definiciones gestionables por el actor (JEFE_AREA/ADMIN). |
+| GET | `/recurring-activities/compliance` | Panel de cumplimiento: agregados a tiempo/destiempo/vencidas por actividad y por responsable en un rango de fechas (JEFE_AREA/ADMIN). |
 | GET | `/recurring-activities/:id` | Detalle de una definición dentro de alcance. |
 | PATCH | `/recurring-activities/:id` | Edita una definición (datos, responsable, pausa). |
 | DELETE | `/recurring-activities/:id` | Pausa la definición (soft-delete `active=false`; no borra ni elimina ocurrencias). |
@@ -491,3 +500,10 @@ alcance/inexistente, `409` transición o responsable inválido, `400` DTO invál
 por rol. El tipo de actividad usa el catálogo `RECURRING_ACTIVITY_TYPE` (REPORTE,
 VALIDACION, REVISION) y se valida contra `CatalogItem`. Las mutaciones de definiciones y
 ocurrencias se auditan como `RECURRING_ACTIVITY` y `RECURRING_ACTIVITY_OCCURRENCE`.
+
+El panel de cumplimiento (`GET /recurring-activities/compliance`) calcula en el backend,
+por cada ocurrencia del rango, su clasificación: completada **a tiempo** (`completedAt`
+dentro del día objetivo), **a destiempo** (`completedAt` posterior), **vencida** (estado
+VENCIDA) o **pendiente** (PENDIENTE/EN_CURSO). Devuelve los totales de la ventana y los
+desgloses por actividad y por responsable. El alcance lo acota el service: ADMIN sin
+restricción; JEFE_AREA solo sus áreas.

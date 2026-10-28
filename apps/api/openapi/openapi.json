@@ -5975,6 +5975,68 @@
         ]
       }
     },
+    "/recurring-activities/compliance": {
+      "get": {
+        "operationId": "RecurringActivityController_compliance",
+        "parameters": [
+          {
+            "name": "responsibleAreaId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "responsibleUserId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Dia objetivo hasta (inclusive).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Dia objetivo desde (inclusive).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agregados de cumplimiento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplianceResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Panel de cumplimiento: agregados a tiempo/destiempo/vencidas por actividad y responsable (jefe/admin).",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
     "/recurring-activities/{id}": {
       "get": {
         "operationId": "RecurringActivityController_findOne",
@@ -12751,6 +12813,170 @@
           "active",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "ComplianceMetricsDto": {
+        "type": "object",
+        "properties": {
+          "onTime": {
+            "type": "number",
+            "description": "Completadas a tiempo (completedAt <= targetDate)."
+          },
+          "late": {
+            "type": "number",
+            "description": "Completadas a destiempo (completedAt > targetDate)."
+          },
+          "overdue": {
+            "type": "number",
+            "description": "Vencidas (estado VENCIDA, no completadas)."
+          },
+          "pending": {
+            "type": "number",
+            "description": "Pendientes o en curso dentro de plazo."
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de ocurrencias del grupo en la ventana."
+          }
+        },
+        "required": [
+          "onTime",
+          "late",
+          "overdue",
+          "pending",
+          "total"
+        ]
+      },
+      "ComplianceByActivityDto": {
+        "type": "object",
+        "properties": {
+          "activityId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador de la definicion."
+          },
+          "activityTitle": {
+            "type": "string",
+            "description": "Titulo de la definicion."
+          },
+          "cadence": {
+            "type": "string",
+            "description": "Cadencia de la definicion (Recurrence)."
+          },
+          "responsibleKind": {
+            "type": "string",
+            "description": "Tipo de responsable (USER/AREA)."
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario responsable (si USER)."
+          },
+          "responsibleAreaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Area responsable (si AREA)."
+          },
+          "metrics": {
+            "description": "Metricas agregadas de la actividad.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ComplianceMetricsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "activityId",
+          "activityTitle",
+          "cadence",
+          "responsibleKind",
+          "responsibleUserId",
+          "responsibleAreaId",
+          "metrics"
+        ]
+      },
+      "ComplianceByResponsibleDto": {
+        "type": "object",
+        "properties": {
+          "responsibleKind": {
+            "type": "string",
+            "description": "Tipo de responsable (USER/AREA)."
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario responsable (si USER)."
+          },
+          "responsibleAreaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Area responsable (si AREA)."
+          },
+          "metrics": {
+            "description": "Metricas agregadas del responsable.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ComplianceMetricsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "responsibleKind",
+          "responsibleUserId",
+          "responsibleAreaId",
+          "metrics"
+        ]
+      },
+      "ComplianceResponseDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Inicio de la ventana aplicada (o null si abierta)."
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fin de la ventana aplicada (o null si abierta)."
+          },
+          "totals": {
+            "description": "Totales de toda la ventana en alcance.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ComplianceMetricsDto"
+              }
+            ]
+          },
+          "byActivity": {
+            "description": "Desglose por actividad.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplianceByActivityDto"
+            }
+          },
+          "byResponsible": {
+            "description": "Desglose por responsable.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplianceByResponsibleDto"
+            }
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "totals",
+          "byActivity",
+          "byResponsible"
         ]
       },
       "UpdateRecurringActivityDto": {

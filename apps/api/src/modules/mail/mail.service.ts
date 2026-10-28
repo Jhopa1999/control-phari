@@ -5,6 +5,7 @@ import type { MailConfig } from './mail.config';
 import { MailConfigResolver } from './mail-config.resolver';
 import type {
   PasswordResetPayload,
+  RecurringActivityNoticePayload,
   UserInvitationPayload,
 } from './mail.types';
 /**
@@ -71,6 +72,42 @@ export class MailService {
     });
   }
   /**
+   * Envia el aviso de una ocurrencia de actividad recurrente (FEAT-003): al
+   * nacer la ocurrencia ("nueva") o cuando se acerca su dia objetivo
+   * ("recordatorio"). DEGRADA sin lanzar si no hay SMTP (igual que invitacion),
+   * para no romper la generacion ni el cron de recordatorio.
+   */
+  async sendRecurringActivityNotice(
+    payload: RecurringActivityNoticePayload,
+  ): Promise<void> {
+    const cfg = await this.resolver.resolve();
+    const subject =
+      payload.kind === 'nueva'
+        ? `Nueva actividad recurrente: ${payload.activityTitle}`
+        : `Recordatorio de actividad recurrente: ${payload.activityTitle}`;
+    const intro =
+      payload.kind === 'nueva'
+        ? `Tienes una nueva actividad recurrente pendiente para el ${payload.targetDateLabel}.`
+        : `Te recordamos que la actividad recurrente vence el ${payload.targetDateLabel}.`;
+    const action = 'Ver mis actividades';
+    if (cfg === null) {
+      this.logDisabled(
+        `aviso de actividad recurrente (${payload.kind})`,
+        payload.to,
+        payload.activityUrl,
+      );
+      return;
+    }
+    await this.createTransport(cfg).sendMail({
+      from: this.formatFrom(cfg),
+      to: payload.to,
+      subject,
+      text: this.buildNoticeText(payload.name, intro, action, payload.activityUrl),
+      html: this.buildNoticeHtml(payload.name, intro, action, payload.activityUrl),
+    });
+  }
+
+  /**
    * Construye un transporter efimero para un envio concreto. Solo pasa `auth`
    * cuando hay usuario (relays sin autenticacion lo omiten).
    */
@@ -116,6 +153,42 @@ export class MailService {
       'Si no esperabas este correo, puedes ignorarlo.',
     ].join('\n');
   }
+  /** Cuerpo de texto plano del aviso de actividad recurrente (sin vigencia). */
+  private buildNoticeText(
+    name: string,
+    intro: string,
+    action: string,
+    url: string,
+  ): string {
+    return [
+      `Hola ${name},`,
+      '',
+      intro,
+      '',
+      `${action}: ${url}`,
+      '',
+      'Puedes marcarla como completada desde el portal.',
+    ].join('\n');
+  }
+
+  /** Cuerpo HTML del aviso de actividad recurrente (sin vigencia). */
+  private buildNoticeHtml(
+    name: string,
+    intro: string,
+    action: string,
+    url: string,
+  ): string {
+    return [
+      '<div style="font-family: Arial, Helvetica, sans-serif; color: #1f2937; line-height: 1.5;">',
+      `  <p>Hola ${name},</p>`,
+      `  <p>${intro}</p>`,
+      `  <p><a href="${url}" style="display: inline-block; padding: 10px 16px; background-color: #1d4ed8; color: #ffffff; text-decoration: none; border-radius: 6px;">${action}</a></p>`,
+      `  <p style="color: #6b7280; font-size: 13px;">Si el boton no funciona, copia y pega este enlace en tu navegador:<br /><a href="${url}">${url}</a></p>`,
+      '  <p style="color: #6b7280; font-size: 13px;">Puedes marcarla como completada desde el portal.</p>',
+      '</div>',
+    ].join('\n');
+  }
+
   /** Cuerpo HTML inline sobrio. */
   private buildHtml(
     name: string,

@@ -10,6 +10,7 @@ import { RecurringActivityService } from './recurring-activity.service';
 
 const GENERATION_JOB = 'recurring-activity:generation';
 const OVERDUE_JOB = 'recurring-activity:overdue';
+const REMINDER_JOB = 'recurring-activity:reminder';
 
 /**
  * Motor de tiempo in-process del modulo (FEAT-001, design §2). Registra dos
@@ -46,9 +47,12 @@ export class RecurringActivitySchedulerService
       this.runGeneration(),
     );
     this.registerJob(OVERDUE_JOB, config.overdueCron, () => this.runOverdue());
+    this.registerJob(REMINDER_JOB, config.reminderCron, () =>
+      this.runReminders(),
+    );
 
     this.logger.log(
-      `Scheduler de actividades recurrentes activo (generacion="${config.generationCron}", vencidas="${config.overdueCron}", tz="${config.timezone}").`,
+      `Scheduler de actividades recurrentes activo (generacion="${config.generationCron}", vencidas="${config.overdueCron}", recordatorios="${config.reminderCron}", tz="${config.timezone}").`,
     );
   }
 
@@ -61,7 +65,7 @@ export class RecurringActivitySchedulerService
       return;
     }
     // Detener los jobs en el apagado limpio para no dejar timers colgando.
-    for (const name of [GENERATION_JOB, OVERDUE_JOB]) {
+    for (const name of [GENERATION_JOB, OVERDUE_JOB, REMINDER_JOB]) {
       if (this.schedulerRegistry.doesExist('cron', name)) {
         this.schedulerRegistry.getCronJob(name).stop();
         this.schedulerRegistry.deleteCronJob(name);
@@ -99,6 +103,24 @@ export class RecurringActivitySchedulerService
     } catch (error) {
       this.logger.error(
         'Fallo el marcado de ocurrencias vencidas.',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
+
+  /**
+   * Ejecuta el envio de recordatorios por correo. try/catch como las demas: un
+   * fallo se registra pero no tumba el cron. Los correos degradan sin SMTP.
+   */
+  async runReminders(): Promise<void> {
+    try {
+      const result = await this.service.sendDueReminders();
+      this.logger.log(
+        `Recordatorios: ${result.remindersSent} ocurrencias notificadas.`,
+      );
+    } catch (error) {
+      this.logger.error(
+        'Fallo el envio de recordatorios de actividades recurrentes.',
         error instanceof Error ? error.stack : String(error),
       );
     }

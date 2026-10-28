@@ -130,6 +130,16 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Se documento la fase 2 de actividades recurrentes: la API REST de definiciones (CRUD con soft-delete) y de ocurrencias (listado por alcance mine/all, start y complete con comentario opcional) con autorizacion por alcance de area, la nueva clave de modulo recurring en MODULE_MATRIX (los tres roles para operar; gestion acotada a JEFE_AREA/ADMIN) y la pantalla web /actividades-recurrentes (Que me toca + Gestion)."
+    },
+    {
+      "timestamp": "2026-10-28T12:00:00Z",
+      "trigger_file": "apps/api/src/modules/recurring-activity/recurring-activity.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Se documento la fase 3 de actividades recurrentes: avisos por correo al nacer la ocurrencia y cron de recordatorio idempotente (columna reminder_sent_at, migracion occurrence_reminder_sent_at, degradan sin SMTP), el endpoint GET /recurring-activities/compliance (agregados a tiempo/destiempo/vencidas por actividad y responsable) y la pestana Cumplimiento de la pantalla /actividades-recurrentes."
     }
   ]
 }

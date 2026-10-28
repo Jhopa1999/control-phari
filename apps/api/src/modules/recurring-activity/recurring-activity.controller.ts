@@ -8,12 +8,14 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBody,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -21,6 +23,8 @@ import { RecurringActivityService } from './recurring-activity.service';
 import { CreateRecurringActivityDto } from './dto/create-recurring-activity.dto';
 import { UpdateRecurringActivityDto } from './dto/update-recurring-activity.dto';
 import { RecurringActivityResponseDto } from './dto/recurring-activity-response.dto';
+import { ComplianceQueryDto } from './dto/compliance-query.dto';
+import { ComplianceResponseDto } from './dto/compliance-response.dto';
 import { CurrentActor } from '../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../auth/current-actor';
 import { CurrentUserGuard } from '../auth/current-user.guard';
@@ -68,6 +72,25 @@ export class RecurringActivityController {
     @Body() dto: CreateRecurringActivityDto,
   ) {
     return this.service.createActivity(actor, dto);
+  }
+
+  @Get('compliance')
+  @Roles(RoleCode.JEFE_AREA, RoleCode.ADMIN)
+  @ApiOperation({
+    summary:
+      'Panel de cumplimiento: agregados a tiempo/destiempo/vencidas por actividad y responsable (jefe/admin).',
+  })
+  @ApiQuery({ name: 'from', required: false, type: String, description: 'Dia objetivo desde (inclusive).' })
+  @ApiQuery({ name: 'to', required: false, type: String, description: 'Dia objetivo hasta (inclusive).' })
+  @ApiQuery({ name: 'responsibleUserId', required: false, type: String, format: 'uuid' })
+  @ApiQuery({ name: 'responsibleAreaId', required: false, type: String, format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Agregados de cumplimiento.', type: ComplianceResponseDto })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  compliance(
+    @CurrentActor() actor: CurrentActorType,
+    @Query() query: ComplianceQueryDto,
+  ) {
+    return this.service.getCompliance(actor, query);
   }
 
   @Get()

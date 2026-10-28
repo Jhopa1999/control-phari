@@ -1134,6 +1134,9 @@ model RecurringActivityOccurrence {
   completedByUserId String?  @map("completed_by_user_id") @db.Uuid
   completionComment String?  @map("completion_comment")
   periodLabel      String?   @map("period_label")
+  /// Marca de envio del recordatorio por correo (FEAT-003). Null = aun no se
+  /// envio; una vez puesto, el cron de recordatorio no reenvia (idempotencia).
+  reminderSentAt   DateTime? @map("reminder_sent_at")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 

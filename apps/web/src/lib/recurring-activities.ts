@@ -4,6 +4,8 @@ import {
   type CreateRecurringActivity,
   type PaginatedRecurringOccurrences,
   type RecurringActivity,
+  type RecurringCompliance,
+  type RecurringComplianceQuery,
   type RecurringOccurrence,
   type RecurringOccurrencesQuery,
   type UpdateRecurringActivity,
@@ -136,6 +138,25 @@ export async function updateActivity(
     const { data, error, response } = await api.PATCH(
       '/recurring-activities/{id}',
       { params: { path: { id } }, body: input },
+    );
+    if (error || !data) {
+      throw toApiError(response.status);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/** Panel de cumplimiento (GET /recurring-activities/compliance, jefe/admin). */
+export async function getCompliance(
+  query: RecurringComplianceQuery = {},
+): Promise<RecurringCompliance> {
+  try {
+    const { data, error, response } = await api.GET(
+      '/recurring-activities/compliance',
+      { params: { query } },
     );
     if (error || !data) {
       throw toApiError(response.status);

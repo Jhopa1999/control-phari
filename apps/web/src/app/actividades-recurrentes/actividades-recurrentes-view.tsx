@@ -46,6 +46,7 @@ import {
 import { recurrenceLabel, responsibleKindLabel } from '@/lib/status-labels';
 import { listUsers } from '@/lib/team';
 import { CompleteOccurrenceDialog } from './complete-occurrence-dialog';
+import { CompliancePanel } from './compliance-panel';
 import { DefinitionFormDialog } from './definition-form-dialog';
 import { OccurrenceDetailDialog } from './occurrence-detail-dialog';
 
@@ -472,9 +473,13 @@ export function ActividadesRecurrentesView(): React.ReactElement {
           <TabsList>
             <TabsTrigger value="mine">Qué me toca</TabsTrigger>
             <TabsTrigger value="manage">Gestión</TabsTrigger>
+            <TabsTrigger value="compliance">Cumplimiento</TabsTrigger>
           </TabsList>
           <TabsContent value="mine">{misActividades}</TabsContent>
           <TabsContent value="manage">{gestion}</TabsContent>
+          <TabsContent value="compliance">
+            <CompliancePanel users={users} areas={areas} />
+          </TabsContent>
         </Tabs>
       ) : (
         misActividades
