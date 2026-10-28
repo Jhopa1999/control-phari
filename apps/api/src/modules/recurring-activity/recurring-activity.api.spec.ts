@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -290,6 +290,42 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
         { responsibleKind: ResponsibleKind.USER, responsibleUserId: 'actor-1' },
         { responsibleKind: ResponsibleKind.AREA, responsibleAreaId: { in: ['area-A'] } },
       ]);
+    });
+
+    it('LIDER_PROCESO con grant ve sus ocurrencias con scope=mine (sin 403) y deriva el area del proceso', async () => {
+      // Regresion del bug "que me toca": un LIDER_PROCESO (sin JEFE_AREA ni
+      // ADMIN) con grant activo en un proceso debe poder consultar scope=mine.
+      // La pertenencia al area se deriva del grant por proceso (Process.areaId),
+      // no de un vinculo directo usuario-area.
+      prisma.process.findMany.mockResolvedValue([{ areaId: 'area-FIBI' }]);
+      const lider = actor({
+        userId: 'lider-1',
+        roleCodes: new Set([RoleCode.LIDER_PROCESO]),
+        scopedProcessIds: new Set(['proc-FIBI']),
+      });
+      await expect(
+        service.findOccurrences(lider, {} as never),
+      ).resolves.toBeDefined();
+      // Solo se consultan los procesos del propio actor para derivar su area.
+      expect(prisma.process.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: { in: ['proc-FIBI'] } } }),
+      );
+      const where = prisma.recurringActivityOccurrence.findMany.mock.calls[0][0].where;
+      expect(where.activity.AND[0].OR).toEqual([
+        { responsibleKind: ResponsibleKind.USER, responsibleUserId: 'lider-1' },
+        { responsibleKind: ResponsibleKind.AREA, responsibleAreaId: { in: ['area-FIBI'] } },
+      ]);
+    });
+
+    it('scope=all para un LIDER_PROCESO sigue siendo 403 (solo jefe/admin)', async () => {
+      const lider = actor({
+        userId: 'lider-1',
+        roleCodes: new Set([RoleCode.LIDER_PROCESO]),
+        scopedProcessIds: new Set(['proc-FIBI']),
+      });
+      await expect(
+        service.findOccurrences(lider, { scope: 'all' } as never),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('scope=all para ADMIN no acota por area', async () => {

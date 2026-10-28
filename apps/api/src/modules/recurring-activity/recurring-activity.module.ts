@@ -15,10 +15,20 @@ import { RecurringActivitySchedulerService } from './recurring-activity.schedule
  * mutaciones de definiciones y ocurrencias). ScheduleModule.forRoot() se
  * registra UNA sola vez en AppModule; aqui solo vive el scheduler service que
  * usa SchedulerRegistry.
+ *
+ * ORDEN DE CONTROLLERS (importante): OccurrenceController va PRIMERO. Sus rutas
+ * cuelgan de "recurring-activities/occurrences", mientras que
+ * RecurringActivityController expone "recurring-activities/:id". El router
+ * (Express) resuelve por orden de registro, asi que si el controller con ":id"
+ * se registrara antes, "GET /recurring-activities/occurrences" casaria con
+ * ":id" (= "occurrences") y nunca llegaria al listado de ocurrencias: un
+ * LIDER_PROCESO recibiria 403 (RolesGuard del :id, solo JEFE_AREA/ADMIN) y un
+ * jefe/admin un 400 (ParseUUIDPipe). Registrar la ruta estatica mas especifica
+ * antes que la parametrizada evita esa colision.
  */
 @Module({
   imports: [PrismaModule, AuthModule, AuditModule, MailModule],
-  controllers: [RecurringActivityController, OccurrenceController],
+  controllers: [OccurrenceController, RecurringActivityController],
   providers: [RecurringActivityService, RecurringActivitySchedulerService],
   exports: [RecurringActivityService],
 })
