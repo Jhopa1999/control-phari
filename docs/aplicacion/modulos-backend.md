@@ -116,7 +116,9 @@ sus flujos. Lectura con actor; escritura solo `JEFE_AREA`.
 
 Núcleo del flujo de demanda. Reúne la ficha de la solicitud y los subflujos de triage,
 priorización y aprobación. Accesible a los 3 roles con alcance por proceso principal;
-triage/priorización/aprobación exigen `JEFE_AREA` o `LIDER_PROCESO`.
+triage/priorización exigen `JEFE_AREA` o `LIDER_PROCESO`. En aprobación, la cola y el
+histórico los ven `JEFE_AREA` y `LIDER_PROCESO`, pero la **decisión** de aprobar o
+devolver es exclusiva de `JEFE_AREA`.
 
 ### Solicitud (`request.controller.ts`)
 
@@ -150,9 +152,9 @@ proceso; uno nuevo nace bajo el proceso principal de la solicitud. También `JEF
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/requests/pending-approval` | Cola de solicitudes en backlog priorizado del alcance. |
-| GET | `/requests/:id/approval` | Histórico de decisiones de compromiso. |
-| POST | `/requests/:id/approval` | Aprueba (→ *Comprometida*) o devuelve (→ *En triage*, motivo requerido). |
+| GET | `/requests/pending-approval` | Cola de solicitudes en backlog priorizado del alcance (`JEFE_AREA`/`LIDER_PROCESO`). |
+| GET | `/requests/:id/approval` | Histórico de decisiones de compromiso (`JEFE_AREA`/`LIDER_PROCESO`). |
+| POST | `/requests/:id/approval` | Aprueba (→ *Comprometida*) o devuelve (→ *En triage*, motivo requerido). **Solo `JEFE_AREA`** (un líder recibe `403`). |
 
 Reglas clave: el triage solo se registra desde `REGISTRADA`; priorizar exige triage con
 decisión "Continuar", un estado válido y un activo base asociado (sin `assetId` → `409`

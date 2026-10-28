@@ -73,7 +73,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 
 | Ruta | Pantalla | Qué permite hacer |
 | --- | --- | --- |
-| `/administracion/revision` | Aprobaciones | Cola de aprobación: aprobar el compromiso o devolver a triage (menú grupo *Demanda* como *Aprobaciones*, `review`). |
+| `/administracion/revision` | Aprobaciones | Cola de aprobación: solo `JEFE_AREA` puede aprobar el compromiso o devolver a triage; `LIDER_PROCESO` ve la cola en modo lectura (menú grupo *Demanda* como *Aprobaciones*, `review`). |
 | `/administracion/frameworks` | Controles | Ciclo de control de gobierno (gates GC1–GC5) y validaciones (menú grupo *Gobierno* como *Controles*, `frameworks`). |
 | `/administracion/maestras` | Maestras | Administrar las maestras/catálogos (`admin`); también marca activa la ruta `/catalogs`. |
 | `/administracion/areas` | Áreas | Crear y editar áreas organizativas (por ejemplo, Analítica) que agrupan procesos: listado, alta y edición de nombre/estado/orden. Solo rol ADMIN (`areas`). |

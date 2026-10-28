@@ -123,9 +123,13 @@ Dos guards, en este orden (`auth/current-user.guard.ts`, `auth/roles.guard.ts`):
    declarados; si no → `403`. Si no hay `@Roles`, deja pasar (el control fino queda al
    service).
 
-El `@Roles` puede estar a nivel de controller (todo el controller) o por endpoint. Por
-ejemplo, en `tasks` el ver/estado lo tienen los 3 roles, pero crear/editar/borrar exige
-`JEFE_AREA`/`LIDER_PROCESO`.
+El `@Roles` puede estar a nivel de controller (todo el controller) o por endpoint; el
+`RolesGuard` usa `getAllAndOverride`, de modo que el `@Roles` del método **sobreescribe**
+al de la clase. Por ejemplo, en `tasks` el ver/estado lo tienen los 3 roles, pero
+crear/editar/borrar exige `JEFE_AREA`/`LIDER_PROCESO`. En `approval`, la clase permite
+`JEFE_AREA`/`LIDER_PROCESO` (ver cola e histórico), pero `POST /requests/:id/approval`
+declara `@Roles(JEFE_AREA)`: la **decisión** de aprobar o devolver es exclusiva del jefe
+de área y un líder recibe `403`.
 
 ## Matriz de módulos (`auth/module-matrix.ts`)
 

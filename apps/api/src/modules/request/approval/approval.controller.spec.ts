@@ -2,6 +2,7 @@ import { ApprovalController } from './approval.controller';
 import { ApprovalService } from './approval.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
+import { ROLES_KEY } from '../../auth/roles.decorator';
 
 function actor(): CurrentActor {
   return {
@@ -43,5 +44,42 @@ describe('ApprovalController (delegacion)', () => {
     const dto = {} as never;
     await expect(controller.create(a, 'r1', dto)).resolves.toBe('create');
     expect(svc.create).toHaveBeenCalledWith(a, 'r1', dto);
+  });
+});
+
+/**
+ * Autorizacion por rol (regla de negocio): la DECISION de aprobar/devolver es
+ * exclusiva de JEFE_AREA, mientras que la lectura (cola e historico) sigue
+ * disponible para JEFE_AREA y LIDER_PROCESO. El RolesGuard aplica la metadata
+ * del metodo si existe (getAllAndOverride: metodo > clase), por lo que basta
+ * con afirmar la metadata declarada en cada nivel.
+ */
+describe('ApprovalController (autorizacion por rol)', () => {
+  it('la clase permite JEFE_AREA y LIDER_PROCESO (lectura)', () => {
+    const roles = Reflect.getMetadata(ROLES_KEY, ApprovalController) as
+      | RoleCode[]
+      | undefined;
+    expect(roles).toEqual([RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO]);
+  });
+
+  it('POST :id/approval es exclusivo de JEFE_AREA (sobreescribe la clase)', () => {
+    const roles = Reflect.getMetadata(
+      ROLES_KEY,
+      ApprovalController.prototype.create,
+    ) as RoleCode[] | undefined;
+    expect(roles).toEqual([RoleCode.JEFE_AREA]);
+  });
+
+  it('los GET (cola e historico) no sobreescriben el rol de la clase', () => {
+    const pending = Reflect.getMetadata(
+      ROLES_KEY,
+      ApprovalController.prototype.pendingApproval,
+    );
+    const history = Reflect.getMetadata(
+      ROLES_KEY,
+      ApprovalController.prototype.findForRequest,
+    );
+    expect(pending).toBeUndefined();
+    expect(history).toBeUndefined();
   });
 });

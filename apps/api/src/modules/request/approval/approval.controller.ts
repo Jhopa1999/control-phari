@@ -26,9 +26,12 @@ import { Roles } from '../../auth/roles.decorator';
 import { RoleCode } from '../../auth/role-code';
 
 /**
- * API REST de la aprobacion del compromiso (design §3.3). Rol: JEFE_AREA,
- * LIDER_PROCESO (capacidad `review`); alcance por proceso principal en el
- * service. La ruta estatica `pending-approval` se declara antes que `:id/...`.
+ * API REST de la aprobacion del compromiso (design §3.3). Lectura (cola e
+ * historico): JEFE_AREA y LIDER_PROCESO conservan visibilidad. La DECISION de
+ * aprobar/devolver (POST :id/approval) es EXCLUSIVA de JEFE_AREA: el
+ * @Roles a nivel de metodo sobreescribe el de la clase (RolesGuard usa
+ * getAllAndOverride). Alcance por proceso principal en el service. La ruta
+ * estatica `pending-approval` se declara antes que `:id/...`.
  */
 @ApiTags('approval')
 @Controller('requests')
@@ -59,12 +62,13 @@ export class ApprovalController {
   }
 
   @Post(':id/approval')
-  @ApiOperation({ summary: 'Aprueba (-> Comprometida) o devuelve (-> En triage, motivo req.).' })
+  @Roles(RoleCode.JEFE_AREA)
+  @ApiOperation({ summary: 'Aprueba (-> Comprometida) o devuelve (-> En triage, motivo req.). Solo JEFE_AREA.' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: CreateApprovalDto })
   @ApiResponse({ status: 201, description: 'Decision registrada.', type: ApprovalResponseDto })
   @ApiResponse({ status: 400, description: 'Devolver sin motivo u otros datos invalidos.' })
-  @ApiResponse({ status: 403, description: 'Rol insuficiente (sin review).' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente (la decision es exclusiva de JEFE_AREA).' })
   @ApiResponse({ status: 404, description: 'Solicitud fuera de alcance.' })
   @ApiResponse({ status: 409, description: 'La solicitud no esta en backlog priorizado.' })
   create(

@@ -45,6 +45,15 @@ export function RevisionView(): React.ReactElement {
   const { permissions, allowedModules } = useActor();
   const permissionsLoaded = permissions !== null;
   const reviewAllowed = allowedModules.has('review');
+  // La DECISION de aprobar/devolver es exclusiva del jefe de área (el backend
+  // exige @Roles(JEFE_AREA) en POST :id/approval). Los líderes conservan la
+  // visibilidad de la cola pero no ven las acciones. Gating cosmético: el
+  // backend es el control real (403 ante un líder). Mismo patrón que
+  // documentos-view.tsx.
+  const canDecide = React.useMemo(
+    () => (permissions?.grants ?? []).some((g) => g.roleCode === 'JEFE_AREA'),
+    [permissions],
+  );
   const [queue, setQueue] = React.useState<Request[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
   const [loadError, setLoadError] = React.useState<string | null>(null);
@@ -154,8 +163,9 @@ export function RevisionView(): React.ReactElement {
           }
         >
           <p className="text-muted-foreground">
-            Aprobar compromisos y autorizar planes corresponde al jefe de área y a los líderes de
-            proceso. El estado de cada solicitud se consulta en Solicitudes.
+            Aprobar compromisos es exclusivo del jefe de área; los líderes de proceso pueden
+            consultar la cola y autorizar planes. El estado de cada solicitud se consulta en
+            Solicitudes.
           </p>
         </InlineNotice>
       </PageLayout>
@@ -184,7 +194,9 @@ export function RevisionView(): React.ReactElement {
         }
       >
         <InlineNotice tone="info" className="py-2">
-          Aprobar lleva la solicitud a Comprometida; devolver la regresa a triage con un motivo.
+          {canDecide
+            ? 'Aprobar lleva la solicitud a Comprometida; devolver la regresa a triage con un motivo.'
+            : 'Solo el jefe de área puede aprobar o devolver. Aquí puedes consultar las solicitudes priorizadas pendientes de decisión.'}
         </InlineNotice>
         <PriorityLegend />
         <DataView
@@ -225,31 +237,35 @@ export function RevisionView(): React.ReactElement {
                       {formatDate(req.registeredAt)}
                     </TableCell>
                     <RowActionsCell>
-                      <RowActions
-                        rowLabel={req.title}
-                        actions={[
-                          {
-                            key: 'approve',
-                            label: 'Aprobar',
-                            onSelect: () => void handleApprove(req, index),
-                            busy: approvingId === req.id,
-                            busyLabel: 'Aprobando…',
-                            disabled: acting,
-                            placement: 'inline',
-                          },
-                          {
-                            key: 'return',
-                            label: 'Devolver',
-                            onSelect: () => {
-                              rowIndexRef.current = index;
-                              setDevolverError(null);
-                              setDevolver(req);
+                      {canDecide ? (
+                        <RowActions
+                          rowLabel={req.title}
+                          actions={[
+                            {
+                              key: 'approve',
+                              label: 'Aprobar',
+                              onSelect: () => void handleApprove(req, index),
+                              busy: approvingId === req.id,
+                              busyLabel: 'Aprobando…',
+                              disabled: acting,
+                              placement: 'inline',
                             },
-                            disabled: acting,
-                            placement: 'inline',
-                          },
-                        ]}
-                      />
+                            {
+                              key: 'return',
+                              label: 'Devolver',
+                              onSelect: () => {
+                                rowIndexRef.current = index;
+                                setDevolverError(null);
+                                setDevolver(req);
+                              },
+                              disabled: acting,
+                              placement: 'inline',
+                            },
+                          ]}
+                        />
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Solo lectura</span>
+                      )}
                     </RowActionsCell>
                   </TableRow>
                 );
