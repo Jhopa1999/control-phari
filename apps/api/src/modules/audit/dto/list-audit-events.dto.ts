@@ -36,6 +36,8 @@ export const OBJECT_TYPES = [
   'GATE_CHECK',
   'GATE_PENDING_ITEM',
   'VALIDATION_RECORD',
+  'RECURRING_ACTIVITY',
+  'RECURRING_ACTIVITY_OCCURRENCE',
 ] as const;
 
 /** Verbos de mutacion filtrables (design 1.2 / 4.2.1). */

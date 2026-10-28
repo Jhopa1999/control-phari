@@ -281,6 +281,36 @@ Registro de una prueba/validación con su evidencia.
 - Índices: por `requestId`, `gateCheckId`, `validationTypeCode`, `resultCode`,
   `blocking`, `blockingResolved`.
 
+## Actividades recurrentes
+
+### RecurringActivity (`recurring_activities`)
+
+Definición de una actividad que se repite con una cadencia (qué se repite y cada cuánto).
+- Campos clave: `title`, `description?`, `activityType` (código de la maestra
+  `RECURRING_ACTIVITY_TYPE`), `cadence` (valor lógico `Recurrence`), `intervalCount`
+  (cada cuántos períodos; por defecto 1), `startDate` (`@db.Date`, ancla de la cadencia),
+  `endDate?` (`@db.Date`), `anticipationDays?` (si es nulo, usa el default del entorno),
+  responsable (`responsibleKind` USER/AREA con `responsibleUserId?`/`responsibleAreaId?`),
+  `active`.
+- Relaciones: `responsibleUser`/`responsibleArea` (`onDelete: Restrict`), `occurrences`.
+- Regla de integridad: un `CHECK` garantiza **exactamente un responsable** (USER con
+  `responsibleUserId` y sin área, o AREA con `responsibleAreaId` y sin usuario).
+- Índices: por `active`, `responsibleUserId`, `responsibleAreaId`, `activityType`,
+  `cadence`.
+
+### RecurringActivityOccurrence (`recurring_activity_occurrences`)
+
+Instancia concreta de una definición para un día objetivo; es lo que una persona realiza
+y marca como completada.
+- Campos clave: `activityId`, `targetDate` (`@db.Date`), `status` (valor lógico
+  `OccurrenceStatus`, inicial `PENDIENTE`), `completedAt?`, `completedByUserId?`,
+  `completionComment?`, `periodLabel?` (etiqueta legible del período, p. ej. `2024-W03`).
+- Relaciones: `activity` (`onDelete: Cascade`), `completedBy` (`onDelete: Restrict`).
+- Unicidad: `(activityId, targetDate)` único — el motor genera con `skipDuplicates`, así
+  que es idempotente y no duplica la ocurrencia de un mismo día.
+- Índices: por `status`, `targetDate`, `(status, targetDate)`, `completedByUserId`,
+  `activityId`.
+
 ## Enums y estados (valores lógicos, no enums de Prisma)
 
 - **Roles** (`Role.code`, enum TypeScript `RoleCode`): `JEFE_AREA`, `LIDER_PROCESO`,
@@ -297,10 +327,18 @@ Registro de una prueba/validación con su evidencia.
 - **Estados de coordinación**: diarios/semanales `BORRADOR → ENVIADO` (con `REVISADO`);
   novedades y compromisos usan `EN_CURSO` como estado inicial de una máquina mínima
   reversible.
+- **Cadencia de actividad recurrente** (`RecurringActivity.cadence`, enum `Recurrence`):
+  `SEMANAL`, `MENSUAL`, `TRIMESTRAL`, `SEMESTRAL`, `ANUAL`.
+- **Tipo de responsable** (`RecurringActivity.responsibleKind`, enum `ResponsibleKind`):
+  `USER`, `AREA`.
+- **Estado de ocurrencia recurrente** (`RecurringActivityOccurrence.status`, enum
+  `OccurrenceStatus`): `PENDIENTE` inicial; `EN_CURSO`, `COMPLETADA` (terminal) y
+  `VENCIDA` (puede cerrarse tarde a `COMPLETADA`).
 
 Varios atributos se almacenan como **código de maestra** (`CatalogItem`) y se validan en
 el service, por ejemplo: `ACTIVITY_CLASS`, `ISSUE_TYPE`, `RECORD_STATE`,
-`GOVERNANCE_ROUTE` y los tipos/tecnologías/fuentes/frecuencias de los activos.
+`GOVERNANCE_ROUTE`, `RECURRING_ACTIVITY_TYPE` y los tipos/tecnologías/fuentes/frecuencias
+de los activos.
 
 ## Migraciones (`apps/api/prisma/migrations/`, en orden)
 
@@ -320,3 +358,8 @@ el service, por ejemplo: `ACTIVITY_CLASS`, `ISSUE_TYPE`, `RECORD_STATE`,
 14. `20261016050442_backfill_analitica_area` (SQL idempotente escrito a mano: crea el
     área `ANALITICA` y asigna a ella los procesos sin área)
 15. `20261016050516_make_process_area_required` (`area_id` pasa a `NOT NULL`)
+16. `20261021040316_activo_base_solicitudes`
+17. `20261023023235_add_audit_event_query_indexes`
+18. `20261028021002_recurring_activities` (actividades recurrentes: tablas
+    `recurring_activities` y `recurring_activity_occurrences`, con un `CHECK` escrito a
+    mano que garantiza exactamente un responsable —persona o área—)

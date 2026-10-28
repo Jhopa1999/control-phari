@@ -47,6 +47,9 @@ model Area {
 
   processes Process[]
 
+  // Actividades recurrentes cuyo responsable es ESTA area (responsibleKind=AREA).
+  recurringActivities RecurringActivity[] @relation("RecurringActivityResponsibleArea")
+
   @@unique([code], name: "area_code_unique")
   @@index([active])
   @@index([sortOrder])
@@ -171,6 +174,12 @@ model User {
   // updated_by_user_id, onDelete SetNull). Relacion inversa requerida por Prisma.
   smtpConfigsUpdated SmtpConfig[]
   authTokens AuthToken[]
+
+  // Actividades recurrentes (FEAT-001): definiciones cuyo responsable es ESTA
+  // persona (responsibleKind=USER) y ocurrencias que esta persona completo.
+  // Cada relacion usa `name` propio porque hay mas de una FK User por modelo.
+  recurringActivitiesResponsible RecurringActivity[]           @relation("RecurringActivityResponsibleUser")
+  recurringOccurrencesCompleted  RecurringActivityOccurrence[] @relation("RecurringOccurrenceCompletedBy")
 
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
@@ -1061,4 +1070,81 @@ model SmtpConfig {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("smtp_config")
+}
+
+/// DEFINICION de una actividad recurrente (FEAT-001, design §2). Describe QUE
+/// se repite y CON QUE cadencia; no es una tarea concreta. El motor
+/// (scheduler) materializa sus RecurringActivityOccurrence (OCURRENCIAS) a
+/// futuro dentro de la ventana de anticipacion. `cadence`/`responsibleKind`
+/// guardan el `code` de los enums logicos (recurrence.ts / responsible-kind.ts):
+/// solo el modulo recurring-activity los escribe. `startDate`/`endDate` son
+/// dias de calendario (@db.Date), sin hora ni zona. El responsable es
+/// EXACTAMENTE uno (persona USER o area AREA): lo garantiza un CHECK en la
+/// migracion ademas del helper logico.
+model RecurringActivity {
+  id          String  @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  /// Tipo de actividad (catalogo RECURRING_ACTIVITY_TYPE: REPORTE/VALIDACION/REVISION).
+  activityType String @map("activity_type")
+  /// Cadencia logica (Recurrence): SEMANAL/MENSUAL/TRIMESTRAL/SEMESTRAL/ANUAL.
+  cadence     String
+  /// Cada cuantos periodos se repite (p. ej. cada 2 semanas). >= 1.
+  intervalCount Int    @default(1) @map("interval_count")
+  /// Primer dia objetivo / ancla de la cadencia (dia de calendario).
+  startDate   DateTime  @map("start_date") @db.Date
+  /// Fin opcional de la recurrencia (inclusive). Null = sin fin.
+  endDate     DateTime? @map("end_date") @db.Date
+  /// Dias de anticipacion propios; si null el motor usa el default de ENV.
+  anticipationDays Int? @map("anticipation_days")
+  /// Tipo de responsable (ResponsibleKind): USER o AREA.
+  responsibleKind   String  @map("responsible_kind")
+  responsibleUserId String? @map("responsible_user_id") @db.Uuid
+  responsibleAreaId String? @map("responsible_area_id") @db.Uuid
+  /// Si false, el motor no genera nuevas ocurrencias (pausa sin borrar).
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  responsibleUser User? @relation("RecurringActivityResponsibleUser", fields: [responsibleUserId], references: [id], onDelete: Restrict)
+  responsibleArea Area? @relation("RecurringActivityResponsibleArea", fields: [responsibleAreaId], references: [id], onDelete: Restrict)
+  occurrences     RecurringActivityOccurrence[]
+
+  @@index([active])
+  @@index([responsibleUserId])
+  @@index([responsibleAreaId])
+  @@index([activityType])
+  @@index([cadence])
+  @@map("recurring_activities")
+}
+
+/// OCURRENCIA concreta de una actividad recurrente para un dia objetivo
+/// (FEAT-001, design §2). Es la unidad que una persona realiza y marca como
+/// completada. `status` guarda el `code` del enum logico OccurrenceStatus
+/// (occurrence-status.ts). `targetDate` es un dia de calendario (@db.Date). El
+/// par (activityId, targetDate) es UNICO: el motor genera con createMany
+/// skipDuplicates para ser idempotente y no duplicar la ocurrencia de un mismo
+/// dia. `periodLabel` es una etiqueta legible del periodo (p. ej. "2024-W03").
+model RecurringActivityOccurrence {
+  id         String   @id @default(uuid()) @db.Uuid
+  activityId String   @map("activity_id") @db.Uuid
+  targetDate DateTime @map("target_date") @db.Date
+  status     String   @default("PENDIENTE")
+  completedAt      DateTime? @map("completed_at")
+  completedByUserId String?  @map("completed_by_user_id") @db.Uuid
+  completionComment String?  @map("completion_comment")
+  periodLabel      String?   @map("period_label")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  activity    RecurringActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  completedBy User?             @relation("RecurringOccurrenceCompletedBy", fields: [completedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([activityId, targetDate], name: "recurring_occurrence_activity_target_unique")
+  @@index([status])
+  @@index([targetDate])
+  @@index([status, targetDate])
+  @@index([completedByUserId])
+  @@index([activityId])
+  @@map("recurring_activity_occurrences")
 }

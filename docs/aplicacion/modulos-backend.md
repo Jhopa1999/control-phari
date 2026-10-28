@@ -426,3 +426,50 @@ Administradores del sistema (`admin-users.controller.ts`), base `/admin/users`:
 Reglas clave: no se permite degradar al último administrador activo (`400`). El cambio se
 audita como `USER`. El flag `isAdmin` NO se expone en el DTO del módulo `user`, para que un
 `JEFE_AREA` no pueda autopromoverse.
+
+## recurring-activity — Actividades recurrentes (motor de tiempo)
+
+Gestiona las actividades que se repiten con una cadencia (reporte semanal a presidencia,
+validación semestral de OKR, etc.). Una **definición** (`RecurringActivity`) describe qué
+se repite y con qué cadencia; el **motor** materializa sus **ocurrencias**
+(`RecurringActivityOccurrence`), que son las instancias concretas con una fecha objetivo
+que alguien realiza y marca como completada.
+
+Helpers lógicos puros del dominio (mismo patrón que `task-status.ts`):
+
+- `recurrence.ts`: enum `Recurrence` (SEMANAL, MENSUAL, TRIMESTRAL, SEMESTRAL, ANUAL) y la
+  función pura `nextTargetDatesFrom(cadence, intervalCount, startDate, from, to)` que
+  calcula las fechas objetivo dentro de una ventana. Reglas de borde: SEMANAL conserva el
+  día de semana de `startDate`; la familia mensual avanza por meses anclando al día de
+  `startDate` y, si el mes destino no tiene ese día (p. ej. 31 o 29 de febrero), lo ancla
+  al último día del mes. Las fechas son días de calendario (`@db.Date`, medianoche UTC).
+- `occurrence-status.ts`: enum `OccurrenceStatus` (PENDIENTE, EN_CURSO, COMPLETADA,
+  VENCIDA) y sus transiciones permitidas; COMPLETADA es terminal, VENCIDA puede cerrarse
+  tarde a COMPLETADA.
+- `responsible-kind.ts`: enum `ResponsibleKind` (USER, AREA) y la validación "exactamente
+  un responsable" (persona o área, nunca ambos ni ninguno), espejo del CHECK de BD.
+
+Motor (`recurring-activity.service.ts` + `recurring-activity.scheduler.service.ts`): dos
+operaciones idempotentes que corren como crons in-process (`@nestjs/schedule`,
+`ScheduleModule.forRoot()` en `app.module.ts`):
+
+- Generación: por cada definición activa inserta las ocurrencias futuras dentro de su
+  ventana de anticipación con `createMany` + `skipDuplicates` sobre el par único
+  `(activityId, targetDate)`; correrla dos veces no duplica.
+- Marcado de vencidas: pasa a VENCIDA las ocurrencias PENDIENTE/EN_CURSO cuyo
+  `targetDate` ya quedó en el pasado (`updateMany` filtrado por estado, idempotente).
+
+El "hoy" se calcula como el día local de la zona configurada
+(`RECURRING_ACTIVITY_TIMEZONE`, por defecto `America/Lima`), para no correr el día por la
+zona del proceso. La configuración (zona, días de anticipación, expresiones cron e
+interruptor del motor) se lee del entorno con defaults seguros
+(`recurring-activity.config.ts`); con `RECURRING_ACTIVITY_SCHEDULER_ENABLED=false` el
+motor no registra crons.
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| POST | `/recurring-activities/run-generation` | Dispara manualmente la generación de ocurrencias debidas (solo ADMIN). |
+
+El tipo de actividad usa el catálogo `RECURRING_ACTIVITY_TYPE` (REPORTE, VALIDACION,
+REVISION). Las mutaciones de definiciones y ocurrencias se auditarán como
+`RECURRING_ACTIVITY` y `RECURRING_ACTIVITY_OCCURRENCE` (tipos ya reservados en auditoría).
