@@ -49,6 +49,8 @@ const OBJECT_TYPES = [
   'GATE_CHECK',
   'GATE_PENDING_ITEM',
   'VALIDATION_RECORD',
+  'RECURRING_ACTIVITY',
+  'RECURRING_ACTIVITY_OCCURRENCE',
 ] as const;
 
 /** Tipo del enum objectType tal como lo declara el contrato OpenAPI. */
@@ -65,7 +67,7 @@ type LocalObjectType = (typeof OBJECT_TYPES)[number];
  * tipo _EquivalenceDiff deja de ser `never` y Expect<...> FALLA el typecheck:mcp
  * a propósito (su constraint `T extends never` se viola). Esto obliga a revisar
  * y actualizar el z.enum cuando el contrato cambie (comportamiento deseado, no
- * un fallo). Hoy OBJECT_TYPES iguala el enum del contrato (27 valores).
+ * un fallo). Hoy OBJECT_TYPES iguala el enum del contrato (29 valores).
  */
 // Valores que están en un lado pero no en el otro; `never` si son equivalentes.
 type _EquivalenceDiff =

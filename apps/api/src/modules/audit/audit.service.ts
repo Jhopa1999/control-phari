@@ -48,7 +48,9 @@ export type AuditObjectType =
   | 'GATE_PENDING_ITEM'
   | 'VALIDATION_RECORD'
   | 'SMTP_CONFIG'
-  | 'AI_CONFIG';
+  | 'AI_CONFIG'
+  | 'RECURRING_ACTIVITY'
+  | 'RECURRING_ACTIVITY_OCCURRENCE';
 
 /** Verbos de mutacion registrados (design 1.2 / 4.2.1). */
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'REVOKE';

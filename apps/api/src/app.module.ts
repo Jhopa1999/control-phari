@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule } from 'nestjs-pino';
 import { buildLoggerModuleOptions } from './observability/logger.config';
 import { HealthModule } from './health/health.module';
@@ -18,10 +19,15 @@ import { GovernanceModule } from './modules/governance/governance.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
 import { AiModule } from './modules/ai/ai.module';
+import { RecurringActivityModule } from './modules/recurring-activity/recurring-activity.module';
 
 @Module({
   imports: [
     LoggerModule.forRoot(buildLoggerModuleOptions()),
+    // Motor in-process de tiempo (unico mecanismo de scheduling, sin colas).
+    // generate-openapi.ts crea la app sin init(), asi que esto no monta crons
+    // al generar OpenAPI.
+    ScheduleModule.forRoot(),
     HealthModule,
     AuthModule,
     AuditModule,
@@ -39,6 +45,7 @@ import { AiModule } from './modules/ai/ai.module';
     PortfolioModule,
     SystemSettingsModule,
     AiModule,
+    RecurringActivityModule,
   ],
 })
 export class AppModule {}

@@ -30,7 +30,8 @@ export type ModuleKey =
   | 'systemSettings'
   | 'areas'
   | 'processesAdmin'
-  | 'aiSettings';
+  | 'aiSettings'
+  | 'recurring';
 
 /**
  * Matriz de modulos -> roles permitidos. Reproduce LITERALMENTE la "Matriz de
@@ -96,6 +97,11 @@ export const MODULE_MATRIX: Record<ModuleKey, readonly RoleCode[]> = {
   // Configuracion de agentes de IA: SOLO ADMIN. Es configuracion tecnica del
   // sistema (credenciales Bedrock, modelos, agentes), fuera del alcance de area.
   aiSettings: [RoleCode.ADMIN],
+  // Actividades recurrentes: la OPERACION (ver "que me toca" y completar
+  // ocurrencias) es de los 3 roles de area; la GESTION de definiciones la
+  // acota el service a JEFE_AREA (su area) / ADMIN. La seccion web es visible
+  // para los 3 roles.
+  recurring: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
 };
 
 /** Todas las claves de modulo, en orden de declaracion. */

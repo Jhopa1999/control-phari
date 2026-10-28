@@ -159,6 +159,35 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Se documento que GET /admin/ai/config ahora tambien devuelve el catalogo de modelos permitidos (models: id/label/tier) para el selector del Admin, y el panel 'Sugerencia de IA' en la pantalla /demanda/triage (sugiere sin persistir, prefija los selects, muestra banda P1-P4 orientativa, duplicados e informacion faltante; degrada dejando el triage manual intacto)."
+    },
+    {
+      "timestamp": "2026-10-28T02:30:00Z",
+      "trigger_file": "apps/api/prisma/schema.prisma",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md"
+      ],
+      "summary": "Se documento la fase 1 de actividades recurrentes: modulo recurring-activity (helpers Recurrence/OccurrenceStatus/ResponsibleKind, motor idempotente con @nestjs/schedule y POST /recurring-activities/run-generation solo ADMIN), los modelos RecurringActivity y RecurringActivityOccurrence con su migracion y el CHECK de exactamente un responsable, el catalogo RECURRING_ACTIVITY_TYPE y los nuevos tipos de auditoria."
+    },
+    {
+      "timestamp": "2026-10-28T03:15:00Z",
+      "trigger_file": "apps/api/src/modules/recurring-activity/recurring-activity.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Se documento la fase 2 de actividades recurrentes: la API REST de definiciones (CRUD con soft-delete) y de ocurrencias (listado por alcance mine/all, start y complete con comentario opcional) con autorizacion por alcance de area, la nueva clave de modulo recurring en MODULE_MATRIX (los tres roles para operar; gestion acotada a JEFE_AREA/ADMIN) y la pantalla web /actividades-recurrentes (Que me toca + Gestion)."
+    },
+    {
+      "timestamp": "2026-10-28T12:00:00Z",
+      "trigger_file": "apps/api/src/modules/recurring-activity/recurring-activity.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Se documento la fase 3 de actividades recurrentes: avisos por correo al nacer la ocurrencia y cron de recordatorio idempotente (columna reminder_sent_at, migracion occurrence_reminder_sent_at, degradan sin SMTP), el endpoint GET /recurring-activities/compliance (agregados a tiempo/destiempo/vencidas por actividad y responsable) y la pestana Cumplimiento de la pantalla /actividades-recurrentes."
     }
   ]
 }

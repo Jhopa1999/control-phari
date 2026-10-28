@@ -345,6 +345,11 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
       label: 'P4 · Reserva de demanda, reformulacion o cierre motivado',
       sortOrder: 4,
     },
+    // RECURRING_ACTIVITY_TYPE (FEAT-001) - tipo de actividad recurrente. Seed
+    // inicial reversible (ampliable por gestion de maestras sin migracion).
+    { catalog: 'RECURRING_ACTIVITY_TYPE', code: 'REPORTE', label: 'Reporte', sortOrder: 1 },
+    { catalog: 'RECURRING_ACTIVITY_TYPE', code: 'VALIDACION', label: 'Validacion', sortOrder: 2 },
+    { catalog: 'RECURRING_ACTIVITY_TYPE', code: 'REVISION', label: 'Revision', sortOrder: 3 },
   ];
 
 // --- Ejecucion idempotente --------------------------------------------------

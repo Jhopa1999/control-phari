@@ -1,6 +1,7 @@
 import {
   BadgeCheck,
   Bot,
+  CalendarClock,
   CalendarDays,
   ChartColumn,
   ChartGantt,
@@ -68,7 +69,8 @@ export type ModuleKey =
   | 'systemSettings'
   | 'areas'
   | 'processesAdmin'
-  | 'aiSettings';
+  | 'aiSettings'
+  | 'recurring';
 
 export interface NavItem {
   href: string;
@@ -106,6 +108,12 @@ export const NAV_GROUPS: NavGroup[] = [
         moduleKey: 'assigned',
         icon: ListTodo,
         activeFor: ['/seguimiento/tareas'],
+      },
+      {
+        href: '/actividades-recurrentes',
+        label: 'Actividades recurrentes',
+        moduleKey: 'recurring',
+        icon: CalendarClock,
       },
     ],
   },
@@ -235,6 +243,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   areas: 'Áreas',
   processesAdmin: 'Procesos',
   aiSettings: 'Agentes de IA',
+  recurring: 'Actividades recurrentes',
 };
 
 /** Las 25 claves de módulo, sin repetidos, en el orden de MODULE_LABELS. */

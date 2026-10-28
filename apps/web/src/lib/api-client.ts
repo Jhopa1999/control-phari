@@ -146,6 +146,42 @@ export type ChangeDocumentStatus =
   components['schemas']['ChangeDocumentStatusDto'];
 /** Estado destino valido de un documento (DocStatus). */
 export type DocumentStatus = ChangeDocumentStatus['targetStatus'];
+// --- Actividades recurrentes (FEAT-002): tipos del contrato OpenAPI ---
+export type RecurringActivity =
+  components['schemas']['RecurringActivityResponseDto'];
+export type CreateRecurringActivity =
+  components['schemas']['CreateRecurringActivityDto'];
+export type UpdateRecurringActivity =
+  components['schemas']['UpdateRecurringActivityDto'];
+export type RecurringOccurrence =
+  components['schemas']['OccurrenceResponseDto'];
+export type PaginatedRecurringOccurrences =
+  components['schemas']['PaginatedOccurrencesResponseDto'];
+export type CompleteRecurringOccurrence =
+  components['schemas']['CompleteOccurrenceDto'];
+/** Cadencia de una actividad recurrente (Recurrence del backend). */
+export type RecurrenceCadence = CreateRecurringActivity['cadence'];
+/** Tipo de responsable de una definicion (ResponsibleKind). */
+export type ResponsibleKind = CreateRecurringActivity['responsibleKind'];
+/** Estado de una ocurrencia (OccurrenceStatus). */
+export type OccurrenceStatus = RecurringOccurrence['status'];
+/** Query de GET /recurring-activities/occurrences del contrato. */
+export type RecurringOccurrencesQuery = NonNullable<
+  paths['/recurring-activities/occurrences']['get']['parameters']['query']
+>;
+// --- Actividades recurrentes (FEAT-003): panel de cumplimiento ---
+export type RecurringCompliance =
+  components['schemas']['ComplianceResponseDto'];
+export type RecurringComplianceMetrics =
+  components['schemas']['ComplianceMetricsDto'];
+export type RecurringComplianceByActivity =
+  components['schemas']['ComplianceByActivityDto'];
+export type RecurringComplianceByResponsible =
+  components['schemas']['ComplianceByResponsibleDto'];
+/** Query de GET /recurring-activities/compliance del contrato. */
+export type RecurringComplianceQuery = NonNullable<
+  paths['/recurring-activities/compliance']['get']['parameters']['query']
+>;
 // --- Administracion de sistema (rol ADMIN + SMTP en runtime) ---
 export type SmtpConfig = components['schemas']['SmtpConfigResponseDto'];
 export type UpdateSmtpConfig = components['schemas']['UpdateSmtpConfigDto'];

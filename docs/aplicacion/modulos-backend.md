@@ -476,3 +476,84 @@ vacío). En modo `iam-role` no se guardan claves (el SDK resuelve el rol de la i
 La sugerencia valida cada `suggested*Code` contra las maestras activas (code inválido →
 `null` + nota) y descarta duplicados cuyo `requestId` no estaba en el contexto. Los cambios
 de configuración se auditan como `AI_CONFIG`.
+
+## recurring-activity — Actividades recurrentes (motor de tiempo)
+
+Gestiona las actividades que se repiten con una cadencia (reporte semanal a presidencia,
+validación semestral de OKR, etc.). Una **definición** (`RecurringActivity`) describe qué
+se repite y con qué cadencia; el **motor** materializa sus **ocurrencias**
+(`RecurringActivityOccurrence`), que son las instancias concretas con una fecha objetivo
+que alguien realiza y marca como completada.
+
+Helpers lógicos puros del dominio (mismo patrón que `task-status.ts`):
+
+- `recurrence.ts`: enum `Recurrence` (SEMANAL, MENSUAL, TRIMESTRAL, SEMESTRAL, ANUAL) y la
+  función pura `nextTargetDatesFrom(cadence, intervalCount, startDate, from, to)` que
+  calcula las fechas objetivo dentro de una ventana. Reglas de borde: SEMANAL conserva el
+  día de semana de `startDate`; la familia mensual avanza por meses anclando al día de
+  `startDate` y, si el mes destino no tiene ese día (p. ej. 31 o 29 de febrero), lo ancla
+  al último día del mes. Las fechas son días de calendario (`@db.Date`, medianoche UTC).
+- `occurrence-status.ts`: enum `OccurrenceStatus` (PENDIENTE, EN_CURSO, COMPLETADA,
+  VENCIDA) y sus transiciones permitidas; COMPLETADA es terminal, VENCIDA puede cerrarse
+  tarde a COMPLETADA.
+- `responsible-kind.ts`: enum `ResponsibleKind` (USER, AREA) y la validación "exactamente
+  un responsable" (persona o área, nunca ambos ni ninguno), espejo del CHECK de BD.
+
+Motor (`recurring-activity.service.ts` + `recurring-activity.scheduler.service.ts`): dos
+operaciones idempotentes que corren como crons in-process (`@nestjs/schedule`,
+`ScheduleModule.forRoot()` en `app.module.ts`):
+
+- Generación: por cada definición activa inserta las ocurrencias futuras dentro de su
+  ventana de anticipación con `createMany` + `skipDuplicates` sobre el par único
+  `(activityId, targetDate)`; correrla dos veces no duplica.
+- Marcado de vencidas: pasa a VENCIDA las ocurrencias PENDIENTE/EN_CURSO cuyo
+  `targetDate` ya quedó en el pasado (`updateMany` filtrado por estado, idempotente).
+- Recordatorios por correo: un tercer cron busca ocurrencias PENDIENTE/EN_CURSO cuyo día
+  objetivo está dentro de la ventana `RECURRING_ACTIVITY_REMINDER_DAYS` (por defecto 3) y
+  cuyo `reminderSentAt` sigue en `null`, envía el aviso y marca `reminderSentAt` (no
+  reenvía: idempotente por la marca). Al nacer una ocurrencia en la generación también se
+  envía un aviso "nueva". Ambos avisos reutilizan `MailService` y **degradan sin lanzar**
+  si no hay SMTP configurado, de modo que la generación y el recordatorio nunca se rompen.
+  Destinatarios: la persona responsable (USER) o, para responsable AREA, los usuarios con
+  grant activo en algún proceso de esa área (regla inversa).
+
+El "hoy" se calcula como el día local de la zona configurada
+(`RECURRING_ACTIVITY_TIMEZONE`, por defecto `America/Lima`), para no correr el día por la
+zona del proceso. La configuración (zona, días de anticipación, expresiones cron e
+interruptor del motor) se lee del entorno con defaults seguros
+(`recurring-activity.config.ts`); con `RECURRING_ACTIVITY_SCHEDULER_ENABLED=false` el
+motor no registra crons.
+
+La API REST se reparte en dos controllers delgados que delegan en el service:
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| POST | `/recurring-activities/run-generation` | Dispara manualmente la generación de ocurrencias debidas (solo ADMIN). |
+| POST | `/recurring-activities` | Crea una definición (JEFE_AREA/ADMIN). |
+| GET | `/recurring-activities` | Lista las definiciones gestionables por el actor (JEFE_AREA/ADMIN). |
+| GET | `/recurring-activities/compliance` | Panel de cumplimiento: agregados a tiempo/destiempo/vencidas por actividad y por responsable en un rango de fechas (JEFE_AREA/ADMIN). |
+| GET | `/recurring-activities/:id` | Detalle de una definición dentro de alcance. |
+| PATCH | `/recurring-activities/:id` | Edita una definición (datos, responsable, pausa). |
+| DELETE | `/recurring-activities/:id` | Pausa la definición (soft-delete `active=false`; no borra ni elimina ocurrencias). |
+| GET | `/recurring-activities/occurrences` | Lista ocurrencias por alcance (`scope=mine` por defecto; `all` solo JEFE_AREA/ADMIN). Filtros por estado, cadencia, tipo, rango de fechas y responsable; paginación `page/pageSize` (≤100). |
+| GET | `/recurring-activities/occurrences/:id` | Detalle de una ocurrencia dentro de alcance. |
+| POST | `/recurring-activities/occurrences/:id/start` | Toma una ocurrencia (PENDIENTE → EN_CURSO). |
+| POST | `/recurring-activities/occurrences/:id/complete` | Completa una ocurrencia; comentario/evidencia opcional. |
+
+Autorización por alcance (regla única de pertenencia a área): las áreas del actor se
+derivan de sus procesos con grant activo (`Process.areaId`), ya que el actor no expone
+áreas directamente. `scope=mine` devuelve las ocurrencias cuya definición tiene al actor
+como responsable USER o es de un área suya. La gestión de definiciones es libre para ADMIN
+y, para JEFE_AREA, solo si el área objetivo (o el área del usuario responsable, derivada
+con la misma consulta) está entre las suyas; si no, `403`. Errores: `404` fuera de
+alcance/inexistente, `409` transición o responsable inválido, `400` DTO inválido, `403`
+por rol. El tipo de actividad usa el catálogo `RECURRING_ACTIVITY_TYPE` (REPORTE,
+VALIDACION, REVISION) y se valida contra `CatalogItem`. Las mutaciones de definiciones y
+ocurrencias se auditan como `RECURRING_ACTIVITY` y `RECURRING_ACTIVITY_OCCURRENCE`.
+
+El panel de cumplimiento (`GET /recurring-activities/compliance`) calcula en el backend,
+por cada ocurrencia del rango, su clasificación: completada **a tiempo** (`completedAt`
+dentro del día objetivo), **a destiempo** (`completedAt` posterior), **vencida** (estado
+VENCIDA) o **pendiente** (PENDIENTE/EN_CURSO). Devuelve los totales de la ventana y los
+desgloses por actividad y por responsable. El alcance lo acota el service: ADMIN sin
+restricción; JEFE_AREA solo sus áreas.
