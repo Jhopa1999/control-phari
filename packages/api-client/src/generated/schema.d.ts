@@ -4846,22 +4846,6 @@ export interface components {
             /** @description true promueve a ADMIN de sistema; false degrada. */
             isAdmin: boolean;
         };
-        AiConfigResponseDto: Record<string, never>;
-        UpdateAiGlobalConfigDto: {
-            /** @description Enciende/apaga globalmente la IA. Por defecto arranca apagada. */
-            enabled?: boolean;
-            /**
-             * @description Modo de credenciales: 'iam-role' (rol de la instancia) o 'access-keys' (claves guardadas).
-             * @enum {string}
-             */
-            credentialMode?: "iam-role" | "access-keys";
-            /** @description AWS Access Key ID (solo modo access-keys). */
-            awsAccessKeyId?: string;
-            /** @description AWS Secret Access Key (write-only). Ausente conserva; no vacio cifra y reemplaza; cadena vacia es invalida (usar clearCredentials). */
-            awsSecretAccessKey?: string;
-            /** @description true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio. */
-            clearCredentials?: boolean;
-        };
         AiGlobalConfigResponseDto: {
             /** @description IA encendida globalmente. */
             enabled: boolean;
@@ -4898,6 +4882,40 @@ export interface components {
             timeoutMs: number;
             /** @description Ultima actualizacion (ISO) o null. */
             updatedAt: string | null;
+        };
+        AiModelCatalogEntryDto: {
+            /** @description ID del modelo de Bedrock (perfil de inferencia) invocable por el agente. */
+            id: string;
+            /** @description Nombre legible del modelo para el selector. */
+            label: string;
+            /**
+             * @description Categoria orientativa: default (recomendado), premium (mayor calidad) u other.
+             * @enum {string}
+             */
+            tier: "default" | "premium" | "other";
+        };
+        AiConfigResponseDto: {
+            /** @description Estado global de IA (encendido, modo de credenciales, secretSet, last4). */
+            global: components["schemas"]["AiGlobalConfigResponseDto"];
+            /** @description Agentes de IA configurados (Fase 1: TRIAGE). */
+            agents: components["schemas"]["AiAgentConfigResponseDto"][];
+            /** @description Catalogo cerrado de modelos de Bedrock permitidos para el selector del Admin. */
+            models: components["schemas"]["AiModelCatalogEntryDto"][];
+        };
+        UpdateAiGlobalConfigDto: {
+            /** @description Enciende/apaga globalmente la IA. Por defecto arranca apagada. */
+            enabled?: boolean;
+            /**
+             * @description Modo de credenciales: 'iam-role' (rol de la instancia) o 'access-keys' (claves guardadas).
+             * @enum {string}
+             */
+            credentialMode?: "iam-role" | "access-keys";
+            /** @description AWS Access Key ID (solo modo access-keys). */
+            awsAccessKeyId?: string;
+            /** @description AWS Secret Access Key (write-only). Ausente conserva; no vacio cifra y reemplaza; cadena vacia es invalida (usar clearCredentials). */
+            awsSecretAccessKey?: string;
+            /** @description true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio. */
+            clearCredentials?: boolean;
         };
         UpdateAiAgentConfigDto: {
             /** @description Enciende/apaga este agente. */

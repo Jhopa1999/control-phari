@@ -129,6 +129,15 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Se documento la nueva clave de modulo aiSettings (solo ADMIN; MODULE_MATRIX pasa a 25 claves, un JEFE_AREA ve todas menos systemSettings, areas y aiSettings) y el item de menu 'Agentes de IA' bajo Administracion (/administracion/ia), con el menu ahora en 27 items."
+    },
+    {
+      "timestamp": "2026-10-28T03:00:00Z",
+      "trigger_file": "apps/api/src/modules/ai/ai-config.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Se documento que GET /admin/ai/config ahora tambien devuelve el catalogo de modelos permitidos (models: id/label/tier) para el selector del Admin, y el panel 'Sugerencia de IA' en la pantalla /demanda/triage (sugiere sin persistir, prefija los selects, muestra banda P1-P4 orientativa, duplicados e informacion faltante; degrada dejando el triage manual intacto)."
     }
   ]
 }

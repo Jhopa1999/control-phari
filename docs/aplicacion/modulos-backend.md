@@ -442,7 +442,7 @@ Configuración de IA (`ai-config.controller.ts`), base `/admin/ai`, solo `ADMIN`
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/admin/ai/config` | Estado global + lista de agentes. Nunca incluye el secret ni el ciphertext (solo `secretSet` y `accessKeyIdLast4`). |
+| GET | `/admin/ai/config` | Estado global + lista de agentes + catálogo de modelos permitidos (`models`: `id`, `label`, `tier`) para alimentar el selector del Admin. Nunca incluye el secret ni el ciphertext (solo `secretSet` y `accessKeyIdLast4`). |
 | PATCH | `/admin/ai/config` | Actualiza la configuración global (encendido, modo de credenciales, claves). Regla determinista del secret como en SMTP. |
 | GET | `/admin/ai/agents/:code` | Configuración de un agente por `code` (p. ej. `TRIAGE`). `404` si no existe. |
 | PATCH | `/admin/ai/agents/:code` | Actualiza un agente (encendido, región, modelo, prompt, temperatura, tokens, timeout). Valida el modelo contra el catálogo → `400`. |

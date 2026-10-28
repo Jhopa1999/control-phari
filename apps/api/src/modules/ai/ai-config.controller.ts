@@ -7,20 +7,12 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RoleCode } from '../auth/role-code';
 import { AiConfigService } from './ai-config.service';
+import { AiConfigResponseDto } from './dto/ai-config-response.dto';
 import { AiGlobalConfigResponseDto } from './dto/ai-global-config-response.dto';
 import { AiAgentConfigResponseDto } from './dto/ai-agent-config-response.dto';
 import { AiConnectionTestDto } from './dto/ai-connection-test.dto';
 import { UpdateAiGlobalConfigDto } from './dto/update-ai-global-config.dto';
 import { UpdateAiAgentConfigDto } from './dto/update-ai-agent-config.dto';
-
-/**
- * Respuesta combinada de GET /admin/ai/config: estado global + lista de agentes.
- * Se declara como clase para que Swagger la tipe (nunca expone secretos).
- */
-class AiConfigResponseDto {
-  global!: AiGlobalConfigResponseDto;
-  agents!: AiAgentConfigResponseDto[];
-}
 
 /**
  * Administracion de la configuracion de IA en runtime (IA Fase 1, FEAT-001).

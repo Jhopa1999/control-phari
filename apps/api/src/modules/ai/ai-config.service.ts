@@ -13,7 +13,11 @@ import { AuditService } from '../audit/audit.service';
 // Nest no resuelve PrismaService al construir AppModule fuera de tsc.
 import { CurrentActor } from '../auth/current-actor';
 import { encryptSecret, decryptSecret } from './ai-crypto';
-import { assertModelAllowed } from './bedrock-model-catalog';
+import {
+  assertModelAllowed,
+  BEDROCK_MODEL_CATALOG_ENTRIES,
+} from './bedrock-model-catalog';
+import { AiConfigResponseDto } from './dto/ai-config-response.dto';
 import { BEDROCK_CLIENT, BedrockClient } from './bedrock.client';
 import { AiGlobalConfigResponseDto } from './dto/ai-global-config-response.dto';
 import { AiAgentConfigResponseDto } from './dto/ai-agent-config-response.dto';
@@ -78,11 +82,12 @@ export class AiConfigService {
     };
   }
 
-  /** Estado global + lista de agentes (nunca secretos). */
-  async getConfig(): Promise<{
-    global: AiGlobalConfigResponseDto;
-    agents: AiAgentConfigResponseDto[];
-  }> {
+  /**
+   * Estado global + lista de agentes + catalogo de modelos permitidos (nunca
+   * secretos). El catalogo se deriva de BEDROCK_MODEL_CATALOG para alimentar el
+   * selector del Admin sin duplicar la lista en el frontend.
+   */
+  async getConfig(): Promise<AiConfigResponseDto> {
     const [globalRow, agentRows] = await Promise.all([
       this.loadGlobal(),
       this.prisma.aiAgentConfig.findMany({ orderBy: { code: 'asc' } }),
@@ -90,6 +95,11 @@ export class AiConfigService {
     return {
       global: this.toGlobalResponse(globalRow),
       agents: agentRows.map((a) => this.toAgentResponse(a)),
+      models: BEDROCK_MODEL_CATALOG_ENTRIES.map((m) => ({
+        id: m.id,
+        label: m.label,
+        tier: m.tier,
+      })),
     };
   }
 

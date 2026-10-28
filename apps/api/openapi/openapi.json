@@ -12353,40 +12353,6 @@
           "isAdmin"
         ]
       },
-      "AiConfigResponseDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "UpdateAiGlobalConfigDto": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean",
-            "description": "Enciende/apaga globalmente la IA. Por defecto arranca apagada."
-          },
-          "credentialMode": {
-            "type": "string",
-            "enum": [
-              "iam-role",
-              "access-keys"
-            ],
-            "description": "Modo de credenciales: 'iam-role' (rol de la instancia) o 'access-keys' (claves guardadas)."
-          },
-          "awsAccessKeyId": {
-            "type": "string",
-            "description": "AWS Access Key ID (solo modo access-keys).",
-            "maxLength": 128
-          },
-          "awsSecretAccessKey": {
-            "type": "string",
-            "description": "AWS Secret Access Key (write-only). Ausente conserva; no vacio cifra y reemplaza; cadena vacia es invalida (usar clearCredentials)."
-          },
-          "clearCredentials": {
-            "type": "boolean",
-            "description": "true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio."
-          }
-        }
-      },
       "AiGlobalConfigResponseDto": {
         "type": "object",
         "properties": {
@@ -12482,6 +12448,95 @@
           "timeoutMs",
           "updatedAt"
         ]
+      },
+      "AiModelCatalogEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID del modelo de Bedrock (perfil de inferencia) invocable por el agente."
+          },
+          "label": {
+            "type": "string",
+            "description": "Nombre legible del modelo para el selector."
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "default",
+              "premium",
+              "other"
+            ],
+            "description": "Categoria orientativa: default (recomendado), premium (mayor calidad) u other."
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "tier"
+        ]
+      },
+      "AiConfigResponseDto": {
+        "type": "object",
+        "properties": {
+          "global": {
+            "description": "Estado global de IA (encendido, modo de credenciales, secretSet, last4).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AiGlobalConfigResponseDto"
+              }
+            ]
+          },
+          "agents": {
+            "description": "Agentes de IA configurados (Fase 1: TRIAGE).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiAgentConfigResponseDto"
+            }
+          },
+          "models": {
+            "description": "Catalogo cerrado de modelos de Bedrock permitidos para el selector del Admin.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiModelCatalogEntryDto"
+            }
+          }
+        },
+        "required": [
+          "global",
+          "agents",
+          "models"
+        ]
+      },
+      "UpdateAiGlobalConfigDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Enciende/apaga globalmente la IA. Por defecto arranca apagada."
+          },
+          "credentialMode": {
+            "type": "string",
+            "enum": [
+              "iam-role",
+              "access-keys"
+            ],
+            "description": "Modo de credenciales: 'iam-role' (rol de la instancia) o 'access-keys' (claves guardadas)."
+          },
+          "awsAccessKeyId": {
+            "type": "string",
+            "description": "AWS Access Key ID (solo modo access-keys).",
+            "maxLength": 128
+          },
+          "awsSecretAccessKey": {
+            "type": "string",
+            "description": "AWS Secret Access Key (write-only). Ausente conserva; no vacio cifra y reemplaza; cadena vacia es invalida (usar clearCredentials)."
+          },
+          "clearCredentials": {
+            "type": "boolean",
+            "description": "true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio."
+          }
+        }
       },
       "UpdateAiAgentConfigDto": {
         "type": "object",

@@ -25,6 +25,48 @@ export const BEDROCK_MODEL_CATALOG = [
 /** Tipo del `modelId` permitido (uno de los del catalogo cerrado). */
 export type BedrockModelId = (typeof BEDROCK_MODEL_CATALOG)[number];
 
+/** Categoria del modelo, para que el Admin reconozca el default/premium. */
+export type BedrockModelTier = 'default' | 'premium' | 'other';
+
+/** Entrada de catalogo lista para la UI: id invocable + nombre legible + tier. */
+export interface BedrockModelCatalogEntry {
+  /** `modelId` que invoca el SDK (perfil de inferencia cross-region). */
+  id: BedrockModelId;
+  /** Nombre legible para el selector del Admin. */
+  label: string;
+  /** Categoria orientativa (default = recomendado, premium = mayor calidad). */
+  tier: BedrockModelTier;
+}
+
+/**
+ * Metadatos de presentacion por `modelId`, derivados del catalogo cerrado. No
+ * agrega modelos ni cambia la fuente de verdad (`BEDROCK_MODEL_CATALOG`): solo
+ * acompana cada id con un nombre legible y su tier para el selector del Admin.
+ */
+const MODEL_PRESENTATION: Record<BedrockModelId, { label: string; tier: BedrockModelTier }> = {
+  'us.anthropic.claude-haiku-4-5-20251001-v1:0': {
+    label: 'Claude Haiku 4.5 (económico, recomendado)',
+    tier: 'default',
+  },
+  'us.anthropic.claude-sonnet-4-5-20250929-v1:0': {
+    label: 'Claude Sonnet 4.5 (mayor calidad)',
+    tier: 'premium',
+  },
+};
+
+/**
+ * Catalogo de modelos estructurado para alimentar el selector del Admin, en el
+ * mismo orden que `BEDROCK_MODEL_CATALOG`. Se deriva del catalogo cerrado para
+ * que la UI muestre nombres legibles sin duplicar la lista ni hardcodearla en el
+ * frontend.
+ */
+export const BEDROCK_MODEL_CATALOG_ENTRIES: readonly BedrockModelCatalogEntry[] =
+  BEDROCK_MODEL_CATALOG.map((id) => ({
+    id,
+    label: MODEL_PRESENTATION[id].label,
+    tier: MODEL_PRESENTATION[id].tier,
+  }));
+
 /**
  * Modelo por defecto del agente de triage (Claude Haiku). El seed lo usa como
  * valor inicial de `AiAgentConfig.model`; el Admin puede cambiarlo por cualquier
