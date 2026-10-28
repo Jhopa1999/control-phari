@@ -32,11 +32,11 @@ if (!connectionString || connectionString.trim() === '') {
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
-// Contrasena de desarrollo conocida para probar el login JWT en local. NO es
-// un secreto real: solo sirve en el seed sintetico (dominio demo.local) para
-// que, con AUTH_MODE=jwt, POST /auth/login funcione con los usuarios dev. El
-// modo dev-header NO usa esta credencial (sigue resolviendo por X-Actor-Id).
-const DEV_PASSWORD = 'dev1234';
+// Contrasena comun para los usuarios sembrados (equipo real + genericos de
+// respaldo). Pensada para arrancar las pruebas con el equipo; cada persona
+// deberia cambiarla al entrar. Con AUTH_MODE=jwt, POST /auth/login la usa; el
+// modo dev-header NO (sigue resolviendo por X-Actor-Id).
+const DEV_PASSWORD = 'Prueba2026*';
 
 // --- Datos sinteticos -------------------------------------------------------
 
@@ -72,35 +72,58 @@ const PROCESSES: Array<{
 ];
 
 const USERS: Array<{ identifier: string; name: string; isAdmin?: boolean }> = [
-  // Admin de SISTEMA inicial (design h): sembrado directo (no por invitacion)
-  // para no quedar bloqueados sin SMTP. isAdmin=true; no necesita grants.
-  { identifier: 'admin@demo.local', name: 'Alex Admin', isAdmin: true },
-  { identifier: 'jefe@demo.local', name: 'Ana Jefa' },
-  { identifier: 'lider.bi@demo.local', name: 'Beto Lider BI' },
-  { identifier: 'integrante.bi@demo.local', name: 'Carla Integrante BI' },
-  { identifier: 'lider.ia@demo.local', name: 'Diego Lider IA' },
-  // Admin de SISTEMA solicitado por el negocio. Se siembra junto a
-  // admin@demo.local (ambos conviven); no se elimina el admin sintetico.
+  // --- Equipo real (dominio corporativo) --------------------------------
+  // Jhonatan: Jefe de area + Admin de SISTEMA (administra SMTP, areas, etc.).
   {
     identifier: 'jhonatan.pacheco@pharitechservices.com',
     name: 'Jhonatan Pacheco',
     isAdmin: true,
   },
+  { identifier: 'julian.melo@pharitechservices.com', name: 'Julian Melo' },
+  { identifier: 'rafael.monsalve@pharitechservices.com', name: 'Rafael Monsalve' },
+  { identifier: 'wilmer.castro@pharitechservices.com', name: 'Wilmer Castro' },
+  { identifier: 'brayan.fonseca@pharitechservices.com', name: 'Brayan Fonseca' },
+  // --- Usuarios genericos de respaldo (uno por rol) ---------------------
+  // Dominio demo.local para distinguirlos del equipo real. Utiles para probar
+  // cada rol sin usar una cuenta real. admin@demo.local se conserva como
+  // respaldo de acceso administrativo por si el login del equipo falla.
+  { identifier: 'admin@demo.local', name: 'Admin Generico', isAdmin: true },
+  { identifier: 'jefe@demo.local', name: 'Jefe Generico' },
+  { identifier: 'lider@demo.local', name: 'Lider Generico' },
+  { identifier: 'integrante@demo.local', name: 'Integrante Generico' },
 ];
 
-/** Grants que ejercitan los controles negativos de `10`. */
+/**
+ * Grants del equipo real + los genericos de respaldo. Procesos: BI=FIBI,
+ * Integraciones=FIID, IA=FIAA, Coordinacion=FMAA. Nota: LIDER_PROCESO ya
+ * incluye las capacidades de INTEGRANTE en su proceso, por eso un "lider y
+ * miembro" se modela con un unico grant de lider.
+ */
 const GRANTS: Array<{ userIdentifier: string; roleCode: string; processCode: string }> = [
-  // Jefa: JEFE_AREA en los 4 procesos (control de area completa).
+  // --- Equipo real ------------------------------------------------------
+  // Jhonatan Pacheco: Jefe de area sobre los 4 procesos (control total del area).
+  { userIdentifier: 'jhonatan.pacheco@pharitechservices.com', roleCode: 'JEFE_AREA', processCode: 'FIBI' },
+  { userIdentifier: 'jhonatan.pacheco@pharitechservices.com', roleCode: 'JEFE_AREA', processCode: 'FIID' },
+  { userIdentifier: 'jhonatan.pacheco@pharitechservices.com', roleCode: 'JEFE_AREA', processCode: 'FIAA' },
+  { userIdentifier: 'jhonatan.pacheco@pharitechservices.com', roleCode: 'JEFE_AREA', processCode: 'FMAA' },
+  // Julian Melo: Lider de BI (incluye capacidades de miembro en BI).
+  { userIdentifier: 'julian.melo@pharitechservices.com', roleCode: 'LIDER_PROCESO', processCode: 'FIBI' },
+  // Rafael Monsalve: Lider de Integraciones (incluye miembro en Integraciones).
+  { userIdentifier: 'rafael.monsalve@pharitechservices.com', roleCode: 'LIDER_PROCESO', processCode: 'FIID' },
+  // Wilmer Castro: Lider de IA.
+  { userIdentifier: 'wilmer.castro@pharitechservices.com', roleCode: 'LIDER_PROCESO', processCode: 'FIAA' },
+  // Brayan Fonseca: Integrante de IA.
+  { userIdentifier: 'brayan.fonseca@pharitechservices.com', roleCode: 'INTEGRANTE', processCode: 'FIAA' },
+  // --- Genericos de respaldo -------------------------------------------
+  // Jefe generico: JEFE_AREA en los 4 procesos.
   { userIdentifier: 'jefe@demo.local', roleCode: 'JEFE_AREA', processCode: 'FIBI' },
   { userIdentifier: 'jefe@demo.local', roleCode: 'JEFE_AREA', processCode: 'FIID' },
   { userIdentifier: 'jefe@demo.local', roleCode: 'JEFE_AREA', processCode: 'FIAA' },
   { userIdentifier: 'jefe@demo.local', roleCode: 'JEFE_AREA', processCode: 'FMAA' },
-  // Lider BI: LIDER_PROCESO solo en FIBI.
-  { userIdentifier: 'lider.bi@demo.local', roleCode: 'LIDER_PROCESO', processCode: 'FIBI' },
-  // Integrante BI: INTEGRANTE solo en FIBI.
-  { userIdentifier: 'integrante.bi@demo.local', roleCode: 'INTEGRANTE', processCode: 'FIBI' },
-  // Lider IA: LIDER_PROCESO solo en FIAA.
-  { userIdentifier: 'lider.ia@demo.local', roleCode: 'LIDER_PROCESO', processCode: 'FIAA' },
+  // Lider generico: LIDER_PROCESO en BI (proceso de ejemplo para probar el rol).
+  { userIdentifier: 'lider@demo.local', roleCode: 'LIDER_PROCESO', processCode: 'FIBI' },
+  // Integrante generico: INTEGRANTE en BI.
+  { userIdentifier: 'integrante@demo.local', roleCode: 'INTEGRANTE', processCode: 'FIBI' },
 ];
 
 /** Maestras base confirmadas de `20-master-data.md` (sin valores de ruido). */
