@@ -230,17 +230,29 @@ Compromiso (vencimiento requerido; reunión fuente opcional).
 ## Activos y documentos
 
 ### Asset (`assets`)
-Activo analítico anclado a un proceso (FK requerida = ancla de alcance). Sin borrado
-físico: retiro = cambio de estado.
-- Campos clave: `processId`, `requestId?`, `ownerUserId?`, `name`, `status`
-  (default `BORRADOR`), atributos por código de maestra (`typeCode?`, `technologyCode?`,
-  `sourceCode?`, `frequencyCode?`), `documentationRef?`, `functionalDescription?`,
-  `dependencies?`.
-- Índices: por `processId`, `requestId`, `status`, `typeCode`.
-- Relaciones: `process`, `request?` (solicitud de origen, relación
+Activo genérico, compartido y gobernado. `processId` es el proceso propietario/origen
+(FK requerida), siempre visible; la visibilidad adicional vive en la tabla puente
+`AssetProcessVisibility`. Los atributos por-solicitud (tipo, tecnología, fuente,
+frecuencia) se retiraron del modelo: pertenecen a cada solicitud, no al activo. Sin
+borrado físico: retiro = cambio de estado. La escritura (crear/editar/cambiar estado)
+está reservada al jefe de área.
+- Campos clave: `processId` (propietario), `requestId?`, `ownerUserId?`, `name`,
+  `status` (default `BORRADOR`), `documentationRef?`, `generalDescription?` (descripción
+  general del activo), `dependencies?`.
+- Índices: por `processId`, `requestId`, `status`.
+- Relaciones: `process` (propietario), `request?` (solicitud de origen, relación
   `AssetOriginRequest`), `owner?`, `requestsAssociated` (solicitudes que usan este
-  activo como base, inversa de `Request.asset`, relación `RequestAsset`), documentos,
-  actividades de bitácora y novedades.
+  activo como base, inversa de `Request.asset`, relación `RequestAsset`), `visibilities`
+  (procesos que pueden ver/usar el activo), documentos, actividades de bitácora y
+  novedades.
+
+### AssetProcessVisibility (`asset_process_visibilities`)
+Tabla puente N:M Activo↔Proceso: procesos que pueden ver y usar (asociar) un activo
+genérico, además del proceso propietario (`Asset.processId`), que siempre se considera
+visible. Solo el jefe de área define este conjunto al crear/editar el activo.
+- Campos clave: `assetId`, `processId`.
+- Índices: único `(assetId, processId)`; índice por `processId`.
+- Relaciones: `asset` (`onDelete: Cascade`), `process` (`onDelete: Restrict`).
 
 ### Document (`documents`)
 Metadatos de un documento Markdown; FK requerida al activo. El contenido vive en las
@@ -299,8 +311,9 @@ Registro de una prueba/validación con su evidencia.
   reversible.
 
 Varios atributos se almacenan como **código de maestra** (`CatalogItem`) y se validan en
-el service, por ejemplo: `ACTIVITY_CLASS`, `ISSUE_TYPE`, `RECORD_STATE`,
-`GOVERNANCE_ROUTE` y los tipos/tecnologías/fuentes/frecuencias de los activos.
+el service, por ejemplo: `ACTIVITY_CLASS`, `ISSUE_TYPE`, `RECORD_STATE` y
+`GOVERNANCE_ROUTE`. (Las familias `ASSET_TYPE`, `TECHNOLOGY`, `SOURCE` y `FREQUENCY`
+quedaron sin consumidores tras hacer el activo genérico; permanecen sembradas.)
 
 ## Migraciones (`apps/api/prisma/migrations/`, en orden)
 
@@ -320,3 +333,10 @@ el service, por ejemplo: `ACTIVITY_CLASS`, `ISSUE_TYPE`, `RECORD_STATE`,
 14. `20261016050442_backfill_analitica_area` (SQL idempotente escrito a mano: crea el
     área `ANALITICA` y asigna a ella los procesos sin área)
 15. `20261016050516_make_process_area_required` (`area_id` pasa a `NOT NULL`)
+16. `20261021040316_activo_base_solicitudes`
+17. `20261023023235_add_audit_event_query_indexes`
+18. `20261027231656_activo_generico_gobernanza` (migración destructiva: elimina de
+    `assets` las columnas `type_code`, `technology_code`, `source_code`,
+    `frequency_code` y su índice; renombra `functional_description` a
+    `general_description` conservando los datos; crea la tabla puente
+    `asset_process_visibilities`)

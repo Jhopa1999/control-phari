@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
-import type { AssetModel } from '../../../generated/prisma/models/Asset';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { KnowledgeScopeService } from '../knowledge-scope.service';
@@ -19,22 +18,15 @@ import { ChangeAssetStatusDto } from './dto/change-asset-status.dto';
 import { AssetResponseDto } from './dto/asset-response.dto';
 import { AssetRequestHistoryItemDto } from './dto/asset-request-history-item.dto';
 
-/** Mapa codigo de maestra -> familia (catalog) para la validacion del body. */
-const CATALOG_FAMILY: Record<string, string> = {
-  typeCode: 'ASSET_TYPE',
-  technologyCode: 'TECHNOLOGY',
-  sourceCode: 'SOURCE',
-  frequencyCode: 'FREQUENCY',
-};
-
 /**
- * Logica de activos (design §2/§3/§5). Alcance de lectura via
- * KnowledgeScopeService (404 fuera), escritura por rol via
- * `requireAssetWritable` (403), maquina de estado via AssetStateService (salto
- * -> 400). Las FK del body (`ownerUserId`/`requestId`) y los codigos de maestra
- * se validan dentro de la `$transaction` (400 si invalidos). Mutacion +
- * AuditEvent en la misma transaccion (objectType ASSET, scopeProcessId =
- * asset.processId). P2002 -> 409.
+ * Activo generico, compartido y gobernado (design §2/§3/§5/§a-§e). Lectura via
+ * KnowledgeScopeService (propietario ∪ visibilidad, 404 fuera). ESCRITURA
+ * (crear/editar/cambiar estado) reservada al jefe de area via
+ * `requireAssetGovernor` (403). Maquina de estado via AssetStateService (salto
+ * -> 400). El jefe define `visibleProcessIds` (tabla puente
+ * AssetProcessVisibility); el propietario (`processId`) siempre es visible y se
+ * excluye del conjunto. Mutacion + AuditEvent en la misma `$transaction`
+ * (objectType ASSET, scopeProcessId = asset.processId). P2002 -> 409.
  */
 @Injectable()
 export class AssetService {
@@ -45,7 +37,10 @@ export class AssetService {
     private readonly state: AssetStateService,
   ) {}
 
-  private snapshot(row: AssetModel): Prisma.InputJsonValue {
+  private snapshot(
+    row: AssetWithVisibilities,
+    visibleProcessIds: string[],
+  ): Prisma.InputJsonValue {
     return {
       id: row.id,
       processId: row.processId,
@@ -53,17 +48,14 @@ export class AssetService {
       ownerUserId: row.ownerUserId,
       name: row.name,
       status: row.status,
-      typeCode: row.typeCode,
-      technologyCode: row.technologyCode,
-      sourceCode: row.sourceCode,
-      frequencyCode: row.frequencyCode,
       documentationRef: row.documentationRef,
-      functionalDescription: row.functionalDescription,
+      generalDescription: row.generalDescription,
       dependencies: row.dependencies,
+      visibleProcessIds: [...visibleProcessIds].sort(),
     };
   }
 
-  private toResponse(row: AssetModel): AssetResponseDto {
+  private toResponse(row: AssetWithVisibilities): AssetResponseDto {
     return {
       id: row.id,
       processId: row.processId,
@@ -71,13 +63,10 @@ export class AssetService {
       ownerUserId: row.ownerUserId,
       name: row.name,
       status: row.status,
-      typeCode: row.typeCode,
-      technologyCode: row.technologyCode,
-      sourceCode: row.sourceCode,
-      frequencyCode: row.frequencyCode,
       documentationRef: row.documentationRef,
-      functionalDescription: row.functionalDescription,
+      generalDescription: row.generalDescription,
       dependencies: row.dependencies,
+      visibleProcessIds: row.visibilities.map((v) => v.processId).sort(),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -86,32 +75,15 @@ export class AssetService {
   private async requireInScope(
     actor: CurrentActor,
     id: string,
-  ): Promise<AssetModel> {
+  ): Promise<AssetWithVisibilities> {
     const row = await this.prisma.asset.findFirst({
       where: { AND: [{ id }, this.scope.assetScopeWhere(actor)] },
+      include: ASSET_INCLUDE,
     });
     if (!row) {
       throw new NotFoundException(`Activo "${id}" no encontrado.`);
     }
     return row;
-  }
-
-  /** Valida un code de maestra contra su familia; code invalido/inactivo -> 400. */
-  private async assertCatalogCode(
-    tx: Prisma.TransactionClient,
-    catalog: string,
-    code: string | undefined,
-  ): Promise<void> {
-    if (code === undefined) {
-      return;
-    }
-    const item = await tx.catalogItem.findFirst({
-      where: { catalog, code, active: true },
-      select: { id: true },
-    });
-    if (!item) {
-      throw new BadRequestException(`El codigo "${code}" no es valido para ${catalog}.`);
-    }
   }
 
   /** Valida que el owner (usuario) exista y este activo; invalido -> 400. */
@@ -128,30 +100,67 @@ export class AssetService {
     }
   }
 
-  /** Valida que la Request exista y participe del proceso del activo; invalido -> 400. */
+  /**
+   * Valida que la Request exista y participe de ALGUNO de los procesos
+   * visibles del activo (propietario + visibilidad). Invalido -> 400.
+   */
   private async assertRequest(
     tx: Prisma.TransactionClient,
     requestId: string,
-    processId: string,
+    visibleProcessIds: string[],
   ): Promise<void> {
     const request = await tx.request.findFirst({
-      where: { id: requestId, participants: { some: { processId } } },
+      where: {
+        id: requestId,
+        participants: { some: { processId: { in: visibleProcessIds } } },
+      },
       select: { id: true },
     });
     if (!request) {
       throw new BadRequestException(
-        'La solicitud indicada no existe o no pertenece al proceso del activo.',
+        'La solicitud indicada no existe o no pertenece a un proceso visible del activo.',
       );
     }
   }
 
-  private async assertCatalogCodes(
+  /**
+   * Valida que todos los procesos indicados existan y esten activos; alguno
+   * invalido/inactivo -> 400. Usado para el `processId` propietario (NIT-5) y
+   * para `visibleProcessIds`.
+   */
+  private async assertActiveProcesses(
     tx: Prisma.TransactionClient,
-    codes: Partial<Record<keyof typeof CATALOG_FAMILY, string | undefined>>,
+    ids: string[],
   ): Promise<void> {
-    for (const [field, catalog] of Object.entries(CATALOG_FAMILY)) {
-      await this.assertCatalogCode(tx, catalog, codes[field]);
+    if (ids.length === 0) {
+      return;
     }
+    const found = await tx.process.findMany({
+      where: { id: { in: ids }, active: true },
+      select: { id: true },
+    });
+    if (found.length !== ids.length) {
+      throw new BadRequestException(
+        'Alguno de los procesos indicados no existe o esta inactivo.',
+      );
+    }
+  }
+
+  /**
+   * Normaliza `visibleProcessIds`: dedupe y EXCLUYE el propietario (no es error
+   * que el cliente lo envie; el propietario siempre es visible y nunca se
+   * materializa como fila puente).
+   */
+  private normalizeVisible(
+    ownerProcessId: string,
+    visibleProcessIds: string[] | undefined,
+  ): string[] {
+    if (visibleProcessIds === undefined) {
+      return [];
+    }
+    return Array.from(new Set(visibleProcessIds)).filter(
+      (id) => id !== ownerProcessId,
+    );
   }
 
   async list(
@@ -174,6 +183,7 @@ export class AssetService {
 
     const rows = await this.prisma.asset.findMany({
       where,
+      include: ASSET_INCLUDE,
       orderBy: [{ createdAt: 'desc' }],
       ...(filters.take !== undefined ? { take: filters.take } : {}),
     });
@@ -221,25 +231,21 @@ export class AssetService {
   ): Promise<AssetResponseDto> {
     try {
       const created = await this.prisma.$transaction(async (tx) => {
-        // Autorizacion por rol: nace BORRADOR, nextStatus = BORRADOR.
-        this.scope.requireAssetWritable(
-          actor,
-          { processId: dto.processId, status: AssetStatus.BORRADOR },
-          AssetStatus.BORRADOR,
-        );
+        // Gobernanza: crear un activo es exclusivo del jefe de area.
+        this.scope.requireAssetGovernor(actor);
+
+        // NIT-5: el propietario ya no se valida via scope; validarlo aqui.
+        await this.assertActiveProcesses(tx, [dto.processId]);
+
+        const visible = this.normalizeVisible(dto.processId, dto.visibleProcessIds);
+        await this.assertActiveProcesses(tx, visible);
 
         if (dto.ownerUserId !== undefined) {
           await this.assertOwner(tx, dto.ownerUserId);
         }
         if (dto.requestId !== undefined) {
-          await this.assertRequest(tx, dto.requestId, dto.processId);
+          await this.assertRequest(tx, dto.requestId, [dto.processId, ...visible]);
         }
-        await this.assertCatalogCodes(tx, {
-          typeCode: dto.typeCode,
-          technologyCode: dto.technologyCode,
-          sourceCode: dto.sourceCode,
-          frequencyCode: dto.frequencyCode,
-        });
 
         const row = await tx.asset.create({
           data: {
@@ -248,14 +254,14 @@ export class AssetService {
             status: AssetStatus.BORRADOR,
             ...(dto.requestId !== undefined ? { requestId: dto.requestId } : {}),
             ...(dto.ownerUserId !== undefined ? { ownerUserId: dto.ownerUserId } : {}),
-            ...(dto.typeCode !== undefined ? { typeCode: dto.typeCode } : {}),
-            ...(dto.technologyCode !== undefined ? { technologyCode: dto.technologyCode } : {}),
-            ...(dto.sourceCode !== undefined ? { sourceCode: dto.sourceCode } : {}),
-            ...(dto.frequencyCode !== undefined ? { frequencyCode: dto.frequencyCode } : {}),
             ...(dto.documentationRef !== undefined ? { documentationRef: dto.documentationRef } : {}),
-            ...(dto.functionalDescription !== undefined ? { functionalDescription: dto.functionalDescription } : {}),
+            ...(dto.generalDescription !== undefined ? { generalDescription: dto.generalDescription } : {}),
             ...(dto.dependencies !== undefined ? { dependencies: dto.dependencies } : {}),
+            ...(visible.length > 0
+              ? { visibilities: { createMany: { data: visible.map((processId) => ({ processId })) } } }
+              : {}),
           },
+          include: ASSET_INCLUDE,
         });
 
         await this.audit.record(tx, {
@@ -265,7 +271,7 @@ export class AssetService {
           objectId: row.id,
           scopeProcessId: row.processId,
           before: null,
-          after: this.snapshot(row),
+          after: this.snapshot(row, visible),
         });
 
         return row;
@@ -283,24 +289,43 @@ export class AssetService {
     dto: UpdateAssetDto,
   ): Promise<AssetResponseDto> {
     const existing = await this.requireInScope(actor, id);
+    const previousVisible = existing.visibilities.map((v) => v.processId);
 
     try {
       const updated = await this.prisma.$transaction(async (tx) => {
-        // Editar metadatos no mueve el estado: nextStatus = estado actual.
-        this.scope.requireAssetWritable(actor, existing, existing.status);
+        // Gobernanza: editar un activo es exclusivo del jefe de area.
+        this.scope.requireAssetGovernor(actor);
 
         if (typeof dto.ownerUserId === 'string') {
           await this.assertOwner(tx, dto.ownerUserId);
         }
-        if (typeof dto.requestId === 'string') {
-          await this.assertRequest(tx, dto.requestId, existing.processId);
+
+        // Conjunto de visibilidad resultante: si viene definido, reemplaza;
+        // si no, se conserva el previo.
+        const replaceVisible = dto.visibleProcessIds !== undefined;
+        const nextVisible = replaceVisible
+          ? this.normalizeVisible(existing.processId, dto.visibleProcessIds)
+          : previousVisible;
+
+        if (replaceVisible) {
+          await this.assertActiveProcesses(tx, nextVisible);
         }
-        await this.assertCatalogCodes(tx, {
-          typeCode: dto.typeCode,
-          technologyCode: dto.technologyCode,
-          sourceCode: dto.sourceCode,
-          frequencyCode: dto.frequencyCode,
-        });
+
+        if (typeof dto.requestId === 'string') {
+          await this.assertRequest(tx, dto.requestId, [
+            existing.processId,
+            ...nextVisible,
+          ]);
+        }
+
+        if (replaceVisible) {
+          await tx.assetProcessVisibility.deleteMany({ where: { assetId: id } });
+          if (nextVisible.length > 0) {
+            await tx.assetProcessVisibility.createMany({
+              data: nextVisible.map((processId) => ({ assetId: id, processId })),
+            });
+          }
+        }
 
         const row = await tx.asset.update({
           where: { id },
@@ -308,14 +333,11 @@ export class AssetService {
             ...(dto.name !== undefined ? { name: dto.name } : {}),
             ...(dto.requestId !== undefined ? { requestId: dto.requestId } : {}),
             ...(dto.ownerUserId !== undefined ? { ownerUserId: dto.ownerUserId } : {}),
-            ...(dto.typeCode !== undefined ? { typeCode: dto.typeCode } : {}),
-            ...(dto.technologyCode !== undefined ? { technologyCode: dto.technologyCode } : {}),
-            ...(dto.sourceCode !== undefined ? { sourceCode: dto.sourceCode } : {}),
-            ...(dto.frequencyCode !== undefined ? { frequencyCode: dto.frequencyCode } : {}),
             ...(dto.documentationRef !== undefined ? { documentationRef: dto.documentationRef } : {}),
-            ...(dto.functionalDescription !== undefined ? { functionalDescription: dto.functionalDescription } : {}),
+            ...(dto.generalDescription !== undefined ? { generalDescription: dto.generalDescription } : {}),
             ...(dto.dependencies !== undefined ? { dependencies: dto.dependencies } : {}),
           },
+          include: ASSET_INCLUDE,
         });
 
         await this.audit.record(tx, {
@@ -324,8 +346,8 @@ export class AssetService {
           objectType: 'ASSET',
           objectId: row.id,
           scopeProcessId: row.processId,
-          before: this.snapshot(existing),
-          after: this.snapshot(row),
+          before: this.snapshot(existing, previousVisible),
+          after: this.snapshot(row, nextVisible),
         });
 
         return row;
@@ -343,15 +365,18 @@ export class AssetService {
     dto: ChangeAssetStatusDto,
   ): Promise<AssetResponseDto> {
     const existing = await this.requireInScope(actor, id);
+    const visible = existing.visibilities.map((v) => v.processId);
     const nextStatus = this.state.assertTransition(existing.status, dto.targetStatus);
 
     try {
       const updated = await this.prisma.$transaction(async (tx) => {
-        this.scope.requireAssetWritable(actor, existing, nextStatus);
+        // Gobernanza: cambiar el estado de un activo es exclusivo del jefe.
+        this.scope.requireAssetGovernor(actor);
 
         const row = await tx.asset.update({
           where: { id },
           data: { status: nextStatus },
+          include: ASSET_INCLUDE,
         });
 
         await this.audit.record(tx, {
@@ -360,8 +385,8 @@ export class AssetService {
           objectType: 'ASSET',
           objectId: row.id,
           scopeProcessId: row.processId,
-          before: this.snapshot(existing),
-          after: this.snapshot(row),
+          before: this.snapshot(existing, visible),
+          after: this.snapshot(row, visible),
         });
 
         return row;
@@ -384,3 +409,13 @@ export class AssetService {
     return error;
   }
 }
+
+/** Include estandar: trae las filas de visibilidad (solo el processId). */
+const ASSET_INCLUDE = {
+  visibilities: { select: { processId: true } },
+} satisfies Prisma.AssetInclude;
+
+/** Payload de Asset con la relacion de visibilidad (sin `any`, MEDIUM-C). */
+type AssetWithVisibilities = Prisma.AssetGetPayload<{
+  include: typeof ASSET_INCLUDE;
+}>;

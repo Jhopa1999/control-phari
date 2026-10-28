@@ -8,22 +8,48 @@ import { RoleCode } from '../auth/role-code';
  * Fuente unica de verdad del alcance de activos y documentos (design §2.2),
  * analogo a `capacity-scope.service.ts`. La LECTURA no distingue rol
  * (`assetScopeWhere`): integrante y lider leen igual sus procesos con grant
- * activo; el jefe ve todo. La frontera POR ROL (quien escribe/cambia estado)
- * vive SOLO en `requireAssetWritable`. Politica: 404 fuera de alcance de
- * lectura, 403 rol insuficiente.
+ * activo; el jefe ve todo. La visibilidad del activo es generica: propietario
+ * (`Asset.processId`) union la tabla puente `AssetProcessVisibility`. La
+ * frontera POR ROL de ESCRITURA del activo (crear/editar/cambiar estado) vive
+ * en `requireAssetGovernor` (solo jefe). `requireAssetWritable` y
+ * `requireProcessManager` quedan intactos: los usa la gestion DOCUMENTAL del
+ * lider. Politica: 404 fuera de alcance de lectura, 403 rol insuficiente.
  */
 @Injectable()
 export class KnowledgeScopeService {
   /**
-   * Lectura/consulta (design §2.2). Jefe = sin frontera (`{}`); el resto = sus
-   * procesos con grant activo (`scopedProcessIds`, union de grants, sin mirar
-   * roleCode). Fuera de este `where` -> 404 (findFirst no encuentra).
+   * Lectura/consulta (design §2.2/§a). Jefe = sin frontera (`{}`); el resto =
+   * activos cuyo proceso PROPIETARIO (`processId`) O alguna fila de visibilidad
+   * (`AssetProcessVisibility`) cae en sus procesos con grant activo
+   * (`scopedProcessIds`, union de grants, sin mirar roleCode). Fuera de este
+   * `where` -> 404 (findFirst no encuentra).
    */
   assetScopeWhere(actor: CurrentActor): Prisma.AssetWhereInput {
     if (actor.isJefeArea) {
       return {};
     }
-    return { processId: { in: Array.from(actor.scopedProcessIds) } };
+    const ids = Array.from(actor.scopedProcessIds);
+    return {
+      OR: [
+        { processId: { in: ids } },
+        { visibilities: { some: { processId: { in: ids } } } },
+      ],
+    };
+  }
+
+  /**
+   * Gobernanza de ESCRITURA del activo (design §c): crear/editar/cambiar estado
+   * es exclusivo del jefe de area. ADMIN no escribe activos (regla de negocio
+   * del area, no operacion de sistema). Fuente de verdad en el servicio; el
+   * guard `@Roles(JEFE_AREA)` es la ruta primaria de 403.
+   */
+  requireAssetGovernor(actor: CurrentActor): void {
+    if (actor.isJefeArea) {
+      return;
+    }
+    throw new ForbiddenException(
+      'Solo el jefe de area puede crear, editar o cambiar el estado de un activo.',
+    );
   }
 
   /** Procesos donde el actor es LIDER_PROCESO (no cualquier grant). */

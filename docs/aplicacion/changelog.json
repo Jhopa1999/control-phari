@@ -111,6 +111,17 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Se documento la paginacion real en servidor de GET /audit-events (page/pageSize <=100, respuesta { data, page, pageSize, total, hasMore } con el alcance por rol aplicado antes de paginar), el filtro action, los tres indices nuevos de AuditEvent por (campo, createdAt desc) y la pantalla /gobierno/auditoria con filtros Objeto/Accion y paginacion contra el servidor."
+    },
+    {
+      "timestamp": "2026-10-27T23:30:00Z",
+      "trigger_file": "apps/api/prisma/schema.prisma",
+      "updated_docs": [
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Activo generico, compartido y gobernado: migracion destructiva que elimina de assets las columnas type_code/technology_code/source_code/frequency_code y renombra functional_description a general_description, nueva tabla puente AssetProcessVisibility (visibilidad N:M por proceso), escritura del activo reservada al jefe de area (requireAssetGovernor + @Roles(JEFE_AREA)), y el triage deja de crear activos (POST /requests/:id/asset solo asocia un assetId existente y habilitado para el proceso, 409 si no)."
     }
   ]
 }
