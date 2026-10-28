@@ -163,6 +163,25 @@ describe('TriageSuggestionService', () => {
     );
   });
 
+  it('JSON envuelto en cerca markdown (```json) => se interpreta (caso real de Claude)', async () => {
+    const fenced = '```json\n' + JSON.stringify(validSuggestion()) + '\n```';
+    const { service } = makeDeps({
+      invoke: jest.fn().mockResolvedValue(fenced),
+    });
+    const res = await service.suggest(jefeActor(), REQUEST_ID);
+    expect(res.suggestedRouteCode).toBe(validSuggestion().suggestedRouteCode);
+  });
+
+  it('JSON precedido/seguido de texto => se interpreta', async () => {
+    const wrapped =
+      'Aqui esta la sugerencia:\n' + JSON.stringify(validSuggestion()) + '\nEspero que ayude.';
+    const { service } = makeDeps({
+      invoke: jest.fn().mockResolvedValue(wrapped),
+    });
+    const res = await service.suggest(jefeActor(), REQUEST_ID);
+    expect(res.suggestedRouteCode).toBe(validSuggestion().suggestedRouteCode);
+  });
+
   it('JSON que no valida el DTO => 422', async () => {
     const { service } = makeDeps({
       invoke: jest

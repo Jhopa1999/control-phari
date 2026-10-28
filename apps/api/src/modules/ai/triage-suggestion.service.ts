@@ -25,6 +25,24 @@ import type { RequestModel } from '../../generated/prisma/models/Request';
 /** Agente de IA que atiende la sugerencia de triage. */
 const TRIAGE_AGENT_CODE = 'TRIAGE';
 
+/**
+ * Extrae el objeto JSON de la salida del modelo. Aunque el prompt exige JSON
+ * puro, los LLM suelen envolverlo en una cerca markdown (```json ... ```) o
+ * anteponer/anadir texto. Se quita la cerca y, si aun hay texto alrededor, se
+ * toma el tramo entre la primera "{" y la ultima "}". Si no hay llaves se
+ * devuelve el texto tal cual (JSON.parse fallara y el caller responde 422).
+ */
+function extractJsonObject(raw: string): string {
+  const unfenced = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+  const start = unfenced.indexOf('{');
+  const end = unfenced.lastIndexOf('}');
+  return start !== -1 && end > start ? unfenced.slice(start, end + 1) : unfenced;
+}
+
 /** Catalogos (maestras) de los cinco codes que la sugerencia puede proponer. */
 const TRIAGE_CATALOGS = {
   suggestedRouteCode: 'TRIAGE_ROUTE',
@@ -141,7 +159,7 @@ export class TriageSuggestionService {
     // 6) Parsear JSON (no-JSON -> 422).
     let parsed: unknown;
     try {
-      parsed = JSON.parse(raw);
+      parsed = JSON.parse(extractJsonObject(raw));
     } catch {
       throw new UnprocessableEntityException(
         'La IA devolvio una respuesta que no se pudo interpretar.',
