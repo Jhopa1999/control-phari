@@ -5887,6 +5887,238 @@
           "admin-users"
         ]
       }
+    },
+    "/admin/ai/config": {
+      "get": {
+        "operationId": "AiConfigController_getConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Estado de IA.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConfigResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Estado de la configuracion de IA (solo ADMIN): global + agentes. Nunca incluye secretos.",
+        "tags": [
+          "admin-ai"
+        ]
+      },
+      "patch": {
+        "operationId": "AiConfigController_updateConfig",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAiGlobalConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuracion global guardada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiGlobalConfigResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o combinacion secret/clearCredentials no permitida."
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Actualiza la configuracion global de IA (solo ADMIN). Reglas del secret: ausente conserva, no vacio cifra, \"\" invalido, clearCredentials limpia.",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/admin/ai/agents/{code}": {
+      "get": {
+        "operationId": "AiConfigController_getAgent",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Code del agente (p. ej. TRIAGE).",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuracion del agente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiAgentConfigResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Agente no encontrado."
+          }
+        },
+        "summary": "Configuracion de un agente de IA por code (solo ADMIN).",
+        "tags": [
+          "admin-ai"
+        ]
+      },
+      "patch": {
+        "operationId": "AiConfigController_updateAgent",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Code del agente (p. ej. TRIAGE).",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAiAgentConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agente guardado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiAgentConfigResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o modelo fuera del catalogo."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Agente no encontrado."
+          }
+        },
+        "summary": "Actualiza un agente de IA (solo ADMIN). Valida el modelo contra el catalogo permitido.",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/admin/ai/agents/{code}/test": {
+      "post": {
+        "operationId": "AiConfigController_testAgent",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Code del agente (p. ej. TRIAGE).",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Resultado de la prueba.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConnectionTestDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Agente no encontrado."
+          }
+        },
+        "summary": "Prueba la conexion del agente con Bedrock (solo ADMIN). Devuelve { ok, message } sin secretos ni stack.",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/requests/{id}/ai/triage-suggestion": {
+      "post": {
+        "operationId": "TriageSuggestionController_suggest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sugerencia de triage.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriageSuggestionResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          },
+          "409": {
+            "description": "La sugerencia de IA esta desactivada o mal configurada."
+          },
+          "422": {
+            "description": "La IA devolvio una salida no interpretable."
+          },
+          "503": {
+            "description": "La IA no respondio a tiempo o no esta disponible."
+          }
+        },
+        "summary": "Sugiere (no persiste) campos de triage, banda de prioridad y posibles duplicados con IA. Degrada si la IA esta apagada o falla.",
+        "tags": [
+          "ai-triage"
+        ]
+      }
     }
   },
   "info": {
@@ -12119,6 +12351,308 @@
         },
         "required": [
           "isAdmin"
+        ]
+      },
+      "AiConfigResponseDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateAiGlobalConfigDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Enciende/apaga globalmente la IA. Por defecto arranca apagada."
+          },
+          "credentialMode": {
+            "type": "string",
+            "enum": [
+              "iam-role",
+              "access-keys"
+            ],
+            "description": "Modo de credenciales: 'iam-role' (rol de la instancia) o 'access-keys' (claves guardadas)."
+          },
+          "awsAccessKeyId": {
+            "type": "string",
+            "description": "AWS Access Key ID (solo modo access-keys).",
+            "maxLength": 128
+          },
+          "awsSecretAccessKey": {
+            "type": "string",
+            "description": "AWS Secret Access Key (write-only). Ausente conserva; no vacio cifra y reemplaza; cadena vacia es invalida (usar clearCredentials)."
+          },
+          "clearCredentials": {
+            "type": "boolean",
+            "description": "true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio."
+          }
+        }
+      },
+      "AiGlobalConfigResponseDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "IA encendida globalmente."
+          },
+          "credentialMode": {
+            "type": "string",
+            "enum": [
+              "iam-role",
+              "access-keys"
+            ],
+            "description": "Modo de credenciales efectivo."
+          },
+          "secretSet": {
+            "type": "boolean",
+            "description": "Hay un secret de AWS guardado (nunca se devuelve el valor)."
+          },
+          "accessKeyIdLast4": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ultimos 4 caracteres del AWS Access Key ID guardado, o null."
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ultima actualizacion (ISO) o null."
+          }
+        },
+        "required": [
+          "enabled",
+          "credentialMode",
+          "secretSet",
+          "accessKeyIdLast4",
+          "updatedAt"
+        ]
+      },
+      "AiAgentConfigResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Code estable del agente (p. ej. TRIAGE)."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Nombre visible del agente."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Agente encendido."
+          },
+          "region": {
+            "type": "string",
+            "description": "Region de AWS del agente."
+          },
+          "model": {
+            "type": "string",
+            "description": "ID del modelo de Bedrock en uso."
+          },
+          "basePrompt": {
+            "type": "string",
+            "description": "Prompt base del agente."
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Temperatura de muestreo (0..1)."
+          },
+          "maxTokens": {
+            "type": "number",
+            "description": "Maximo de tokens de salida."
+          },
+          "timeoutMs": {
+            "type": "number",
+            "description": "Timeout de invocacion en ms."
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ultima actualizacion (ISO) o null."
+          }
+        },
+        "required": [
+          "code",
+          "displayName",
+          "enabled",
+          "region",
+          "model",
+          "basePrompt",
+          "temperature",
+          "maxTokens",
+          "timeoutMs",
+          "updatedAt"
+        ]
+      },
+      "UpdateAiAgentConfigDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Enciende/apaga este agente."
+          },
+          "region": {
+            "type": "string",
+            "description": "Region de AWS (p. ej. us-east-2).",
+            "maxLength": 32
+          },
+          "model": {
+            "type": "string",
+            "description": "ID del modelo de Bedrock (debe estar en el catalogo permitido).",
+            "maxLength": 128
+          },
+          "basePrompt": {
+            "type": "string",
+            "description": "Prompt base del agente.",
+            "maxLength": 8000
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Temperatura 0..1.",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "maxTokens": {
+            "type": "number",
+            "description": "Maximo de tokens 1..8192.",
+            "minimum": 1,
+            "maximum": 8192
+          },
+          "timeoutMs": {
+            "type": "number",
+            "description": "Timeout de invocacion en ms (1000..60000).",
+            "minimum": 1000,
+            "maximum": 60000
+          }
+        }
+      },
+      "AiConnectionTestDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "La prueba de conexion fue exitosa."
+          },
+          "message": {
+            "type": "string",
+            "description": "Mensaje legible del resultado (sin secretos ni stack)."
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ]
+      },
+      "DuplicateCandidateDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID de la solicitud candidata a duplicado."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la solicitud candidata.",
+            "maxLength": 255
+          },
+          "confidence": {
+            "type": "number",
+            "description": "Confianza del parecido (0..1).",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo breve del parecido.",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "requestId",
+          "title",
+          "confidence",
+          "reason"
+        ]
+      },
+      "TriageSuggestionResponseDto": {
+        "type": "object",
+        "properties": {
+          "suggestedRouteCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Code sugerido de TRIAGE_ROUTE o null."
+          },
+          "suggestedDemandTypeCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Code sugerido de DEMAND_TYPE o null."
+          },
+          "suggestedCriticalityCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Code sugerido de CRITICALITY o null."
+          },
+          "suggestedSizeCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Code sugerido de TRIAGE_SIZE o null."
+          },
+          "suggestedDataAvailabilityCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Code sugerido de DATA_AVAILABILITY o null."
+          },
+          "tentativePriorityBand": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "P1",
+              "P2",
+              "P3",
+              "P4"
+            ],
+            "description": "Banda de prioridad tentativa (P1..P4) o null. Señal, no score oficial."
+          },
+          "priorityRationale": {
+            "type": "string",
+            "description": "Justificacion breve de la banda.",
+            "maxLength": 600
+          },
+          "possibleDuplicates": {
+            "description": "Posibles duplicados sugeridos.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateCandidateDto"
+            }
+          },
+          "missingInformation": {
+            "description": "Informacion faltante detectada (y notas de codes no validos).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "model": {
+            "type": "string",
+            "description": "ID del modelo que genero la sugerencia."
+          },
+          "agentCode": {
+            "type": "string",
+            "description": "Code del agente que genero la sugerencia."
+          }
+        },
+        "required": [
+          "suggestedRouteCode",
+          "suggestedDemandTypeCode",
+          "suggestedCriticalityCode",
+          "suggestedSizeCode",
+          "suggestedDataAvailabilityCode",
+          "tentativePriorityBand",
+          "priorityRationale",
+          "possibleDuplicates",
+          "missingInformation",
+          "model",
+          "agentCode"
         ]
       }
     }

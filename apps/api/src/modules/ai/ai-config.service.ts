@@ -6,6 +6,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
+// NOTA: los @Inject() explicitos de PrismaService y AuditService son necesarios
+// porque el generador de OpenAPI corre con tsx (esbuild), y esbuild no emite
+// `design:paramtypes` de forma fiable cuando el constructor mezcla parametros
+// sin decorar con uno decorado con @Inject (el token BEDROCK_CLIENT). Sin ellos,
+// Nest no resuelve PrismaService al construir AppModule fuera de tsc.
 import { CurrentActor } from '../auth/current-actor';
 import { encryptSecret, decryptSecret } from './ai-crypto';
 import { assertModelAllowed } from './bedrock-model-catalog';
@@ -28,8 +33,8 @@ import type { AiAgentConfigModel } from '../../generated/prisma/models/AiAgentCo
 @Injectable()
 export class AiConfigService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly audit: AuditService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuditService) private readonly audit: AuditService,
     @Inject(BEDROCK_CLIENT) private readonly bedrock: BedrockClient,
   ) {}
 

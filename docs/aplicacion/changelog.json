@@ -120,6 +120,15 @@
         "docs/aplicacion/modelo-datos.md"
       ],
       "summary": "Se documento el modulo ai (Fase 1): config de IA en /admin/ai/config y /admin/ai/agents/:code[/test] (solo ADMIN, sin exponer secretos) y POST /requests/:id/ai/triage-suggestion (sugiere sin persistir, roles de triage, degradacion 409/422/503), mas los modelos AiGlobalConfig (ai_global_config) y AiAgentConfig (ai_agent_config) y la migracion aditiva ai_config."
+    },
+    {
+      "timestamp": "2026-10-27T21:30:00Z",
+      "trigger_file": "apps/web/src/lib/navigation.ts",
+      "updated_docs": [
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Se documento la nueva clave de modulo aiSettings (solo ADMIN; MODULE_MATRIX pasa a 25 claves, un JEFE_AREA ve todas menos systemSettings, areas y aiSettings) y el item de menu 'Agentes de IA' bajo Administracion (/administracion/ia), con el menu ahora en 27 items."
     }
   ]
 }

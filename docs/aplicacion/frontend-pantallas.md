@@ -6,7 +6,7 @@ El frontend (Next.js, App Router) vive en `apps/web/src/app/`. Cada `page.tsx` e
 envoltura delgada que delega en su componente de vista (`*-view.tsx`) y consume la API
 del backend. El frontend no accede a la base de datos ni usa Prisma.
 
-El menú lateral se define en `apps/web/src/lib/navigation.ts`: 7 grupos y 26 ítems.
+El menú lateral se define en `apps/web/src/lib/navigation.ts`: 7 grupos y 27 ítems.
 Cada ítem declara una `moduleKey` que coincide con las claves de `MODULE_MATRIX` del
 backend; el menú se filtra de forma **cosmética** según `allowedModules` de
 `GET /me/permissions`. El control real de acceso lo hace siempre el servidor. Ver
@@ -79,6 +79,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | `/administracion/areas` | Áreas | Crear y editar áreas organizativas (por ejemplo, Analítica) que agrupan procesos: listado, alta y edición de nombre/estado/orden. Solo rol ADMIN (`areas`). |
 | `/administracion/procesos` | Procesos | Crear y editar procesos (por ejemplo, BI, Integraciones, IA) agrupados por área: el alta exige un área activa y la edición no mueve el proceso de área. Rol ADMIN o jefe de área (`processesAdmin`). |
 | `/administracion/configuracion-smtp` | Configuración SMTP | Configurar el servidor SMTP en runtime (host, puerto, remitente, contraseña write-only) con prueba de envío, y gestionar los administradores del sistema (toggle `isAdmin`). Solo rol ADMIN (`systemSettings`). |
+| `/administracion/ia` | Agentes de IA | Configurar los agentes de IA (credenciales de AWS Bedrock, modelo, prompt y parámetros) desde la plataforma. Solo rol ADMIN (`aiSettings`). |
 
 ## Catálogos (`/catalogs`) — funcionalidad base
 

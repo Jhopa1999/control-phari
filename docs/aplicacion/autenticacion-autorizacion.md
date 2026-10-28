@@ -158,12 +158,14 @@ de verdad** compartida con el frontend: el menú usa las mismas claves para filt
 | `systemSettings` | — | — | — |
 | `areas` | — | — | — |
 | `processesAdmin` | — | — | ✓ |
+| `aiSettings` | — | — | — |
 
-> `systemSettings` (configuración del sistema: SMTP y administradores) y `areas`
-> (gestión de áreas organizativas) son exclusivos del rol de **sistema** `ADMIN`:
-> ningún rol de área los ve. `processesAdmin` (administración de procesos) lo ven
-> `ADMIN` y `JEFE_AREA`. `MODULE_MATRIX` tiene por tanto 24 claves; un `JEFE_AREA` ve
-> todas menos `systemSettings` y `areas`.
+> `systemSettings` (configuración del sistema: SMTP y administradores), `areas`
+> (gestión de áreas organizativas) y `aiSettings` (configuración de los agentes de
+> IA) son exclusivos del rol de **sistema** `ADMIN`: ningún rol de área los ve.
+> `processesAdmin` (administración de procesos) lo ven `ADMIN` y `JEFE_AREA`.
+> `MODULE_MATRIX` tiene por tanto 25 claves; un `JEFE_AREA` ve todas menos
+> `systemSettings`, `areas` y `aiSettings`.
 
 `GET /me/permissions` también devuelve `roleCodes` (los códigos de rol efectivos del
 actor, incluido `ADMIN` si aplica); el frontend los usa para ofrecer en «Equipo y

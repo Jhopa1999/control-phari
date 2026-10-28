@@ -29,7 +29,8 @@ export type ModuleKey =
   | 'permissions'
   | 'systemSettings'
   | 'areas'
-  | 'processesAdmin';
+  | 'processesAdmin'
+  | 'aiSettings';
 
 /**
  * Matriz de modulos -> roles permitidos. Reproduce LITERALMENTE la "Matriz de
@@ -92,6 +93,9 @@ export const MODULE_MATRIX: Record<ModuleKey, readonly RoleCode[]> = {
   // Administracion de procesos: ADMIN (gestion global) y JEFE_AREA (gestiona
   // los procesos de su area).
   processesAdmin: [RoleCode.ADMIN, RoleCode.JEFE_AREA],
+  // Configuracion de agentes de IA: SOLO ADMIN. Es configuracion tecnica del
+  // sistema (credenciales Bedrock, modelos, agentes), fuera del alcance de area.
+  aiSettings: [RoleCode.ADMIN],
 };
 
 /** Todas las claves de modulo, en orden de declaracion. */

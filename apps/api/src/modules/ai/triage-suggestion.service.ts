@@ -45,9 +45,13 @@ type SuggestedCodeKey = keyof typeof TRIAGE_CATALOGS;
  */
 @Injectable()
 export class TriageSuggestionService {
+  // NOTA: los @Inject() explicitos de PrismaService y RequestStateService son
+  // necesarios porque el generador de OpenAPI corre con tsx (esbuild), que no
+  // emite `design:paramtypes` de forma fiable cuando el constructor mezcla
+  // parametros sin decorar con uno decorado con @Inject (BEDROCK_CLIENT).
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly state: RequestStateService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(RequestStateService) private readonly state: RequestStateService,
     @Inject(BEDROCK_CLIENT) private readonly bedrock: BedrockClient,
   ) {}
 
