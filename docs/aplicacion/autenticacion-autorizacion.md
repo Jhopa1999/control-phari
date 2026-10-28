@@ -158,12 +158,15 @@ de verdad** compartida con el frontend: el menú usa las mismas claves para filt
 | `systemSettings` | — | — | — |
 | `areas` | — | — | — |
 | `processesAdmin` | — | — | ✓ |
+| `recurring` | ✓ | ✓ | ✓ |
 
 > `systemSettings` (configuración del sistema: SMTP y administradores) y `areas`
 > (gestión de áreas organizativas) son exclusivos del rol de **sistema** `ADMIN`:
 > ningún rol de área los ve. `processesAdmin` (administración de procesos) lo ven
-> `ADMIN` y `JEFE_AREA`. `MODULE_MATRIX` tiene por tanto 24 claves; un `JEFE_AREA` ve
-> todas menos `systemSettings` y `areas`.
+> `ADMIN` y `JEFE_AREA`. `recurring` (actividades recurrentes) lo ven los tres roles
+> de área para la operación («qué me toca» y completar ocurrencias); la gestión de
+> definiciones la acota el service a `JEFE_AREA`/`ADMIN`. `MODULE_MATRIX` tiene por
+> tanto 25 claves; un `JEFE_AREA` ve todas menos `systemSettings` y `areas`.
 
 `GET /me/permissions` también devuelve `roleCodes` (los códigos de rol efectivos del
 actor, incluido `ADMIN` si aplica); el frontend los usa para ofrecer en «Equipo y

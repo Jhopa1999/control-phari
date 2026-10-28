@@ -53,6 +53,13 @@ export class RecurringActivitySchedulerService
   }
 
   onModuleDestroy(): void {
+    // generate-openapi.ts crea la app sin init() y luego llama a close(): en ese
+    // modo onModuleInit no corre y el SchedulerRegistry puede no estar resuelto.
+    // Guardamos contra ese caso para que la generacion del contrato (que cierra
+    // la app) no falle; en runtime real el registry siempre esta presente.
+    if (!this.schedulerRegistry) {
+      return;
+    }
     // Detener los jobs en el apagado limpio para no dejar timers colgando.
     for (const name of [GENERATION_JOB, OVERDUE_JOB]) {
       if (this.schedulerRegistry.doesExist('cron', name)) {

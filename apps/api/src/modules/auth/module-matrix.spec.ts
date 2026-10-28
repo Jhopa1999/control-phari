@@ -5,7 +5,7 @@ import {
 } from './module-matrix';
 import { RoleCode } from './role-code';
 describe('MODULE_MATRIX / allowedModulesFor', () => {
-  it('expone exactamente las 24 claves (21 de design 3.3 + systemSettings + areas + processesAdmin)', () => {
+  it('expone exactamente las 25 claves (21 de design 3.3 + systemSettings + areas + processesAdmin + recurring)', () => {
     expect(MODULE_KEYS).toEqual([
       'demandOverview',
       'dashboard',
@@ -31,6 +31,7 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
       'systemSettings',
       'areas',
       'processesAdmin',
+      'recurring',
     ]);
   });
   it('admin y team solo son para JEFE_AREA (specs/10)', () => {
@@ -90,6 +91,7 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
       'frameworks',
       'audit',
       'permissions',
+      'recurring',
     ];
     expect(allowedModulesFor([RoleCode.INTEGRANTE]).sort()).toEqual(
       [...esperadosIntegrante].sort(),

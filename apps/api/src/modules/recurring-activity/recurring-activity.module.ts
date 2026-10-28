@@ -3,6 +3,7 @@ import { PrismaModule } from '../../database/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
 import { RecurringActivityController } from './recurring-activity.controller';
+import { OccurrenceController } from './occurrence.controller';
 import { RecurringActivityService } from './recurring-activity.service';
 import { RecurringActivitySchedulerService } from './recurring-activity.scheduler.service';
 
@@ -16,7 +17,7 @@ import { RecurringActivitySchedulerService } from './recurring-activity.schedule
  */
 @Module({
   imports: [PrismaModule, AuthModule, AuditModule],
-  controllers: [RecurringActivityController],
+  controllers: [RecurringActivityController, OccurrenceController],
   providers: [RecurringActivityService, RecurringActivitySchedulerService],
   exports: [RecurringActivityService],
 })

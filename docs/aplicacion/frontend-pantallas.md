@@ -27,6 +27,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | `/activar-cuenta` | Activar cuenta | Establece la contraseña inicial de una cuenta invitada con el token del correo (`?token=`, mismo `POST /auth/reset-password`). Al confirmar la cuenta queda activa, inicia sesión automáticamente y redirige a `/inicio`. Pública. |
 | `/inicio` | Panel del área | Tablero de inicio del actor (menú: *Panel del área*, `dashboard`). |
 | `/mi-trabajo` | Mi trabajo | Tareas asignadas al usuario actual; enlaza al detalle de tarea (menú: *Mi trabajo*, `assigned`). |
+| `/actividades-recurrentes` | Actividades recurrentes | Actividades que se repiten (reportes, validaciones, revisiones). Vista *Qué me toca* por defecto (ocurrencias del actor, `scope=mine`, agrupadas por periodo) con acciones *Tomar* y *Completar* (comentario opcional) y detalle de solo lectura de las completadas. Para JEFE_AREA/ADMIN, una pestaña *Gestión* con el alta/edición/pausa de definiciones. Menú: *Actividades recurrentes*, `recurring`. |
 
 ## Demanda (`/demanda/*`)
 

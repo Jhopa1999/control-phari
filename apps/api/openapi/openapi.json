@@ -267,7 +267,9 @@
                 "DOCUMENT_VERSION",
                 "GATE_CHECK",
                 "GATE_PENDING_ITEM",
-                "VALIDATION_RECORD"
+                "VALIDATION_RECORD",
+                "RECURRING_ACTIVITY",
+                "RECURRING_ACTIVITY_OCCURRENCE"
               ],
               "type": "string"
             }
@@ -5885,6 +5887,460 @@
         "summary": "Promueve/degrada a un usuario como ADMIN de sistema (solo ADMIN). No permite degradar al ultimo admin activo.",
         "tags": [
           "admin-users"
+        ]
+      }
+    },
+    "/recurring-activities/run-generation": {
+      "post": {
+        "operationId": "RecurringActivityController_runGeneration",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Resultado de la generacion."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Dispara manualmente la generacion de ocurrencias debidas (solo ADMIN).",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities": {
+      "post": {
+        "operationId": "RecurringActivityController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRecurringActivityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Definicion creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurringActivityResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente o fuera de area."
+          },
+          "409": {
+            "description": "Responsable incoherente o fechas invalidas."
+          }
+        },
+        "summary": "Crea una definicion de actividad recurrente.",
+        "tags": [
+          "recurring-activity"
+        ]
+      },
+      "get": {
+        "operationId": "RecurringActivityController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Definiciones.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecurringActivityResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista las definiciones gestionables por el actor.",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/{id}": {
+      "get": {
+        "operationId": "RecurringActivityController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Definicion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurringActivityResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          }
+        },
+        "summary": "Detalle de una definicion dentro de alcance.",
+        "tags": [
+          "recurring-activity"
+        ]
+      },
+      "patch": {
+        "operationId": "RecurringActivityController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRecurringActivityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Definicion actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurringActivityResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente o fuera de area."
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          },
+          "409": {
+            "description": "Responsable incoherente o fechas invalidas."
+          }
+        },
+        "summary": "Edita una definicion (datos, responsable, pausa).",
+        "tags": [
+          "recurring-activity"
+        ]
+      },
+      "delete": {
+        "operationId": "RecurringActivityController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Definicion pausada."
+          },
+          "403": {
+            "description": "Rol insuficiente o fuera de area."
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          }
+        },
+        "summary": "Pausa una definicion (soft-delete active=false; no borra).",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences": {
+      "get": {
+        "operationId": "OccurrenceController_findAll",
+        "parameters": [
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Tamano de pagina (acotado a 100). Por defecto 25.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Pagina (1-based). Por defecto 1.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "responsibleAreaId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "responsibleUserId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Dia objetivo hasta (inclusive).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Dia objetivo desde (inclusive).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "activityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cadence",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "SEMANAL",
+                "MENSUAL",
+                "TRIMESTRAL",
+                "SEMESTRAL",
+                "ANUAL"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "PENDIENTE",
+                "EN_CURSO",
+                "COMPLETADA",
+                "VENCIDA"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "mine",
+                "all"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pagina de ocurrencias.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedOccurrencesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros invalidos."
+          },
+          "403": {
+            "description": "scope=all sin permiso."
+          }
+        },
+        "summary": "Lista ocurrencias por alcance (mine por defecto; all jefe/admin).",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences/{id}": {
+      "get": {
+        "operationId": "OccurrenceController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ocurrencia.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          }
+        },
+        "summary": "Detalle de una ocurrencia dentro de alcance.",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences/{id}/start": {
+      "post": {
+        "operationId": "OccurrenceController_start",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ocurrencia actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          },
+          "409": {
+            "description": "Transicion no permitida."
+          }
+        },
+        "summary": "Toma una ocurrencia (PENDIENTE -> EN_CURSO).",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences/{id}/complete": {
+      "post": {
+        "operationId": "OccurrenceController_complete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteOccurrenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ocurrencia completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          },
+          "409": {
+            "description": "Transicion no permitida."
+          }
+        },
+        "summary": "Completa una ocurrencia (comentario opcional).",
+        "tags": [
+          "recurring-activity"
         ]
       }
     }
@@ -12120,6 +12576,406 @@
         "required": [
           "isAdmin"
         ]
+      },
+      "CreateRecurringActivityDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titulo de la actividad.",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripcion/alcance.",
+            "maxLength": 4000
+          },
+          "activityType": {
+            "type": "string",
+            "description": "Tipo de actividad (catalogo RECURRING_ACTIVITY_TYPE, p. ej. REPORTE).",
+            "maxLength": 255
+          },
+          "cadence": {
+            "type": "string",
+            "enum": [
+              "SEMANAL",
+              "MENSUAL",
+              "TRIMESTRAL",
+              "SEMESTRAL",
+              "ANUAL"
+            ],
+            "description": "Cadencia logica de la recurrencia."
+          },
+          "intervalCount": {
+            "type": "number",
+            "description": "Cada cuantos periodos se repite (>= 1). Por defecto 1.",
+            "minimum": 1,
+            "default": 1
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Primer dia objetivo / ancla de la cadencia (dia de calendario)."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fin opcional de la recurrencia (inclusive). Null/omitido = sin fin."
+          },
+          "anticipationDays": {
+            "type": "number",
+            "description": "Dias de anticipacion propios; si se omite, el motor usa el default de ENV.",
+            "minimum": 0,
+            "maximum": 3650
+          },
+          "responsibleKind": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "AREA"
+            ],
+            "description": "Tipo de responsable: USER o AREA."
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Usuario responsable (requerido si responsibleKind=USER)."
+          },
+          "responsibleAreaId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Area responsable (requerida si responsibleKind=AREA)."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Si false, el motor no genera nuevas ocurrencias (pausa sin borrar). Por defecto true."
+          }
+        },
+        "required": [
+          "title",
+          "activityType",
+          "cadence",
+          "startDate",
+          "responsibleKind"
+        ]
+      },
+      "RecurringActivityResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la actividad."
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Descripcion/alcance."
+          },
+          "activityType": {
+            "type": "string",
+            "description": "Tipo de actividad (catalogo RECURRING_ACTIVITY_TYPE)."
+          },
+          "cadence": {
+            "type": "string",
+            "description": "Cadencia logica (Recurrence)."
+          },
+          "intervalCount": {
+            "type": "number",
+            "description": "Cada cuantos periodos se repite (>= 1)."
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Primer dia objetivo / ancla."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fin opcional (inclusive)."
+          },
+          "anticipationDays": {
+            "type": "number",
+            "nullable": true,
+            "description": "Dias de anticipacion propios (null = default ENV)."
+          },
+          "responsibleKind": {
+            "type": "string",
+            "description": "Tipo de responsable (ResponsibleKind): USER o AREA."
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario responsable."
+          },
+          "responsibleAreaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Area responsable."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Si false, el motor no genera nuevas ocurrencias."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "activityType",
+          "cadence",
+          "intervalCount",
+          "startDate",
+          "endDate",
+          "anticipationDays",
+          "responsibleKind",
+          "responsibleUserId",
+          "responsibleAreaId",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateRecurringActivityDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titulo de la actividad.",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripcion/alcance.",
+            "maxLength": 4000
+          },
+          "activityType": {
+            "type": "string",
+            "description": "Tipo de actividad (catalogo RECURRING_ACTIVITY_TYPE, p. ej. REPORTE).",
+            "maxLength": 255
+          },
+          "cadence": {
+            "type": "string",
+            "enum": [
+              "SEMANAL",
+              "MENSUAL",
+              "TRIMESTRAL",
+              "SEMESTRAL",
+              "ANUAL"
+            ],
+            "description": "Cadencia logica de la recurrencia."
+          },
+          "intervalCount": {
+            "type": "number",
+            "description": "Cada cuantos periodos se repite (>= 1). Por defecto 1.",
+            "minimum": 1,
+            "default": 1
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Primer dia objetivo / ancla de la cadencia (dia de calendario)."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fin opcional de la recurrencia (inclusive). Null/omitido = sin fin."
+          },
+          "anticipationDays": {
+            "type": "number",
+            "description": "Dias de anticipacion propios; si se omite, el motor usa el default de ENV.",
+            "minimum": 0,
+            "maximum": 3650
+          },
+          "responsibleKind": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "AREA"
+            ],
+            "description": "Tipo de responsable: USER o AREA."
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Usuario responsable (requerido si responsibleKind=USER)."
+          },
+          "responsibleAreaId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Area responsable (requerida si responsibleKind=AREA)."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Si false, el motor no genera nuevas ocurrencias (pausa sin borrar). Por defecto true."
+          }
+        }
+      },
+      "OccurrenceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico de la ocurrencia."
+          },
+          "activityId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Definicion a la que pertenece."
+          },
+          "activityTitle": {
+            "type": "string",
+            "description": "Titulo de la definicion (contexto)."
+          },
+          "activityType": {
+            "type": "string",
+            "description": "Tipo de actividad de la definicion."
+          },
+          "cadence": {
+            "type": "string",
+            "description": "Cadencia de la definicion (Recurrence)."
+          },
+          "responsibleKind": {
+            "type": "string",
+            "description": "Tipo de responsable de la definicion (USER/AREA)."
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario responsable de la definicion."
+          },
+          "responsibleAreaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Area responsable de la definicion."
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Dia objetivo de la ocurrencia."
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado de la ocurrencia (OccurrenceStatus)."
+          },
+          "periodLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "Etiqueta legible del periodo (p. ej. \"2024-W03\")."
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha/hora de completado."
+          },
+          "completedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario que completo."
+          },
+          "completionComment": {
+            "type": "string",
+            "nullable": true,
+            "description": "Comentario/evidencia de completado (opcional)."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "activityId",
+          "activityTitle",
+          "activityType",
+          "cadence",
+          "responsibleKind",
+          "responsibleUserId",
+          "responsibleAreaId",
+          "targetDate",
+          "status",
+          "periodLabel",
+          "completedAt",
+          "completedByUserId",
+          "completionComment",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginatedOccurrencesResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Ocurrencias de la pagina.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceResponseDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "description": "Pagina actual (1-based).",
+            "example": 1
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Tamano de pagina aplicado (acotado a 100).",
+            "example": 25
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de ocurrencias en alcance para el filtro vigente."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Hay al menos una pagina mas despues de esta."
+          }
+        },
+        "required": [
+          "data",
+          "page",
+          "pageSize",
+          "total",
+          "hasMore"
+        ]
+      },
+      "CompleteOccurrenceDto": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string",
+            "description": "Comentario o evidencia del completado (opcional).",
+            "maxLength": 4000
+          }
+        }
       }
     }
   }

@@ -466,10 +466,28 @@ interruptor del motor) se lee del entorno con defaults seguros
 (`recurring-activity.config.ts`); con `RECURRING_ACTIVITY_SCHEDULER_ENABLED=false` el
 motor no registra crons.
 
+La API REST se reparte en dos controllers delgados que delegan en el service:
+
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | POST | `/recurring-activities/run-generation` | Dispara manualmente la generación de ocurrencias debidas (solo ADMIN). |
+| POST | `/recurring-activities` | Crea una definición (JEFE_AREA/ADMIN). |
+| GET | `/recurring-activities` | Lista las definiciones gestionables por el actor (JEFE_AREA/ADMIN). |
+| GET | `/recurring-activities/:id` | Detalle de una definición dentro de alcance. |
+| PATCH | `/recurring-activities/:id` | Edita una definición (datos, responsable, pausa). |
+| DELETE | `/recurring-activities/:id` | Pausa la definición (soft-delete `active=false`; no borra ni elimina ocurrencias). |
+| GET | `/recurring-activities/occurrences` | Lista ocurrencias por alcance (`scope=mine` por defecto; `all` solo JEFE_AREA/ADMIN). Filtros por estado, cadencia, tipo, rango de fechas y responsable; paginación `page/pageSize` (≤100). |
+| GET | `/recurring-activities/occurrences/:id` | Detalle de una ocurrencia dentro de alcance. |
+| POST | `/recurring-activities/occurrences/:id/start` | Toma una ocurrencia (PENDIENTE → EN_CURSO). |
+| POST | `/recurring-activities/occurrences/:id/complete` | Completa una ocurrencia; comentario/evidencia opcional. |
 
-El tipo de actividad usa el catálogo `RECURRING_ACTIVITY_TYPE` (REPORTE, VALIDACION,
-REVISION). Las mutaciones de definiciones y ocurrencias se auditarán como
-`RECURRING_ACTIVITY` y `RECURRING_ACTIVITY_OCCURRENCE` (tipos ya reservados en auditoría).
+Autorización por alcance (regla única de pertenencia a área): las áreas del actor se
+derivan de sus procesos con grant activo (`Process.areaId`), ya que el actor no expone
+áreas directamente. `scope=mine` devuelve las ocurrencias cuya definición tiene al actor
+como responsable USER o es de un área suya. La gestión de definiciones es libre para ADMIN
+y, para JEFE_AREA, solo si el área objetivo (o el área del usuario responsable, derivada
+con la misma consulta) está entre las suyas; si no, `403`. Errores: `404` fuera de
+alcance/inexistente, `409` transición o responsable inválido, `400` DTO inválido, `403`
+por rol. El tipo de actividad usa el catálogo `RECURRING_ACTIVITY_TYPE` (REPORTE,
+VALIDACION, REVISION) y se valida contra `CatalogItem`. Las mutaciones de definiciones y
+ocurrencias se auditan como `RECURRING_ACTIVITY` y `RECURRING_ACTIVITY_OCCURRENCE`.

@@ -1699,6 +1699,128 @@ export interface paths {
         patch: operations["AdminUsersController_setAdminFlag"];
         trace?: never;
     };
+    "/recurring-activities/run-generation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dispara manualmente la generacion de ocurrencias debidas (solo ADMIN). */
+        post: operations["RecurringActivityController_runGeneration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las definiciones gestionables por el actor. */
+        get: operations["RecurringActivityController_findAll"];
+        put?: never;
+        /** Crea una definicion de actividad recurrente. */
+        post: operations["RecurringActivityController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una definicion dentro de alcance. */
+        get: operations["RecurringActivityController_findOne"];
+        put?: never;
+        post?: never;
+        /** Pausa una definicion (soft-delete active=false; no borra). */
+        delete: operations["RecurringActivityController_remove"];
+        options?: never;
+        head?: never;
+        /** Edita una definicion (datos, responsable, pausa). */
+        patch: operations["RecurringActivityController_update"];
+        trace?: never;
+    };
+    "/recurring-activities/occurrences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista ocurrencias por alcance (mine por defecto; all jefe/admin). */
+        get: operations["OccurrenceController_findAll"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/occurrences/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una ocurrencia dentro de alcance. */
+        get: operations["OccurrenceController_findOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/occurrences/{id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Toma una ocurrencia (PENDIENTE -> EN_CURSO). */
+        post: operations["OccurrenceController_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/occurrences/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Completa una ocurrencia (comentario opcional). */
+        post: operations["OccurrenceController_complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4776,6 +4898,236 @@ export interface components {
             /** @description true promueve a ADMIN de sistema; false degrada. */
             isAdmin: boolean;
         };
+        CreateRecurringActivityDto: {
+            /** @description Titulo de la actividad. */
+            title: string;
+            /** @description Descripcion/alcance. */
+            description?: string;
+            /** @description Tipo de actividad (catalogo RECURRING_ACTIVITY_TYPE, p. ej. REPORTE). */
+            activityType: string;
+            /**
+             * @description Cadencia logica de la recurrencia.
+             * @enum {string}
+             */
+            cadence: "SEMANAL" | "MENSUAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
+            /**
+             * @description Cada cuantos periodos se repite (>= 1). Por defecto 1.
+             * @default 1
+             */
+            intervalCount: number;
+            /**
+             * Format: date-time
+             * @description Primer dia objetivo / ancla de la cadencia (dia de calendario).
+             */
+            startDate: string;
+            /**
+             * Format: date-time
+             * @description Fin opcional de la recurrencia (inclusive). Null/omitido = sin fin.
+             */
+            endDate?: string;
+            /** @description Dias de anticipacion propios; si se omite, el motor usa el default de ENV. */
+            anticipationDays?: number;
+            /**
+             * @description Tipo de responsable: USER o AREA.
+             * @enum {string}
+             */
+            responsibleKind: "USER" | "AREA";
+            /**
+             * Format: uuid
+             * @description Usuario responsable (requerido si responsibleKind=USER).
+             */
+            responsibleUserId?: string;
+            /**
+             * Format: uuid
+             * @description Area responsable (requerida si responsibleKind=AREA).
+             */
+            responsibleAreaId?: string;
+            /** @description Si false, el motor no genera nuevas ocurrencias (pausa sin borrar). Por defecto true. */
+            active?: boolean;
+        };
+        RecurringActivityResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /** @description Titulo de la actividad. */
+            title: string;
+            /** @description Descripcion/alcance. */
+            description: string | null;
+            /** @description Tipo de actividad (catalogo RECURRING_ACTIVITY_TYPE). */
+            activityType: string;
+            /** @description Cadencia logica (Recurrence). */
+            cadence: string;
+            /** @description Cada cuantos periodos se repite (>= 1). */
+            intervalCount: number;
+            /**
+             * Format: date-time
+             * @description Primer dia objetivo / ancla.
+             */
+            startDate: string;
+            /**
+             * Format: date-time
+             * @description Fin opcional (inclusive).
+             */
+            endDate: string | null;
+            /** @description Dias de anticipacion propios (null = default ENV). */
+            anticipationDays: number | null;
+            /** @description Tipo de responsable (ResponsibleKind): USER o AREA. */
+            responsibleKind: string;
+            /**
+             * Format: uuid
+             * @description Usuario responsable.
+             */
+            responsibleUserId: string | null;
+            /**
+             * Format: uuid
+             * @description Area responsable.
+             */
+            responsibleAreaId: string | null;
+            /** @description Si false, el motor no genera nuevas ocurrencias. */
+            active: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de actualizacion.
+             */
+            updatedAt: string;
+        };
+        UpdateRecurringActivityDto: {
+            /** @description Titulo de la actividad. */
+            title?: string;
+            /** @description Descripcion/alcance. */
+            description?: string;
+            /** @description Tipo de actividad (catalogo RECURRING_ACTIVITY_TYPE, p. ej. REPORTE). */
+            activityType?: string;
+            /**
+             * @description Cadencia logica de la recurrencia.
+             * @enum {string}
+             */
+            cadence?: "SEMANAL" | "MENSUAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
+            /**
+             * @description Cada cuantos periodos se repite (>= 1). Por defecto 1.
+             * @default 1
+             */
+            intervalCount: number;
+            /**
+             * Format: date-time
+             * @description Primer dia objetivo / ancla de la cadencia (dia de calendario).
+             */
+            startDate?: string;
+            /**
+             * Format: date-time
+             * @description Fin opcional de la recurrencia (inclusive). Null/omitido = sin fin.
+             */
+            endDate?: string;
+            /** @description Dias de anticipacion propios; si se omite, el motor usa el default de ENV. */
+            anticipationDays?: number;
+            /**
+             * @description Tipo de responsable: USER o AREA.
+             * @enum {string}
+             */
+            responsibleKind?: "USER" | "AREA";
+            /**
+             * Format: uuid
+             * @description Usuario responsable (requerido si responsibleKind=USER).
+             */
+            responsibleUserId?: string;
+            /**
+             * Format: uuid
+             * @description Area responsable (requerida si responsibleKind=AREA).
+             */
+            responsibleAreaId?: string;
+            /** @description Si false, el motor no genera nuevas ocurrencias (pausa sin borrar). Por defecto true. */
+            active?: boolean;
+        };
+        OccurrenceResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico de la ocurrencia.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Definicion a la que pertenece.
+             */
+            activityId: string;
+            /** @description Titulo de la definicion (contexto). */
+            activityTitle: string;
+            /** @description Tipo de actividad de la definicion. */
+            activityType: string;
+            /** @description Cadencia de la definicion (Recurrence). */
+            cadence: string;
+            /** @description Tipo de responsable de la definicion (USER/AREA). */
+            responsibleKind: string;
+            /**
+             * Format: uuid
+             * @description Usuario responsable de la definicion.
+             */
+            responsibleUserId: string | null;
+            /**
+             * Format: uuid
+             * @description Area responsable de la definicion.
+             */
+            responsibleAreaId: string | null;
+            /**
+             * Format: date-time
+             * @description Dia objetivo de la ocurrencia.
+             */
+            targetDate: string;
+            /** @description Estado de la ocurrencia (OccurrenceStatus). */
+            status: string;
+            /** @description Etiqueta legible del periodo (p. ej. "2024-W03"). */
+            periodLabel: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha/hora de completado.
+             */
+            completedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Usuario que completo.
+             */
+            completedByUserId: string | null;
+            /** @description Comentario/evidencia de completado (opcional). */
+            completionComment: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de actualizacion.
+             */
+            updatedAt: string;
+        };
+        PaginatedOccurrencesResponseDto: {
+            /** @description Ocurrencias de la pagina. */
+            data: components["schemas"]["OccurrenceResponseDto"][];
+            /**
+             * @description Pagina actual (1-based).
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Tamano de pagina aplicado (acotado a 100).
+             * @example 25
+             */
+            pageSize: number;
+            /** @description Total de ocurrencias en alcance para el filtro vigente. */
+            total: number;
+            /** @description Hay al menos una pagina mas despues de esta. */
+            hasMore: boolean;
+        };
+        CompleteOccurrenceDto: {
+            /** @description Comentario o evidencia del completado (opcional). */
+            comment?: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -4990,7 +5342,7 @@ export interface operations {
                 /** @description Pagina (1-based). Por defecto 1. */
                 page?: number;
                 action?: "CREATE" | "UPDATE" | "DELETE" | "REVOKE";
-                objectType?: "PROCESS" | "AREA" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD";
+                objectType?: "PROCESS" | "AREA" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD" | "RECURRING_ACTIVITY" | "RECURRING_ACTIVITY_OCCURRENCE";
             };
             header?: never;
             path?: never;
@@ -10287,6 +10639,388 @@ export interface operations {
             };
             /** @description Usuario no encontrado. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecurringActivityController_runGeneration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resultado de la generacion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecurringActivityController_findAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Definiciones. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecurringActivityResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecurringActivityController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRecurringActivityDto"];
+            };
+        };
+        responses: {
+            /** @description Definicion creada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecurringActivityResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente o fuera de area. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Responsable incoherente o fechas invalidas. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecurringActivityController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Definicion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecurringActivityResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecurringActivityController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Definicion pausada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente o fuera de area. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecurringActivityController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRecurringActivityDto"];
+            };
+        };
+        responses: {
+            /** @description Definicion actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecurringActivityResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente o fuera de area. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Responsable incoherente o fechas invalidas. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_findAll: {
+        parameters: {
+            query?: {
+                /** @description Tamano de pagina (acotado a 100). Por defecto 25. */
+                pageSize?: number;
+                /** @description Pagina (1-based). Por defecto 1. */
+                page?: number;
+                responsibleAreaId?: string;
+                responsibleUserId?: string;
+                /** @description Dia objetivo hasta (inclusive). */
+                to?: string;
+                /** @description Dia objetivo desde (inclusive). */
+                from?: string;
+                activityType?: string;
+                cadence?: "SEMANAL" | "MENSUAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
+                status?: "PENDIENTE" | "EN_CURSO" | "COMPLETADA" | "VENCIDA";
+                scope?: "mine" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pagina de ocurrencias. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedOccurrencesResponseDto"];
+                };
+            };
+            /** @description Filtros invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description scope=all sin permiso. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ocurrencia. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceResponseDto"];
+                };
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ocurrencia actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceResponseDto"];
+                };
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transicion no permitida. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteOccurrenceDto"];
+            };
+        };
+        responses: {
+            /** @description Ocurrencia completada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transicion no permitida. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

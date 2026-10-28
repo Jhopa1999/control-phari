@@ -1,7 +1,13 @@
 import { PrismaService } from '../../database/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { RecurringActivityService } from './recurring-activity.service';
 import { OccurrenceStatus } from './occurrence-status';
 import { Recurrence } from './recurrence';
+
+/** Audit mockeado: el motor (generacion/vencidas) no audita, pero el service lo requiere en el constructor. */
+function createAuditMock(): AuditService {
+  return { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+}
 
 /** Define las variables de entorno del motor para un test determinista. */
 function withConfigEnv(): void {
@@ -56,7 +62,7 @@ describe('RecurringActivityService', () => {
   beforeEach(() => {
     withConfigEnv();
     prisma = createPrismaMock();
-    service = new RecurringActivityService(prisma);
+    service = new RecurringActivityService(prisma, createAuditMock());
   });
 
   describe('generateDueOccurrences (idempotencia por createMany skipDuplicates)', () => {

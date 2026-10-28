@@ -42,3 +42,43 @@ export const PLAN_STATUS_LABELS: Record<string, string> = {
 export function planStatusLabel(status: string): string {
   return PLAN_STATUS_LABELS[status] ?? status;
 }
+
+/** Etiquetas legibles de la cadencia de una actividad recurrente (Recurrence). */
+export const RECURRENCE_LABELS: Record<string, string> = {
+  SEMANAL: 'Semanal',
+  MENSUAL: 'Mensual',
+  TRIMESTRAL: 'Trimestral',
+  SEMESTRAL: 'Semestral',
+  ANUAL: 'Anual',
+};
+
+/** Orden de cadencias para selects. */
+export const RECURRENCES: readonly string[] = [
+  'SEMANAL',
+  'MENSUAL',
+  'TRIMESTRAL',
+  'SEMESTRAL',
+  'ANUAL',
+] as const;
+
+export function recurrenceLabel(cadence: string): string {
+  return RECURRENCE_LABELS[cadence] ?? cadence;
+}
+
+/** Etiquetas del tipo de responsable (ResponsibleKind). */
+export const RESPONSIBLE_KIND_LABELS: Record<string, string> = {
+  USER: 'Persona',
+  AREA: 'Área',
+};
+
+export function responsibleKindLabel(kind: string): string {
+  return RESPONSIBLE_KIND_LABELS[kind] ?? kind;
+}
+
+/** Orden de estados de ocurrencia para selects/listados. */
+export const OCCURRENCE_STATUSES: readonly string[] = [
+  'PENDIENTE',
+  'EN_CURSO',
+  'COMPLETADA',
+  'VENCIDA',
+] as const;

@@ -29,7 +29,8 @@ export type ModuleKey =
   | 'permissions'
   | 'systemSettings'
   | 'areas'
-  | 'processesAdmin';
+  | 'processesAdmin'
+  | 'recurring';
 
 /**
  * Matriz de modulos -> roles permitidos. Reproduce LITERALMENTE la "Matriz de
@@ -92,6 +93,11 @@ export const MODULE_MATRIX: Record<ModuleKey, readonly RoleCode[]> = {
   // Administracion de procesos: ADMIN (gestion global) y JEFE_AREA (gestiona
   // los procesos de su area).
   processesAdmin: [RoleCode.ADMIN, RoleCode.JEFE_AREA],
+  // Actividades recurrentes: la OPERACION (ver "que me toca" y completar
+  // ocurrencias) es de los 3 roles de area; la GESTION de definiciones la
+  // acota el service a JEFE_AREA (su area) / ADMIN. La seccion web es visible
+  // para los 3 roles.
+  recurring: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
 };
 
 /** Todas las claves de modulo, en orden de declaracion. */

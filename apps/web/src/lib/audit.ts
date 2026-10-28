@@ -48,6 +48,8 @@ const AUDIT_OBJECT_TYPE_FILTER: Record<AuditObjectType, true> = {
   GATE_CHECK: true,
   GATE_PENDING_ITEM: true,
   VALIDATION_RECORD: true,
+  RECURRING_ACTIVITY: true,
+  RECURRING_ACTIVITY_OCCURRENCE: true,
 };
 
 export const AUDIT_OBJECT_TYPE_OPTIONS = Object.keys(

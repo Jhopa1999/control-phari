@@ -35,6 +35,7 @@ export type StatusKind =
   | 'triage'
   | 'plan'
   | 'task'
+  | 'occurrence'
   | 'record'
   | 'log'
   | 'asset'
@@ -63,6 +64,13 @@ const LOG_LABELS: Record<string, string> = {
   BORRADOR: 'Borrador',
   ENVIADO: 'Enviado',
   REVISADO: 'Revisado',
+};
+/** Estados de una ocurrencia de actividad recurrente (OccurrenceStatus). */
+const OCCURRENCE_LABELS: Record<string, string> = {
+  PENDIENTE: 'Pendiente',
+  EN_CURSO: 'En curso',
+  COMPLETADA: 'Completada',
+  VENCIDA: 'Vencida',
 };
 const ASSET_LABELS: Record<string, string> = {
   BORRADOR: 'Borrador',
@@ -171,6 +179,12 @@ const STATUS_TABLES: Record<
     BLOQUEADA: 'danger',
     EN_REVISION: 'info',
     TERMINADA: 'success',
+  }),
+  occurrence: statusTable(OCCURRENCE_LABELS, {
+    PENDIENTE: { tone: 'neutral', icon: CircleDashed },
+    EN_CURSO: 'info',
+    COMPLETADA: { tone: 'success', icon: CircleCheck },
+    VENCIDA: { tone: 'danger', icon: TriangleAlert },
   }),
   record: statusTable(RECORD_STATE_LABEL, {
     BORRADOR: 'neutral',
