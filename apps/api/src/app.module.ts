@@ -17,6 +17,7 @@ import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 import { GovernanceModule } from './modules/governance/governance.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
+import { AiModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { SystemSettingsModule } from './modules/system-settings/system-settings.
     GovernanceModule,
     PortfolioModule,
     SystemSettingsModule,
+    AiModule,
   ],
 })
 export class AppModule {}

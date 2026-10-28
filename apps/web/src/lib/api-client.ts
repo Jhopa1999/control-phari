@@ -155,6 +155,26 @@ export type AdminUser = components['schemas']['AdminUserResponseDto'];
 export type SetAdminFlag = components['schemas']['SetAdminFlagDto'];
 /** Fuente efectiva de la configuracion SMTP (db | env | none). */
 export type SmtpConfigSource = SmtpConfig['source'];
+// --- IA Fase 1 (configuracion de agentes + sugerencia de triage) ---
+/** Estado combinado de IA (GET /admin/ai/config): global + agentes + catalogo de modelos. */
+export type AiConfig = components['schemas']['AiConfigResponseDto'];
+export type AiGlobalConfig = components['schemas']['AiGlobalConfigResponseDto'];
+export type AiAgentConfig = components['schemas']['AiAgentConfigResponseDto'];
+export type AiModelCatalogEntry =
+  components['schemas']['AiModelCatalogEntryDto'];
+export type UpdateAiGlobalConfig =
+  components['schemas']['UpdateAiGlobalConfigDto'];
+export type UpdateAiAgentConfig =
+  components['schemas']['UpdateAiAgentConfigDto'];
+/** Resultado de la prueba de conexion de un agente ({ ok, message }). */
+export type AiConnectionTest = components['schemas']['AiConnectionTestDto'];
+/** Sugerencia de triage generada por IA (no persiste nada). */
+export type TriageSuggestion =
+  components['schemas']['TriageSuggestionResponseDto'];
+export type DuplicateCandidate =
+  components['schemas']['DuplicateCandidateDto'];
+/** Modo de credenciales de IA (iam-role | access-keys). */
+export type AiCredentialMode = AiGlobalConfig['credentialMode'];
 /**
  * Clave de localStorage donde el selector de usuario (dev) guarda el
  * identifier del actor actual. Mecanismo exclusivo de desarrollo (design 3.2).

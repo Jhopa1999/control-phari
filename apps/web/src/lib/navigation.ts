@@ -1,5 +1,6 @@
 import {
   BadgeCheck,
+  Bot,
   CalendarDays,
   ChartColumn,
   ChartGantt,
@@ -66,7 +67,8 @@ export type ModuleKey =
   | 'permissions'
   | 'systemSettings'
   | 'areas'
-  | 'processesAdmin';
+  | 'processesAdmin'
+  | 'aiSettings';
 
 export interface NavItem {
   href: string;
@@ -192,6 +194,12 @@ export const NAV_GROUPS: NavGroup[] = [
         moduleKey: 'systemSettings',
         icon: Mail,
       },
+      {
+        href: '/administracion/ia',
+        label: 'Agentes de IA',
+        moduleKey: 'aiSettings',
+        icon: Bot,
+      },
     ],
   },
 ];
@@ -226,9 +234,10 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   systemSettings: 'Configuración del sistema',
   areas: 'Áreas',
   processesAdmin: 'Procesos',
+  aiSettings: 'Agentes de IA',
 };
 
-/** Las 24 claves de módulo, sin repetidos, en el orden de MODULE_LABELS. */
+/** Las 25 claves de módulo, sin repetidos, en el orden de MODULE_LABELS. */
 export const MODULE_ORDER: readonly ModuleKey[] = Object.keys(MODULE_LABELS) as ModuleKey[];
 
 /** Grupos con sus ítems permitidos; los grupos que quedan vacíos no se devuelven. */

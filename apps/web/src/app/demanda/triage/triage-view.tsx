@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ListFilter } from 'lucide-react';
+import { ListFilter, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -39,8 +39,10 @@ import type {
   Process,
   Request,
   Triage,
+  TriageSuggestion,
 } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
+import { AiTriageError, requestTriageSuggestion } from '@/lib/ai-triage';
 import { listAssets } from '@/lib/assets';
 import { listCatalogItems } from '@/lib/catalog';
 import { formatCount, formatDateTime } from '@/lib/format';
@@ -180,6 +182,11 @@ export function TriageView(): React.ReactElement {
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const effortRef = React.useRef<HTMLInputElement>(null);
+  // Sugerencia de IA (panel lateral): no persiste nada, solo prefija los selects
+  // del formulario para que el humano confirme. Se reinicia al cambiar de solicitud.
+  const [suggestion, setSuggestion] = React.useState<TriageSuggestion | null>(null);
+  const [suggesting, setSuggesting] = React.useState(false);
+  const [suggestionError, setSuggestionError] = React.useState<string | null>(null);
 
   // Fija la selección, reinicia el formulario y carga los candidatos a
   // responsable principal de esa solicitud (dependen de su proceso principal).
@@ -191,6 +198,9 @@ export function TriageView(): React.ReactElement {
     setFieldErrors({});
     setFormError(null);
     setRegisteredTriage(null);
+    setSuggestion(null);
+    setSuggestionError(null);
+    setSuggesting(false);
     if (!id) {
       setEligibleResponsibles([]);
       return;
@@ -377,6 +387,31 @@ export function TriageView(): React.ReactElement {
     }
   }
 
+  /**
+   * Pide una sugerencia de IA para la solicitud elegida. No envía nada: solo
+   * guarda la respuesta para que el humano la revise y, si quiere, prefije los
+   * selects. En 409/422/503/error deja un mensaje y el triage manual intacto.
+   */
+  async function handleSuggest(): Promise<void> {
+    if (!selected || suggesting) return;
+    setSuggesting(true);
+    setSuggestion(null);
+    setSuggestionError(null);
+    const id = selected.id;
+    try {
+      const result = await requestTriageSuggestion(id);
+      if (selectedRef.current !== id) return;
+      setSuggestion(result);
+    } catch (err) {
+      if (selectedRef.current !== id) return;
+      const message =
+        err instanceof AiTriageError ? err.message : 'Ocurrió un error inesperado.';
+      setSuggestionError(message);
+    } finally {
+      if (selectedRef.current === id) setSuggesting(false);
+    }
+  }
+
   function renderCatalogSelect(
     id: string,
     label: string,
@@ -411,6 +446,162 @@ export function TriageView(): React.ReactElement {
     if (!code) return null;
     const item = (catalogs[family] ?? []).find((c) => c.code === code);
     return item?.label ?? code;
+  }
+
+  /**
+   * Panel «Sugerencia de IA» de la columna lateral: botón para pedir la
+   * sugerencia, estado de carga, mensaje de degradación (409/422/503/error) y, en
+   * éxito, los cinco codes traducidos a etiqueta, la banda P1-P4 orientativa +
+   * justificación, los posibles duplicados (enlazados) y la información faltante.
+   * Cada code sugerido tiene un botón que PREFIJA el select del formulario; la
+   * sugerencia nunca envía nada por sí sola.
+   */
+  function renderSuggestionPanel(): React.ReactElement {
+    const rows: {
+      field: keyof TriageFormValues;
+      family: string;
+      label: string;
+      code: string | null;
+    }[] = suggestion
+      ? [
+          { field: 'routeCode', family: 'TRIAGE_ROUTE', label: 'Ruta', code: suggestion.suggestedRouteCode },
+          {
+            field: 'demandTypeCode',
+            family: 'DEMAND_TYPE',
+            label: 'Tipo de demanda',
+            code: suggestion.suggestedDemandTypeCode,
+          },
+          {
+            field: 'criticalityCode',
+            family: 'CRITICALITY',
+            label: 'Criticidad',
+            code: suggestion.suggestedCriticalityCode,
+          },
+          { field: 'sizeCode', family: 'TRIAGE_SIZE', label: 'Tamaño', code: suggestion.suggestedSizeCode },
+          {
+            field: 'dataAvailabilityCode',
+            family: 'DATA_AVAILABILITY',
+            label: 'Disponibilidad de datos',
+            code: suggestion.suggestedDataAvailabilityCode,
+          },
+        ]
+      : [];
+
+    return (
+      <section
+        aria-labelledby="triage-ai-title"
+        className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4"
+      >
+        <div className="flex items-center gap-2">
+          <Sparkles className="size-4 text-muted-foreground" aria-hidden="true" />
+          <h2 id="triage-ai-title" className="text-base font-semibold">
+            Sugerencia de IA
+          </h2>
+        </div>
+        <p className="text-meta text-muted-foreground">
+          Es una señal orientativa: nada se envía ni se registra por sí solo. Revisa y confirma en el
+          formulario de triage.
+        </p>
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            loading={suggesting}
+            onClick={() => void handleSuggest()}
+          >
+            <Sparkles aria-hidden="true" />
+            {suggestion ? 'Volver a sugerir' : 'Sugerir con IA'}
+          </Button>
+        </div>
+
+        {suggestionError ? (
+          <InlineNotice tone="warning" role="status" title="No hay sugerencia disponible.">
+            <p className="text-muted-foreground">{suggestionError}</p>
+          </InlineNotice>
+        ) : null}
+
+        {suggestion ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold">Clasificación sugerida</h3>
+              <ul className="flex flex-col gap-2">
+                {rows.map((row) => (
+                  <li
+                    key={row.field}
+                    className="flex flex-wrap items-center justify-between gap-2"
+                  >
+                    <span className="text-sm">
+                      <span className="text-muted-foreground">{row.label}:</span>{' '}
+                      {row.code ? (catalogLabel(row.family, row.code) ?? row.code) : 'Sin sugerencia'}
+                    </span>
+                    {row.code ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => update(row.field, row.code as TriageFormValues[typeof row.field])}
+                      >
+                        Usar
+                      </Button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <h3 className="text-sm font-semibold">Prioridad orientativa</h3>
+              <div className="flex items-center gap-2 text-sm">
+                {suggestion.tentativePriorityBand ? (
+                  <StatusBadge kind="band" value={suggestion.tentativePriorityBand} />
+                ) : (
+                  <span className="text-muted-foreground">Sin banda</span>
+                )}
+              </div>
+              {suggestion.priorityRationale ? (
+                <p className="text-meta text-muted-foreground">{suggestion.priorityRationale}</p>
+              ) : null}
+              <p className="text-meta text-muted-foreground">
+                Es una señal, no el score oficial de priorización.
+              </p>
+            </div>
+
+            {suggestion.possibleDuplicates.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <h3 className="text-sm font-semibold">Posibles duplicados</h3>
+                <ul className="flex flex-col gap-2">
+                  {suggestion.possibleDuplicates.map((dup) => (
+                    <li key={dup.requestId} className="flex flex-col gap-0.5">
+                      <Link
+                        href={`/demanda/solicitudes/${encodeURIComponent(dup.requestId)}`}
+                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        {dup.title}
+                      </Link>
+                      {dup.reason ? (
+                        <span className="text-meta text-muted-foreground">{dup.reason}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {suggestion.missingInformation.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <h3 className="text-sm font-semibold">Información faltante</h3>
+                <ul className="list-disc pl-5 text-meta text-muted-foreground">
+                  {suggestion.missingInformation.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
+    );
   }
 
   /**
@@ -701,6 +892,7 @@ export function TriageView(): React.ReactElement {
                 </h2>
                 <RequestFacts request={selected} processName={processName} />
               </section>
+              {isTriageable(selected) ? renderSuggestionPanel() : null}
               <RequirementsPanel
                 id="triage-asset-requirement"
                 title="Falta el activo base"

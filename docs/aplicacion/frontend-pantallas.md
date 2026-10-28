@@ -6,7 +6,7 @@ El frontend (Next.js, App Router) vive en `apps/web/src/app/`. Cada `page.tsx` e
 envoltura delgada que delega en su componente de vista (`*-view.tsx`) y consume la API
 del backend. El frontend no accede a la base de datos ni usa Prisma.
 
-El menú lateral se define en `apps/web/src/lib/navigation.ts`: 7 grupos y 26 ítems.
+El menú lateral se define en `apps/web/src/lib/navigation.ts`: 7 grupos y 27 ítems.
 Cada ítem declara una `moduleKey` que coincide con las claves de `MODULE_MATRIX` del
 backend; el menú se filtra de forma **cosmética** según `allowedModules` de
 `GET /me/permissions`. El control real de acceso lo hace siempre el servidor. Ver
@@ -34,7 +34,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | --- | --- | --- |
 | `/demanda/solicitudes` | Solicitudes | Registrar y consultar solicitudes de demanda; cada fila ofrece la acción *Ver detalle* que abre la ficha de la solicitud (menú grupo *Demanda*, `requests`). |
 | `/demanda/solicitudes/[id]` | Detalle de la solicitud | Ficha de **solo lectura** que reúne el recorrido completo de la solicitud en un stepper vertical con todas las etapas visibles (Solicitud, Triage, Priorización, Aprobación/Compromiso, Planificación, Gobierno y validación, Estabilización/Cierre); cada etapa muestra su estado derivado y, cuando el módulo y el estado lo permiten, un enlace *Ir a actuar* hacia la bandeja correspondiente. Se llega desde la acción *Ver detalle* de Solicitudes (no es ítem de menú, `requests`). |
-| `/demanda/triage` | Triage | Clasificar la solicitud, decidir su ruta y asociar su **activo base** (solo un activo **existente** visible para el proceso; el triage no crea activos y enlaza al módulo de Activos), requisito para priorizar (`triage`). |
+| `/demanda/triage` | Triage | Clasificar la solicitud, decidir su ruta y asociar su **activo base** (solo un activo **existente** visible para el proceso; el triage no crea activos y enlaza al módulo de Activos), requisito para priorizar (`triage`). La columna lateral incluye un panel **Sugerencia de IA**: un botón pide la sugerencia (no persiste nada), muestra los cinco codes orientativos con botones para **prefijar** los selects del formulario, la banda de prioridad `P1`–`P4` orientativa, posibles duplicados enlazados e información faltante; si la IA está apagada o falla, muestra un aviso y el triage manual sigue operativo. |
 | `/demanda/priorizacion` | Priorización | Evaluar con los criterios ponderados y ordenar el backlog (`priority`). |
 | `/demanda/resumen` | Indicadores | Panorama/indicadores de demanda (menú grupo *Ejecución* como *Indicadores*, `demandOverview`). |
 
@@ -79,6 +79,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | `/administracion/areas` | Áreas | Crear y editar áreas organizativas (por ejemplo, Analítica) que agrupan procesos: listado, alta y edición de nombre/estado/orden. Solo rol ADMIN (`areas`). |
 | `/administracion/procesos` | Procesos | Crear y editar procesos (por ejemplo, BI, Integraciones, IA) agrupados por área: el alta exige un área activa y la edición no mueve el proceso de área. Rol ADMIN o jefe de área (`processesAdmin`). |
 | `/administracion/configuracion-smtp` | Configuración SMTP | Configurar el servidor SMTP en runtime (host, puerto, remitente, contraseña write-only) con prueba de envío, y gestionar los administradores del sistema (toggle `isAdmin`). Solo rol ADMIN (`systemSettings`). |
+| `/administracion/ia` | Agentes de IA | Configurar los agentes de IA (credenciales de AWS Bedrock, modelo, prompt y parámetros) desde la plataforma. Solo rol ADMIN (`aiSettings`). |
 
 ## Catálogos (`/catalogs`) — funcionalidad base
 

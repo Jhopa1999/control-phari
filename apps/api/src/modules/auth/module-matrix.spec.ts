@@ -5,7 +5,7 @@ import {
 } from './module-matrix';
 import { RoleCode } from './role-code';
 describe('MODULE_MATRIX / allowedModulesFor', () => {
-  it('expone exactamente las 24 claves (21 de design 3.3 + systemSettings + areas + processesAdmin)', () => {
+  it('expone exactamente las 25 claves (21 de design 3.3 + systemSettings + areas + processesAdmin + aiSettings)', () => {
     expect(MODULE_KEYS).toEqual([
       'demandOverview',
       'dashboard',
@@ -31,6 +31,7 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
       'systemSettings',
       'areas',
       'processesAdmin',
+      'aiSettings',
     ]);
   });
   it('admin y team solo son para JEFE_AREA (specs/10)', () => {
@@ -61,6 +62,7 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
       'systemSettings',
       'areas',
       'processesAdmin',
+      'aiSettings',
     ]);
   });
   it('areas es SOLO para ADMIN; processesAdmin para ADMIN y JEFE_AREA', () => {
@@ -143,13 +145,17 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
     expect(combined).toContain('admin'); // de jefe
     expect(combined).toContain('requests'); // comun
   });
-  it('el jefe ve todos los modulos de area (todos MENOS systemSettings y areas)', () => {
-    // systemSettings y areas son exclusivos de ADMIN: el jefe de area NO es
-    // ADMIN, por lo que ve todos los modulos de la matriz excepto esos dos
-    // (processesAdmin SI lo ve, porque gestiona los procesos de su area).
+  it('el jefe ve todos los modulos de area (todos MENOS systemSettings, areas y aiSettings)', () => {
+    // systemSettings, areas y aiSettings son exclusivos de ADMIN: el jefe de
+    // area NO es ADMIN, por lo que ve todos los modulos de la matriz excepto
+    // esos tres (processesAdmin SI lo ve, porque gestiona los procesos de su
+    // area).
     expect(allowedModulesFor([RoleCode.JEFE_AREA])).toEqual(
       MODULE_KEYS.filter(
-        (key) => key !== 'systemSettings' && key !== 'areas',
+        (key) =>
+          key !== 'systemSettings' &&
+          key !== 'areas' &&
+          key !== 'aiSettings',
       ),
     );
   });

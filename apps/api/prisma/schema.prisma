@@ -173,6 +173,13 @@ model User {
   smtpConfigsUpdated SmtpConfig[]
   authTokens         AuthToken[]
 
+  // IA Fase 1 (FEAT-001): configuracion global y de agentes de IA actualizadas
+  // por este usuario. Dos modelos (AiGlobalConfig, AiAgentConfig) apuntan a User
+  // por updated_by_user_id, por eso cada relacion inversa lleva `name` propio
+  // (Prisma exige nombres distintos para desambiguar). onDelete SetNull.
+  aiGlobalConfigsUpdated AiGlobalConfig[] @relation("AiGlobalConfigUpdatedBy")
+  aiAgentConfigsUpdated  AiAgentConfig[]  @relation("AiAgentConfigUpdatedBy")
+
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
   @@map("users")
@@ -1081,4 +1088,48 @@ model SmtpConfig {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("smtp_config")
+}
+
+/// Configuracion GLOBAL de IA (singleton: fila unica) — IA Fase 1 (FEAT-001).
+/// Permite al ADMIN encender/apagar la IA y elegir el modo de credenciales sin
+/// tocar codigo. En modo `access-keys` el secret se guarda CIFRADO (AES-256-GCM,
+/// formato iv.tag.ciphertext base64) en aws_secret_access_key_ciphertext; NUNCA
+/// en claro ni devuelto al frontend. En modo `iam-role` no se guardan claves (el
+/// SDK resuelve el rol de la instancia). Arranca APAGADA (enabled=false).
+model AiGlobalConfig {
+  id                       String   @id @default(uuid()) @db.Uuid
+  enabled                  Boolean  @default(false)
+  credentialMode           String   @default("iam-role") @map("credential_mode")
+  awsAccessKeyId           String?  @map("aws_access_key_id")
+  awsSecretAccessKeyCipher String?  @map("aws_secret_access_key_ciphertext")
+  updatedByUserId          String?  @map("updated_by_user_id") @db.Uuid
+  updatedBy                User?    @relation("AiGlobalConfigUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_global_config")
+}
+
+/// Configuracion por AGENTE de IA (uno por `code`, p. ej. TRIAGE) — IA Fase 1
+/// (FEAT-001). Todo es editable desde el Admin: modelo, region, prompt base,
+/// temperatura, tokens y timeout. Arranca APAGADO (enabled=false). No guarda
+/// secretos (las credenciales viven en AiGlobalConfig, un solo lugar).
+model AiAgentConfig {
+  id              String   @id @default(uuid()) @db.Uuid
+  code            String   @unique
+  displayName     String   @map("display_name")
+  enabled         Boolean  @default(false)
+  region          String   @default("us-east-2")
+  model           String
+  basePrompt      String   @map("base_prompt") @db.Text
+  temperature     Float    @default(0.2)
+  maxTokens       Int      @default(1024) @map("max_tokens")
+  timeoutMs       Int      @default(20000) @map("timeout_ms")
+  updatedByUserId String?  @map("updated_by_user_id") @db.Uuid
+  updatedBy       User?    @relation("AiAgentConfigUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([code])
+  @@map("ai_agent_config")
 }

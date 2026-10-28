@@ -132,6 +132,33 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Activo generico, compartido y gobernado: migracion destructiva que elimina de assets las columnas type_code/technology_code/source_code/frequency_code y renombra functional_description a general_description, nueva tabla puente AssetProcessVisibility (visibilidad N:M por proceso), escritura del activo reservada al jefe de area (requireAssetGovernor + @Roles(JEFE_AREA)), y el triage deja de crear activos (POST /requests/:id/asset solo asocia un assetId existente y habilitado para el proceso, 409 si no)."
+    },
+    {
+      "timestamp": "2026-10-28T01:30:00Z",
+      "trigger_file": "apps/api/prisma/schema.prisma",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md"
+      ],
+      "summary": "Se documento el modulo ai (Fase 1): config de IA en /admin/ai/config y /admin/ai/agents/:code[/test] (solo ADMIN, sin exponer secretos) y POST /requests/:id/ai/triage-suggestion (sugiere sin persistir, roles de triage, degradacion 409/422/503), mas los modelos AiGlobalConfig (ai_global_config) y AiAgentConfig (ai_agent_config) y la migracion aditiva ai_config."
+    },
+    {
+      "timestamp": "2026-10-27T21:30:00Z",
+      "trigger_file": "apps/web/src/lib/navigation.ts",
+      "updated_docs": [
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Se documento la nueva clave de modulo aiSettings (solo ADMIN; MODULE_MATRIX pasa a 25 claves, un JEFE_AREA ve todas menos systemSettings, areas y aiSettings) y el item de menu 'Agentes de IA' bajo Administracion (/administracion/ia), con el menu ahora en 27 items."
+    },
+    {
+      "timestamp": "2026-10-28T03:00:00Z",
+      "trigger_file": "apps/api/src/modules/ai/ai-config.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Se documento que GET /admin/ai/config ahora tambien devuelve el catalogo de modelos permitidos (models: id/label/tier) para el selector del Admin, y el panel 'Sugerencia de IA' en la pantalla /demanda/triage (sugiere sin persistir, prefija los selects, muestra banda P1-P4 orientativa, duplicados e informacion faltante; degrada dejando el triage manual intacto)."
     }
   ]
 }
