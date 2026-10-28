@@ -535,7 +535,11 @@ y **PostgreSQL**. Las migraciones se aplican como paso explícito con
 `prisma migrate deploy`.
 
 El procedimiento completo (variables, build de imágenes, arranque, migraciones,
-logs, backup, rollback, HTTPS) está en **[docs/deployment.md](deployment.md)**.
+logs, backup, rollback, HTTPS con Let's Encrypt y renovación automática) está en
+**[docs/deployment.md](deployment.md)**. El registro de la instalación concreta
+en AWS (EC2 "EC2 Vigia": URL pública `https://3.22.84.134.sslip.io`, IDs de
+infraestructura, operación por SSM) está en
+**[docs/despliegue-produccion-aws.md](despliegue-produccion-aws.md)**.
 
 ---
 

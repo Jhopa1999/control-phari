@@ -10,7 +10,13 @@ Documentacion y decisiones tecnicas de la plantilla de portales.
   pruebas, Git/PR, CI y despliegue). Empieza aqui si vas a usar la plantilla.
 - **[deployment.md](deployment.md)** — Manual de despliegue a produccion
   (Docker Compose, Nginx, variables, migraciones, start/stop, logs, backup,
-  rollback, HTTPS).
+  rollback, HTTPS con Let's Encrypt y renovacion automatica). Guia generica y
+  reutilizable de la plantilla.
+- **[despliegue-produccion-aws.md](despliegue-produccion-aws.md)** — Registro
+  operativo de la instalacion CONCRETA en AWS (EC2 "EC2 Vigia"): URL publica,
+  IDs de infraestructura, como se abrio a internet (IGW), HTTPS con sslip.io,
+  operacion por SSM, seed y re-despliegue. Especifico de esta instalacion, no de
+  la plantilla.
 - Este archivo (`README.md`) — decisiones tecnicas registradas durante la
   construccion de la plantilla.
 

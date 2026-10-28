@@ -17,6 +17,8 @@ resources:
   - file://package.json
   - file://apps/api/package.json
   - file://apps/web/package.json
+  - file://apps/mcp/package.json
+  - file://apps/mcp/README.md
   - file://packages/api-client/package.json
 includeMcpJson: false
 includePowers: false
@@ -126,6 +128,9 @@ de cada edición pequeña.
 - Cambio de backend: `npm run test:unit` relevante + `npm run typecheck`.
 - Cambio de frontend: `npm run typecheck` + `npm run build` cuando corresponda.
 - Cambio de contrato: `npm run contracts:generate` + `npm run typecheck`.
+- Cambio en el MCP (`apps/mcp`): `npm run build:api-client` primero, luego
+  `npm run typecheck:mcp` y `npm run test --workspace apps/mcp`. El MCP es una
+  capa delgada sobre el backend (ver `.kiro/steering/50-mcp.md`).
 - Cambio funcional completo (afecta un flujo cubierto por E2E):
   `npm run test:unit`, `npm run test:e2e`, `npm run typecheck`, `npm run build`.
   `npm run test:e2e` requiere PostgreSQL levantado (`npm run db:up`).

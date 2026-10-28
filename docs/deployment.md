@@ -19,7 +19,8 @@ Internet
  mcp  ----> api (http://api:3001, solo red interna de Compose)
 ```
 
-- Solo **Nginx** publica un puerto al host (80; 443 cuando se configure HTTPS).
+- Solo **Nginx** publica puertos al host (80 y, con HTTPS habilitado, 443; ver
+  sección «HTTPS»).
 - `web`, `api`, `mcp` y `postgres` **no** publican puertos al host.
 - `api` se conecta a PostgreSQL por el nombre de servicio `postgres:5432`.
 - El navegador consume la API por el mismo dominio bajo `/api` (lo resuelve
@@ -124,6 +125,83 @@ una migración compensatoria. No se implementa blue/green todavía.
 `server` comentado de ejemplo para HTTPS. Para producción real: terminar TLS en
 Nginx con certificados de Let's Encrypt (Certbot), montando los certificados en
 el contenedor. **Nunca** versionar llaves privadas ni certificados.
+
+### Procedimiento con Let's Encrypt (webroot + Certbot)
+
+Patrón reutilizable para habilitar HTTPS sin reconstruir imágenes, usando el
+contenedor oficial `certbot/certbot` en modo `webroot` y dos volúmenes
+compartidos con Nginx (certificados y el directorio del challenge ACME):
+
+1. **Requisito previo:** un **nombre de dominio** que resuelva a la IP pública
+   del servidor. Let's Encrypt **no** emite certificados para una IP desnuda.
+   Si no hay dominio propio, un servicio tipo `sslip.io`/`nip.io`
+   (`<ip>.sslip.io` resuelve a `<ip>`) sirve como nombre válido provisional.
+   Conviene además que la IP pública sea **fija** (Elastic IP en AWS) para que
+   el certificado y el DNS no se rompan si la instancia se reinicia.
+
+2. **Publicar 80 y 443 y montar los volúmenes.** Un override de Compose
+   (p. ej. `compose.https.yaml`) añade al servicio `nginx` los puertos `80:80`
+   y `443:443` y los volúmenes `letsencrypt:/etc/letsencrypt` y
+   `certbot_www:/var/www/certbot`. Se levanta con los dos ficheros:
+
+   ```bash
+   docker compose -f compose.prod.yaml -f compose.https.yaml \
+     --env-file .env.production up -d
+   ```
+
+3. **Config de Nginx para el challenge + redirección.** El bloque `server` de
+   escucha en 80 sirve `location /.well-known/acme-challenge/ { root /var/www/certbot; }`
+   (esto **no** debe redirigirse a HTTPS) y redirige el resto a HTTPS con
+   `return 301`. El bloque `server` de escucha en 443 (`ssl`) usa
+   `ssl_certificate` / `ssl_certificate_key` apuntando a
+   `/etc/letsencrypt/live/<dominio>/fullchain.pem` y `privkey.pem`. Como Nginx
+   no arranca si referencia un certificado que aún no existe, el primer arranque
+   usa una config **bootstrap** solo-HTTP (que ya sirve el challenge) y, tras
+   emitir el certificado, se cambia a la config con el bloque 443.
+
+4. **Emitir el certificado** (webroot):
+
+   ```bash
+   docker run --rm \
+     -v <proyecto>_letsencrypt:/etc/letsencrypt \
+     -v <proyecto>_certbot_www:/var/www/certbot \
+     certbot/certbot certonly --webroot -w /var/www/certbot \
+     -d <dominio> --agree-tos --no-eff-email \
+     --register-unsafely-without-email --non-interactive
+   ```
+
+   (`--register-unsafely-without-email` evita el registro con correo; usa
+   `--email <correo-valido>` si quieres avisos de expiración. Un dominio `.local`
+   como correo lo rechaza Let's Encrypt.)
+
+5. **Activar la config HTTPS y recargar.** Copiar la config con el bloque 443 a
+   `infra/nginx/nginx.conf` y recargar Nginx. **Ojo:** un `up -d nginx` **no**
+   relee la config montada si el servicio no cambió; fuerza la recarga con:
+
+   ```bash
+   docker exec <proyecto>-nginx-1 nginx -t     # validar sintaxis
+   docker exec <proyecto>-nginx-1 nginx -s reload
+   ```
+
+6. **Actualizar `APP_WEB_URL`** en `.env.production` a `https://<dominio>` y
+   recrear `api` (es la fuente única de los enlaces de los correos de reset de
+   contraseña e invitación).
+
+### Renovación automática del certificado
+
+Los certificados de Let's Encrypt duran 90 días. Automatiza la renovación con un
+pequeño script que ejecute `certbot renew` (webroot) y recargue Nginx, lanzado a
+diario. En distribuciones **sin cron** (p. ej. Amazon Linux 2023, que no trae
+`/etc/cron.d` ni `cronie`) usa un **systemd timer**:
+
+- `renew-cert.sh`: `docker run --rm -v <proyecto>_letsencrypt:/etc/letsencrypt
+  -v <proyecto>_certbot_www:/var/www/certbot certbot/certbot renew --webroot -w
+  /var/www/certbot --quiet` seguido de `docker exec <proyecto>-nginx-1 nginx -s
+  reload`.
+- `certbot-renew.service` (`Type=oneshot`, `ExecStart=.../renew-cert.sh`) +
+  `certbot-renew.timer` (`OnCalendar` diario, `Persistent=true`), habilitado con
+  `systemctl enable --now certbot-renew.timer`.
+- Verifica con `certbot renew --dry-run` antes de confiar en el timer.
 
 ## MCP por red (`/mcp`)
 

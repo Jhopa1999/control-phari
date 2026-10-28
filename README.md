@@ -445,4 +445,6 @@ npm run docker:prod:migrate                   # prisma migrate deploy (paso expl
 
 ## Pendiente (siguientes incrementos)
 
-Autenticacion e identidad, HTTPS con certificados reales, CD automático y MCP.
+CD automático (hoy el despliegue es manual) y endurecimiento del Security Group
+de la instalación AWS. Ya resueltos: autenticación por JWT, MCP por red y HTTPS
+con Let's Encrypt (ver [`docs/despliegue-produccion-aws.md`](docs/despliegue-produccion-aws.md)).
