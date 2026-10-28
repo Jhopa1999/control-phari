@@ -135,11 +135,13 @@ devolver es exclusiva de `JEFE_AREA`.
 | --- | --- | --- |
 | GET | `/requests/:id/triage` | Triage de la solicitud (0 o 1 fila) y candidatos a responsable. |
 | POST | `/requests/:id/triage` | Registra el triage (solo desde `REGISTRADA`; segundo POST → `409`). |
-| POST | `/requests/:id/asset` | Asocia el activo base: existente (`assetId`) o nuevo (`newAsset`), uno solo (`400` si ambos o ninguno); solo en estados tempranos (`409` fuera). |
+| POST | `/requests/:id/asset` | Asocia un activo base **existente** (`assetId`, requerido); solo en estados tempranos (`409` fuera, o si el activo no está habilitado para el proceso de la solicitud). |
 
-Asociar activo reutiliza el módulo de activos: un activo existente puede ser de otro
-proceso; uno nuevo nace bajo el proceso principal de la solicitud. También `JEFE_AREA`/
-`LIDER_PROCESO` (más `ADMIN`).
+El triage **no crea activos**: solo asocia uno existente que esté visible para el actor.
+La creación de activos vive en el módulo de Activos y la realiza el jefe de área. El
+service valida el alcance de lectura del activo (`404` si no accesible) y que esté
+habilitado para el proceso principal de la solicitud (`409` si no). `JEFE_AREA`/
+`LIDER_PROCESO` (más `ADMIN`) pueden asociar.
 
 ### Priorización (`priority/priority.controller.ts`)
 
@@ -319,20 +321,29 @@ mínimas reversibles.
 
 ## knowledge — Activos y documentos
 
-Inventario de activos analíticos y su documentación en Markdown versionada. Los 3
-roles con alcance por proceso; la autoridad por rol y la máquina de estado se aplican
-en el service.
+Inventario de activos genéricos, compartidos y gobernados, y su documentación en
+Markdown versionada. Los 3 roles de área **leen** con alcance por proceso (propietario ∪
+visibilidad); la **escritura** del activo (crear/editar/cambiar estado) es exclusiva del
+jefe de área (`requireAssetGovernor` + `@Roles(JEFE_AREA)` en los handlers de
+escritura). La máquina de estado se aplica en el service.
 
 ### Activos (`asset/asset.controller.ts`)
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/assets` | Lista activos en alcance (filtros opcionales). |
-| POST | `/assets` | Crea un activo (nace BORRADOR; el integrante solo propone). |
+| GET | `/assets` | Lista activos en alcance (filtros opcionales). Los 3 roles de área. |
+| POST | `/assets` | Crea un activo (nace BORRADOR). Solo `JEFE_AREA`. |
 | GET | `/assets/:id` | Detalle de un activo. |
 | GET | `/assets/:id/requests` | Historial de solicitudes que tienen el activo como base (más reciente primero). |
-| PATCH | `/assets/:id` | Edita atributos de un activo (no el estado). |
-| POST | `/assets/:id/status` | Cambia el estado de un activo (transición válida). |
+| PATCH | `/assets/:id` | Edita atributos de un activo (no el estado). Solo `JEFE_AREA`. |
+| POST | `/assets/:id/status` | Cambia el estado de un activo (transición válida). Solo `JEFE_AREA`. |
+
+El activo es genérico: ya no tiene tipo/tecnología/fuente/frecuencia (esos atributos
+pertenecen a cada solicitud). `generalDescription` lo describe en general. El jefe define
+con `visibleProcessIds` qué procesos pueden ver/usar el activo (tabla puente
+`AssetProcessVisibility`); el proceso propietario (`processId`) siempre es visible. El
+líder solo **asocia** activos visibles a sus solicitudes y gestiona los documentos
+vinculados.
 
 ### Documentos (`document/document.controller.ts`)
 

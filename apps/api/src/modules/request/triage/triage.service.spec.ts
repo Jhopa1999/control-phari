@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { AssetService } from '../../knowledge/asset/asset.service';
 import { AuditService } from '../../audit/audit.service';
@@ -29,11 +25,10 @@ function createMocks() {
   const auditRecord = audit.record as unknown as jest.Mock;
   const state = new RequestStateService(prisma);
   const assetService = {
+    // El triage ya no crea activos: solo asocia uno existente via `get`.
     get: jest.fn(),
-    create: jest.fn(),
   } as unknown as AssetService;
   const assetGet = assetService.get as unknown as jest.Mock;
-  const assetCreate = assetService.create as unknown as jest.Mock;
   return {
     prisma,
     prismaObj,
@@ -42,7 +37,6 @@ function createMocks() {
     state,
     assetService,
     assetGet,
-    assetCreate,
   };
 }
 
@@ -364,11 +358,16 @@ describe('TriageService', () => {
   // --- Asociacion de activo base en el triage (FEAT-002) ---
 
   describe('associateAsset', () => {
-    it('activo existente -> OK, escribe assetId y audita UPDATE REQUEST', async () => {
+    it('activo existente habilitado (propietario del mainProcess) -> OK, escribe assetId y audita UPDATE REQUEST', async () => {
       (m.prismaObj.request as any).findFirst.mockResolvedValue(
         makeRequest(RequestState.EN_TRIAGE, { assetId: null }),
       );
-      m.assetGet.mockResolvedValue({ id: 'a-existente' });
+      // Propietario = p1 (mainProcessId), visible para la solicitud.
+      m.assetGet.mockResolvedValue({
+        id: 'a-existente',
+        processId: 'p1',
+        visibleProcessIds: [],
+      });
       (m.prismaObj.request as any).update.mockResolvedValue(
         makeRequest(RequestState.EN_TRIAGE, {
           assetId: 'a-existente',
@@ -381,7 +380,6 @@ describe('TriageService', () => {
       });
 
       expect(m.assetGet).toHaveBeenCalledWith(expect.anything(), 'a-existente');
-      expect(m.assetCreate).not.toHaveBeenCalled();
       expect((m.prismaObj.request as any).update.mock.calls[0][0].data).toEqual({
         assetId: 'a-existente',
       });
@@ -396,54 +394,43 @@ describe('TriageService', () => {
       });
     });
 
-    it('activo nuevo -> crea via AssetService con processId=mainProcessId y SIN requestId', async () => {
+    it('activo habilitado por visibilidad (no propietario) -> OK', async () => {
       (m.prismaObj.request as any).findFirst.mockResolvedValue(
         makeRequest(RequestState.EN_TRIAGE, { assetId: null }),
       );
-      m.assetCreate.mockResolvedValue({ id: 'a-nuevo' });
+      // Propietario de otro proceso, pero p1 esta en visibleProcessIds.
+      m.assetGet.mockResolvedValue({
+        id: 'a-visible',
+        processId: 'p-otro',
+        visibleProcessIds: ['p1'],
+      });
       (m.prismaObj.request as any).update.mockResolvedValue(
         makeRequest(RequestState.EN_TRIAGE, {
-          assetId: 'a-nuevo',
+          assetId: 'a-visible',
           participants: [],
         }),
       );
 
       const result = await service.associateAsset(lider(), 'r1', {
-        newAsset: { name: 'Conector de mantenimiento' },
+        assetId: 'a-visible',
       });
 
-      expect(m.assetGet).not.toHaveBeenCalled();
-      const createArg = m.assetCreate.mock.calls[0][1];
-      expect(createArg).toMatchObject({
-        processId: 'p1',
-        name: 'Conector de mantenimiento',
-      });
-      expect(createArg).not.toHaveProperty('requestId');
-      expect(result.assetId).toBe('a-nuevo');
+      expect(result.assetId).toBe('a-visible');
     });
 
-    it('ambos (assetId y newAsset) -> 400 sin mutacion', async () => {
+    it('activo accesible pero NO habilitado para el mainProcess -> 409 sin mutacion', async () => {
       (m.prismaObj.request as any).findFirst.mockResolvedValue(
         makeRequest(RequestState.EN_TRIAGE, { assetId: null }),
       );
+      // El actor ve el activo por p-otro, pero p1 (mainProcess) no esta habilitado.
+      m.assetGet.mockResolvedValue({
+        id: 'a-otro',
+        processId: 'p-otro',
+        visibleProcessIds: ['p-otro-2'],
+      });
       await expect(
-        service.associateAsset(lider(), 'r1', {
-          assetId: 'a-existente',
-          newAsset: { name: 'Nuevo' },
-        }),
-      ).rejects.toBeInstanceOf(BadRequestException);
-      expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
-      expect(m.assetGet).not.toHaveBeenCalled();
-      expect(m.assetCreate).not.toHaveBeenCalled();
-    });
-
-    it('ninguno (ni assetId ni newAsset) -> 400 sin mutacion', async () => {
-      (m.prismaObj.request as any).findFirst.mockResolvedValue(
-        makeRequest(RequestState.EN_TRIAGE, { assetId: null }),
-      );
-      await expect(
-        service.associateAsset(lider(), 'r1', {}),
-      ).rejects.toBeInstanceOf(BadRequestException);
+        service.associateAsset(lider(), 'r1', { assetId: 'a-otro' }),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
     });
 
@@ -456,6 +443,17 @@ describe('TriageService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
       expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
       expect(m.assetGet).not.toHaveBeenCalled();
+    });
+
+    it('activo fuera de alcance del actor -> 404 (propaga de AssetService.get)', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.EN_TRIAGE, { assetId: null }),
+      );
+      m.assetGet.mockRejectedValue(new NotFoundException('Activo no encontrado.'));
+      await expect(
+        service.associateAsset(lider(), 'r1', { assetId: 'a-oculto' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
     });
 
     it('solicitud fuera de alcance -> 404', async () => {

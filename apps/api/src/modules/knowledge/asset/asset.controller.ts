@@ -31,10 +31,13 @@ import { Roles } from '../../auth/roles.decorator';
 import { RoleCode } from '../../auth/role-code';
 
 /**
- * API REST de activos (design §3.2). Los 3 roles tienen el modulo; el alcance
- * (404 fuera), la autoridad por rol (403) y la maquina de estado (400 salto
- * invalido) se aplican en el service. Rutas estaticas (`/assets`) preceden a
- * las parametricas (`/assets/:id`, `/assets/:id/status`).
+ * API REST de activos (design §3.2/§c). LECTURA (GET) para los 3 roles con
+ * grant (`@Roles` de clase); ADMIN no figura y por tanto no accede al modulo
+ * (comportamiento no modificado por este trabajo). ESCRITURA (POST/PATCH/POST
+ * status) reservada al jefe de area con `@Roles(JEFE_AREA)` a nivel de handler
+ * (ruta primaria de 403); el service la reafirma con `requireAssetGovernor`. El
+ * alcance (404 fuera) y la maquina de estado (400 salto invalido) se aplican en
+ * el service. Rutas estaticas (`/assets`) preceden a las parametricas.
  */
 @ApiTags('assets')
 @Controller('assets')
@@ -56,12 +59,12 @@ export class AssetController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Crea un activo (nace BORRADOR; integrante solo propone).' })
+  @Roles(RoleCode.JEFE_AREA)
+  @ApiOperation({ summary: 'Crea un activo (nace BORRADOR). Solo el jefe de area.' })
   @ApiBody({ type: CreateAssetDto })
   @ApiResponse({ status: 201, description: 'Activo creado.', type: AssetResponseDto })
   @ApiResponse({ status: 400, description: 'Datos invalidos.' })
-  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  @ApiResponse({ status: 404, description: 'Proceso fuera de alcance.' })
+  @ApiResponse({ status: 403, description: 'Solo el jefe de area puede crear.' })
   create(
     @CurrentActor() actor: CurrentActorType,
     @Body() dto: CreateAssetDto,
@@ -96,12 +99,13 @@ export class AssetController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Edita atributos de un activo (no el estado).' })
+  @Roles(RoleCode.JEFE_AREA)
+  @ApiOperation({ summary: 'Edita atributos de un activo (no el estado). Solo el jefe de area.' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: UpdateAssetDto })
   @ApiResponse({ status: 200, description: 'Activo actualizado.', type: AssetResponseDto })
   @ApiResponse({ status: 400, description: 'Datos invalidos.' })
-  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 403, description: 'Solo el jefe de area puede editar.' })
   @ApiResponse({ status: 404, description: 'Activo fuera de alcance.' })
   update(
     @CurrentActor() actor: CurrentActorType,
@@ -112,12 +116,13 @@ export class AssetController {
   }
 
   @Post(':id/status')
-  @ApiOperation({ summary: 'Cambia el estado de un activo (transicion valida).' })
+  @Roles(RoleCode.JEFE_AREA)
+  @ApiOperation({ summary: 'Cambia el estado de un activo (transicion valida). Solo el jefe de area.' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: ChangeAssetStatusDto })
   @ApiResponse({ status: 200, description: 'Estado actualizado.', type: AssetResponseDto })
   @ApiResponse({ status: 400, description: 'Transicion no permitida.' })
-  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 403, description: 'Solo el jefe de area puede cambiar el estado.' })
   @ApiResponse({ status: 404, description: 'Activo fuera de alcance.' })
   changeStatus(
     @CurrentActor() actor: CurrentActorType,

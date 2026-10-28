@@ -35,7 +35,6 @@ import {
 import type {
   Asset,
   AssetStatus,
-  CatalogItem,
   CoordinationPerson,
   Process,
   Request,
@@ -48,7 +47,6 @@ import {
   listAssets,
   updateAsset,
 } from '@/lib/assets';
-import { listCatalogItems } from '@/lib/catalog';
 import { getStatus } from '@/lib/status-presentation';
 import {
   compareByOrder,
@@ -112,28 +110,14 @@ export function ActivosView(): React.ReactElement {
     () => (permissions?.grants ?? []).some((g) => g.roleCode === 'JEFE_AREA'),
     [permissions],
   );
-  const leaderProcessIds = React.useMemo(
-    () =>
-      new Set(
-        (permissions?.grants ?? [])
-          .filter((g) => g.roleCode === 'LIDER_PROCESO')
-          .map((g) => g.processId),
-      ),
-    [permissions],
-  );
-  const canChangeStatus = React.useCallback(
-    (asset: Asset) => isJefe || leaderProcessIds.has(asset.processId),
-    [isJefe, leaderProcessIds],
-  );
+  // Gobernanza: solo el jefe de área crea/edita/cambia estado de un activo. El
+  // control real es del servidor (403); aquí es gating cosmético.
+  const canChangeStatus = React.useCallback(() => isJefe, [isJefe]);
 
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [owners, setOwners] = React.useState<CoordinationPerson[]>([]);
-  const [typeOptions, setTypeOptions] = React.useState<CatalogItem[]>([]);
-  const [technologyOptions, setTechnologyOptions] = React.useState<CatalogItem[]>([]);
-  const [sourceOptions, setSourceOptions] = React.useState<CatalogItem[]>([]);
-  const [frequencyOptions, setFrequencyOptions] = React.useState<CatalogItem[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
@@ -154,24 +138,16 @@ export function ActivosView(): React.ReactElement {
   const load = React.useCallback(async () => {
     setState('loading');
     try {
-      const [list, procs, reqs, usrs, types, techs, sources, freqs] = await Promise.all([
+      const [list, procs, reqs, usrs] = await Promise.all([
         listAssets(),
         listProcesses().catch(() => [] as Process[]),
         listRequests().catch(() => [] as Request[]),
         listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
-        listCatalogItems({ catalog: 'ASSET_TYPE', active: true }).catch(() => [] as CatalogItem[]),
-        listCatalogItems({ catalog: 'TECHNOLOGY', active: true }).catch(() => [] as CatalogItem[]),
-        listCatalogItems({ catalog: 'SOURCE', active: true }).catch(() => [] as CatalogItem[]),
-        listCatalogItems({ catalog: 'FREQUENCY', active: true }).catch(() => [] as CatalogItem[]),
       ]);
       setAssets(list);
       setProcesses(procs);
       setRequests(reqs);
       setOwners(usrs);
-      setTypeOptions(types);
-      setTechnologyOptions(techs);
-      setSourceOptions(sources);
-      setFrequencyOptions(freqs);
       setState('success');
     } catch (err) {
       setErrorMessage(messageOf(err));
@@ -196,11 +172,6 @@ export function ActivosView(): React.ReactElement {
     (id: string | null) =>
       id ? (owners.find((u) => u.id === id)?.name ?? OUT_OF_SCOPE_PERSON) : '—',
     [owners],
-  );
-  const typeLabel = React.useCallback(
-    (code: string | null) =>
-      code ? (typeOptions.find((o) => o.code === code)?.label ?? code) : '—',
-    [typeOptions],
   );
 
   const comparators = React.useMemo<Record<SortKey, Comparator<Asset>>>(
@@ -262,13 +233,10 @@ export function ActivosView(): React.ReactElement {
           // Vacío en los Selects opcionales = desligar (null); undefined omite.
           requestId: trimOrUndefined(values.requestId) ?? null,
           ownerUserId: trimOrUndefined(values.ownerUserId) ?? null,
-          typeCode: trimOrUndefined(values.typeCode),
-          technologyCode: trimOrUndefined(values.technologyCode),
-          sourceCode: trimOrUndefined(values.sourceCode),
-          frequencyCode: trimOrUndefined(values.frequencyCode),
           documentationRef: trimOrUndefined(values.documentationRef),
-          functionalDescription: trimOrUndefined(values.functionalDescription),
+          generalDescription: trimOrUndefined(values.generalDescription),
           dependencies: trimOrUndefined(values.dependencies),
+          visibleProcessIds: values.visibleProcessIds,
         });
         toast.success('Activo actualizado.');
       } else {
@@ -277,13 +245,10 @@ export function ActivosView(): React.ReactElement {
           name: values.name.trim(),
           requestId: trimOrUndefined(values.requestId),
           ownerUserId: trimOrUndefined(values.ownerUserId),
-          typeCode: trimOrUndefined(values.typeCode),
-          technologyCode: trimOrUndefined(values.technologyCode),
-          sourceCode: trimOrUndefined(values.sourceCode),
-          frequencyCode: trimOrUndefined(values.frequencyCode),
           documentationRef: trimOrUndefined(values.documentationRef),
-          functionalDescription: trimOrUndefined(values.functionalDescription),
+          generalDescription: trimOrUndefined(values.generalDescription),
           dependencies: trimOrUndefined(values.dependencies),
+          visibleProcessIds: values.visibleProcessIds,
         });
         toast.success('Activo creado.');
       }
@@ -316,7 +281,6 @@ export function ActivosView(): React.ReactElement {
 
   function rowActions(asset: Asset): RowAction[] {
     const actions: RowAction[] = [
-      { key: 'edit', label: 'Editar', onSelect: () => openEdit(asset), placement: 'inline' },
       {
         key: 'history',
         label: 'Ver historial',
@@ -324,7 +288,16 @@ export function ActivosView(): React.ReactElement {
         placement: 'menu',
       },
     ];
-    const transition = canChangeStatus(asset) ? transitionOf(asset.status) : null;
+    // Editar: solo el jefe de área (gobernanza; el control real es del servidor).
+    if (isJefe) {
+      actions.unshift({
+        key: 'edit',
+        label: 'Editar',
+        onSelect: () => openEdit(asset),
+        placement: 'inline',
+      });
+    }
+    const transition = canChangeStatus() ? transitionOf(asset.status) : null;
     if (transition) {
       actions.push({
         key: 'status',
@@ -351,10 +324,12 @@ export function ActivosView(): React.ReactElement {
         title="Activos"
         description="Activos de datos y soluciones de cada proceso."
         actions={
-          <Button type="button" onClick={openCreate} disabled={state === 'loading'}>
-            <Plus aria-hidden="true" />
-            Nuevo activo
-          </Button>
+          isJefe ? (
+            <Button type="button" onClick={openCreate} disabled={state === 'loading'}>
+              <Plus aria-hidden="true" />
+              Nuevo activo
+            </Button>
+          ) : null
         }
       />
 
@@ -437,7 +412,7 @@ export function ActivosView(): React.ReactElement {
 
       <DataView
         state={viewState}
-        loading={{ rows: 6, columns: 7 }}
+        loading={{ rows: 6, columns: 6 }}
         error={{
           title: 'No fue posible cargar los activos.',
           message: errorMessage,
@@ -447,12 +422,12 @@ export function ActivosView(): React.ReactElement {
           icon: Database,
           title: 'Aún no hay activos registrados.',
           description: 'Registra el primer activo de un proceso para documentarlo y seguir su estado.',
-          action: (
+          action: isJefe ? (
             <Button type="button" onClick={openCreate}>
               <Plus aria-hidden="true" />
               Nuevo activo
             </Button>
-          ),
+          ) : undefined,
         }}
       >
         <Table scrollLabel="Tabla de activos">
@@ -472,7 +447,6 @@ export function ActivosView(): React.ReactElement {
               />
               <TableHead>Solicitud</TableHead>
               <TableHead>Responsable</TableHead>
-              <TableHead>Tipo</TableHead>
               <SortableTableHead
                 label="Estado"
                 sortKey="status"
@@ -498,9 +472,6 @@ export function ActivosView(): React.ReactElement {
                 </TableCell>
                 <TableCell className="min-w-32 text-muted-foreground">
                   {ownerName(asset.ownerUserId)}
-                </TableCell>
-                <TableCell className="min-w-28 text-muted-foreground">
-                  {typeLabel(asset.typeCode)}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   <StatusBadge kind="asset" value={asset.status} />
@@ -539,10 +510,6 @@ export function ActivosView(): React.ReactElement {
         processes={processes}
         requests={requests}
         owners={owners}
-        typeOptions={typeOptions}
-        technologyOptions={technologyOptions}
-        sourceOptions={sourceOptions}
-        frequencyOptions={frequencyOptions}
         submitting={submitting}
         errorMessage={formError}
         onSubmit={(values) => void handleSubmit(values)}

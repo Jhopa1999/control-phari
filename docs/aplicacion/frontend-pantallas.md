@@ -34,7 +34,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | --- | --- | --- |
 | `/demanda/solicitudes` | Solicitudes | Registrar y consultar solicitudes de demanda; cada fila ofrece la acción *Ver detalle* que abre la ficha de la solicitud (menú grupo *Demanda*, `requests`). |
 | `/demanda/solicitudes/[id]` | Detalle de la solicitud | Ficha de **solo lectura** que reúne el recorrido completo de la solicitud en un stepper vertical con todas las etapas visibles (Solicitud, Triage, Priorización, Aprobación/Compromiso, Planificación, Gobierno y validación, Estabilización/Cierre); cada etapa muestra su estado derivado y, cuando el módulo y el estado lo permiten, un enlace *Ir a actuar* hacia la bandeja correspondiente. Se llega desde la acción *Ver detalle* de Solicitudes (no es ítem de menú, `requests`). |
-| `/demanda/triage` | Triage | Clasificar la solicitud, decidir su ruta y asociar su **activo base** (existente o nuevo bajo el proceso principal), requisito para priorizar (`triage`). |
+| `/demanda/triage` | Triage | Clasificar la solicitud, decidir su ruta y asociar su **activo base** (solo un activo **existente** visible para el proceso; el triage no crea activos y enlaza al módulo de Activos), requisito para priorizar (`triage`). |
 | `/demanda/priorizacion` | Priorización | Evaluar con los criterios ponderados y ordenar el backlog (`priority`). |
 | `/demanda/resumen` | Indicadores | Panorama/indicadores de demanda (menú grupo *Ejecución* como *Indicadores*, `demandOverview`). |
 
@@ -57,7 +57,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | Ruta | Pantalla | Qué permite hacer |
 | --- | --- | --- |
 | `/activos/capacidad` | Capacidad | Registrar disponibilidad y asignaciones de horas por mes (menú grupo *Ejecución* como *Capacidad*, `capacity`). |
-| `/activos/catalogo` | Activos | Inventario de activos analíticos; cada fila ofrece la acción *Ver historial* (menú grupo *Activos y conocimiento*, `asset`). |
+| `/activos/catalogo` | Activos | Inventario de activos genéricos; cada fila ofrece *Ver historial*. Crear/editar y cambiar estado solo los ve el **jefe de área** (el diálogo define nombre, descripción general y los procesos que pueden ver el activo); los demás roles ven la tabla en modo lectura (menú grupo *Activos y conocimiento*, `asset`). |
 | `/activos/catalogo/[id]/historial` | Historial por activo | Vista de solo lectura de las solicitudes que tienen el activo como base, con su estado y proceso, ordenadas por fecha de registro; se llega desde la acción *Ver historial* del catálogo (no es ítem de menú, `asset`). |
 | `/activos/documentos` | Documentos | Documentación Markdown versionada de los activos (`docs`). |
 

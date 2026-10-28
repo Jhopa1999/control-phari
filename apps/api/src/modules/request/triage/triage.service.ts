@@ -295,12 +295,15 @@ export class TriageService {
   }
 
   /**
-   * Asocia el activo base de la solicitud durante el triage (FEAT-002).
-   * Exactamente UNA opcion: `assetId` (activo existente, puede ser de otro
-   * proceso) XOR `newAsset` (crea uno bajo el proceso principal reutilizando
-   * AssetService). Solo en estados tempranos (ASSET_ASSOCIABLE_STATES); fuera
-   * -> 409. Escribe `Request.assetId` y audita UPDATE REQUEST en una
-   * $transaction. Devuelve el RequestResponseDto reconstruido.
+   * Asocia un activo EXISTENTE como base de la solicitud durante el triage. El
+   * triage NO crea activos (la creacion vive en el modulo de Activos, solo por
+   * el jefe de area): solo asocia un `assetId` ya visible para el actor.
+   * `AssetService.get` aplica el alcance de visibilidad (404 si no accesible),
+   * por lo que un lider nunca asocia un activo no habilitado para sus procesos.
+   * Refuerzo adicional: el activo debe estar habilitado para el proceso
+   * principal de la solicitud (propietario O visibilidad), si no -> 409. Solo
+   * en estados tempranos (ASSET_ASSOCIABLE_STATES); fuera -> 409. Escribe
+   * `Request.assetId` y audita UPDATE REQUEST en una $transaction.
    */
   async associateAsset(
     actor: CurrentActor,
@@ -315,50 +318,23 @@ export class TriageService {
       );
     }
 
-    const hasExisting = dto.assetId !== undefined;
-    const hasNew = dto.newAsset !== undefined;
-    if (hasExisting === hasNew) {
-      throw new BadRequestException(
-        'Indica un activo existente o los datos de uno nuevo, pero no ambos.',
+    // Activo existente: AssetService.get aplica el alcance (404 si no
+    // accesible). El DTO devuelto trae el propietario en `processId` y el resto
+    // de la visibilidad en `visibleProcessIds` (sin releer la tabla puente).
+    const asset = await this.assetService.get(actor, dto.assetId);
+
+    // Refuerzo de visibilidad: el activo debe estar habilitado para el proceso
+    // principal de la solicitud (propietario O alguna fila de visibilidad).
+    const visibleForMainProcess =
+      asset.processId === request.mainProcessId ||
+      asset.visibleProcessIds.includes(request.mainProcessId);
+    if (!visibleForMainProcess) {
+      throw new ConflictException(
+        'El activo no esta habilitado para el proceso de la solicitud.',
       );
     }
 
-    // Existente: reutiliza AssetService.get (404 si no accesible; admite un
-    // activo de otro proceso). Nuevo: crea bajo el proceso principal via
-    // AssetService.create, SIN pasar requestId (la asociacion la escribe este
-    // service sobre la Request).
-    const assetId = hasExisting
-      ? (await this.assetService.get(actor, dto.assetId!)).id
-      : (
-          await this.assetService.create(actor, {
-            processId: request.mainProcessId,
-            name: dto.newAsset!.name,
-            ...(dto.newAsset!.ownerUserId !== undefined
-              ? { ownerUserId: dto.newAsset!.ownerUserId }
-              : {}),
-            ...(dto.newAsset!.typeCode !== undefined
-              ? { typeCode: dto.newAsset!.typeCode }
-              : {}),
-            ...(dto.newAsset!.technologyCode !== undefined
-              ? { technologyCode: dto.newAsset!.technologyCode }
-              : {}),
-            ...(dto.newAsset!.sourceCode !== undefined
-              ? { sourceCode: dto.newAsset!.sourceCode }
-              : {}),
-            ...(dto.newAsset!.frequencyCode !== undefined
-              ? { frequencyCode: dto.newAsset!.frequencyCode }
-              : {}),
-            ...(dto.newAsset!.documentationRef !== undefined
-              ? { documentationRef: dto.newAsset!.documentationRef }
-              : {}),
-            ...(dto.newAsset!.functionalDescription !== undefined
-              ? { functionalDescription: dto.newAsset!.functionalDescription }
-              : {}),
-            ...(dto.newAsset!.dependencies !== undefined
-              ? { dependencies: dto.newAsset!.dependencies }
-              : {}),
-          })
-        ).id;
+    const assetId = asset.id;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.request.update({

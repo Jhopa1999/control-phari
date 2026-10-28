@@ -1,14 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 /**
- * Contrato HTTP de un activo (design §3.4). FKs y atributos opcionales como
- * null. El estado es un AssetStatus (texto).
+ * Contrato HTTP de un activo generico (design §3.4/§e). FKs y atributos
+ * opcionales como null. El estado es un AssetStatus (texto). `processId` es el
+ * proceso PROPIETARIO; `visibleProcessIds` contiene SOLO los procesos de la
+ * tabla puente (NO incluye al propietario), siempre un array (nunca null).
  */
 export class AssetResponseDto {
   @ApiProperty({ type: String, format: 'uuid' })
   id!: string;
 
-  @ApiProperty({ type: String, format: 'uuid', description: 'Proceso del activo.' })
+  @ApiProperty({ type: String, format: 'uuid', description: 'Proceso propietario del activo.' })
   processId!: string;
 
   @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Solicitud de origen.' })
@@ -23,26 +25,21 @@ export class AssetResponseDto {
   @ApiProperty({ type: String, description: 'Estado (AssetStatus).' })
   status!: string;
 
-  @ApiProperty({ type: String, nullable: true, description: 'Tipo (maestra ASSET_TYPE).' })
-  typeCode!: string | null;
-
-  @ApiProperty({ type: String, nullable: true, description: 'Tecnologia (maestra TECHNOLOGY).' })
-  technologyCode!: string | null;
-
-  @ApiProperty({ type: String, nullable: true, description: 'Fuente (maestra SOURCE).' })
-  sourceCode!: string | null;
-
-  @ApiProperty({ type: String, nullable: true, description: 'Frecuencia (maestra FREQUENCY).' })
-  frequencyCode!: string | null;
-
   @ApiProperty({ type: String, nullable: true })
   documentationRef!: string | null;
 
-  @ApiProperty({ type: String, nullable: true })
-  functionalDescription!: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Descripcion general del activo.' })
+  generalDescription!: string | null;
 
   @ApiProperty({ type: String, nullable: true })
   dependencies!: string | null;
+
+  @ApiProperty({
+    type: [String],
+    format: 'uuid',
+    description: 'Procesos que pueden ver/usar el activo (sin incluir al propietario).',
+  })
+  visibleProcessIds!: string[];
 
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt!: Date;

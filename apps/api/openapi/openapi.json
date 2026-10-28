@@ -1507,7 +1507,7 @@
             }
           },
           "400": {
-            "description": "Datos invalidos o ambos/ninguno de activo."
+            "description": "Datos invalidos (assetId no es UUID)."
           },
           "403": {
             "description": "Rol insuficiente."
@@ -1516,10 +1516,10 @@
             "description": "Solicitud o activo fuera de alcance."
           },
           "409": {
-            "description": "La solicitud no admite asociar activo en su estado."
+            "description": "La solicitud no admite asociar activo en su estado, o el activo no esta habilitado para su proceso."
           }
         },
-        "summary": "Asocia el activo base de la solicitud (existente XOR nuevo); requisito para priorizar.",
+        "summary": "Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos.",
         "tags": [
           "triage"
         ]
@@ -1674,13 +1674,10 @@
             "description": "Datos invalidos."
           },
           "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Proceso fuera de alcance."
+            "description": "Solo el jefe de area puede crear."
           }
         },
-        "summary": "Crea un activo (nace BORRADOR; integrante solo propone).",
+        "summary": "Crea un activo (nace BORRADOR). Solo el jefe de area.",
         "tags": [
           "assets"
         ]
@@ -1759,13 +1756,13 @@
             "description": "Datos invalidos."
           },
           "403": {
-            "description": "Rol insuficiente."
+            "description": "Solo el jefe de area puede editar."
           },
           "404": {
             "description": "Activo fuera de alcance."
           }
         },
-        "summary": "Edita atributos de un activo (no el estado).",
+        "summary": "Edita atributos de un activo (no el estado). Solo el jefe de area.",
         "tags": [
           "assets"
         ]
@@ -1849,13 +1846,13 @@
             "description": "Transicion no permitida."
           },
           "403": {
-            "description": "Rol insuficiente."
+            "description": "Solo el jefe de area puede cambiar el estado."
           },
           "404": {
             "description": "Activo fuera de alcance."
           }
         },
-        "summary": "Cambia el estado de un activo (transicion valida).",
+        "summary": "Cambia el estado de un activo (transicion valida). Solo el jefe de area.",
         "tags": [
           "assets"
         ]
@@ -7457,72 +7454,18 @@
           "decision"
         ]
       },
-      "NewAssetInputDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Nombre del activo (requerido).",
-            "maxLength": 300
-          },
-          "ownerUserId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Dueno/responsable (usuario)."
-          },
-          "typeCode": {
-            "type": "string",
-            "description": "Tipo (maestra ASSET_TYPE)."
-          },
-          "technologyCode": {
-            "type": "string",
-            "description": "Tecnologia (maestra TECHNOLOGY)."
-          },
-          "sourceCode": {
-            "type": "string",
-            "description": "Fuente (maestra SOURCE)."
-          },
-          "frequencyCode": {
-            "type": "string",
-            "description": "Frecuencia (maestra FREQUENCY)."
-          },
-          "documentationRef": {
-            "type": "string",
-            "description": "Referencia documental/repositorio.",
-            "maxLength": 2000
-          },
-          "functionalDescription": {
-            "type": "string",
-            "description": "Descripcion funcional.",
-            "maxLength": 20000
-          },
-          "dependencies": {
-            "type": "string",
-            "description": "Dependencias/observaciones.",
-            "maxLength": 20000
-          }
-        },
-        "required": [
-          "name"
-        ]
-      },
       "AssociateAssetDto": {
         "type": "object",
         "properties": {
           "assetId": {
             "type": "string",
             "format": "uuid",
-            "description": "Activo existente a asociar (excluyente con newAsset)."
-          },
-          "newAsset": {
-            "description": "Datos de un activo nuevo a crear y asociar (excluyente con assetId).",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/NewAssetInputDto"
-              }
-            ]
+            "description": "Activo existente a asociar."
           }
-        }
+        },
+        "required": [
+          "assetId"
+        ]
       },
       "PriorityEvaluationResponseDto": {
         "type": "object",
@@ -7701,7 +7644,7 @@
           "processId": {
             "type": "string",
             "format": "uuid",
-            "description": "Proceso del activo."
+            "description": "Proceso propietario del activo."
           },
           "requestId": {
             "type": "string",
@@ -7723,37 +7666,26 @@
             "type": "string",
             "description": "Estado (AssetStatus)."
           },
-          "typeCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Tipo (maestra ASSET_TYPE)."
-          },
-          "technologyCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Tecnologia (maestra TECHNOLOGY)."
-          },
-          "sourceCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Fuente (maestra SOURCE)."
-          },
-          "frequencyCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Frecuencia (maestra FREQUENCY)."
-          },
           "documentationRef": {
             "type": "string",
             "nullable": true
           },
-          "functionalDescription": {
+          "generalDescription": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Descripcion general del activo."
           },
           "dependencies": {
             "type": "string",
             "nullable": true
+          },
+          "visibleProcessIds": {
+            "description": "Procesos que pueden ver/usar el activo (sin incluir al propietario).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           "createdAt": {
             "type": "string",
@@ -7771,13 +7703,10 @@
           "ownerUserId",
           "name",
           "status",
-          "typeCode",
-          "technologyCode",
-          "sourceCode",
-          "frequencyCode",
           "documentationRef",
-          "functionalDescription",
+          "generalDescription",
           "dependencies",
+          "visibleProcessIds",
           "createdAt",
           "updatedAt"
         ]
@@ -7788,7 +7717,7 @@
           "processId": {
             "type": "string",
             "format": "uuid",
-            "description": "Proceso del activo (requerido)."
+            "description": "Proceso propietario del activo (requerido)."
           },
           "name": {
             "type": "string",
@@ -7805,36 +7734,28 @@
             "format": "uuid",
             "description": "Dueno/responsable (usuario)."
           },
-          "typeCode": {
-            "type": "string",
-            "description": "Tipo (maestra ASSET_TYPE)."
-          },
-          "technologyCode": {
-            "type": "string",
-            "description": "Tecnologia (maestra TECHNOLOGY)."
-          },
-          "sourceCode": {
-            "type": "string",
-            "description": "Fuente (maestra SOURCE)."
-          },
-          "frequencyCode": {
-            "type": "string",
-            "description": "Frecuencia (maestra FREQUENCY)."
-          },
           "documentationRef": {
             "type": "string",
             "description": "Referencia documental/repositorio.",
             "maxLength": 2000
           },
-          "functionalDescription": {
+          "generalDescription": {
             "type": "string",
-            "description": "Descripcion funcional.",
+            "description": "Descripcion general del activo.",
             "maxLength": 20000
           },
           "dependencies": {
             "type": "string",
             "description": "Dependencias/observaciones.",
             "maxLength": 20000
+          },
+          "visibleProcessIds": {
+            "description": "Procesos que pueden ver/usar el activo (ademas del propietario).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
@@ -7897,36 +7818,28 @@
             "nullable": true,
             "description": "Dueno/responsable (null para desligar)."
           },
-          "typeCode": {
-            "type": "string",
-            "description": "Tipo (maestra ASSET_TYPE)."
-          },
-          "technologyCode": {
-            "type": "string",
-            "description": "Tecnologia (maestra TECHNOLOGY)."
-          },
-          "sourceCode": {
-            "type": "string",
-            "description": "Fuente (maestra SOURCE)."
-          },
-          "frequencyCode": {
-            "type": "string",
-            "description": "Frecuencia (maestra FREQUENCY)."
-          },
           "documentationRef": {
             "type": "string",
             "description": "Referencia documental/repositorio.",
             "maxLength": 2000
           },
-          "functionalDescription": {
+          "generalDescription": {
             "type": "string",
-            "description": "Descripcion funcional.",
+            "description": "Descripcion general del activo.",
             "maxLength": 20000
           },
           "dependencies": {
             "type": "string",
             "description": "Dependencias/observaciones.",
             "maxLength": 20000
+          },
+          "visibleProcessIds": {
+            "description": "Procesos que pueden ver/usar el activo (reemplaza el conjunto; [] = solo propietario).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },

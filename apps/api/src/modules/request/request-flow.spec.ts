@@ -104,10 +104,15 @@ function createFlowMocks(
   const prisma = prismaObj as unknown as PrismaService;
   const audit = { record: jest.fn() } as unknown as AuditService;
   const state = new RequestStateService(prisma);
-  // Activo "existente" para la asociacion; el service solo usa su id.
+  // Activo "existente" para la asociacion. El activo es propietario del proceso
+  // principal 'p1', por lo que es visible para la solicitud (refuerzo de
+  // visibilidad por mainProcessId en associateAsset).
   const assetService = {
-    get: jest.fn(async (_actor: unknown, id: string) => ({ id })),
-    create: jest.fn(async () => ({ id: 'asset-nuevo' })),
+    get: jest.fn(async (_actor: unknown, id: string) => ({
+      id,
+      processId: 'p1',
+      visibleProcessIds: [] as string[],
+    })),
   } as unknown as AssetService;
   return {
     request,

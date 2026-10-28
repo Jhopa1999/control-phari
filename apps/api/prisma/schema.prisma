@@ -89,7 +89,8 @@ model Process {
   commitments   Commitment[]
 
   // Fase 6 (activos): activos anclados a este proceso.
-  assets Asset[]
+  assets                   Asset[]
+  assetProcessVisibilities AssetProcessVisibility[]
 
   @@unique([code], name: "process_code_unique")
   @@index([active])
@@ -100,20 +101,20 @@ model Process {
 /// Identidad funcional de una persona del area. NO es credencial: no hay
 /// password, token ni sesion (la autenticacion real es una capa separada).
 model User {
-  id         String   @id @default(uuid()) @db.Uuid
-  identifier String
-  name       String
-  active     Boolean  @default(true)
+  id           String   @id @default(uuid()) @db.Uuid
+  identifier   String
+  name         String
+  active       Boolean  @default(true)
   // Hash bcrypt de la credencial, usado solo por la autenticacion real (JWT).
   // Nullable: dev-header no lo usa y las filas existentes no lo tienen; no es
   // credencial en modo dev. Nunca se expone en DTOs ni respuestas.
-  passwordHash String? @map("password_hash")
+  passwordHash String?  @map("password_hash")
   // Rol de SISTEMA/GLOBAL (design a). Admin tecnico independiente de los grants
   // por proceso: no se concede por Grant ni por proceso. Es la UNICA fuente de
   // RoleCode.ADMIN (load-actor). Default false, aditivo y back-compat.
-  isAdmin    Boolean  @default(false) @map("is_admin")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  isAdmin      Boolean  @default(false) @map("is_admin")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   grants      Grant[]
   auditEvents AuditEvent[]
@@ -123,8 +124,8 @@ model User {
   // User, por eso ambas relaciones Triage->User llevan `name`).
   triages                  Triage[]             @relation("TriageDecidedBy")
   triagesAsMainResponsible Triage[]             @relation("TriageMainResponsible")
-  priorityEvaluations PriorityEvaluation[]
-  approvals           Approval[]
+  priorityEvaluations      PriorityEvaluation[]
+  approvals                Approval[]
 
   // Fase 3 (plan): planes enviados/autorizados y tareas de las que es
   // responsable o que acepto. Cada relacion usa un `name` distinto porque hay
@@ -158,19 +159,19 @@ model User {
   // Fase 7 (gobierno de la demanda): decisiones de gate, faltantes a cargo,
   // validaciones ejecutadas/resueltas y bloqueos de Request. Cada relacion usa
   // `name` propio porque hay mas de una FK User por modelo (Prisma lo exige).
-  gateChecksDecided            GateCheck[]        @relation("GateCheckDecider")
-  gatePendingOwned             GatePendingItem[]  @relation("GatePendingOwner")
-  validationsExecuted          ValidationRecord[] @relation("ValidationExecutor")
-  validationsBlockingResolved  ValidationRecord[] @relation("ValidationBlockingResolver")
-  requestsBlocked              Request[]          @relation("RequestBlockedBy")
-  requestsBlockResolved        Request[]          @relation("RequestBlockedResolvedBy")
+  gateChecksDecided           GateCheck[]        @relation("GateCheckDecider")
+  gatePendingOwned            GatePendingItem[]  @relation("GatePendingOwner")
+  validationsExecuted         ValidationRecord[] @relation("ValidationExecutor")
+  validationsBlockingResolved ValidationRecord[] @relation("ValidationBlockingResolver")
+  requestsBlocked             Request[]          @relation("RequestBlockedBy")
+  requestsBlockResolved       Request[]          @relation("RequestBlockedResolvedBy")
 
   // Mail-fase1 (FEAT-002): tokens de un solo uso para reset de contrasena e
   // invitacion/activacion. Se borran en cascada si se elimina el usuario.
   // SmtpConfig: filas de configuracion SMTP actualizadas por este usuario (FK
   // updated_by_user_id, onDelete SetNull). Relacion inversa requerida por Prisma.
   smtpConfigsUpdated SmtpConfig[]
-  authTokens AuthToken[]
+  authTokens         AuthToken[]
 
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
@@ -275,35 +276,35 @@ model AuditEvent {
 /// `operationalState` es un enum logico derivado/read-only: solo lo escribe el
 /// helper de transicion de RequestStateService, nunca un update/DTO libre.
 model Request {
-  id                    String    @id @default(uuid()) @db.Uuid
-  title                 String
-  registeredAt          DateTime  @default(now()) @map("registered_at")
-  requesterArea         String?   @map("requester_area")
-  requesterName         String?   @map("requester_name")
-  functionalOwner       String?   @map("functional_owner")
-  targetDate            DateTime? @map("target_date")
-  referenceUrl          String?   @map("reference_url")
-  expectedResult        String?   @map("expected_result")
-  mainProcessId         String    @map("main_process_id") @db.Uuid
-  operationalState      String    @default("REGISTRADA") @map("operational_state")
-  initialCommitmentDate DateTime? @map("initial_commitment_date")
-  changeJustification   String?   @map("change_justification")
+  id                      String    @id @default(uuid()) @db.Uuid
+  title                   String
+  registeredAt            DateTime  @default(now()) @map("registered_at")
+  requesterArea           String?   @map("requester_area")
+  requesterName           String?   @map("requester_name")
+  functionalOwner         String?   @map("functional_owner")
+  targetDate              DateTime? @map("target_date")
+  referenceUrl            String?   @map("reference_url")
+  expectedResult          String?   @map("expected_result")
+  mainProcessId           String    @map("main_process_id") @db.Uuid
+  operationalState        String    @default("REGISTRADA") @map("operational_state")
+  initialCommitmentDate   DateTime? @map("initial_commitment_date")
+  changeJustification     String?   @map("change_justification")
   // Activo base de la solicitud (P1, aditivo): activo sobre el que se trabaja la
   // solicitud; nullable hasta que la mesa lo asocie en el triage.
-  assetId               String?   @map("asset_id") @db.Uuid
+  assetId                 String?   @map("asset_id") @db.Uuid
   // Fase 7 (gobierno · design §2.5, aditivo): ruta proporcional del marco §6
   // (catalogo GOVERNANCE_ROUTE, nullable hasta que el lider la elija) y el flag
   // transversal de bloqueo (D-B7/MEDIUM-1). El bloqueo convive con
   // `operationalState` (no lo reemplaza) y aplica en cualquier etapa:
   // "Request bloqueada" = blockedAt != null AND blockedResolvedAt == null.
-  governanceRoute        String?   @map("governance_route")
-  blockedReason          String?   @map("blocked_reason")
-  blockedAt              DateTime? @map("blocked_at")
-  blockedByUserId        String?   @map("blocked_by_user_id") @db.Uuid
-  blockedResolvedAt      DateTime? @map("blocked_resolved_at")
-  blockedResolvedByUserId String?  @map("blocked_resolved_by_user_id") @db.Uuid
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  governanceRoute         String?   @map("governance_route")
+  blockedReason           String?   @map("blocked_reason")
+  blockedAt               DateTime? @map("blocked_at")
+  blockedByUserId         String?   @map("blocked_by_user_id") @db.Uuid
+  blockedResolvedAt       DateTime? @map("blocked_resolved_at")
+  blockedResolvedByUserId String?   @map("blocked_resolved_by_user_id") @db.Uuid
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
 
   mainProcess         Process              @relation("RequestMainProcess", fields: [mainProcessId], references: [id], onDelete: Restrict)
   participants        RequestParticipant[]
@@ -369,22 +370,22 @@ model RequestParticipant {
 /// Triage: clasificacion y decision de ruta (BR-004, SCR-04). Tabla 1:N por
 /// extensibilidad futura; en Fase 2 el gate solo admite un Triage por Request.
 model Triage {
-  id                   String   @id @default(uuid()) @db.Uuid
-  requestId            String   @map("request_id") @db.Uuid
-  routeCode            String?  @map("route_code")
-  demandTypeCode       String?  @map("demand_type_code")
-  criticalityCode      String?  @map("criticality_code")
-  sizeCode             String?  @map("size_code")
-  dataAvailabilityCode String?  @map("data_availability_code")
-  totalEffortHours     Int?     @map("total_effort_hours")
-  mainResponsibleUserId String? @map("main_responsible_user_id") @db.Uuid
-  decision             String
-  decidedAt            DateTime @default(now()) @map("decided_at")
-  decidedByUserId      String   @map("decided_by_user_id") @db.Uuid
-  dependencies         String?
-  notes                String?
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default(uuid()) @db.Uuid
+  requestId             String   @map("request_id") @db.Uuid
+  routeCode             String?  @map("route_code")
+  demandTypeCode        String?  @map("demand_type_code")
+  criticalityCode       String?  @map("criticality_code")
+  sizeCode              String?  @map("size_code")
+  dataAvailabilityCode  String?  @map("data_availability_code")
+  totalEffortHours      Int?     @map("total_effort_hours")
+  mainResponsibleUserId String?  @map("main_responsible_user_id") @db.Uuid
+  decision              String
+  decidedAt             DateTime @default(now()) @map("decided_at")
+  decidedByUserId       String   @map("decided_by_user_id") @db.Uuid
+  dependencies          String?
+  notes                 String?
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   request         Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
   decidedBy       User    @relation("TriageDecidedBy", fields: [decidedByUserId], references: [id], onDelete: Restrict)
@@ -844,29 +845,27 @@ model Commitment {
 // Diseno aprobado en .agents/tasks/fase6-activos/design.md §1.2.
 // ============================================================================
 
-/// Activo analitico (SCR-15 · `08` Activo). Ficha de inventario anclada a un
-/// proceso (FK requerida = ancla de alcance). `status` es enum logico
-/// AssetStatus read-only (default BORRADOR): solo lo escribe el helper de
-/// AssetStateService, nunca un DTO libre. Los atributos tipo/tecnologia/fuente/
-/// frecuencia se guardan como CODIGO de maestra (String, no FK a CatalogItem),
-/// validados en el service (design §1.2 D2). Sin borrado fisico: retiro =
-/// cambio de estado (design §4.1 D3).
+/// Activo generico, compartido y gobernado (SCR-15 · `08` Activo). `processId`
+/// es el proceso PROPIETARIO/origen (FK requerida), siempre visible; la
+/// visibilidad adicional vive en la tabla puente `AssetProcessVisibility`. Los
+/// atributos por-solicitud (tipo/tecnologia/fuente/frecuencia) se retiraron del
+/// modelo: pertenecen a cada solicitud, no al activo. `generalDescription` es
+/// una descripcion general del activo. `status` es enum logico AssetStatus
+/// read-only (default BORRADOR): solo lo escribe AssetStateService. Escritura
+/// (crear/editar/cambiar estado) reservada al jefe de area. Sin borrado fisico:
+/// retiro = cambio de estado (design §4.1 D3).
 model Asset {
-  id                    String   @id @default(uuid()) @db.Uuid
-  processId             String   @map("process_id") @db.Uuid
-  requestId             String?  @map("request_id") @db.Uuid
-  ownerUserId           String?  @map("owner_user_id") @db.Uuid
-  name                  String
-  status                String   @default("BORRADOR")
-  typeCode              String?  @map("type_code")
-  technologyCode        String?  @map("technology_code")
-  sourceCode            String?  @map("source_code")
-  frequencyCode         String?  @map("frequency_code")
-  documentationRef      String?  @map("documentation_ref")
-  functionalDescription String?  @map("functional_description")
-  dependencies          String?
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default(uuid()) @db.Uuid
+  processId          String   @map("process_id") @db.Uuid
+  requestId          String?  @map("request_id") @db.Uuid
+  ownerUserId        String?  @map("owner_user_id") @db.Uuid
+  name               String
+  status             String   @default("BORRADOR")
+  documentationRef   String?  @map("documentation_ref")
+  generalDescription String?  @map("general_description")
+  dependencies       String?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   process Process  @relation(fields: [processId], references: [id], onDelete: Restrict)
   request Request? @relation("AssetOriginRequest", fields: [requestId], references: [id], onDelete: Restrict)
@@ -875,6 +874,9 @@ model Asset {
   // Solicitudes que tienen este activo como base (P1, inversa de Request.asset).
   requestsAssociated Request[] @relation("RequestAsset")
 
+  // Visibilidad N:M: procesos que pueden ver/usar el activo (ademas del propietario).
+  visibilities AssetProcessVisibility[]
+
   documents          Document[]
   dailyLogActivities DailyLogActivity[]
   issues             Issue[]
@@ -882,8 +884,26 @@ model Asset {
   @@index([processId])
   @@index([requestId])
   @@index([status])
-  @@index([typeCode])
   @@map("assets")
+}
+
+/// Visibilidad N:M Activo <-> Proceso (gobernanza): procesos que pueden ver y
+/// usar (asociar) un activo generico, ademas del proceso propietario
+/// (`Asset.processId`), que siempre se considera visible. Solo el jefe de area
+/// define este conjunto al crear/editar el activo. Patron calcado de
+/// RequestParticipant.
+model AssetProcessVisibility {
+  id        String   @id @default(uuid()) @db.Uuid
+  assetId   String   @map("asset_id") @db.Uuid
+  processId String   @map("process_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  asset   Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  process Process @relation(fields: [processId], references: [id], onDelete: Restrict)
+
+  @@unique([assetId, processId], name: "asset_process_visibility_unique")
+  @@index([processId])
+  @@map("asset_process_visibilities")
 }
 
 /// Documento (SCR-16 · `08` Documento). Metadatos de un documento Markdown;

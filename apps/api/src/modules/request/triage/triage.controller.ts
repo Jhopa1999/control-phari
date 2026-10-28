@@ -77,15 +77,19 @@ export class TriageController {
   @HttpCode(200)
   @ApiOperation({
     summary:
-      'Asocia el activo base de la solicitud (existente XOR nuevo); requisito para priorizar.',
+      'Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: AssociateAssetDto })
   @ApiResponse({ status: 200, description: 'Activo asociado.', type: RequestResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos invalidos o ambos/ninguno de activo.' })
+  @ApiResponse({ status: 400, description: 'Datos invalidos (assetId no es UUID).' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Solicitud o activo fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'La solicitud no admite asociar activo en su estado.' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'La solicitud no admite asociar activo en su estado, o el activo no esta habilitado para su proceso.',
+  })
   associateAsset(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

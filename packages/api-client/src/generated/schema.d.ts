@@ -434,7 +434,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Asocia el activo base de la solicitud (existente XOR nuevo); requisito para priorizar. */
+        /** Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos. */
         post: operations["TriageController_associateAsset"];
         delete?: never;
         options?: never;
@@ -470,7 +470,7 @@ export interface paths {
         /** Lista activos en alcance (filtros opcionales). */
         get: operations["AssetController_list"];
         put?: never;
-        /** Crea un activo (nace BORRADOR; integrante solo propone). */
+        /** Crea un activo (nace BORRADOR). Solo el jefe de area. */
         post: operations["AssetController_create"];
         delete?: never;
         options?: never;
@@ -492,7 +492,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Edita atributos de un activo (no el estado). */
+        /** Edita atributos de un activo (no el estado). Solo el jefe de area. */
         patch: operations["AssetController_update"];
         trace?: never;
     };
@@ -522,7 +522,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Cambia el estado de un activo (transicion valida). */
+        /** Cambia el estado de un activo (transicion valida). Solo el jefe de area. */
         post: operations["AssetController_changeStatus"];
         delete?: never;
         options?: never;
@@ -2532,37 +2532,12 @@ export interface components {
             /** @description Observaciones. */
             notes?: string;
         };
-        NewAssetInputDto: {
-            /** @description Nombre del activo (requerido). */
-            name: string;
-            /**
-             * Format: uuid
-             * @description Dueno/responsable (usuario).
-             */
-            ownerUserId?: string;
-            /** @description Tipo (maestra ASSET_TYPE). */
-            typeCode?: string;
-            /** @description Tecnologia (maestra TECHNOLOGY). */
-            technologyCode?: string;
-            /** @description Fuente (maestra SOURCE). */
-            sourceCode?: string;
-            /** @description Frecuencia (maestra FREQUENCY). */
-            frequencyCode?: string;
-            /** @description Referencia documental/repositorio. */
-            documentationRef?: string;
-            /** @description Descripcion funcional. */
-            functionalDescription?: string;
-            /** @description Dependencias/observaciones. */
-            dependencies?: string;
-        };
         AssociateAssetDto: {
             /**
              * Format: uuid
-             * @description Activo existente a asociar (excluyente con newAsset).
+             * @description Activo existente a asociar.
              */
-            assetId?: string;
-            /** @description Datos de un activo nuevo a crear y asociar (excluyente con assetId). */
-            newAsset?: components["schemas"]["NewAssetInputDto"];
+            assetId: string;
         };
         PriorityEvaluationResponseDto: {
             /**
@@ -2640,7 +2615,7 @@ export interface components {
             id: string;
             /**
              * Format: uuid
-             * @description Proceso del activo.
+             * @description Proceso propietario del activo.
              */
             processId: string;
             /**
@@ -2657,17 +2632,12 @@ export interface components {
             name: string;
             /** @description Estado (AssetStatus). */
             status: string;
-            /** @description Tipo (maestra ASSET_TYPE). */
-            typeCode: string | null;
-            /** @description Tecnologia (maestra TECHNOLOGY). */
-            technologyCode: string | null;
-            /** @description Fuente (maestra SOURCE). */
-            sourceCode: string | null;
-            /** @description Frecuencia (maestra FREQUENCY). */
-            frequencyCode: string | null;
             documentationRef: string | null;
-            functionalDescription: string | null;
+            /** @description Descripcion general del activo. */
+            generalDescription: string | null;
             dependencies: string | null;
+            /** @description Procesos que pueden ver/usar el activo (sin incluir al propietario). */
+            visibleProcessIds: string[];
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -2676,7 +2646,7 @@ export interface components {
         CreateAssetDto: {
             /**
              * Format: uuid
-             * @description Proceso del activo (requerido).
+             * @description Proceso propietario del activo (requerido).
              */
             processId: string;
             /** @description Nombre del activo (requerido). */
@@ -2691,20 +2661,14 @@ export interface components {
              * @description Dueno/responsable (usuario).
              */
             ownerUserId?: string;
-            /** @description Tipo (maestra ASSET_TYPE). */
-            typeCode?: string;
-            /** @description Tecnologia (maestra TECHNOLOGY). */
-            technologyCode?: string;
-            /** @description Fuente (maestra SOURCE). */
-            sourceCode?: string;
-            /** @description Frecuencia (maestra FREQUENCY). */
-            frequencyCode?: string;
             /** @description Referencia documental/repositorio. */
             documentationRef?: string;
-            /** @description Descripcion funcional. */
-            functionalDescription?: string;
+            /** @description Descripcion general del activo. */
+            generalDescription?: string;
             /** @description Dependencias/observaciones. */
             dependencies?: string;
+            /** @description Procesos que pueden ver/usar el activo (ademas del propietario). */
+            visibleProcessIds?: string[];
         };
         AssetRequestHistoryItemDto: {
             /**
@@ -2740,20 +2704,14 @@ export interface components {
              * @description Dueno/responsable (null para desligar).
              */
             ownerUserId?: string | null;
-            /** @description Tipo (maestra ASSET_TYPE). */
-            typeCode?: string;
-            /** @description Tecnologia (maestra TECHNOLOGY). */
-            technologyCode?: string;
-            /** @description Fuente (maestra SOURCE). */
-            sourceCode?: string;
-            /** @description Frecuencia (maestra FREQUENCY). */
-            frequencyCode?: string;
             /** @description Referencia documental/repositorio. */
             documentationRef?: string;
-            /** @description Descripcion funcional. */
-            functionalDescription?: string;
+            /** @description Descripcion general del activo. */
+            generalDescription?: string;
             /** @description Dependencias/observaciones. */
             dependencies?: string;
+            /** @description Procesos que pueden ver/usar el activo (reemplaza el conjunto; [] = solo propietario). */
+            visibleProcessIds?: string[];
         };
         ChangeAssetStatusDto: {
             /**
@@ -6155,7 +6113,7 @@ export interface operations {
                     "application/json": components["schemas"]["RequestResponseDto"];
                 };
             };
-            /** @description Datos invalidos o ambos/ninguno de activo. */
+            /** @description Datos invalidos (assetId no es UUID). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6176,7 +6134,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La solicitud no admite asociar activo en su estado. */
+            /** @description La solicitud no admite asociar activo en su estado, o el activo no esta habilitado para su proceso. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6338,15 +6296,8 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Rol insuficiente. */
+            /** @description Solo el jefe de area puede crear. */
             403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Proceso fuera de alcance. */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6421,7 +6372,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Rol insuficiente. */
+            /** @description Solo el jefe de area puede editar. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6504,7 +6455,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Rol insuficiente. */
+            /** @description Solo el jefe de area puede cambiar el estado. */
             403: {
                 headers: {
                     [name: string]: unknown;

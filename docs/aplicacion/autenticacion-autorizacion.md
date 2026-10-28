@@ -131,6 +131,16 @@ crear/editar/borrar exige `JEFE_AREA`/`LIDER_PROCESO`. En `approval`, la clase p
 declara `@Roles(JEFE_AREA)`: la **decisión** de aprobar o devolver es exclusiva del jefe
 de área y un líder recibe `403`.
 
+En `assets` la lectura (`GET`) la tienen los 3 roles de área (`JEFE_AREA`,
+`LIDER_PROCESO`, `INTEGRANTE`); `ADMIN` no figura en el `@Roles` del controller y por
+tanto no accede al módulo de activos. La **escritura** (crear/editar/cambiar estado)
+está reservada al jefe de área: los handlers `POST/PATCH/POST :id/status` llevan
+`@Roles(JEFE_AREA)` y el service lo reafirma con `requireAssetGovernor` (403 para
+líder/integrante/admin). El activo es genérico y compartido; el jefe define qué procesos
+pueden verlo/usarlo (tabla puente `AssetProcessVisibility`), y el líder solo **asocia**
+activos visibles a sus solicitudes y gestiona los documentos vinculados
+(`requireAssetWritable`/`requireProcessManager`, sin cambios).
+
 ## Matriz de módulos (`auth/module-matrix.ts`)
 
 `MODULE_MATRIX` mapea cada clave de módulo a los roles permitidos. Es la **única fuente
