@@ -24,7 +24,6 @@ import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RequestContextBar, type RequestPickerGroup } from '@/components/request-context-bar';
-import { RequirementsPanel, type RequirementItem } from '@/components/requirements-panel';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
@@ -69,7 +68,6 @@ import {
   importPlanExcel,
   submitPlan,
 } from '@/lib/plan';
-import { guideCategoryLabel, presentGuidePending } from '@/lib/plan-guide';
 import { deletePhase, listPhases, reorderPhases } from '@/lib/plan-phases';
 import { PLANNABLE_STATES } from '@/lib/request-state';
 import { listRequests } from '@/lib/requests';
@@ -92,6 +90,7 @@ import { SegmentedRadio } from '@/components/ui/segmented-radio';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { TaskDetail } from '../tareas/task-detail';
 import { PhaseDialog } from './phase-dialog';
+import { PlanGuidePanel } from './plan-guide-panel';
 import { PlanSummary } from './plan-summary';
 import { PlanTasksKanban } from './plan-tasks-kanban';
 import { TaskDialog } from './task-dialog';
@@ -113,7 +112,6 @@ const NOT_PLANNABLE =
 /** Nota y motivo de la fase inicial con tareas (design §10.2, «LOCK»). */
 const LOCK = 'Fase inicial con tareas: no se mueve ni se elimina.';
 const PHASE_HAS_TASKS = 'La fase tiene tareas. Elimínalas antes de eliminar la fase.';
-const SUBMIT_REASON_ID = 'plan-guide-submit-reason';
 const ALL = 'ALL';
 const TASK_NOUN = { one: 'tarea', other: 'tareas' };
 
@@ -131,7 +129,6 @@ const TASK_COMPARATORS: Record<TaskSortKey, Comparator<Task>> = {
   status: (a, b, direction) => compareTaskStatus(a.status, b.status, direction),
 };
 
-const LIST_FORMAT = new Intl.ListFormat('es', { style: 'long', type: 'conjunction' });
 
 function messageOf(err: unknown): string {
   return err instanceof PlanError ? err.message : 'Ocurrió un error inesperado.';
@@ -670,97 +667,6 @@ export function PlanView(): React.ReactElement {
     return (id ? document.getElementById(id) : null) ?? tasksHeadingRef.current;
   }, []);
 
-  function renderGuide(currentGuide: PlanGuide): React.ReactElement {
-    const seen = new Map<string, number>();
-    const presented = currentGuide.pendings.map((p) => {
-      const item = presentGuidePending(p, {
-        phase: (id) => phaseNameById.get(id) ?? null,
-        task: (id) => taskTitleById.get(id) ?? null,
-      });
-      // Ids únicos aunque la API repita código y destino.
-      const count = seen.get(item.id) ?? 0;
-      seen.set(item.id, count + 1);
-      return count === 0 ? item : { ...item, id: `${item.id}#${count}` };
-    });
-
-    const items: RequirementItem[] = presented.map((item) => {
-      let action: RequirementItem['action'];
-      if (item.action) {
-        const { kind, label, targetId } = item.action;
-        if (kind === 'newPhase') {
-          action = { label, onClick: openNewPhase, disabled: busy };
-        } else if (kind === 'newTask') {
-          action = initialPhaseId
-            ? { label, onClick: () => openNewTask(initialPhaseId), disabled: busy }
-            : { label, disabled: true, disabledReason: 'Primero crea una fase.' };
-        } else if (kind === 'editPhase') {
-          const phase = phases.find((p) => p.id === targetId);
-          action = phase ? { label, onClick: () => openEditPhase(phase), disabled: busy } : undefined;
-        } else {
-          const task = tasks.find((t) => t.id === targetId);
-          action = task ? { label, onClick: () => openEditTask(task), disabled: busy } : undefined;
-        }
-      }
-      return { id: item.id, label: item.label, status: 'pending', action };
-    });
-
-    const groupOrder: string[] = [];
-    const groupItems = new Map<string, string[]>();
-    for (const item of presented) {
-      if (!groupItems.has(item.category)) {
-        groupOrder.push(item.category);
-        groupItems.set(item.category, []);
-      }
-      groupItems.get(item.category)?.push(item.id);
-    }
-    const groups = groupOrder.map((category) => ({
-      id: category,
-      label: guideCategoryLabel(category),
-      itemIds: groupItems.get(category) ?? [],
-    }));
-
-    const future = currentGuide.futureCategories.map(guideCategoryLabel);
-    const canSubmit = currentGuide.canSubmit;
-
-    return (
-      <RequirementsPanel
-        id="plan-guide"
-        liveUpdates
-        title="Aún no puedes enviar el plan a autorización"
-        description="Resuelve cada pendiente desde su acción; la lista se actualiza al guardar."
-        doneTitle="El plan está listo para enviar"
-        doneDescription="No hay pendientes en las categorías evaluadas."
-        items={items}
-        groups={groups}
-        footer={
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col items-start gap-1">
-              <Button
-                type="button"
-                unavailable={!canSubmit}
-                disabled={canSubmit && busy}
-                aria-describedby={canSubmit ? 'plan-guide-summary' : `plan-guide-summary ${SUBMIT_REASON_ID}`}
-                onClick={() => setSubmitOpen(true)}
-              >
-                Enviar a autorización
-              </Button>
-              {!canSubmit ? (
-                <DisabledReason id={SUBMIT_REASON_ID}>
-                  Resuelve los pendientes de la lista para enviar el plan.
-                </DisabledReason>
-              ) : null}
-            </div>
-            {future.length > 0 ? (
-              <p className="text-meta text-muted-foreground">
-                {`Se evaluarán más adelante: ${LIST_FORMAT.format(future)}.`}
-              </p>
-            ) : null}
-          </div>
-        }
-      />
-    );
-  }
-
   function phaseActions(phase: PlanPhase, index: number): RowAction[] {
     const isInitial = phase.id === initialPhaseId;
     const hasTasks = (taskCountByPhase.get(phase.id) ?? 0) > 0;
@@ -1211,7 +1117,22 @@ export function PlanView(): React.ReactElement {
         {renderPhases()}
         {renderTasks()}
         {/* PLA-06: el bloque de envío va al final, después de fases y tareas. La guía solo se muestra si el plan es editable (§11.9); getPlanGuide se sigue llamando. */}
-        {canEdit && guide ? renderGuide(guide) : null}
+        {canEdit && guide ? (
+          <PlanGuidePanel
+            guide={guide}
+            phases={phases}
+            tasks={tasks}
+            phaseNameById={phaseNameById}
+            taskTitleById={taskTitleById}
+            initialPhaseId={initialPhaseId}
+            busy={busy}
+            onNewPhase={openNewPhase}
+            onNewTask={openNewTask}
+            onEditPhase={openEditPhase}
+            onEditTask={openEditTask}
+            onSubmit={() => setSubmitOpen(true)}
+          />
+        ) : null}
       </>
     );
   }
