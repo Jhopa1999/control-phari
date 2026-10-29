@@ -3,6 +3,7 @@ import { PrismaModule } from '../../database/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
 import { RequestModule } from '../request/request.module';
+import { StorageModule } from '../storage/storage.module';
 import { PlanController } from './plan.controller';
 import { PlanService } from './plan.service';
 import { PlanExcelService } from './plan-excel.service';
@@ -14,6 +15,8 @@ import { TaskController } from './task/task.controller';
 import { TaskService } from './task/task.service';
 import { DependencyController } from './dependency/dependency.controller';
 import { DependencyService } from './dependency/dependency.service';
+import { EvidenceController } from './evidence/evidence.controller';
+import { EvidenceService } from './evidence/evidence.service';
 
 /**
  * Modulo raiz del plan (design §3.2, D13): plan + submodulos phase/task/
@@ -26,12 +29,13 @@ import { DependencyService } from './dependency/dependency.service';
  * (design §3.2); el test de modulo fija este contrato.
  */
 @Module({
-  imports: [PrismaModule, AuthModule, AuditModule, RequestModule],
+  imports: [PrismaModule, AuthModule, AuditModule, RequestModule, StorageModule],
   controllers: [
     TaskController,
     PlanController,
     PhaseController,
     DependencyController,
+    EvidenceController,
   ],
   providers: [
     PlanService,
@@ -41,6 +45,7 @@ import { DependencyService } from './dependency/dependency.service';
     PhaseService,
     TaskService,
     DependencyService,
+    EvidenceService,
   ],
 })
 export class PlanModule {}

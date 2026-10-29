@@ -186,6 +186,11 @@ Tarea del plan.
   `acceptedAt?`, `acceptedByUserId?`, `evidenceUrl?`.
 - Restricciones/índices: por `phaseId`, `responsibleUserId`, `status`.
 
+### TaskEvidence (`task_evidences`)
+Archivo de evidencia de una tarea; el binario vive en el bucket S3 maestro y aquí solo el metadato.
+- Campos clave: `taskId`, `fileName`, `contentType`, `sizeBytes`, `storageKey` (único), `uploadedByUserId`, `createdAt`.
+- Relaciones: pertenece a `Task` (borrado en cascada) y a `User` (quien la subió).
+
 ### TaskDependency (`task_dependencies`)
 Dependencia dirigida entre dos tareas del mismo plan (append-only).
 - Campos clave: `dependentTaskId`, `predecessorTaskId`.
@@ -219,7 +224,7 @@ Cabecera de registro diario por proceso + fecha + autor.
 Actividad de un registro diario (con clasificación de maestra `ACTIVITY_CLASS`).
 - Campos clave: `dailyLogId`, `classificationCode`, referencias opcionales
   (`projectRequestId?`, `taskId?`, `assetRef?`, `requesterRef?`, `relatedIssueId?`,
-  `assetId?`), `hours`, `evidenceUrl?`, `nextStep?`, `nextStepDate?`.
+  `assetId?`), `hours`, `evidenceUrl?`, `nextStep?`, `nextStepDate?` (estos dos últimos ya no se capturan ni se muestran en la UI; se conservan en BD).
 - Índices: por `dailyLogId`, `classificationCode`, `taskId`, `projectRequestId`,
   `relatedIssueId`, `assetId`.
 

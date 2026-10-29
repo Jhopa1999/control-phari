@@ -9,6 +9,7 @@ function createMocks() {
   const prismaObj: Record<string, unknown> = {
     request: { findMany: jest.fn() },
     priorityEvaluation: { findMany: jest.fn() },
+    task: { findMany: jest.fn().mockResolvedValue([]) },
   };
   const prisma = prismaObj as unknown as PrismaService;
   const state = {

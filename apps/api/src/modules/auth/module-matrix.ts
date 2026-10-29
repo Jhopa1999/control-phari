@@ -89,9 +89,9 @@ export const MODULE_MATRIX: Record<ModuleKey, readonly RoleCode[]> = {
   // de JEFE_AREA): este modulo es la configuracion tecnica del sistema (SMTP,
   // administradores) y queda fuera del alcance del jefe de area.
   systemSettings: [RoleCode.ADMIN],
-  // Gestion de areas organizativas: SOLO ADMIN (crea/edita areas como
-  // Analitica). Es administracion de la estructura, fuera del alcance de area.
-  areas: [RoleCode.ADMIN],
+  // Gestion de areas organizativas: ADMIN y JEFE_AREA (crean/editan areas como
+  // Analitica).
+  areas: [RoleCode.ADMIN, RoleCode.JEFE_AREA],
   // Administracion de procesos: ADMIN (gestion global) y JEFE_AREA (gestiona
   // los procesos de su area).
   processesAdmin: [RoleCode.ADMIN, RoleCode.JEFE_AREA],

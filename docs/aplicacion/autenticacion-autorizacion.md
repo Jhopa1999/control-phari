@@ -170,7 +170,7 @@ de verdad** compartida con el frontend: el menú usa las mismas claves para filt
 | `team` | — | — | ✓ |
 | `permissions` | ✓ | ✓ | ✓ |
 | `systemSettings` | — | — | — |
-| `areas` | — | — | — |
+| `areas` | — | — | ✓ |
 | `processesAdmin` | — | — | ✓ |
 | `requesters` | — | — | ✓ |
 | `aiSettings` | — | — | — |
@@ -179,9 +179,9 @@ de verdad** compartida con el frontend: el menú usa las mismas claves para filt
 > `systemSettings` (configuración del sistema: SMTP y administradores), `areas`
 > (gestión de áreas organizativas) y `aiSettings` (configuración de los agentes de
 > IA) son exclusivos del rol de **sistema** `ADMIN`: ningún rol de área los ve.
-> `processesAdmin` (administración de procesos) y `requesters` (maestro de solicitantes) los ven `ADMIN` y `JEFE_AREA`.
+> `areas` (gestión de áreas organizativas), `processesAdmin` (administración de procesos) y `requesters` (maestro de solicitantes) los ven `ADMIN` y `JEFE_AREA`.
 > `MODULE_MATRIX` tiene por tanto 26 claves; un `JEFE_AREA` ve todas menos
-> `systemSettings`, `areas` y `aiSettings`.
+> `systemSettings` y `aiSettings`.
 >
 > `recurring` (actividades recurrentes) lo ven los tres roles de area para la
 > operacion (ver "que me toca" y completar ocurrencias); la gestion de definiciones

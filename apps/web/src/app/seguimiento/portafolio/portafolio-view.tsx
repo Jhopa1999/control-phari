@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { PriorityBadge, PriorityLegend, StatusBadge } from '@/components/status-badge';
 import { SearchInput, Toolbar } from '@/components/toolbar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -87,6 +88,55 @@ function messageOf(err: unknown): string {
   return err instanceof ApiError
     ? err.message
     : 'Ocurrió un error inesperado.';
+}
+
+/** Barra de avance del proyecto; «—» si aún no tiene tareas. */
+function ProgressCell({ value }: { value: number | null | undefined }): React.ReactElement {
+  if (value === null || value === undefined) {
+    return <span className="text-muted-foreground">Sin tareas</span>;
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        role="progressbar"
+        aria-label="Avance del proyecto"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={value}
+        className="h-2 w-20 overflow-hidden rounded-full bg-muted"
+      >
+        <div className="h-full bg-primary" style={{ width: `${value}%` }} />
+      </div>
+      <span className="text-meta tabular-nums">{value}%</span>
+    </div>
+  );
+}
+
+/** Alerta según la fecha objetivo (vencido, próximo a vencer). */
+function DueBadge({
+  status,
+  days,
+}: {
+  status: string;
+  days: number | null | undefined;
+}): React.ReactElement | null {
+  if (status === 'VENCIDO') {
+    const late = Math.abs(days ?? 0);
+    return (
+      <Badge variant="danger">{late === 1 ? 'Vencido hace 1 día' : `Vencido hace ${late} días`}</Badge>
+    );
+  }
+  if (status === 'PROXIMO_A_VENCER') {
+    return (
+      <Badge variant="warning">
+        {days === 0 ? 'Vence hoy' : days === 1 ? 'Vence mañana' : `Vence en ${days} días`}
+      </Badge>
+    );
+  }
+  if (status === 'EN_TIEMPO') {
+    return <Badge variant="success">En tiempo</Badge>;
+  }
+  return null;
 }
 
 /**
@@ -272,7 +322,7 @@ export function PortafolioView(): React.ReactElement {
 
       <DataView
         state={viewState}
-        loading={{ rows: 8, columns: 8 }}
+        loading={{ rows: 8, columns: 11 }}
         error={{
           title: 'No fue posible cargar el portafolio.',
           message: errorMessage,
@@ -295,6 +345,7 @@ export function PortafolioView(): React.ReactElement {
               <TableHead>Proceso</TableHead>
               <SortableTableHead label="Estado" sortKey="state" sort={table.sort} onSort={table.toggleSort} />
               <SortableTableHead label="Banda" sortKey="band" sort={table.sort} onSort={table.toggleSort} />
+              <TableHead>Avance</TableHead>
               <TableHead>Ruta</TableHead>
               <TableHead>Responsable</TableHead>
               <SortableTableHead
@@ -312,7 +363,9 @@ export function PortafolioView(): React.ReactElement {
             {table.pageRows.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="min-w-56 max-w-[28rem]">
-                  <CellTitle>{item.title}</CellTitle>
+                  <CellTitle href={`/demanda/solicitudes/${encodeURIComponent(item.id)}`}>
+                    {item.title}
+                  </CellTitle>
                 </TableCell>
                 <TableCell className="min-w-32 text-muted-foreground">{item.mainProcessName}</TableCell>
                 <TableCell className="whitespace-nowrap">
@@ -320,6 +373,9 @@ export function PortafolioView(): React.ReactElement {
                 </TableCell>
                 <TableCell>
                   <PriorityBadge variant="compact" band={item.priorityBand} label={item.priorityLabel} />
+                </TableCell>
+                <TableCell className="min-w-32">
+                  <ProgressCell value={item.progressPercent} />
                 </TableCell>
                 <TableCell className="whitespace-nowrap">{routeLabel(item.governanceRoute, routes)}</TableCell>
                 <TableCell className="min-w-44 max-w-[16rem]">
@@ -334,7 +390,12 @@ export function PortafolioView(): React.ReactElement {
                 <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
                   {formatDateOnly(item.registeredAt)}
                 </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums">{formatDateOnly(item.targetDate)}</TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <div className="flex flex-col items-start gap-0.5">
+                    <span className="tabular-nums">{formatDateOnly(item.targetDate)}</span>
+                    <DueBadge status={item.dueStatus} days={item.daysToTarget} />
+                  </div>
+                </TableCell>
                 <TableCell className="whitespace-nowrap tabular-nums">
                   {formatDateOnly(item.initialCommitmentDate)}
                 </TableCell>

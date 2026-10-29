@@ -4,6 +4,12 @@ import { Prisma } from '../../generated/prisma/client';
 import { CurrentActor } from '../auth/current-actor';
 import { RequestStateService } from '../request/request-state.service';
 import { PortfolioScopeService } from './portfolio-scope.service';
+import {
+  computeDueAlert,
+  computeProgressPercent,
+  dueSoonDaysFromEnv,
+  type TaskProgressInput,
+} from './progress';
 import { ListPortfolioDto } from './dto/list-portfolio.dto';
 import { PortfolioItemResponseDto } from './dto/portfolio-item-response.dto';
 
@@ -89,8 +95,33 @@ export class PortfolioService {
       }
     }
 
+    // Avance: tareas de todos los planes en alcance, en una sola consulta.
+    const tasks = await this.prisma.task.findMany({
+      where: { phase: { plan: { requestId: { in: requestIds } } } },
+      select: {
+        status: true,
+        progress: true,
+        phase: { select: { plan: { select: { requestId: true } } } },
+      },
+    });
+    const tasksByRequest = new Map<string, TaskProgressInput[]>();
+    for (const task of tasks) {
+      const key = task.phase.plan.requestId;
+      const list = tasksByRequest.get(key) ?? [];
+      list.push({ status: task.status, progress: task.progress });
+      tasksByRequest.set(key, list);
+    }
+    const today = new Date();
+    const dueSoonDays = dueSoonDaysFromEnv(process.env.PORTFOLIO_DUE_SOON_DAYS);
+
     const items: PortfolioItemResponseDto[] = [];
     for (const req of requests) {
+      const alert = computeDueAlert(
+        req.targetDate,
+        req.operationalState,
+        today,
+        dueSoonDays,
+      );
       // Banda post-query sobre la evaluacion vigente: null si SIN_PRIORIZAR; el
       // helper priorityBand nunca devuelve null (solo se llama si hay score).
       const evaluation = currentEvaluationByRequest.get(req.id) ?? null;
@@ -126,6 +157,9 @@ export class PortfolioService {
         registeredAt: toIsoDate(req.registeredAt) ?? '',
         targetDate: toIsoDate(req.targetDate),
         initialCommitmentDate: toIsoDate(req.initialCommitmentDate),
+        progressPercent: computeProgressPercent(tasksByRequest.get(req.id) ?? []),
+        dueStatus: alert.dueStatus,
+        daysToTarget: alert.daysToTarget,
         blocked: req.blockedAt !== null && req.blockedResolvedAt === null,
         blockedReason: req.blockedReason,
       });

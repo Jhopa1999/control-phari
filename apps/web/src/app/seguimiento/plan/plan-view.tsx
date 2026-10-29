@@ -89,6 +89,8 @@ import { usePlanTasksView } from '@/lib/use-plan-tasks-view';
 import { useRequestIdParam } from '@/lib/use-request-param';
 import { listCoordinationPeople } from '@/lib/worklog';
 import { SegmentedRadio } from '@/components/ui/segmented-radio';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
+import { TaskDetail } from '../tareas/task-detail';
 import { PhaseDialog } from './phase-dialog';
 import { PlanSummary } from './plan-summary';
 import { PlanTasksKanban } from './plan-tasks-kanban';
@@ -206,6 +208,8 @@ export function PlanView(): React.ReactElement {
     task: Task | null;
     phaseId: string | null;
   }>({ open: false, task: null, phaseId: null });
+  // Panel lateral con el detalle de la tarea elegida.
+  const [detailTaskId, setDetailTaskId] = React.useState<string | null>(null);
   const [submitOpen, setSubmitOpen] = React.useState(false);
   const [phaseToDelete, setPhaseToDelete] = React.useState<PlanPhase | null>(null);
   const [phaseConfirmOpen, setPhaseConfirmOpen] = React.useState(false);
@@ -1048,7 +1052,7 @@ export function PlanView(): React.ReactElement {
                 <TableRow key={task.id}>
                   <TableCell className="min-w-56 max-w-[28rem]">
                     <div className="flex items-center gap-2">
-                      <CellTitle href={`/seguimiento/tareas?taskId=${encodeURIComponent(task.id)}`}>
+                      <CellTitle onOpen={() => setDetailTaskId(task.id)}>
                         {task.title}
                       </CellTitle>
                       {task.isMilestone ? (
@@ -1403,6 +1407,29 @@ export function PlanView(): React.ReactElement {
               void refreshPlanData();
             }}
           />
+          <Sheet open={detailTaskId !== null} onOpenChange={(open) => !open && setDetailTaskId(null)}>
+            <SheetContent
+              side="right"
+              closeLabel="Cerrar detalle"
+              className="w-[36rem] max-w-[95vw] gap-4 overflow-y-auto bg-background p-5"
+            >
+              <SheetTitle className="pr-10">
+                {tasks.find((t) => t.id === detailTaskId)?.title ?? 'Detalle de la tarea'}
+              </SheetTitle>
+              <SheetDescription className="sr-only">
+                Detalle de la tarea: estado, predecesoras y evidencia.
+              </SheetDescription>
+              {detailTaskId ? (
+                <TaskDetail
+                  key={detailTaskId}
+                  taskId={detailTaskId}
+                  embedded
+                  onSelectTask={setDetailTaskId}
+                  onChanged={() => void refreshPlanData()}
+                />
+              ) : null}
+            </SheetContent>
+          </Sheet>
           <TaskDialog
             open={taskDialog.open}
             task={taskDialog.task}

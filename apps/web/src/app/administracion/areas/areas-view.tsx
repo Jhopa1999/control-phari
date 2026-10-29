@@ -34,9 +34,9 @@ function messageOf(err: unknown): string {
 }
 
 /**
- * Áreas organizativas (solo ADMIN): lista, crea y edita areas como Analitica,
+ * Áreas organizativas (ADMIN y JEFE_AREA): lista, crea y edita areas como Analitica,
  * que agrupan procesos. Gating cosmetico via allowedModules.has('areas'); el
- * control real lo aplica el backend (@Roles(ADMIN)). Solo consume el cliente
+ * control real lo aplica el backend (@Roles(ADMIN, JEFE_AREA)). Solo consume el cliente
  * tipado del contrato OpenAPI (no toca Prisma ni la BD).
  */
 export function AreasView(): React.ReactElement {
@@ -155,7 +155,7 @@ export function AreasView(): React.ReactElement {
           }
         >
           <p className="text-muted-foreground">
-            Gestionar áreas corresponde al rol de administrador.
+            Gestionar áreas corresponde a los roles de administrador y líder de área.
           </p>
         </InlineNotice>
       </PageLayout>

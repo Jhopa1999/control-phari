@@ -84,8 +84,6 @@ function activityBody(values: ActividadFormValues) {
     justification: trimOrUndefined(values.justification),
     description: trimOrUndefined(values.description),
     result: trimOrUndefined(values.result),
-    nextStep: trimOrUndefined(values.nextStep),
-    nextStepDate: trimOrUndefined(values.nextStepDate),
     evidenceUrl: trimOrUndefined(values.evidenceUrl),
   };
 }

@@ -539,7 +539,7 @@
             "description": "Ya existe el code."
           }
         },
-        "summary": "Crea un area (solo ADMIN).",
+        "summary": "Crea un area (ADMIN o JEFE_AREA).",
         "tags": [
           "areas"
         ]
@@ -621,7 +621,7 @@
             "description": "Area no encontrada."
           }
         },
-        "summary": "Edita name/active/sortOrder (solo ADMIN).",
+        "summary": "Edita name/active/sortOrder (ADMIN o JEFE_AREA).",
         "tags": [
           "areas"
         ]
@@ -4064,6 +4064,171 @@
         "summary": "Quita una predecesora de la tarea.",
         "tags": [
           "task-dependencies"
+        ]
+      }
+    },
+    "/tasks/{taskId}/evidence": {
+      "get": {
+        "operationId": "EvidenceController_list",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EvidenceResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tarea fuera de alcance."
+          }
+        },
+        "summary": "Lista las evidencias (archivos) de una tarea.",
+        "tags": [
+          "tasks"
+        ]
+      },
+      "post": {
+        "operationId": "EvidenceController_upload",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadEvidenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Archivo vacio, muy grande o de tipo no permitido."
+          },
+          "403": {
+            "description": "No eres responsable ni lider."
+          },
+          "409": {
+            "description": "Proyecto cerrado."
+          }
+        },
+        "summary": "Adjunta un archivo de evidencia a la tarea (multipart).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/tasks/{taskId}/evidence/{evidenceId}/download": {
+      "get": {
+        "operationId": "EvidenceController_download",
+        "parameters": [
+          {
+            "name": "evidenceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceDownloadDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          }
+        },
+        "summary": "URL temporal para descargar una evidencia.",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/tasks/{taskId}/evidence/{evidenceId}": {
+      "delete": {
+        "operationId": "EvidenceController_remove",
+        "parameters": [
+          {
+            "name": "evidenceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Evidencia eliminada."
+          },
+          "403": {
+            "description": "No eres responsable ni lider."
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          }
+        },
+        "summary": "Quita una evidencia de la tarea.",
+        "tags": [
+          "tasks"
         ]
       }
     },
@@ -11250,6 +11415,83 @@
           "predecessorTaskId"
         ]
       },
+      "EvidenceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "Nombre original del archivo."
+          },
+          "contentType": {
+            "type": "string",
+            "description": "Tipo MIME."
+          },
+          "sizeBytes": {
+            "type": "number",
+            "description": "Tamano en bytes."
+          },
+          "uploadedByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploadedByName": {
+            "type": "string",
+            "description": "Nombre de quien subio el archivo."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "taskId",
+          "fileName",
+          "contentType",
+          "sizeBytes",
+          "uploadedByUserId",
+          "uploadedByName",
+          "createdAt"
+        ]
+      },
+      "UploadEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "Archivo de evidencia."
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "EvidenceDownloadDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL prefirmada de descarga."
+          },
+          "expiresInSeconds": {
+            "type": "number",
+            "description": "Segundos de vigencia de la URL."
+          }
+        },
+        "required": [
+          "url",
+          "expiresInSeconds"
+        ]
+      },
       "CapacitySummaryRowDto": {
         "type": "object",
         "properties": {
@@ -13944,6 +14186,27 @@
             "nullable": true,
             "description": "Compromiso inicial (YYYY-MM-DD) o null."
           },
+          "progressPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "Avance del proyecto (0..100) segun sus tareas; null si no tiene tareas."
+          },
+          "dueStatus": {
+            "type": "string",
+            "enum": [
+              "SIN_FECHA",
+              "EN_TIEMPO",
+              "PROXIMO_A_VENCER",
+              "VENCIDO",
+              "NO_APLICA"
+            ],
+            "description": "Alerta de la fecha objetivo. NO_APLICA en proyectos cerrados, rechazados o retirados."
+          },
+          "daysToTarget": {
+            "type": "number",
+            "nullable": true,
+            "description": "Dias hasta la fecha objetivo (negativo = vencido) o null."
+          },
           "blocked": {
             "type": "boolean",
             "description": "Flag transversal de bloqueo activo (Fase 7)."
@@ -13969,6 +14232,9 @@
           "registeredAt",
           "targetDate",
           "initialCommitmentDate",
+          "progressPercent",
+          "dueStatus",
+          "daysToTarget",
           "blocked",
           "blockedReason"
         ]
