@@ -250,6 +250,15 @@
                                              "docs/aplicacion/autenticacion-autorizacion.md"
                                          ],
                         "summary":  "Ajustes funcionales: evidencias en S3 por tarea, panel lateral de tarea, sin aceptación como requisito, avance y alertas de fecha en portafolio, áreas para líderes y bitácora sin siguiente paso."
+                    },
+                    {
+                        "timestamp":  "2026-10-29T20:45:00Z",
+                        "trigger_file":  "apps/api/src/modules/ai/ai-config.service.ts",
+                        "updated_docs":  [
+                                             "docs/aplicacion/modulos-backend.md",
+                                             "docs/aplicacion/modelo-datos.md"
+                                         ],
+                        "summary":  "IA: la API asegura al arrancar el agente TRIAGE por defecto (apagado, upsert sin pisar cambios del admin) con valores compartidos con el seed en ai-defaults.ts."
                     }
                 ]
 }

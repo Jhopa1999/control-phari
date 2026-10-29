@@ -4,6 +4,15 @@ import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import { AiConfigService } from './ai-config.service';
+import {
+  DEFAULT_AGENT_CONFIGS,
+  TRIAGE_AGENT_CODE,
+  TRIAGE_BASE_PROMPT,
+} from './ai-defaults';
+import {
+  assertModelAllowed,
+  DEFAULT_TRIAGE_MODEL,
+} from './bedrock-model-catalog';
 import { BedrockClient } from './bedrock.client';
 import { encryptSecret } from './ai-crypto';
 import { UpdateAiGlobalConfigDto } from './dto/update-ai-global-config.dto';
@@ -60,6 +69,7 @@ describe('AiConfigService', () => {
       aiAgentConfig: {
         findMany: jest.fn().mockResolvedValue(opts.agent ? [opts.agent] : []),
         findUnique: jest.fn().mockResolvedValue(opts.agent ?? null),
+        upsert: jest.fn().mockResolvedValue({ id: 'a-1' }),
       },
       $transaction: jest.fn(async (cb: (tx: unknown) => Promise<unknown>) =>
         cb(txClient),
@@ -208,5 +218,41 @@ describe('AiConfigService', () => {
     expect(res.ok).toBe(false);
     expect(res.message).toMatch(/mal configurada/i);
     expect(bedrock.ping).not.toHaveBeenCalled();
+  });
+
+  describe('agentes por defecto', () => {
+    it('ensureDefaultAgents crea el agente TRIAGE apagado y NUNCA pisa lo existente (update vacio)', async () => {
+      const { service, prisma } = makeDeps({});
+      await service.ensureDefaultAgents();
+      const upsert = prisma.aiAgentConfig.upsert as jest.Mock;
+      expect(upsert).toHaveBeenCalledTimes(DEFAULT_AGENT_CONFIGS.length);
+      const arg = upsert.mock.calls[0][0];
+      expect(arg.where).toEqual({ code: TRIAGE_AGENT_CODE });
+      expect(arg.update).toEqual({});
+      expect(arg.create.code).toBe(TRIAGE_AGENT_CODE);
+      expect(arg.create.enabled).toBe(false);
+      expect(arg.create.basePrompt).toBe(TRIAGE_BASE_PROMPT);
+      expect(arg.create.model).toBe(DEFAULT_TRIAGE_MODEL);
+    });
+
+    it('el modelo por defecto esta dentro del catalogo cerrado (si no, el Admin no podria guardar)', () => {
+      for (const agent of DEFAULT_AGENT_CONFIGS) {
+        expect(() => assertModelAllowed(agent.model)).not.toThrow();
+      }
+    });
+
+    it('onModuleInit asegura los agentes al arrancar', async () => {
+      const { service, prisma } = makeDeps({});
+      await service.onModuleInit();
+      expect(prisma.aiAgentConfig.upsert).toHaveBeenCalled();
+    });
+
+    it('onModuleInit NO impide arrancar si la base falla (p. ej. migraciones pendientes)', async () => {
+      const { service, prisma } = makeDeps({});
+      (prisma.aiAgentConfig.upsert as jest.Mock).mockRejectedValue(
+        new Error('relation "ai_agent_config" does not exist'),
+      );
+      await expect(service.onModuleInit()).resolves.toBeUndefined();
+    });
   });
 });

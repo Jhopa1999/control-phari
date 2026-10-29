@@ -538,6 +538,7 @@ Configuración de IA (`ai-config.controller.ts`), base `/admin/ai`, solo `ADMIN`
 | PATCH | `/admin/ai/agents/:code` | Actualiza un agente (encendido, región, modelo, prompt, temperatura, tokens, timeout). Valida el modelo contra el catálogo → `400`. |
 | POST | `/admin/ai/agents/:code/test` | Prueba la conexión con Bedrock; responde `{ ok, message }` sin secretos ni stack. En modo `access-keys` descifra el secret solo en ese momento; si falla → `{ ok:false }`. |
 
+Agentes por defecto: el Admin solo EDITA agentes existentes (no hay endpoint de creación). Al arrancar, `AiConfigService.onModuleInit` llama a `ensureDefaultAgents`, que crea (apagado) el agente `TRIAGE` si falta, con `upsert` de `update` vacío: nunca pisa lo que el admin haya cambiado. Un fallo al asegurarlo se registra y no impide arrancar la API. Los valores por defecto (prompt, modelo, parámetros) viven en `ai-defaults.ts` y los comparte el seed de Prisma.
 Sugerencia de triage (`triage-suggestion.controller.ts`), base `/requests/:id`, roles
 `JEFE_AREA`, `LIDER_PROCESO`, `ADMIN`:
 

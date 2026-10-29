@@ -18,7 +18,7 @@ import { config as loadEnv } from 'dotenv';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { hashPassword } from '../src/modules/auth/password-hash';
-import { DEFAULT_TRIAGE_MODEL } from '../src/modules/ai/bedrock-model-catalog';
+import { DEFAULT_AGENT_CONFIGS } from '../src/modules/ai/ai-defaults';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 loadEnv({ path: path.resolve(here, '../../../.env') });
@@ -39,40 +39,6 @@ const prisma = new PrismaClient({ adapter });
 // modo dev-header NO (sigue resolviendo por X-Actor-Id).
 const DEV_PASSWORD = 'Prueba2026*';
 
-// IA Fase 1 (FEAT-001): modelo semilla del agente de triage. Es el default del
-// catalogo cerrado (Claude Haiku); el ADMIN puede cambiarlo por cualquier otro
-// del catalogo desde la plataforma, sin tocar codigo.
-const TRIAGE_SEED_MODEL = DEFAULT_TRIAGE_MODEL;
-
-// Prompt base semilla del agente de triage. Instruye a la IA a SUGERIR (no
-// decidir): salida JSON estricta, elegir SOLO entre los codes provistos en el
-// contexto y referenciar SOLO los requestId del contexto como posibles
-// duplicados. Editable desde el Admin.
-const TRIAGE_BASE_PROMPT = [
-  'Eres un asistente de triage para un portal de gestion de demanda.',
-  'Tu tarea es SUGERIR (no decidir) la clasificacion de una solicitud a partir',
-  'de su ficha y del contexto que se te entrega. El humano confirma: tus',
-  'sugerencias son orientativas.',
-  '',
-  'Reglas estrictas:',
-  '- Responde UNICAMENTE con un objeto JSON valido, sin texto adicional, sin',
-  '  markdown y sin comentarios.',
-  '- Para cada campo suggested*Code elige EXCLUSIVAMENTE un code presente en',
-  '  catalogOptions de su maestra correspondiente; si ninguno aplica, usa null.',
-  '  No inventes codes.',
-  '- tentativePriorityBand debe ser uno de "P1", "P2", "P3", "P4" o null.',
-  '- possibleDuplicates solo puede referenciar requestId presentes en',
-  '  duplicateCandidates del contexto; no inventes solicitudes.',
-  '- missingInformation es una lista de textos breves con la informacion que',
-  '  falte para decidir.',
-  '',
-  'El objeto JSON debe tener exactamente estas claves:',
-  'suggestedRouteCode, suggestedDemandTypeCode, suggestedCriticalityCode,',
-  'suggestedSizeCode, suggestedDataAvailabilityCode (string o null),',
-  'tentativePriorityBand (string o null), priorityRationale (string),',
-  'possibleDuplicates (array de { requestId, title, confidence, reason }),',
-  'missingInformation (array de strings), model (string), agentCode (string).',
-].join('\n');
 
 // --- Datos sinteticos -------------------------------------------------------
 
@@ -504,23 +470,16 @@ async function main(): Promise<void> {
     });
   }
 
-  await prisma.aiAgentConfig.upsert({
-    where: { code: 'TRIAGE' },
-    // Re-ejecutar no reactiva ni cambia la config que el admin haya tocado: solo
-    // asegura la existencia de la fila. Por eso update es vacio.
-    update: {},
-    create: {
-      code: 'TRIAGE',
-      displayName: 'Agente de triage',
-      enabled: false,
-      region: 'us-east-2',
-      model: TRIAGE_SEED_MODEL,
-      basePrompt: TRIAGE_BASE_PROMPT,
-      temperature: 0.2,
-      maxTokens: 1024,
-      timeoutMs: 20000,
-    },
-  });
+  // Fuente unica de los valores: src/modules/ai/ai-defaults.ts (tambien la usa la API al arrancar).
+  for (const agent of DEFAULT_AGENT_CONFIGS) {
+    await prisma.aiAgentConfig.upsert({
+      where: { code: agent.code },
+      // Re-ejecutar no reactiva ni cambia la config que el admin haya tocado: solo
+      // asegura la existencia de la fila. Por eso update es vacio.
+      update: {},
+      create: { ...agent },
+    });
+  }
 
   const [areas, roles, processes, users, grants] = await Promise.all([
     prisma.area.count(),
