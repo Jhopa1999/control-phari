@@ -31,7 +31,11 @@ export default defineConfig({
   workers: 1,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
-  reporter: 'list',
+  // En CI: lista en el log, anotaciones por test fallido (visibles en el check
+  // del PR) y reporte HTML que el workflow publica como artefacto.
+  reporter: isCI
+    ? [['list'], ['github'], ['html', { open: 'never' }]]
+    : 'list',
   globalSetup: './e2e/global-setup.ts',
   use: {
     baseURL: WEB_URL,
