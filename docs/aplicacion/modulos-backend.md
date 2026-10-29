@@ -75,8 +75,8 @@ actor; escritura solo `ADMIN` (rol de sistema).
 | --- | --- | --- |
 | GET | `/areas` | Lista áreas (filtro opcional `active`). |
 | GET | `/areas/:id` | Obtiene un área por id (`404` si no existe). |
-| POST | `/areas` | Crea un área (solo ADMIN). |
-| PATCH | `/areas/:id` | Edita `name`/`active`/`sortOrder` (solo ADMIN). |
+| POST | `/areas` | Crea un área (ADMIN o JEFE_AREA). |
+| PATCH | `/areas/:id` | Edita `name`/`active`/`sortOrder` (ADMIN o JEFE_AREA). |
 
 Reglas: `code` se normaliza a MAYÚSCULAS y es único (`409` si se repite al crear); el
 `code` no es editable (enviarlo en el PATCH → `400`). Cada alta/edición se audita como
@@ -221,7 +221,11 @@ Validaciones de fechas (backend y formularios): la fecha de fin de una fase o ta
 | PATCH | `/tasks/:id` | Edita una tarea (no estado/aceptación; regla de hito). |
 | DELETE | `/tasks/:id` | Borra una tarea (`409` si es predecesora de otra). |
 | PATCH | `/tasks/:id/status` | Cambia el estado (gate de predecesoras). |
-| PATCH | `/tasks/:id/accept` | Acepta/retira la aceptación (precondición TERMINADA). |
+| PATCH | `/tasks/:id/accept` | Acepta/retira la aceptación (precondición TERMINADA). Ya no es requisito del gate de predecesoras ni se muestra en la UI; se conserva por compatibilidad. |
+| GET | `/tasks/:taskId/evidence` | Lista los archivos de evidencia de la tarea. |
+| POST | `/tasks/:taskId/evidence` | Adjunta un archivo (multipart, campo `file`) y lo guarda en el bucket S3 maestro (`proyectos/{requestId}/tareas/{taskId}/evidencias/…`). Solo el responsable de la tarea o jefe/líder; `400` si está vacío, supera `EVIDENCE_MAX_BYTES` (8 MB) o su tipo no está permitido; `409` en proyecto cerrado. |
+| GET | `/tasks/:taskId/evidence/:evidenceId/download` | URL prefirmada de descarga (vigencia `STORAGE_PRESIGN_TTL_SECONDS`). |
+| DELETE | `/tasks/:taskId/evidence/:evidenceId` | Quita la evidencia (BD y objeto S3). |
 
 ### Dependencias (`dependency/dependency.controller.ts`)
 
@@ -233,7 +237,7 @@ Validaciones de fechas (backend y formularios): la fecha de fin de una fase o ta
 
 Reglas clave: el envío del plan exige la guía sin pendientes; la transición de una
 tarea respeta el gate de predecesoras (una dependiente avanza solo si su predecesora
-está TERMINADA y aceptada); una dependencia no puede ser circular ni cruzar planes
+está TERMINADA; la aceptación ya no es requisito); una dependencia no puede ser circular ni cruzar planes
 distintos; el integrante solo opera el estado de su propia tarea.
 
 ## portfolio — Portafolio e indicadores del área
@@ -245,7 +249,7 @@ Vistas de solo lectura: el portafolio de iniciativas y el control del área
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/portfolio` | Listado del portafolio en alcance (filtros `mainProcessId`, `state`, `band`). |
+| GET | `/portfolio` | Listado del portafolio en alcance (filtros `mainProcessId`, `state`, `band`). Cada ítem incluye `progressPercent` (promedio del avance de las tareas del plan, `TERMINADA` = 100; `null` sin tareas) y la alerta de fecha objetivo `dueStatus` (`SIN_FECHA`, `EN_TIEMPO`, `PROXIMO_A_VENCER`, `VENCIDO`, `NO_APLICA` en cerradas/rechazadas/retiradas) con `daysToTarget`. El umbral de «próximo a vencer» es `PORTFOLIO_DUE_SOON_DAYS` (7 por defecto). |
 
 ### Control del área (`area-control.controller.ts`)
 

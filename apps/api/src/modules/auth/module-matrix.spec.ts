@@ -68,9 +68,9 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
       'aiSettings',
     ]);
   });
-  it('areas es SOLO para ADMIN; processesAdmin para ADMIN y JEFE_AREA', () => {
+  it('areas y processesAdmin son para ADMIN y JEFE_AREA', () => {
     expect(allowedModulesFor([RoleCode.ADMIN])).toContain('areas');
-    expect(allowedModulesFor([RoleCode.JEFE_AREA])).not.toContain('areas');
+    expect(allowedModulesFor([RoleCode.JEFE_AREA])).toContain('areas');
     expect(allowedModulesFor([RoleCode.ADMIN])).toContain('processesAdmin');
     expect(allowedModulesFor([RoleCode.JEFE_AREA])).toContain('processesAdmin');
     expect(allowedModulesFor([RoleCode.LIDER_PROCESO])).not.toContain(
@@ -149,16 +149,15 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
     expect(combined).toContain('admin'); // de jefe
     expect(combined).toContain('requests'); // comun
   });
-  it('el jefe ve todos los modulos de area (todos MENOS systemSettings, areas y aiSettings)', () => {
-    // systemSettings, areas y aiSettings son exclusivos de ADMIN: el jefe de
+  it('el jefe ve todos los modulos de area (todos MENOS systemSettings y aiSettings)', () => {
+    // systemSettings y aiSettings son exclusivos de ADMIN: el jefe de
     // area NO es ADMIN, por lo que ve todos los modulos de la matriz excepto
-    // esos tres (processesAdmin SI lo ve, porque gestiona los procesos de su
+    // esos dos (processesAdmin SI lo ve, porque gestiona los procesos de su
     // area).
     expect(allowedModulesFor([RoleCode.JEFE_AREA])).toEqual(
       MODULE_KEYS.filter(
         (key) =>
           key !== 'systemSettings' &&
-          key !== 'areas' &&
           key !== 'aiSettings',
       ),
     );

@@ -186,7 +186,7 @@ export interface paths {
         /** Lista areas. */
         get: operations["AreaController_findMany"];
         put?: never;
-        /** Crea un area (solo ADMIN). */
+        /** Crea un area (ADMIN o JEFE_AREA). */
         post: operations["AreaController_create"];
         delete?: never;
         options?: never;
@@ -208,7 +208,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Edita name/active/sortOrder (solo ADMIN). */
+        /** Edita name/active/sortOrder (ADMIN o JEFE_AREA). */
         patch: operations["AreaController_update"];
         trace?: never;
     };
@@ -1202,6 +1202,58 @@ export interface paths {
         post?: never;
         /** Quita una predecesora de la tarea. */
         delete: operations["DependencyController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las evidencias (archivos) de una tarea. */
+        get: operations["EvidenceController_list"];
+        put?: never;
+        /** Adjunta un archivo de evidencia a la tarea (multipart). */
+        post: operations["EvidenceController_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/evidence/{evidenceId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** URL temporal para descargar una evidencia. */
+        get: operations["EvidenceController_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/evidence/{evidenceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Quita una evidencia de la tarea. */
+        delete: operations["EvidenceController_remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -4115,6 +4167,37 @@ export interface components {
              */
             predecessorTaskId: string;
         };
+        EvidenceResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            taskId: string;
+            /** @description Nombre original del archivo. */
+            fileName: string;
+            /** @description Tipo MIME. */
+            contentType: string;
+            /** @description Tamano en bytes. */
+            sizeBytes: number;
+            /** Format: uuid */
+            uploadedByUserId: string;
+            /** @description Nombre de quien subio el archivo. */
+            uploadedByName: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        UploadEvidenceDto: {
+            /**
+             * Format: binary
+             * @description Archivo de evidencia.
+             */
+            file: string;
+        };
+        EvidenceDownloadDto: {
+            /** @description URL prefirmada de descarga. */
+            url: string;
+            /** @description Segundos de vigencia de la URL. */
+            expiresInSeconds: number;
+        };
         CapacitySummaryRowDto: {
             /**
              * Format: uuid
@@ -5389,6 +5472,15 @@ export interface components {
             targetDate: string | null;
             /** @description Compromiso inicial (YYYY-MM-DD) o null. */
             initialCommitmentDate: string | null;
+            /** @description Avance del proyecto (0..100) segun sus tareas; null si no tiene tareas. */
+            progressPercent: number | null;
+            /**
+             * @description Alerta de la fecha objetivo. NO_APLICA en proyectos cerrados, rechazados o retirados.
+             * @enum {string}
+             */
+            dueStatus: "SIN_FECHA" | "EN_TIEMPO" | "PROXIMO_A_VENCER" | "VENCIDO" | "NO_APLICA";
+            /** @description Dias hasta la fecha objetivo (negativo = vencido) o null. */
+            daysToTarget: number | null;
             /** @description Flag transversal de bloqueo activo (Fase 7). */
             blocked: boolean;
             /** @description Motivo del bloqueo o null. */
@@ -9757,6 +9849,144 @@ export interface operations {
             };
             /** @description La dependencia no existe. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EvidenceController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceResponseDto"][];
+                };
+            };
+            /** @description Tarea fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EvidenceController_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["UploadEvidenceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceResponseDto"];
+                };
+            };
+            /** @description Archivo vacio, muy grande o de tipo no permitido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No eres responsable ni lider. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Proyecto cerrado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EvidenceController_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evidenceId: unknown;
+                taskId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceDownloadDto"];
+                };
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EvidenceController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evidenceId: unknown;
+                taskId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Evidencia eliminada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No eres responsable ni lider. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -46,7 +46,10 @@ const sheetVariants = cva(
 
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<typeof sheetVariants> {
+  /** Texto accesible del botón cerrar. */
+  closeLabel?: string;
+}
 
 /**
  * Requiere un `SheetTitle` (puede ser `sr-only`). El contenido que empiece
@@ -55,7 +58,7 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ComponentRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = 'left', className, children, ...props }, ref) => (
+>(({ side = 'left', className, children, closeLabel = 'Cerrar menú', ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
@@ -63,7 +66,7 @@ const SheetContent = React.forwardRef<
       <SheetPrimitive.Close asChild>
         <Button variant="ghost" size="icon-sm" className="absolute top-3 right-3">
           <X aria-hidden="true" />
-          <span className="sr-only">Cerrar menú</span>
+          <span className="sr-only">{closeLabel}</span>
         </Button>
       </SheetPrimitive.Close>
     </SheetPrimitive.Content>

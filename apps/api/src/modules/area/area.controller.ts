@@ -31,7 +31,7 @@ import { RoleCode } from '../auth/role-code';
 
 /**
  * API REST de Area (p. ej. Analitica). Lectura accesible a todos; escritura
- * solo ADMIN (rol de sistema). Las areas agrupan procesos.
+ * ADMIN o JEFE_AREA. Las areas agrupan procesos.
  */
 @ApiTags('areas')
 @Controller('areas')
@@ -58,8 +58,8 @@ export class AreaController {
   }
 
   @Post()
-  @Roles(RoleCode.ADMIN)
-  @ApiOperation({ summary: 'Crea un area (solo ADMIN).' })
+  @Roles(RoleCode.ADMIN, RoleCode.JEFE_AREA)
+  @ApiOperation({ summary: 'Crea un area (ADMIN o JEFE_AREA).' })
   @ApiBody({ type: CreateAreaDto })
   @ApiResponse({ status: 201, description: 'Area creada.', type: AreaResponseDto })
   @ApiResponse({ status: 400, description: 'Datos de entrada invalidos.' })
@@ -73,8 +73,8 @@ export class AreaController {
   }
 
   @Patch(':id')
-  @Roles(RoleCode.ADMIN)
-  @ApiOperation({ summary: 'Edita name/active/sortOrder (solo ADMIN).' })
+  @Roles(RoleCode.ADMIN, RoleCode.JEFE_AREA)
+  @ApiOperation({ summary: 'Edita name/active/sortOrder (ADMIN o JEFE_AREA).' })
   @ApiBody({ type: UpdateAreaDto })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Area actualizada.', type: AreaResponseDto })

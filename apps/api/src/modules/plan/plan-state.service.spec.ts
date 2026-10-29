@@ -203,18 +203,18 @@ describe('PlanStateService', () => {
   });
 
   describe('assertPredecessorsSatisfied (AC-010/033)', () => {
-    it('predecesora TERMINADA pero no aceptada -> 409 nombrando la dependencia', async () => {
+    it('predecesora no TERMINADA -> 409 nombrando la dependencia', async () => {
       prisma.taskDependency.findMany.mockResolvedValue([
-        { predecessor: { title: 'Pre A', status: TaskStatus.TERMINADA, accepted: false } },
+        { predecessor: { title: 'Pre A', status: TaskStatus.EN_CURSO, accepted: true } },
       ]);
       await expect(
         service.assertPredecessorsSatisfied('t2'),
       ).rejects.toMatchObject({ status: 409 });
     });
 
-    it('predecesora TERMINADA y aceptada -> no lanza', async () => {
+    it('predecesora TERMINADA (aceptada o no) -> no lanza', async () => {
       prisma.taskDependency.findMany.mockResolvedValue([
-        { predecessor: { title: 'Pre A', status: TaskStatus.TERMINADA, accepted: true } },
+        { predecessor: { title: 'Pre A', status: TaskStatus.TERMINADA, accepted: false } },
       ]);
       await expect(
         service.assertPredecessorsSatisfied('t2'),

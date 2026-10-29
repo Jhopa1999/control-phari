@@ -35,7 +35,7 @@ El portal acompaña el ciclo de vida de una **solicitud** (`Request`) de princip
    devuelve a triage con motivo.
 5. **Planificación.** La solicitud comprometida obtiene un plan con fases, tareas y
    dependencias; el plan se envía, se autoriza o se devuelve.
-6. **Ejecución y seguimiento.** Se ejecutan las tareas (estado y aceptación), se
+6. **Ejecución y seguimiento.** Se ejecutan las tareas (estado y evidencias en archivos), se
    reparte la capacidad del mes y se registra el trabajo diario, las novedades, las
    reuniones y los compromisos.
 7. **Gobierno.** En paralelo, cada solicitud pasa por un ciclo de control de 5 gates
@@ -144,3 +144,16 @@ Notas de operación:
 - `APP_WEB_URL` (entorno) sigue siendo la única fuente de la URL base de los enlaces.
 - Usuario administrador inicial del seed de desarrollo: `admin@demo.local` (contraseña dev
   `dev1234`, a cambiar). No necesita grants: su rol es global.
+
+## Proyecto y Portafolio: qué va en cada módulo
+
+- **Proyecto**: es la unidad de trabajo. Responde a «qué se hace y cómo va *este* proyecto».
+  Reúne el detalle de una iniciativa comprometida: su plan, tareas, evidencias, documentos,
+  bitácoras, avance y cierre. Aquí se **edita y opera**.
+- **Portafolio**: es la vista ejecutiva de *todos* los proyectos a la vez. Responde a «cómo va
+  el conjunto». Sirve para comparar, priorizar y detectar riesgos (avance, alertas por fecha
+  objetivo, estado, bloqueos) y permite entrar a la ficha de cada proyecto. Aquí se **consulta**
+  de forma consolidada; no se edita.
+
+Regla práctica: lo que se opera o se edita va en Proyecto; lo que se consulta de forma
+consolidada va en Portafolio.

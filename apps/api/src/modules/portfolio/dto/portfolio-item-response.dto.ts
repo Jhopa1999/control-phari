@@ -57,6 +57,28 @@ export class PortfolioItemResponseDto {
   @ApiProperty({ type: String, nullable: true, description: 'Compromiso inicial (YYYY-MM-DD) o null.' })
   initialCommitmentDate!: string | null;
 
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: 'Avance del proyecto (0..100) segun sus tareas; null si no tiene tareas.',
+  })
+  progressPercent!: number | null;
+
+  @ApiProperty({
+    type: String,
+    enum: ['SIN_FECHA', 'EN_TIEMPO', 'PROXIMO_A_VENCER', 'VENCIDO', 'NO_APLICA'],
+    description:
+      'Alerta de la fecha objetivo. NO_APLICA en proyectos cerrados, rechazados o retirados.',
+  })
+  dueStatus!: string;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: 'Dias hasta la fecha objetivo (negativo = vencido) o null.',
+  })
+  daysToTarget!: number | null;
+
   @ApiProperty({ type: Boolean, description: 'Flag transversal de bloqueo activo (Fase 7).' })
   blocked!: boolean;
 

@@ -190,9 +190,9 @@ export class PlanStateService {
   }
 
   /**
-   * Exige que TODAS las predecesoras directas de `taskId` esten TERMINADA Y
-   * accepted (design §2.7, AC-010/033). Si alguna no cumple, 409 nombrando la
-   * primera dependencia que bloquea.
+   * Exige que TODAS las predecesoras directas de `taskId` esten TERMINADA
+   * (AC-010). La aceptacion ya no es requisito: el estado Terminada basta. Si
+   * alguna no cumple, 409 nombrando la primera dependencia que bloquea.
    */
   async assertPredecessorsSatisfied(taskId: string): Promise<void> {
     const deps = await this.prisma.taskDependency.findMany({
@@ -203,10 +203,10 @@ export class PlanStateService {
     });
     for (const dep of deps) {
       const p = dep.predecessor;
-      if (p.status !== TaskStatus.TERMINADA || !p.accepted) {
+      if (p.status !== TaskStatus.TERMINADA) {
         throw new ConflictException(
-          `No se puede iniciar: la predecesora "${p.title}" debe estar terminada y aceptada ` +
-            `(estado actual "${p.status}", aceptada: ${p.accepted ? 'si' : 'no'}).`,
+          `No se puede iniciar: la predecesora "${p.title}" debe estar terminada ` +
+            `(estado actual "${p.status}").`,
         );
       }
     }

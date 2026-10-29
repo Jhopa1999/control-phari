@@ -155,10 +155,11 @@ model User {
   // Fase 3 (plan): planes enviados/autorizados y tareas de las que es
   // responsable o que acepto. Cada relacion usa un `name` distinto porque hay
   // mas de una FK User por modelo (Prisma exige nombrarlas).
-  plansSubmitted   Plan[] @relation("PlanSubmittedBy")
-  plansAuthorized  Plan[] @relation("PlanAuthorizedBy")
-  tasksResponsible Task[] @relation("TaskResponsible")
-  tasksAccepted    Task[] @relation("TaskAcceptedBy")
+  plansSubmitted   Plan[]         @relation("PlanSubmittedBy")
+  plansAuthorized  Plan[]         @relation("PlanAuthorizedBy")
+  tasksResponsible Task[]         @relation("TaskResponsible")
+  tasksAccepted    Task[]         @relation("TaskAcceptedBy")
+  taskEvidences    TaskEvidence[] @relation("TaskEvidenceUploadedBy")
 
   // Fase 4 (capacidad): disponibilidad mensual y asignaciones de la persona.
   monthlyAvailabilities MonthlyAvailability[]
@@ -557,7 +558,7 @@ model PlanPhase {
 
 /// Tarea del plan (design §1.2, BR-009/010/013; AC-010/011/033). `status` y
 /// `accepted` son enum logico/derivados: solo los escriben los helpers del
-/// modulo plan. El gate de dependientes exige TERMINADA Y accepted.
+/// modulo plan. El gate de dependientes exige TERMINADA (accepted ya no es requisito).
 model Task {
   id                     String    @id @default(uuid()) @db.Uuid
   phaseId                String    @map("phase_id") @db.Uuid
@@ -587,6 +588,7 @@ model Task {
 
   dependenciesAsDependent   TaskDependency[] @relation("DependencyDependent")
   dependenciesAsPredecessor TaskDependency[] @relation("DependencyPredecessor")
+  evidences                 TaskEvidence[]
 
   // Fase 5 (trabajo y coordinacion): referencias opcionales a esta tarea.
   dailyLogActivities DailyLogActivity[]
@@ -596,6 +598,26 @@ model Task {
   @@index([responsibleUserId])
   @@index([status])
   @@map("tasks")
+}
+
+/// Archivo de evidencia de una tarea, guardado en el bucket S3 maestro del app.
+/// El binario vive en S3 (storage_key); aqui solo el metadato. Se crea al
+/// subir el archivo y se borra junto con el objeto de S3.
+model TaskEvidence {
+  id               String   @id @default(uuid()) @db.Uuid
+  taskId           String   @map("task_id") @db.Uuid
+  fileName         String   @map("file_name")
+  contentType      String   @map("content_type")
+  sizeBytes        Int      @map("size_bytes")
+  storageKey       String   @unique @map("storage_key")
+  uploadedByUserId String   @map("uploaded_by_user_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  task       Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy User @relation("TaskEvidenceUploadedBy", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([taskId])
+  @@map("task_evidences")
 }
 
 /// Dependencia dirigida entre dos tareas del mismo plan (design §1.2, BR-009;

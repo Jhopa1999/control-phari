@@ -39,8 +39,6 @@ export interface ActividadFormValues {
   justification: string;
   description: string;
   result: string;
-  nextStep: string;
-  nextStepDate: string;
   evidenceUrl: string;
   relatedIssueId: string;
 }
@@ -112,8 +110,6 @@ function emptyValues(): ActividadFormValues {
     justification: '',
     description: '',
     result: '',
-    nextStep: '',
-    nextStepDate: '',
     evidenceUrl: '',
     relatedIssueId: '',
   };
@@ -196,8 +192,6 @@ export function ActividadFormDialog({
         justification: editing.justification ?? '',
         description: editing.description ?? '',
         result: editing.result ?? '',
-        nextStep: editing.nextStep ?? '',
-        nextStepDate: editing.nextStepDate ?? '',
         evidenceUrl: editing.evidenceUrl ?? '',
         relatedIssueId: editing.relatedIssueId ?? '',
       });
@@ -437,23 +431,6 @@ export function ActividadFormDialog({
                   </Select>
                 )}
               </Field>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field id="act-next" label="Siguiente paso">
-                  <Input
-                    value={values.nextStep}
-                    placeholder="Qué sigue (opcional)"
-                    onChange={(e) => set('nextStep', e.target.value)}
-                  />
-                </Field>
-                <Field id="act-next-date" label="Fecha del siguiente paso">
-                  <Input
-                    type="date"
-                    value={values.nextStepDate}
-                    onChange={(e) => set('nextStepDate', e.target.value)}
-                  />
-                </Field>
-              </div>
 
               <Field id="act-evidence" label="Evidencia">
                 <Input

@@ -51,9 +51,9 @@ abrir, cada minuto y al volver a la pestaña.
 | Ruta | Pantalla | Qué permite hacer |
 | --- | --- | --- |
 | `/seguimiento/plan` | Planificación | Gestionar el plan, fases, tareas y dependencias; importar/exportar en Excel (.xlsx) con plantilla descargable y lista de errores por fila; el bloque de envío a autorización va al final de la pantalla (menú grupo *Ejecución* como *Planificación*, `plan`). |
-| `/seguimiento/portafolio` | Portafolio | Vista de solo lectura del portafolio de iniciativas (`portfolio`). |
-| `/seguimiento/proyectos` | Proyectos | Área de proyectos (marcada *Próximamente* en el menú, `project`). |
-| `/seguimiento/tareas` | Tarea | Detalle de una tarea (lee `?taskId=`); se llega desde *Mi trabajo* y *Planificación*; no es un ítem de menú. |
+| `/seguimiento/portafolio` | Portafolio | Vista consolidada de solo lectura de todas las iniciativas en alcance: el título abre la ficha del proyecto (`/demanda/solicitudes/:id`); muestra el **avance** (barra, promedio de sus tareas) y la **alerta de fecha objetivo** (*En tiempo*, *Vence en N días*, *Vencido hace N días*; sin alerta si el proyecto está cerrado, rechazado o retirado) (`portfolio`). |
+| `/seguimiento/proyectos` | Proyectos | Área de proyectos (marcada *Próximamente* en el menú, `project`). Objetivo: la **ficha operativa de un proyecto** (detalle, plan, tareas, documentos, bitácoras y avance); hoy esa ficha vive en `/demanda/solicitudes/:id`. |
+| `/seguimiento/tareas` | Tarea | Detalle de una tarea (lee `?taskId=`); se llega desde *Mi trabajo*; no es un ítem de menú. En *Planificación* el mismo detalle se abre como **panel lateral derecho** al hacer clic en el título de la tarea (con botón cerrar). Incluye estado, predecesoras (basta con que estén *Terminadas*; ya no existe la aceptación) y **archivos de evidencia** (adjuntar, descargar y quitar; PDF, imágenes, texto, Office o ZIP, máx. 8 MB). |
 | `/seguimiento/bitacora` | Bitácora | Registrar/consultar el trabajo diario (menú grupo *Seguimiento*, `log`). |
 | `/seguimiento/semanal` | Reporte semanal | Consolidar el reporte semanal del proceso (`log`). |
 | `/seguimiento/novedades` | Novedades | Registrar y seguir incidencias/bloqueos (`log`). |
@@ -85,7 +85,7 @@ abrir, cada minuto y al volver a la pestaña.
 | `/administracion/frameworks` | Controles | Ciclo de control de gobierno (gates GC1–GC5) y validaciones (menú grupo *Gobierno* como *Controles*, `frameworks`). |
 | `/administracion/maestras` | Maestras | Administrar las maestras/catálogos (`admin`); también marca activa la ruta `/catalogs`. |
 | `/administracion/solicitantes` | Solicitantes | Maestro de solicitantes: listado, alta, edición y activar/inactivar; cada solicitante se asocia a un área activa (`requesters`, `ADMIN` y `JEFE_AREA`). |
-| `/administracion/areas` | Áreas | Crear y editar áreas organizativas (por ejemplo, Analítica) que agrupan procesos: listado, alta y edición de nombre/estado/orden. Solo rol ADMIN (`areas`). |
+| `/administracion/areas` | Áreas | Crear y editar áreas organizativas (por ejemplo, Analítica) que agrupan procesos: listado, alta y edición de nombre/estado/orden. Roles ADMIN y jefe de área (`areas`). |
 | `/administracion/procesos` | Procesos | Crear y editar procesos (por ejemplo, BI, Integraciones, IA) agrupados por área: el alta exige un área activa y la edición no mueve el proceso de área. Rol ADMIN o jefe de área (`processesAdmin`). |
 | `/administracion/configuracion-smtp` | Configuración SMTP | Configurar el servidor SMTP en runtime (host, puerto, remitente, contraseña write-only) con prueba de envío, y gestionar los administradores del sistema (toggle `isAdmin`). Solo rol ADMIN (`systemSettings`). |
 | `/administracion/ia` | Agentes de IA | Configurar los agentes de IA (credenciales de AWS Bedrock, modelo, prompt y parámetros) desde la plataforma. Solo rol ADMIN (`aiSettings`). |
