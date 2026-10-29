@@ -62,6 +62,14 @@ services:
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
       # URL base del frontend para enlaces de reset/invitacion (unica fuente).
       APP_WEB_URL: ${APP_WEB_URL:-}
+      # Evidencias de tareas: bucket maestro S3. Las credenciales AWS son
+      # opcionales: en EC2 se usa el rol de la instancia (dejarlas vacias).
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-}
+      STORAGE_S3_REGION: ${STORAGE_S3_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      EVIDENCE_MAX_BYTES: ${EVIDENCE_MAX_BYTES:-}
+      PORTFOLIO_DUE_SOON_DAYS: ${PORTFOLIO_DUE_SOON_DAYS:-}
     depends_on:
       postgres:
         condition: service_healthy
