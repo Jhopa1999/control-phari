@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -12,6 +14,7 @@ import { AuditService } from '../audit/audit.service';
 // sin decorar con uno decorado con @Inject (el token BEDROCK_CLIENT). Sin ellos,
 // Nest no resuelve PrismaService al construir AppModule fuera de tsc.
 import { CurrentActor } from '../auth/current-actor';
+import { DEFAULT_AGENT_CONFIGS } from './ai-defaults';
 import { encryptSecret, decryptSecret } from './ai-crypto';
 import {
   assertModelAllowed,
@@ -35,12 +38,48 @@ import type { AiAgentConfigModel } from '../../generated/prisma/models/AiAgentCo
  * `accessKeyIdLast4`.
  */
 @Injectable()
-export class AiConfigService {
+export class AiConfigService implements OnModuleInit {
+  private readonly logger = new Logger(AiConfigService.name);
+
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(BEDROCK_CLIENT) private readonly bedrock: BedrockClient,
   ) {}
+
+  /**
+   * Al arrancar, garantiza que existan los agentes por defecto. El Admin solo
+   * puede editar agentes existentes, asi que un ambiente poblado sin el seed de
+   * Prisma se quedaba sin agente de triage (la sugerencia respondia 409). Un
+   * fallo aqui (p. ej. migraciones aun sin aplicar) NO debe impedir arrancar la
+   * API: se registra y se sigue.
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.ensureDefaultAgents();
+    } catch (error) {
+      this.logger.warn(
+        `No se pudieron asegurar los agentes de IA por defecto: ${
+          error instanceof Error ? error.message : 'error desconocido'
+        }`,
+      );
+    }
+  }
+
+  /**
+   * Crea los agentes por defecto que falten. Idempotente y NO destructivo:
+   * `update` vacio, asi que nunca pisa lo que el admin haya cambiado (activo,
+   * modelo, prompt, parametros). Los agentes nacen apagados.
+   */
+  async ensureDefaultAgents(): Promise<void> {
+    for (const agent of DEFAULT_AGENT_CONFIGS) {
+      await this.prisma.aiAgentConfig.upsert({
+        where: { code: agent.code },
+        update: {},
+        create: { ...agent },
+      });
+    }
+  }
 
   /** Lee el singleton global (0 o 1 fila). */
   private async loadGlobal(): Promise<AiGlobalConfigModel | null> {
