@@ -50,6 +50,14 @@ test.beforeAll(async ({ request }) => {
   requestId = req.id as string;
   // 2) Triage CONTINUAR → EN_TRIAGE
   await post(request, `/requests/${requestId}/triage`, { decision: 'CONTINUAR' });
+
+  // 2b) Activo base: la priorización exige uno asociado en el triage (gate del
+  // backend). El jefe crea el activo y lo asocia a la solicitud.
+  const asset = await post(request, '/assets', {
+    processId: mainProcessId,
+    name: `Activo E2E ${ts}`,
+  });
+  await post(request, `/requests/${requestId}/asset`, { assetId: asset.id as string });
   // 3) Priorización → BACKLOG_PRIORIZADO
   await post(request, `/requests/${requestId}/priority`, {
     impact: 3,

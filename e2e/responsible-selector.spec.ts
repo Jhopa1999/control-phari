@@ -11,9 +11,10 @@ import { expect, test } from '@playwright/test';
  * que gestiona el plan y asigna responsables) recibía 403 y quedaba vacío, de
  * modo que no se podía asignar a nadie. Este test lo ejercita como líder.
  *
- * Se usa el formulario de Activos (/activos/catalogo) por ser la ruta más
- * directa que monta ese selector sin precondiciones de flujo (no requiere una
- * solicitud comprometida ni un plan con fases).
+ * Se usa el formulario de Novedades (/seguimiento/novedades) porque cualquier
+ * rol puede abrirlo y monta ese selector sin precondiciones de flujo (no
+ * requiere una solicitud comprometida ni un plan con fases). Activos ya no
+ * sirve: por gobernanza solo el jefe de área crea activos.
  */
 
 // Origen de la web: WEB_ORIGIN o, si falta, E2E_WEB_URL (el mismo de
@@ -54,11 +55,11 @@ test('el selector de responsable se puebla vía /coordination/people para un lí
     }
   });
 
-  await page.goto('/activos/catalogo');
+  await page.goto('/seguimiento/novedades');
 
-  // Abre el formulario de nuevo activo (monta el selector de responsable).
+  // Abre el formulario de nueva novedad (monta el selector de responsable).
   await page
-    .getByRole('button', { name: /Nuevo activo/i })
+    .getByRole('button', { name: /Nueva novedad/i })
     .first()
     .click();
 
