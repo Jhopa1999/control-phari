@@ -25,7 +25,7 @@ Documentacion y decisiones tecnicas de la plantilla de portales.
 ### Versiones del stack (andamiaje inicial)
 
 - Node.js: >= 20.9.0 (desarrollado con v24.19.0).
-- Next.js: 16.4.0 (App Router).
+- Next.js: 16.4.3 (App Router).
 - React / React DOM: 19.3.0.
 - NestJS (core, common, platform-express): 11.2.7.
 - NestJS CLI / schematics: 11.0.24 / 11.1.0.
