@@ -7,6 +7,19 @@ import {
 } from 'lucide-react';
 import type { PlanGuidePending } from '../apps/web/src/lib/api-client';
 import {
+  TASK_TRANSITIONS as API_TASK_TRANSITIONS,
+  TASK_STATUSES as API_TASK_STATUSES,
+} from '../apps/api/src/modules/plan/task-status';
+import {
+  TASK_TRANSITIONS as WEB_TASK_TRANSITIONS,
+  nextTaskStatuses,
+} from '../apps/web/src/lib/task-transitions';
+import {
+  RECORD_STATE_LABEL,
+  nextStates,
+  stateLabel,
+} from '../apps/web/src/lib/record-state';
+import {
   formatCount,
   formatDate,
   formatDateOnly,
@@ -228,16 +241,16 @@ test.describe('navigation', () => {
     return item;
   };
 
-  test('MODULE_ORDER tiene las 25 claves del backend, sin repetidos, y cada una su etiqueta', () => {
-    expect(MODULE_ORDER).toHaveLength(25);
-    expect(new Set(MODULE_ORDER).size).toBe(25);
+  test('MODULE_ORDER tiene las claves del backend, sin repetidos, y cada una su etiqueta', () => {
+    expect(MODULE_ORDER).toHaveLength(MODULE_KEYS.length);
+    expect(new Set(MODULE_ORDER).size).toBe(MODULE_KEYS.length);
     expect([...MODULE_ORDER].sort()).toEqual([...MODULE_KEYS].sort());
     for (const key of MODULE_ORDER) {
       expect(MODULE_LABELS[key], key).toBeTruthy();
     }
   });
 
-  test('los href del menu son exactamente las 25 rutas, en sus 7 grupos', () => {
+  test('los href del menu son exactamente las rutas esperadas, en sus 7 grupos', () => {
     // Protege las URLs: el rediseño reagrupa el menú, pero ninguna ruta cambia.
     expect(allItems().map((item) => item.href)).toEqual([
       '/inicio',
@@ -263,7 +276,11 @@ test.describe('navigation', () => {
       '/gobierno/mis-permisos',
       '/gobierno/equipo',
       '/administracion/maestras',
+      '/administracion/areas',
+      '/administracion/procesos',
+      '/administracion/solicitantes',
       '/administracion/configuracion-smtp',
+      '/administracion/ia',
     ]);
     expect(NAV_GROUPS.map((group) => group.label)).toEqual([
       null,
@@ -937,5 +954,50 @@ test.describe('table-sort', () => {
     expect(view.pageRows.map((row) => row.id)).toEqual(
       Array.from({ length: 15 }, (_, i) => 15 - i),
     );
+  });
+});
+
+test.describe('task-transitions', () => {
+  test('el espejo del frontend coincide con la máquina de estados del backend', () => {
+    const fromApi = [...API_TASK_TRANSITIONS]
+      .map(([from, to]) => `${from}>${to}`)
+      .sort();
+    const fromWeb = Object.entries(WEB_TASK_TRANSITIONS)
+      .flatMap(([from, targets]) => targets.map((to) => `${from}>${to}`))
+      .sort();
+    expect(fromWeb).toEqual(fromApi);
+  });
+
+  test('el espejo cubre exactamente los estados del backend', () => {
+    expect(Object.keys(WEB_TASK_TRANSITIONS).sort()).toEqual(
+      [...API_TASK_STATUSES].sort(),
+    );
+  });
+
+  test('nextTaskStatuses con un valor fuera del enum devuelve [] sin lanzar', () => {
+    expect(
+      nextTaskStatuses('INEXISTENTE' as unknown as keyof typeof WEB_TASK_TRANSITIONS),
+    ).toEqual([]);
+  });
+});
+
+test.describe('record-state', () => {
+  test('nextStates sigue las transiciones reversibles del flujo', () => {
+    expect(nextStates('EN_CURSO')).toEqual(['BLOQUEADO', 'COMPLETADO']);
+    expect(nextStates('BLOQUEADO')).toEqual(['EN_CURSO', 'COMPLETADO']);
+    expect(nextStates('COMPLETADO')).toEqual(['ARCHIVADO', 'EN_CURSO']);
+    expect(nextStates('ARCHIVADO')).toEqual(['EN_CURSO']);
+  });
+
+  test('BORRADOR y los valores desconocidos no ofrecen transiciones', () => {
+    expect(nextStates('BORRADOR')).toEqual([]);
+    expect(nextStates('XYZ')).toEqual([]);
+  });
+
+  test('stateLabel traduce los estados y deja el código si es desconocido', () => {
+    for (const [code, label] of Object.entries(RECORD_STATE_LABEL)) {
+      expect(stateLabel(code)).toBe(label);
+    }
+    expect(stateLabel('XYZ')).toBe('XYZ');
   });
 });

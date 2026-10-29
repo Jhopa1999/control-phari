@@ -11,9 +11,10 @@ import { expect, test } from '@playwright/test';
  * que gestiona el plan y asigna responsables) recibía 403 y quedaba vacío, de
  * modo que no se podía asignar a nadie. Este test lo ejercita como líder.
  *
- * Se usa el formulario de Activos (/activos/catalogo) por ser la ruta más
- * directa que monta ese selector sin precondiciones de flujo (no requiere una
- * solicitud comprometida ni un plan con fases).
+ * Se usa el formulario de Novedades (/seguimiento/novedades) porque cualquier
+ * rol puede abrirlo y monta ese selector sin precondiciones de flujo (no
+ * requiere una solicitud comprometida ni un plan con fases). Activos ya no
+ * sirve: por gobernanza solo el jefe de área crea activos.
  */
 
 // Origen de la web: WEB_ORIGIN o, si falta, E2E_WEB_URL (el mismo de
@@ -21,7 +22,7 @@ import { expect, test } from '@playwright/test';
 const WEB_ORIGIN =
   process.env.WEB_ORIGIN ?? process.env.E2E_WEB_URL ?? 'http://localhost:3000';
 // Líder de proceso BI (seed): NO es jefe, por lo que /users le daría 403.
-const LIDER_IDENTIFIER = 'lider.bi@demo.local';
+const LIDER_IDENTIFIER = 'lider@demo.local';
 
 // Fija el actor de desarrollo (líder) en localStorage antes de cargar la app,
 // igual que hace el selector del portal; el middleware del api-client lo
@@ -54,11 +55,11 @@ test('el selector de responsable se puebla vía /coordination/people para un lí
     }
   });
 
-  await page.goto('/activos/catalogo');
+  await page.goto('/seguimiento/novedades');
 
-  // Abre el formulario de nuevo activo (monta el selector de responsable).
+  // Abre el formulario de nueva novedad (monta el selector de responsable).
   await page
-    .getByRole('button', { name: /Nuevo activo/i })
+    .getByRole('button', { name: /Nueva novedad/i })
     .first()
     .click();
 
@@ -79,5 +80,5 @@ test('el selector de responsable se puebla vía /coordination/people para un lí
   // al menos el propio líder debe aparecer entre las personas en alcance.
   await dialog.getByLabel('Responsable').click();
   const options = page.getByRole('option');
-  await expect(options.filter({ hasText: 'Beto Lider BI' })).toBeVisible();
+  await expect(options.filter({ hasText: 'Lider Generico' })).toBeVisible();
 });
