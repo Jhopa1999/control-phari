@@ -21,7 +21,7 @@ const WEB_ORIGIN =
   process.env.WEB_ORIGIN ?? process.env.E2E_WEB_URL ?? 'http://localhost:3000';
 // Integrante BI (seed): sin triage, priorización, aprobaciones, plan,
 // indicadores, equipo ni maestras (MODULE_MATRIX).
-const INTEGRANTE_IDENTIFIER = 'integrante.bi@demo.local';
+const INTEGRANTE_IDENTIFIER = 'integrante@demo.local';
 
 /** Títulos de los grupos del menú, en orden (el primero no tiene título). */
 const GROUP_LABELS = [
@@ -68,6 +68,7 @@ test.describe('escritorio 1440×900', () => {
     await expect(lists.first().getByRole('link')).toHaveText([
       'Panel del área',
       'Mi trabajo',
+      'Actividades recurrentes',
     ]);
     for (const [index, label] of GROUP_LABELS.entries()) {
       await expect(lists.nth(index + 1)).toHaveAccessibleName(label);

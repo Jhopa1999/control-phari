@@ -22,7 +22,7 @@ import { expect, test } from '@playwright/test';
 const WEB_ORIGIN =
   process.env.WEB_ORIGIN ?? process.env.E2E_WEB_URL ?? 'http://localhost:3000';
 // Líder de proceso BI (seed): NO es jefe, por lo que /users le daría 403.
-const LIDER_IDENTIFIER = 'lider.bi@demo.local';
+const LIDER_IDENTIFIER = 'lider@demo.local';
 
 // Fija el actor de desarrollo (líder) en localStorage antes de cargar la app,
 // igual que hace el selector del portal; el middleware del api-client lo
@@ -80,5 +80,5 @@ test('el selector de responsable se puebla vía /coordination/people para un lí
   // al menos el propio líder debe aparecer entre las personas en alcance.
   await dialog.getByLabel('Responsable').click();
   const options = page.getByRole('option');
-  await expect(options.filter({ hasText: 'Beto Lider BI' })).toBeVisible();
+  await expect(options.filter({ hasText: 'Lider Generico' })).toBeVisible();
 });
