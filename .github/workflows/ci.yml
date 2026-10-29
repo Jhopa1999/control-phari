@@ -69,6 +69,9 @@ jobs:
       - name: Pruebas unitarias (Jest)
         run: npm run test:unit
 
+      - name: Lint (web)
+        run: npm run lint --workspace apps/web
+
       - name: Typecheck
         run: npm run typecheck
 
