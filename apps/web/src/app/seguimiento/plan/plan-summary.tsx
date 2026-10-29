@@ -9,7 +9,6 @@ export interface PlanSummaryProps {
   plan: Plan;
 }
 
-
 /**
  * Resumen del plan (solo lectura): estado y los hitos ya registrados del
  * ciclo de vida (enviado a autorización, autorizado, devuelto) con sus fechas.

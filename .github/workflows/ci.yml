@@ -81,6 +81,11 @@ jobs:
       - name: Migraciones (deploy)
         run: npm run prisma:migrate:deploy --workspace apps/api
 
+      # Los E2E usan el actor de desarrollo jefe@demo.local (e2e/global-setup.ts),
+      # que solo existe en el seed sintetico e idempotente. La BD de CI es efimera.
+      - name: Datos base de prueba (seed)
+        run: npm run prisma:seed --workspace apps/api
+
       - name: Instalar Chromium para Playwright
         run: npx playwright install --with-deps chromium
 

@@ -3,12 +3,9 @@
 import * as React from 'react';
 import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { MarkdownViewProps } from './markdown-view-content';
 
-export interface MarkdownViewProps {
-  /** Markdown en texto plano; se escapa el HTML crudo (anti-XSS). */
-  content: string;
-  className?: string;
-}
+export type { MarkdownViewProps } from './markdown-view-content';
 
 /**
  * `react-markdown` + `remark-gfm` pesan bastante y solo se usan en los
