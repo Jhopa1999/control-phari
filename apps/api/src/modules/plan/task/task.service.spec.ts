@@ -28,6 +28,7 @@ function createMocks() {
   const prisma = prismaObj as unknown as PrismaService;
   const audit = { record: jest.fn() } as unknown as AuditService;
   const planState = {
+    assertProjectOpen: jest.fn(),
     requireTaskInScope: jest.fn(),
     requirePlanByIdInScope: jest.fn().mockResolvedValue({
       plan: { id: 'plan1' },
@@ -92,7 +93,7 @@ describe('TaskService', () => {
 
   beforeEach(() => {
     m = createMocks();
-    service = new TaskService(m.prisma, m.audit, m.planState);
+    service = new TaskService(m.prisma, m.audit, m.planState, { notify: jest.fn(), areaHeadsForProcess: jest.fn().mockResolvedValue([]), processLeaders: jest.fn().mockResolvedValue([]) } as never);
   });
 
   describe('create (regla hito, AC-011)', () => {
@@ -475,7 +476,7 @@ describe('TaskService', () => {
       await service.myWork(actorWith(RoleCode.INTEGRANTE, 'u1'));
       const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
       expect(where.responsibleUserId).toBe('u1');
-      expect(where.phase.plan.request).toEqual({ mainProcessId: { in: ['p1'] } });
+      expect(where.phase.plan.request).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
     });
 
     it('jefe de area: sin filtro de alcance (request where {}) y mapea items', async () => {
@@ -493,7 +494,7 @@ describe('TaskService', () => {
       const res = await service.myWork(actorWith(RoleCode.JEFE_AREA, 'uj'));
       const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
       expect(where.responsibleUserId).toBe('uj');
-      expect(where.phase.plan.request).toEqual({});
+      expect(where.phase.plan.request).toEqual({ deletedAt: null });
       expect(res[0]).toMatchObject({
         taskId: 'tW',
         phaseName: 'Fase 1',

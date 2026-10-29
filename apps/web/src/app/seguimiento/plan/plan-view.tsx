@@ -52,7 +52,6 @@ import {
 import type {
   CoordinationPerson,
   Plan,
-  PlanDocument,
   PlanGuide,
   PlanPhase,
   Request,
@@ -65,12 +64,10 @@ import { formatDateOnly, formatDateTime, formatHours } from '@/lib/format';
 import {
   PlanError,
   createPlan,
-  downloadPlanDocument,
-  exportPlan,
+  downloadPlanExcel,
   getPlan,
   getPlanGuide,
-  importPlan,
-  parsePlanDocumentFile,
+  importPlanExcel,
   planStatusLabel,
   submitPlan,
 } from '@/lib/plan';
@@ -217,7 +214,8 @@ export function PlanView(): React.ReactElement {
   const [taskConfirmOpen, setTaskConfirmOpen] = React.useState(false);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   // Import de plan: documento elegido pendiente de confirmar el reemplazo.
-  const [importDoc, setImportDoc] = React.useState<PlanDocument | null>(null);
+  const [importFile, setImportFile] = React.useState<File | null>(null);
+  const [importErrors, setImportErrors] = React.useState<string[]>([]);
   const [importConfirmOpen, setImportConfirmOpen] = React.useState(false);
   const importInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -498,8 +496,19 @@ export function PlanView(): React.ReactElement {
     if (!selectedId) return;
     setBusy(true);
     try {
-      const doc = await exportPlan(selectedId);
-      downloadPlanDocument(selectedId, doc);
+      await downloadPlanExcel(selectedId, 'export');
+    } catch (err) {
+      toast.error(messageOf(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDownloadTemplate() {
+    if (!selectedId) return;
+    setBusy(true);
+    try {
+      await downloadPlanExcel(selectedId, 'template');
     } catch (err) {
       toast.error(messageOf(err));
     } finally {
@@ -525,27 +534,31 @@ export function PlanView(): React.ReactElement {
     // Limpiar el value permite reintentar el mismo archivo tras un error.
     event.target.value = '';
     if (!file) return;
-    try {
-      const parsed = await parsePlanDocumentFile(file);
-      // La forma la valida el backend al importar; aquí solo garantizamos JSON.
-      setImportDoc(parsed as PlanDocument);
-      setImportConfirmOpen(true);
-    } catch (err) {
-      toast.error(messageOf(err));
+    if (!/\.xlsx$/i.test(file.name)) {
+      toast.error('Elige un archivo Excel (.xlsx). Puedes descargar la plantilla.');
+      return;
     }
+    // El contenido lo valida el backend al importar.
+    setImportErrors([]);
+    setImportFile(file);
+    setImportConfirmOpen(true);
   }
 
   async function handleImportPlan() {
-    if (!selectedId || !importDoc) return;
+    if (!selectedId || !importFile) return;
     setBusy(true);
     try {
-      const result = await importPlan(selectedId, importDoc);
+      const result = await importPlanExcel(selectedId, importFile);
+      setImportErrors([]);
       toast.success(result.message);
       await refreshPlanData();
     } catch (err) {
+      if (err instanceof PlanError && err.details.length > 0) {
+        setImportErrors(err.details);
+      }
       toast.error(messageOf(err));
     } finally {
-      setImportDoc(null);
+      setImportFile(null);
       setBusy(false);
     }
   }
@@ -1251,10 +1264,19 @@ export function PlanView(): React.ReactElement {
         ) : null}
         {renderPlanSummary(plan)}
         {renderPlanActions()}
-        {/* La guía solo se muestra si el plan es editable (§11.9); getPlanGuide se sigue llamando. */}
-        {canEdit && guide ? renderGuide(guide) : null}
+        {importErrors.length > 0 ? (
+          <InlineNotice tone="danger" title={`No se importó el archivo: se encontraron ${importErrors.length} error(es).`}>
+            <ul className="list-disc pl-5 text-sm">
+              {importErrors.map((message, index) => (
+                <li key={index}>{message}</li>
+              ))}
+            </ul>
+          </InlineNotice>
+        ) : null}
         {renderPhases()}
         {renderTasks()}
+        {/* PLA-06: el bloque de envío va al final, después de fases y tareas. La guía solo se muestra si el plan es editable (§11.9); getPlanGuide se sigue llamando. */}
+        {canEdit && guide ? renderGuide(guide) : null}
       </>
     );
   }
@@ -1276,7 +1298,17 @@ export function PlanView(): React.ReactElement {
           onClick={() => void handleExportPlan()}
         >
           <Download aria-hidden="true" />
-          Exportar plan
+          Exportar plan (Excel)
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={() => void handleDownloadTemplate()}
+        >
+          <FileSpreadsheet aria-hidden="true" />
+          Descargar plantilla
         </Button>
         <div className="flex flex-col items-start gap-1">
           <Button
@@ -1289,7 +1321,7 @@ export function PlanView(): React.ReactElement {
             onClick={handleExportTasks}
           >
             <FileSpreadsheet aria-hidden="true" />
-            Exportar tareas (Excel)
+            Exportar tareas (CSV)
           </Button>
           {noTasks ? (
             <DisabledReason id="plan-export-tasks-reason">
@@ -1308,7 +1340,7 @@ export function PlanView(): React.ReactElement {
             onClick={() => importInputRef.current?.click()}
           >
             <Upload aria-hidden="true" />
-            Importar plan
+            Importar plan (Excel)
           </Button>
           {!canEdit ? (
             <DisabledReason id="plan-import-reason">
@@ -1319,7 +1351,7 @@ export function PlanView(): React.ReactElement {
         <input
           ref={importInputRef}
           type="file"
-          accept="application/json,.json"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           className="hidden"
           onChange={(event) => void handleImportFileChange(event)}
         />
@@ -1445,6 +1477,7 @@ export function PlanView(): React.ReactElement {
             task={taskDialog.task}
             phaseId={taskDialog.phaseId}
             allTasks={tasks}
+            phases={phases}
             onOpenChange={(open) => setTaskDialog((prev) => ({ ...prev, open }))}
             onSaved={() => {
               setTaskDialog({ open: false, task: null, phaseId: null });

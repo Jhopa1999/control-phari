@@ -21,6 +21,7 @@ function createMocks() {
   const prisma = prismaObj as unknown as PrismaService;
   const audit = { record: jest.fn() } as unknown as AuditService;
   const planState = {
+    assertProjectOpen: jest.fn(),
     requirePlanByIdInScope: jest.fn().mockResolvedValue({
       plan: { id: 'plan1' },
       requestId: 'r1',

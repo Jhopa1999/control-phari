@@ -243,6 +243,8 @@
               "enum": [
                 "PROCESS",
                 "AREA",
+                "REQUESTER",
+                "PROJECT_CLOSURE",
                 "USER",
                 "GRANT",
                 "CATALOG_ITEM",
@@ -625,20 +627,16 @@
         ]
       }
     },
-    "/processes": {
+    "/requesters": {
       "get": {
-        "operationId": "ProcessController_findMany",
+        "operationId": "RequesterController_findMany",
         "parameters": [
           {
-            "name": "kind",
+            "name": "areaId",
             "required": false,
             "in": "query",
             "schema": {
-              "enum": [
-                "PROCESS",
-                "COORDINATION"
-              ],
-              "type": "string"
+              "format": "uuid"
             }
           },
           {
@@ -652,70 +650,70 @@
         ],
         "responses": {
           "200": {
-            "description": "Listado de procesos.",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ProcessResponseDto"
+                    "$ref": "#/components/schemas/RequesterResponseDto"
                   }
                 }
               }
             }
           },
           "401": {
-            "description": "No hay un usuario actual valido."
+            "description": "No hay un usuario actual válido."
           }
         },
-        "summary": "Lista procesos (jefe: todos; no-jefe: solo su alcance).",
+        "summary": "Lista solicitantes (filtros: active, areaId).",
         "tags": [
-          "processes"
+          "requesters"
         ]
       },
       "post": {
-        "operationId": "ProcessController_create",
+        "operationId": "RequesterController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateProcessDto"
+                "$ref": "#/components/schemas/CreateRequesterDto"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Proceso creado.",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProcessResponseDto"
+                  "$ref": "#/components/schemas/RequesterResponseDto"
                 }
               }
             }
           },
           "400": {
-            "description": "Datos de entrada invalidos."
+            "description": "Datos inválidos o área inexistente/inactiva."
           },
           "403": {
             "description": "Rol insuficiente."
           },
           "409": {
-            "description": "Ya existe el code."
+            "description": "Solicitante duplicado."
           }
         },
-        "summary": "Crea un proceso (ADMIN o JEFE_AREA).",
+        "summary": "Crea un solicitante asociado a un área (ADMIN/JEFE_AREA).",
         "tags": [
-          "processes"
+          "requesters"
         ]
       }
     },
-    "/processes/{id}": {
+    "/requesters/{id}": {
       "get": {
-        "operationId": "ProcessController_findOne",
+        "operationId": "RequesterController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -728,26 +726,29 @@
         ],
         "responses": {
           "200": {
-            "description": "Proceso encontrado.",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProcessResponseDto"
+                  "$ref": "#/components/schemas/RequesterResponseDto"
                 }
               }
             }
           },
+          "401": {
+            "description": "No hay un usuario actual válido."
+          },
           "404": {
-            "description": "No existe o esta fuera de alcance."
+            "description": "No existe."
           }
         },
-        "summary": "Obtiene un proceso por id (404 si fuera de alcance).",
+        "summary": "Consulta un solicitante por id.",
         "tags": [
-          "processes"
+          "requesters"
         ]
       },
       "patch": {
-        "operationId": "ProcessController_update",
+        "operationId": "RequesterController_update",
         "parameters": [
           {
             "name": "id",
@@ -763,193 +764,105 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateProcessDto"
+                "$ref": "#/components/schemas/UpdateRequesterDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Proceso actualizado.",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProcessResponseDto"
+                  "$ref": "#/components/schemas/RequesterResponseDto"
                 }
               }
             }
-          },
-          "400": {
-            "description": "Datos de entrada invalidos o id no UUID."
           },
           "403": {
             "description": "Rol insuficiente."
           },
           "404": {
-            "description": "Proceso no encontrado."
-          }
-        },
-        "summary": "Edita name/framework/active/sortOrder (ADMIN o JEFE_AREA).",
-        "tags": [
-          "processes"
-        ]
-      }
-    },
-    "/users": {
-      "get": {
-        "operationId": "UserController_findMany",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Listado de usuarios.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          }
-        },
-        "summary": "Lista todos los usuarios (solo JEFE_AREA).",
-        "tags": [
-          "users"
-        ]
-      },
-      "post": {
-        "operationId": "UserController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateUserDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Usuario creado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos de entrada invalidos."
-          },
-          "403": {
-            "description": "Rol insuficiente."
+            "description": "No existe."
           },
           "409": {
-            "description": "Ya existe el identifier."
+            "description": "Solicitante duplicado."
           }
         },
-        "summary": "Crea una identidad funcional (solo JEFE_AREA).",
+        "summary": "Edita o activa/inactiva un solicitante (ADMIN/JEFE_AREA).",
         "tags": [
-          "users"
+          "requesters"
         ]
       }
     },
-    "/users/{id}": {
+    "/notifications": {
       "get": {
-        "operationId": "UserController_findOne",
+        "operationId": "NotificationController_list",
         "parameters": [
           {
-            "name": "id",
-            "required": true,
-            "in": "path",
+            "name": "take",
+            "required": false,
+            "in": "query",
             "schema": {
-              "format": "uuid"
+              "type": "number"
+            }
+          },
+          {
+            "name": "unreadOnly",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Usuario encontrado.",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserResponseDto"
+                  "$ref": "#/components/schemas/NotificationListDto"
                 }
               }
             }
           },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Usuario no encontrado."
+          "401": {
+            "description": "No hay un usuario actual válido."
           }
         },
-        "summary": "Obtiene un usuario con sus grants (solo JEFE_AREA).",
+        "summary": "Notificaciones del usuario actual y contador de no leídas.",
         "tags": [
-          "users"
-        ]
-      },
-      "patch": {
-        "operationId": "UserController_update",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateUserDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Usuario actualizado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos de entrada invalidos o id no UUID."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Usuario no encontrado."
-          }
-        },
-        "summary": "Edita name/active (solo JEFE_AREA).",
-        "tags": [
-          "users"
+          "notifications"
         ]
       }
     },
-    "/users/{id}/invite": {
+    "/notifications/read-all": {
       "post": {
-        "operationId": "UserInviteController_invite",
+        "operationId": "NotificationController_markAllRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkAllReadResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Marca todas las notificaciones del usuario como leídas.",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/notifications/{id}/read": {
+      "post": {
+        "operationId": "NotificationController_markRead",
         "parameters": [
           {
             "name": "id",
@@ -962,59 +875,31 @@
         ],
         "responses": {
           "204": {
-            "description": "Invitacion emitida y enviada."
-          },
-          "403": {
-            "description": "Rol insuficiente."
+            "description": "Marcada como leída."
           },
           "404": {
-            "description": "Usuario no encontrado."
+            "description": "No existe o no pertenece al usuario."
           }
         },
-        "summary": "Emite y envia la invitacion de activacion para un usuario (solo JEFE_AREA). El reenvio invalida el enlace previo.",
+        "summary": "Marca una notificación propia como leída.",
         "tags": [
-          "users"
+          "notifications"
         ]
       }
     },
-    "/grants": {
+    "/closures/pending": {
       "get": {
-        "operationId": "GrantController_findMany",
-        "parameters": [
-          {
-            "name": "active",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "name": "processId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "userId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
+        "operationId": "ClosureController_pending",
+        "parameters": [],
         "responses": {
           "200": {
-            "description": "Listado de grants.",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/GrantResponseDto"
+                    "$ref": "#/components/schemas/PendingClosureDto"
                   }
                 }
               }
@@ -1024,57 +909,15 @@
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Lista grants del alcance del actor (ADMIN ve todos).",
+        "summary": "Cierres de proyecto pendientes de aprobación (alcance del actor).",
         "tags": [
-          "grants"
-        ]
-      },
-      "post": {
-        "operationId": "GrantController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateGrantDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Grant creado o reactivado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GrantResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos de entrada invalidos."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Usuario o proceso inexistente."
-          },
-          "409": {
-            "description": "El grant ya existe y esta activo."
-          }
-        },
-        "summary": "Concede un grant (segun jerarquia y alcance del actor).",
-        "tags": [
-          "grants"
+          "closure"
         ]
       }
     },
-    "/grants/{id}": {
-      "delete": {
-        "operationId": "GrantController_revoke",
+    "/requests/{id}/closure": {
+      "get": {
+        "operationId": "ClosureController_status",
         "parameters": [
           {
             "name": "id",
@@ -1087,25 +930,145 @@
         ],
         "responses": {
           "200": {
-            "description": "Grant revocado (devuelve el actualizado).",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GrantResponseDto"
+                  "$ref": "#/components/schemas/ClosureStatusDto"
                 }
               }
             }
           },
-          "403": {
-            "description": "Rol insuficiente."
-          },
           "404": {
-            "description": "Grant no encontrado."
+            "description": "Solicitud fuera de alcance."
           }
         },
-        "summary": "Revoca un grant (soft; segun jerarquia y alcance del actor).",
+        "summary": "Estado del cierre: validaciones de tareas y documentación, e historial.",
         "tags": [
-          "grants"
+          "closure"
+        ]
+      },
+      "post": {
+        "operationId": "ClosureController_request",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClosureStatusDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No se cumplen las condiciones (se indica el motivo)."
+          }
+        },
+        "summary": "Solicita el cierre del proyecto (tareas terminadas y documentación aprobada).",
+        "tags": [
+          "closure"
+        ]
+      }
+    },
+    "/requests/{id}/closure/decision": {
+      "post": {
+        "operationId": "ClosureController_decide",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClosureDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClosureStatusDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Faltan las observaciones del rechazo."
+          },
+          "409": {
+            "description": "Sin solicitud pendiente o condiciones incumplidas."
+          }
+        },
+        "summary": "Aprueba (-> Cerrado) o rechaza la solicitud de cierre (solo JEFE_AREA).",
+        "tags": [
+          "closure"
+        ]
+      }
+    },
+    "/requests/{id}/reopen": {
+      "post": {
+        "operationId": "ClosureController_reopen",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReopenProjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClosureStatusDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El proyecto no está cerrado."
+          }
+        },
+        "summary": "Reabre un proyecto cerrado (solo JEFE_AREA, con motivo).",
+        "tags": [
+          "closure"
         ]
       }
     },
@@ -1336,6 +1299,37 @@
           }
         },
         "summary": "Obtiene una solicitud por id (404 fuera de alcance).",
+        "tags": [
+          "requests"
+        ]
+      },
+      "delete": {
+        "operationId": "RequestController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Solicitud eliminada (lógicamente)."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud no encontrada."
+          },
+          "409": {
+            "description": "La solicitud está en ejecución o cerrada."
+          }
+        },
+        "summary": "Elimina lógicamente una solicitud (JEFE_AREA/LIDER_PROCESO en su alcance).",
         "tags": [
           "requests"
         ]
@@ -1933,6 +1927,34 @@
         ]
       }
     },
+    "/documents/pending-approval": {
+      "get": {
+        "operationId": "DocumentController_pendingApproval",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Documentos pendientes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Documentos pendientes de aprobación dentro del alcance.",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
     "/documents/{id}": {
       "get": {
         "operationId": "DocumentController_get",
@@ -2191,6 +2213,99 @@
         ]
       }
     },
+    "/documents/{id}/submit-approval": {
+      "post": {
+        "operationId": "DocumentController_submitForApproval",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documento pendiente de aprobación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Transición no permitida."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Documento fuera de alcance."
+          },
+          "409": {
+            "description": "El proyecto está cerrado."
+          }
+        },
+        "summary": "Envía el documento a aprobación (líder/jefe).",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/documents/{id}/review": {
+      "post": {
+        "operationId": "DocumentController_review",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Documento revisado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Transición no permitida o falta el motivo del rechazo."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Documento fuera de alcance."
+          }
+        },
+        "summary": "Aprueba o rechaza un documento pendiente (solo JEFE_AREA).",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
     "/documents/{id}/status": {
       "post": {
         "operationId": "DocumentController_changeStatus",
@@ -2238,6 +2353,490 @@
         "summary": "Cambia el estado del documento (transicion valida; lider/jefe).",
         "tags": [
           "documents"
+        ]
+      }
+    },
+    "/processes": {
+      "get": {
+        "operationId": "ProcessController_findMany",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "PROCESS",
+                "COORDINATION"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de procesos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProcessResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          }
+        },
+        "summary": "Lista procesos (jefe: todos; no-jefe: solo su alcance).",
+        "tags": [
+          "processes"
+        ]
+      },
+      "post": {
+        "operationId": "ProcessController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProcessDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Proceso creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "Ya existe el code."
+          }
+        },
+        "summary": "Crea un proceso (ADMIN o JEFE_AREA).",
+        "tags": [
+          "processes"
+        ]
+      }
+    },
+    "/processes/{id}": {
+      "get": {
+        "operationId": "ProcessController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proceso encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o esta fuera de alcance."
+          }
+        },
+        "summary": "Obtiene un proceso por id (404 si fuera de alcance).",
+        "tags": [
+          "processes"
+        ]
+      },
+      "patch": {
+        "operationId": "ProcessController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProcessDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Proceso actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos o id no UUID."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Proceso no encontrado."
+          }
+        },
+        "summary": "Edita name/framework/active/sortOrder (ADMIN o JEFE_AREA).",
+        "tags": [
+          "processes"
+        ]
+      }
+    },
+    "/users": {
+      "get": {
+        "operationId": "UserController_findMany",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Listado de usuarios.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista todos los usuarios (solo JEFE_AREA).",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "UserController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "Ya existe el identifier."
+          }
+        },
+        "summary": "Crea una identidad funcional (solo JEFE_AREA).",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "operationId": "UserController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuario encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Usuario no encontrado."
+          }
+        },
+        "summary": "Obtiene un usuario con sus grants (solo JEFE_AREA).",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "operationId": "UserController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuario actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos o id no UUID."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Usuario no encontrado."
+          }
+        },
+        "summary": "Edita name/active (solo JEFE_AREA).",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/invite": {
+      "post": {
+        "operationId": "UserInviteController_invite",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Invitacion emitida y enviada."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Usuario no encontrado."
+          }
+        },
+        "summary": "Emite y envia la invitacion de activacion para un usuario (solo JEFE_AREA). El reenvio invalida el enlace previo.",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/grants": {
+      "get": {
+        "operationId": "GrantController_findMany",
+        "parameters": [
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de grants.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GrantResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Lista grants del alcance del actor (ADMIN ve todos).",
+        "tags": [
+          "grants"
+        ]
+      },
+      "post": {
+        "operationId": "GrantController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGrantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Grant creado o reactivado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Usuario o proceso inexistente."
+          },
+          "409": {
+            "description": "El grant ya existe y esta activo."
+          }
+        },
+        "summary": "Concede un grant (segun jerarquia y alcance del actor).",
+        "tags": [
+          "grants"
+        ]
+      }
+    },
+    "/grants/{id}": {
+      "delete": {
+        "operationId": "GrantController_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Grant revocado (devuelve el actualizado).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Grant no encontrado."
+          }
+        },
+        "summary": "Revoca un grant (soft; segun jerarquia y alcance del actor).",
+        "tags": [
+          "grants"
         ]
       }
     },
@@ -2777,6 +3376,119 @@
           }
         },
         "summary": "Exporta el plan a un documento JSON portable (solo lectura).",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/requests/{requestId}/plan/export-excel": {
+      "get": {
+        "operationId": "PlanController_exportExcel",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo .xlsx del plan."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          }
+        },
+        "summary": "Exporta el plan a un archivo Excel (.xlsx).",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/requests/{requestId}/plan/template-excel": {
+      "get": {
+        "operationId": "PlanController_templateExcel",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plantilla .xlsx."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          }
+        },
+        "summary": "Descarga la plantilla Excel (.xlsx) de planificación.",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/requests/{requestId}/plan/import-excel": {
+      "post": {
+        "operationId": "PlanController_importExcel",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportPlanExcelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan importado (reemplazado).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPlanResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Archivo inválido; el cuerpo incluye la lista de errores (errors)."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          },
+          "409": {
+            "description": "El plan no esta en borrador ni devuelto."
+          }
+        },
+        "summary": "Importa el plan desde un Excel (.xlsx); reemplaza el contenido actual.",
         "tags": [
           "plan"
         ]
@@ -4618,6 +5330,9 @@
           },
           "404": {
             "description": "Reunion fuera de alcance."
+          },
+          "409": {
+            "description": "El acta está cerrada."
           }
         },
         "summary": "Edita una reunion (incluye set de participantes).",
@@ -4643,9 +5358,92 @@
           },
           "404": {
             "description": "Reunion fuera de alcance."
+          },
+          "409": {
+            "description": "Acta cerrada o con compromisos."
           }
         },
-        "summary": "Borra una reunion (cascade de participantes).",
+        "summary": "Borra un acta abierta sin compromisos (cascade de participantes).",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
+    "/meetings/{id}/close": {
+      "post": {
+        "operationId": "MeetingController_close",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acta cerrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso para cerrar el acta."
+          },
+          "404": {
+            "description": "Reunion fuera de alcance."
+          },
+          "409": {
+            "description": "Acta ya cerrada o sin decisiones ni compromisos."
+          }
+        },
+        "summary": "Cierra el acta (responsable, líder del proceso o jefe).",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
+    "/meetings/{id}/reopen": {
+      "post": {
+        "operationId": "MeetingController_reopen",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Acta reabierta.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso para reabrir el acta."
+          },
+          "404": {
+            "description": "Reunion fuera de alcance."
+          },
+          "409": {
+            "description": "El acta ya está abierta."
+          }
+        },
+        "summary": "Reabre un acta cerrada (líder del proceso o jefe).",
         "tags": [
           "meetings"
         ]
@@ -6119,6 +6917,259 @@
         ]
       }
     },
+    "/recurring-activities/occurrences": {
+      "get": {
+        "operationId": "OccurrenceController_findAll",
+        "parameters": [
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Tamano de pagina (acotado a 100). Por defecto 25.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Pagina (1-based). Por defecto 1.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "responsibleAreaId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "responsibleUserId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Dia objetivo hasta (inclusive).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Dia objetivo desde (inclusive).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "activityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cadence",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "SEMANAL",
+                "MENSUAL",
+                "TRIMESTRAL",
+                "SEMESTRAL",
+                "ANUAL"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "PENDIENTE",
+                "EN_CURSO",
+                "COMPLETADA",
+                "VENCIDA"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "mine",
+                "all"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pagina de ocurrencias.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedOccurrencesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros invalidos."
+          },
+          "403": {
+            "description": "scope=all sin permiso."
+          }
+        },
+        "summary": "Lista ocurrencias por alcance (mine por defecto; all jefe/admin).",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences/{id}": {
+      "get": {
+        "operationId": "OccurrenceController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ocurrencia.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          }
+        },
+        "summary": "Detalle de una ocurrencia dentro de alcance.",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences/{id}/start": {
+      "post": {
+        "operationId": "OccurrenceController_start",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ocurrencia actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          },
+          "409": {
+            "description": "Transicion no permitida."
+          }
+        },
+        "summary": "Toma una ocurrencia (PENDIENTE -> EN_CURSO).",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences/{id}/complete": {
+      "post": {
+        "operationId": "OccurrenceController_complete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteOccurrenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ocurrencia completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          },
+          "409": {
+            "description": "Transicion no permitida."
+          }
+        },
+        "summary": "Completa una ocurrencia (comentario opcional).",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
     "/recurring-activities/run-generation": {
       "post": {
         "operationId": "RecurringActivityController_runGeneration",
@@ -6377,259 +7428,6 @@
           }
         },
         "summary": "Pausa una definicion (soft-delete active=false; no borra).",
-        "tags": [
-          "recurring-activity"
-        ]
-      }
-    },
-    "/recurring-activities/occurrences": {
-      "get": {
-        "operationId": "OccurrenceController_findAll",
-        "parameters": [
-          {
-            "name": "pageSize",
-            "required": false,
-            "in": "query",
-            "description": "Tamano de pagina (acotado a 100). Por defecto 25.",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "description": "Pagina (1-based). Por defecto 1.",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "responsibleAreaId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "responsibleUserId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": false,
-            "in": "query",
-            "description": "Dia objetivo hasta (inclusive).",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": false,
-            "in": "query",
-            "description": "Dia objetivo desde (inclusive).",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "activityType",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "cadence",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "SEMANAL",
-                "MENSUAL",
-                "TRIMESTRAL",
-                "SEMESTRAL",
-                "ANUAL"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "PENDIENTE",
-                "EN_CURSO",
-                "COMPLETADA",
-                "VENCIDA"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "scope",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "mine",
-                "all"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Pagina de ocurrencias.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaginatedOccurrencesResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Filtros invalidos."
-          },
-          "403": {
-            "description": "scope=all sin permiso."
-          }
-        },
-        "summary": "Lista ocurrencias por alcance (mine por defecto; all jefe/admin).",
-        "tags": [
-          "recurring-activity"
-        ]
-      }
-    },
-    "/recurring-activities/occurrences/{id}": {
-      "get": {
-        "operationId": "OccurrenceController_findOne",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Ocurrencia.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OccurrenceResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No existe o fuera de alcance."
-          }
-        },
-        "summary": "Detalle de una ocurrencia dentro de alcance.",
-        "tags": [
-          "recurring-activity"
-        ]
-      }
-    },
-    "/recurring-activities/occurrences/{id}/start": {
-      "post": {
-        "operationId": "OccurrenceController_start",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Ocurrencia actualizada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OccurrenceResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No existe o fuera de alcance."
-          },
-          "409": {
-            "description": "Transicion no permitida."
-          }
-        },
-        "summary": "Toma una ocurrencia (PENDIENTE -> EN_CURSO).",
-        "tags": [
-          "recurring-activity"
-        ]
-      }
-    },
-    "/recurring-activities/occurrences/{id}/complete": {
-      "post": {
-        "operationId": "OccurrenceController_complete",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CompleteOccurrenceDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Ocurrencia completada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OccurrenceResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos."
-          },
-          "404": {
-            "description": "No existe o fuera de alcance."
-          },
-          "409": {
-            "description": "Transicion no permitida."
-          }
-        },
-        "summary": "Completa una ocurrencia (comentario opcional).",
         "tags": [
           "recurring-activity"
         ]
@@ -7357,7 +8155,7 @@
           }
         }
       },
-      "ProcessResponseDto": {
+      "RequesterResponseDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -7365,41 +8163,25 @@
             "format": "uuid",
             "description": "Identificador unico."
           },
-          "code": {
-            "type": "string",
-            "description": "Codigo estable.",
-            "example": "FIBI"
-          },
           "name": {
             "type": "string",
-            "description": "Nombre del proceso.",
-            "example": "BI"
-          },
-          "framework": {
-            "type": "string",
-            "nullable": true,
-            "description": "Marco asociado.",
-            "example": "INS-006"
-          },
-          "kind": {
-            "type": "string",
-            "description": "Tipo de proceso.",
-            "example": "PROCESS"
+            "description": "Nombre del solicitante.",
+            "example": "Ana Perez"
           },
           "areaId": {
             "type": "string",
             "format": "uuid",
-            "description": "Area a la que pertenece."
+            "description": "Area asociada (maestro de areas)."
+          },
+          "areaName": {
+            "type": "string",
+            "description": "Nombre del area asociada.",
+            "example": "Finanzas"
           },
           "active": {
             "type": "boolean",
             "description": "Estado activo.",
             "example": true
-          },
-          "sortOrder": {
-            "type": "number",
-            "description": "Orden de presentacion.",
-            "example": 1
           },
           "createdAt": {
             "type": "string",
@@ -7414,244 +8196,362 @@
         },
         "required": [
           "id",
-          "code",
           "name",
-          "framework",
-          "kind",
           "areaId",
+          "areaName",
           "active",
-          "sortOrder",
           "createdAt",
           "updatedAt"
         ]
       },
-      "CreateProcessDto": {
+      "CreateRequesterDto": {
         "type": "object",
         "properties": {
-          "code": {
-            "type": "string",
-            "description": "Codigo estable del proceso (se normaliza a MAYUSCULAS).",
-            "example": "FIBI",
-            "maxLength": 50
-          },
           "name": {
             "type": "string",
-            "description": "Nombre del proceso.",
-            "example": "BI",
+            "description": "Nombre del solicitante.",
             "maxLength": 255
           },
           "areaId": {
             "type": "string",
             "format": "uuid",
-            "description": "Area a la que pertenece el proceso."
-          },
-          "framework": {
-            "type": "string",
-            "description": "Marco asociado observado.",
-            "example": "INS-006",
-            "maxLength": 50
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "PROCESS",
-              "COORDINATION"
-            ],
-            "description": "Tipo de proceso. Por defecto PROCESS.",
-            "default": "PROCESS"
-          },
-          "sortOrder": {
-            "type": "number",
-            "description": "Orden de presentacion. Por defecto 0.",
-            "minimum": 0,
-            "example": 1
+            "description": "Area del maestro de areas."
           }
         },
         "required": [
-          "code",
           "name",
           "areaId"
         ]
       },
-      "UpdateProcessDto": {
+      "UpdateRequesterDto": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
-            "description": "Nombre del proceso.",
+            "description": "Nombre del solicitante.",
             "maxLength": 255
           },
-          "framework": {
+          "areaId": {
             "type": "string",
-            "description": "Marco asociado.",
-            "maxLength": 50
+            "format": "uuid",
+            "description": "Area del maestro de areas."
           },
           "active": {
             "type": "boolean",
-            "description": "Estado activo del proceso."
+            "description": "Activa o inactiva el solicitante."
+          }
+        }
+      },
+      "NotificationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "sortOrder": {
+          "type": {
+            "type": "string",
+            "description": "Tipo de evento (p. ej. TASK_ASSIGNED)."
+          },
+          "title": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "link": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ruta interna del elemento relacionado."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "readAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "message",
+          "link",
+          "requestId",
+          "read",
+          "readAt",
+          "createdAt"
+        ]
+      },
+      "NotificationListDto": {
+        "type": "object",
+        "properties": {
+          "unreadCount": {
             "type": "number",
-            "description": "Orden de presentacion.",
-            "minimum": 0
+            "description": "Total de notificaciones no leídas."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationDto"
+            }
           }
-        }
+        },
+        "required": [
+          "unreadCount",
+          "items"
+        ]
       },
-      "UserResponseDto": {
+      "MarkAllReadResultDto": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "updated"
+        ]
+      },
+      "PendingClosureDto": {
+        "type": "object",
+        "properties": {
+          "closureId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestTitle": {
+            "type": "string"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestedByName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "closureId",
+          "requestId",
+          "requestTitle",
+          "requestedAt",
+          "requestedByName"
+        ]
+      },
+      "ClosureDocumentDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid",
-            "description": "Identificador unico."
+            "format": "uuid"
           },
-          "identifier": {
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reviewReason": {
             "type": "string",
-            "description": "Identificador funcional.",
-            "example": "persona@demo.local"
-          },
-          "name": {
-            "type": "string",
-            "description": "Nombre visible.",
-            "example": "Persona Demo"
-          },
-          "active": {
-            "type": "boolean",
-            "description": "Estado activo.",
-            "example": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Fecha de creacion."
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Fecha de ultima actualizacion."
+            "nullable": true
           }
         },
         "required": [
           "id",
-          "identifier",
-          "name",
-          "active",
-          "createdAt",
-          "updatedAt"
+          "title",
+          "status",
+          "reviewReason"
         ]
       },
-      "CreateUserDto": {
-        "type": "object",
-        "properties": {
-          "identifier": {
-            "type": "string",
-            "description": "Identificador funcional unico (p. ej. email corporativo).",
-            "example": "persona@demo.local",
-            "maxLength": 255
-          },
-          "name": {
-            "type": "string",
-            "description": "Nombre visible.",
-            "example": "Persona Demo",
-            "maxLength": 255
-          }
-        },
-        "required": [
-          "identifier",
-          "name"
-        ]
-      },
-      "UpdateUserDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Nombre visible.",
-            "maxLength": 255
-          },
-          "active": {
-            "type": "boolean",
-            "description": "Estado activo del usuario."
-          }
-        }
-      },
-      "GrantResponseDto": {
+      "ClosureRecordDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid",
-            "description": "Identificador unico."
+            "format": "uuid"
           },
-          "userId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Usuario asignado."
-          },
-          "roleId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Rol concedido."
-          },
-          "processId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Proceso del grant."
-          },
-          "active": {
-            "type": "boolean",
-            "description": "Estado activo (false = revocado).",
-            "example": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Fecha de creacion."
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Fecha de ultima actualizacion."
-          }
-        },
-        "required": [
-          "id",
-          "userId",
-          "roleId",
-          "processId",
-          "active",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "CreateGrantDto": {
-        "type": "object",
-        "properties": {
-          "userId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Id del usuario a asignar."
-          },
-          "roleCode": {
+          "status": {
             "type": "string",
             "enum": [
-              "JEFE_AREA",
-              "LIDER_PROCESO",
-              "INTEGRANTE",
-              "ADMIN"
-            ],
-            "description": "Rol a conceder."
+              "PENDIENTE",
+              "APROBADO",
+              "RECHAZADO"
+            ]
           },
-          "processId": {
+          "requestedAt": {
             "type": "string",
-            "format": "uuid",
-            "description": "Id del proceso del grant."
+            "format": "date-time"
+          },
+          "requestedByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "decidedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "decisionReason": {
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [
-          "userId",
-          "roleCode",
-          "processId"
+          "id",
+          "status",
+          "requestedAt",
+          "requestedByUserId",
+          "requestedByName",
+          "decidedAt",
+          "decidedByName",
+          "decisionReason"
+        ]
+      },
+      "ClosureStatusDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestState": {
+            "type": "string",
+            "description": "Estado operativo de la solicitud."
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "EN_EJECUCION",
+              "PENDIENTE_DOCUMENTACION",
+              "PENDIENTE_APROBACION_DOCUMENTAL",
+              "EJECUCION_FINALIZADA",
+              "PENDIENTE_APROBACION_CIERRE",
+              "CERRADO",
+              "NO_APLICA"
+            ],
+            "description": "Estado funcional del cierre."
+          },
+          "tasksTotal": {
+            "type": "number"
+          },
+          "tasksCompleted": {
+            "type": "number"
+          },
+          "documents": {
+            "description": "Documentación de cierre (categoría CIERRE).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClosureDocumentDto"
+            }
+          },
+          "canRequestClosure": {
+            "type": "boolean"
+          },
+          "blockers": {
+            "description": "Motivos por los que aún no se puede solicitar el cierre.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pending": {
+            "nullable": true,
+            "description": "Solicitud de cierre pendiente.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ClosureRecordDto"
+              }
+            ]
+          },
+          "history": {
+            "description": "Historial de solicitudes de cierre.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClosureRecordDto"
+            }
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "closedByName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "requestId",
+          "requestState",
+          "phase",
+          "tasksTotal",
+          "tasksCompleted",
+          "documents",
+          "canRequestClosure",
+          "blockers",
+          "pending",
+          "history",
+          "closedAt",
+          "closedByName"
+        ]
+      },
+      "ClosureDecisionDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "APROBAR",
+              "RECHAZAR"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Observaciones (obligatorias al rechazar)."
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "ReopenProjectDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Motivo de la reapertura (obligatorio)."
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "RequestParticipantResponseDto": {
@@ -7694,6 +8594,12 @@
             "type": "string",
             "nullable": true,
             "description": "Area solicitante."
+          },
+          "requesterId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Solicitante del maestro (null en solicitudes históricas)."
           },
           "requesterName": {
             "type": "string",
@@ -7785,6 +8691,7 @@
           "title",
           "registeredAt",
           "requesterArea",
+          "requesterId",
           "requesterName",
           "functionalOwner",
           "targetDate",
@@ -7910,6 +8817,11 @@
               "format": "uuid"
             }
           },
+          "requesterId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitante del maestro de solicitantes. El área y el nombre se toman de su registro."
+          },
           "requesterArea": {
             "type": "string",
             "description": "Area solicitante.",
@@ -7966,6 +8878,11 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "requesterId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitante del maestro de solicitantes. El área y el nombre se toman de su registro."
           },
           "requesterArea": {
             "type": "string",
@@ -8668,6 +9585,39 @@
             "type": "string",
             "description": "Estado (DocStatus)."
           },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Proyecto (solicitud) vinculado, p. ej. documentación de cierre."
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Envío a aprobación."
+          },
+          "submittedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Última aprobación o rechazo."
+          },
+          "reviewedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "reviewReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo del rechazo u observación de la aprobación."
+          },
           "currentVersion": {
             "nullable": true,
             "description": "Resumen de la version vigente (sin contenido).",
@@ -8693,6 +9643,12 @@
           "title",
           "categoryCode",
           "status",
+          "requestId",
+          "submittedAt",
+          "submittedByUserId",
+          "reviewedAt",
+          "reviewedByUserId",
+          "reviewReason",
           "currentVersion",
           "createdAt",
           "updatedAt"
@@ -8714,6 +9670,11 @@
           "categoryCode": {
             "type": "string",
             "description": "Categoria (maestra DOC_CATEGORY)."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proyecto (solicitud) al que pertenece el documento, p. ej. documentación de cierre."
           },
           "content": {
             "type": "string",
@@ -8823,6 +9784,27 @@
           "content"
         ]
       },
+      "ReviewDocumentDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "APROBAR",
+              "RECHAZAR"
+            ],
+            "description": "Decisión."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo (obligatorio al rechazar).",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
       "ChangeDocumentStatusDto": {
         "type": "object",
         "properties": {
@@ -8830,7 +9812,9 @@
             "type": "string",
             "enum": [
               "BORRADOR",
+              "PENDIENTE_APROBACION",
               "VIGENTE",
+              "RECHAZADO",
               "ARCHIVADA"
             ],
             "description": "Estado destino."
@@ -8843,6 +9827,303 @@
         },
         "required": [
           "targetStatus"
+        ]
+      },
+      "ProcessResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "code": {
+            "type": "string",
+            "description": "Codigo estable.",
+            "example": "FIBI"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del proceso.",
+            "example": "BI"
+          },
+          "framework": {
+            "type": "string",
+            "nullable": true,
+            "description": "Marco asociado.",
+            "example": "INS-006"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Tipo de proceso.",
+            "example": "PROCESS"
+          },
+          "areaId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Area a la que pertenece."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo.",
+            "example": true
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden de presentacion.",
+            "example": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "framework",
+          "kind",
+          "areaId",
+          "active",
+          "sortOrder",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateProcessDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Codigo estable del proceso (se normaliza a MAYUSCULAS).",
+            "example": "FIBI",
+            "maxLength": 50
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del proceso.",
+            "example": "BI",
+            "maxLength": 255
+          },
+          "areaId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Area a la que pertenece el proceso."
+          },
+          "framework": {
+            "type": "string",
+            "description": "Marco asociado observado.",
+            "example": "INS-006",
+            "maxLength": 50
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PROCESS",
+              "COORDINATION"
+            ],
+            "description": "Tipo de proceso. Por defecto PROCESS.",
+            "default": "PROCESS"
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden de presentacion. Por defecto 0.",
+            "minimum": 0,
+            "example": 1
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "areaId"
+        ]
+      },
+      "UpdateProcessDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del proceso.",
+            "maxLength": 255
+          },
+          "framework": {
+            "type": "string",
+            "description": "Marco asociado.",
+            "maxLength": 50
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo del proceso."
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden de presentacion.",
+            "minimum": 0
+          }
+        }
+      },
+      "UserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional.",
+            "example": "persona@demo.local"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible.",
+            "example": "Persona Demo"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo.",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "identifier",
+          "name",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional unico (p. ej. email corporativo).",
+            "example": "persona@demo.local",
+            "maxLength": 255
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible.",
+            "example": "Persona Demo",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "identifier",
+          "name"
+        ]
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre visible.",
+            "maxLength": 255
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo del usuario."
+          }
+        }
+      },
+      "GrantResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Usuario asignado."
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Rol concedido."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso del grant."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Estado activo (false = revocado).",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "roleId",
+          "processId",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateGrantDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id del usuario a asignar."
+          },
+          "roleCode": {
+            "type": "string",
+            "enum": [
+              "JEFE_AREA",
+              "LIDER_PROCESO",
+              "INTEGRANTE",
+              "ADMIN"
+            ],
+            "description": "Rol a conceder."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id del proceso del grant."
+          }
+        },
+        "required": [
+          "userId",
+          "roleCode",
+          "processId"
         ]
       },
       "MyWorkItemDto": {
@@ -9535,6 +10816,12 @@
             "type": "boolean",
             "description": "Indica si la tarea es un hito."
           },
+          "responsibleIdentifier": {
+            "type": "string",
+            "nullable": true,
+            "description": "Identificador del usuario responsable (opcional). Debe corresponder a un usuario activo.",
+            "maxLength": 255
+          },
           "estimateHours": {
             "type": "number",
             "nullable": true,
@@ -9694,6 +10981,18 @@
           "plan",
           "phases",
           "dependencies"
+        ]
+      },
+      "ImportPlanExcelDto": {
+        "type": "object",
+        "properties": {
+          "fileBase64": {
+            "type": "string",
+            "description": "Contenido del archivo .xlsx codificado en base64."
+          }
+        },
+        "required": [
+          "fileBase64"
         ]
       },
       "ImportPlanResultDto": {
@@ -11125,6 +12424,54 @@
           "toState"
         ]
       },
+      "MeetingCommitmentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "description": "Estado (maestra RECORD_STATE)."
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Vencimiento (YYYY-MM-DD)."
+          },
+          "assignedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "expectedResult": {
+            "type": "string",
+            "nullable": true
+          },
+          "result": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "state",
+          "dueDate",
+          "assignedUserId",
+          "responsibleUserId",
+          "expectedResult",
+          "result"
+        ]
+      },
       "MeetingResponseDto": {
         "type": "object",
         "properties": {
@@ -11189,6 +12536,25 @@
             "type": "string",
             "nullable": true
           },
+          "closed": {
+            "type": "boolean",
+            "description": "El acta está cerrada (COMPLETADO/ARCHIVADO): no admite cambios."
+          },
+          "commitmentsTotal": {
+            "type": "number",
+            "description": "Compromisos derivados del acta."
+          },
+          "commitmentsOpen": {
+            "type": "number",
+            "description": "Compromisos del acta aún abiertos (no completados ni archivados)."
+          },
+          "commitments": {
+            "description": "Compromisos del acta (lista del acta, visible para quien ve la reunión).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeetingCommitmentDto"
+            }
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -11212,6 +12578,10 @@
           "agenda",
           "decisions",
           "notes",
+          "closed",
+          "commitmentsTotal",
+          "commitmentsOpen",
+          "commitments",
           "createdAt",
           "updatedAt"
         ]
@@ -11384,6 +12754,16 @@
             "format": "uuid",
             "nullable": true
           },
+          "sourceMeetingTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Título del acta de origen."
+          },
+          "sourceMeetingDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fecha del acta de origen (YYYY-MM-DD)."
+          },
           "assignedUserId": {
             "type": "string",
             "format": "uuid",
@@ -11432,6 +12812,8 @@
           "state",
           "dueDate",
           "sourceMeetingId",
+          "sourceMeetingTitle",
+          "sourceMeetingDate",
           "assignedUserId",
           "responsibleUserId",
           "relatedRequestId",
@@ -13141,6 +14523,155 @@
           "agentCode"
         ]
       },
+      "OccurrenceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico de la ocurrencia."
+          },
+          "activityId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Definicion a la que pertenece."
+          },
+          "activityTitle": {
+            "type": "string",
+            "description": "Titulo de la definicion (contexto)."
+          },
+          "activityType": {
+            "type": "string",
+            "description": "Tipo de actividad de la definicion."
+          },
+          "cadence": {
+            "type": "string",
+            "description": "Cadencia de la definicion (Recurrence)."
+          },
+          "responsibleKind": {
+            "type": "string",
+            "description": "Tipo de responsable de la definicion (USER/AREA)."
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario responsable de la definicion."
+          },
+          "responsibleAreaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Area responsable de la definicion."
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Dia objetivo de la ocurrencia."
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado de la ocurrencia (OccurrenceStatus)."
+          },
+          "periodLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "Etiqueta legible del periodo (p. ej. \"2024-W03\")."
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha/hora de completado."
+          },
+          "completedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario que completo."
+          },
+          "completionComment": {
+            "type": "string",
+            "nullable": true,
+            "description": "Comentario/evidencia de completado (opcional)."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "activityId",
+          "activityTitle",
+          "activityType",
+          "cadence",
+          "responsibleKind",
+          "responsibleUserId",
+          "responsibleAreaId",
+          "targetDate",
+          "status",
+          "periodLabel",
+          "completedAt",
+          "completedByUserId",
+          "completionComment",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginatedOccurrencesResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Ocurrencias de la pagina.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceResponseDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "description": "Pagina actual (1-based).",
+            "example": 1
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Tamano de pagina aplicado (acotado a 100).",
+            "example": 25
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de ocurrencias en alcance para el filtro vigente."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Hay al menos una pagina mas despues de esta."
+          }
+        },
+        "required": [
+          "data",
+          "page",
+          "pageSize",
+          "total",
+          "hasMore"
+        ]
+      },
+      "CompleteOccurrenceDto": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string",
+            "description": "Comentario o evidencia del completado (opcional).",
+            "maxLength": 4000
+          }
+        }
+      },
       "CreateRecurringActivityDto": {
         "type": "object",
         "properties": {
@@ -13553,155 +15084,6 @@
           "active": {
             "type": "boolean",
             "description": "Si false, el motor no genera nuevas ocurrencias (pausa sin borrar). Por defecto true."
-          }
-        }
-      },
-      "OccurrenceResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Identificador unico de la ocurrencia."
-          },
-          "activityId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Definicion a la que pertenece."
-          },
-          "activityTitle": {
-            "type": "string",
-            "description": "Titulo de la definicion (contexto)."
-          },
-          "activityType": {
-            "type": "string",
-            "description": "Tipo de actividad de la definicion."
-          },
-          "cadence": {
-            "type": "string",
-            "description": "Cadencia de la definicion (Recurrence)."
-          },
-          "responsibleKind": {
-            "type": "string",
-            "description": "Tipo de responsable de la definicion (USER/AREA)."
-          },
-          "responsibleUserId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true,
-            "description": "Usuario responsable de la definicion."
-          },
-          "responsibleAreaId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true,
-            "description": "Area responsable de la definicion."
-          },
-          "targetDate": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Dia objetivo de la ocurrencia."
-          },
-          "status": {
-            "type": "string",
-            "description": "Estado de la ocurrencia (OccurrenceStatus)."
-          },
-          "periodLabel": {
-            "type": "string",
-            "nullable": true,
-            "description": "Etiqueta legible del periodo (p. ej. \"2024-W03\")."
-          },
-          "completedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true,
-            "description": "Fecha/hora de completado."
-          },
-          "completedByUserId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true,
-            "description": "Usuario que completo."
-          },
-          "completionComment": {
-            "type": "string",
-            "nullable": true,
-            "description": "Comentario/evidencia de completado (opcional)."
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Fecha de creacion."
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Fecha de actualizacion."
-          }
-        },
-        "required": [
-          "id",
-          "activityId",
-          "activityTitle",
-          "activityType",
-          "cadence",
-          "responsibleKind",
-          "responsibleUserId",
-          "responsibleAreaId",
-          "targetDate",
-          "status",
-          "periodLabel",
-          "completedAt",
-          "completedByUserId",
-          "completionComment",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "PaginatedOccurrencesResponseDto": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "description": "Ocurrencias de la pagina.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OccurrenceResponseDto"
-            }
-          },
-          "page": {
-            "type": "number",
-            "description": "Pagina actual (1-based).",
-            "example": 1
-          },
-          "pageSize": {
-            "type": "number",
-            "description": "Tamano de pagina aplicado (acotado a 100).",
-            "example": 25
-          },
-          "total": {
-            "type": "number",
-            "description": "Total de ocurrencias en alcance para el filtro vigente."
-          },
-          "hasMore": {
-            "type": "boolean",
-            "description": "Hay al menos una pagina mas despues de esta."
-          }
-        },
-        "required": [
-          "data",
-          "page",
-          "pageSize",
-          "total",
-          "hasMore"
-        ]
-      },
-      "CompleteOccurrenceDto": {
-        "type": "object",
-        "properties": {
-          "comment": {
-            "type": "string",
-            "description": "Comentario o evidencia del completado (opcional).",
-            "maxLength": 4000
           }
         }
       }

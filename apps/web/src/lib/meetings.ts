@@ -35,11 +35,15 @@ function messageForStatus(status: number): string {
 }
 
 /** Normaliza cualquier fallo (HTTP o de red) a un MeetingError entendible. */
-function toMeetingError(status: number | undefined): MeetingError {
+function toMeetingError(status: number | undefined, body?: unknown): MeetingError {
   if (status === undefined) {
     return new MeetingError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
+  }
+  const server = (body as { message?: unknown } | undefined)?.message;
+  if ((status === 400 || status === 403 || status === 409) && typeof server === 'string' && server.trim()) {
+    return new MeetingError(server, status);
   }
   return new MeetingError(messageForStatus(status), status);
 }
@@ -49,7 +53,7 @@ export async function listMeetings(): Promise<Meeting[]> {
   try {
     const { data, error, response } = await api.GET('/meetings');
     if (error || !data) {
-      throw toMeetingError(response.status);
+      throw toMeetingError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -65,7 +69,7 @@ export async function getMeeting(id: string): Promise<Meeting> {
       params: { path: { id } },
     });
     if (error || !data) {
-      throw toMeetingError(response.status);
+      throw toMeetingError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -83,7 +87,7 @@ export async function createMeeting(
       body: input,
     });
     if (error || !data) {
-      throw toMeetingError(response.status);
+      throw toMeetingError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -103,7 +107,7 @@ export async function updateMeeting(
       body: input,
     });
     if (error || !data) {
-      throw toMeetingError(response.status);
+      throw toMeetingError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -119,8 +123,36 @@ export async function deleteMeeting(id: string): Promise<void> {
       params: { path: { id } },
     });
     if (error) {
-      throw toMeetingError(response.status);
+      throw toMeetingError(response.status, error);
     }
+  } catch (err) {
+    if (err instanceof MeetingError) throw err;
+    throw toMeetingError(undefined);
+  }
+}
+
+/** Cierra el acta (POST /meetings/:id/close): ya no se modifica. */
+export async function closeMeeting(id: string): Promise<Meeting> {
+  try {
+    const { data, error, response } = await api.POST('/meetings/{id}/close', {
+      params: { path: { id } },
+    });
+    if (error || !data) throw toMeetingError(response.status, error);
+    return data;
+  } catch (err) {
+    if (err instanceof MeetingError) throw err;
+    throw toMeetingError(undefined);
+  }
+}
+
+/** Reabre un acta cerrada (POST /meetings/:id/reopen; líder o jefe). */
+export async function reopenMeeting(id: string): Promise<Meeting> {
+  try {
+    const { data, error, response } = await api.POST('/meetings/{id}/reopen', {
+      params: { path: { id } },
+    });
+    if (error || !data) throw toMeetingError(response.status, error);
+    return data;
   } catch (err) {
     if (err instanceof MeetingError) throw err;
     throw toMeetingError(undefined);

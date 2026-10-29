@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,7 +14,12 @@ import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { KnowledgeScopeService } from '../knowledge-scope.service';
 import { DocumentStateService } from './document-state.service';
-import { DocStatus } from './doc-status';
+import { CLOSURE_DOC_CATEGORY, DocStatus } from './doc-status';
+import {
+  NotificationService,
+  NotificationType,
+} from '../../notification/notification.service';
+import { ReviewDocumentDto } from './dto/review-document.dto';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { CreateDocumentVersionDto } from './dto/create-document-version.dto';
@@ -46,6 +53,7 @@ export class DocumentService {
     private readonly audit: AuditService,
     private readonly scope: KnowledgeScopeService,
     private readonly state: DocumentStateService,
+    private readonly notifications: NotificationService,
   ) {}
 
   private documentSnapshot(row: DocumentModel): Prisma.InputJsonValue {
@@ -80,6 +88,12 @@ export class DocumentService {
       title: row.title,
       categoryCode: row.categoryCode,
       status: row.status,
+      requestId: row.requestId,
+      submittedAt: row.submittedAt,
+      submittedByUserId: row.submittedByUserId,
+      reviewedAt: row.reviewedAt,
+      reviewedByUserId: row.reviewedByUserId,
+      reviewReason: row.reviewReason,
       currentVersion: row.currentVersion
         ? {
             id: row.currentVersion.id,
@@ -163,9 +177,7 @@ export class DocumentService {
     if (filters.processId !== undefined) {
       assetAnd.push({ processId: filters.processId });
     }
-    if (filters.requestId !== undefined) {
-      assetAnd.push({ requestId: filters.requestId });
-    }
+
 
     const where: Prisma.DocumentWhereInput = { AND: [{ asset: assetWhere }] };
     const and = where.AND as Prisma.DocumentWhereInput[];
@@ -174,6 +186,15 @@ export class DocumentService {
     }
     if (filters.status !== undefined) {
       and.push({ status: filters.status });
+    }
+    if (filters.requestId !== undefined) {
+      // Documentos del proyecto: vinculados directamente o por el activo de origen.
+      and.push({
+        OR: [{ requestId: filters.requestId }, { asset: { requestId: filters.requestId } }],
+      });
+    }
+    if (filters.categoryCode !== undefined) {
+      and.push({ categoryCode: filters.categoryCode });
     }
     if (filters.q !== undefined) {
       and.push({ title: { contains: filters.q, mode: 'insensitive' } });
@@ -209,6 +230,9 @@ export class DocumentService {
     const asset = await this.requireAssetInScope(actor, dto.assetId);
     // Crear documento no mueve el estado del activo: nextStatus = estado actual.
     this.scope.requireAssetWritable(actor, asset, asset.status);
+    if (dto.requestId !== undefined) {
+      await this.requireOpenProjectInScope(actor, dto.requestId);
+    }
 
     try {
       const created = await this.prisma.$transaction(async (tx) => {
@@ -218,6 +242,7 @@ export class DocumentService {
             title: dto.title,
             status: DocStatus.BORRADOR,
             ...(dto.categoryCode !== undefined ? { categoryCode: dto.categoryCode } : {}),
+            ...(dto.requestId !== undefined ? { requestId: dto.requestId } : {}),
           },
         });
 
@@ -280,6 +305,7 @@ export class DocumentService {
   ): Promise<DocumentResponseDto> {
     const { document, asset } = await this.requireDocumentInScope(actor, id);
     this.scope.requireAssetWritable(actor, asset, asset.status);
+    await this.assertProjectOpen(document.requestId);
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.document.update({
@@ -324,6 +350,7 @@ export class DocumentService {
     const { document, asset } = await this.requireDocumentInScope(actor, id);
     // Versionar NO mueve el estado del documento (D6): nextStatus = asset.status.
     this.scope.requireAssetWritable(actor, asset, asset.status);
+    await this.assertProjectOpen(document.requestId);
 
     // Un unico reintento server-side ante P2002 recomputando max+1 (finding #7).
     try {
@@ -368,10 +395,19 @@ export class DocumentService {
         },
       });
 
-      // Solo se mueve el puntero; Document.status NO se toca (D6).
+      // Solo se mueve el puntero; Document.status NO se toca (D6). Excepcion: la
+      // documentacion de cierre ya enviada o aprobada vuelve a BORRADOR, porque
+      // el contenido aprobado debe ser exactamente el revisado.
+      const resetsApproval =
+        document.categoryCode === CLOSURE_DOC_CATEGORY &&
+        (document.status === DocStatus.VIGENTE ||
+          document.status === DocStatus.PENDIENTE_APROBACION);
       const withPointer = await tx.document.update({
         where: { id: document.id },
-        data: { currentVersionId: version.id },
+        data: {
+          currentVersionId: version.id,
+          ...(resetsApproval ? { status: DocStatus.BORRADOR } : {}),
+        },
         include: {
           currentVersion: {
             select: {
@@ -473,11 +509,48 @@ export class DocumentService {
     // Cambiar estado del documento esta reservado a lider/jefe (design §2.3): el
     // integrante nunca puede, aunque el activo este en BORRADOR.
     this.scope.requireProcessManager(actor, asset);
+    await this.assertProjectOpen(document.requestId);
+
+    const fromPending = document.status === DocStatus.PENDIENTE_APROBACION;
+    const isDecision =
+      fromPending &&
+      (nextStatus === DocStatus.VIGENTE || nextStatus === DocStatus.RECHAZADO);
+    if (isDecision && !actor.isJefeArea) {
+      throw new ForbiddenException(
+        'Solo el jefe de área puede aprobar o rechazar documentación.',
+      );
+    }
+    if (nextStatus === DocStatus.RECHAZADO && !dto.reason?.trim()) {
+      throw new BadRequestException('Indica el motivo del rechazo.');
+    }
+    if (
+      document.categoryCode === CLOSURE_DOC_CATEGORY &&
+      nextStatus === DocStatus.VIGENTE &&
+      !fromPending
+    ) {
+      throw new ConflictException(
+        'La documentación de cierre debe enviarse a aprobación; no se puede publicar directamente.',
+      );
+    }
+
+    const data: Prisma.DocumentUncheckedUpdateInput = { status: nextStatus };
+    if (nextStatus === DocStatus.PENDIENTE_APROBACION) {
+      data.submittedAt = new Date();
+      data.submittedByUserId = actor.userId;
+      data.reviewedAt = null;
+      data.reviewedByUserId = null;
+      data.reviewReason = null;
+    }
+    if (isDecision) {
+      data.reviewedAt = new Date();
+      data.reviewedByUserId = actor.userId;
+      data.reviewReason = dto.reason?.trim() || null;
+    }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.document.update({
         where: { id },
-        data: { status: nextStatus },
+        data,
         include: {
           currentVersion: {
             select: {
@@ -503,7 +576,127 @@ export class DocumentService {
       return row;
     });
 
+    await this.notifyStatusChange(actor, updated, asset, nextStatus, isDecision);
     return this.toResponse(updated);
+  }
+
+  /** Atajo: enviar a aprobación (BORRADOR/RECHAZADO -> PENDIENTE_APROBACION). */
+  submitForApproval(actor: CurrentActor, id: string): Promise<DocumentResponseDto> {
+    return this.changeStatus(actor, id, { targetStatus: DocStatus.PENDIENTE_APROBACION });
+  }
+
+  /** Aprobar (-> VIGENTE) o rechazar (-> RECHAZADO, motivo obligatorio). Solo jefe. */
+  review(
+    actor: CurrentActor,
+    id: string,
+    dto: ReviewDocumentDto,
+  ): Promise<DocumentResponseDto> {
+    return this.changeStatus(actor, id, {
+      targetStatus: dto.decision === 'APROBAR' ? DocStatus.VIGENTE : DocStatus.RECHAZADO,
+      ...(dto.reason !== undefined ? { reason: dto.reason } : {}),
+    });
+  }
+
+  /** Cola de documentos pendientes de aprobación dentro del alcance (Aprobaciones). */
+  async pendingApproval(actor: CurrentActor): Promise<DocumentResponseDto[]> {
+    const rows = await this.prisma.document.findMany({
+      where: {
+        AND: [
+          { status: DocStatus.PENDIENTE_APROBACION },
+          { asset: this.scope.assetScopeWhere(actor) },
+        ],
+      },
+      orderBy: [{ submittedAt: 'asc' }, { createdAt: 'asc' }],
+      include: {
+        currentVersion: {
+          select: { id: true, versionNumber: true, authorUserId: true, createdAt: true },
+        },
+      },
+    });
+    return rows.map((row) => this.toResponse(row));
+  }
+
+  /** Ruta interna del documento en el portal. */
+  private documentLink(doc: { id: string; assetId: string }): string {
+    return `/activos/documentos?documentId=${encodeURIComponent(doc.id)}`;
+  }
+
+  private async notifyStatusChange(
+    actor: CurrentActor,
+    doc: DocumentModel,
+    asset: AssetModel,
+    nextStatus: DocStatus,
+    isDecision: boolean,
+  ): Promise<void> {
+    const link = this.documentLink(doc);
+    if (nextStatus === DocStatus.PENDIENTE_APROBACION) {
+      await this.notifications.notify({
+        userIds: await this.notifications.areaHeadsForProcess(asset.processId),
+        excludeUserId: actor.userId,
+        type: NotificationType.DOCUMENT_PENDING_APPROVAL,
+        title: 'Documentación pendiente de aprobación',
+        message: `«${doc.title}» espera tu aprobación.`,
+        link,
+        requestId: doc.requestId,
+      });
+    } else if (isDecision) {
+      const approved = nextStatus === DocStatus.VIGENTE;
+      await this.notifications.notify({
+        userIds: [doc.submittedByUserId],
+        excludeUserId: actor.userId,
+        type: approved
+          ? NotificationType.DOCUMENT_APPROVED
+          : NotificationType.DOCUMENT_REJECTED,
+        title: approved ? 'Documentación aprobada' : 'Documentación rechazada',
+        message: approved
+          ? `«${doc.title}» fue aprobada.`
+          : `«${doc.title}» fue rechazada: ${doc.reviewReason ?? ''}`.trim(),
+        link,
+        requestId: doc.requestId,
+      });
+    }
+  }
+
+  /**
+   * El proyecto (solicitud) al que se vincula un documento debe existir, estar
+   * en el alcance del actor y no estar cerrado.
+   */
+  private async requireOpenProjectInScope(
+    actor: CurrentActor,
+    requestId: string,
+  ): Promise<void> {
+    const request = await this.prisma.request.findFirst({
+      where: {
+        id: requestId,
+        deletedAt: null,
+        ...(actor.isJefeArea
+          ? {}
+          : { mainProcessId: { in: Array.from(actor.scopedProcessIds) } }),
+      },
+      select: { operationalState: true },
+    });
+    if (!request) {
+      throw new NotFoundException(`Solicitud "${requestId}" no encontrada.`);
+    }
+    if (request.operationalState === 'CERRADA') {
+      throw new ConflictException(
+        'El proyecto está cerrado; no admite cambios en su documentación.',
+      );
+    }
+  }
+
+  /** Bloquea cambios ordinarios en documentos de un proyecto cerrado (CIE-01). */
+  private async assertProjectOpen(requestId: string | null): Promise<void> {
+    if (!requestId) return;
+    const request = await this.prisma.request.findFirst({
+      where: { id: requestId },
+      select: { operationalState: true },
+    });
+    if (request?.operationalState === 'CERRADA') {
+      throw new ConflictException(
+        'El proyecto está cerrado; no admite cambios en su documentación.',
+      );
+    }
   }
 
   private isUniqueViolation(error: unknown): boolean {

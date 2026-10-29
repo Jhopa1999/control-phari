@@ -5,6 +5,7 @@ import { AuditModule } from '../audit/audit.module';
 import { RequestModule } from '../request/request.module';
 import { PlanController } from './plan.controller';
 import { PlanService } from './plan.service';
+import { PlanExcelService } from './plan-excel.service';
 import { PlanStateService } from './plan-state.service';
 import { PlanGuideService } from './plan-guide.service';
 import { PhaseController } from './phase/phase.controller';
@@ -34,6 +35,7 @@ import { DependencyService } from './dependency/dependency.service';
   ],
   providers: [
     PlanService,
+    PlanExcelService,
     PlanStateService,
     PlanGuideService,
     PhaseService,

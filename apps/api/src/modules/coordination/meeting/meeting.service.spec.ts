@@ -71,6 +71,7 @@ function meetingRow(overrides: Record<string, unknown> = {}) {
     createdAt: now,
     updatedAt: now,
     participants: [],
+    commitments: [],
     ...overrides,
   };
 }

@@ -84,6 +84,7 @@ export class MeetingController {
   @ApiResponse({ status: 200, description: 'Reunion actualizada.', type: MeetingResponseDto })
   @ApiResponse({ status: 400, description: 'Datos invalidos o participante fuera de alcance.' })
   @ApiResponse({ status: 404, description: 'Reunion fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El acta está cerrada.' })
   update(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -92,12 +93,43 @@ export class MeetingController {
     return this.meetingService.update(actor, id, dto);
   }
 
+  @Post(':id/close')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Cierra el acta (responsable, líder del proceso o jefe).' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Acta cerrada.', type: MeetingResponseDto })
+  @ApiResponse({ status: 403, description: 'Sin permiso para cerrar el acta.' })
+  @ApiResponse({ status: 404, description: 'Reunion fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'Acta ya cerrada o sin decisiones ni compromisos.' })
+  close(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.meetingService.close(actor, id);
+  }
+
+  @Post(':id/reopen')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Reabre un acta cerrada (líder del proceso o jefe).' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Acta reabierta.', type: MeetingResponseDto })
+  @ApiResponse({ status: 403, description: 'Sin permiso para reabrir el acta.' })
+  @ApiResponse({ status: 404, description: 'Reunion fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El acta ya está abierta.' })
+  reopen(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.meetingService.reopen(actor, id);
+  }
+
   @Delete(':id')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Borra una reunion (cascade de participantes).' })
+  @ApiOperation({ summary: 'Borra un acta abierta sin compromisos (cascade de participantes).' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Reunion borrada.' })
   @ApiResponse({ status: 404, description: 'Reunion fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'Acta cerrada o con compromisos.' })
   remove(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

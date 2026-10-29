@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,23 +10,45 @@ import { Prisma } from '../../../generated/prisma/client';
 import type { MeetingModel } from '../../../generated/prisma/models/Meeting';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
+import { RoleCode } from '../../auth/role-code';
 import { CoordinationScopeService } from '../coordination-scope.service';
 import { dateStringToDate, dateToString } from '../date';
+import { RecordState } from '../record-state';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
 import { UpdateMeetingDto } from './dto/update-meeting.dto';
 import { ListMeetingsDto } from './dto/list-meetings.dto';
 import { MeetingResponseDto } from './dto/meeting-response.dto';
+import { DONE_COMMITMENT_STATES, isMinutesClosed } from './minutes';
 
-/** Reunion con sus participantes (para el mapeo de respuesta). */
-type MeetingWithParticipants = MeetingModel & {
-  participants: { userId: string }[];
-};
+const COMMITMENT_SELECT = {
+  id: true,
+  title: true,
+  state: true,
+  dueDate: true,
+  assignedUserId: true,
+  responsibleUserId: true,
+  expectedResult: true,
+  result: true,
+} as const;
+
+const MEETING_INCLUDE = {
+  participants: { select: { userId: true } },
+  commitments: {
+    select: COMMITMENT_SELECT,
+    orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+  },
+} satisfies Prisma.MeetingInclude;
+
+/** Reunion con sus participantes y compromisos (para el mapeo de respuesta). */
+type MeetingWithRelations = Prisma.MeetingGetPayload<{ include: typeof MEETING_INCLUDE }>;
 
 /**
- * Logica de reuniones (design §2.2/§4). Estado inicial BORRADOR; participantes
- * N:M limitados al alcance (listPeople). Alcance via CoordinationScopeService
- * (participante o responsable). Mutacion + AuditEvent en la MISMA
- * `$transaction` (objectType MEETING). Sin acta/notificacion/compromiso-auto.
+ * Lógica de reuniones y su ACTA (design §2.2/§4 + unificación con compromisos).
+ * El acta nace abierta (BORRADOR); se cierra (COMPLETADO) y desde entonces no se
+ * modifica ni se le agregan compromisos; puede reabrirla el líder del proceso o
+ * el jefe de área. Los compromisos del acta se devuelven con la reunión.
+ * Participantes N:M limitados al alcance. Mutación + AuditEvent en la MISMA
+ * `$transaction` (objectType MEETING).
  */
 @Injectable()
 export class MeetingService {
@@ -55,7 +79,7 @@ export class MeetingService {
     };
   }
 
-  private toResponse(row: MeetingWithParticipants): MeetingResponseDto {
+  private toResponse(row: MeetingWithRelations): MeetingResponseDto {
     return {
       id: row.id,
       processId: row.processId,
@@ -70,6 +94,19 @@ export class MeetingService {
       agenda: row.agenda,
       decisions: row.decisions,
       notes: row.notes,
+      closed: isMinutesClosed(row.state),
+      commitmentsTotal: row.commitments.length,
+      commitmentsOpen: row.commitments.filter((c) => !DONE_COMMITMENT_STATES.has(c.state)).length,
+      commitments: row.commitments.map((c) => ({
+        id: c.id,
+        title: c.title,
+        state: c.state,
+        dueDate: dateToString(c.dueDate),
+        assignedUserId: c.assignedUserId,
+        responsibleUserId: c.responsibleUserId,
+        expectedResult: c.expectedResult,
+        result: c.result,
+      })),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -101,15 +138,33 @@ export class MeetingService {
   private async requireInScope(
     actor: CurrentActor,
     id: string,
-  ): Promise<MeetingWithParticipants> {
+  ): Promise<MeetingWithRelations> {
     const row = await this.prisma.meeting.findFirst({
       where: { AND: [{ id }, this.scope.meetingWhere(actor)] },
-      include: { participants: { select: { userId: true } } },
+      include: MEETING_INCLUDE,
     });
     if (!row) {
       throw new NotFoundException(`Reunion "${id}" no encontrada.`);
     }
     return row;
+  }
+
+  /** Jefe de área o líder del proceso de la reunión. */
+  private isManager(actor: CurrentActor, processId: string): boolean {
+    return (
+      actor.isJefeArea ||
+      actor.grants.some(
+        (g) => g.roleCode === RoleCode.LIDER_PROCESO && g.processId === processId,
+      )
+    );
+  }
+
+  private assertOpen(row: MeetingModel): void {
+    if (isMinutesClosed(row.state)) {
+      throw new ConflictException(
+        'El acta está cerrada y no admite cambios. Reábrela si necesitas modificarla.',
+      );
+    }
   }
 
   async list(
@@ -129,7 +184,7 @@ export class MeetingService {
 
     const rows = await this.prisma.meeting.findMany({
       where,
-      include: { participants: { select: { userId: true } } },
+      include: MEETING_INCLUDE,
       orderBy: [{ meetingDate: 'desc' }, { createdAt: 'desc' }],
     });
     return rows.map((row) => this.toResponse(row));
@@ -179,7 +234,7 @@ export class MeetingService {
               }
             : {}),
         },
-        include: { participants: { select: { userId: true } } },
+        include: MEETING_INCLUDE,
       });
 
       await this.audit.record(tx, {
@@ -207,6 +262,13 @@ export class MeetingService {
     dto: UpdateMeetingDto,
   ): Promise<MeetingResponseDto> {
     const existing = await this.requireInScope(actor, id);
+    // El acta cerrada es un registro: se reabre explícitamente (POST /reopen).
+    this.assertOpen(existing);
+    if (dto.state !== undefined && isMinutesClosed(dto.state)) {
+      throw new BadRequestException(
+        'Para cerrar el acta usa la acción «Cerrar acta».',
+      );
+    }
     const meetingDate =
       dto.meetingDate !== undefined
         ? dateStringToDate(dto.meetingDate)
@@ -251,7 +313,7 @@ export class MeetingService {
           ...(dto.decisions !== undefined ? { decisions: dto.decisions } : {}),
           ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
         },
-        include: { participants: { select: { userId: true } } },
+        include: MEETING_INCLUDE,
       });
 
       await this.audit.record(tx, {
@@ -276,8 +338,77 @@ export class MeetingService {
     return this.toResponse(updated);
   }
 
+  /**
+   * Cierra el acta (BORRADOR/EN_CURSO -> COMPLETADO). Lo hace el responsable de
+   * la reunión, el líder del proceso o el jefe de área. Exige que el acta tenga
+   * registrado algo de lo acordado: decisiones o al menos un compromiso.
+   */
+  async close(actor: CurrentActor, id: string): Promise<MeetingResponseDto> {
+    const existing = await this.requireInScope(actor, id);
+    this.assertOpen(existing);
+    if (
+      existing.responsibleUserId !== actor.userId &&
+      !this.isManager(actor, existing.processId)
+    ) {
+      throw new ForbiddenException(
+        'Solo el responsable de la reunión, el líder del proceso o el jefe de área pueden cerrar el acta.',
+      );
+    }
+    if (!existing.decisions?.trim() && existing.commitments.length === 0) {
+      throw new ConflictException(
+        'Registra las decisiones o al menos un compromiso antes de cerrar el acta.',
+      );
+    }
+    return this.setState(actor, existing, RecordState.COMPLETADO);
+  }
+
+  /** Reabre un acta cerrada (-> BORRADOR). Solo líder del proceso o jefe de área. */
+  async reopen(actor: CurrentActor, id: string): Promise<MeetingResponseDto> {
+    const existing = await this.requireInScope(actor, id);
+    if (!isMinutesClosed(existing.state)) {
+      throw new ConflictException('El acta ya está abierta.');
+    }
+    if (!this.isManager(actor, existing.processId)) {
+      throw new ForbiddenException(
+        'Solo el líder del proceso o el jefe de área pueden reabrir un acta.',
+      );
+    }
+    return this.setState(actor, existing, RecordState.BORRADOR);
+  }
+
+  private async setState(
+    actor: CurrentActor,
+    existing: MeetingWithRelations,
+    state: RecordState,
+  ): Promise<MeetingResponseDto> {
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.meeting.update({
+        where: { id: existing.id },
+        data: { state },
+        include: MEETING_INCLUDE,
+      });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'UPDATE',
+        objectType: 'MEETING',
+        objectId: row.id,
+        scopeProcessId: row.processId,
+        before: { state: existing.state },
+        after: { state: row.state },
+      });
+      return row;
+    });
+    return this.toResponse(updated);
+  }
+
   async remove(actor: CurrentActor, id: string): Promise<void> {
     const existing = await this.requireInScope(actor, id);
+    this.assertOpen(existing);
+    if (existing.commitments.length > 0) {
+      throw new ConflictException(
+        'No se puede eliminar un acta con compromisos registrados; elimina o reasigna primero sus compromisos.',
+      );
+    }
 
     await this.prisma.$transaction(async (tx) => {
       // Cascade de participantes por el schema (onDelete: Cascade).

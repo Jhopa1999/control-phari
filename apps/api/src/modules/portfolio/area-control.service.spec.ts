@@ -467,13 +467,13 @@ describe('AreaControlService', () => {
     it('jefe -> requestScope where = {}', async () => {
       await service.indicators(jefe(), PERIOD);
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
-      expect(where.AND[0]).toEqual({});
+      expect(where.AND[0]).toEqual({ deletedAt: null });
     });
 
     it('no-jefe -> mainProcessId in scopedProcessIds (sin filtrar por rol)', async () => {
       await service.indicators(lider(['p1']), PERIOD);
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
-      expect(where.AND[0]).toEqual({ mainProcessId: { in: ['p1'] } });
+      expect(where.AND[0]).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
     });
 
     it('actor mixto (lider A + integrante B) ve A y B (union de grants)', async () => {
@@ -527,7 +527,7 @@ describe('AreaControlService', () => {
       (m.prismaObj.request as any).findMany.mockResolvedValueOnce([]);
       await service.demandSummary(lider(['p1']), PERIOD);
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
-      expect(where).toEqual({ mainProcessId: { in: ['p1'] } });
+      expect(where).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
     });
   });
 });

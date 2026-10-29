@@ -37,6 +37,7 @@ export type StatusKind =
   | 'task'
   | 'occurrence'
   | 'record'
+  | 'minutes'
   | 'log'
   | 'asset'
   | 'document'
@@ -79,6 +80,8 @@ const ASSET_LABELS: Record<string, string> = {
 };
 const DOCUMENT_LABELS: Record<string, string> = {
   BORRADOR: 'Borrador',
+  PENDIENTE_APROBACION: 'Pendiente de aprobación',
+  RECHAZADO: 'Rechazado',
   VIGENTE: 'Vigente',
   ARCHIVADA: 'Archivada',
 };
@@ -99,6 +102,12 @@ const BAND_LABELS: Record<string, string> = {
   P3: 'P3',
   P4: 'P4',
   SIN_PRIORIZAR: 'Sin priorizar',
+};
+const MINUTES_LABELS: Record<string, string> = {
+  BORRADOR: 'Abierta',
+  EN_CURSO: 'Abierta',
+  COMPLETADO: 'Cerrada',
+  ARCHIVADO: 'Archivada',
 };
 const ACTIVE_LABELS: Record<string, string> = {
   true: 'Activo',
@@ -193,6 +202,14 @@ const STATUS_TABLES: Record<
     COMPLETADO: 'success',
     ARCHIVADO: 'neutral',
   }),
+  // Acta de reunión: se reutilizan los códigos de RECORD_STATE con su
+  // significado para el acta (BORRADOR = abierta, COMPLETADO = cerrada).
+  minutes: statusTable(MINUTES_LABELS, {
+    BORRADOR: 'info',
+    EN_CURSO: 'info',
+    COMPLETADO: 'success',
+    ARCHIVADO: 'neutral',
+  }),
   log: statusTable(LOG_LABELS, {
     BORRADOR: 'neutral',
     ENVIADO: 'info',
@@ -205,6 +222,8 @@ const STATUS_TABLES: Record<
   }),
   document: statusTable(DOCUMENT_LABELS, {
     BORRADOR: 'neutral',
+    PENDIENTE_APROBACION: 'info',
+    RECHAZADO: 'danger',
     VIGENTE: 'success',
     ARCHIVADA: 'neutral',
   }),

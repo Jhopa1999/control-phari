@@ -33,6 +33,7 @@ export interface TaskInScope {
   planId: string;
   requestId: string;
   mainProcessId: string;
+  requestState: string;
 }
 
 /**
@@ -51,9 +52,21 @@ export class PlanStateService {
    */
   private requestScopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
     if (actor.isJefeArea) {
-      return {};
+      return { deletedAt: null };
     }
-    return { mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+    return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+  }
+
+  /**
+   * CIE-01: un proyecto cerrado no admite modificaciones ordinarias de su plan,
+   * fases, tareas ni dependencias. Solo la reapertura autorizada lo desbloquea.
+   */
+  assertProjectOpen(requestState: string): void {
+    if (requestState === 'CERRADA') {
+      throw new ConflictException(
+        'El proyecto está cerrado; no se pueden modificar su plan, fases ni tareas. Solicita su reapertura si es necesario.',
+      );
+    }
   }
 
   /** Valida/resuelve una transicion de tarea (design §1.3). */
@@ -159,7 +172,7 @@ export class PlanStateService {
     }
     const request = await this.prisma.request.findFirst({
       where: { AND: [{ id: plan.requestId }, this.requestScopeWhere(actor)] },
-      select: { id: true, mainProcessId: true },
+      select: { id: true, mainProcessId: true, operationalState: true },
     });
     if (!request) {
       throw new NotFoundException(`Tarea "${taskId}" no encontrada.`);
@@ -172,6 +185,7 @@ export class PlanStateService {
       planId,
       requestId: request.id,
       mainProcessId: request.mainProcessId,
+      requestState: request.operationalState,
     };
   }
 

@@ -102,7 +102,7 @@ describe('PlanService', () => {
 
   beforeEach(() => {
     m = createMocks();
-    service = new PlanService(m.prisma, m.audit, m.requestState, m.planState, m.guide);
+    service = new PlanService(m.prisma, m.audit, m.requestState, m.planState, m.guide, { notify: jest.fn(), areaHeadsForProcess: jest.fn().mockResolvedValue([]), processLeaders: jest.fn().mockResolvedValue([]) } as never);
   });
 
   describe('create', () => {

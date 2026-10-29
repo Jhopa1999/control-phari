@@ -45,7 +45,8 @@ model Area {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  processes Process[]
+  processes  Process[]
+  requesters Requester[]
 
   // Actividades recurrentes cuyo responsable es ESTA area (responsibleKind=AREA).
   recurringActivities RecurringActivity[] @relation("RecurringActivityResponsibleArea")
@@ -54,6 +55,26 @@ model Area {
   @@index([active])
   @@index([sortOrder])
   @@map("areas")
+}
+
+/// Maestro de solicitantes (SOL-02): persona/solicitante de una solicitud, siempre
+/// asociado a un area del maestro de areas. El nombre es unico (sin distinguir mayusculas/tildes).
+model Requester {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  nameKey   String   @map("name_key")
+  areaId    String   @map("area_id") @db.Uuid
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  area     Area      @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  requests Request[]
+
+  @@unique([nameKey], name: "requester_name_unique")
+  @@index([areaId])
+  @@index([active])
+  @@map("requesters")
 }
 
 /// Proceso de gestion del area (BI, Integraciones, IA) y la coordinacion
@@ -104,20 +125,21 @@ model Process {
 /// Identidad funcional de una persona del area. NO es credencial: no hay
 /// password, token ni sesion (la autenticacion real es una capa separada).
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  identifier   String
-  name         String
-  active       Boolean  @default(true)
+  id            String         @id @default(uuid()) @db.Uuid
+  notifications Notification[]
+  identifier    String
+  name          String
+  active        Boolean        @default(true)
   // Hash bcrypt de la credencial, usado solo por la autenticacion real (JWT).
   // Nullable: dev-header no lo usa y las filas existentes no lo tienen; no es
   // credencial en modo dev. Nunca se expone en DTOs ni respuestas.
-  passwordHash String?  @map("password_hash")
+  passwordHash  String?        @map("password_hash")
   // Rol de SISTEMA/GLOBAL (design a). Admin tecnico independiente de los grants
   // por proceso: no se concede por Grant ni por proceso. Es la UNICA fuente de
   // RoleCode.ADMIN (load-actor). Default false, aditivo y back-compat.
-  isAdmin      Boolean  @default(false) @map("is_admin")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  isAdmin       Boolean        @default(false) @map("is_admin")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
 
   grants      Grant[]
   auditEvents AuditEvent[]
@@ -297,6 +319,15 @@ model Request {
   registeredAt            DateTime  @default(now()) @map("registered_at")
   requesterArea           String?   @map("requester_area")
   requesterName           String?   @map("requester_name")
+  // Maestro de solicitantes (SOL-02/03): FK nullable para no afectar historicos;
+  // requesterName/requesterArea se conservan como copia (snapshot) del maestro.
+  requesterId             String?   @map("requester_id") @db.Uuid
+  // Eliminacion logica (SOL-01): conserva trazabilidad.
+  deletedAt               DateTime? @map("deleted_at")
+  deletedByUserId         String?   @map("deleted_by_user_id") @db.Uuid
+  // Cierre formal del proyecto (CIE-01): quien y cuando cerro la solicitud.
+  closedAt                DateTime? @map("closed_at")
+  closedByUserId          String?   @map("closed_by_user_id") @db.Uuid
   functionalOwner         String?   @map("functional_owner")
   targetDate              DateTime? @map("target_date")
   referenceUrl            String?   @map("reference_url")
@@ -323,6 +354,9 @@ model Request {
   updatedAt               DateTime  @updatedAt @map("updated_at")
 
   mainProcess         Process              @relation("RequestMainProcess", fields: [mainProcessId], references: [id], onDelete: Restrict)
+  requester           Requester?           @relation(fields: [requesterId], references: [id], onDelete: Restrict)
+  closures            ProjectClosure[]
+  projectDocuments    Document[]           @relation("DocumentRequest")
   participants        RequestParticipant[]
   triages             Triage[]
   priorityEvaluations PriorityEvaluation[]
@@ -928,16 +962,26 @@ model AssetProcessVisibility {
 /// NO vive aqui: vive en DocumentVersion (design §1.2 D4). `currentVersionId`
 /// apunta a la ultima version de contenido (ortogonal al status).
 model Document {
-  id               String   @id @default(uuid()) @db.Uuid
-  assetId          String   @map("asset_id") @db.Uuid
-  title            String
-  categoryCode     String?  @map("category_code")
-  status           String   @default("BORRADOR")
-  currentVersionId String?  @map("current_version_id") @db.Uuid
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  id                String    @id @default(uuid()) @db.Uuid
+  assetId           String    @map("asset_id") @db.Uuid
+  title             String
+  categoryCode      String?   @map("category_code")
+  status            String    @default("BORRADOR")
+  currentVersionId  String?   @map("current_version_id") @db.Uuid
+  // Flujo de aprobacion documental: quien envio a aprobacion y la ultima revision.
+  submittedAt       DateTime? @map("submitted_at")
+  submittedByUserId String?   @map("submitted_by_user_id") @db.Uuid
+  reviewedAt        DateTime? @map("reviewed_at")
+  reviewedByUserId  String?   @map("reviewed_by_user_id") @db.Uuid
+  reviewReason      String?   @map("review_reason")
+  // Proyecto (solicitud) al que pertenece el documento, p. ej. documentacion de
+  // cierre (CIE-01). Nullable: los documentos generales del activo no lo usan.
+  requestId         String?   @map("request_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   asset          Asset             @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  request        Request?          @relation("DocumentRequest", fields: [requestId], references: [id], onDelete: Restrict)
   versions       DocumentVersion[] @relation("DocumentVersions")
   currentVersion DocumentVersion?  @relation("DocumentCurrentVersion", fields: [currentVersionId], references: [id], onDelete: Restrict)
 
@@ -1153,32 +1197,32 @@ model AiAgentConfig {
 /// EXACTAMENTE uno (persona USER o area AREA): lo garantiza un CHECK en la
 /// migracion ademas del helper logico.
 model RecurringActivity {
-  id          String  @id @default(uuid()) @db.Uuid
-  title       String
-  description String?
+  id                String    @id @default(uuid()) @db.Uuid
+  title             String
+  description       String?
   /// Tipo de actividad (catalogo RECURRING_ACTIVITY_TYPE: REPORTE/VALIDACION/REVISION).
-  activityType String @map("activity_type")
+  activityType      String    @map("activity_type")
   /// Cadencia logica (Recurrence): SEMANAL/MENSUAL/TRIMESTRAL/SEMESTRAL/ANUAL.
-  cadence     String
+  cadence           String
   /// Cada cuantos periodos se repite (p. ej. cada 2 semanas). >= 1.
-  intervalCount Int    @default(1) @map("interval_count")
+  intervalCount     Int       @default(1) @map("interval_count")
   /// Primer dia objetivo / ancla de la cadencia (dia de calendario).
-  startDate   DateTime  @map("start_date") @db.Date
+  startDate         DateTime  @map("start_date") @db.Date
   /// Fin opcional de la recurrencia (inclusive). Null = sin fin.
-  endDate     DateTime? @map("end_date") @db.Date
+  endDate           DateTime? @map("end_date") @db.Date
   /// Dias de anticipacion propios; si null el motor usa el default de ENV.
-  anticipationDays Int? @map("anticipation_days")
+  anticipationDays  Int?      @map("anticipation_days")
   /// Tipo de responsable (ResponsibleKind): USER o AREA.
-  responsibleKind   String  @map("responsible_kind")
-  responsibleUserId String? @map("responsible_user_id") @db.Uuid
-  responsibleAreaId String? @map("responsible_area_id") @db.Uuid
+  responsibleKind   String    @map("responsible_kind")
+  responsibleUserId String?   @map("responsible_user_id") @db.Uuid
+  responsibleAreaId String?   @map("responsible_area_id") @db.Uuid
   /// Si false, el motor no genera nuevas ocurrencias (pausa sin borrar).
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  active            Boolean   @default(true)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  responsibleUser User? @relation("RecurringActivityResponsibleUser", fields: [responsibleUserId], references: [id], onDelete: Restrict)
-  responsibleArea Area? @relation("RecurringActivityResponsibleArea", fields: [responsibleAreaId], references: [id], onDelete: Restrict)
+  responsibleUser User?                         @relation("RecurringActivityResponsibleUser", fields: [responsibleUserId], references: [id], onDelete: Restrict)
+  responsibleArea Area?                         @relation("RecurringActivityResponsibleArea", fields: [responsibleAreaId], references: [id], onDelete: Restrict)
   occurrences     RecurringActivityOccurrence[]
 
   @@index([active])
@@ -1197,19 +1241,19 @@ model RecurringActivity {
 /// skipDuplicates para ser idempotente y no duplicar la ocurrencia de un mismo
 /// dia. `periodLabel` es una etiqueta legible del periodo (p. ej. "2024-W03").
 model RecurringActivityOccurrence {
-  id         String   @id @default(uuid()) @db.Uuid
-  activityId String   @map("activity_id") @db.Uuid
-  targetDate DateTime @map("target_date") @db.Date
-  status     String   @default("PENDIENTE")
-  completedAt      DateTime? @map("completed_at")
-  completedByUserId String?  @map("completed_by_user_id") @db.Uuid
-  completionComment String?  @map("completion_comment")
-  periodLabel      String?   @map("period_label")
+  id                String    @id @default(uuid()) @db.Uuid
+  activityId        String    @map("activity_id") @db.Uuid
+  targetDate        DateTime  @map("target_date") @db.Date
+  status            String    @default("PENDIENTE")
+  completedAt       DateTime? @map("completed_at")
+  completedByUserId String?   @map("completed_by_user_id") @db.Uuid
+  completionComment String?   @map("completion_comment")
+  periodLabel       String?   @map("period_label")
   /// Marca de envio del recordatorio por correo (FEAT-003). Null = aun no se
   /// envio; una vez puesto, el cron de recordatorio no reenvia (idempotencia).
-  reminderSentAt   DateTime? @map("reminder_sent_at")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  reminderSentAt    DateTime? @map("reminder_sent_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   activity    RecurringActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   completedBy User?             @relation("RecurringOccurrenceCompletedBy", fields: [completedByUserId], references: [id], onDelete: Restrict)
@@ -1221,4 +1265,44 @@ model RecurringActivityOccurrence {
   @@index([completedByUserId])
   @@index([activityId])
   @@map("recurring_activity_occurrences")
+}
+
+/// Notificacion por usuario (centro de notificaciones). Se genera por eventos reales
+/// del aplicativo; `link` es la ruta interna del elemento relacionado.
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String
+  title     String
+  message   String
+  link      String?
+  requestId String?   @map("request_id") @db.Uuid
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+/// Solicitud de cierre formal de un proyecto (CIE-01). Una fila por intento: si se
+/// rechaza se puede volver a solicitar. Conserva la evidencia del cierre.
+model ProjectClosure {
+  id                String    @id @default(uuid()) @db.Uuid
+  requestId         String    @map("request_id") @db.Uuid
+  status            String
+  requestedByUserId String    @map("requested_by_user_id") @db.Uuid
+  requestedAt       DateTime  @default(now()) @map("requested_at")
+  decidedByUserId   String?   @map("decided_by_user_id") @db.Uuid
+  decidedAt         DateTime? @map("decided_at")
+  decisionReason    String?   @map("decision_reason")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  request Request @relation(fields: [requestId], references: [id], onDelete: Restrict)
+
+  @@index([requestId, status])
+  @@map("project_closures")
 }

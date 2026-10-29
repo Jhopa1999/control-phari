@@ -22,6 +22,8 @@ import { PaginatedAuditEventsResponseDto } from './dto/paginated-audit-events-re
 export type AuditObjectType =
   | 'PROCESS'
   | 'AREA'
+  | 'REQUESTER'
+  | 'PROJECT_CLOSURE'
   | 'USER'
   | 'GRANT'
   | 'CATALOG_ITEM'

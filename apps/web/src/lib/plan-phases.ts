@@ -5,7 +5,7 @@ import {
   type ReorderPhases,
   type UpdatePhase,
 } from './api-client';
-import { PlanError } from './plan';
+import { PlanError, serverMessage } from './plan';
 
 function messageForStatus(status: number): string {
   switch (status) {
@@ -22,13 +22,13 @@ function messageForStatus(status: number): string {
   }
 }
 
-function toPhaseError(status: number | undefined): PlanError {
+function toPhaseError(status: number | undefined, body?: unknown): PlanError {
   if (status === undefined) {
     return new PlanError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new PlanError(messageForStatus(status), status);
+  return new PlanError(serverMessage(status, body) ?? messageForStatus(status), status);
 }
 
 /** Fases de un plan ordenadas por `order` (GET /plans/:planId/phases). */
@@ -38,7 +38,7 @@ export async function listPhases(planId: string): Promise<PlanPhase[]> {
       params: { path: { planId } },
     });
     if (error || !data) {
-      throw toPhaseError(response.status);
+      throw toPhaseError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -58,7 +58,7 @@ export async function createPhase(
       body: input,
     });
     if (error || !data) {
-      throw toPhaseError(response.status);
+      throw toPhaseError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -79,7 +79,7 @@ export async function updatePhase(
       { params: { path: { planId, phaseId } }, body: input },
     );
     if (error || !data) {
-      throw toPhaseError(response.status);
+      throw toPhaseError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -102,7 +102,7 @@ export async function reorderPhases(
       { params: { path: { planId } }, body: input },
     );
     if (error || !data) {
-      throw toPhaseError(response.status);
+      throw toPhaseError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -125,7 +125,7 @@ export async function deletePhase(
       { params: { path: { planId, phaseId } } },
     );
     if (error) {
-      throw toPhaseError(response.status);
+      throw toPhaseError(response.status, error);
     }
   } catch (err) {
     if (err instanceof PlanError) throw err;

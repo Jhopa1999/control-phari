@@ -1,4 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
+import { assertTaskWithinPhase, assertValidRange } from '../date-range';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import type { PlanPhaseModel } from '../../../generated/prisma/models/PlanPhase';
@@ -64,9 +65,16 @@ export class PhaseService {
     planId: string,
     dto: CreatePhaseDto,
   ): Promise<PlanPhaseResponseDto> {
-    const { mainProcessId } = await this.planState.requirePlanByIdInScope(
+    const { mainProcessId, requestState } = await this.planState.requirePlanByIdInScope(
       actor,
       planId,
+    );
+    this.planState.assertProjectOpen(requestState);
+
+    assertValidRange(
+      dto.startDate !== undefined ? new Date(dto.startDate) : null,
+      dto.endDate !== undefined ? new Date(dto.endDate) : null,
+      'fase',
     );
 
     let order = dto.order;
@@ -111,11 +119,31 @@ export class PhaseService {
     phaseId: string,
     dto: UpdatePhaseDto,
   ): Promise<PlanPhaseResponseDto> {
-    const { mainProcessId } = await this.planState.requirePlanByIdInScope(
+    const { mainProcessId, requestState } = await this.planState.requirePlanByIdInScope(
       actor,
       planId,
     );
+    this.planState.assertProjectOpen(requestState);
     const phase = await this.requirePhase(planId, phaseId);
+
+    const nextStart =
+      dto.startDate !== undefined ? new Date(dto.startDate) : phase.startDate;
+    const nextEnd =
+      dto.endDate !== undefined ? new Date(dto.endDate) : phase.endDate;
+    assertValidRange(nextStart, nextEnd, 'fase');
+    if (dto.startDate !== undefined || dto.endDate !== undefined) {
+      // PLA-01: las tareas existentes deben seguir dentro del nuevo rango.
+      const tasks = await this.prisma.task.findMany({
+        where: { phaseId },
+        select: { title: true, startDate: true, endDate: true },
+      });
+      for (const t of tasks) {
+        assertTaskWithinPhase(
+          { start: t.startDate, end: t.endDate, title: t.title },
+          { name: dto.name ?? phase.name, startDate: nextStart, endDate: nextEnd },
+        );
+      }
+    }
 
     const data: Prisma.PlanPhaseUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
@@ -152,10 +180,11 @@ export class PhaseService {
     planId: string,
     dto: ReorderPhasesDto,
   ): Promise<PlanPhaseResponseDto[]> {
-    const { plan, mainProcessId } = await this.planState.requirePlanByIdInScope(
+    const { plan, mainProcessId, requestState } = await this.planState.requirePlanByIdInScope(
       actor,
       planId,
     );
+    this.planState.assertProjectOpen(requestState);
 
     const phases = await this.prisma.planPhase.findMany({
       where: { planId },
@@ -230,10 +259,11 @@ export class PhaseService {
     planId: string,
     phaseId: string,
   ): Promise<void> {
-    const { mainProcessId } = await this.planState.requirePlanByIdInScope(
+    const { mainProcessId, requestState } = await this.planState.requirePlanByIdInScope(
       actor,
       planId,
     );
+    this.planState.assertProjectOpen(requestState);
     const phase = await this.requirePhase(planId, phaseId);
 
     const taskCount = await this.prisma.task.count({ where: { phaseId } });

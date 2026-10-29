@@ -27,6 +27,7 @@ import { ApprovalError, createApproval, listPendingApproval } from '@/lib/approv
 import { formatDate } from '@/lib/format';
 import { DevolverDialog } from './devolver-dialog';
 import { PlanAuthorizationSection } from './plan-authorization-section';
+import { PendingReviewsSections } from './pending-reviews-sections';
 import { focusTargetAfterRemoval } from './row-focus';
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
@@ -228,7 +229,9 @@ export function RevisionView(): React.ReactElement {
                 return (
                   <TableRow key={req.id}>
                     <TableCell className="min-w-56 max-w-[28rem]">
-                      <CellTitle>{req.title}</CellTitle>
+                      <CellTitle href={allowedModules.has('requests') ? `/demanda/solicitudes/${encodeURIComponent(req.id)}` : undefined}>
+                        {req.title}
+                      </CellTitle>
                     </TableCell>
                     <TableCell>
                       <PriorityBadge variant="compact" score={req.currentScore} label={req.priorityLabel} />
@@ -278,6 +281,9 @@ export function RevisionView(): React.ReactElement {
       {/* Autorización de planes: se añade a la cola de compromiso. Oculta para
           quien no tiene el módulo review. */}
       <PlanAuthorizationSection />
+
+      {/* Documentación y cierres de proyecto por aprobar (APR-01 / CIE-01). */}
+      <PendingReviewsSections />
 
       <DevolverDialog
         kind="solicitud"

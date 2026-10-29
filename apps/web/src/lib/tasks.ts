@@ -6,7 +6,7 @@ import {
   type UpdateTask,
   type UpdateTaskStatus,
 } from './api-client';
-import { PlanError } from './plan';
+import { PlanError, serverMessage } from './plan';
 
 function messageForStatus(status: number): string {
   switch (status) {
@@ -23,13 +23,13 @@ function messageForStatus(status: number): string {
   }
 }
 
-function toTaskError(status: number | undefined): PlanError {
+function toTaskError(status: number | undefined, body?: unknown): PlanError {
   if (status === undefined) {
     return new PlanError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new PlanError(messageForStatus(status), status);
+  return new PlanError(serverMessage(status, body) ?? messageForStatus(status), status);
 }
 
 /**
@@ -43,7 +43,7 @@ export async function listPlanTasks(planId: string): Promise<Task[]> {
       params: { path: { planId } },
     });
     if (error || !data) {
-      throw toTaskError(response.status);
+      throw toTaskError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -59,7 +59,7 @@ export async function getTask(id: string): Promise<Task> {
       params: { path: { id } },
     });
     if (error || !data) {
-      throw toTaskError(response.status);
+      throw toTaskError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -79,7 +79,7 @@ export async function createTask(
       { params: { path: { phaseId } }, body: input },
     );
     if (error || !data) {
-      throw toTaskError(response.status);
+      throw toTaskError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -99,7 +99,7 @@ export async function updateTask(
       body: input,
     });
     if (error || !data) {
-      throw toTaskError(response.status);
+      throw toTaskError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -117,7 +117,7 @@ export async function deleteTask(id: string): Promise<void> {
       params: { path: { id } },
     });
     if (error) {
-      throw toTaskError(response.status);
+      throw toTaskError(response.status, error);
     }
   } catch (err) {
     if (err instanceof PlanError) throw err;
@@ -139,7 +139,7 @@ export async function updateTaskStatus(
       body: input,
     });
     if (error || !data) {
-      throw toTaskError(response.status);
+      throw toTaskError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -162,7 +162,7 @@ export async function acceptTask(
       body: input,
     });
     if (error || !data) {
-      throw toTaskError(response.status);
+      throw toTaskError(response.status, error);
     }
     return data;
   } catch (err) {

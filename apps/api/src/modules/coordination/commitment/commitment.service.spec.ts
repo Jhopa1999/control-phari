@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
@@ -29,8 +29,13 @@ function createMocks() {
   const auditRecord = audit.record as unknown as jest.Mock;
   const scope = new CoordinationScopeService(prisma);
   const workflow = new WorkflowStateService();
-  const service = new CommitmentService(prisma, audit, scope, workflow);
-  return { prismaObj, auditRecord, service };
+  const notifications = {
+    notify: jest.fn(),
+    areaHeadsForProcess: jest.fn().mockResolvedValue([]),
+    processLeaders: jest.fn().mockResolvedValue([]),
+  };
+  const service = new CommitmentService(prisma, audit, scope, workflow, notifications as never);
+  return { prismaObj, auditRecord, service, notifications };
 }
 
 function integrante(scoped: string[] = ['p1']): CurrentActor {
@@ -100,7 +105,7 @@ describe('CommitmentService', () => {
   });
 
   it('sourceMeetingId solo relaciona: no crea nada automatico (§11 D7)', async () => {
-    m.prismaObj.meeting.findFirst.mockResolvedValue({ id: 'mt1' });
+    m.prismaObj.meeting.findFirst.mockResolvedValue({ id: 'mt1', state: 'BORRADOR', processId: 'p1' });
     m.prismaObj.commitment.create.mockImplementation(({ data }: any) =>
       Promise.resolve(commitmentRow(data)),
     );
@@ -113,6 +118,44 @@ describe('CommitmentService', () => {
     expect(res.sourceMeetingId).toBe('11111111-1111-1111-1111-111111111111');
     // Solo la reunion se LEE (validacion de visibilidad), nunca se muta.
     expect(m.prismaObj.meeting.findFirst).toHaveBeenCalled();
+  });
+
+  describe('acta de origen', () => {
+    const MT = '11111111-1111-1111-1111-111111111111';
+
+    it('no se agregan compromisos a un acta cerrada -> 409', async () => {
+      m.prismaObj.meeting.findFirst.mockResolvedValue({ id: 'mt1', state: 'COMPLETADO', processId: 'p1' });
+      await expect(
+        m.service.create(integrante(), { processId: 'p1', title: 'X', dueDate: '2025-03-20', sourceMeetingId: MT }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(m.prismaObj.commitment.create).not.toHaveBeenCalled();
+    });
+
+    it('el compromiso debe ser del mismo proceso que el acta -> 400', async () => {
+      m.prismaObj.meeting.findFirst.mockResolvedValue({ id: 'mt1', state: 'BORRADOR', processId: 'p2' });
+      await expect(
+        m.service.create(integrante(), { processId: 'p1', title: 'X', dueDate: '2025-03-20', sourceMeetingId: MT }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('notifica al asignado y al responsable al crear', async () => {
+      m.prismaObj.commitment.create.mockImplementation(({ data }: any) =>
+        Promise.resolve(commitmentRow(data)),
+      );
+      await m.service.create(integrante(), {
+        processId: 'p1', title: 'X', dueDate: '2025-03-20', assignedUserId: 'ua', responsibleUserId: 'ur',
+      });
+      expect(m.notifications.notify).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'COMMITMENT_ASSIGNED', userIds: ['ua', 'ur'] }),
+      );
+    });
+
+    it('no se elimina un compromiso de un acta cerrada -> 409', async () => {
+      m.prismaObj.commitment.findFirst.mockResolvedValue(commitmentRow({ sourceMeetingId: 'mt1' }));
+      m.prismaObj.meeting.findFirst.mockResolvedValue({ state: 'COMPLETADO' });
+      await expect(m.service.remove(integrante(), 'c1')).rejects.toBeInstanceOf(ConflictException);
+      expect(m.prismaObj.commitment.delete).not.toHaveBeenCalled();
+    });
   });
 
   describe('transition (grafo igual que Issue)', () => {
@@ -198,7 +241,7 @@ describe('CommitmentService', () => {
     });
 
     it('crea con todos los campos opcionales presentes', async () => {
-      m.prismaObj.meeting.findFirst.mockResolvedValue({ id: 'mt1' });
+      m.prismaObj.meeting.findFirst.mockResolvedValue({ id: 'mt1', state: 'BORRADOR', processId: 'p1' });
       m.prismaObj.request.findFirst.mockResolvedValue({ id: 'r1' });
       m.prismaObj.commitment.create.mockImplementation(({ data }: any) =>
         Promise.resolve(commitmentRow(data)),

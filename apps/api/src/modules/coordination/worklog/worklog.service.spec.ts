@@ -280,7 +280,7 @@ describe('WorklogService', () => {
       });
       const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0]
         .where;
-      expect(where.AND).toContainEqual({ mainProcessId: { in: ['p1'] } });
+      expect(where.AND).toContainEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
     });
 
     it('(HIGH-2) projectRequestId de un proceso sin grant -> 404', async () => {

@@ -79,6 +79,19 @@ export class PlanDocumentTaskDto {
   @IsBoolean()
   isMilestone!: boolean;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Identificador del usuario responsable (opcional). Debe corresponder a un usuario activo.',
+    maxLength: 255,
+  })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(255)
+  responsibleIdentifier?: string | null;
+
   @ApiPropertyOptional({ type: Number, nullable: true, description: 'Estimacion en horas (hito => 0).', minimum: 0 })
   @IsOptional()
   @IsInt()

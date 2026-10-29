@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -26,6 +28,8 @@ import { CurrentActor } from '../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../auth/current-actor';
 import { CurrentUserGuard } from '../auth/current-user.guard';
 import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RoleCode } from '../auth/role-code';
 
 /**
  * API REST de Request (modulo `requests`, design §3.3). Accesible a los 3 roles
@@ -73,6 +77,22 @@ export class RequestController {
     @Body() dto: CreateRequestDto,
   ) {
     return this.requestService.create(actor, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO)
+  @ApiOperation({ summary: 'Elimina lógicamente una solicitud (JEFE_AREA/LIDER_PROCESO en su alcance).' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 204, description: 'Solicitud eliminada (lógicamente).' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Solicitud no encontrada.' })
+  @ApiResponse({ status: 409, description: 'La solicitud está en ejecución o cerrada.' })
+  remove(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.requestService.remove(actor, id);
   }
 
   @Patch(':id')

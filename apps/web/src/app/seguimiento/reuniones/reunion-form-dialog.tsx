@@ -181,9 +181,10 @@ export function ReunionFormDialog({
         onCloseAutoFocus={handleCloseAutoFocus}
       >
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Editar reunión' : 'Nueva reunión'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Editar acta' : 'Nueva acta de reunión'}</DialogTitle>
           <DialogDescription>
-            Registra la reunión y sus participantes. La reunión inicia en estado Borrador.
+            Registra los datos de la reunión, quiénes asistieron, la agenda y lo decidido. Los
+            compromisos se agregan desde el acta.
           </DialogDescription>
         </DialogHeader>
 
@@ -301,7 +302,7 @@ export function ReunionFormDialog({
               <Textarea value={agenda} onChange={(e) => setAgenda(e.target.value)} />
             </Field>
 
-            <Field id="reu-decisions" label="Decisiones">
+            <Field id="reu-decisions" label="Decisiones y acuerdos">
               <Textarea value={decisions} onChange={(e) => setDecisions(e.target.value)} />
             </Field>
 
@@ -322,7 +323,7 @@ export function ReunionFormDialog({
               Cancelar
             </Button>
             <Button type="submit" loading={submitting}>
-              {submitting ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear reunión'}
+              {submitting ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear acta'}
             </Button>
           </DialogFooter>
         </form>

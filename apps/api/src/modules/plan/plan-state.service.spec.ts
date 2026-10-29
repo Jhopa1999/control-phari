@@ -119,7 +119,7 @@ describe('PlanStateService', () => {
       prisma.plan.findFirst.mockResolvedValue({ id: 'plan1', requestId: 'r1' });
       await service.requirePlanInScope(jefe, 'r1');
       const where = prisma.request.findFirst.mock.calls[0][0].where;
-      expect(where.AND).toContainEqual({});
+      expect(where.AND).toContainEqual({ deletedAt: null });
     });
   });
 

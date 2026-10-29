@@ -184,7 +184,7 @@ describe('ApprovalService', () => {
     const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
     expect(where.AND).toEqual([
       { operationalState: RequestState.BACKLOG_PRIORIZADO },
-      { mainProcessId: { in: ['p1'] } },
+      { deletedAt: null, mainProcessId: { in: ['p1'] } },
     ]);
   });
 
@@ -194,7 +194,7 @@ describe('ApprovalService', () => {
     const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
     expect(where.AND).toEqual([
       { operationalState: RequestState.BACKLOG_PRIORIZADO },
-      {},
+      { deletedAt: null },
     ]);
   });
 });

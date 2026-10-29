@@ -67,9 +67,9 @@ export class RequestStateService {
    */
   private scopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
     if (actor.isJefeArea) {
-      return {};
+      return { deletedAt: null };
     }
-    return { mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+    return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
   }
 
   /**
@@ -105,6 +105,7 @@ export class RequestStateService {
       id: request.id,
       title: request.title,
       registeredAt: request.registeredAt,
+      requesterId: request.requesterId,
       requesterArea: request.requesterArea,
       requesterName: request.requesterName,
       functionalOwner: request.functionalOwner,

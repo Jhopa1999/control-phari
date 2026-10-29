@@ -153,7 +153,7 @@ describe('RequestService', () => {
       (m.prismaObj.request as any).findMany.mockResolvedValue([]);
       await service.findMany(jefe(), {});
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
-      expect(where).toEqual({});
+      expect(where).toEqual({ deletedAt: null });
     });
 
     it('no-jefe: scopeWhere filtra por scopedProcessIds', async () => {
@@ -185,7 +185,7 @@ describe('RequestService', () => {
       const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0].where;
       expect(where.AND).toEqual([
         { id: 'r1' },
-        { mainProcessId: { in: ['p1'] } },
+        { deletedAt: null, mainProcessId: { in: ['p1'] } },
       ]);
     });
 

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -22,6 +23,7 @@ import { UpdateDocumentDto } from './dto/update-document.dto';
 import { CreateDocumentVersionDto } from './dto/create-document-version.dto';
 import { ListDocumentsDto } from './dto/list-documents.dto';
 import { ChangeDocumentStatusDto } from './dto/change-document-status.dto';
+import { ReviewDocumentDto } from './dto/review-document.dto';
 import { DocumentResponseDto } from './dto/document-response.dto';
 import { DocumentVersionResponseDto } from './dto/document-version-response.dto';
 import { DocumentContentResponseDto } from './dto/document-content-response.dto';
@@ -55,6 +57,15 @@ export class DocumentController {
     @Query() filters: ListDocumentsDto,
   ) {
     return this.documentService.list(actor, filters);
+  }
+
+  @Get('pending-approval')
+  @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO)
+  @ApiOperation({ summary: 'Documentos pendientes de aprobación dentro del alcance.' })
+  @ApiResponse({ status: 200, description: 'Documentos pendientes.', type: [DocumentResponseDto] })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  pendingApproval(@CurrentActor() actor: CurrentActorType) {
+    return this.documentService.pendingApproval(actor);
   }
 
   @Post()
@@ -157,6 +168,40 @@ export class DocumentController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.documentService.getCurrentContent(actor, id);
+  }
+
+  @Post(':id/submit-approval')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Envía el documento a aprobación (líder/jefe).' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Documento pendiente de aprobación.', type: DocumentResponseDto })
+  @ApiResponse({ status: 400, description: 'Transición no permitida.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Documento fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El proyecto está cerrado.' })
+  submitForApproval(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.documentService.submitForApproval(actor, id);
+  }
+
+  @Post(':id/review')
+  @HttpCode(200)
+  @Roles(RoleCode.JEFE_AREA)
+  @ApiOperation({ summary: 'Aprueba o rechaza un documento pendiente (solo JEFE_AREA).' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ type: ReviewDocumentDto })
+  @ApiResponse({ status: 200, description: 'Documento revisado.', type: DocumentResponseDto })
+  @ApiResponse({ status: 400, description: 'Transición no permitida o falta el motivo del rechazo.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Documento fuera de alcance.' })
+  review(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReviewDocumentDto,
+  ) {
+    return this.documentService.review(actor, id, dto);
   }
 
   @Post(':id/status')

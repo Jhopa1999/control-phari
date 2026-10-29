@@ -24,6 +24,8 @@ import { runApiTool } from './shared.js';
 const OBJECT_TYPES = [
   'PROCESS',
   'AREA',
+  'REQUESTER',
+  'PROJECT_CLOSURE',
   'USER',
   'GRANT',
   'CATALOG_ITEM',

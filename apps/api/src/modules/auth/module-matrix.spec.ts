@@ -5,7 +5,7 @@ import {
 } from './module-matrix';
 import { RoleCode } from './role-code';
 describe('MODULE_MATRIX / allowedModulesFor', () => {
-  it('expone exactamente las 26 claves (21 de design 3.3 + systemSettings + areas + processesAdmin + aiSettings + recurring)', () => {
+  it('expone exactamente las 27 claves (21 de design 3.3 + systemSettings + areas + processesAdmin + requesters + aiSettings + recurring)', () => {
     expect(MODULE_KEYS).toEqual([
       'demandOverview',
       'dashboard',
@@ -31,6 +31,7 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
       'systemSettings',
       'areas',
       'processesAdmin',
+      'requesters',
       'aiSettings',
       'recurring',
     ]);
@@ -63,6 +64,7 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
       'systemSettings',
       'areas',
       'processesAdmin',
+      'requesters',
       'aiSettings',
     ]);
   });

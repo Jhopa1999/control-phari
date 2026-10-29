@@ -206,8 +206,8 @@ export class CapacityService {
     requestId: string,
   ): Promise<void> {
     const scopeWhere: Prisma.RequestWhereInput = actor.isJefeArea
-      ? {}
-      : { mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+      ? { deletedAt: null }
+      : { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
 
     const request = await this.prisma.request.findFirst({
       where: { AND: [{ id: requestId }, scopeWhere] },

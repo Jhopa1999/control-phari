@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { BrandMark } from '@/components/brand';
+import { NotificationBell } from '@/components/notification-bell';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -53,7 +54,8 @@ export function MobileNav(): React.ReactElement {
       </Sheet>
       <BrandMark />
       <span className="truncate text-sm font-semibold">Portal del área</span>
-      <ThemeToggle className="ml-auto" />
+      <NotificationBell className="ml-auto" />
+      <ThemeToggle />
     </header>
   );
 }

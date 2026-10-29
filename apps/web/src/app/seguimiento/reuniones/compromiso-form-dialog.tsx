@@ -48,6 +48,11 @@ interface CompromisoFormDialogProps {
   processes: Process[];
   people: CoordinationPerson[];
   meetings: Meeting[];
+  /**
+   * Acta desde la que se registra el compromiso: fija el proceso y el acta de
+   * origen (no se pueden cambiar en el formulario).
+   */
+  fixedMeeting?: Meeting | null;
   submitting: boolean;
   /** Error del backend; se conserva ante fallo (AC-031). */
   errorMessage: string | null;
@@ -84,6 +89,7 @@ export function CompromisoFormDialog({
   processes,
   people,
   meetings,
+  fixedMeeting,
   submitting,
   errorMessage,
   onSubmit,
@@ -120,17 +126,29 @@ export function CompromisoFormDialog({
       setExpectedResult(editing.expectedResult ?? '');
       setBlockers(editing.blockers ?? '');
     } else {
-      setProcessId('');
+      setProcessId(fixedMeeting?.processId ?? '');
       setTitle('');
       // Hoy en el calendario local del usuario (design §7.9, regla 2).
       setDueDate(localDateInputValue());
       setAssignedUserId('');
-      setResponsibleUserId('');
-      setSourceMeetingId('');
+      setResponsibleUserId(fixedMeeting?.responsibleUserId ?? '');
+      setSourceMeetingId(fixedMeeting?.id ?? '');
       setExpectedResult('');
       setBlockers('');
     }
-  }, [open, editing]);
+  }, [open, editing, fixedMeeting]);
+
+  // Actas a las que se puede ligar: abiertas y del mismo proceso (más la actual).
+  const meetingOptions = React.useMemo(
+    () =>
+      meetings.filter(
+        (m) =>
+          m.id === (editing?.sourceMeetingId ?? '') ||
+          (!m.closed && (!processId || m.processId === processId)),
+      ),
+    [meetings, editing, processId],
+  );
+  const lockedToMeeting = Boolean(fixedMeeting);
 
   function clearError(key: FieldKey) {
     setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
@@ -173,8 +191,9 @@ export function CompromisoFormDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Editar compromiso' : 'Nuevo compromiso'}</DialogTitle>
           <DialogDescription>
-            Un compromiso tiene vencimiento. La reunión de origen es opcional y solo relaciona; no
-            se crea automáticamente desde reuniones.
+            {lockedToMeeting
+              ? 'Registra un compromiso acordado en esta reunión, con su responsable y vencimiento.'
+              : 'Un compromiso tiene vencimiento. Puedes ligarlo a un acta abierta o registrarlo sin acta.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -183,7 +202,7 @@ export function CompromisoFormDialog({
             <RequiredHint />
             <Field id="com-process" label="Proceso" required={!isEdit} error={fieldErrors.processId}>
               {(control) =>
-                isEdit ? (
+                isEdit || lockedToMeeting ? (
                   <Input {...control} readOnly disabled value={processName(processId)} />
                 ) : (
                   <Select
@@ -276,18 +295,29 @@ export function CompromisoFormDialog({
               </Field>
             </div>
 
-            <Field id="com-meeting" label="Reunión de origen">
-              {(control) => (
+            <Field
+              id="com-meeting"
+              label="Acta de origen"
+              help={lockedToMeeting ? 'El compromiso queda registrado en esta acta.' : 'Solo actas abiertas del mismo proceso.'}
+            >
+              {(control) => lockedToMeeting && fixedMeeting ? (
+                <Input
+                  {...control}
+                  readOnly
+                  disabled
+                  value={`${fixedMeeting.title} (${formatDateOnly(fixedMeeting.meetingDate)})`}
+                />
+              ) : (
                 <Select
                   value={sourceMeetingId || SIN_VALOR}
                   onValueChange={(v) => setSourceMeetingId(v === SIN_VALOR ? '' : v)}
                 >
                   <SelectTrigger {...control}>
-                    <SelectValue placeholder="Sin reunión" />
+                    <SelectValue placeholder="Sin acta" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={SIN_VALOR}>Sin reunión</SelectItem>
-                    {meetings.map((m) => (
+                    <SelectItem value={SIN_VALOR}>Sin acta</SelectItem>
+                    {meetingOptions.map((m) => (
                       <SelectItem key={m.id} value={m.id}>
                         {`${m.title} (${formatDateOnly(m.meetingDate)})`}
                       </SelectItem>

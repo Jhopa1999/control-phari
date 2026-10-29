@@ -27,6 +27,14 @@ export class RequestResponseDto {
   @ApiProperty({ type: String, nullable: true, description: 'Area solicitante.' })
   requesterArea!: string | null;
 
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Solicitante del maestro (null en solicitudes históricas).',
+  })
+  requesterId!: string | null;
+
   @ApiProperty({ type: String, nullable: true, description: 'Nombre del solicitante.' })
   requesterName!: string | null;
 

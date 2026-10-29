@@ -11,6 +11,8 @@ import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 export const OBJECT_TYPES = [
   'PROCESS',
   'AREA',
+  'REQUESTER',
+  'PROJECT_CLOSURE',
   'USER',
   'GRANT',
   'CATALOG_ITEM',

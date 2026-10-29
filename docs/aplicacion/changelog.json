@@ -188,6 +188,36 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Se documento la fase 3 de actividades recurrentes: avisos por correo al nacer la ocurrencia y cron de recordatorio idempotente (columna reminder_sent_at, migracion occurrence_reminder_sent_at, degradan sin SMTP), el endpoint GET /recurring-activities/compliance (agregados a tiempo/destiempo/vencidas por actividad y responsable) y la pestana Cumplimiento de la pantalla /actividades-recurrentes."
+    },
+    {
+      "timestamp": "2026-10-28T23:30:00Z",
+      "trigger_file": "apps/api/src/modules/plan/plan.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md"
+      ],
+      "summary": "Se documentaron los ajustes de solicitudes (maestro de solicitantes, eliminacion logica, area automatica), validaciones de fechas de fases y tareas, importacion y exportacion Excel del plan, bloque de envio al final y enlaces en Aprobaciones."
+    },
+    {
+      "timestamp": "2026-10-29T00:30:00Z",
+      "trigger_file": "apps/api/src/modules/closure/closure.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Se documentaron el centro de notificaciones (modulo notification, modelo Notification y campana en la barra superior), la aprobacion documental (estados PENDIENTE_APROBACION/RECHAZADO, endpoints submit-approval/review/pending-approval, Document.requestId) y el cierre formal de proyectos (modulo closure, modelo ProjectClosure, Request.closedAt/closedByUserId, bloqueos tras el cierre, reapertura y panel en la ficha), con sus tres migraciones."
+    },
+    {
+      "timestamp": "2026-10-29T04:00:00Z",
+      "trigger_file": "apps/web/src/lib/navigation.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Se documento la unificacion de Reuniones y compromisos: la reunion es el acta (estados abierta/cerrada/archivada sobre RECORD_STATE, POST /meetings/:id/close y /reopen, compromisos del acta en la respuesta), reglas de acta cerrada, notificacion COMMITMENT_ASSIGNED y la pantalla unica /seguimiento/reuniones con pestanas Actas y Compromisos (la ruta /seguimiento/compromisos redirige)."
     }
   ]
 }

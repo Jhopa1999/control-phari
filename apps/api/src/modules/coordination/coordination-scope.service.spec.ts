@@ -115,10 +115,11 @@ describe('CoordinationScopeService', () => {
 
   describe('requestVisibilityWhere (HIGH-2, scopedProcessIds)', () => {
     it('jefe -> {}', () => {
-      expect(scope.requestVisibilityWhere(jefe())).toEqual({});
+      expect(scope.requestVisibilityWhere(jefe())).toEqual({ deletedAt: null });
     });
     it('no-jefe -> mainProcessId in scopedProcessIds (TODOS los grants)', () => {
       expect(scope.requestVisibilityWhere(integranteConProceso('p1'))).toEqual({
+        deletedAt: null,
         mainProcessId: { in: ['p1'] },
       });
     });

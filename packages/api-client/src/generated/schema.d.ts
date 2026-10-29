@@ -212,79 +212,60 @@ export interface paths {
         patch: operations["AreaController_update"];
         trace?: never;
     };
-    "/processes": {
+    "/requesters": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Lista procesos (jefe: todos; no-jefe: solo su alcance). */
-        get: operations["ProcessController_findMany"];
+        /** Lista solicitantes (filtros: active, areaId). */
+        get: operations["RequesterController_findMany"];
         put?: never;
-        /** Crea un proceso (ADMIN o JEFE_AREA). */
-        post: operations["ProcessController_create"];
+        /** Crea un solicitante asociado a un área (ADMIN/JEFE_AREA). */
+        post: operations["RequesterController_create"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/processes/{id}": {
+    "/requesters/{id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Obtiene un proceso por id (404 si fuera de alcance). */
-        get: operations["ProcessController_findOne"];
+        /** Consulta un solicitante por id. */
+        get: operations["RequesterController_findOne"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Edita name/framework/active/sortOrder (ADMIN o JEFE_AREA). */
-        patch: operations["ProcessController_update"];
+        /** Edita o activa/inactiva un solicitante (ADMIN/JEFE_AREA). */
+        patch: operations["RequesterController_update"];
         trace?: never;
     };
-    "/users": {
+    "/notifications": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Lista todos los usuarios (solo JEFE_AREA). */
-        get: operations["UserController_findMany"];
+        /** Notificaciones del usuario actual y contador de no leídas. */
+        get: operations["NotificationController_list"];
         put?: never;
-        /** Crea una identidad funcional (solo JEFE_AREA). */
-        post: operations["UserController_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/users/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Obtiene un usuario con sus grants (solo JEFE_AREA). */
-        get: operations["UserController_findOne"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Edita name/active (solo JEFE_AREA). */
-        patch: operations["UserController_update"];
-        trace?: never;
-    };
-    "/users/{id}/invite": {
+    "/notifications/read-all": {
         parameters: {
             query?: never;
             header?: never;
@@ -293,33 +274,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Emite y envia la invitacion de activacion para un usuario (solo JEFE_AREA). El reenvio invalida el enlace previo. */
-        post: operations["UserInviteController_invite"];
+        /** Marca todas las notificaciones del usuario como leídas. */
+        post: operations["NotificationController_markAllRead"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/grants": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista grants del alcance del actor (ADMIN ve todos). */
-        get: operations["GrantController_findMany"];
-        put?: never;
-        /** Concede un grant (segun jerarquia y alcance del actor). */
-        post: operations["GrantController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/grants/{id}": {
+    "/notifications/{id}/read": {
         parameters: {
             query?: never;
             header?: never;
@@ -328,9 +291,78 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Marca una notificación propia como leída. */
+        post: operations["NotificationController_markRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/closures/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cierres de proyecto pendientes de aprobación (alcance del actor). */
+        get: operations["ClosureController_pending"];
+        put?: never;
         post?: never;
-        /** Revoca un grant (soft; segun jerarquia y alcance del actor). */
-        delete: operations["GrantController_revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/closure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Estado del cierre: validaciones de tareas y documentación, e historial. */
+        get: operations["ClosureController_status"];
+        put?: never;
+        /** Solicita el cierre del proyecto (tareas terminadas y documentación aprobada). */
+        post: operations["ClosureController_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/closure/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aprueba (-> Cerrado) o rechaza la solicitud de cierre (solo JEFE_AREA). */
+        post: operations["ClosureController_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reabre un proyecto cerrado (solo JEFE_AREA, con motivo). */
+        post: operations["ClosureController_reopen"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -400,7 +432,8 @@ export interface paths {
         get: operations["RequestController_findOne"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Elimina lógicamente una solicitud (JEFE_AREA/LIDER_PROCESO en su alcance). */
+        delete: operations["RequestController_remove"];
         options?: never;
         head?: never;
         /** Edita la ficha (no el estado); conserva fechas iniciales (BR-017). */
@@ -548,6 +581,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/documents/pending-approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Documentos pendientes de aprobación dentro del alcance. */
+        get: operations["DocumentController_pendingApproval"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/documents/{id}": {
         parameters: {
             query?: never;
@@ -618,6 +668,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/documents/{id}/submit-approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Envía el documento a aprobación (líder/jefe). */
+        post: operations["DocumentController_submitForApproval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aprueba o rechaza un documento pendiente (solo JEFE_AREA). */
+        post: operations["DocumentController_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/documents/{id}/status": {
         parameters: {
             query?: never;
@@ -630,6 +714,130 @@ export interface paths {
         /** Cambia el estado del documento (transicion valida; lider/jefe). */
         post: operations["DocumentController_changeStatus"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/processes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista procesos (jefe: todos; no-jefe: solo su alcance). */
+        get: operations["ProcessController_findMany"];
+        put?: never;
+        /** Crea un proceso (ADMIN o JEFE_AREA). */
+        post: operations["ProcessController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/processes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtiene un proceso por id (404 si fuera de alcance). */
+        get: operations["ProcessController_findOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita name/framework/active/sortOrder (ADMIN o JEFE_AREA). */
+        patch: operations["ProcessController_update"];
+        trace?: never;
+    };
+    "/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista todos los usuarios (solo JEFE_AREA). */
+        get: operations["UserController_findMany"];
+        put?: never;
+        /** Crea una identidad funcional (solo JEFE_AREA). */
+        post: operations["UserController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtiene un usuario con sus grants (solo JEFE_AREA). */
+        get: operations["UserController_findOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita name/active (solo JEFE_AREA). */
+        patch: operations["UserController_update"];
+        trace?: never;
+    };
+    "/users/{id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Emite y envia la invitacion de activacion para un usuario (solo JEFE_AREA). El reenvio invalida el enlace previo. */
+        post: operations["UserInviteController_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista grants del alcance del actor (ADMIN ve todos). */
+        get: operations["GrantController_findMany"];
+        put?: never;
+        /** Concede un grant (segun jerarquia y alcance del actor). */
+        post: operations["GrantController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/grants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoca un grant (soft; segun jerarquia y alcance del actor). */
+        delete: operations["GrantController_revoke"];
         options?: never;
         head?: never;
         patch?: never;
@@ -786,6 +994,57 @@ export interface paths {
         get: operations["PlanController_exportPlan"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{requestId}/plan/export-excel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exporta el plan a un archivo Excel (.xlsx). */
+        get: operations["PlanController_exportExcel"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{requestId}/plan/template-excel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Descarga la plantilla Excel (.xlsx) de planificación. */
+        get: operations["PlanController_templateExcel"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{requestId}/plan/import-excel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Importa el plan desde un Excel (.xlsx); reemplaza el contenido actual. */
+        post: operations["PlanController_importExcel"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1295,12 +1554,46 @@ export interface paths {
         get: operations["MeetingController_get"];
         put?: never;
         post?: never;
-        /** Borra una reunion (cascade de participantes). */
+        /** Borra un acta abierta sin compromisos (cascade de participantes). */
         delete: operations["MeetingController_remove"];
         options?: never;
         head?: never;
         /** Edita una reunion (incluye set de participantes). */
         patch: operations["MeetingController_update"];
+        trace?: never;
+    };
+    "/meetings/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cierra el acta (responsable, líder del proceso o jefe). */
+        post: operations["MeetingController_close"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meetings/{id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reabre un acta cerrada (líder del proceso o jefe). */
+        post: operations["MeetingController_reopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/commitments": {
@@ -1769,6 +2062,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/recurring-activities/occurrences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista ocurrencias por alcance (mine por defecto; all jefe/admin). */
+        get: operations["OccurrenceController_findAll"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/occurrences/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una ocurrencia dentro de alcance. */
+        get: operations["OccurrenceController_findOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/occurrences/{id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Toma una ocurrencia (PENDIENTE -> EN_CURSO). */
+        post: operations["OccurrenceController_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/occurrences/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Completa una ocurrencia (comentario opcional). */
+        post: operations["OccurrenceController_complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recurring-activities/run-generation": {
         parameters: {
             query?: never;
@@ -1838,74 +2199,6 @@ export interface paths {
         head?: never;
         /** Edita una definicion (datos, responsable, pausa). */
         patch: operations["RecurringActivityController_update"];
-        trace?: never;
-    };
-    "/recurring-activities/occurrences": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista ocurrencias por alcance (mine por defecto; all jefe/admin). */
-        get: operations["OccurrenceController_findAll"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/recurring-activities/occurrences/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Detalle de una ocurrencia dentro de alcance. */
-        get: operations["OccurrenceController_findOne"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/recurring-activities/occurrences/{id}/start": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Toma una ocurrencia (PENDIENTE -> EN_CURSO). */
-        post: operations["OccurrenceController_start"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/recurring-activities/occurrences/{id}/complete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Completa una ocurrencia (comentario opcional). */
-        post: operations["OccurrenceController_complete"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
 }
@@ -2267,117 +2560,27 @@ export interface components {
             /** @description Orden de presentacion. */
             sortOrder?: number;
         };
-        ProcessResponseDto: {
+        RequesterResponseDto: {
             /**
              * Format: uuid
              * @description Identificador unico.
              */
             id: string;
             /**
-             * @description Codigo estable.
-             * @example FIBI
-             */
-            code: string;
-            /**
-             * @description Nombre del proceso.
-             * @example BI
+             * @description Nombre del solicitante.
+             * @example Ana Perez
              */
             name: string;
             /**
-             * @description Marco asociado.
-             * @example INS-006
-             */
-            framework: string | null;
-            /**
-             * @description Tipo de proceso.
-             * @example PROCESS
-             */
-            kind: string;
-            /**
              * Format: uuid
-             * @description Area a la que pertenece.
+             * @description Area asociada (maestro de areas).
              */
             areaId: string;
             /**
-             * @description Estado activo.
-             * @example true
+             * @description Nombre del area asociada.
+             * @example Finanzas
              */
-            active: boolean;
-            /**
-             * @description Orden de presentacion.
-             * @example 1
-             */
-            sortOrder: number;
-            /**
-             * Format: date-time
-             * @description Fecha de creacion.
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Fecha de ultima actualizacion.
-             */
-            updatedAt: string;
-        };
-        CreateProcessDto: {
-            /**
-             * @description Codigo estable del proceso (se normaliza a MAYUSCULAS).
-             * @example FIBI
-             */
-            code: string;
-            /**
-             * @description Nombre del proceso.
-             * @example BI
-             */
-            name: string;
-            /**
-             * Format: uuid
-             * @description Area a la que pertenece el proceso.
-             */
-            areaId: string;
-            /**
-             * @description Marco asociado observado.
-             * @example INS-006
-             */
-            framework?: string;
-            /**
-             * @description Tipo de proceso. Por defecto PROCESS.
-             * @default PROCESS
-             * @enum {string}
-             */
-            kind: "PROCESS" | "COORDINATION";
-            /**
-             * @description Orden de presentacion. Por defecto 0.
-             * @example 1
-             */
-            sortOrder?: number;
-        };
-        UpdateProcessDto: {
-            /** @description Nombre del proceso. */
-            name?: string;
-            /** @description Marco asociado. */
-            framework?: string;
-            /** @description Estado activo del proceso. */
-            active?: boolean;
-            /** @description Orden de presentacion. */
-            sortOrder?: number;
-        };
-        UserResponseDto: {
-            /**
-             * Format: uuid
-             * @description Identificador unico.
-             */
-            id: string;
-            /**
-             * @description Identificador funcional.
-             * @example persona@demo.local
-             */
-            identifier: string;
-            /**
-             * @description Nombre visible.
-             * @example Persona Demo
-             */
-            name: string;
+            areaName: string;
             /**
              * @description Estado activo.
              * @example true
@@ -2394,77 +2597,117 @@ export interface components {
              */
             updatedAt: string;
         };
-        CreateUserDto: {
-            /**
-             * @description Identificador funcional unico (p. ej. email corporativo).
-             * @example persona@demo.local
-             */
-            identifier: string;
-            /**
-             * @description Nombre visible.
-             * @example Persona Demo
-             */
+        CreateRequesterDto: {
+            /** @description Nombre del solicitante. */
             name: string;
+            /**
+             * Format: uuid
+             * @description Area del maestro de areas.
+             */
+            areaId: string;
         };
-        UpdateUserDto: {
-            /** @description Nombre visible. */
+        UpdateRequesterDto: {
+            /** @description Nombre del solicitante. */
             name?: string;
-            /** @description Estado activo del usuario. */
+            /**
+             * Format: uuid
+             * @description Area del maestro de areas.
+             */
+            areaId?: string;
+            /** @description Activa o inactiva el solicitante. */
             active?: boolean;
         };
-        GrantResponseDto: {
-            /**
-             * Format: uuid
-             * @description Identificador unico.
-             */
+        NotificationDto: {
+            /** Format: uuid */
             id: string;
-            /**
-             * Format: uuid
-             * @description Usuario asignado.
-             */
-            userId: string;
-            /**
-             * Format: uuid
-             * @description Rol concedido.
-             */
-            roleId: string;
-            /**
-             * Format: uuid
-             * @description Proceso del grant.
-             */
-            processId: string;
-            /**
-             * @description Estado activo (false = revocado).
-             * @example true
-             */
-            active: boolean;
-            /**
-             * Format: date-time
-             * @description Fecha de creacion.
-             */
+            /** @description Tipo de evento (p. ej. TASK_ASSIGNED). */
+            type: string;
+            title: string;
+            message: string;
+            /** @description Ruta interna del elemento relacionado. */
+            link: string | null;
+            /** Format: uuid */
+            requestId: string | null;
+            read: boolean;
+            /** Format: date-time */
+            readAt: string | null;
+            /** Format: date-time */
             createdAt: string;
-            /**
-             * Format: date-time
-             * @description Fecha de ultima actualizacion.
-             */
-            updatedAt: string;
         };
-        CreateGrantDto: {
+        NotificationListDto: {
+            /** @description Total de notificaciones no leídas. */
+            unreadCount: number;
+            items: components["schemas"]["NotificationDto"][];
+        };
+        MarkAllReadResultDto: {
+            updated: number;
+        };
+        PendingClosureDto: {
+            /** Format: uuid */
+            closureId: string;
+            /** Format: uuid */
+            requestId: string;
+            requestTitle: string;
+            /** Format: date-time */
+            requestedAt: string;
+            requestedByName: string | null;
+        };
+        ClosureDocumentDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            status: string;
+            reviewReason: string | null;
+        };
+        ClosureRecordDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PENDIENTE" | "APROBADO" | "RECHAZADO";
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: uuid */
+            requestedByUserId: string;
+            requestedByName: string | null;
+            /** Format: date-time */
+            decidedAt: string | null;
+            decidedByName: string | null;
+            decisionReason: string | null;
+        };
+        ClosureStatusDto: {
+            /** Format: uuid */
+            requestId: string;
+            /** @description Estado operativo de la solicitud. */
+            requestState: string;
             /**
-             * Format: uuid
-             * @description Id del usuario a asignar.
-             */
-            userId: string;
-            /**
-             * @description Rol a conceder.
+             * @description Estado funcional del cierre.
              * @enum {string}
              */
-            roleCode: "JEFE_AREA" | "LIDER_PROCESO" | "INTEGRANTE" | "ADMIN";
-            /**
-             * Format: uuid
-             * @description Id del proceso del grant.
-             */
-            processId: string;
+            phase: "EN_EJECUCION" | "PENDIENTE_DOCUMENTACION" | "PENDIENTE_APROBACION_DOCUMENTAL" | "EJECUCION_FINALIZADA" | "PENDIENTE_APROBACION_CIERRE" | "CERRADO" | "NO_APLICA";
+            tasksTotal: number;
+            tasksCompleted: number;
+            /** @description Documentación de cierre (categoría CIERRE). */
+            documents: components["schemas"]["ClosureDocumentDto"][];
+            canRequestClosure: boolean;
+            /** @description Motivos por los que aún no se puede solicitar el cierre. */
+            blockers: string[];
+            /** @description Solicitud de cierre pendiente. */
+            pending: components["schemas"]["ClosureRecordDto"] | null;
+            /** @description Historial de solicitudes de cierre. */
+            history: components["schemas"]["ClosureRecordDto"][];
+            /** Format: date-time */
+            closedAt: string | null;
+            closedByName: string | null;
+        };
+        ClosureDecisionDto: {
+            /** @enum {string} */
+            decision: "APROBAR" | "RECHAZAR";
+            /** @description Observaciones (obligatorias al rechazar). */
+            reason?: string;
+        };
+        ReopenProjectDto: {
+            /** @description Motivo de la reapertura (obligatorio). */
+            reason: string;
         };
         RequestParticipantResponseDto: {
             /**
@@ -2493,6 +2736,11 @@ export interface components {
             registeredAt: string;
             /** @description Area solicitante. */
             requesterArea: string | null;
+            /**
+             * Format: uuid
+             * @description Solicitante del maestro (null en solicitudes históricas).
+             */
+            requesterId: string | null;
             /** @description Nombre del solicitante. */
             requesterName: string | null;
             /** @description Dueno funcional. */
@@ -2603,6 +2851,11 @@ export interface components {
             mainProcessId: string;
             /** @description Procesos participantes adicionales. El principal se materializa siempre. */
             participantProcessIds?: string[];
+            /**
+             * Format: uuid
+             * @description Solicitante del maestro de solicitantes. El área y el nombre se toman de su registro.
+             */
+            requesterId?: string;
             /** @description Area solicitante. */
             requesterArea?: string;
             /** @description Nombre del solicitante. */
@@ -2629,6 +2882,11 @@ export interface components {
             title?: string;
             /** @description Procesos participantes adicionales (el principal se mantiene). */
             participantProcessIds?: string[];
+            /**
+             * Format: uuid
+             * @description Solicitante del maestro de solicitantes. El área y el nombre se toman de su registro.
+             */
+            requesterId?: string;
             /** @description Area solicitante. */
             requesterArea?: string;
             /** @description Nombre del solicitante. */
@@ -2958,6 +3216,27 @@ export interface components {
             categoryCode: string | null;
             /** @description Estado (DocStatus). */
             status: string;
+            /**
+             * Format: uuid
+             * @description Proyecto (solicitud) vinculado, p. ej. documentación de cierre.
+             */
+            requestId: string | null;
+            /**
+             * Format: date-time
+             * @description Envío a aprobación.
+             */
+            submittedAt: string | null;
+            /** Format: uuid */
+            submittedByUserId: string | null;
+            /**
+             * Format: date-time
+             * @description Última aprobación o rechazo.
+             */
+            reviewedAt: string | null;
+            /** Format: uuid */
+            reviewedByUserId: string | null;
+            /** @description Motivo del rechazo u observación de la aprobación. */
+            reviewReason: string | null;
             /** @description Resumen de la version vigente (sin contenido). */
             currentVersion: components["schemas"]["DocumentCurrentVersionDto"] | null;
             /** Format: date-time */
@@ -2975,6 +3254,11 @@ export interface components {
             title: string;
             /** @description Categoria (maestra DOC_CATEGORY). */
             categoryCode?: string;
+            /**
+             * Format: uuid
+             * @description Proyecto (solicitud) al que pertenece el documento, p. ej. documentación de cierre.
+             */
+            requestId?: string;
             /** @description Contenido Markdown de la version 1. */
             content: string;
         };
@@ -3024,14 +3308,222 @@ export interface components {
             /** @description Contenido Markdown. */
             content: string;
         };
+        ReviewDocumentDto: {
+            /**
+             * @description Decisión.
+             * @enum {string}
+             */
+            decision: "APROBAR" | "RECHAZAR";
+            /** @description Motivo (obligatorio al rechazar). */
+            reason?: string;
+        };
         ChangeDocumentStatusDto: {
             /**
              * @description Estado destino.
              * @enum {string}
              */
-            targetStatus: "BORRADOR" | "VIGENTE" | "ARCHIVADA";
+            targetStatus: "BORRADOR" | "PENDIENTE_APROBACION" | "VIGENTE" | "RECHAZADO" | "ARCHIVADA";
             /** @description Motivo del cambio. */
             reason?: string;
+        };
+        ProcessResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * @description Codigo estable.
+             * @example FIBI
+             */
+            code: string;
+            /**
+             * @description Nombre del proceso.
+             * @example BI
+             */
+            name: string;
+            /**
+             * @description Marco asociado.
+             * @example INS-006
+             */
+            framework: string | null;
+            /**
+             * @description Tipo de proceso.
+             * @example PROCESS
+             */
+            kind: string;
+            /**
+             * Format: uuid
+             * @description Area a la que pertenece.
+             */
+            areaId: string;
+            /**
+             * @description Estado activo.
+             * @example true
+             */
+            active: boolean;
+            /**
+             * @description Orden de presentacion.
+             * @example 1
+             */
+            sortOrder: number;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ultima actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateProcessDto: {
+            /**
+             * @description Codigo estable del proceso (se normaliza a MAYUSCULAS).
+             * @example FIBI
+             */
+            code: string;
+            /**
+             * @description Nombre del proceso.
+             * @example BI
+             */
+            name: string;
+            /**
+             * Format: uuid
+             * @description Area a la que pertenece el proceso.
+             */
+            areaId: string;
+            /**
+             * @description Marco asociado observado.
+             * @example INS-006
+             */
+            framework?: string;
+            /**
+             * @description Tipo de proceso. Por defecto PROCESS.
+             * @default PROCESS
+             * @enum {string}
+             */
+            kind: "PROCESS" | "COORDINATION";
+            /**
+             * @description Orden de presentacion. Por defecto 0.
+             * @example 1
+             */
+            sortOrder?: number;
+        };
+        UpdateProcessDto: {
+            /** @description Nombre del proceso. */
+            name?: string;
+            /** @description Marco asociado. */
+            framework?: string;
+            /** @description Estado activo del proceso. */
+            active?: boolean;
+            /** @description Orden de presentacion. */
+            sortOrder?: number;
+        };
+        UserResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * @description Identificador funcional.
+             * @example persona@demo.local
+             */
+            identifier: string;
+            /**
+             * @description Nombre visible.
+             * @example Persona Demo
+             */
+            name: string;
+            /**
+             * @description Estado activo.
+             * @example true
+             */
+            active: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ultima actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateUserDto: {
+            /**
+             * @description Identificador funcional unico (p. ej. email corporativo).
+             * @example persona@demo.local
+             */
+            identifier: string;
+            /**
+             * @description Nombre visible.
+             * @example Persona Demo
+             */
+            name: string;
+        };
+        UpdateUserDto: {
+            /** @description Nombre visible. */
+            name?: string;
+            /** @description Estado activo del usuario. */
+            active?: boolean;
+        };
+        GrantResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Usuario asignado.
+             */
+            userId: string;
+            /**
+             * Format: uuid
+             * @description Rol concedido.
+             */
+            roleId: string;
+            /**
+             * Format: uuid
+             * @description Proceso del grant.
+             */
+            processId: string;
+            /**
+             * @description Estado activo (false = revocado).
+             * @example true
+             */
+            active: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ultima actualizacion.
+             */
+            updatedAt: string;
+        };
+        CreateGrantDto: {
+            /**
+             * Format: uuid
+             * @description Id del usuario a asignar.
+             */
+            userId: string;
+            /**
+             * @description Rol a conceder.
+             * @enum {string}
+             */
+            roleCode: "JEFE_AREA" | "LIDER_PROCESO" | "INTEGRANTE" | "ADMIN";
+            /**
+             * Format: uuid
+             * @description Id del proceso del grant.
+             */
+            processId: string;
         };
         MyWorkItemDto: {
             /**
@@ -3413,6 +3905,8 @@ export interface components {
             title: string;
             /** @description Indica si la tarea es un hito. */
             isMilestone: boolean;
+            /** @description Identificador del usuario responsable (opcional). Debe corresponder a un usuario activo. */
+            responsibleIdentifier?: string | null;
             /** @description Estimacion en horas (hito => 0). */
             estimateHours?: number | null;
             /**
@@ -3477,6 +3971,10 @@ export interface components {
             phases: components["schemas"]["PlanDocumentPhaseDto"][];
             /** @description Dependencias entre tareas por referencia local. */
             dependencies: components["schemas"]["PlanDocumentDependencyDto"][];
+        };
+        ImportPlanExcelDto: {
+            /** @description Contenido del archivo .xlsx codificado en base64. */
+            fileBase64: string;
         };
         ImportPlanResultDto: {
             /**
@@ -4196,6 +4694,21 @@ export interface components {
              */
             toState: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
         };
+        MeetingCommitmentDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** @description Estado (maestra RECORD_STATE). */
+            state: string;
+            /** @description Vencimiento (YYYY-MM-DD). */
+            dueDate: string;
+            /** Format: uuid */
+            assignedUserId: string | null;
+            /** Format: uuid */
+            responsibleUserId: string | null;
+            expectedResult: string | null;
+            result: string | null;
+        };
         MeetingResponseDto: {
             /** Format: uuid */
             id: string;
@@ -4223,6 +4736,14 @@ export interface components {
             agenda: string | null;
             decisions: string | null;
             notes: string | null;
+            /** @description El acta está cerrada (COMPLETADO/ARCHIVADO): no admite cambios. */
+            closed: boolean;
+            /** @description Compromisos derivados del acta. */
+            commitmentsTotal: number;
+            /** @description Compromisos del acta aún abiertos (no completados ni archivados). */
+            commitmentsOpen: number;
+            /** @description Compromisos del acta (lista del acta, visible para quien ve la reunión). */
+            commitments: components["schemas"]["MeetingCommitmentDto"][];
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -4322,6 +4843,10 @@ export interface components {
             dueDate: string;
             /** Format: uuid */
             sourceMeetingId: string | null;
+            /** @description Título del acta de origen. */
+            sourceMeetingTitle: string | null;
+            /** @description Fecha del acta de origen (YYYY-MM-DD). */
+            sourceMeetingDate: string | null;
             /** Format: uuid */
             assignedUserId: string | null;
             /** Format: uuid */
@@ -5076,6 +5601,89 @@ export interface components {
             /** @description Code del agente que genero la sugerencia. */
             agentCode: string;
         };
+        OccurrenceResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico de la ocurrencia.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Definicion a la que pertenece.
+             */
+            activityId: string;
+            /** @description Titulo de la definicion (contexto). */
+            activityTitle: string;
+            /** @description Tipo de actividad de la definicion. */
+            activityType: string;
+            /** @description Cadencia de la definicion (Recurrence). */
+            cadence: string;
+            /** @description Tipo de responsable de la definicion (USER/AREA). */
+            responsibleKind: string;
+            /**
+             * Format: uuid
+             * @description Usuario responsable de la definicion.
+             */
+            responsibleUserId: string | null;
+            /**
+             * Format: uuid
+             * @description Area responsable de la definicion.
+             */
+            responsibleAreaId: string | null;
+            /**
+             * Format: date-time
+             * @description Dia objetivo de la ocurrencia.
+             */
+            targetDate: string;
+            /** @description Estado de la ocurrencia (OccurrenceStatus). */
+            status: string;
+            /** @description Etiqueta legible del periodo (p. ej. "2024-W03"). */
+            periodLabel: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha/hora de completado.
+             */
+            completedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Usuario que completo.
+             */
+            completedByUserId: string | null;
+            /** @description Comentario/evidencia de completado (opcional). */
+            completionComment: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de actualizacion.
+             */
+            updatedAt: string;
+        };
+        PaginatedOccurrencesResponseDto: {
+            /** @description Ocurrencias de la pagina. */
+            data: components["schemas"]["OccurrenceResponseDto"][];
+            /**
+             * @description Pagina actual (1-based).
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Tamano de pagina aplicado (acotado a 100).
+             * @example 25
+             */
+            pageSize: number;
+            /** @description Total de ocurrencias en alcance para el filtro vigente. */
+            total: number;
+            /** @description Hay al menos una pagina mas despues de esta. */
+            hasMore: boolean;
+        };
+        CompleteOccurrenceDto: {
+            /** @description Comentario o evidencia del completado (opcional). */
+            comment?: string;
+        };
         CreateRecurringActivityDto: {
             /** @description Titulo de la actividad. */
             title: string;
@@ -5294,89 +5902,6 @@ export interface components {
             /** @description Si false, el motor no genera nuevas ocurrencias (pausa sin borrar). Por defecto true. */
             active?: boolean;
         };
-        OccurrenceResponseDto: {
-            /**
-             * Format: uuid
-             * @description Identificador unico de la ocurrencia.
-             */
-            id: string;
-            /**
-             * Format: uuid
-             * @description Definicion a la que pertenece.
-             */
-            activityId: string;
-            /** @description Titulo de la definicion (contexto). */
-            activityTitle: string;
-            /** @description Tipo de actividad de la definicion. */
-            activityType: string;
-            /** @description Cadencia de la definicion (Recurrence). */
-            cadence: string;
-            /** @description Tipo de responsable de la definicion (USER/AREA). */
-            responsibleKind: string;
-            /**
-             * Format: uuid
-             * @description Usuario responsable de la definicion.
-             */
-            responsibleUserId: string | null;
-            /**
-             * Format: uuid
-             * @description Area responsable de la definicion.
-             */
-            responsibleAreaId: string | null;
-            /**
-             * Format: date-time
-             * @description Dia objetivo de la ocurrencia.
-             */
-            targetDate: string;
-            /** @description Estado de la ocurrencia (OccurrenceStatus). */
-            status: string;
-            /** @description Etiqueta legible del periodo (p. ej. "2024-W03"). */
-            periodLabel: string | null;
-            /**
-             * Format: date-time
-             * @description Fecha/hora de completado.
-             */
-            completedAt: string | null;
-            /**
-             * Format: uuid
-             * @description Usuario que completo.
-             */
-            completedByUserId: string | null;
-            /** @description Comentario/evidencia de completado (opcional). */
-            completionComment: string | null;
-            /**
-             * Format: date-time
-             * @description Fecha de creacion.
-             */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description Fecha de actualizacion.
-             */
-            updatedAt: string;
-        };
-        PaginatedOccurrencesResponseDto: {
-            /** @description Ocurrencias de la pagina. */
-            data: components["schemas"]["OccurrenceResponseDto"][];
-            /**
-             * @description Pagina actual (1-based).
-             * @example 1
-             */
-            page: number;
-            /**
-             * @description Tamano de pagina aplicado (acotado a 100).
-             * @example 25
-             */
-            pageSize: number;
-            /** @description Total de ocurrencias en alcance para el filtro vigente. */
-            total: number;
-            /** @description Hay al menos una pagina mas despues de esta. */
-            hasMore: boolean;
-        };
-        CompleteOccurrenceDto: {
-            /** @description Comentario o evidencia del completado (opcional). */
-            comment?: string;
-        };
     };
     responses: never;
     parameters: never;
@@ -5591,7 +6116,7 @@ export interface operations {
                 /** @description Pagina (1-based). Por defecto 1. */
                 page?: number;
                 action?: "CREATE" | "UPDATE" | "DELETE" | "REVOKE";
-                objectType?: "PROCESS" | "AREA" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD" | "RECURRING_ACTIVITY" | "RECURRING_ACTIVITY_OCCURRENCE";
+                objectType?: "PROCESS" | "AREA" | "REQUESTER" | "PROJECT_CLOSURE" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD" | "RECURRING_ACTIVITY" | "RECURRING_ACTIVITY_OCCURRENCE";
             };
             header?: never;
             path?: never;
@@ -5929,10 +6454,10 @@ export interface operations {
             };
         };
     };
-    ProcessController_findMany: {
+    RequesterController_findMany: {
         parameters: {
             query?: {
-                kind?: "PROCESS" | "COORDINATION";
+                areaId?: unknown;
                 active?: boolean;
             };
             header?: never;
@@ -5941,16 +6466,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Listado de procesos. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProcessResponseDto"][];
+                    "application/json": components["schemas"]["RequesterResponseDto"][];
                 };
             };
-            /** @description No hay un usuario actual valido. */
+            /** @description No hay un usuario actual válido. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5959,7 +6483,7 @@ export interface operations {
             };
         };
     };
-    ProcessController_create: {
+    RequesterController_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -5968,20 +6492,19 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateProcessDto"];
+                "application/json": components["schemas"]["CreateRequesterDto"];
             };
         };
         responses: {
-            /** @description Proceso creado. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProcessResponseDto"];
+                    "application/json": components["schemas"]["RequesterResponseDto"];
                 };
             };
-            /** @description Datos de entrada invalidos. */
+            /** @description Datos inválidos o área inexistente/inactiva. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5995,7 +6518,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Ya existe el code. */
+            /** @description Solicitante duplicado. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6004,7 +6527,7 @@ export interface operations {
             };
         };
     };
-    ProcessController_findOne: {
+    RequesterController_findOne: {
         parameters: {
             query?: never;
             header?: never;
@@ -6015,16 +6538,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Proceso encontrado. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProcessResponseDto"];
+                    "application/json": components["schemas"]["RequesterResponseDto"];
                 };
             };
-            /** @description No existe o esta fuera de alcance. */
+            /** @description No hay un usuario actual válido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6033,7 +6562,7 @@ export interface operations {
             };
         };
     };
-    ProcessController_update: {
+    RequesterController_update: {
         parameters: {
             query?: never;
             header?: never;
@@ -6044,25 +6573,17 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateProcessDto"];
+                "application/json": components["schemas"]["UpdateRequesterDto"];
             };
         };
         responses: {
-            /** @description Proceso actualizado. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProcessResponseDto"];
+                    "application/json": components["schemas"]["RequesterResponseDto"];
                 };
-            };
-            /** @description Datos de entrada invalidos o id no UUID. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description Rol insuficiente. */
             403: {
@@ -6071,79 +6592,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Proceso no encontrado. */
+            /** @description No existe. */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-        };
-    };
-    UserController_findMany: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Listado de usuarios. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponseDto"][];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    UserController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateUserDto"];
-            };
-        };
-        responses: {
-            /** @description Usuario creado. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponseDto"];
-                };
-            };
-            /** @description Datos de entrada invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Ya existe el identifier. */
+            /** @description Solicitante duplicado. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6152,7 +6608,55 @@ export interface operations {
             };
         };
     };
-    UserController_findOne: {
+    NotificationController_list: {
+        parameters: {
+            query?: {
+                take?: number;
+                unreadOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationListDto"];
+                };
+            };
+            /** @description No hay un usuario actual válido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NotificationController_markAllRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkAllReadResultDto"];
+                };
+            };
+        };
+    };
+    NotificationController_markRead: {
         parameters: {
             query?: never;
             header?: never;
@@ -6163,104 +6667,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Usuario encontrado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponseDto"];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Usuario no encontrado. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    UserController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateUserDto"];
-            };
-        };
-        responses: {
-            /** @description Usuario actualizado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserResponseDto"];
-                };
-            };
-            /** @description Datos de entrada invalidos o id no UUID. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Usuario no encontrado. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    UserInviteController_invite: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Invitacion emitida y enviada. */
+            /** @description Marcada como leída. */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Usuario no encontrado. */
+            /** @description No existe o no pertenece al usuario. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6269,65 +6683,22 @@ export interface operations {
             };
         };
     };
-    GrantController_findMany: {
-        parameters: {
-            query?: {
-                active?: boolean;
-                processId?: unknown;
-                userId?: unknown;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Listado de grants. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GrantResponseDto"][];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    GrantController_create: {
+    ClosureController_pending: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateGrantDto"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Grant creado o reactivado. */
-            201: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GrantResponseDto"];
+                    "application/json": components["schemas"]["PendingClosureDto"][];
                 };
-            };
-            /** @description Datos de entrada invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description Rol insuficiente. */
             403: {
@@ -6336,23 +6707,9 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Usuario o proceso inexistente. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description El grant ya existe y esta activo. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
         };
     };
-    GrantController_revoke: {
+    ClosureController_status: {
         parameters: {
             query?: never;
             header?: never;
@@ -6363,24 +6720,115 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Grant revocado (devuelve el actualizado). */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GrantResponseDto"];
+                    "application/json": components["schemas"]["ClosureStatusDto"];
                 };
             };
-            /** @description Rol insuficiente. */
-            403: {
+            /** @description Solicitud fuera de alcance. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Grant no encontrado. */
-            404: {
+        };
+    };
+    ClosureController_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosureStatusDto"];
+                };
+            };
+            /** @description No se cumplen las condiciones (se indica el motivo). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClosureController_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClosureDecisionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosureStatusDto"];
+                };
+            };
+            /** @description Faltan las observaciones del rechazo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin solicitud pendiente o condiciones incumplidas. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClosureController_reopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReopenProjectDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosureStatusDto"];
+                };
+            };
+            /** @description El proyecto no está cerrado. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6595,6 +7043,47 @@ export interface operations {
             };
             /** @description No existe o esta fuera de alcance. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RequestController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Solicitud eliminada (lógicamente). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud no encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La solicitud está en ejecución o cerrada. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7200,6 +7689,33 @@ export interface operations {
             };
         };
     };
+    DocumentController_pendingApproval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Documentos pendientes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     DocumentController_get: {
         parameters: {
             query?: never;
@@ -7446,6 +7962,103 @@ export interface operations {
             };
         };
     };
+    DocumentController_submitForApproval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Documento pendiente de aprobación. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponseDto"];
+                };
+            };
+            /** @description Transición no permitida. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Documento fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El proyecto está cerrado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DocumentController_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewDocumentDto"];
+            };
+        };
+        responses: {
+            /** @description Documento revisado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponseDto"];
+                };
+            };
+            /** @description Transición no permitida o falta el motivo del rechazo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Documento fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     DocumentController_changeStatus: {
         parameters: {
             query?: never;
@@ -7485,6 +8098,465 @@ export interface operations {
                 content?: never;
             };
             /** @description Documento fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProcessController_findMany: {
+        parameters: {
+            query?: {
+                kind?: "PROCESS" | "COORDINATION";
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Listado de procesos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessResponseDto"][];
+                };
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProcessController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProcessDto"];
+            };
+        };
+        responses: {
+            /** @description Proceso creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe el code. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProcessController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proceso encontrado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessResponseDto"];
+                };
+            };
+            /** @description No existe o esta fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProcessController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProcessDto"];
+            };
+        };
+        responses: {
+            /** @description Proceso actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos o id no UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Proceso no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserController_findMany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Listado de usuarios. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserDto"];
+            };
+        };
+        responses: {
+            /** @description Usuario creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe el identifier. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usuario encontrado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuario no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserDto"];
+            };
+        };
+        responses: {
+            /** @description Usuario actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos o id no UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuario no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserInviteController_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invitacion emitida y enviada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuario no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrantController_findMany: {
+        parameters: {
+            query?: {
+                active?: boolean;
+                processId?: unknown;
+                userId?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Listado de grants. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrantController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGrantDto"];
+            };
+        };
+        responses: {
+            /** @description Grant creado o reactivado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuario o proceso inexistente. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El grant ya existe y esta activo. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrantController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grant revocado (devuelve el actualizado). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Grant no encontrado. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8016,6 +9088,128 @@ export interface operations {
             };
             /** @description Plan inexistente o fuera de alcance. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_exportExcel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archivo .xlsx del plan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_templateExcel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plantilla .xlsx. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_importExcel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportPlanExcelDto"];
+            };
+        };
+        responses: {
+            /** @description Plan importado (reemplazado). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPlanResultDto"];
+                };
+            };
+            /** @description Archivo inválido; el cuerpo incluye la lista de errores (errors). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El plan no esta en borrador ni devuelto. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9754,6 +10948,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Acta cerrada o con compromisos. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     MeetingController_update: {
@@ -9789,6 +10990,99 @@ export interface operations {
             };
             /** @description Reunion fuera de alcance. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El acta está cerrada. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeetingController_close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Acta cerrada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingResponseDto"];
+                };
+            };
+            /** @description Sin permiso para cerrar el acta. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Reunion fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Acta ya cerrada o sin decisiones ni compromisos. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeetingController_reopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Acta reabierta. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingResponseDto"];
+                };
+            };
+            /** @description Sin permiso para reabrir el acta. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Reunion fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El acta ya está abierta. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11146,6 +12440,167 @@ export interface operations {
             };
         };
     };
+    OccurrenceController_findAll: {
+        parameters: {
+            query?: {
+                /** @description Tamano de pagina (acotado a 100). Por defecto 25. */
+                pageSize?: number;
+                /** @description Pagina (1-based). Por defecto 1. */
+                page?: number;
+                responsibleAreaId?: string;
+                responsibleUserId?: string;
+                /** @description Dia objetivo hasta (inclusive). */
+                to?: string;
+                /** @description Dia objetivo desde (inclusive). */
+                from?: string;
+                activityType?: string;
+                cadence?: "SEMANAL" | "MENSUAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
+                status?: "PENDIENTE" | "EN_CURSO" | "COMPLETADA" | "VENCIDA";
+                scope?: "mine" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pagina de ocurrencias. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedOccurrencesResponseDto"];
+                };
+            };
+            /** @description Filtros invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description scope=all sin permiso. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ocurrencia. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceResponseDto"];
+                };
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ocurrencia actualizada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceResponseDto"];
+                };
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transicion no permitida. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteOccurrenceDto"];
+            };
+        };
+        responses: {
+            /** @description Ocurrencia completada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceResponseDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transicion no permitida. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RecurringActivityController_runGeneration: {
         parameters: {
             query?: never;
@@ -11393,167 +12848,6 @@ export interface operations {
                 content?: never;
             };
             /** @description Responsable incoherente o fechas invalidas. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    OccurrenceController_findAll: {
-        parameters: {
-            query?: {
-                /** @description Tamano de pagina (acotado a 100). Por defecto 25. */
-                pageSize?: number;
-                /** @description Pagina (1-based). Por defecto 1. */
-                page?: number;
-                responsibleAreaId?: string;
-                responsibleUserId?: string;
-                /** @description Dia objetivo hasta (inclusive). */
-                to?: string;
-                /** @description Dia objetivo desde (inclusive). */
-                from?: string;
-                activityType?: string;
-                cadence?: "SEMANAL" | "MENSUAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
-                status?: "PENDIENTE" | "EN_CURSO" | "COMPLETADA" | "VENCIDA";
-                scope?: "mine" | "all";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Pagina de ocurrencias. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedOccurrencesResponseDto"];
-                };
-            };
-            /** @description Filtros invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description scope=all sin permiso. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    OccurrenceController_findOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ocurrencia. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OccurrenceResponseDto"];
-                };
-            };
-            /** @description No existe o fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    OccurrenceController_start: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ocurrencia actualizada. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OccurrenceResponseDto"];
-                };
-            };
-            /** @description No existe o fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Transicion no permitida. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    OccurrenceController_complete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: unknown;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompleteOccurrenceDto"];
-            };
-        };
-        responses: {
-            /** @description Ocurrencia completada. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OccurrenceResponseDto"];
-                };
-            };
-            /** @description Datos invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No existe o fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Transicion no permitida. */
             409: {
                 headers: {
                     [name: string]: unknown;

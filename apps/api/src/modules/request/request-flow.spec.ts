@@ -122,7 +122,7 @@ function createFlowMocks(
     state,
     assetService,
     triage: new TriageService(prisma, audit, state, assetService),
-    priority: new PriorityService(prisma, audit, state),
+    priority: new PriorityService(prisma, audit, state, { notify: jest.fn(), areaHeadsForProcess: jest.fn().mockResolvedValue([]), processLeaders: jest.fn().mockResolvedValue([]) } as never),
     approval: new ApprovalService(prisma, audit, state),
   };
 }

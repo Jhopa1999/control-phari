@@ -23,6 +23,8 @@ export type AuditObjectType = NonNullable<AuditEventsQuery['objectType']>;
 const AUDIT_OBJECT_TYPE_FILTER: Record<AuditObjectType, true> = {
   PROCESS: true,
   AREA: true,
+  REQUESTER: true,
+  PROJECT_CLOSURE: true,
   USER: true,
   GRANT: true,
   CATALOG_ITEM: true,
@@ -103,6 +105,8 @@ const AUDIT_OBJECT_LABELS: Record<string, string> = {
   PRIORITY_EVALUATION: 'Evaluación de prioridad',
   PROCESS: 'Proceso',
   REQUEST: 'Solicitud',
+  REQUESTER: 'Solicitante',
+  PROJECT_CLOSURE: 'Cierre de proyecto',
   TASK: 'Tarea',
   TASK_DEPENDENCY: 'Dependencia de tarea',
   TRIAGE: 'Triage',

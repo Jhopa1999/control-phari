@@ -33,6 +33,15 @@ export class CreateDocumentDto {
   @IsString()
   categoryCode?: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description: 'Proyecto (solicitud) al que pertenece el documento, p. ej. documentación de cierre.',
+  })
+  @IsOptional()
+  @IsUUID()
+  requestId?: string;
+
   @ApiProperty({ type: String, description: 'Contenido Markdown de la version 1.', maxLength: 200000 })
   @IsString()
   @MinLength(1, { message: 'El contenido es obligatorio.' })

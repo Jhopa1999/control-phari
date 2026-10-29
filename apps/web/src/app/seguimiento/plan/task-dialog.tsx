@@ -15,7 +15,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -23,9 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import type { Task, CoordinationPerson } from '@/lib/api-client';
+import type { Task, CoordinationPerson, PlanPhase } from '@/lib/api-client';
 import { PlanError } from '@/lib/plan';
 import { createTask, updateTask } from '@/lib/tasks';
 import {
@@ -40,6 +38,7 @@ interface TaskDialogProps {
   task: Task | null;
   phaseId: string | null;
   allTasks: Task[];
+  phases: PlanPhase[];
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }
@@ -47,7 +46,7 @@ interface TaskDialogProps {
 /** Id del formulario: el FormError lleva `task-form-error`. */
 const FORM_ID = 'task-form';
 
-type FieldKey = 'title' | 'hours';
+type FieldKey = 'title' | 'hours' | 'dates';
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 function toDateInput(iso: string | null | undefined): string {
@@ -64,6 +63,32 @@ function toIso(value: string): string | undefined {
   return date.toISOString();
 }
 
+function fmtDate(value: string): string {
+  const [y, m, d] = value.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+/** PLA-04/PLA-05: fin >= inicio y fechas dentro del rango de la fase. */
+function validateTaskDates(
+  start: string,
+  end: string,
+  phase: PlanPhase | undefined,
+): string | null {
+  if (start && end && end < start) {
+    return 'La fecha de vencimiento no puede ser anterior a la fecha de inicio.';
+  }
+  const phaseStart = phase?.startDate ? phase.startDate.slice(0, 10) : '';
+  const phaseEnd = phase?.endDate ? phase.endDate.slice(0, 10) : '';
+  const name = phase?.name ?? '';
+  if (phaseStart && ((start && start < phaseStart) || (end && end < phaseStart))) {
+    return `Las fechas de la tarea no pueden ser anteriores al inicio de la fase "${name}" (${fmtDate(phaseStart)}).`;
+  }
+  if (phaseEnd && ((end && end > phaseEnd) || (start && start > phaseEnd))) {
+    return `Las fechas de la tarea no pueden ser posteriores al fin de la fase "${name}" (${fmtDate(phaseEnd)}).`;
+  }
+  return null;
+}
+
 function messageOf(err: unknown): string {
   return err instanceof PlanError ? err.message : 'Ocurrió un error inesperado.';
 }
@@ -78,6 +103,7 @@ export function TaskDialog({
   task,
   phaseId,
   allTasks,
+  phases,
   onOpenChange,
   onSaved,
 }: TaskDialogProps): React.ReactElement {
@@ -86,7 +112,6 @@ export function TaskDialog({
   const [startDate, setStartDate] = React.useState('');
   const [endDate, setEndDate] = React.useState('');
   const [estimateHours, setEstimateHours] = React.useState('');
-  const [isMilestone, setIsMilestone] = React.useState(false);
   const [description, setDescription] = React.useState('');
   const [acceptanceCriteria, setAcceptanceCriteria] = React.useState('');
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
@@ -131,7 +156,6 @@ export function TaskDialog({
           ? String(task.estimateHours)
           : '',
       );
-      setIsMilestone(task?.isMilestone ?? false);
       setDescription(task?.description ?? '');
       setAcceptanceCriteria(task?.acceptanceCriteria ?? '');
       setPredecessorIds(
@@ -178,15 +202,9 @@ export function TaskDialog({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (submitting) return;
-    // Regla hito (BR-010/AC-011): una sola fecha y 0 horas. La UI lo fuerza; el
-    // backend es el control real.
-    const effectiveEnd = isMilestone ? startDate || endDate : endDate;
-    const effectiveStart = isMilestone ? startDate || endDate : startDate;
-    const hours = isMilestone
-      ? 0
-      : estimateHours.trim() === ''
-        ? undefined
-        : Number(estimateHours);
+    const effectiveEnd = endDate;
+    const effectiveStart = startDate;
+    const hours = estimateHours.trim() === '' ? undefined : Number(estimateHours);
 
     // Las reglas de siempre, evaluadas todas a la vez (design §9).
     const errors: FieldErrors = {};
@@ -194,10 +212,16 @@ export function TaskDialog({
     if (hours !== undefined && (Number.isNaN(hours) || hours < 0)) {
       errors.hours = 'El esfuerzo debe ser un número de horas válido.';
     }
+    const dateError = validateTaskDates(
+      startDate,
+      endDate,
+      phases.find((p) => p.id === (task?.phaseId ?? phaseId)),
+    );
+    if (dateError) errors.dates = dateError;
     const missingPhase = !task && !phaseId;
     setFieldErrors(errors);
     setFormError(missingPhase ? 'Falta la fase de la tarea.' : null);
-    if (errors.title || errors.hours || missingPhase) {
+    if (errors.title || errors.hours || errors.dates || missingPhase) {
       // Foco al primer campo con error, en orden del DOM.
       if (errors.title) titleRef.current?.focus();
       else if (errors.hours) hoursRef.current?.focus();
@@ -211,7 +235,6 @@ export function TaskDialog({
       startDate: toIso(effectiveStart),
       endDate: toIso(effectiveEnd),
       estimateHours: hours,
-      isMilestone,
       description: description.trim() || undefined,
       acceptanceCriteria: acceptanceCriteria.trim() || undefined,
     };
@@ -275,50 +298,43 @@ export function TaskDialog({
               )}
             </Field>
 
-            <div className="flex min-h-8 items-center gap-2">
-              <Switch
-                id="task-milestone"
-                checked={isMilestone}
-                onCheckedChange={(checked) => {
-                  setIsMilestone(checked);
-                  if (checked) {
-                    setEstimateHours('0');
-                    clearFieldError('hours');
-                  }
-                }}
-              />
-              <Label htmlFor="task-milestone" className="font-normal">
-                Es un hito (una sola fecha, sin esfuerzo)
-              </Label>
-            </div>
-
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="task-start" label={isMilestone ? 'Fecha del hito' : 'Inicio'}>
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-              </Field>
-              {!isMilestone ? (
-                <Field id="task-end" label="Vencimiento">
-                  <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-                </Field>
-              ) : null}
-            </div>
-
-            {!isMilestone ? (
-              <Field id="task-hours" label="Esfuerzo (horas)" error={fieldErrors.hours}>
+              <Field id="task-start" label="Inicio" error={fieldErrors.dates}>
                 <Input
-                  ref={hoursRef}
-                  type="number"
-                  min={0}
-                  inputMode="decimal"
-                  className="sm:w-40"
-                  value={estimateHours}
+                  type="date"
+                  value={startDate}
                   onChange={(e) => {
-                    setEstimateHours(e.target.value);
-                    clearFieldError('hours');
+                    setStartDate(e.target.value);
+                    clearFieldError('dates');
                   }}
                 />
               </Field>
-            ) : null}
+              <Field id="task-end" label="Vencimiento">
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    clearFieldError('dates');
+                  }}
+                />
+              </Field>
+            </div>
+
+            <Field id="task-hours" label="Esfuerzo (horas)" error={fieldErrors.hours}>
+              <Input
+                ref={hoursRef}
+                type="number"
+                min={0}
+                inputMode="decimal"
+                className="sm:w-40"
+                value={estimateHours}
+                onChange={(e) => {
+                  setEstimateHours(e.target.value);
+                  clearFieldError('hours');
+                }}
+              />
+            </Field>
 
             <Field id="task-desc" label="Descripción">
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />

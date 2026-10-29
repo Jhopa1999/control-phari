@@ -1,29 +1,35 @@
 /**
- * Enum logico de estados del Documento de Fase 6 (design §4.2; maestra
- * DOC_STATUS, ya sembrada en Fase 1). Conjunto cerrado y tipado: gobierna la
- * maquina minima reversible del documento. La columna `status` guarda el `code`
- * (texto); solo el helper DocumentStateService la escribe, y el estado se mueve
- * UNICAMENTE por POST /documents/:id/status (crear version NO lo mueve, D6). El
- * estado inicial es BORRADOR.
+ * Enum logico de estados del Documento (design §4.2; maestra DOC_STATUS). La
+ * columna `status` guarda el `code` (texto); solo el helper DocumentStateService
+ * la valida, y el estado se mueve UNICAMENTE por los endpoints de estado
+ * (crear version NO lo mueve, D6). El estado inicial es BORRADOR.
+ *
+ * Flujo de aprobacion documental: BORRADOR -> PENDIENTE_APROBACION (enviar) ->
+ * VIGENTE (aprobado) o RECHAZADO (con motivo). VIGENTE representa el documento
+ * aprobado/publicado; no se duplica un estado "APROBADO".
  */
 export enum DocStatus {
   BORRADOR = 'BORRADOR',
+  PENDIENTE_APROBACION = 'PENDIENTE_APROBACION',
   VIGENTE = 'VIGENTE',
+  RECHAZADO = 'RECHAZADO',
   ARCHIVADA = 'ARCHIVADA',
 }
+
+/** Categoria de la documentacion de cierre de proyectos (maestra DOC_CATEGORY). */
+export const CLOSURE_DOC_CATEGORY = 'CIERRE';
 
 /** Todos los estados validos, util para validaciones y pruebas. */
 export const DOC_STATUSES: readonly DocStatus[] = Object.values(DocStatus);
 
 /**
- * Transiciones permitidas de la maquina minima REVERSIBLE del documento
- * (design §4.2). SOLO estas aristas se admiten; lo no listado -> 400 en el
- * helper. Todas pasan por POST /documents/:id/status.
+ * Transiciones permitidas (design §4.2 + aprobacion documental). Lo no listado
+ * -> 400 en el helper.
  */
 export const DOC_STATUS_TRANSITIONS: ReadonlyArray<
   readonly [DocStatus, DocStatus]
 > = [
-  // Publicar un borrador.
+  // Publicar un borrador directamente (documentos generales, no de cierre).
   [DocStatus.BORRADOR, DocStatus.VIGENTE],
   // Archivar un vigente.
   [DocStatus.VIGENTE, DocStatus.ARCHIVADA],
@@ -31,6 +37,15 @@ export const DOC_STATUS_TRANSITIONS: ReadonlyArray<
   [DocStatus.ARCHIVADA, DocStatus.VIGENTE],
   // Despublicar un vigente (reversible).
   [DocStatus.VIGENTE, DocStatus.BORRADOR],
+  // Aprobacion documental.
+  [DocStatus.BORRADOR, DocStatus.PENDIENTE_APROBACION],
+  [DocStatus.PENDIENTE_APROBACION, DocStatus.VIGENTE],
+  [DocStatus.PENDIENTE_APROBACION, DocStatus.RECHAZADO],
+  // Retirar el envio para corregir.
+  [DocStatus.PENDIENTE_APROBACION, DocStatus.BORRADOR],
+  // Subsanar un rechazo: volver a borrador o reenviar.
+  [DocStatus.RECHAZADO, DocStatus.BORRADOR],
+  [DocStatus.RECHAZADO, DocStatus.PENDIENTE_APROBACION],
 ];
 
 /**

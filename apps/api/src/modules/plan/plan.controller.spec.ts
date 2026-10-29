@@ -28,7 +28,12 @@ describe('PlanController (delegacion)', () => {
     authorize: jest.fn().mockResolvedValue('authorize'),
     return: jest.fn().mockResolvedValue('return'),
   } as unknown as PlanService;
-  const controller = new PlanController(svc);
+  const excelSvc = {
+    exportExcel: jest.fn().mockResolvedValue(Buffer.from('x')),
+    templateExcel: jest.fn().mockResolvedValue(Buffer.from('x')),
+    importExcel: jest.fn().mockResolvedValue('importExcel'),
+  };
+  const controller = new PlanController(svc, excelSvc as never);
   const a = actor();
 
   it('create delega actor, requestId y dto', async () => {
@@ -58,6 +63,13 @@ describe('PlanController (delegacion)', () => {
   it('exportPlan delega actor y requestId', async () => {
     await expect(controller.exportPlan(a, 'r1')).resolves.toBe('exportPlan');
     expect(svc.exportPlan).toHaveBeenCalledWith(a, 'r1');
+  });
+
+  it('importExcel delega el archivo en base64', async () => {
+    await expect(controller.importExcel(a, 'r1', { fileBase64: 'abc' })).resolves.toBe(
+      'importExcel',
+    );
+    expect(excelSvc.importExcel).toHaveBeenCalledWith(a, 'r1', 'abc');
   });
 
   it('importPlan delega actor, requestId y dto', async () => {

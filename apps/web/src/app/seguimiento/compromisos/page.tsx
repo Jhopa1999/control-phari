@@ -1,7 +1,9 @@
-import { CompromisosView } from './compromisos-view';
+import { redirect } from 'next/navigation';
 
-export const metadata = { title: 'Compromisos' };
-
-export default function CompromisosPage(): React.ReactElement {
-  return <CompromisosView />;
+/**
+ * Compromisos se unificó con Reuniones: la ruta antigua lleva a la pestaña
+ * «Compromisos» del módulo «Reuniones y compromisos».
+ */
+export default function CompromisosPage(): never {
+  redirect('/seguimiento/reuniones?tab=compromisos');
 }

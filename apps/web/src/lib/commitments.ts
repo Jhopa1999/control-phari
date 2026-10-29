@@ -36,11 +36,15 @@ function messageForStatus(status: number): string {
 }
 
 /** Normaliza cualquier fallo (HTTP o de red) a un CommitmentError entendible. */
-function toCommitmentError(status: number | undefined): CommitmentError {
+function toCommitmentError(status: number | undefined, body?: unknown): CommitmentError {
   if (status === undefined) {
     return new CommitmentError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
+  }
+  const server = (body as { message?: unknown } | undefined)?.message;
+  if ((status === 400 || status === 403 || status === 409) && typeof server === 'string' && server.trim()) {
+    return new CommitmentError(server, status);
   }
   return new CommitmentError(messageForStatus(status), status);
 }
@@ -50,7 +54,7 @@ export async function listCommitments(): Promise<Commitment[]> {
   try {
     const { data, error, response } = await api.GET('/commitments');
     if (error || !data) {
-      throw toCommitmentError(response.status);
+      throw toCommitmentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -66,7 +70,7 @@ export async function getCommitment(id: string): Promise<Commitment> {
       params: { path: { id } },
     });
     if (error || !data) {
-      throw toCommitmentError(response.status);
+      throw toCommitmentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -84,7 +88,7 @@ export async function createCommitment(
       body: input,
     });
     if (error || !data) {
-      throw toCommitmentError(response.status);
+      throw toCommitmentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -104,7 +108,7 @@ export async function updateCommitment(
       body: input,
     });
     if (error || !data) {
-      throw toCommitmentError(response.status);
+      throw toCommitmentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -127,7 +131,7 @@ export async function transitionCommitment(
       },
     );
     if (error || !data) {
-      throw toCommitmentError(response.status);
+      throw toCommitmentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -143,7 +147,7 @@ export async function deleteCommitment(id: string): Promise<void> {
       params: { path: { id } },
     });
     if (error) {
-      throw toCommitmentError(response.status);
+      throw toCommitmentError(response.status, error);
     }
   } catch (err) {
     if (err instanceof CommitmentError) throw err;

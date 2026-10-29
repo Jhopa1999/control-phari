@@ -24,9 +24,9 @@ export class GovernanceScopeService {
   /** `where` de alcance por proceso principal (design §2.5): jefe sin filtro. */
   private scopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
     if (actor.isJefeArea) {
-      return {};
+      return { deletedAt: null };
     }
-    return { mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+    return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
   }
 
   /** Procesos donde el actor es LIDER_PROCESO (no cualquier grant). */

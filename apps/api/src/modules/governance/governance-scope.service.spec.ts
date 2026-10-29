@@ -73,7 +73,7 @@ describe('GovernanceScopeService', () => {
       expect(res).toBe(request);
       const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0]
         .where;
-      expect(where.AND).toEqual([{ id: 'req-1' }, {}]);
+      expect(where.AND).toEqual([{ id: 'req-1' }, { deletedAt: null }]);
     });
 
     it('no-jefe -> where filtra por mainProcessId in scopedProcessIds', async () => {

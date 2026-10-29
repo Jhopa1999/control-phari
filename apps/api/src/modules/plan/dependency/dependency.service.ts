@@ -74,10 +74,11 @@ export class DependencyService {
     dependentTaskId: string,
     dto: AddDependencyDto,
   ): Promise<TaskDependencyResponseDto> {
-    const { mainProcessId } = await this.planState.requireTaskInScope(
+    const { mainProcessId, requestState } = await this.planState.requireTaskInScope(
       actor,
       dependentTaskId,
     );
+    this.planState.assertProjectOpen(requestState);
     const predecessorTaskId = dto.predecessorTaskId;
 
     // Auto-dependencia -> 400.
@@ -154,10 +155,11 @@ export class DependencyService {
     dependentTaskId: string,
     predecessorTaskId: string,
   ): Promise<void> {
-    const { mainProcessId } = await this.planState.requireTaskInScope(
+    const { mainProcessId, requestState } = await this.planState.requireTaskInScope(
       actor,
       dependentTaskId,
     );
+    this.planState.assertProjectOpen(requestState);
 
     const dep = await this.prisma.taskDependency.findUnique({
       where: {

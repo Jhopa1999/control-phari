@@ -455,6 +455,7 @@ describe('AssetService', () => {
 
       expect(m.prismaObj.request.findMany.mock.calls[0][0].where).toEqual({
         assetId: 'a1',
+        deletedAt: null,
       });
       expect(res.map((r) => r.id)).toEqual(['r2', 'r1']);
       expect(res[0].operationalState).toBe('EN_TRIAGE');

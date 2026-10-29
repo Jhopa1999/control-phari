@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -17,6 +18,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { PlanService } from './plan.service';
+import { PlanExcelService } from './plan-excel.service';
+import { ImportPlanExcelDto } from './dto/import-plan-excel.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { ReturnPlanDto } from './dto/return-plan.dto';
@@ -38,12 +41,18 @@ import { RoleCode } from '../auth/role-code';
  * el mismo conjunto de roles de MODULE_MATRIX). Alcance por mainProcessId en el
  * service.
  */
+const XLSX_MIME =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 @ApiTags('plan')
 @Controller('requests')
 @UseGuards(CurrentUserGuard, RolesGuard)
 @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO)
 export class PlanController {
-  constructor(private readonly planService: PlanService) {}
+  constructor(
+    private readonly planService: PlanService,
+    private readonly planExcel: PlanExcelService,
+  ) {}
 
   @Post(':requestId/plan')
   @ApiOperation({ summary: 'Crea el plan de una solicitud comprometida (-> En planificacion).' })
@@ -113,6 +122,58 @@ export class PlanController {
     @Param('requestId', ParseUUIDPipe) requestId: string,
   ) {
     return this.planService.exportPlan(actor, requestId);
+  }
+
+  @Get(':requestId/plan/export-excel')
+  @ApiOperation({ summary: 'Exporta el plan a un archivo Excel (.xlsx).' })
+  @ApiParam({ name: 'requestId', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Archivo .xlsx del plan.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Plan inexistente o fuera de alcance.' })
+  async exportExcel(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('requestId', ParseUUIDPipe) requestId: string,
+  ) {
+    const buffer = await this.planExcel.exportExcel(actor, requestId);
+    return new StreamableFile(buffer, {
+      type: XLSX_MIME,
+      disposition: 'attachment; filename="plan.xlsx"',
+    });
+  }
+
+  @Get(':requestId/plan/template-excel')
+  @ApiOperation({ summary: 'Descarga la plantilla Excel (.xlsx) de planificación.' })
+  @ApiParam({ name: 'requestId', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Plantilla .xlsx.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Plan inexistente o fuera de alcance.' })
+  async templateExcel(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('requestId', ParseUUIDPipe) requestId: string,
+  ) {
+    const buffer = await this.planExcel.templateExcel(actor, requestId);
+    return new StreamableFile(buffer, {
+      type: XLSX_MIME,
+      disposition: 'attachment; filename="plantilla-planificacion.xlsx"',
+    });
+  }
+
+  @Post(':requestId/plan/import-excel')
+  @ApiOperation({ summary: 'Importa el plan desde un Excel (.xlsx); reemplaza el contenido actual.' })
+  @ApiParam({ name: 'requestId', format: 'uuid' })
+  @ApiBody({ type: ImportPlanExcelDto })
+  @ApiResponse({ status: 200, description: 'Plan importado (reemplazado).', type: ImportPlanResultDto })
+  @ApiResponse({ status: 400, description: 'Archivo inválido; el cuerpo incluye la lista de errores (errors).' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Plan inexistente o fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El plan no esta en borrador ni devuelto.' })
+  @HttpCode(200)
+  importExcel(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('requestId', ParseUUIDPipe) requestId: string,
+    @Body() dto: ImportPlanExcelDto,
+  ) {
+    return this.planExcel.importExcel(actor, requestId, dto.fileBase64);
   }
 
   @Post(':requestId/plan/import')

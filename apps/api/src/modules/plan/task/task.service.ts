@@ -13,6 +13,11 @@ import { RoleCode } from '../../auth/role-code';
 import { PlanStateService } from '../plan-state.service';
 import { TaskStatus } from '../task-status';
 import { applyMilestoneRule } from './milestone';
+import {
+  NotificationService,
+  NotificationType,
+} from '../../notification/notification.service';
+import { assertTaskWithinPhase, assertValidRange } from '../date-range';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
@@ -41,6 +46,7 @@ export class TaskService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly planState: PlanStateService,
+    private readonly notifications: NotificationService,
   ) {}
 
   private isPlanManager(actor: CurrentActor): boolean {
@@ -148,15 +154,14 @@ export class TaskService {
   ): Promise<TaskResponseDto> {
     const phase = await this.prisma.planPhase.findFirst({
       where: { id: phaseId },
-      select: { id: true, planId: true },
+      select: { id: true, planId: true, name: true, startDate: true, endDate: true },
     });
     if (!phase) {
       throw new NotFoundException(`Fase "${phaseId}" no encontrada.`);
     }
-    const { mainProcessId } = await this.planState.requirePlanByIdInScope(
-      actor,
-      phase.planId,
-    );
+    const { mainProcessId, requestState, requestId } =
+      await this.planState.requirePlanByIdInScope(actor, phase.planId);
+    this.planState.assertProjectOpen(requestState);
 
     const isMilestone = dto.isMilestone ?? false;
     const normalized = applyMilestoneRule({
@@ -165,6 +170,11 @@ export class TaskService {
       startDate: dto.startDate !== undefined ? new Date(dto.startDate) : null,
       endDate: dto.endDate !== undefined ? new Date(dto.endDate) : null,
     });
+    assertValidRange(normalized.startDate, normalized.endDate, 'tarea');
+    assertTaskWithinPhase(
+      { start: normalized.startDate, end: normalized.endDate, title: dto.title },
+      phase,
+    );
 
     const created = await this.prisma.$transaction(async (tx) => {
       const task = await tx.task.create({
@@ -195,7 +205,62 @@ export class TaskService {
       return task;
     });
 
+    await this.notifyAssignment(actor, created, requestId);
     return this.findOne(actor, created.id);
+  }
+
+  /** NOT-01: avisa al responsable cuando se le asigna una tarea. */
+  private async notifyAssignment(
+    actor: CurrentActor,
+    task: { id: string; title: string; responsibleUserId: string | null },
+    requestId: string,
+  ): Promise<void> {
+    if (!task.responsibleUserId) return;
+    await this.notifications.notify({
+      userIds: [task.responsibleUserId],
+      excludeUserId: actor.userId,
+      type: NotificationType.TASK_ASSIGNED,
+      title: 'Nueva tarea asignada',
+      message: `Se te asignó la tarea «${task.title}».`,
+      link: '/mi-trabajo',
+      requestId,
+    });
+  }
+
+  /**
+   * NOT-01: cuando la última tarea pendiente del plan queda terminada, avisa a
+   * los líderes del proceso y a los jefes del área (puede solicitarse el cierre).
+   */
+  private async notifyIfPlanCompleted(
+    actor: CurrentActor,
+    planId: string,
+    requestId: string,
+    mainProcessId: string,
+  ): Promise<void> {
+    const [total, pending] = await Promise.all([
+      this.prisma.task.count({ where: { phase: { planId } } }),
+      this.prisma.task.count({
+        where: { phase: { planId }, status: { not: TaskStatus.TERMINADA } },
+      }),
+    ]);
+    if (total === 0 || pending > 0) return;
+    const request = await this.prisma.request.findFirst({
+      where: { id: requestId },
+      select: { title: true },
+    });
+    const recipients = [
+      ...(await this.notifications.processLeaders(mainProcessId)),
+      ...(await this.notifications.areaHeadsForProcess(mainProcessId)),
+    ];
+    await this.notifications.notify({
+      userIds: recipients,
+      excludeUserId: actor.userId,
+      type: NotificationType.PLAN_TASKS_COMPLETED,
+      title: 'Plan con todas sus tareas completadas',
+      message: `Todas las tareas de «${request?.title ?? 'el proyecto'}» están terminadas. Ya puede gestionarse su cierre.`,
+      link: `/demanda/solicitudes/${encodeURIComponent(requestId)}`,
+      requestId,
+    });
   }
 
   async update(
@@ -203,10 +268,9 @@ export class TaskService {
     taskId: string,
     dto: UpdateTaskDto,
   ): Promise<TaskResponseDto> {
-    const { task, mainProcessId } = await this.planState.requireTaskInScope(
-      actor,
-      taskId,
-    );
+    const { task, mainProcessId, requestState, requestId } =
+      await this.planState.requireTaskInScope(actor, taskId);
+    this.planState.assertProjectOpen(requestState);
 
     const isMilestone = dto.isMilestone ?? task.isMilestone;
     const normalized = applyMilestoneRule({
@@ -217,6 +281,23 @@ export class TaskService {
         dto.startDate !== undefined ? new Date(dto.startDate) : task.startDate,
       endDate: dto.endDate !== undefined ? new Date(dto.endDate) : task.endDate,
     });
+    assertValidRange(normalized.startDate, normalized.endDate, 'tarea');
+    if (dto.startDate !== undefined || dto.endDate !== undefined) {
+      const phase = await this.prisma.planPhase.findFirst({
+        where: { id: task.phaseId },
+        select: { name: true, startDate: true, endDate: true },
+      });
+      if (phase) {
+        assertTaskWithinPhase(
+          {
+            start: normalized.startDate,
+            end: normalized.endDate,
+            title: dto.title ?? task.title,
+          },
+          phase,
+        );
+      }
+    }
 
     const data: Prisma.TaskUpdateInput = {};
     if (dto.title !== undefined) data.title = dto.title;
@@ -243,7 +324,7 @@ export class TaskService {
       data.endDate = normalized.endDate;
     }
 
-    await this.prisma.$transaction(async (tx) => {
+    const saved = await this.prisma.$transaction(async (tx) => {
       const next = await tx.task.update({ where: { id: task.id }, data });
       await this.audit.record(tx, {
         actorUserId: actor.userId,
@@ -254,16 +335,22 @@ export class TaskService {
         before: this.snapshot(task),
         after: this.snapshot(next),
       });
+      return next;
     });
 
+    if (
+      dto.responsibleUserId !== undefined &&
+      dto.responsibleUserId !== task.responsibleUserId
+    ) {
+      await this.notifyAssignment(actor, saved, requestId);
+    }
     return this.findOne(actor, task.id);
   }
 
   async remove(actor: CurrentActor, taskId: string): Promise<void> {
-    const { task, mainProcessId } = await this.planState.requireTaskInScope(
-      actor,
-      taskId,
-    );
+    const { task, mainProcessId, requestState } =
+      await this.planState.requireTaskInScope(actor, taskId);
+    this.planState.assertProjectOpen(requestState);
 
     const asPredecessor = await this.prisma.taskDependency.count({
       where: { predecessorTaskId: task.id },
@@ -299,10 +386,9 @@ export class TaskService {
     taskId: string,
     dto: UpdateTaskStatusDto,
   ): Promise<TaskResponseDto> {
-    const { task, mainProcessId } = await this.planState.requireTaskInScope(
-      actor,
-      taskId,
-    );
+    const { task, mainProcessId, requestState, requestId, planId } =
+      await this.planState.requireTaskInScope(actor, taskId);
+    this.planState.assertProjectOpen(requestState);
 
     // Permiso §2.7/D6: integrante que no es responsable -> 403.
     if (!this.isPlanManager(actor) && task.responsibleUserId !== actor.userId) {
@@ -335,6 +421,9 @@ export class TaskService {
       });
     });
 
+    if (nextStatus === TaskStatus.TERMINADA && task.status !== TaskStatus.TERMINADA) {
+      await this.notifyIfPlanCompleted(actor, planId, requestId, mainProcessId);
+    }
     return this.findOne(actor, task.id);
   }
 
@@ -348,10 +437,9 @@ export class TaskService {
     taskId: string,
     dto: AcceptTaskDto,
   ): Promise<TaskResponseDto> {
-    const { task, mainProcessId } = await this.planState.requireTaskInScope(
-      actor,
-      taskId,
-    );
+    const { task, mainProcessId, requestState } =
+      await this.planState.requireTaskInScope(actor, taskId);
+    this.planState.assertProjectOpen(requestState);
 
     if (task.status !== TaskStatus.TERMINADA) {
       throw new ConflictException(
@@ -386,8 +474,8 @@ export class TaskService {
    */
   async myWork(actor: CurrentActor): Promise<MyWorkItemDto[]> {
     const requestWhere: Prisma.RequestWhereInput = actor.isJefeArea
-      ? {}
-      : { mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+      ? { deletedAt: null }
+      : { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
 
     const tasks = await this.prisma.task.findMany({
       where: {

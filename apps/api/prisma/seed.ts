@@ -193,6 +193,8 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'DOC_STATUS', code: 'BORRADOR', label: 'Borrador', sortOrder: 1 },
     { catalog: 'DOC_STATUS', code: 'VIGENTE', label: 'Vigente', sortOrder: 2 },
     { catalog: 'DOC_STATUS', code: 'ARCHIVADA', label: 'Archivada', sortOrder: 3 },
+    { catalog: 'DOC_STATUS', code: 'PENDIENTE_APROBACION', label: 'Pendiente de aprobación', sortOrder: 4 },
+    { catalog: 'DOC_STATUS', code: 'RECHAZADO', label: 'Rechazado', sortOrder: 5 },
     // DEMAND_TYPE
     { catalog: 'DEMAND_TYPE', code: 'DESARROLLO', label: 'Desarrollo', sortOrder: 1 },
     { catalog: 'DEMAND_TYPE', code: 'EVOLUCION', label: 'Evolucion', sortOrder: 2 },
@@ -272,6 +274,7 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'DOC_CATEGORY', code: 'FUNCIONAL', label: 'Funcional', sortOrder: 2 },
     { catalog: 'DOC_CATEGORY', code: 'OPERATIVA', label: 'Operativa', sortOrder: 3 },
     { catalog: 'DOC_CATEGORY', code: 'OTRO', label: 'Otro', sortOrder: 4 },
+    { catalog: 'DOC_CATEGORY', code: 'CIERRE', label: 'Cierre de proyecto', sortOrder: 5 },
     // Fase 7 (gobierno de la demanda · design §2.7). Catalogos nuevos del marco
     // FCGR §4/§6/§7; seed inicial reversible (ampliable por gestion de maestras
     // sin migracion). GOVERNANCE_ROUTE = ruta proporcional (distinta de

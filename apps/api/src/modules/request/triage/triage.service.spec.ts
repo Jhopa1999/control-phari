@@ -198,7 +198,7 @@ describe('TriageService', () => {
       service.create(lider(['p1']), 'r1', { decision: 'CONTINUAR' }),
     ).rejects.toBeInstanceOf(NotFoundException);
     const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0].where;
-    expect(where.AND).toEqual([{ id: 'r1' }, { mainProcessId: { in: ['p1'] } }]);
+    expect(where.AND).toEqual([{ id: 'r1' }, { deletedAt: null, mainProcessId: { in: ['p1'] } }]);
   });
 
   // --- Responsable principal como FK (design §7) ---

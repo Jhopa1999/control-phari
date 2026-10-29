@@ -256,7 +256,6 @@ test.describe('navigation', () => {
       '/seguimiento/semanal',
       '/seguimiento/novedades',
       '/seguimiento/reuniones',
-      '/seguimiento/compromisos',
       '/activos/catalogo',
       '/activos/documentos',
       '/administracion/frameworks',

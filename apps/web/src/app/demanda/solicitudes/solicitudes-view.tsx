@@ -33,12 +33,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Process, Request } from '@/lib/api-client';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import type { Process, Request, Requester } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
 import { formatDate } from '@/lib/format';
+import { listRequesters } from '@/lib/requesters';
 import {
   RequestError,
   createRequest,
+  deleteRequest,
   listRequests,
   updateRequest,
 } from '@/lib/requests';
@@ -122,6 +125,8 @@ export function SolicitudesView(): React.ReactElement {
   const { allowedModules } = useActor();
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
+  const [requesters, setRequesters] = React.useState<Requester[]>([]);
+  const [toDelete, setToDelete] = React.useState<Request | null>(null);
   const [state, setState] = React.useState<LoadState>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
@@ -139,12 +144,14 @@ export function SolicitudesView(): React.ReactElement {
   const load = React.useCallback(async () => {
     setState('loading');
     try {
-      const [reqs, procs] = await Promise.all([
+      const [reqs, procs, reqrs] = await Promise.all([
         listRequests(),
         listProcesses().catch(() => [] as Process[]),
+        listRequesters().catch(() => [] as Requester[]),
       ]);
       setRequests(reqs);
       setProcesses(procs);
+      setRequesters(reqrs);
       setState('success');
     } catch (err) {
       setErrorMessage(messageOf(err));
@@ -245,7 +252,29 @@ export function SolicitudesView(): React.ReactElement {
         placement: 'menu',
       });
     }
+    // Eliminar: el backend valida rol (jefe/líder), alcance y estado.
+    if (allowedModules.has('triage')) {
+      actions.push({
+        key: 'delete',
+        label: 'Eliminar',
+        onSelect: () => setToDelete(r),
+        placement: 'menu',
+      });
+    }
     return actions;
+  }
+
+  async function handleDelete(): Promise<void> {
+    if (!toDelete) return;
+    try {
+      await deleteRequest(toDelete.id);
+      toast.success('Solicitud eliminada.');
+      await load();
+    } catch (err) {
+      toast.error(messageOf(err));
+    } finally {
+      setToDelete(null);
+    }
   }
 
   async function handleSubmit(values: SolicitudFormValues): Promise<void> {
@@ -256,12 +285,10 @@ export function SolicitudesView(): React.ReactElement {
         await updateRequest(editing.id, {
           title: values.title,
           participantProcessIds: values.participantProcessIds,
-          requesterArea: trimOrUndefined(values.requesterArea),
-          requesterName: trimOrUndefined(values.requesterName),
+          requesterId: values.requesterId || undefined,
           functionalOwner: trimOrUndefined(values.functionalOwner),
           expectedResult: trimOrUndefined(values.expectedResult),
           targetDate: toIso(values.targetDate),
-          referenceUrl: trimOrUndefined(values.referenceUrl),
           changeJustification: trimOrUndefined(values.changeJustification),
         });
         toast.success('Solicitud actualizada.');
@@ -270,12 +297,10 @@ export function SolicitudesView(): React.ReactElement {
           title: values.title,
           mainProcessId: values.mainProcessId,
           participantProcessIds: values.participantProcessIds,
-          requesterArea: trimOrUndefined(values.requesterArea),
-          requesterName: trimOrUndefined(values.requesterName),
+          requesterId: values.requesterId || undefined,
           functionalOwner: trimOrUndefined(values.functionalOwner),
           expectedResult: trimOrUndefined(values.expectedResult),
           targetDate: toIso(values.targetDate),
-          referenceUrl: trimOrUndefined(values.referenceUrl),
         });
         const triageHref = `/demanda/triage?requestId=${encodeURIComponent(created.id)}`;
         toast.success(
@@ -508,9 +533,21 @@ export function SolicitudesView(): React.ReactElement {
         }}
         editing={editing}
         processes={processes}
+        requesters={requesters}
         submitting={submitting}
         errorMessage={formError}
         onSubmit={(values) => void handleSubmit(values)}
+      />
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setToDelete(null);
+        }}
+        title={`¿Eliminar la solicitud «${toDelete?.title ?? ''}»?`}
+        description="La solicitud dejará de mostrarse en el portal. Se conserva su historial para trazabilidad."
+        confirmLabel="Eliminar solicitud"
+        onConfirm={handleDelete}
       />
     </PageLayout>
   );

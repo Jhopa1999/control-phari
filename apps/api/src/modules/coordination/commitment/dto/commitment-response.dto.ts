@@ -20,6 +20,12 @@ export class CommitmentResponseDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   sourceMeetingId!: string | null;
 
+  @ApiProperty({ type: String, nullable: true, description: 'Título del acta de origen.' })
+  sourceMeetingTitle!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Fecha del acta de origen (YYYY-MM-DD).' })
+  sourceMeetingDate!: string | null;
+
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   assignedUserId!: string | null;
 

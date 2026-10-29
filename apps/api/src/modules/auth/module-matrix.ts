@@ -30,6 +30,7 @@ export type ModuleKey =
   | 'systemSettings'
   | 'areas'
   | 'processesAdmin'
+  | 'requesters'
   | 'aiSettings'
   | 'recurring';
 
@@ -94,6 +95,8 @@ export const MODULE_MATRIX: Record<ModuleKey, readonly RoleCode[]> = {
   // Administracion de procesos: ADMIN (gestion global) y JEFE_AREA (gestiona
   // los procesos de su area).
   processesAdmin: [RoleCode.ADMIN, RoleCode.JEFE_AREA],
+  // Maestro de solicitantes (cada uno asociado a un area): ADMIN y JEFE_AREA.
+  requesters: [RoleCode.ADMIN, RoleCode.JEFE_AREA],
   // Configuracion de agentes de IA: SOLO ADMIN. Es configuracion tecnica del
   // sistema (credenciales Bedrock, modelos, agentes), fuera del alcance de area.
   aiSettings: [RoleCode.ADMIN],

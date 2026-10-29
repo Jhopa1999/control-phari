@@ -25,7 +25,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Approval, Process, Request, RequestParticipant } from '@/lib/api-client';
+import type {
+  Approval,
+  Process,
+  Request,
+  RequestParticipant,
+  Requester,
+} from '@/lib/api-client';
 import { listApprovals } from '@/lib/approval';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -34,12 +40,11 @@ export interface SolicitudFormValues {
   title: string;
   mainProcessId: string;
   participantProcessIds: string[];
-  requesterArea: string;
-  requesterName: string;
+  /** Solicitante del maestro (el área se asocia automáticamente). */
+  requesterId: string;
   functionalOwner: string;
   expectedResult: string;
   targetDate: string;
-  referenceUrl: string;
   changeJustification: string;
 }
 
@@ -49,6 +54,8 @@ interface SolicitudFormDialogProps {
   /** Si se pasa, el diálogo está en modo edición. */
   editing?: Request | null;
   processes: Process[];
+  /** Maestro de solicitantes (SOL-03). */
+  requesters: Requester[];
   submitting: boolean;
   /** Error del backend en línea; se conserva ante fallo (AC-031). */
   errorMessage: string | null;
@@ -74,12 +81,10 @@ function emptyValues(): SolicitudFormValues {
     title: '',
     mainProcessId: '',
     participantProcessIds: [],
-    requesterArea: '',
-    requesterName: '',
+    requesterId: '',
     functionalOwner: '',
     expectedResult: '',
     targetDate: '',
-    referenceUrl: '',
     changeJustification: '',
   };
 }
@@ -168,6 +173,7 @@ export function SolicitudFormDialog({
   onOpenChange,
   editing,
   processes,
+  requesters,
   submitting,
   errorMessage,
   onSubmit,
@@ -202,12 +208,10 @@ export function SolicitudFormDialog({
         participantProcessIds: editing.participants
           .map((p: RequestParticipant) => p.processId)
           .filter((id: string) => id !== editing.mainProcessId),
-        requesterArea: editing.requesterArea ?? '',
-        requesterName: editing.requesterName ?? '',
+        requesterId: editing.requesterId ?? '',
         functionalOwner: editing.functionalOwner ?? '',
         expectedResult: editing.expectedResult ?? '',
         targetDate: toDateInput(editing.targetDate),
-        referenceUrl: editing.referenceUrl ?? '',
         changeJustification: '',
       });
     } else {
@@ -269,6 +273,20 @@ export function SolicitudFormDialog({
         (id) => id !== values.mainProcessId,
       ),
     });
+  }
+
+  // SOL-03: solo activos (más el solicitante ya asignado, aunque se haya inactivado).
+  const requesterOptions = React.useMemo(
+    () => requesters.filter((r) => r.active || r.id === editing?.requesterId),
+    [requesters, editing],
+  );
+  const selectedRequester = requesters.find((r) => r.id === values.requesterId);
+  let requesterHelp = 'El área se asigna automáticamente según el solicitante.';
+  if (selectedRequester) {
+    requesterHelp = `Área: ${selectedRequester.areaName}`;
+  } else if (editing && !editing.requesterId && editing.requesterName) {
+    const area = editing.requesterArea ? ` (${editing.requesterArea})` : '';
+    requesterHelp = `Solicitante histórico: ${editing.requesterName}${area}. Selecciona uno del maestro para actualizarlo.`;
   }
 
   const mainProcessName = (id: string) => processes.find((p) => p.id === id)?.name ?? id;
@@ -416,17 +434,21 @@ export function SolicitudFormDialog({
             <div className="grid gap-4">
               <GroupHeading>Solicitante</GroupHeading>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field id="sol-area" label="Área solicitante">
-                  <Input
-                    value={values.requesterArea}
-                    onChange={(e) => update('requesterArea', e.target.value)}
-                  />
-                </Field>
-                <Field id="sol-requester" label="Solicitante">
-                  <Input
-                    value={values.requesterName}
-                    onChange={(e) => update('requesterName', e.target.value)}
-                  />
+                <Field id="sol-requester" label="Solicitante" help={requesterHelp}>
+                  {(control) => (
+                    <Select value={values.requesterId} onValueChange={(v) => update('requesterId', v)}>
+                      <SelectTrigger {...control}>
+                        <SelectValue placeholder="Selecciona un solicitante" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {requesterOptions.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </Field>
                 <Field id="sol-owner" label="Dueño funcional">
                   <Input
@@ -445,14 +467,6 @@ export function SolicitudFormDialog({
                   className="sm:w-48"
                   value={values.targetDate}
                   onChange={(e) => update('targetDate', e.target.value)}
-                />
-              </Field>
-              <Field id="sol-url" label="Ficha o enlace de referencia">
-                <Input
-                  type="url"
-                  placeholder="https://…"
-                  value={values.referenceUrl}
-                  onChange={(e) => update('referenceUrl', e.target.value)}
                 />
               </Field>
               <Field id="sol-result" label="Resultado esperado">

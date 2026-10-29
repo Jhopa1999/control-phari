@@ -36,6 +36,12 @@ export class ListDocumentsDto {
   @IsUUID()
   requestId?: string;
 
+  @ApiPropertyOptional({ type: String, description: 'Filtra por categoría (maestra DOC_CATEGORY).', maxLength: 100 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  categoryCode?: string;
+
   @ApiPropertyOptional({ enum: DOC_STATUSES, description: 'Filtra por estado.' })
   @IsOptional()
   @IsIn(DOC_STATUSES as readonly string[], { message: 'Estado invalido.' })

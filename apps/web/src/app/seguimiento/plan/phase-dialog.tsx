@@ -66,6 +66,7 @@ export function PhaseDialog({
   const [endDate, setEndDate] = React.useState('');
   const [deliverable, setDeliverable] = React.useState('');
   const [nameError, setNameError] = React.useState<string | null>(null);
+  const [dateError, setDateError] = React.useState<string | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const nameRef = React.useRef<HTMLInputElement>(null);
@@ -78,6 +79,7 @@ export function PhaseDialog({
       setEndDate(toDateInput(phase?.endDate));
       setDeliverable(phase?.deliverable ?? '');
       setNameError(null);
+      setDateError(null);
       setFormError(null);
     }
   }, [open, phase]);
@@ -92,6 +94,11 @@ export function PhaseDialog({
     }
     setNameError(null);
     setFormError(null);
+    if (startDate && endDate && endDate < startDate) {
+      setDateError('La fecha de fin no puede ser anterior a la fecha de inicio.');
+      return;
+    }
+    setDateError(null);
     setSubmitting(true);
     const body = {
       name: name.trim(),
@@ -140,10 +147,24 @@ export function PhaseDialog({
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field id="phase-start" label="Inicio">
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setDateError(null);
+                  }}
+                />
               </Field>
-              <Field id="phase-end" label="Fin">
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <Field id="phase-end" label="Fin" error={dateError}>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setDateError(null);
+                  }}
+                />
               </Field>
             </div>
             <Field id="phase-deliverable" label="Entregable">

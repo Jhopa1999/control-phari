@@ -235,7 +235,7 @@ export class TriageSuggestionService {
       ? {}
       : { mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
     return this.prisma.request.findMany({
-      where: { AND: [{ id: { not: current.id } }, scope] },
+      where: { AND: [{ id: { not: current.id } }, { deletedAt: null }, scope] },
       select: { id: true, title: true },
       orderBy: { registeredAt: 'desc' },
       take: 50,

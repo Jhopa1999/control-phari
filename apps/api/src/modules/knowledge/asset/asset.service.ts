@@ -206,7 +206,7 @@ export class AssetService {
   ): Promise<AssetRequestHistoryItemDto[]> {
     await this.requireInScope(actor, id);
     const rows = await this.prisma.request.findMany({
-      where: { assetId: id },
+      where: { assetId: id, deletedAt: null },
       orderBy: [{ registeredAt: 'desc' }, { createdAt: 'desc' }],
       select: {
         id: true,

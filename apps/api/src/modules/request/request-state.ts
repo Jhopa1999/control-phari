@@ -63,6 +63,14 @@ export const IMPLEMENTED_TRANSITIONS: ReadonlyArray<
   [RequestState.LISTA_PARA_LIBERAR, RequestState.EN_ESTABILIZACION],
   [RequestState.EN_ESTABILIZACION, RequestState.OPERATIVA],
   [RequestState.OPERATIVA, RequestState.CERRADA],
+  // CIE-01 (cierre formal): la aprobacion del cierre lleva a CERRADA desde la
+  // ejecucion o cualquier etapa posterior; la reapertura autorizada vuelve a
+  // EN_EJECUCION.
+  [RequestState.EN_EJECUCION, RequestState.CERRADA],
+  [RequestState.EN_VALIDACION, RequestState.CERRADA],
+  [RequestState.LISTA_PARA_LIBERAR, RequestState.CERRADA],
+  [RequestState.EN_ESTABILIZACION, RequestState.CERRADA],
+  [RequestState.CERRADA, RequestState.EN_EJECUCION],
 ];
 
 /** Indica si una transicion `from -> to` esta implementada en Fase 2. */

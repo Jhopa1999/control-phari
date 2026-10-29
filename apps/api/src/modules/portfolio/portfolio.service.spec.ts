@@ -120,12 +120,12 @@ describe('PortfolioService', () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([]);
 
     await service.list(jefe(), {});
-    expect((m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND[0]).toEqual({});
+    expect((m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND[0]).toEqual({ deletedAt: null });
 
     await service.list(lider(['p1']), {});
     expect(
       (m.prismaObj.request as any).findMany.mock.calls[1][0].where.AND[0],
-    ).toEqual({ mainProcessId: { in: ['p1'] } });
+    ).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
   });
 
   it('filtros intersectan el alcance (no lo amplian)', async () => {
@@ -135,7 +135,7 @@ describe('PortfolioService', () => {
       state: 'CERRADA' as any,
     });
     const and = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND;
-    expect(and[0]).toEqual({ mainProcessId: { in: ['p1'] } });
+    expect(and[0]).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
     expect(and).toContainEqual({ mainProcessId: 'p1' });
     expect(and).toContainEqual({ operationalState: 'CERRADA' });
   });

@@ -25,6 +25,11 @@ import { PlanGuideService } from './plan-guide.service';
 import { PlanStateService } from './plan-state.service';
 import { PlanStatus } from './plan-status';
 import { hasCycle } from './dependency/cycle';
+import { assertTaskWithinPhase, assertValidRange } from './date-range';
+import {
+  NotificationService,
+  NotificationType,
+} from '../notification/notification.service';
 import { applyMilestoneRule } from './task/milestone';
 
 /**
@@ -60,6 +65,7 @@ export class PlanService {
     private readonly requestState: RequestStateService,
     private readonly planState: PlanStateService,
     private readonly guide: PlanGuideService,
+    private readonly notifications: NotificationService,
   ) {}
 
   private toResponse(plan: PlanWithUsers): PlanResponseDto {
@@ -195,10 +201,9 @@ export class PlanService {
     requestId: string,
     dto: UpdatePlanDto,
   ): Promise<PlanResponseDto> {
-    const { plan, mainProcessId } = await this.planState.requirePlanInScope(
-      actor,
-      requestId,
-    );
+    const { plan, mainProcessId, requestState } =
+      await this.planState.requirePlanInScope(actor, requestId);
+    this.planState.assertProjectOpen(requestState);
 
     const data: Prisma.PlanUpdateInput = {};
     if (dto.periodStart !== undefined) data.periodStart = new Date(dto.periodStart);
@@ -284,7 +289,28 @@ export class PlanService {
       return next;
     });
 
+    // NOT-01: nueva aprobación pendiente (autorización del plan).
+    await this.notifications.notify({
+      userIds: [
+        ...(await this.notifications.areaHeadsForProcess(mainProcessId)),
+        ...(await this.notifications.processLeaders(mainProcessId)),
+      ],
+      excludeUserId: actor.userId,
+      type: NotificationType.PLAN_PENDING_AUTHORIZATION,
+      title: 'Plan pendiente de autorización',
+      message: `El plan de «${await this.requestTitle(requestId)}» espera autorización.`,
+      link: '/administracion/revision',
+      requestId,
+    });
     return this.toResponse(updated);
+  }
+
+  private async requestTitle(requestId: string): Promise<string> {
+    const r = await this.prisma.request.findFirst({
+      where: { id: requestId },
+      select: { title: true },
+    });
+    return r?.title ?? 'la solicitud';
   }
 
   /**
@@ -343,6 +369,15 @@ export class PlanService {
       return next;
     });
 
+    await this.notifications.notify({
+      userIds: [plan.submittedByUserId, ...(await this.notifications.processLeaders(mainProcessId))],
+      excludeUserId: actor.userId,
+      type: NotificationType.PLAN_AUTHORIZED,
+      title: 'Plan aprobado',
+      message: `El plan de «${await this.requestTitle(requestId)}» fue autorizado. El proyecto pasa a ejecución.`,
+      link: `/seguimiento/plan?requestId=${encodeURIComponent(requestId)}`,
+      requestId,
+    });
     return this.toResponse(updated);
   }
 
@@ -389,6 +424,15 @@ export class PlanService {
       return next;
     });
 
+    await this.notifications.notify({
+      userIds: [plan.submittedByUserId, ...(await this.notifications.processLeaders(mainProcessId))],
+      excludeUserId: actor.userId,
+      type: NotificationType.PLAN_RETURNED,
+      title: 'Plan devuelto',
+      message: `El plan de «${await this.requestTitle(requestId)}» fue devuelto: ${dto.reason}`,
+      link: `/seguimiento/plan?requestId=${encodeURIComponent(requestId)}`,
+      requestId,
+    });
     return this.toResponse(updated);
   }
 
@@ -412,6 +456,7 @@ export class PlanService {
       include: {
         tasks: {
           orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          include: { responsible: { select: { identifier: true } } },
         },
       },
     });
@@ -439,6 +484,7 @@ export class PlanService {
           ref,
           title: task.title,
           isMilestone: task.isMilestone,
+          responsibleIdentifier: task.responsible?.identifier ?? null,
           estimateHours: task.estimateHours,
           startDate: task.startDate ? task.startDate.toISOString() : null,
           endDate: task.endDate ? task.endDate.toISOString() : null,
@@ -574,6 +620,46 @@ export class PlanService {
       }
     }
 
+    // PLA-01/04/05: fechas coherentes (fin >= inicio y tareas dentro de su fase).
+    for (const phase of dto.phases) {
+      const phaseStart = toDate(phase.startDate);
+      const phaseEnd = toDate(phase.endDate);
+      assertValidRange(phaseStart, phaseEnd, 'fase');
+      for (const task of phase.tasks) {
+        const n = normalizedByRef.get(task.ref);
+        assertValidRange(n?.startDate, n?.endDate, 'tarea');
+        assertTaskWithinPhase(
+          { start: n?.startDate, end: n?.endDate, title: task.title },
+          { name: phase.name, startDate: phaseStart, endDate: phaseEnd },
+        );
+      }
+    }
+
+    // Responsables: se resuelven por identificador a usuarios activos.
+    const identifiers = new Set<string>();
+    for (const phase of dto.phases) {
+      for (const task of phase.tasks) {
+        const id = task.responsibleIdentifier?.trim();
+        if (id) identifiers.add(id.toLowerCase());
+      }
+    }
+    const userIdByIdentifier = new Map<string, string>();
+    if (identifiers.size > 0) {
+      const users = await this.prisma.user.findMany({
+        where: { active: true },
+        select: { id: true, identifier: true },
+      });
+      for (const u of users) {
+        userIdByIdentifier.set(u.identifier.trim().toLowerCase(), u.id);
+      }
+      const unknown = [...identifiers].filter((i) => !userIdByIdentifier.has(i));
+      if (unknown.length > 0) {
+        throw new BadRequestException(
+          `Responsables inexistentes o inactivos: ${unknown.join(', ')}.`
+        );
+      }
+    }
+
     const beforeCounts = {
       phases: await this.prisma.planPhase.count({ where: { planId: plan.id } }),
       tasks: await this.prisma.task.count({
@@ -632,6 +718,12 @@ export class PlanService {
               phaseId: createdPhase.id,
               title: task.title,
               isMilestone: task.isMilestone,
+              ...(task.responsibleIdentifier?.trim()
+                ? {
+                    responsibleUserId:
+                      userIdByIdentifier.get(task.responsibleIdentifier.trim().toLowerCase()) ?? null,
+                  }
+                : {}),
               estimateHours: normalized.estimateHours,
               startDate: normalized.startDate,
               endDate: normalized.endDate,

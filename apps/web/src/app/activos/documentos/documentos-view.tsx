@@ -15,6 +15,7 @@ import { DisabledReason } from '@/components/disabled-reason';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
+import { ReasonDialog } from '@/components/reason-dialog';
 import { StatusBadge } from '@/components/status-badge';
 import { SearchInput, Toolbar } from '@/components/toolbar';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -49,6 +50,7 @@ import { listCatalogItems } from '@/lib/catalog';
 import {
   DocumentError,
   changeDocumentStatus,
+  reviewDocument,
   createDocument,
   createDocumentVersion,
   downloadMarkdown,
@@ -83,7 +85,15 @@ type SortKey = 'title' | 'asset' | 'version' | 'status';
 const ALL = '__all__';
 const NOUN = { one: 'documento', other: 'documentos' };
 /** Estados en el orden del ciclo de vida. */
-const DOCUMENT_STATES = ['BORRADOR', 'VIGENTE', 'ARCHIVADA'] as const;
+const DOCUMENT_STATES = [
+  'BORRADOR',
+  'PENDIENTE_APROBACION',
+  'RECHAZADO',
+  'VIGENTE',
+  'ARCHIVADA',
+] as const;
+/** Categoría de la documentación de cierre de proyectos. */
+const CLOSURE_CATEGORY = 'CIERRE';
 const compareStatus = compareByOrder(DOCUMENT_STATES);
 /** Orden por defecto: Título ascendente (design §11.17). */
 const DEFAULT_SORT: SortState<SortKey> = { key: 'title', direction: 'asc' };
@@ -96,9 +106,44 @@ function messageOf(err: unknown): string {
     : 'Ocurrió un error inesperado. Inténtalo de nuevo.';
 }
 
-/** Transiciones disponibles desde el estado actual (BORRADOR ↔ VIGENTE ↔ ARCHIVADA). */
-function transitionsOf(status: string): { label: string; target: DocumentStatus }[] {
-  if (status === 'BORRADOR') return [{ label: 'Publicar', target: 'VIGENTE' }];
+type Transition =
+  | { kind: 'status'; label: string; target: DocumentStatus }
+  | { kind: 'approve' | 'reject'; label: string };
+
+/**
+ * Acciones de estado disponibles (gating cosmético; el backend valida). La
+ * documentación de cierre no se publica directamente: pasa por aprobación.
+ * Aprobar y rechazar es del jefe de área.
+ */
+function transitionsOf(doc: Document, isJefe: boolean): Transition[] {
+  const status = doc.status;
+  const isClosure = doc.categoryCode === CLOSURE_CATEGORY;
+  if (status === 'BORRADOR') {
+    const list: Transition[] = [
+      { kind: 'status', label: 'Enviar a aprobación', target: 'PENDIENTE_APROBACION' },
+    ];
+    if (!isClosure) list.push({ kind: 'status', label: 'Publicar', target: 'VIGENTE' });
+    return list;
+  }
+  if (status === 'PENDIENTE_APROBACION') {
+    const list: Transition[] = [];
+    if (isJefe) {
+      list.push({ kind: 'approve', label: 'Aprobar' }, { kind: 'reject', label: 'Rechazar' });
+    }
+    list.push({ kind: 'status', label: 'Retirar envío', target: 'BORRADOR' });
+    return list;
+  }
+  if (status === 'RECHAZADO') {
+    return [
+      { kind: 'status', label: 'Reenviar a aprobación', target: 'PENDIENTE_APROBACION' },
+      { kind: 'status', label: 'Pasar a borrador', target: 'BORRADOR' },
+    ];
+  }
+  return legacyTransitionsOf(status).map((t) => ({ kind: 'status' as const, ...t }));
+}
+
+/** Transiciones de publicación previas (VIGENTE ↔ ARCHIVADA ↔ BORRADOR). */
+function legacyTransitionsOf(status: string): { label: string; target: DocumentStatus }[] {
   if (status === 'VIGENTE') {
     return [
       { label: 'Archivar', target: 'ARCHIVADA' },
@@ -168,6 +213,10 @@ export function DocumentosView(): React.ReactElement {
   const [viewDoc, setViewDoc] = React.useState<Document | null>(null);
 
   const [statusBusyId, setStatusBusyId] = React.useState<string | null>(null);
+  // Rechazo con motivo (aprobación documental).
+  const [rejecting, setRejecting] = React.useState<Document | null>(null);
+  const [rejectSubmitting, setRejectSubmitting] = React.useState(false);
+  const [rejectError, setRejectError] = React.useState<string | null>(null);
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
 
   const assetById = React.useMemo(() => {
@@ -214,6 +263,21 @@ export function DocumentosView(): React.ReactElement {
   React.useEffect(() => {
     void load();
   }, [load]);
+
+  // Enlace directo (notificaciones/aprobaciones): ?documentId=… abre el documento.
+  const deepLinkDone = React.useRef(false);
+  React.useEffect(() => {
+    if (state !== 'success' || deepLinkDone.current) return;
+    deepLinkDone.current = true;
+    const id = new URLSearchParams(window.location.search).get('documentId');
+    const doc = id ? documents.find((d) => d.id === id) : undefined;
+    if (doc) {
+      setViewDoc(doc);
+      setViewOpen(true);
+    } else if (id) {
+      toast.error('El documento no existe o está fuera de tu alcance.');
+    }
+  }, [state, documents]);
 
   const assetName = React.useCallback(
     // Ids que no vienen en las listas del alcance: nunca un UUID visible (§13.1).
@@ -361,6 +425,35 @@ export function DocumentosView(): React.ReactElement {
     }
   }
 
+  async function handleApprove(doc: Document): Promise<void> {
+    setStatusBusyId(doc.id);
+    try {
+      await reviewDocument(doc.id, { decision: 'APROBAR' });
+      toast.success('Documento aprobado.');
+      await load();
+    } catch (err) {
+      toast.error(messageOf(err));
+    } finally {
+      setStatusBusyId(null);
+    }
+  }
+
+  async function handleReject(reason: string): Promise<void> {
+    if (!rejecting) return;
+    setRejectSubmitting(true);
+    setRejectError(null);
+    try {
+      await reviewDocument(rejecting.id, { decision: 'RECHAZAR', reason });
+      toast.success('Documento rechazado. Se notificó a quien lo envió.');
+      setRejecting(null);
+      await load();
+    } catch (err) {
+      setRejectError(messageOf(err));
+    } finally {
+      setRejectSubmitting(false);
+    }
+  }
+
   async function handleDownload(doc: Document): Promise<void> {
     if (!doc.currentVersion) {
       toast.error('El documento no tiene contenido para descargar.');
@@ -428,14 +521,21 @@ export function DocumentosView(): React.ReactElement {
     ];
     if (canChangeStatus(doc)) {
       const busy = statusBusyId === doc.id;
-      for (const transition of transitionsOf(doc.status)) {
+      for (const transition of transitionsOf(doc, isJefe)) {
         actions.push({
-          key: `status-${transition.target}`,
+          key: transition.kind === 'status' ? `status-${transition.target}` : transition.kind,
           label: transition.label,
           placement: 'menu',
           // Mientras cambia el estado, el disparador del menú muestra el spinner.
           busy,
-          onSelect: () => void handleStatus(doc, transition.target),
+          onSelect: () => {
+            if (transition.kind === 'status') void handleStatus(doc, transition.target);
+            else if (transition.kind === 'approve') void handleApprove(doc);
+            else {
+              setRejectError(null);
+              setRejecting(doc);
+            }
+          },
         });
       }
     }
@@ -641,7 +741,17 @@ export function DocumentosView(): React.ReactElement {
               return (
                 <TableRow key={doc.id}>
                   <TableCell className="min-w-56 max-w-[28rem]">
-                    <CellTitle>{doc.title}</CellTitle>
+                    <CellTitle
+                      meta={
+                        doc.status === 'RECHAZADO' && doc.reviewReason
+                          ? `Motivo del rechazo: ${doc.reviewReason}`
+                          : doc.categoryCode === CLOSURE_CATEGORY
+                            ? 'Documentación de cierre'
+                            : undefined
+                      }
+                    >
+                      {doc.title}
+                    </CellTitle>
                   </TableCell>
                   <TableCell className="min-w-40 max-w-64">
                     <span className="line-clamp-2 wrap-break-word text-muted-foreground">
@@ -716,6 +826,27 @@ export function DocumentosView(): React.ReactElement {
           if (!next) setViewDoc(null);
         }}
         document={viewDoc}
+      />
+
+      <ReasonDialog
+        open={rejecting !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setRejecting(null);
+            setRejectError(null);
+          }
+        }}
+        title={`¿Rechazar «${rejecting?.title ?? ''}»?`}
+        description="Indica qué debe corregirse. El documento queda como Rechazado y se notifica a quien lo envió."
+        fieldId="doc-rechazo-motivo"
+        fieldLabel="Motivo del rechazo"
+        confirmLabel="Rechazar documento"
+        busyLabel="Rechazando…"
+        tone="danger"
+        submitting={rejectSubmitting}
+        errorMessage={rejectError}
+        onConfirm={(reason) => void handleReject(reason)}
+        requiredMessage="Indica el motivo del rechazo."
       />
     </PageLayout>
   );

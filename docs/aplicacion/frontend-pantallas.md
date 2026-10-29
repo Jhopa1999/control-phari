@@ -16,6 +16,13 @@ Las URL de las carpetas no coinciden 1:1 con los grupos del menú: el menú est�
 reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 (`src/app/<área>/...`) y se indica a qué grupo del menú pertenece cada pantalla.
 
+## Centro de notificaciones
+
+La barra superior (escritorio y móvil) muestra una campana con el contador de
+notificaciones no leídas. Al abrirla lista las últimas notificaciones del usuario, permite
+marcarlas como leídas (una o todas) y navegar al elemento relacionado. Se actualiza al
+abrir, cada minuto y al volver a la pestaña.
+
 ## Entrada y sesión
 
 | Ruta | Pantalla | Qué permite hacer |
@@ -34,7 +41,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | Ruta | Pantalla | Qué permite hacer |
 | --- | --- | --- |
 | `/demanda/solicitudes` | Solicitudes | Registrar y consultar solicitudes de demanda; cada fila ofrece la acción *Ver detalle* que abre la ficha de la solicitud (menú grupo *Demanda*, `requests`). |
-| `/demanda/solicitudes/[id]` | Detalle de la solicitud | Ficha de **solo lectura** que reúne el recorrido completo de la solicitud en un stepper vertical con todas las etapas visibles (Solicitud, Triage, Priorización, Aprobación/Compromiso, Planificación, Gobierno y validación, Estabilización/Cierre); cada etapa muestra su estado derivado y, cuando el módulo y el estado lo permiten, un enlace *Ir a actuar* hacia la bandeja correspondiente. Se llega desde la acción *Ver detalle* de Solicitudes (no es ítem de menú, `requests`). |
+| `/demanda/solicitudes/[id]` | Detalle de la solicitud | Ficha de **solo lectura** que reúne el recorrido completo de la solicitud en un stepper vertical con todas las etapas visibles (Solicitud, Triage, Priorización, Aprobación/Compromiso, Planificación, Gobierno y validación, Estabilización/Cierre); cada etapa muestra su estado derivado y, cuando el módulo y el estado lo permiten, un enlace *Ir a actuar* hacia la bandeja correspondiente. Se llega desde la acción *Ver detalle* de Solicitudes (no es ítem de menú, `requests`). Incluye el panel *Cierre del proyecto*: estado funcional, validaciones de tareas y documentación, carga y envío a aprobación de la documentación de cierre, *Solicitar cierre*, aprobación o rechazo (jefe), reapertura (jefe) e historial. |
 | `/demanda/triage` | Triage | Clasificar la solicitud, decidir su ruta y asociar su **activo base** (solo un activo **existente** visible para el proceso; el triage no crea activos y enlaza al módulo de Activos), requisito para priorizar (`triage`). La columna lateral incluye un panel **Sugerencia de IA**: un botón pide la sugerencia (no persiste nada), muestra los cinco codes orientativos con botones para **prefijar** los selects del formulario, la banda de prioridad `P1`–`P4` orientativa, posibles duplicados enlazados e información faltante; si la IA está apagada o falla, muestra un aviso y el triage manual sigue operativo. |
 | `/demanda/priorizacion` | Priorización | Evaluar con los criterios ponderados y ordenar el backlog (`priority`). |
 | `/demanda/resumen` | Indicadores | Panorama/indicadores de demanda (menú grupo *Ejecución* como *Indicadores*, `demandOverview`). |
@@ -43,15 +50,15 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 
 | Ruta | Pantalla | Qué permite hacer |
 | --- | --- | --- |
-| `/seguimiento/plan` | Planificación | Gestionar el plan, fases, tareas y dependencias (menú grupo *Ejecución* como *Planificación*, `plan`). |
+| `/seguimiento/plan` | Planificación | Gestionar el plan, fases, tareas y dependencias; importar/exportar en Excel (.xlsx) con plantilla descargable y lista de errores por fila; el bloque de envío a autorización va al final de la pantalla (menú grupo *Ejecución* como *Planificación*, `plan`). |
 | `/seguimiento/portafolio` | Portafolio | Vista de solo lectura del portafolio de iniciativas (`portfolio`). |
 | `/seguimiento/proyectos` | Proyectos | Área de proyectos (marcada *Próximamente* en el menú, `project`). |
 | `/seguimiento/tareas` | Tarea | Detalle de una tarea (lee `?taskId=`); se llega desde *Mi trabajo* y *Planificación*; no es un ítem de menú. |
 | `/seguimiento/bitacora` | Bitácora | Registrar/consultar el trabajo diario (menú grupo *Seguimiento*, `log`). |
 | `/seguimiento/semanal` | Reporte semanal | Consolidar el reporte semanal del proceso (`log`). |
 | `/seguimiento/novedades` | Novedades | Registrar y seguir incidencias/bloqueos (`log`). |
-| `/seguimiento/reuniones` | Reuniones | Crear y gestionar reuniones con participantes (`meeting`). |
-| `/seguimiento/compromisos` | Compromisos | Registrar y dar seguimiento a compromisos (`meeting`). |
+| `/seguimiento/reuniones` | Reuniones y compromisos | Módulo unificado de control de actas (`meeting`), con dos pestañas. **Actas**: lista de reuniones; el acta muestra participantes, responsable, agenda, decisiones y observaciones, y debajo sus compromisos (agregar, editar y cambiar estado). Se cierra como registro (*Cerrar acta*), se reabre (líder o jefe) y se descarga en Markdown o se imprime/guarda como PDF. **Compromisos**: seguimiento consolidado de todos los compromisos en alcance, con filtros de estado (abiertos, vencidos, terminados), persona y acta (incluido *Sin acta*); permite registrar compromisos sin acta. Admite `?tab=compromisos`, `?meetingId=` y `?commitmentId=` para los enlaces de las notificaciones. |
+| `/seguimiento/compromisos` | — | Ruta antigua: redirige a la pestaña *Compromisos* de *Reuniones y compromisos*. |
 
 ## Activos y conocimiento (`/activos/*`)
 
@@ -60,7 +67,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 | `/activos/capacidad` | Capacidad | Registrar disponibilidad y asignaciones de horas por mes (menú grupo *Ejecución* como *Capacidad*, `capacity`). |
 | `/activos/catalogo` | Activos | Inventario de activos genéricos; cada fila ofrece *Ver historial*. Crear/editar y cambiar estado solo los ve el **jefe de área** (el diálogo define nombre, descripción general y los procesos que pueden ver el activo); los demás roles ven la tabla en modo lectura (menú grupo *Activos y conocimiento*, `asset`). |
 | `/activos/catalogo/[id]/historial` | Historial por activo | Vista de solo lectura de las solicitudes que tienen el activo como base, con su estado y proceso, ordenadas por fecha de registro; se llega desde la acción *Ver historial* del catálogo (no es ítem de menú, `asset`). |
-| `/activos/documentos` | Documentos | Documentación Markdown versionada de los activos (`docs`). |
+| `/activos/documentos` | Documentos | Documentación Markdown versionada de los activos (`docs`). Incluye el flujo de aprobación (enviar, aprobar/rechazar con motivo, reenviar) y abre directamente un documento con `?documentId=`. |
 
 ## Gobierno (`/gobierno/*`)
 
@@ -74,9 +81,10 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 
 | Ruta | Pantalla | Qué permite hacer |
 | --- | --- | --- |
-| `/administracion/revision` | Aprobaciones | Cola de aprobación: solo `JEFE_AREA` puede aprobar el compromiso o devolver a triage; `LIDER_PROCESO` ve la cola en modo lectura (menú grupo *Demanda* como *Aprobaciones*, `review`). |
+| `/administracion/revision` | Aprobaciones | Colas de aprobación: compromisos, planes por autorizar, documentación por aprobar y cierres de proyecto por aprobar; el título de cada fila enlaza a la solicitud, al plan, al documento o al resumen del proyecto. Solo `JEFE_AREA` puede aprobar el compromiso o devolver a triage; `LIDER_PROCESO` ve la cola en modo lectura (menú grupo *Demanda* como *Aprobaciones*, `review`). |
 | `/administracion/frameworks` | Controles | Ciclo de control de gobierno (gates GC1–GC5) y validaciones (menú grupo *Gobierno* como *Controles*, `frameworks`). |
 | `/administracion/maestras` | Maestras | Administrar las maestras/catálogos (`admin`); también marca activa la ruta `/catalogs`. |
+| `/administracion/solicitantes` | Solicitantes | Maestro de solicitantes: listado, alta, edición y activar/inactivar; cada solicitante se asocia a un área activa (`requesters`, `ADMIN` y `JEFE_AREA`). |
 | `/administracion/areas` | Áreas | Crear y editar áreas organizativas (por ejemplo, Analítica) que agrupan procesos: listado, alta y edición de nombre/estado/orden. Solo rol ADMIN (`areas`). |
 | `/administracion/procesos` | Procesos | Crear y editar procesos (por ejemplo, BI, Integraciones, IA) agrupados por área: el alta exige un área activa y la edición no mueve el proceso de área. Rol ADMIN o jefe de área (`processesAdmin`). |
 | `/administracion/configuracion-smtp` | Configuración SMTP | Configurar el servidor SMTP en runtime (host, puerto, remitente, contraseña write-only) con prueba de envío, y gestionar los administradores del sistema (toggle `isAdmin`). Solo rol ADMIN (`systemSettings`). |

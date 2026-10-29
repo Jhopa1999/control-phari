@@ -44,7 +44,7 @@ function createMocks() {
   const auditRecord = audit.record as unknown as jest.Mock;
   const scope = new KnowledgeScopeService();
   const state = new DocumentStateService();
-  const service = new DocumentService(prisma, audit, scope, state);
+  const service = new DocumentService(prisma, audit, scope, state, { notify: jest.fn(), areaHeadsForProcess: jest.fn().mockResolvedValue([]), processLeaders: jest.fn().mockResolvedValue([]) } as never);
   return { prismaObj, auditRecord, service };
 }
 
@@ -424,7 +424,10 @@ describe('DocumentService', () => {
       // Filtros de activo embebidos.
       const assetFilter = and.find((c: any) => c.asset);
       expect(assetFilter.asset.AND).toContainEqual({ processId: 'p1' });
-      expect(assetFilter.asset.AND).toContainEqual({ requestId: 'r1' });
+      // El filtro por proyecto incluye documentos vinculados o del activo de origen.
+      expect(and).toContainEqual({
+        OR: [{ requestId: 'r1' }, { asset: { requestId: 'r1' } }],
+      });
       expect(call.take).toBe(10);
     });
 

@@ -38,6 +38,24 @@ export class DocumentResponseDto {
   @ApiProperty({ type: String, description: 'Estado (DocStatus).' })
   status!: string;
 
+  @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Proyecto (solicitud) vinculado, p. ej. documentación de cierre.' })
+  requestId!: string | null;
+
+  @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Envío a aprobación.' })
+  submittedAt!: Date | null;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  submittedByUserId!: string | null;
+
+  @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Última aprobación o rechazo.' })
+  reviewedAt!: Date | null;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  reviewedByUserId!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Motivo del rechazo u observación de la aprobación.' })
+  reviewReason!: string | null;
+
   @ApiProperty({
     type: DocumentCurrentVersionDto,
     nullable: true,

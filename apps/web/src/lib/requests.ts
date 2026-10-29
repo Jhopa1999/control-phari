@@ -106,6 +106,27 @@ export async function createRequest(input: CreateRequest): Promise<Request> {
   }
 }
 
+/** Elimina lógicamente una solicitud (DELETE /requests/:id). 409 si ya está en ejecución. */
+export async function deleteRequest(id: string): Promise<void> {
+  try {
+    const { error, response } = await api.DELETE('/requests/{id}', {
+      params: { path: { id } },
+    });
+    if (error || !response.ok) {
+      if (response.status === 409) {
+        throw new RequestError(
+          'No se puede eliminar una solicitud que ya está en ejecución o cerrada.',
+          409,
+        );
+      }
+      throw toRequestError(response.status);
+    }
+  } catch (err) {
+    if (err instanceof RequestError) throw err;
+    throw toRequestError(undefined);
+  }
+}
+
 /** Edita la ficha (no el estado) y conserva fechas iniciales (PATCH, BR-017). */
 export async function updateRequest(
   id: string,

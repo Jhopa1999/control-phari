@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { MobileNav } from '@/components/mobile-nav';
+import { NotificationBell } from '@/components/notification-bell';
 import { SkipLink } from '@/components/skip-link';
 
 /**
@@ -18,6 +19,10 @@ export function AppShell({ children }: { children: React.ReactNode }): React.Rea
         <AppSidebar variant="desktop" />
         <div className="flex min-w-0 flex-1 flex-col">
           <MobileNav />
+          {/* Barra superior de escritorio: centro de notificaciones (NOT-01). */}
+          <div className="sticky top-0 z-30 hidden h-12 items-center justify-end gap-2 border-b bg-background/95 px-4 backdrop-blur lg:flex md:px-6 xl:px-8">
+            <NotificationBell />
+          </div>
           <main
             id="contenido"
             tabIndex={-1}

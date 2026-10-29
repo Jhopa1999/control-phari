@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -38,9 +39,9 @@ export class RequestService {
    */
   private scopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
     if (actor.isJefeArea) {
-      return {};
+      return { deletedAt: null };
     }
-    return { mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+    return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
   }
 
   /** Snapshot JSON de una Request para auditoria (before/after). */
@@ -109,6 +110,36 @@ export class RequestService {
     return [mainProcessId, ...extra];
   }
 
+  /**
+   * SOL-03: resuelve el solicitante del maestro y devuelve los campos a
+   * persistir: el área y el nombre se toman SIEMPRE del maestro (el usuario no
+   * los diligencia). `currentRequesterId` permite conservar un solicitante que
+   * después fue inactivado sin obligar a cambiarlo al editar otros datos.
+   */
+  private async resolveRequesterData(
+    requesterId: string | undefined,
+    currentRequesterId: string | null = null,
+  ): Promise<{ requesterId?: string; requesterName?: string; requesterArea?: string }> {
+    if (requesterId === undefined) {
+      return {};
+    }
+    const requester = await this.prisma.requester.findFirst({
+      where: { id: requesterId },
+      include: { area: { select: { name: true } } },
+    });
+    if (!requester) {
+      throw new BadRequestException('El solicitante seleccionado no existe.');
+    }
+    if (!requester.active && requester.id !== currentRequesterId) {
+      throw new BadRequestException('El solicitante seleccionado está inactivo.');
+    }
+    return {
+      requesterId: requester.id,
+      requesterName: requester.name,
+      requesterArea: requester.area.name,
+    };
+  }
+
   async findMany(
     actor: CurrentActor,
     filters: ListRequestsDto,
@@ -167,6 +198,8 @@ export class RequestService {
       dto.participantProcessIds,
     );
 
+    const requesterData = await this.resolveRequesterData(dto.requesterId);
+
     const created = await this.prisma.$transaction(async (tx) => {
       const request = await tx.request.create({
         data: {
@@ -174,12 +207,7 @@ export class RequestService {
           mainProcessId: dto.mainProcessId,
           // operationalState usa el default del schema (REGISTRADA): el service
           // no lo repite (design §1.2, MEDIUM-3).
-          ...(dto.requesterArea !== undefined
-            ? { requesterArea: dto.requesterArea }
-            : {}),
-          ...(dto.requesterName !== undefined
-            ? { requesterName: dto.requesterName }
-            : {}),
+          ...requesterData,
           ...(dto.functionalOwner !== undefined
             ? { functionalOwner: dto.functionalOwner }
             : {}),
@@ -224,6 +252,11 @@ export class RequestService {
     dto: UpdateRequestDto,
   ): Promise<RequestResponseDto> {
     const existing = await this.requireInScope(actor, id);
+    if (existing.operationalState === 'CERRADA') {
+      throw new ConflictException(
+        'El proyecto está cerrado; no se puede modificar su ficha. Solicita su reapertura si es necesario.',
+      );
+    }
 
     // Reconciliar participantes si llegan: el principal se mantiene siempre
     // (BR-001). Se recomputan desde cero preservando el invariante.
@@ -234,6 +267,11 @@ export class RequestService {
             dto.participantProcessIds,
           )
         : null;
+
+    const requesterData = await this.resolveRequesterData(
+      dto.requesterId,
+      existing.requesterId,
+    );
 
     const updated = await this.prisma.$transaction(async (tx) => {
       if (participantIds !== null) {
@@ -252,12 +290,7 @@ export class RequestService {
           // registeredAt, initialCommitmentDate y operationalState NO se tocan
           // (BR-017/BR-022).
           ...(dto.title !== undefined ? { title: dto.title } : {}),
-          ...(dto.requesterArea !== undefined
-            ? { requesterArea: dto.requesterArea }
-            : {}),
-          ...(dto.requesterName !== undefined
-            ? { requesterName: dto.requesterName }
-            : {}),
+          ...requesterData,
           ...(dto.functionalOwner !== undefined
             ? { functionalOwner: dto.functionalOwner }
             : {}),
@@ -291,5 +324,45 @@ export class RequestService {
     });
 
     return this.state.buildResponse(updated);
+  }
+
+  /**
+   * SOL-01: eliminación lógica. Conserva el registro (y su historial/auditoría)
+   * marcándolo con `deletedAt`; deja de aparecer en listados y consultas. No se
+   * permite eliminar solicitudes que ya están en ejecución o cerradas.
+   */
+  async remove(actor: CurrentActor, id: string): Promise<void> {
+    const existing = await this.requireInScope(actor, id);
+
+    const BLOCKED_STATES = new Set<string>([
+      'EN_EJECUCION',
+      'BLOQUEADA',
+      'EN_VALIDACION',
+      'LISTA_PARA_LIBERAR',
+      'EN_ESTABILIZACION',
+      'OPERATIVA',
+      'CERRADA',
+    ]);
+    if (BLOCKED_STATES.has(existing.operationalState)) {
+      throw new ConflictException(
+        'No se puede eliminar una solicitud que ya está en ejecución o cerrada.',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const request = await tx.request.update({
+        where: { id },
+        data: { deletedAt: new Date(), deletedByUserId: actor.userId },
+      });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'DELETE',
+        objectType: 'REQUEST',
+        objectId: id,
+        scopeProcessId: request.mainProcessId,
+        before: this.snapshot(existing),
+        after: null,
+      });
+    });
   }
 }

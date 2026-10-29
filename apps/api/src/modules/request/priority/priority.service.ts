@@ -10,6 +10,10 @@ import {
   RequestStateService,
   TriageDecision,
 } from '../request-state.service';
+import {
+  NotificationService,
+  NotificationType,
+} from '../../notification/notification.service';
 import { CreatePriorityEvaluationDto } from './dto/create-priority-evaluation.dto';
 import { PriorityEvaluationResponseDto } from './dto/priority-evaluation-response.dto';
 
@@ -46,6 +50,7 @@ export class PriorityService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly state: RequestStateService,
+    private readonly notifications: NotificationService,
   ) {}
 
   private criteriaOf(dto: CreatePriorityEvaluationDto): PriorityCriteria {
@@ -209,6 +214,18 @@ export class PriorityService {
       return evaluation;
     });
 
+    // NOT-01: nueva aprobación pendiente (compromiso) solo al entrar en la cola.
+    if (request.operationalState !== RequestState.BACKLOG_PRIORIZADO) {
+      await this.notifications.notify({
+        userIds: await this.notifications.areaHeadsForProcess(request.mainProcessId),
+        excludeUserId: actor.userId,
+        type: NotificationType.APPROVAL_PENDING,
+        title: 'Nueva aprobación pendiente',
+        message: `«${request.title}» fue priorizada y espera la aprobación de su compromiso.`,
+        link: '/administracion/revision',
+        requestId,
+      });
+    }
     return this.toResponse(created);
   }
 }

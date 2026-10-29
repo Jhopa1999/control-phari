@@ -36,6 +36,16 @@ export class UpdateRequestDto {
   @IsUUID('all', { each: true })
   participantProcessIds?: string[];
 
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description:
+      'Solicitante del maestro de solicitantes. El área y el nombre se toman de su registro.',
+  })
+  @IsOptional()
+  @IsUUID()
+  requesterId?: string;
+
   @ApiPropertyOptional({ type: String, description: 'Area solicitante.', maxLength: 255 })
   @IsOptional()
   @Transform(trim)

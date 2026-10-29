@@ -18,6 +18,8 @@ export class PlanError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    /** Detalle por fila cuando una importación tiene errores de validación. */
+    readonly details: string[] = [],
   ) {
     super(message);
     this.name = 'PlanError';
@@ -39,13 +41,24 @@ function messageForStatus(status: number): string {
   }
 }
 
-function toPlanError(status: number | undefined): PlanError {
+function toPlanError(status: number | undefined, body?: unknown): PlanError {
   if (status === undefined) {
     return new PlanError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new PlanError(messageForStatus(status), status);
+  return new PlanError(serverMessage(status, body) ?? messageForStatus(status), status);
+}
+
+/**
+ * Mensaje de negocio devuelto por el backend en un 400 (p. ej. validación de
+ * fechas). Solo se usa si es un texto simple: los errores de formato del
+ * ValidationPipe llegan como lista y se sustituyen por el mensaje genérico.
+ */
+export function serverMessage(status: number | undefined, body: unknown): string | undefined {
+  if (status !== 400 || typeof body !== 'object' || body === null) return undefined;
+  const message = (body as { message?: unknown }).message;
+  return typeof message === 'string' && message.trim() !== '' ? message : undefined;
 }
 
 /**
@@ -230,6 +243,94 @@ export async function importPlan(
     );
     if (error || !data) {
       throw toPlanError(response.status);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof PlanError) throw err;
+    throw toPlanError(undefined);
+  }
+}
+
+/** Dispara la descarga de un Blob en el navegador (Blob + <a download>). */
+function saveBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Descarga el plan en Excel (GET /requests/:requestId/plan/export-excel) o la
+ * plantilla vacía de ejemplo (GET .../plan/template-excel).
+ */
+export async function downloadPlanExcel(
+  requestId: string,
+  kind: 'export' | 'template',
+): Promise<void> {
+  try {
+    const path =
+      kind === 'export'
+        ? '/requests/{requestId}/plan/export-excel'
+        : '/requests/{requestId}/plan/template-excel';
+    const { data, error, response } = await api.GET(path, {
+      params: { path: { requestId } },
+      parseAs: 'blob',
+    });
+    if (error || !data) {
+      throw toPlanError(response.status, error);
+    }
+    saveBlob(
+      data as Blob,
+      kind === 'export' ? `plan-${requestId}.xlsx` : 'plantilla-planificacion.xlsx',
+    );
+  } catch (err) {
+    if (err instanceof PlanError) throw err;
+    throw toPlanError(undefined);
+  }
+}
+
+/** Codifica un archivo en base64 (sin prefijo data:). */
+async function fileToBase64(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Importa el plan desde un Excel (POST /requests/:requestId/plan/import-excel).
+ * Si el archivo tiene errores, el backend responde 400 con la lista por fila y
+ * no guarda nada: se devuelven en `PlanError.details`.
+ */
+export async function importPlanExcel(
+  requestId: string,
+  file: File,
+): Promise<ImportPlanResult> {
+  let fileBase64: string;
+  try {
+    fileBase64 = await fileToBase64(file);
+  } catch {
+    throw new PlanError('No fue posible leer el archivo. Inténtalo de nuevo.');
+  }
+  try {
+    const { data, error, response } = await api.POST(
+      '/requests/{requestId}/plan/import-excel',
+      { params: { path: { requestId } }, body: { fileBase64 } },
+    );
+    if (error || !data) {
+      const body = error as { message?: unknown; errors?: unknown } | undefined;
+      const details = Array.isArray(body?.errors)
+        ? body.errors.filter((e): e is string => typeof e === 'string')
+        : [];
+      const base = toPlanError(response.status, error);
+      throw new PlanError(base.message, response.status, details);
     }
     return data;
   } catch (err) {

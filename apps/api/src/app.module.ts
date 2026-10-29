@@ -7,6 +7,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { AreaModule } from './modules/area/area.module';
+import { RequesterModule } from './modules/requester/requester.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { ClosureModule } from './modules/closure/closure.module';
 import { ProcessModule } from './modules/process/process.module';
 import { UserModule } from './modules/user/user.module';
 import { GrantModule } from './modules/grant/grant.module';
@@ -33,6 +36,9 @@ import { RecurringActivityModule } from './modules/recurring-activity/recurring-
     AuditModule,
     CatalogModule,
     AreaModule,
+    RequesterModule,
+    NotificationModule,
+    ClosureModule,
     ProcessModule,
     UserModule,
     GrantModule,

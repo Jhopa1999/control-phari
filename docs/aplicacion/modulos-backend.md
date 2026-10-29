@@ -99,6 +99,16 @@ Reglas: `code` es único (`409` si se repite al crear); al crear, `areaId` es re
 (UUID) y debe apuntar a un área existente (`404` si no existe). El `areaId` no se edita
 en el PATCH.
 
+## requester — Maestro de solicitantes
+Administra los solicitantes de las solicitudes; cada uno pertenece obligatoriamente a un área activa del maestro de áreas. Lectura para cualquier actor autenticado; escritura ADMIN y JEFE_AREA.
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| GET | `/requesters` | Lista solicitantes (filtros opcionales `active`, `areaId`). |
+| GET | `/requesters/:id` | Consulta un solicitante (`404` si no existe). |
+| POST | `/requesters` | Crea un solicitante (`name` + `areaId` obligatorios; `400` si el área no existe o está inactiva). |
+| PATCH | `/requesters/:id` | Edita nombre/área o activa/inactiva el solicitante. |
+Reglas: el nombre es único sin distinguir mayúsculas ni tildes (`409` si se repite). Cada alta/edición se audita como `REQUESTER`. En `POST/PATCH /requests` el campo `requesterId` fija el solicitante y el backend copia su nombre y su área a `requesterName`/`requesterArea`; las solicitudes históricas conservan su texto original.
+
 ## catalog — Maestras genéricas (funcionalidad base)
 
 `CatalogItem` es la maestra genérica reutilizable de la plantilla (prioridades,
@@ -128,6 +138,7 @@ devolver es exclusiva de `JEFE_AREA`.
 | GET | `/requests/:id` | Obtiene una solicitud por id (`404` fuera de alcance). |
 | POST | `/requests` | Crea una solicitud (estado `REGISTRADA`). |
 | PATCH | `/requests/:id` | Edita la ficha (no el estado); conserva fechas iniciales. |
+| DELETE | `/requests/:id` | Eliminación lógica (`deletedAt`/`deletedByUserId`, auditada como `DELETE`). Solo `JEFE_AREA`/`LIDER_PROCESO` dentro de su alcance; `409` si la solicitud está en ejecución o cerrada. Las solicitudes eliminadas dejan de aparecer en listados y consultas. |
 
 ### Triage (`triage/triage.controller.ts`)
 
@@ -179,10 +190,15 @@ estado de tareas lo tienen los 3 roles; "mi trabajo" usa la capacidad `assigned`
 | PATCH | `/requests/:requestId/plan` | Edita datos del plan (no el estado). |
 | GET | `/requests/:requestId/plan/guide` | Guía de pendientes del plan (gate de envío). |
 | GET | `/requests/:requestId/plan/export` | Exporta el plan a un documento JSON portable (solo lectura; cualquier estado). |
+| GET | `/requests/:requestId/plan/export-excel` | Exporta fases, tareas, responsables, fechas y dependencias a un archivo Excel (.xlsx). |
+| GET | `/requests/:requestId/plan/template-excel` | Descarga la plantilla Excel con la misma estructura y un ejemplo. |
+| POST | `/requests/:requestId/plan/import-excel` | Importa el Excel (`fileBase64`) y reemplaza el contenido. Valida todas las filas antes de guardar: `400` con la lista `errors` por hoja/fila (fechas, rango de fase, responsables, referencias); `409` si el plan no está en borrador/devuelto. |
 | POST | `/requests/:requestId/plan/import` | Importa un plan desde un documento y reemplaza su contenido (`409` si no está en borrador/devuelto; `400` si el documento es inválido). |
 | POST | `/requests/:requestId/plan/submit` | Envía el plan a autorización (`409` si hay pendientes). |
 | POST | `/requests/:requestId/plan/authorize` | Autoriza el plan (→ *Autorizado*; Request → *En ejecución*). |
 | POST | `/requests/:requestId/plan/return` | Devuelve el plan con motivo (→ *Devuelto*). |
+
+Validaciones de fechas (backend y formularios): la fecha de fin de una fase o tarea no puede ser anterior a la de inicio; las fechas de cada tarea deben estar dentro del rango de su fase; al cambiar las fechas de una fase se comprueba que sus tareas sigan dentro. Aplican al crear, editar e importar (JSON o Excel). El formulario de tarea ya no ofrece la opción *Es un hito* (el campo se conserva en datos históricos).
 
 ### Fases (`phase/phase.controller.ts`)
 
@@ -300,9 +316,11 @@ Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reun
 | --- | --- | --- |
 | GET | `/meetings` | Lista reuniones en alcance (filtros opcionales). |
 | POST | `/meetings` | Crea una reunión (estado inicial BORRADOR). |
-| GET | `/meetings/:id` | Detalle de una reunión con participantes. |
-| PATCH | `/meetings/:id` | Edita una reunión (incluye el set de participantes). |
-| DELETE | `/meetings/:id` | Borra una reunión (cascade de participantes). |
+| GET | `/meetings/:id` | Detalle del acta: participantes y sus compromisos (`commitments`, `commitmentsTotal`, `commitmentsOpen`, `closed`). |
+| PATCH | `/meetings/:id` | Edita un acta abierta (incluye el set de participantes); `409` si está cerrada. |
+| POST | `/meetings/:id/close` | Cierra el acta (responsable, líder del proceso o jefe); exige decisiones o al menos un compromiso. |
+| POST | `/meetings/:id/reopen` | Reabre un acta cerrada (líder del proceso o jefe). |
+| DELETE | `/meetings/:id` | Borra un acta abierta sin compromisos (cascade de participantes); `409` si no. |
 
 ### Commitments — Compromisos (`commitment/commitment.controller.ts`)
 
@@ -318,6 +336,16 @@ Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reun
 Reglas: los diarios/semanales son propios del autor; los participantes de una reunión
 deben estar dentro del alcance; las novedades y compromisos usan máquinas de estado
 mínimas reversibles.
+
+Actas y compromisos (módulo unificado): la reunión es el acta. Su estado reutiliza
+`RECORD_STATE`: `BORRADOR` = abierta, `COMPLETADO` = cerrada, `ARCHIVADO` = archivada; el
+cierre solo se hace por `POST /meetings/:id/close` (un `PATCH` de estado a cerrado → `400`).
+Un acta cerrada es un registro: no se edita, no se elimina y no admite compromisos nuevos
+ni re-ligados (`409`); sus compromisos siguen su propio seguimiento y no se pueden eliminar.
+Un compromiso con acta debe ser del mismo proceso que ella (`400`); se permiten
+compromisos sin acta. La respuesta del compromiso incluye `sourceMeetingTitle` y
+`sourceMeetingDate`. Al crear un compromiso, o al cambiar su asignado o responsable, se
+notifica a esas personas (`COMMITMENT_ASSIGNED`).
 
 ## knowledge — Activos y documentos
 
@@ -358,10 +386,55 @@ vinculados.
 | GET | `/documents/:id/versions/:versionId/content` | Contenido Markdown de una versión. |
 | GET | `/documents/:id/content` | Contenido Markdown de la versión vigente (atajo). |
 | POST | `/documents/:id/status` | Cambia el estado del documento (líder/jefe). |
+| GET | `/documents/pending-approval` | Documentos pendientes de aprobación en alcance (jefe/líder). |
+| POST | `/documents/:id/submit-approval` | Envía el documento a aprobación (→ *Pendiente de aprobación*). |
+| POST | `/documents/:id/review` | Aprueba (→ *Vigente*) o rechaza (→ *Rechazado*, motivo obligatorio). Solo `JEFE_AREA`. |
 
 Reglas: el contenido de un documento es inmutable por versión (editar crea una nueva
 versión y conserva la previa); el estado y la aceptación los mueven solo los helpers de
 estado, no un DTO libre; retirar un activo es un cambio de estado (sin borrado físico).
+Aprobación documental: `BORRADOR → PENDIENTE_APROBACION → VIGENTE | RECHAZADO`; un
+rechazado puede volver a borrador o reenviarse. La documentación de cierre (categoría
+`CIERRE`) no puede publicarse sin aprobación (`409`) y, si se edita estando enviada o
+aprobada, vuelve a *Borrador*. Los documentos de un proyecto cerrado no admiten cambios
+(`409`). El listado acepta además los filtros `requestId` (documentos vinculados al
+proyecto o a su activo de origen) y `categoryCode`.
+
+## closure — Cierre formal de proyectos
+Valida y gestiona el cierre de un proyecto (solicitud con plan autorizado).
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| GET | `/requests/:id/closure` | Estado funcional del cierre, validaciones (tareas, documentación), solicitud pendiente e historial. |
+| POST | `/requests/:id/closure` | Solicita el cierre (jefe/líder). `409` con el motivo si hay tareas sin terminar o la documentación de cierre falta o no está aprobada. |
+| POST | `/requests/:id/closure/decision` | Aprueba (→ solicitud *Cerrada*, registra `closedAt`/`closedByUserId`) o rechaza con observaciones. Solo `JEFE_AREA`. |
+| POST | `/requests/:id/reopen` | Reabre un proyecto cerrado con motivo (→ *En ejecución*). Solo `JEFE_AREA`. |
+| GET | `/closures/pending` | Cierres pendientes de aprobación en alcance (Aprobaciones). |
+
+Estado funcional derivado (no se persiste): *En ejecución*, *Pendiente de documentación*,
+*Pendiente de aprobación documental*, *Ejecución finalizada*, *Pendiente de aprobación de
+cierre* y *Cerrado*; se reutilizan los estados operativos existentes (`EN_EJECUCION`…
+`CERRADA`). Tras el cierre se bloquean (`409`) la edición de la ficha, la eliminación, el
+plan, fases, tareas, dependencias y la documentación del proyecto. Todas las acciones se
+auditan (`PROJECT_CLOSURE` y `REQUEST`).
+
+## notification — Centro de notificaciones
+Notificaciones por usuario generadas por eventos reales del backend; cada usuario solo
+ve y marca las suyas.
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| GET | `/notifications` | Notificaciones del usuario actual y contador de no leídas (`take`, `unreadOnly`). |
+| POST | `/notifications/:id/read` | Marca una notificación propia como leída (`404` si es ajena). |
+| POST | `/notifications/read-all` | Marca todas como leídas. |
+
+Eventos: compromiso pendiente de aprobación (jefes del área), plan pendiente de
+autorización (jefes y líderes), plan autorizado o devuelto (quien lo envió y líderes),
+tarea asignada (responsable), documentación pendiente de aprobación (jefes),
+documentación aprobada o rechazada (quien la envió), plan con todas sus tareas
+terminadas (líderes y jefes), solicitud de cierre (jefes), cierre aprobado o rechazado
+(solicitante y líderes) y reapertura (líderes). El autor de la acción no se notifica a sí
+mismo; un fallo al notificar nunca revierte la acción de negocio.
 
 ## governance — Gobierno de la demanda (gates GC1–GC5)
 

@@ -85,7 +85,7 @@ describe('PriorityService', () => {
 
   beforeEach(() => {
     m = createMocks();
-    service = new PriorityService(m.prisma, m.audit, m.state);
+    service = new PriorityService(m.prisma, m.audit, m.state, { notify: jest.fn(), areaHeadsForProcess: jest.fn().mockResolvedValue([]), processLeaders: jest.fn().mockResolvedValue([]) } as never);
   });
 
   it('con triage=Continuar y EN_TRIAGE: calcula score (backend), persiste y pasa a BACKLOG', async () => {

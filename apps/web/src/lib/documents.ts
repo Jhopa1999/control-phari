@@ -214,7 +214,7 @@ export async function changeDocumentStatus(
       },
     );
     if (error || !data) {
-      throw toDocumentError(response.status);
+      throw serverDocumentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -260,4 +260,57 @@ export function downloadMarkdown(
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+/** Mensaje de negocio del backend (400/409) si viene como texto simple. */
+function serverDocumentError(status: number, body: unknown): DocumentError {
+  const message = (body as { message?: unknown } | undefined)?.message;
+  if ((status === 400 || status === 409 || status === 403) && typeof message === 'string' && message.trim()) {
+    return new DocumentError(message, status);
+  }
+  return toDocumentError(status);
+}
+
+/** Envía el documento a aprobación (POST /documents/:id/submit-approval). */
+export async function submitDocumentForApproval(id: string): Promise<Document> {
+  try {
+    const { data, error, response } = await api.POST('/documents/{id}/submit-approval', {
+      params: { path: { id } },
+    });
+    if (error || !data) throw serverDocumentError(response.status, error);
+    return data;
+  } catch (err) {
+    if (err instanceof DocumentError) throw err;
+    throw toDocumentError(undefined);
+  }
+}
+
+/** Aprueba o rechaza un documento pendiente (POST /documents/:id/review, jefe). */
+export async function reviewDocument(
+  id: string,
+  input: { decision: 'APROBAR' | 'RECHAZAR'; reason?: string },
+): Promise<Document> {
+  try {
+    const { data, error, response } = await api.POST('/documents/{id}/review', {
+      params: { path: { id } },
+      body: input,
+    });
+    if (error || !data) throw serverDocumentError(response.status, error);
+    return data;
+  } catch (err) {
+    if (err instanceof DocumentError) throw err;
+    throw toDocumentError(undefined);
+  }
+}
+
+/** Documentos pendientes de aprobación (GET /documents/pending-approval). */
+export async function listPendingDocuments(): Promise<Document[]> {
+  try {
+    const { data, error, response } = await api.GET('/documents/pending-approval');
+    if (error || !data) throw toDocumentError(response.status);
+    return data;
+  } catch (err) {
+    if (err instanceof DocumentError) throw err;
+    throw toDocumentError(undefined);
+  }
 }

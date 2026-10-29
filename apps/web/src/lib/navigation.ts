@@ -12,7 +12,6 @@ import {
   FolderOpen,
   FolderTree,
   Gauge,
-  Handshake,
   Inbox,
   KeyRound,
   LayoutDashboard,
@@ -25,6 +24,7 @@ import {
   ShieldCheck,
   TriangleAlert,
   UserCog,
+  UserRound,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -69,6 +69,7 @@ export type ModuleKey =
   | 'systemSettings'
   | 'areas'
   | 'processesAdmin'
+  | 'requesters'
   | 'aiSettings'
   | 'recurring';
 
@@ -151,8 +152,13 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/seguimiento/bitacora', label: 'Bitácora', moduleKey: 'log', icon: NotebookPen },
       { href: '/seguimiento/semanal', label: 'Reporte semanal', moduleKey: 'log', icon: CalendarDays },
       { href: '/seguimiento/novedades', label: 'Novedades', moduleKey: 'log', icon: TriangleAlert },
-      { href: '/seguimiento/reuniones', label: 'Reuniones', moduleKey: 'meeting', icon: Users },
-      { href: '/seguimiento/compromisos', label: 'Compromisos', moduleKey: 'meeting', icon: Handshake },
+      {
+        href: '/seguimiento/reuniones',
+        label: 'Reuniones y compromisos',
+        moduleKey: 'meeting',
+        icon: Users,
+        activeFor: ['/seguimiento/compromisos'],
+      },
     ],
   },
   {
@@ -195,6 +201,12 @@ export const NAV_GROUPS: NavGroup[] = [
         label: 'Procesos',
         moduleKey: 'processesAdmin',
         icon: FolderKanban,
+      },
+      {
+        href: '/administracion/solicitantes',
+        label: 'Solicitantes',
+        moduleKey: 'requesters',
+        icon: UserRound,
       },
       {
         href: '/administracion/configuracion-smtp',
@@ -242,6 +254,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   systemSettings: 'Configuración del sistema',
   areas: 'Áreas',
   processesAdmin: 'Procesos',
+  requesters: 'Solicitantes',
   aiSettings: 'Agentes de IA',
   recurring: 'Actividades recurrentes',
 };

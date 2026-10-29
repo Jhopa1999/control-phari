@@ -25,6 +25,12 @@ Maestra genérica reutilizable (no es una maestra de negocio concreta).
 - Restricciones: único `code`; índices por `active`, `sortOrder`.
 - Relaciones: `processes` (1:N con `Process`).
 
+### Requester (`requesters`)
+- Maestro de solicitantes: `name`, `nameKey` (clave única normalizada, sin tildes ni
+  mayúsculas), `areaId` (FK requerida a `Area`, `onDelete: Restrict`), `active`.
+- `Request.requesterId` (FK nullable) lo referencia; `requesterName`/`requesterArea` se
+  conservan como copia del maestro y como dato histórico.
+
 ### Process (`processes`)
 Proceso del área (BI, Integraciones, IA) y la coordinación multiproceso FMAA.
 - Campos clave: `code` (MAYÚSCULAS, estable), `name`, `framework?`, `kind`, `areaId`
@@ -115,6 +121,8 @@ Admin. Arranca apagado. No guarda secretos (las credenciales viven en `AiGlobalC
 
 ### Request (`requests`)
 Ficha de la demanda; núcleo del flujo.
+- Eliminación lógica: `deletedAt?` y `deletedByUserId?` (las consultas filtran
+  `deletedAt = null`). `requesterId?` referencia al maestro de solicitantes.
 - Campos clave: `title`, `registeredAt`, datos del solicitante (`requesterArea?`,
   `requesterName?`, `functionalOwner?`), `targetDate?`, `referenceUrl?`,
   `expectedResult?`, `mainProcessId`, `assetId?` (activo base sobre el que se
@@ -282,7 +290,25 @@ Metadatos de un documento Markdown; FK requerida al activo. El contenido vive en
 versiones.
 - Campos clave: `assetId`, `title`, `categoryCode?`, `status` (default `BORRADOR`),
   `currentVersionId?` (apunta a la última versión).
+- Aprobación documental: `submittedAt?`/`submittedByUserId?` (envío a aprobación),
+  `reviewedAt?`/`reviewedByUserId?`/`reviewReason?` (última aprobación o rechazo).
+- `requestId?`: proyecto (solicitud) al que pertenece el documento; la documentación de
+  cierre usa la categoría `CIERRE`.
 - Índices: por `assetId`, `status`, `categoryCode`.
+
+### Notification (`notifications`)
+Notificación por usuario del centro de notificaciones.
+- Campos clave: `userId` (FK a `User`, `onDelete: Cascade`), `type` (p. ej.
+  `TASK_ASSIGNED`, `CLOSURE_REQUESTED`), `title`, `message`, `link?` (ruta interna),
+  `requestId?`, `readAt?`, `createdAt`.
+- Índices: `(userId, readAt)` y `(userId, createdAt)`.
+
+### ProjectClosure (`project_closures`)
+Solicitud de cierre formal de un proyecto (una fila por intento; se conserva como
+evidencia).
+- Campos clave: `requestId` (FK a `Request`), `status` (`PENDIENTE`/`APROBADO`/`RECHAZADO`),
+  `requestedByUserId`, `requestedAt`, `decidedByUserId?`, `decidedAt?`, `decisionReason?`.
+- `Request.closedAt?`/`closedByUserId?` registran quién y cuándo cerró el proyecto.
 
 ### DocumentVersion (`document_versions`)
 Versión inmutable de contenido (append-only; editar crea una nueva versión).
@@ -410,3 +436,10 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     mano que garantiza exactamente un responsable —persona o área—)
 21. `20261028115118_occurrence_reminder_sent_at` (añade la columna aditiva
     `reminder_sent_at` a `recurring_activity_occurrences` para los recordatorios por correo)
+22. `20261028225723_solicitantes_eliminacion_logica` (aditiva: tabla `requesters`;
+    columnas `requests.requester_id`, `deleted_at`, `deleted_by_user_id`)
+23. `20261028233818_notificaciones_cierre_aprobacion_documental` (aditiva: tablas
+    `notifications` y `project_closures`; columnas `requests.closed_at`/`closed_by_user_id`
+    y de revisión en `documents`; siembra idempotente de `DOC_CATEGORY=CIERRE` y
+    `DOC_STATUS=PENDIENTE_APROBACION/RECHAZADO`)
+24. `20261028234216_documento_proyecto` (aditiva: `documents.request_id` + FK a `requests`)

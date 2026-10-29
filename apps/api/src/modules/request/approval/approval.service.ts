@@ -58,9 +58,9 @@ export class ApprovalService {
 
   private scopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
     if (actor.isJefeArea) {
-      return {};
+      return { deletedAt: null };
     }
-    return { mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+    return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
   }
 
   private snapshot(approval: ApprovalModel): Prisma.InputJsonValue {

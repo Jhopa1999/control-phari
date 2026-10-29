@@ -49,6 +49,7 @@ import {
   type TriageCatalogs,
 } from './ficha-detalles';
 import { FichaStep } from './ficha-step';
+import { ClosurePanel } from './closure-panel';
 import {
   approvalStepState,
   governanceStepState,
@@ -262,6 +263,8 @@ export function FichaView({ id }: { id: string }): React.ReactElement {
         data={data}
         allowedModules={allowedModules}
       />
+
+      <ClosurePanel request={request} onChanged={() => void load()} />
     </PageLayout>
   );
 }

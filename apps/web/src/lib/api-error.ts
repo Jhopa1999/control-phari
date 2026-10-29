@@ -47,3 +47,21 @@ export function toApiError(status: number | undefined): ApiError {
   }
   return new ApiError(messageForStatus(status), status);
 }
+
+/**
+ * Como toApiError, pero usa el mensaje de negocio del backend cuando es un
+ * texto simple en un 400/409 (p. ej. «No se puede solicitar el cierre: …»), para
+ * que el usuario sepa qué ocurrió y cómo continuar.
+ */
+export function apiErrorFrom(status: number | undefined, body: unknown): ApiError {
+  if (
+    (status === 400 || status === 409) &&
+    typeof body === 'object' &&
+    body !== null &&
+    typeof (body as { message?: unknown }).message === 'string' &&
+    ((body as { message: string }).message.trim() !== '')
+  ) {
+    return new ApiError((body as { message: string }).message, status);
+  }
+  return toApiError(status);
+}
