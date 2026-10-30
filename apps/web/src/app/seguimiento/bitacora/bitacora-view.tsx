@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Plus, Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -179,36 +180,42 @@ export function BitacoraView(): React.ReactElement {
    * Carga el detalle. `silent` (tras guardar o eliminar) no pasa por el estado
    * de carga: las filas siguen montadas y el foco puede volver a ellas.
    */
-  const loadDetail = React.useCallback(async (id: string, silent = false) => {
+  const fetchDetail = React.useCallback((id: string) => {
     latestDetailIdRef.current = id;
-    if (!silent) setDetailState('loading');
-    try {
-      const [d, iss] = await Promise.all([
-        getDailyLog(id),
-        listIssues().catch(() => [] as Issue[]),
-      ]);
-      if (latestDetailIdRef.current !== id) return;
-      setDetail(d);
-      // Novedades del mismo proceso del diario (relación opcional).
-      setIssues(iss.filter((i) => i.processId === d.processId));
-      setDetailError(null);
-      setDetailState('success');
-    } catch (err) {
-      if (latestDetailIdRef.current !== id) return;
-      setDetail(null);
-      setDetailError(err instanceof WorklogError ? err.message : null);
-      setDetailState('error');
-    }
+    return Promise.all([getDailyLog(id), listIssues().catch(() => [] as Issue[])])
+      .then(([d, iss]) => {
+        if (latestDetailIdRef.current !== id) return;
+        setDetail(d);
+        // Novedades del mismo proceso del diario (relación opcional).
+        setIssues(iss.filter((i) => i.processId === d.processId));
+        setDetailError(null);
+        setDetailState('success');
+      })
+      .catch((err: unknown) => {
+        if (latestDetailIdRef.current !== id) return;
+        setDetail(null);
+        setDetailError(err instanceof WorklogError ? err.message : null);
+        setDetailState('error');
+      });
   }, []);
+  const loadDetail = React.useCallback((id: string, silent = false) => {
+    if (!silent) setDetailState('loading');
+    return fetchDetail(id);
+  }, [fetchDetail]);
 
+  // Al cambiar de diario: sin selección se vacía el detalle; con selección se
+  // vuelve a mostrar la carga.
+  useResetOnChange([selectedId], () => {
+    if (!selectedId) setDetail(null);
+    else setDetailState('loading');
+  });
   React.useEffect(() => {
     if (!selectedId) {
       latestDetailIdRef.current = null;
-      setDetail(null);
       return;
     }
-    void loadDetail(selectedId);
-  }, [selectedId, loadDetail]);
+    void fetchDetail(selectedId);
+  }, [selectedId, fetchDetail]);
 
   const processName = React.useCallback(
     (id: string) => processes.find((p) => p.id === id)?.name ?? id,
