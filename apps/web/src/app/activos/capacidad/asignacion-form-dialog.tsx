@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
@@ -117,7 +118,7 @@ export function AsignacionFormDialog({
   const hoursRef = React.useRef<HTMLInputElement>(null);
 
   // Inicializa al abrir. El reset solo ocurre aquí (AC-031).
-  React.useEffect(() => {
+  useResetOnChange([open, editing, lockPerson, selfUserId], () => {
     if (!open) return;
     setFieldErrors({});
     if (editing) {
@@ -131,7 +132,7 @@ export function AsignacionFormDialog({
     } else {
       setValues({ ...EMPTY_VALUES, userId: lockPerson && selfUserId ? selfUserId : '' });
     }
-  }, [open, editing, lockPerson, selfUserId]);
+  });
 
   const activeProcesses = React.useMemo(() => processes.filter((p) => p.active), [processes]);
 

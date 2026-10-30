@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -25,9 +26,9 @@ export function MobileNav(): React.ReactElement {
   const pathname = usePathname();
 
   // Respaldo de onNavigate (p. ej. atrás/adelante con el cajón abierto).
-  React.useEffect(() => {
+  useResetOnChange([pathname], () => {
     setOpen(false);
-  }, [pathname]);
+  });
 
   React.useEffect(() => {
     const query = window.matchMedia(DESKTOP_QUERY);

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Field, FormError, RequiredHint, type FieldControlProps } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
@@ -178,7 +179,7 @@ export function ActividadFormDialog({
 
   // Inicializa al abrir. El reset solo ocurre aquí; ante fallo del POST/PATCH el
   // padre mantiene el diálogo abierto con los valores (AC-031).
-  React.useEffect(() => {
+  useResetOnChange([open, editing], () => {
     if (!open) return;
     setValidation(NO_ERRORS);
     if (editing) {
@@ -198,7 +199,7 @@ export function ActividadFormDialog({
     } else {
       setValues(emptyValues());
     }
-  }, [open, editing]);
+  });
 
   function set<K extends keyof ActividadFormValues>(key: K, value: ActividadFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));

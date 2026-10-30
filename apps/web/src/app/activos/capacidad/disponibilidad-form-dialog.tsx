@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
@@ -95,7 +96,7 @@ export function DisponibilidadFormDialog({
 
   // Inicializa el formulario al abrir. El reset solo ocurre aquí; ante fallo
   // del POST/PATCH el padre mantiene el diálogo abierto con los valores (AC-031).
-  React.useEffect(() => {
+  useResetOnChange([open, editing, lockPerson, selfUserId], () => {
     if (!open) return;
     setFieldErrors({});
     if (editing) {
@@ -105,7 +106,7 @@ export function DisponibilidadFormDialog({
       setUserId(lockPerson && selfUserId ? selfUserId : '');
       setAvailableHours('');
     }
-  }, [open, editing, lockPerson, selfUserId]);
+  });
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();

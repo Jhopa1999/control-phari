@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { CircleAlert } from 'lucide-react';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
 import { Field, FormError, RequiredHint } from '@/components/field';
@@ -116,7 +117,7 @@ export function DocumentoEditorDialog({
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
   // Inicializa los metadatos al abrir. El reset solo ocurre aquí (AC-031).
-  React.useEffect(() => {
+  useResetOnChange([open, editing], () => {
     if (!open) return;
     setFieldErrors({});
     setMode('editor');
@@ -130,13 +131,13 @@ export function DocumentoEditorDialog({
       setCategoryCode('');
       setContent('');
     }
-  }, [open, editing]);
+  });
 
   // Al editar, el contenido vigente llega después: se carga cuando resuelve.
-  React.useEffect(() => {
+  useResetOnChange([open, editing, initialContent], () => {
     if (!open || !editing) return;
     setContent(initialContent);
-  }, [open, editing, initialContent]);
+  });
 
   const count = content.length;
   const overLimit = count > CONTENT_LIMIT;

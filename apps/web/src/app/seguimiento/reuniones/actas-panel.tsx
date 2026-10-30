@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Download, Lock, LockOpen, Plus, Printer, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -89,14 +90,14 @@ export function ActasPanel({
   const detailHeadingRef = React.useRef<HTMLHeadingElement>(null);
 
   // Selección: la de la URL (notificación o pestaña Compromisos) o la primera.
-  React.useEffect(() => {
+  useResetOnChange([state, meetings, initialMeetingId], () => {
     if (state !== 'success') return;
     setSelectedId((prev) => {
       if (initialMeetingId && meetings.some((m) => m.id === initialMeetingId)) return initialMeetingId;
       if (prev && meetings.some((m) => m.id === prev)) return prev;
       return meetings[0]?.id ?? null;
     });
-  }, [state, meetings, initialMeetingId]);
+  });
 
   const selected = meetings.find((m) => m.id === selectedId) ?? null;
   const processName = (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS;

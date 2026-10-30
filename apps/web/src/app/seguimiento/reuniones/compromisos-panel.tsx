@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { DescriptionList } from '@/components/description-list';
@@ -96,7 +97,7 @@ export function CompromisosPanel({
   );
 
   // Selección inicial desde la URL (notificación) o desde un acta.
-  React.useEffect(() => {
+  useResetOnChange([state, commitments, initialCommitmentId], () => {
     if (state !== 'success') return;
     if (initialCommitmentId && commitments.some((c) => c.id === initialCommitmentId)) {
       setStatusFilter('TODOS');
@@ -104,14 +105,14 @@ export function CompromisosPanel({
       setMeetingFilter(ALL);
       setSelectedId(initialCommitmentId);
     }
-  }, [state, commitments, initialCommitmentId]);
+  });
 
-  React.useEffect(() => {
+  useResetOnChange([filtered], () => {
     setSelectedId((prev) => {
       if (prev && filtered.some((c) => c.id === prev)) return prev;
       return filtered[0]?.id ?? null;
     });
-  }, [filtered]);
+  });
 
   const selected = commitments.find((c) => c.id === selectedId) ?? null;
   const processName = (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS;
