@@ -57,6 +57,9 @@ Los documentos de `.kiro/steering/` son la referencia de cumplimiento.
 - Migraciones versionadas e índices cuando apliquen.
 - Compatibilidad del contrato OpenAPI y regeneración del `api-client`.
 - Frontend: accesibilidad y estados loading / vacío / error / éxito.
+- Frontend: cumplimiento de `25-marca-gibo.md` (solo tokens semánticos, sin
+  colores crudos, badges en prioridades y estados, contraste) y que exista la
+  especificación visual del `disenador` para vistas nuevas o rediseñadas.
 - Pruebas: cobertura relevante y datos E2E aislados (catálogo reservado,
   limpieza filtrada, sin `deleteMany({})` sin `where`).
 - Posibles regresiones.

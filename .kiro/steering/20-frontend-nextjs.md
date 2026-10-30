@@ -29,6 +29,13 @@ Stack:
 - Tailwind CSS
 - shadcn/ui
 
+Identidad visual: seguir `25-marca-gibo.md` (Lienzo Claro / Dark Tech, tokens
+semánticos, badges para prioridades y estados, tablas como tarjeta flotante).
+No usar colores crudos de Tailwind; solo tokens.
+
+Antes de implementar una vista nueva o rediseñada (formularios, tablas, estados
+vacíos y de error), obtener la especificación visual del agente `disenador`.
+
 Priorizar componentes reutilizables cuando exista reutilización real.
 No crear un componente genérico únicamente porque podría reutilizarse en el
 futuro.
