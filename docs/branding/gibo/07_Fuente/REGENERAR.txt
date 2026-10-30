@@ -1,0 +1,76 @@
+GIBO - REGENERACIÓN DE ACTIVOS
+
+OBJETIVO
+
+generar_activos.py es la fuente reproducible de los recursos gráficos. Construye
+las geometrías y los contornos del logo, genera SVG y realiza las exportaciones
+raster. No utiliza un modelo de generación de imágenes ni necesita recuperar
+las imágenes de referencia para producir los maestros normalizados.
+
+REQUISITOS
+
+- Python 3.
+- Pillow y fonttools, indicados en requirements.txt.
+- Inkscape instalado y disponible como comando "inkscape" en PATH.
+- Las fuentes originales de 06_Fuentes en sus rutas de entrega.
+
+Inkscape es una aplicación externa. No se instala con pip. Compruebe su acceso:
+
+  inkscape --version
+
+EJECUCIÓN
+
+1. Descomprima el paquete y abra una terminal en su carpeta raíz, la que contiene
+   00_LEEME.txt y los directorios numerados.
+
+2. Instale las dependencias de Python:
+
+   python3 -m pip install -r 07_Fuente/requirements.txt
+
+3. Ejecute:
+
+   python3 07_Fuente/generar_activos.py --output .
+
+Si su sistema registra Python como "python", sustituya "python3" por "python".
+En Windows, añada la carpeta de instalación de Inkscape al PATH si el comando no
+se reconoce. No cambie las rutas relativas internas de fuentes y carpetas.
+
+ALCANCE
+
+La regeneración corresponde a los activos definidos por el script. No recompone
+el manual PDF ni los documentos editoriales. La lámina tiene su propio generador:
+
+  python3 07_Fuente/crear_vista_previa.py
+
+Ejecútelo después de generar los activos con el primer script. Tampoco
+sustituye una revisión visual de las exportaciones. Los documentos y tokens deben
+mantenerse alineados si se cambia la paleta, la geometría o la nomenclatura.
+
+Ejecute sobre una copia del paquete si desea conservar una versión previa:
+el generador puede sobrescribir los archivos de activos que produce.
+
+Las letras de los SVG finales se convierten en contornos. Las fuentes se utilizan
+durante la construcción del descriptor; no se cargan al visualizar el logo final.
+
+CRITERIOS DE REVISIÓN TRAS UN CAMBIO
+
+- Mantener los tres nodos de la O, la órbita y el nodo de la G.
+- Revisar la transparencia real de SVG y PNG, incluidos los huecos internos.
+- Revisar las versiones monocromas sobre fondos contrastantes: los detalles deben
+  ser calados, no manchas blancas insertadas como un segundo color.
+- Abrir la variante positiva sobre claro y la negativa sobre oscuro.
+- Examinar favicon-16.png y favicon-32.png a tamaño real.
+- Confirmar que la exportación respeta el área de protección y no corta el dibujo.
+- Comprobar rutas del manifiesto antes de usarlo en una aplicación.
+
+Las exportaciones pueden mostrar pequeñas diferencias de suavizado entre versiones
+de Inkscape o sistemas gráficos. Los contornos vectoriales y colores maestros son
+la referencia para comparar resultados.
+
+IMPRESIÓN
+
+Los SVG maestros utilizan color digital sRGB. La conversión CMYK depende del perfil
+ICC del proveedor. No trate los porcentajes orientativos del manual como una
+separación de tintas certificada. Para sellos, use los maestros de una tinta y
+revise los calados al tamaño y material de producción.
+

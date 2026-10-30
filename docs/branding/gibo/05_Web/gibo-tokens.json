@@ -1,0 +1,83 @@
+{
+  "marca": "GIBO",
+  "descriptor": "Governance & Data",
+  "version": "1.0",
+  "fecha": "2026-10-29",
+  "espacio_color_digital": "sRGB",
+  "nota": "Esquema propio de entrega. Los valores CMYK son aproximaciones algebraicas; no incluyen conversión mediante perfil ICC.",
+  "colores": {
+    "navy": { "hex": "#0F2557", "rgb": [15, 37, 87], "cmyk_aproximado_porcentaje": [82.8, 57.5, 0.0, 65.9] },
+    "electric": { "hex": "#176BEB", "rgb": [23, 107, 235], "cmyk_aproximado_porcentaje": [90.2, 54.5, 0.0, 7.8] },
+    "cyan": { "hex": "#20BFD1", "rgb": [32, 191, 209], "cmyk_aproximado_porcentaje": [84.7, 8.6, 0.0, 18.0] },
+    "white": { "hex": "#FFFFFF", "rgb": [255, 255, 255] },
+    "black": { "hex": "#000000", "rgb": [0, 0, 0] },
+    "canvas": { "hex": "#F4F6F8", "rgb": [244, 246, 248] },
+    "dark": { "hex": "#08152E", "rgb": [8, 21, 46] },
+    "link_hover": { "hex": "#145CCB", "rgb": [20, 92, 203], "uso": "Variante funcional del azul para enlaces sobre el lienzo claro y hover de botón." }
+  },
+  "tipografia": {
+    "titulares": { "familia": "Montserrat", "peso": 700, "alternativas_sistema": ["Arial", "sans-serif"], "archivo": "../06_Fuentes/Montserrat/Montserrat-variable.ttf" },
+    "interfaz": { "familia": "Inter", "peso_texto": 400, "peso_etiqueta": 600, "alternativas_sistema": ["Arial", "sans-serif"], "archivo": "../06_Fuentes/Inter/Inter-variable.ttf" },
+    "logo": "Contornos vectoriales. No sustituir por texto vivo ni asumir que la referencia utilizó estas familias exactas."
+  },
+  "roles": {
+    "claro": {
+      "background": "{colores.canvas}", "surface": "{colores.white}",
+      "text": "{colores.navy}", "heading": "{colores.navy}",
+      "link": "{colores.link_hover}", "link_hover": "{colores.navy}",
+      "primary": "{colores.electric}", "on_primary": "{colores.white}",
+      "primary_hover": "{colores.link_hover}", "accent": "{colores.cyan}",
+      "on_accent": "{colores.navy}", "focus": "{colores.navy}"
+    },
+    "oscuro": {
+      "background": "{colores.dark}", "surface": "{colores.navy}",
+      "text": "{colores.white}", "heading": "{colores.white}",
+      "link": "{colores.cyan}", "link_hover": "{colores.white}",
+      "primary": "{colores.electric}", "on_primary": "{colores.white}",
+      "primary_hover": "{colores.link_hover}", "accent": "{colores.cyan}",
+      "on_accent": "{colores.navy}", "focus": "{colores.white}"
+    }
+  },
+  "variantes_logo": {
+    "positivo": { "base": "{colores.navy}", "nodo_g": "{colores.electric}", "orbita_nodos_o": "{colores.cyan}", "fondo": "transparente" },
+    "negativo": { "base": "{colores.white}", "nodo_g": "{colores.electric}", "orbita_nodos_o": "{colores.cyan}", "fondo": "transparente" },
+    "negro": { "tinta": "{colores.black}", "detalles": "calados transparentes", "fondo": "transparente" },
+    "blanco": { "tinta": "{colores.white}", "detalles": "calados transparentes", "fondo": "transparente" }
+  },
+  "geometria": {
+    "unidad": "unidad del dibujo vectorial, no píxel de exportación",
+    "wordmark_dibujo": [772, 232],
+    "principal_dibujo": [772, 310],
+    "isotipo_dibujo": [232, 232],
+    "area_proteccion": 36,
+    "icono_lienzo": [512, 512],
+    "icono_simbolo": [384, 384],
+    "icono_ocupacion": 0.75,
+    "nota": "El área de protección se añade alrededor de los recursos generales. La geometría micro y los recursos maskable tienen adaptación específica."
+  },
+  "minimos_recomendados": {
+    "principal": { "ancho_visible_px": 240, "ancho_visible_mm": 42 },
+    "wordmark": { "ancho_visible_px": 120, "ancho_visible_mm": 25, "ancho_visible_mm_monocromo": 32 },
+    "isotipo": { "ancho_visible_px": 32, "ancho_visible_mm": 7, "ancho_visible_mm_sello": 12 },
+    "favicon_micro": { "lienzo_px": [16, 32] },
+    "nota": "Recomendaciones de diseño, no certificación de impresión. Revisar al tamaño final según material y técnica."
+  },
+  "contraste_srgb": [
+    { "frente": "navy", "fondo": "white", "ratio": 14.762 },
+    { "frente": "navy", "fondo": "canvas", "ratio": 13.626 },
+    { "frente": "white", "fondo": "electric", "ratio": 4.840 },
+    { "frente": "electric", "fondo": "canvas", "ratio": 4.467, "nota": "No alcanza 4.5:1 para texto normal." },
+    { "frente": "link_hover", "fondo": "canvas", "ratio": 5.663 },
+    { "frente": "link_hover", "fondo": "white", "ratio": 6.135 },
+    { "frente": "cyan", "fondo": "navy", "ratio": 6.632 },
+    { "frente": "cyan", "fondo": "white", "ratio": 2.226, "nota": "Reservar para acento decorativo sobre blanco." },
+    { "frente": "white", "fondo": "dark", "ratio": 18.150 },
+    { "frente": "cyan", "fondo": "dark", "ratio": 8.154 }
+  ],
+  "fuentes_documentales": {
+    "montserrat": "https://fonts.google.com/specimen/Montserrat",
+    "inter": "https://fonts.google.com/specimen/Inter",
+    "licencia": "https://openfontlicense.org/",
+    "contraste": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html"
+  }
+}

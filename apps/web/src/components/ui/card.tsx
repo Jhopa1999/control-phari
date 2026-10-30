@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-// Contenedor sin sombra: las sombras quedan solo para superposiciones (§5.3).
+// Tarjeta flotante GIBO: superficie con sombra suave y borde casi invisible.
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('rounded-lg border bg-card text-card-foreground', className)}
+      className={cn('rounded-xl border bg-card text-card-foreground shadow-card', className)}
       {...props}
     />
   ),

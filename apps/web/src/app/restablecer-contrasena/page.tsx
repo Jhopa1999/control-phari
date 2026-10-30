@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { Metadata } from 'next';
-import { BrandMark, BrandName } from '@/components/brand';
+import { BrandName } from '@/components/brand';
 import { SetPasswordForm } from '@/components/set-password-form';
 import { getAuthMode } from '@/lib/auth-mode';
 import { cn } from '@/lib/utils';
@@ -23,10 +23,7 @@ export default function ResetPasswordPage(): React.ReactElement {
         insideShell ? 'min-h-full' : 'min-h-dvh bg-muted px-4',
       )}
     >
-      <div className="flex items-center gap-2.5">
-        <BrandMark />
-        <BrandName />
-      </div>
+      <BrandName size="lg" className="items-center" />
       <React.Suspense fallback={null}>
         <SetPasswordForm
           copy={{

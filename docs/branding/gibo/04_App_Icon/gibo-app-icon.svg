@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="gibo-title gibo-desc">
+<title id="gibo-title">GIBO · icono de aplicación</title>
+<desc id="gibo-desc">Fondo marino opaco. Sin esquinas precortadas. Símbolo dentro del 75% central del lienzo.</desc>
+
+<path fill="#0F2557" d="M0 0H512V512H0Z"/><g transform="translate(64 64) scale(1.65517)"><g id="isotipo"><path id="anillo" fill="#FFFFFF" fill-rule="evenodd" d="M232 116 A116 116 0 1 0 0 116 A116 116 0 1 0 232 116 Z M173 116 A57 57 0 1 0 59 116 A57 57 0 1 0 173 116 Z"/><g id="orbita" fill="#20BFD1"><path id="arco-1" d="M143.96604 29.92939 A90.5 90.5 0 0 1 198.67586 152.80967 L190.45395 149.14904 A81.5 81.5 0 0 0 141.18489 38.48889 Z"/><path id="arco-2" d="M161.25 194.3753 A90.5 90.5 0 0 1 29.92939 143.96604 L38.48889 141.18489 A81.5 81.5 0 0 0 156.75 186.58107 Z"/><path id="arco-3" d="M29.92939 88.03396 A90.5 90.5 0 0 1 88.03396 29.92939 L90.81511 38.48889 A81.5 81.5 0 0 0 38.48889 90.81511 Z"/></g><g id="tres-nodos" fill="#20BFD1"><path id="nodo-1" d="M134 30 A18 18 0 1 0 98 30 A18 18 0 1 0 134 30 Z"/><path id="nodo-2" d="M197.91045 173.54523 A18 18 0 1 0 161.91045 173.54523 A18 18 0 1 0 197.91045 173.54523 Z"/><path id="nodo-3" d="M48 116 A18 18 0 1 0 12 116 A18 18 0 1 0 48 116 Z"/></g></g></g>
+</svg>

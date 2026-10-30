@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { Metadata } from 'next';
-import { BrandMark, BrandName } from '@/components/brand';
+import { BrandName } from '@/components/brand';
 import { getAuthMode } from '@/lib/auth-mode';
 import { cn } from '@/lib/utils';
 import { ForgotPasswordForm } from './forgot-password-form';
@@ -23,10 +23,7 @@ export default function ForgotPasswordPage(): React.ReactElement {
         insideShell ? 'min-h-full' : 'min-h-dvh bg-muted px-4',
       )}
     >
-      <div className="flex items-center gap-2.5">
-        <BrandMark />
-        <BrandName />
-      </div>
+      <BrandName size="lg" className="items-center" />
       <ForgotPasswordForm />
     </div>
   );

@@ -1,0 +1,631 @@
+{
+  "version": "1.0",
+  "nota": "Inventario de entregables; excluye este índice y SHA256SUMS.txt.",
+  "archivos": [
+    {
+      "archivo": "00_LEEME.txt",
+      "bytes": 5090,
+      "sha256": "0c185ae35c4ea9f3ca3f09c2ec0bb5eb68d519fd89abd21886cfdde995caf439"
+    },
+    {
+      "archivo": "01_Guia/Auditoria_de_Referencia.txt",
+      "bytes": 7108,
+      "sha256": "e996ad1a31c7b62426aeadd588b5cda9e912118de7591520ac22315e9bfaf09c"
+    },
+    {
+      "archivo": "01_Guia/GIBO_Guia_de_Marca.pdf",
+      "bytes": 1146185,
+      "sha256": "91394915611bc711f34e07ef49c821e65f02956170d2a64e5256e5d2b74f3ad6"
+    },
+    {
+      "archivo": "02_SVG/icono/gibo-icono-blanco.svg",
+      "bytes": 1189,
+      "sha256": "396bd356575b489c82119a5fdf74ca98c71a2808d661a36d03156049b00671ec"
+    },
+    {
+      "archivo": "02_SVG/icono/gibo-icono-negativo.svg",
+      "bytes": 1389,
+      "sha256": "682886aa2a8545326831a580a386530d0f66dc66ee174dd67e7d84a5d86a87ca"
+    },
+    {
+      "archivo": "02_SVG/icono/gibo-icono-negro.svg",
+      "bytes": 1188,
+      "sha256": "384207f0875e4ae834e605e7b5435b85382976d37cb57b5e8ea217bfbd7f1e0f"
+    },
+    {
+      "archivo": "02_SVG/icono/gibo-icono-positivo.svg",
+      "bytes": 1389,
+      "sha256": "8d9113c9e4b72ab3817f683561ec05bbe1b11dd5142ada53df05ccd30f4fc9d0"
+    },
+    {
+      "archivo": "02_SVG/isotipo/gibo-isotipo-blanco.svg",
+      "bytes": 1144,
+      "sha256": "19a19a543a7a30f33a0ad382a638df788c5c88d9f0a43fb74f019ce030bf7fe3"
+    },
+    {
+      "archivo": "02_SVG/isotipo/gibo-isotipo-micro-blanco.svg",
+      "bytes": 1119,
+      "sha256": "4383fe27023f52902c32abf261e51cb3c3c5d2200c34206bb658f864c9966d77"
+    },
+    {
+      "archivo": "02_SVG/isotipo/gibo-isotipo-micro-negativo.svg",
+      "bytes": 1319,
+      "sha256": "640565a374b4b58734da422ff172f140e20bc92c52c9874f8d4d70541577ba36"
+    },
+    {
+      "archivo": "02_SVG/isotipo/gibo-isotipo-micro-negro.svg",
+      "bytes": 1118,
+      "sha256": "bdc4a1b304b29652b66a821913517770307fd9edd5013e705d0f2d27d489a8ae"
+    },
+    {
+      "archivo": "02_SVG/isotipo/gibo-isotipo-micro-positivo.svg",
+      "bytes": 1319,
+      "sha256": "5a2eee5d5714120a65dbc3c601fcb2fbe467c4f58a55e7d860668c0a53b05722"
+    },
+    {
+      "archivo": "02_SVG/isotipo/gibo-isotipo-negativo.svg",
+      "bytes": 1344,
+      "sha256": "3e5f4fd2e00bd9233fdf4ada5249b004835b8dccec7d4efdd74eb5c1b2fc3d38"
+    },
+    {
+      "archivo": "02_SVG/isotipo/gibo-isotipo-negro.svg",
+      "bytes": 1143,
+      "sha256": "02032a35ab6f603e67323bbdd8d04a063e9d16c20188b140ed4d32484be62c60"
+    },
+    {
+      "archivo": "02_SVG/isotipo/gibo-isotipo-positivo.svg",
+      "bytes": 1344,
+      "sha256": "64e11ed227be8cc0309d6843c47e1144756e070c3a52aafc939856e0e117ec34"
+    },
+    {
+      "archivo": "02_SVG/principal/gibo-principal-blanco.svg",
+      "bytes": 9513,
+      "sha256": "e994a663571fac12ba75a6555ccc5ab9a394d7c50af7147c387a6f56994a5359"
+    },
+    {
+      "archivo": "02_SVG/principal/gibo-principal-negativo.svg",
+      "bytes": 9751,
+      "sha256": "89aef8a085fb666891f55abaf1738fe9c2c62092706840799f6b1c9b422e6d7b"
+    },
+    {
+      "archivo": "02_SVG/principal/gibo-principal-negro.svg",
+      "bytes": 9512,
+      "sha256": "77fa3aca97ceb7906fdcd553f022b11f79b03af6ace20a55e1b3a982c5c6cd64"
+    },
+    {
+      "archivo": "02_SVG/principal/gibo-principal-positivo.svg",
+      "bytes": 9751,
+      "sha256": "244f0b60e4a3da767c45d559f608a98a16e8cefccb5161ef202697e78fa51fea"
+    },
+    {
+      "archivo": "02_SVG/wordmark/gibo-wordmark-blanco.svg",
+      "bytes": 2059,
+      "sha256": "7d2edf66cd2fd7d0d3e39a2e0a91988b25ec5655ced5e626ca4220cb522eef99"
+    },
+    {
+      "archivo": "02_SVG/wordmark/gibo-wordmark-negativo.svg",
+      "bytes": 2297,
+      "sha256": "2c5ca12bfa444f09cfea99a989c0ac98ddf11bf5d39fc1b02c2dd593aeade7a4"
+    },
+    {
+      "archivo": "02_SVG/wordmark/gibo-wordmark-negro.svg",
+      "bytes": 2058,
+      "sha256": "2cb2419936701c4fb06eb27365607fe37df0b902922f6688fc831cc461e38790"
+    },
+    {
+      "archivo": "02_SVG/wordmark/gibo-wordmark-positivo.svg",
+      "bytes": 2297,
+      "sha256": "9558e2370b27c51df65cb0cd662e4b625d908deaccc19dd05b21aa3bebcf088a"
+    },
+    {
+      "archivo": "03_PNG/icono/gibo-icono-blanco-2048.png",
+      "bytes": 89630,
+      "sha256": "1f623db813ade8c6c3991ea8ae5bc73b1c927962b70080fc9064250597e452f1",
+      "dimensiones_px": [
+        2048,
+        2048
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/icono/gibo-icono-blanco-512.png",
+      "bytes": 18241,
+      "sha256": "0932eefc396b1bd798bf97ea98929e0cc5706bbbf93be6c8673d0e49e7266c4f",
+      "dimensiones_px": [
+        512,
+        512
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/icono/gibo-icono-negativo-2048.png",
+      "bytes": 109393,
+      "sha256": "9358526c96d117b5b311ced33757c9f4b7941bd82f1ef44dc49162e1376de2fe",
+      "dimensiones_px": [
+        2048,
+        2048
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/icono/gibo-icono-negativo-512.png",
+      "bytes": 22633,
+      "sha256": "f0385b9c7c639160f2020b29df658c282c32d8673013837c98b180ca271bb43d",
+      "dimensiones_px": [
+        512,
+        512
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/icono/gibo-icono-negro-2048.png",
+      "bytes": 100416,
+      "sha256": "5dd81e4a3584ad59bb9f768ee4a6604b344a733700fcc61ed89f0c0544d238bf",
+      "dimensiones_px": [
+        2048,
+        2048
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/icono/gibo-icono-negro-512.png",
+      "bytes": 19843,
+      "sha256": "5c7190aa63a7b5b24c50fb9e0327a9a9068473eefc996209df15ec6cdca12e26",
+      "dimensiones_px": [
+        512,
+        512
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/icono/gibo-icono-positivo-2048.png",
+      "bytes": 127688,
+      "sha256": "abc145916a22d5dadb22f822ee6b73be55a0586da896d2aa9262e062a3d96c06",
+      "dimensiones_px": [
+        2048,
+        2048
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/icono/gibo-icono-positivo-512.png",
+      "bytes": 26805,
+      "sha256": "2da4b8e54fe1edd5975b70d86b5a1e9ba11b9ba93021d1fa43d1a311f19b9a70",
+      "dimensiones_px": [
+        512,
+        512
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/isotipo/gibo-isotipo-blanco-2048.png",
+      "bytes": 90641,
+      "sha256": "01a380861554a268469f03f0c917cc990f32309b136ec2d21887868f2c921b0d",
+      "dimensiones_px": [
+        2048,
+        2048
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/isotipo/gibo-isotipo-blanco-512.png",
+      "bytes": 18506,
+      "sha256": "3cfaa9f765e86faec1c4685fccee9c9304383c9fcbe3677a30848a26ce6e6651",
+      "dimensiones_px": [
+        512,
+        512
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/isotipo/gibo-isotipo-negativo-2048.png",
+      "bytes": 110635,
+      "sha256": "1784d6cd4a332e6729db2bd4b3b804032cef8bea6c3c7b38d6e09f1859629560",
+      "dimensiones_px": [
+        2048,
+        2048
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/isotipo/gibo-isotipo-negativo-512.png",
+      "bytes": 23026,
+      "sha256": "7fc74042bd1fe157b733af0fbd2497475b5cff5370fcf0f1d65adedc6fef937b",
+      "dimensiones_px": [
+        512,
+        512
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/isotipo/gibo-isotipo-negro-2048.png",
+      "bytes": 101356,
+      "sha256": "4efd1788c93db24e1ed57c6ff61130fa3584ce6e1c76324ddf8cf4cb808a5e55",
+      "dimensiones_px": [
+        2048,
+        2048
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/isotipo/gibo-isotipo-negro-512.png",
+      "bytes": 20209,
+      "sha256": "8d0ca3dd155e4638b82905b52e2694b1bc639073eed665796bb1bd2f75d939fc",
+      "dimensiones_px": [
+        512,
+        512
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/isotipo/gibo-isotipo-positivo-2048.png",
+      "bytes": 129303,
+      "sha256": "7e216f66f8045778f590bc5e80cc586ceb0206dd4e95a4cbd29ea7c4430be64c",
+      "dimensiones_px": [
+        2048,
+        2048
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/isotipo/gibo-isotipo-positivo-512.png",
+      "bytes": 27368,
+      "sha256": "9f54ef7d880febc23a85fb595f7a7ea1af640afaa4cea43671e99109a9237f97",
+      "dimensiones_px": [
+        512,
+        512
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/principal/gibo-principal-blanco-1600.png",
+      "bytes": 58079,
+      "sha256": "a2f3ba0aef5bc3416d89669b2e507e1ea4037340ab058ed751652cfbe25dbe60",
+      "dimensiones_px": [
+        1600,
+        724
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/principal/gibo-principal-blanco-3200.png",
+      "bytes": 127013,
+      "sha256": "ec4e4fcb39025979a23d3bc722e290395795b5fef55ffebc8659789f73a753bf",
+      "dimensiones_px": [
+        3200,
+        1448
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/principal/gibo-principal-negativo-1600.png",
+      "bytes": 64959,
+      "sha256": "2f08b45e7b7adecfb5a43c57ec4b63ee00e7379c3f2e6a01dd0df54881462f40",
+      "dimensiones_px": [
+        1600,
+        724
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/principal/gibo-principal-negativo-3200.png",
+      "bytes": 141225,
+      "sha256": "c44fc3123c9dee1b4a49fe28be36108695d48c702faff25ea38e78184eba73f1",
+      "dimensiones_px": [
+        3200,
+        1448
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/principal/gibo-principal-negro-1600.png",
+      "bytes": 64309,
+      "sha256": "6dbc92dca21cd7a56e357ee13103f3f84681b3cb4b0602717081f6dec7eb1c16",
+      "dimensiones_px": [
+        1600,
+        724
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/principal/gibo-principal-negro-3200.png",
+      "bytes": 139468,
+      "sha256": "1e1d28cf24bb57f0b755ad4c1a89544286e2d321cae33a1d5b8a813325e2c13f",
+      "dimensiones_px": [
+        3200,
+        1448
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/principal/gibo-principal-positivo-1600.png",
+      "bytes": 87301,
+      "sha256": "68f226d0dd2a314a65a8af864bb648f47f88a6537d6788a1262b79547563e257",
+      "dimensiones_px": [
+        1600,
+        724
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/principal/gibo-principal-positivo-3200.png",
+      "bytes": 186309,
+      "sha256": "272de4a4896a6ae6129154c89e8ab807e361aa0c3f4b44b39dd8e9984718be04",
+      "dimensiones_px": [
+        3200,
+        1448
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/wordmark/gibo-wordmark-blanco-1600.png",
+      "bytes": 39665,
+      "sha256": "c9b96c687a36ad01b720c9f7eede31c5085e6b47e0fd553881f1d9e99f23b360",
+      "dimensiones_px": [
+        1600,
+        576
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/wordmark/gibo-wordmark-blanco-3200.png",
+      "bytes": 87019,
+      "sha256": "519b989f1c72ad5ba150c4a9297810b6b90a758655310a1b7e5557567f315640",
+      "dimensiones_px": [
+        3200,
+        1153
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/wordmark/gibo-wordmark-negativo-1600.png",
+      "bytes": 46569,
+      "sha256": "4e556683f3be6d179ba0f2f29d5ef8914f2592eb7f8dc8e56db98b961e71ac26",
+      "dimensiones_px": [
+        1600,
+        576
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/wordmark/gibo-wordmark-negativo-3200.png",
+      "bytes": 101714,
+      "sha256": "f3270a27610785ba1afb406d855a6d7fc161663f4d0cdd809bba4fc3b329eb51",
+      "dimensiones_px": [
+        3200,
+        1153
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/wordmark/gibo-wordmark-negro-1600.png",
+      "bytes": 44012,
+      "sha256": "b9584a9032b4e70b9ff4c12a79407b434116d5a1c3a8e07e19dcec8ece5eb59e",
+      "dimensiones_px": [
+        1600,
+        576
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/wordmark/gibo-wordmark-negro-3200.png",
+      "bytes": 101275,
+      "sha256": "b7984bfb7dd43b7502412681185df4cd9ed251eb42404e00527847d7823c5fb8",
+      "dimensiones_px": [
+        3200,
+        1153
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/wordmark/gibo-wordmark-positivo-1600.png",
+      "bytes": 59587,
+      "sha256": "fae5260b848dfc5912510b4f3aef283438938663ebb1c2e4638baf5004aee32e",
+      "dimensiones_px": [
+        1600,
+        576
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "03_PNG/wordmark/gibo-wordmark-positivo-3200.png",
+      "bytes": 128031,
+      "sha256": "4d26228290012282990f55c1fa6aef978db2eb9bc127e0af4536cb06888a075e",
+      "dimensiones_px": [
+        3200,
+        1153
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "04_App_Icon/android-chrome-192.png",
+      "bytes": 9506,
+      "sha256": "bcca789f9134f73d2016a72f487dd00d14172f05065021ceee8dbef8cda13832",
+      "dimensiones_px": [
+        192,
+        192
+      ],
+      "modo": "RGB"
+    },
+    {
+      "archivo": "04_App_Icon/android-chrome-512.png",
+      "bytes": 26114,
+      "sha256": "629ab2387e0e8e590d1d37dc052e93fd8e7e198a4f713fbfde1e0d2735b4eb5f",
+      "dimensiones_px": [
+        512,
+        512
+      ],
+      "modo": "RGB"
+    },
+    {
+      "archivo": "04_App_Icon/apple-touch-icon.png",
+      "bytes": 8909,
+      "sha256": "cdbf6ad4c9f3552b9739b6709068468b925b4304c718bdaa3d597a14ba869cdd",
+      "dimensiones_px": [
+        180,
+        180
+      ],
+      "modo": "RGB"
+    },
+    {
+      "archivo": "04_App_Icon/favicon-16.png",
+      "bytes": 1075,
+      "sha256": "3cbbc2fc8da318c74bdf7fb409470007c765df8397f879ac6fd55f9f04d235c8",
+      "dimensiones_px": [
+        16,
+        16
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "04_App_Icon/favicon-32.png",
+      "bytes": 1941,
+      "sha256": "6b00f95a7090b0ea2e0f060834c3f61f995aa632a9c6bd5b59d5fa2392329de9",
+      "dimensiones_px": [
+        32,
+        32
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "04_App_Icon/favicon-48.png",
+      "bytes": 2455,
+      "sha256": "f29f73a9fb156d6a84adcdca8a9e0af152973cafab0dacc074c2baaccd2a7eda",
+      "dimensiones_px": [
+        48,
+        48
+      ],
+      "modo": "RGBA"
+    },
+    {
+      "archivo": "04_App_Icon/favicon.ico",
+      "bytes": 5578,
+      "sha256": "900cfd6b9099ed062a7bce8d6fe9a39d9e5bebfdf43396a2ddf92b6f9411ec2d"
+    },
+    {
+      "archivo": "04_App_Icon/favicon.svg",
+      "bytes": 1432,
+      "sha256": "b7a205c5f243516d5dec5e8d03155893c5ef972ca59cc207013bd34cfcb58832"
+    },
+    {
+      "archivo": "04_App_Icon/gibo-app-icon-1024.png",
+      "bytes": 55094,
+      "sha256": "b07a71b6a6ddb98b0d1df7e2708d0a0f0c267452911ed4951d59a50373f33108",
+      "dimensiones_px": [
+        1024,
+        1024
+      ],
+      "modo": "RGB"
+    },
+    {
+      "archivo": "04_App_Icon/gibo-app-icon.svg",
+      "bytes": 1375,
+      "sha256": "b7ee5f17c414f263e78a2936dcd86ccbf8697a2ee7611b97302b060fede894ff"
+    },
+    {
+      "archivo": "04_App_Icon/maskable-icon-192.png",
+      "bytes": 9506,
+      "sha256": "bcca789f9134f73d2016a72f487dd00d14172f05065021ceee8dbef8cda13832",
+      "dimensiones_px": [
+        192,
+        192
+      ],
+      "modo": "RGB"
+    },
+    {
+      "archivo": "04_App_Icon/maskable-icon-512.png",
+      "bytes": 26114,
+      "sha256": "629ab2387e0e8e590d1d37dc052e93fd8e7e198a4f713fbfde1e0d2735b4eb5f",
+      "dimensiones_px": [
+        512,
+        512
+      ],
+      "modo": "RGB"
+    },
+    {
+      "archivo": "04_App_Icon/site.webmanifest",
+      "bytes": 707,
+      "sha256": "cd1889d8e1fe9b5b47e27d481f6e48aca60d2ad55c8ad97cb87df82e4f564490"
+    },
+    {
+      "archivo": "05_Web/INTEGRACION_WEB.txt",
+      "bytes": 5795,
+      "sha256": "ae361a3fdbae630c5e929e8edd8c55afcd033cade71c8aa2440c3dc538c77ae8"
+    },
+    {
+      "archivo": "05_Web/gibo-tokens.css",
+      "bytes": 2569,
+      "sha256": "8cd0c77ffbc5143b62853b962b59203f79e9aed13313e1e8bc3e966260b1fffd"
+    },
+    {
+      "archivo": "05_Web/gibo-tokens.json",
+      "bytes": 4911,
+      "sha256": "3d9060379f734464dd2a3e963c7ed6adb4f6981493a417ec79b1c6a483974218"
+    },
+    {
+      "archivo": "06_Fuentes/Inter/Inter-variable.ttf",
+      "bytes": 876576,
+      "sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031"
+    },
+    {
+      "archivo": "06_Fuentes/Inter/OFL.txt",
+      "bytes": 4377,
+      "sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57"
+    },
+    {
+      "archivo": "06_Fuentes/Montserrat/Montserrat-variable.ttf",
+      "bytes": 744936,
+      "sha256": "0f7b311b2f3279e4eef9b2f968bcdbab6e28f4daeb1f049f4f278a902bcd82f7"
+    },
+    {
+      "archivo": "06_Fuentes/Montserrat/OFL.txt",
+      "bytes": 4400,
+      "sha256": "8b7141c03fa4f8d44e6345d5d4931709290f0f67875e452e95ac1fd3a027802e"
+    },
+    {
+      "archivo": "06_Fuentes/procedencia.json",
+      "bytes": 1423,
+      "sha256": "fe4adbf86a4cb9c74f28b41740741bbf8bb4f0a5848c41e71c16732451c48d6c"
+    },
+    {
+      "archivo": "07_Fuente/REGENERAR.txt",
+      "bytes": 3108,
+      "sha256": "dee4b634f0dc0afe50d18a74a73442a05fd228e360fbb54342e7e55c7defb731"
+    },
+    {
+      "archivo": "07_Fuente/crear_vista_previa.py",
+      "bytes": 4066,
+      "sha256": "b37dbb0a6ddf6045ac673d5ac9b172d22d1791895d421a91b68e5fb6c81f2dff"
+    },
+    {
+      "archivo": "07_Fuente/generar_activos.py",
+      "bytes": 13864,
+      "sha256": "690db8dcbf1c7b260a4b0c95fa84dba992b5eac9608e25fe00855e17314e13a4"
+    },
+    {
+      "archivo": "07_Fuente/geometria.json",
+      "bytes": 1273,
+      "sha256": "c9081a4fb07e58083fb93b2b1bfcbbaf7e1044abd2c62699253df5f3bfe32f5a"
+    },
+    {
+      "archivo": "07_Fuente/requirements.txt",
+      "bytes": 146,
+      "sha256": "24d6ffe6bc1b73b4bf4018dc64b1af5584d54c28b1aac12299e8ff50ae3f4c0f"
+    },
+    {
+      "archivo": "08_Preview/GIBO_Vista_Previa.png",
+      "bytes": 331595,
+      "sha256": "9c81999eeaafe74ce022013c3121c046056e0a3fd1c16b5118b98037ae36d4c9",
+      "dimensiones_px": [
+        2000,
+        1740
+      ],
+      "modo": "RGB"
+    },
+    {
+      "archivo": "09_Control_Calidad/verificacion.json",
+      "bytes": 1699,
+      "sha256": "14ce556e3102784b3ed584ca9c2c6d57cf2ac1c1ee529a554c24be412bbcc470"
+    }
+  ]
+}

@@ -334,7 +334,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
           onClick={onNavigate}
           className="flex min-w-0 items-center gap-2.5 rounded-md p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
-          <BrandMark />
+          <BrandMark className="hidden rail:flex" />
           <BrandName className="rail:sr-only" />
         </Link>
         {/* En riel (solo escritorio) se oculta para no estrechar la columna; el
@@ -385,7 +385,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
               <span
                 aria-hidden="true"
                 title={isRail ? userName : undefined}
-                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-xs font-semibold text-primary"
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-xs font-semibold text-link"
               >
                 {initialsOf(authUser?.name)}
               </span>
@@ -458,7 +458,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
                 aria-label={`Usuario actual (dev): ${actorDisplay ?? 'ninguno'}. Expandir el menú para cambiarlo`}
                 onClick={handleAvatarClick}
               >
-                <span className="flex size-7 items-center justify-center rounded-full bg-primary-subtle text-xs font-semibold text-primary">
+                <span className="flex size-7 items-center justify-center rounded-full bg-primary-subtle text-xs font-semibold text-link">
                   {selectedActor ? initialsOf(selectedActor.name) : '?'}
                 </span>
               </Button>

@@ -81,6 +81,14 @@ apóyate en ellos en lugar de reinventar reglas.
 4. Realiza el cambio mínimo coherente; no reestructures áreas no relacionadas.
 5. Valídalo con las comprobaciones pertinentes al tipo de cambio.
 
+## Validación visual con el Diseñador
+
+Antes de escribir el componente de una vista nueva o rediseñada (formularios,
+tablas, estados vacíos y de error), pide la especificación visual al agente
+`disenador` y valida con él la estructura. Implementa con esas clases y con los
+tokens de `.kiro/steering/25-marca-gibo.md`. Si el cambio es un ajuste menor
+dentro de un patrón ya especificado, no hace falta una nueva consulta.
+
 ## Flujo vertical de referencia
 
 Cuando aplique, el flujo de una funcionalidad es:

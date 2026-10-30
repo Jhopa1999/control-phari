@@ -45,7 +45,7 @@ function Evidence({ record }: { record: ValidationRecord }): React.ReactElement 
         target="_blank"
         rel="noopener noreferrer"
         title={ref}
-        className="inline-flex items-center gap-1 rounded-sm text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="inline-flex items-center gap-1 rounded-sm text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         Enlace
         <ExternalLink className="size-3.5 shrink-0" aria-hidden="true" />

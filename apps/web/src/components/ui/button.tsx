@@ -18,7 +18,7 @@ const buttonVariants = cva(
         'ghost-destructive': 'text-danger not-aria-disabled:hover:bg-danger-subtle',
         destructive:
           'bg-destructive text-destructive-foreground not-aria-disabled:hover:bg-destructive-hover',
-        link: 'text-primary underline-offset-4 not-aria-disabled:hover:underline',
+        link: 'text-link underline-offset-4 not-aria-disabled:hover:underline',
       },
       size: {
         default: 'h-9 px-3',

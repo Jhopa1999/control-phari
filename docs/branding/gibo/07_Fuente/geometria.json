@@ -1,0 +1,73 @@
+{
+  "version": "1.0",
+  "date": "2026-10-29",
+  "unit": "unidad vectorial",
+  "principal": {
+    "art_width": 772,
+    "art_height": 310,
+    "viewBox": [
+      -36,
+      -36,
+      844,
+      382
+    ]
+  },
+  "wordmark": {
+    "art_width": 772,
+    "art_height": 232,
+    "viewBox": [
+      -36,
+      -36,
+      844,
+      304
+    ]
+  },
+  "isotipo": {
+    "diameter": 232,
+    "inner_diameter": 114,
+    "orbit_radius": 86,
+    "orbit_thickness": 9,
+    "node_radius": 18,
+    "angles_deg": [
+      -90,
+      42,
+      180
+    ],
+    "viewBox": [
+      -36,
+      -36,
+      304,
+      304
+    ]
+  },
+  "clearspace": 36,
+  "icon": {
+    "canvas": 512,
+    "art_diameter": 384,
+    "padding": 64
+  },
+  "micro": {
+    "canvas": 32,
+    "art_diameter": 28,
+    "padding": 2,
+    "orbit_thickness_in_master_units": 14,
+    "node_radius": 20.5
+  },
+  "tagline": {
+    "bbox": [
+      14,
+      262,
+      758,
+      308.14464870666967
+    ],
+    "height": 46.14464870666968,
+    "font": "Montserrat Bold 700",
+    "scaled_proportionally": true
+  },
+  "colors": {
+    "navy": "#0F2557",
+    "electric": "#176BEB",
+    "cyan": "#20BFD1"
+  },
+  "note": "Contornos propios normalizados desde raster; no es recuperación del maestro original. CMYK no gestionado en SVG/PNG."
+}

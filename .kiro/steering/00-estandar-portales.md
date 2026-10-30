@@ -82,6 +82,11 @@ packages/api-client
 - No introducir Kubernetes, Kafka, Redis u otra infraestructura por defecto.
 - Mantener una arquitectura de monolito modular mientras sea suficiente.
 - Favorecer soluciones simples, mantenibles y comprobables.
+- La apariencia visual (marca, tokens, componentes) se rige por
+  `.kiro/steering/25-marca-gibo.md`. Es una capa de presentación y no cambia
+  los límites arquitectónicos de este estándar.
+- Las vistas nuevas o rediseñadas se especifican visualmente con el agente
+  `disenador` antes de implementarse.
 - No romper los comandos existentes del repositorio.
 - Antes de considerar terminado un cambio, debe compilar y pasar las
   validaciones correspondientes.

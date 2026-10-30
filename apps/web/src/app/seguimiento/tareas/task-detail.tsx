@@ -374,7 +374,7 @@ export function TaskDetail({
               href={task.evidenceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex max-w-full items-start gap-1 rounded-sm text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex max-w-full items-start gap-1 rounded-sm text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <span className="break-all">{task.evidenceUrl}</span>
               <ExternalLink className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
