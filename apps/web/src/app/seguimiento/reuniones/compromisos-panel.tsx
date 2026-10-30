@@ -265,6 +265,7 @@ export function CompromisosPanel({
                     size="sm"
                     loading={transitioningTo === to}
                     disabled={transitioningTo !== null}
+                    // eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render.
                     onClick={() => void handleTransition(selected, to)}
                   >
                     {stateLabel(to)}

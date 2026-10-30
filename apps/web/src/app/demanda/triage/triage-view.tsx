@@ -269,6 +269,7 @@ export function TriageView(): React.ReactElement {
   React.useEffect(() => {
     if (state !== 'success' || !urlId || urlId === selectedRef.current) return;
     if (requests.some((r) => r.id === urlId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la selección con ?requestId= de la URL (sistema externo, vía router) una vez cargada la lista.
       setNotice(null);
       selectRequest(urlId);
     } else {

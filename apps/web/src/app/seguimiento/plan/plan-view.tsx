@@ -297,6 +297,7 @@ export function PlanView(): React.ReactElement {
   React.useEffect(() => {
     if (requestsState !== 'success' || !urlId || urlId === selectedRef.current) return;
     if (requests.some((r) => r.id === urlId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la selección con ?requestId= de la URL (sistema externo, vía router) una vez cargada la lista.
       setNotice(null);
       selectRequest(urlId);
     } else {
@@ -615,8 +616,10 @@ export function PlanView(): React.ReactElement {
     return phases.reduce((min, p) => (p.order < min.order ? p : min), phases[0]).id;
   }, [phases]);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- falso positivo del compilador: se conserva a propósito la memoización manual del mapa.
   const phaseNameById = React.useMemo(() => new Map(phases.map((p) => [p.id, p.name])), [phases]);
   const taskTitleById = React.useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- falso positivo del compilador: se conserva a propósito la memoización manual del mapa.
   const personNameById = React.useMemo(() => new Map(people.map((p) => [p.id, p.name])), [people]);
   const taskCountByPhase = React.useMemo(() => {
     const counts = new Map<string, number>();
@@ -1329,6 +1332,7 @@ export function PlanView(): React.ReactElement {
         />
         {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
         {selected ? (
+          // eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render.
           renderPlan()
         ) : (
           <div className="rounded-lg border bg-card">

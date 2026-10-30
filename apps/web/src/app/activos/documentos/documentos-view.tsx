@@ -742,6 +742,7 @@ export function DocumentosView(): React.ReactElement {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {/* eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render. */}
             {table.pageRows.map((doc) => {
               const asset = assetById.get(doc.assetId);
               return (

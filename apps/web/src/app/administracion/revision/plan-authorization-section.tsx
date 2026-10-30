@@ -221,6 +221,7 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
             </TableRow>
           </TableHeader>
           <TableBody ref={bodyRef}>
+            {/* eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render. */}
             {rows.map((row, index) => (
               <TableRow key={row.plan.id}>
                 <TableCell className="min-w-56 max-w-[28rem]">

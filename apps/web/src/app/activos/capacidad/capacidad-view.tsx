@@ -160,6 +160,7 @@ export function CapacidadView(): React.ReactElement {
   // carga nada y el campo muestra un Skeleton.
   const [month, setMonth] = React.useState<string>('');
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- valor por defecto con la fecha local del navegador; se fija tras montar para no desajustar la hidratación (el servidor no conoce la zona horaria del usuario).
     setMonth((v) => v || localMonthInputValue());
   }, []);
 
