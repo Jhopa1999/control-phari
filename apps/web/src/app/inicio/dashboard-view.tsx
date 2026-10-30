@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Inbox } from 'lucide-react';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -132,23 +133,33 @@ export function DashboardView(): React.ReactElement {
   const [state, setState] = React.useState<LoadState>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  const load = React.useCallback(async (rangeFrom: string, rangeTo: string) => {
+  const fetchSummary = React.useCallback((rangeFrom: string, rangeTo: string) => {
+    return getDemandSummary({ from: rangeFrom, to: rangeTo })
+      .then((data) => {
+        setSummary(data);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        setErrorMessage(messageOf(err));
+        setState('error');
+      });
+  }, []);
+  const load = React.useCallback((rangeFrom: string, rangeTo: string) => {
     setState('loading');
     setErrorMessage(null);
-    try {
-      const data = await getDemandSummary({ from: rangeFrom, to: rangeTo });
-      setSummary(data);
-      setState('success');
-    } catch (err) {
-      setErrorMessage(messageOf(err));
-      setState('error');
-    }
-  }, []);
+    return fetchSummary(rangeFrom, rangeTo);
+  }, [fetchSummary]);
 
+  // Al cambiar el periodo se vuelve a mostrar la carga.
+  useResetOnChange([from, to], () => {
+    if (!from || !to) return;
+    setState('loading');
+    setErrorMessage(null);
+  });
   React.useEffect(() => {
     if (!from || !to) return;
-    void load(from, to);
-  }, [from, to, load]);
+    void fetchSummary(from, to);
+  }, [from, to, fetchSummary]);
 
   const hasData =
     summary !== null &&

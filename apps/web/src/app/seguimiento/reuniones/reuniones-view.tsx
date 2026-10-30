@@ -58,26 +58,27 @@ export function ReunionesView(): React.ReactElement {
     setInitialCommitmentId(readParam('commitmentId'));
   }, []);
 
-  const reload = React.useCallback(async () => {
-    try {
-      const [mts, cmts, procs, ppl] = await Promise.all([
-        listMeetings(),
-        listCommitments(),
-        listProcesses().catch(() => [] as Process[]),
-        listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
-      ]);
-      setMeetings(mts);
-      setCommitments(cmts);
-      setProcesses(procs);
-      setPeople(ppl);
-      setError(null);
-      setState('success');
-    } catch (err) {
-      setError(
-        err instanceof MeetingError || err instanceof CommitmentError ? err.message : null,
-      );
-      setState('error');
-    }
+  const reload = React.useCallback(() => {
+    return Promise.all([
+      listMeetings(),
+      listCommitments(),
+      listProcesses().catch(() => [] as Process[]),
+      listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
+    ])
+      .then(([mts, cmts, procs, ppl]) => {
+        setMeetings(mts);
+        setCommitments(cmts);
+        setProcesses(procs);
+        setPeople(ppl);
+        setError(null);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        setError(
+          err instanceof MeetingError || err instanceof CommitmentError ? err.message : null,
+        );
+        setState('error');
+      });
   }, []);
 
   React.useEffect(() => {

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { CalendarClock, ChevronRight, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -191,33 +192,41 @@ export function CapacidadView(): React.ReactElement {
   const focusAfterDeleteRef = React.useRef<string | null>(null);
   const assignmentsHeadingRef = React.useRef<HTMLHeadingElement>(null);
 
-  const load = React.useCallback(async (targetMonth: string) => {
-    setState('loading');
-    try {
-      const [sum, avail, asig, ppl, procs, reqs] = await Promise.all([
-        listCapacitySummary(targetMonth),
-        listAvailability(targetMonth),
-        listAssignments(targetMonth),
-        listCapacityPeople().catch(() => [] as CapacityPerson[]),
-        listProcesses().catch(() => [] as Process[]),
-        listRequests().catch(() => [] as Request[]),
-      ]);
-      setSummary(sum);
-      setAvailability(avail);
-      setAssignments(asig);
-      setPeople(ppl);
-      setProcesses(procs);
-      setRequests(reqs);
-      setState('success');
-    } catch {
-      setState('error');
-    }
+  const fetchCapacity = React.useCallback((targetMonth: string) => {
+    return Promise.all([
+      listCapacitySummary(targetMonth),
+      listAvailability(targetMonth),
+      listAssignments(targetMonth),
+      listCapacityPeople().catch(() => [] as CapacityPerson[]),
+      listProcesses().catch(() => [] as Process[]),
+      listRequests().catch(() => [] as Request[]),
+    ])
+      .then(([sum, avail, asig, ppl, procs, reqs]) => {
+        setSummary(sum);
+        setAvailability(avail);
+        setAssignments(asig);
+        setPeople(ppl);
+        setProcesses(procs);
+        setRequests(reqs);
+        setState('success');
+      })
+      .catch(() => {
+        setState('error');
+      });
   }, []);
+  const load = React.useCallback((targetMonth: string) => {
+    setState('loading');
+    return fetchCapacity(targetMonth);
+  }, [fetchCapacity]);
 
+  // Al cambiar el mes se vuelve a mostrar la carga.
+  useResetOnChange([month], () => {
+    if (month) setState('loading');
+  });
   React.useEffect(() => {
     if (!month) return;
-    void load(month);
-  }, [month, load]);
+    void fetchCapacity(month);
+  }, [month, fetchCapacity]);
 
   // Resumen: todas las personas (pageSize null, §24.1), orden de la API por defecto.
   const summaryTable = useClientTable({
