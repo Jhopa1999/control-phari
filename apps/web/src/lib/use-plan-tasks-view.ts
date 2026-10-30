@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createLocalPrefStore } from './local-pref-store';
 
 /**
  * Preferencia de presentación de la sección «Tareas» de Planificación:
@@ -48,17 +49,14 @@ export interface PlanTasksViewMode {
  * El SSR y el primer render usan 'table' (sin desajuste de hidratación); la
  * preferencia guardada se lee después del montaje.
  */
+const store = createLocalPrefStore<PlanTasksView>(readPref, writePref, 'table');
+
 export function usePlanTasksView(): PlanTasksViewMode {
-  const [view, setViewState] = React.useState<PlanTasksView>('table');
-
-  React.useEffect(() => {
-    setViewState(readPref());
-  }, []);
-
-  const setView = React.useCallback((next: PlanTasksView) => {
-    writePref(next);
-    setViewState(next);
-  }, []);
-
+  const view = React.useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+    store.getServerSnapshot,
+  );
+  const setView = React.useCallback((next: PlanTasksView) => store.set(next), []);
   return { view, setView };
 }

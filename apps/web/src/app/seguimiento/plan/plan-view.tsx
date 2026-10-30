@@ -173,7 +173,10 @@ export function PlanView(): React.ReactElement {
   const [requestsError, setRequestsError] = React.useState<string | null>(null);
   const [selectedId, setSelectedId] = React.useState('');
   const selectedRef = React.useRef(selectedId);
-  selectedRef.current = selectedId;
+  // Ultimo valor para los callbacks asincronos (se actualiza tras el render, no durante).
+  React.useEffect(() => {
+    selectedRef.current = selectedId;
+  });
   const [notice, setNotice] = React.useState<string | null>(null);
 
   // --- Plan y sus datos ---

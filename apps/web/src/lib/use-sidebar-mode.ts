@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createLocalPrefStore } from './local-pref-store';
 
 /**
  * Preferencia del menú lateral (design §8.3):
@@ -13,6 +14,8 @@ export type SidebarPref = 'auto' | 'rail' | 'expanded';
 const STORAGE_KEY = 'sidebarCollapsed';
 /** Mismo intervalo que la variante `rail:` de globals.css. */
 const AUTO_RAIL_QUERY = '(min-width: 1024px) and (max-width: 1279.98px)';
+
+const store = createLocalPrefStore<SidebarPref>(readPref, writePref, 'auto');
 
 function readPref(): SidebarPref {
   try {
@@ -53,12 +56,12 @@ export interface SidebarMode {
  * cargar); se acepta en lugar de un script en <head>.
  */
 export function useSidebarMode(): SidebarMode {
-  const [pref, setPrefState] = React.useState<SidebarPref>('auto');
+  const pref = React.useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+    store.getServerSnapshot,
+  );
   const [autoRail, setAutoRail] = React.useState(false);
-
-  React.useEffect(() => {
-    setPrefState(readPref());
-  }, []);
 
   React.useEffect(() => {
     const query = window.matchMedia(AUTO_RAIL_QUERY);
@@ -70,10 +73,7 @@ export function useSidebarMode(): SidebarMode {
 
   const isRail = pref === 'rail' || (pref === 'auto' && autoRail);
 
-  const setPref = React.useCallback((next: SidebarPref) => {
-    writePref(next);
-    setPrefState(next);
-  }, []);
+  const setPref = React.useCallback((next: SidebarPref) => store.set(next), []);
 
   const toggle = React.useCallback(() => {
     setPref(isRail ? 'expanded' : 'rail');
