@@ -12,8 +12,11 @@ export interface EmptyStateProps {
   /** Solo si la pantalla ya ofrece esa acción. */
   action?: React.ReactNode;
   secondaryAction?: React.ReactNode;
-  /** py-10 (por defecto) o py-6. */
-  size?: 'default' | 'compact';
+  /**
+   * py-10 (por defecto), py-6 (compact) o una sola línea (inline): para bloques
+   * secundarios donde un vacío grande empuja el contenido útil hacia abajo.
+   */
+  size?: 'default' | 'compact' | 'inline';
 }
 
 /**
@@ -28,6 +31,21 @@ export function EmptyState({
   secondaryAction,
   size = 'default',
 }: EmptyStateProps): React.ReactElement {
+  if (size === 'inline') {
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 py-4 text-center text-sm">
+        {Icon ? <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /> : null}
+        <p className="font-semibold">{title}</p>
+        {description ? <div className="text-muted-foreground">{description}</div> : null}
+        {action || secondaryAction ? (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {action}
+            {secondaryAction}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
   return (
     <div
       className={cn(

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
-import { ChartGantt, RefreshCw } from 'lucide-react';
+import { ChartGantt } from 'lucide-react';
 import { toast } from 'sonner';
 import { CellTitle } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
@@ -10,7 +10,6 @@ import { InlineNotice } from '@/components/inline-notice';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -189,12 +188,6 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
       title="Planes por autorizar"
       count={state === 'success' ? rows.length : undefined}
       headingRef={headingRef}
-      actions={
-        <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
-          <RefreshCw aria-hidden="true" />
-          Actualizar
-        </Button>
-      }
     >
       <InlineNotice tone="info" className="py-2">
         Autorizar lleva la solicitud a En ejecución; devolver regresa el plan a edición con un motivo.
@@ -208,6 +201,7 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
         }}
         empty={{
           icon: ChartGantt,
+          size: 'inline',
           title: 'No hay planes pendientes de autorización.',
           description: 'Los planes enviados a autorización aparecerán aquí.',
         }}

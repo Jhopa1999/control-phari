@@ -10,6 +10,7 @@ import { Field } from '@/components/field';
 import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
+import { RequestInbox } from '@/components/request-inbox';
 import { ReasonDialog } from '@/components/reason-dialog';
 import { RequestContextBar } from '@/components/request-context-bar';
 import { Section } from '@/components/section';
@@ -586,13 +587,11 @@ export function FrameworksView(): React.ReactElement {
         {selectedId ? (
           renderDetail()
         ) : (
-          <div className="rounded-lg border bg-card">
-            <EmptyState
-              icon={ShieldCheck}
-              title="Elige una solicitud para empezar."
-              description="Verás sus controles GC1–GC5, las validaciones registradas y la ruta proporcional."
-            />
-          </div>
+          <RequestInbox
+            requests={requests}
+            show={['state', 'priority', 'registered']}
+            onPick={handlePick}
+          />
         )}
       </>
     );

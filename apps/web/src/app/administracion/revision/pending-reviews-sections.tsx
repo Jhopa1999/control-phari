@@ -2,14 +2,13 @@
 
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
-import { FileCheck2, Lock, RefreshCw } from 'lucide-react';
+import { FileCheck2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { CellTitle } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { ReasonDialog } from '@/components/reason-dialog';
 import { RowActions, RowActionsCell } from '@/components/row-actions';
 import { Section } from '@/components/section';
-import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -111,12 +110,6 @@ export function PendingReviewsSections(): React.ReactElement | null {
       <Section
         title="Documentación por aprobar"
         count={docState === 'success' ? docs.length : undefined}
-        actions={
-          <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
-            <RefreshCw aria-hidden="true" />
-            Actualizar
-          </Button>
-        }
       >
         <DataView
           state={stateOf(docState, docs.length)}
@@ -124,6 +117,7 @@ export function PendingReviewsSections(): React.ReactElement | null {
           error={{ title: 'No fue posible cargar la documentación por aprobar.', onRetry: () => void load() }}
           empty={{
             icon: FileCheck2,
+            size: 'inline',
             title: 'No hay documentación pendiente de aprobación.',
             description: 'Los documentos enviados a aprobación aparecerán aquí.',
           }}
@@ -198,6 +192,7 @@ export function PendingReviewsSections(): React.ReactElement | null {
           error={{ title: 'No fue posible cargar los cierres por aprobar.', onRetry: () => void load() }}
           empty={{
             icon: Lock,
+            size: 'inline',
             title: 'No hay cierres pendientes de aprobación.',
             description: 'Las solicitudes de cierre de proyecto aparecerán aquí.',
           }}

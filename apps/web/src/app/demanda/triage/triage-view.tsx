@@ -11,6 +11,7 @@ import { Field, FieldSet, FormError, RequiredHint } from '@/components/field';
 import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
+import { RequestInbox } from '@/components/request-inbox';
 import {
   RequestContextBar,
   RequestFacts,
@@ -919,13 +920,12 @@ export function TriageView(): React.ReactElement {
             </div>
           </div>
         ) : (
-          <div className="rounded-lg border bg-card">
-            <EmptyState
-              icon={ListFilter}
-              title="Elige una solicitud para empezar."
-              description="Las solicitudes pendientes de triage aparecen primero en el selector."
-            />
-          </div>
+          <RequestInbox
+            requests={requests}
+            groups={GROUPS}
+            show={['state', 'registered']}
+            onPick={handlePick}
+          />
         )}
       </>
     );
