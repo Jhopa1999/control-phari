@@ -114,7 +114,10 @@ export function PriorizacionView(): React.ReactElement {
 
   const [selectedId, setSelectedId] = React.useState('');
   const selectedRef = React.useRef(selectedId);
-  selectedRef.current = selectedId;
+  // Ultimo valor para los callbacks asincronos (se actualiza tras el render, no durante).
+  React.useEffect(() => {
+    selectedRef.current = selectedId;
+  });
   const [scores, setScores] = React.useState<Scores>(emptyScores());
   const [justification, setJustification] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);

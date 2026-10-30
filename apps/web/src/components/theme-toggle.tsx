@@ -13,6 +13,9 @@ import {
 
 type ThemeOption = 'light' | 'dark' | 'system';
 
+/** Suscripción que nunca notifica: el valor «ya estoy en el cliente» no cambia. */
+const subscribeNever = (): (() => void) => () => undefined;
+
 const OPTIONS: ReadonlyArray<{ value: ThemeOption; label: string; icon: typeof Sun }> = [
   { value: 'light', label: 'Claro', icon: Sun },
   { value: 'dark', label: 'Oscuro', icon: Moon },
@@ -32,11 +35,8 @@ const OPTIONS: ReadonlyArray<{ value: ThemeOption; label: string; icon: typeof S
  */
 export function ThemeToggle({ className }: { className?: string }): React.ReactElement {
   const { theme, resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  // false en el servidor y durante la hidratación; true ya en el cliente.
+  const mounted = React.useSyncExternalStore(subscribeNever, () => true, () => false);
 
   // Icono del disparador: antes de montar, un neutro estable; ya montado, el
   // monitor en «Sistema» o el icono del tema resuelto (sol/luna).

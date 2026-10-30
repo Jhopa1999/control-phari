@@ -170,7 +170,10 @@ export function TriageView(): React.ReactElement {
 
   const [selectedId, setSelectedId] = React.useState('');
   const selectedRef = React.useRef(selectedId);
-  selectedRef.current = selectedId;
+  // Ultimo valor para los callbacks asincronos (se actualiza tras el render, no durante).
+  React.useEffect(() => {
+    selectedRef.current = selectedId;
+  });
   const [eligibleResponsibles, setEligibleResponsibles] = React.useState<
     EligibleResponsible[]
   >([]);
