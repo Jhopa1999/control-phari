@@ -81,33 +81,37 @@ export function NovedadesView(): React.ReactElement {
   // tras una transición, cuando el botón pulsado desaparece; NIT 4).
   const detailHeadingRef = React.useRef<HTMLHeadingElement>(null);
 
+  const loadData = React.useCallback(() => {
+    return Promise.all([
+      listIssues(),
+      listProcesses().catch(() => [] as Process[]),
+      listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
+    ])
+      .then(([iss, procs, ppl]) => {
+        setIssues(iss);
+        setProcesses(procs);
+        setPeople(ppl);
+        setLoadError(null);
+        setState('success');
+        // Mantiene la selección si sigue existiendo; si no, toma la primera.
+        setSelectedId((prev) => {
+          if (prev && iss.some((i) => i.id === prev)) return prev;
+          return iss[0]?.id ?? null;
+        });
+      })
+      .catch((err: unknown) => {
+        setLoadError(err instanceof IssueError ? err.message : null);
+        setState('error');
+      });
+  }, []);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      const [iss, procs, ppl] = await Promise.all([
-        listIssues(),
-        listProcesses().catch(() => [] as Process[]),
-        listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
-      ]);
-      setIssues(iss);
-      setProcesses(procs);
-      setPeople(ppl);
-      setLoadError(null);
-      setState('success');
-      // Mantiene la selección si sigue existiendo; si no, toma la primera.
-      setSelectedId((prev) => {
-        if (prev && iss.some((i) => i.id === prev)) return prev;
-        return iss[0]?.id ?? null;
-      });
-    } catch (err) {
-      setLoadError(err instanceof IssueError ? err.message : null);
-      setState('error');
-    }
-  }, []);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    void loadData();
+  }, [loadData]);
 
   const selected = React.useMemo(
     () => issues.find((i) => i.id === selectedId) ?? null,

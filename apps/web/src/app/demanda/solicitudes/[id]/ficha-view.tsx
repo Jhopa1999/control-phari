@@ -117,76 +117,83 @@ export function FichaView({ id }: { id: string }): React.ReactElement {
   const [data, setData] = React.useState<StageData>(EMPTY_STAGE);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
+  const loadData = React.useCallback(() => {
+    // getRequest es el dato troncal: si falla, es error global de la ficha.
+    return getRequest(id)
+      .then((req) =>
+        // Las demás lecturas toleran fallo/404 por etapa y se degradan a vacío.
+        Promise.all([
+          listProcesses().catch(() => [] as Process[]),
+          listTriageSafe(id),
+          listPriorityEvaluations(id).catch(() => [] as PriorityEvaluation[]),
+          listApprovals(id).catch(() => [] as Approval[]),
+          getPlanSafe(id),
+          getGovernanceBoard(id).catch(() => null),
+          listValidations(id).catch(() => [] as ValidationRecord[]),
+          listCatalog('TRIAGE_ROUTE'),
+          listCatalog('DEMAND_TYPE'),
+          listCatalog('CRITICALITY'),
+          listCatalog('TRIAGE_SIZE'),
+          listCatalog('DATA_AVAILABILITY'),
+          listCatalog('GOVERNANCE_ROUTE'),
+          listCatalog('VALIDATION_TYPE'),
+          listCatalog('VALIDATION_RESULT'),
+        ]).then(
+          ([
+            processes,
+            triageContext,
+            evaluations,
+            approvals,
+            plan,
+            board,
+            validations,
+            route,
+            demandType,
+            criticality,
+            size,
+            dataAvailability,
+            governanceRoute,
+            validationType,
+            validationResult,
+          ]) => {
+            setRequest(req);
+            setData({
+              processes,
+              triages: triageContext,
+              evaluations,
+              approvals,
+              plan,
+              board,
+              validations,
+              triageCatalogs: {
+                route,
+                demandType,
+                criticality,
+                size,
+                dataAvailability,
+              },
+              routeCatalog: governanceRoute,
+              validationTypeCatalog: validationType,
+              validationResultCatalog: validationResult,
+            });
+            setState('success');
+          },
+        ),
+      )
+      .catch((err: unknown) => {
+        setErrorMessage(err instanceof RequestError ? err.message : 'Ocurrió un error inesperado.');
+        setState('error');
+      });
+  }, [id]);
   const load = React.useCallback(async () => {
     setState('loading');
     setErrorMessage(null);
-    try {
-      // getRequest es el dato troncal: si falla, es error global de la ficha.
-      const req = await getRequest(id);
-      // Las demás lecturas toleran fallo/404 por etapa y se degradan a vacío.
-      const [
-        processes,
-        triageContext,
-        evaluations,
-        approvals,
-        plan,
-        board,
-        validations,
-        route,
-        demandType,
-        criticality,
-        size,
-        dataAvailability,
-        governanceRoute,
-        validationType,
-        validationResult,
-      ] = await Promise.all([
-        listProcesses().catch(() => [] as Process[]),
-        listTriageSafe(id),
-        listPriorityEvaluations(id).catch(() => [] as PriorityEvaluation[]),
-        listApprovals(id).catch(() => [] as Approval[]),
-        getPlanSafe(id),
-        getGovernanceBoard(id).catch(() => null),
-        listValidations(id).catch(() => [] as ValidationRecord[]),
-        listCatalog('TRIAGE_ROUTE'),
-        listCatalog('DEMAND_TYPE'),
-        listCatalog('CRITICALITY'),
-        listCatalog('TRIAGE_SIZE'),
-        listCatalog('DATA_AVAILABILITY'),
-        listCatalog('GOVERNANCE_ROUTE'),
-        listCatalog('VALIDATION_TYPE'),
-        listCatalog('VALIDATION_RESULT'),
-      ]);
-      setRequest(req);
-      setData({
-        processes,
-        triages: triageContext,
-        evaluations,
-        approvals,
-        plan,
-        board,
-        validations,
-        triageCatalogs: {
-          route,
-          demandType,
-          criticality,
-          size,
-          dataAvailability,
-        },
-        routeCatalog: governanceRoute,
-        validationTypeCatalog: validationType,
-        validationResultCatalog: validationResult,
-      });
-      setState('success');
-    } catch (err) {
-      setErrorMessage(err instanceof RequestError ? err.message : 'Ocurrió un error inesperado.');
-      setState('error');
-    }
-  }, [id]);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    void loadData();
+  }, [loadData]);
 
   if (state === 'loading') {
     return (

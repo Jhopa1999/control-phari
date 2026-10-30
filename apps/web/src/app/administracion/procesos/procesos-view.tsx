@@ -56,7 +56,8 @@ export function ProcesosView(): React.ReactElement {
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [areas, setAreas] = React.useState<Area[]>([]);
   const [activeAreas, setActiveAreas] = React.useState<Area[]>([]);
-  const [state, setState] = React.useState<LoadState>('loading');
+  const [loadedState, setState] = React.useState<LoadState>('loading');
+  const state: LoadState = permissionsLoaded && !processesAllowed ? 'forbidden' : loadedState;
   const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -64,38 +65,39 @@ export function ProcesosView(): React.ReactElement {
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
 
+  const loadData = React.useCallback(() => {
+    // Procesos del alcance + areas (todas, para resolver nombres) + areas
+    // activas (para el selector obligatorio al crear).
+    return Promise.all([
+      listProcesses(),
+      listAreas(),
+      listAreas({ active: true }),
+    ])
+      .then(([p, all, active]) => {
+        setProcesses(p);
+        setAreas(all);
+        setActiveAreas(active);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiError && err.status === 403) {
+          setState('forbidden');
+          return;
+        }
+        setLoadError(err instanceof Error ? err.message : null);
+        setState('error');
+      });
+  }, []);
   const load = React.useCallback(async (silent = false) => {
     if (!silent) setState('loading');
-    try {
-      // Procesos del alcance + areas (todas, para resolver nombres) + areas
-      // activas (para el selector obligatorio al crear).
-      const [p, all, active] = await Promise.all([
-        listProcesses(),
-        listAreas(),
-        listAreas({ active: true }),
-      ]);
-      setProcesses(p);
-      setAreas(all);
-      setActiveAreas(active);
-      setState('success');
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
-        setState('forbidden');
-        return;
-      }
-      setLoadError(err instanceof Error ? err.message : null);
-      setState('error');
-    }
-  }, []);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
     if (!permissionsLoaded) return;
-    if (!processesAllowed) {
-      setState('forbidden');
-      return;
-    }
-    void load();
-  }, [permissionsLoaded, processesAllowed, load]);
+    if (!processesAllowed) return;
+    void loadData();
+  }, [permissionsLoaded, processesAllowed, loadData]);
 
   const areaLabelById = React.useMemo(() => {
     const map = new Map<string, string>();

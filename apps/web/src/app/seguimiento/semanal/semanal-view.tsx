@@ -110,31 +110,35 @@ export function SemanalView(): React.ReactElement {
 
   const detailHeadingRef = React.useRef<HTMLHeadingElement>(null);
 
+  const loadData = React.useCallback(() => {
+    return Promise.all([
+      listWeeklyReports(),
+      listProcesses().catch(() => [] as Process[]),
+    ])
+      .then(([reps, procs]) => {
+        setReports(reps);
+        setProcesses(procs);
+        setLoadError(null);
+        setState('success');
+        // Mantiene la selección si sigue existiendo; si no, toma el primero.
+        setSelectedId((prev) => {
+          if (prev && reps.some((r) => r.id === prev)) return prev;
+          return reps[0]?.id ?? null;
+        });
+      })
+      .catch((err: unknown) => {
+        setLoadError(err instanceof WorklogError ? err.message : null);
+        setState('error');
+      });
+  }, []);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      const [reps, procs] = await Promise.all([
-        listWeeklyReports(),
-        listProcesses().catch(() => [] as Process[]),
-      ]);
-      setReports(reps);
-      setProcesses(procs);
-      setLoadError(null);
-      setState('success');
-      // Mantiene la selección si sigue existiendo; si no, toma el primero.
-      setSelectedId((prev) => {
-        if (prev && reps.some((r) => r.id === prev)) return prev;
-        return reps[0]?.id ?? null;
-      });
-    } catch (err) {
-      setLoadError(err instanceof WorklogError ? err.message : null);
-      setState('error');
-    }
-  }, []);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    void loadData();
+  }, [loadData]);
 
   /**
    * Carga el detalle. `silent` (tras guardar o enviar) no pasa por el estado de

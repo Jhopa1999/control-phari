@@ -154,31 +154,35 @@ export function PriorizacionView(): React.ReactElement {
     [loadCurrentEvaluation],
   );
 
+  const loadData = React.useCallback(() => {
+    return Promise.all([
+      listRequests(),
+      listProcesses().catch(() => [] as Process[]),
+    ])
+      .then(([reqs, procs]) => {
+        setRequests(reqs);
+        setProcesses(procs);
+        setState('success');
+        // Regla 3 de §7.9.1: si la solicitud elegida ya no está, se limpia.
+        if (selectedRef.current && !reqs.some((r) => r.id === selectedRef.current)) {
+          selectRequest('');
+          setRequestId(null);
+        }
+      })
+      .catch((err: unknown) => {
+        setLoadError(err instanceof Error ? err.message : null);
+        setState('error');
+      });
+  }, [selectRequest, setRequestId]);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      const [reqs, procs] = await Promise.all([
-        listRequests(),
-        listProcesses().catch(() => [] as Process[]),
-      ]);
-      setRequests(reqs);
-      setProcesses(procs);
-      setState('success');
-      // Regla 3 de §7.9.1: si la solicitud elegida ya no está, se limpia.
-      if (selectedRef.current && !reqs.some((r) => r.id === selectedRef.current)) {
-        selectRequest('');
-        setRequestId(null);
-      }
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : null);
-      setState('error');
-    }
-  }, [selectRequest, setRequestId]);
+    await loadData();
+  }, [loadData]);
 
   // `load` es estable: carga al montar, como hoy (no recarga al cambiar de actor).
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    void loadData();
+  }, [loadData]);
 
   // Regla 1 de §7.9.1: adoptar ?requestId= al terminar la carga y cuando cambia.
   React.useEffect(() => {

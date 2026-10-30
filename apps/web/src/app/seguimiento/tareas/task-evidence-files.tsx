@@ -39,19 +39,24 @@ export function TaskEvidenceFiles({ taskId }: { taskId: string }): React.ReactEl
   const inputRef = React.useRef<HTMLInputElement>(null);
   const inputId = React.useId();
 
+  const loadData = React.useCallback(() => {
+    return listTaskEvidence(taskId)
+      .then((list) => {
+        setFiles(list);
+        setState('success');
+      })
+      .catch(() => {
+        setState('error');
+      });
+  }, [taskId]);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      setFiles(await listTaskEvidence(taskId));
-      setState('success');
-    } catch {
-      setState('error');
-    }
-  }, [taskId]);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    void loadData();
+  }, [loadData]);
 
   async function handleSelected(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];

@@ -52,7 +52,8 @@ export function RequestersView(): React.ReactElement {
 
   const [requesters, setRequesters] = React.useState<Requester[]>([]);
   const [areas, setAreas] = React.useState<Area[]>([]);
-  const [state, setState] = React.useState<LoadState>('loading');
+  const [loadedState, setState] = React.useState<LoadState>('loading');
+  const state: LoadState = permissionsLoaded && !allowed ? 'forbidden' : loadedState;
   const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -60,34 +61,35 @@ export function RequestersView(): React.ReactElement {
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
 
+  const loadData = React.useCallback(() => {
+    return Promise.all([
+      listRequesters(),
+      listAreas({ active: true }),
+    ])
+      .then(([list, activeAreas]) => {
+        setRequesters(list);
+        setAreas(activeAreas);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiError && err.status === 403) {
+          setState('forbidden');
+          return;
+        }
+        setLoadError(err instanceof Error ? err.message : null);
+        setState('error');
+      });
+  }, []);
   const load = React.useCallback(async (silent = false) => {
     if (!silent) setState('loading');
-    try {
-      const [list, activeAreas] = await Promise.all([
-        listRequesters(),
-        listAreas({ active: true }),
-      ]);
-      setRequesters(list);
-      setAreas(activeAreas);
-      setState('success');
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
-        setState('forbidden');
-        return;
-      }
-      setLoadError(err instanceof Error ? err.message : null);
-      setState('error');
-    }
-  }, []);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
     if (!permissionsLoaded) return;
-    if (!allowed) {
-      setState('forbidden');
-      return;
-    }
-    void load();
-  }, [permissionsLoaded, allowed, load]);
+    if (!allowed) return;
+    void loadData();
+  }, [permissionsLoaded, allowed, loadData]);
 
   function openCreate(): void {
     setEditing(null);

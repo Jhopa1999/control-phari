@@ -141,27 +141,31 @@ export function SolicitudesView(): React.ReactElement {
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
 
+  const loadData = React.useCallback(() => {
+    return Promise.all([
+      listRequests(),
+      listProcesses().catch(() => [] as Process[]),
+      listRequesters().catch(() => [] as Requester[]),
+    ])
+      .then(([reqs, procs, reqrs]) => {
+        setRequests(reqs);
+        setProcesses(procs);
+        setRequesters(reqrs);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        setErrorMessage(messageOf(err));
+        setState('error');
+      });
+  }, []);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      const [reqs, procs, reqrs] = await Promise.all([
-        listRequests(),
-        listProcesses().catch(() => [] as Process[]),
-        listRequesters().catch(() => [] as Requester[]),
-      ]);
-      setRequests(reqs);
-      setProcesses(procs);
-      setRequesters(reqrs);
-      setState('success');
-    } catch (err) {
-      setErrorMessage(messageOf(err));
-      setState('error');
-    }
-  }, []);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    void loadData();
+  }, [loadData]);
 
   const processName = React.useMemo(() => {
     const names = new Map(processes.map((p) => [p.id, p.name]));

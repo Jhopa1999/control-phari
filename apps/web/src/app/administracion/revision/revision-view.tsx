@@ -56,7 +56,8 @@ export function RevisionView(): React.ReactElement {
     [permissions],
   );
   const [queue, setQueue] = React.useState<Request[]>([]);
-  const [state, setState] = React.useState<LoadState>('loading');
+  const [loadedState, setState] = React.useState<LoadState>('loading');
+  const state: LoadState = permissionsLoaded && !reviewAllowed ? 'forbidden' : loadedState;
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [actingId, setActingId] = React.useState<string | null>(null);
   const [approvingId, setApprovingId] = React.useState<string | null>(null);
@@ -67,32 +68,33 @@ export function RevisionView(): React.ReactElement {
   const bodyRef = React.useRef<HTMLTableSectionElement>(null);
   const headingRef = React.useRef<HTMLHeadingElement>(null);
 
+  const loadData = React.useCallback(() => {
+    return listPendingApproval()
+      .then((data) => {
+        setQueue(data);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApprovalError && err.status === 403) {
+          setState('forbidden');
+          return;
+        }
+        setLoadError(messageOf(err));
+        setState('error');
+      });
+  }, []);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      const data = await listPendingApproval();
-      setQueue(data);
-      setState('success');
-    } catch (err) {
-      if (err instanceof ApprovalError && err.status === 403) {
-        setState('forbidden');
-        return;
-      }
-      setLoadError(messageOf(err));
-      setState('error');
-    }
-  }, []);
+    await loadData();
+  }, [loadData]);
 
   // Gating cosmético, como en Indicadores: sin el módulo review no se llama al
   // backend (respondería 403) y se muestra el aviso; un 403 lleva al mismo aviso.
   React.useEffect(() => {
     if (!permissionsLoaded) return;
-    if (!reviewAllowed) {
-      setState('forbidden');
-      return;
-    }
-    void load();
-  }, [permissionsLoaded, reviewAllowed, load]);
+    if (!reviewAllowed) return;
+    void loadData();
+  }, [permissionsLoaded, reviewAllowed, loadData]);
 
   const returnFocusTo = React.useCallback(
     () => focusTargetAfterRemoval(bodyRef.current, rowIndexRef.current, headingRef.current),

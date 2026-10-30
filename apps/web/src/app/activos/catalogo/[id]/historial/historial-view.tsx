@@ -61,27 +61,31 @@ export function HistorialView({ assetId }: HistorialViewProps): React.ReactEleme
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [sort, setSort] = React.useState<SortState<SortKey>>(DEFAULT_SORT);
 
+  const loadData = React.useCallback(() => {
+    return Promise.all([
+      getAsset(assetId),
+      listAssetRequests(assetId),
+      listProcesses().catch(() => [] as Process[]),
+    ])
+      .then(([assetDetail, history, procs]) => {
+        setAsset(assetDetail);
+        setRows(history);
+        setProcesses(procs);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        setErrorMessage(messageOf(err));
+        setState('error');
+      });
+  }, [assetId]);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      const [assetDetail, history, procs] = await Promise.all([
-        getAsset(assetId),
-        listAssetRequests(assetId),
-        listProcesses().catch(() => [] as Process[]),
-      ]);
-      setAsset(assetDetail);
-      setRows(history);
-      setProcesses(procs);
-      setState('success');
-    } catch (err) {
-      setErrorMessage(messageOf(err));
-      setState('error');
-    }
-  }, [assetId]);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    void loadData();
+  }, [loadData]);
 
   const processName = React.useCallback(
     (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS,

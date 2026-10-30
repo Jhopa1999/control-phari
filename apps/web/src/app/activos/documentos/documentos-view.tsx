@@ -234,35 +234,39 @@ export function DocumentosView(): React.ReactElement {
     [assetById, isJefe, leaderProcessIds],
   );
 
+  const loadData = React.useCallback(() => {
+    return Promise.all([
+      listDocuments(),
+      listAssets().catch(() => [] as Asset[]),
+      listProcesses().catch(() => [] as Process[]),
+      listRequests().catch(() => [] as Request[]),
+      listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
+      listCatalogItems({ catalog: 'DOC_CATEGORY', active: true }).catch(
+        () => [] as CatalogItem[],
+      ),
+    ])
+      .then(([docs, assetList, procs, reqs, usrs, cats]) => {
+        setDocuments(docs);
+        setAssets(assetList);
+        setProcesses(procs);
+        setRequests(reqs);
+        setOwners(usrs);
+        setCategoryOptions(cats);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        setErrorMessage(messageOf(err));
+        setState('error');
+      });
+  }, []);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      const [docs, assetList, procs, reqs, usrs, cats] = await Promise.all([
-        listDocuments(),
-        listAssets().catch(() => [] as Asset[]),
-        listProcesses().catch(() => [] as Process[]),
-        listRequests().catch(() => [] as Request[]),
-        listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
-        listCatalogItems({ catalog: 'DOC_CATEGORY', active: true }).catch(
-          () => [] as CatalogItem[],
-        ),
-      ]);
-      setDocuments(docs);
-      setAssets(assetList);
-      setProcesses(procs);
-      setRequests(reqs);
-      setOwners(usrs);
-      setCategoryOptions(cats);
-      setState('success');
-    } catch (err) {
-      setErrorMessage(messageOf(err));
-      setState('error');
-    }
-  }, []);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    void loadData();
+  }, [loadData]);
 
   // Enlace directo (notificaciones/aprobaciones): ?documentId=… abre el documento.
   const deepLinkDone = React.useRef(false);
