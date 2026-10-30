@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import Link from 'next/link';
 import {
   ArrowDown,
@@ -232,32 +233,42 @@ export function PlanView(): React.ReactElement {
     setSelectedId(id);
   }, []);
 
-  const loadRequests = React.useCallback(async () => {
-    setRequestsState('loading');
-    try {
-      const all = await Promise.all(PLANNABLE_STATES.map((state) => listRequests({ state })));
-      const flat = all.flat();
-      setRequests(flat);
-      setRequestsState('success');
-      // Regla 3 de §7.9.1: si la solicitud elegida ya no está, se limpia.
-      if (selectedRef.current && !flat.some((r) => r.id === selectedRef.current)) {
-        selectRequest('');
-        setRequestId(null);
-      }
-    } catch (err) {
-      setRequestsError(err instanceof Error ? err.message : null);
-      setRequestsState('error');
-    }
+  const fetchRequests = React.useCallback(() => {
+    return Promise.all(PLANNABLE_STATES.map((state) => listRequests({ state })))
+      .then((all) => {
+        const flat = all.flat();
+        setRequests(flat);
+        setRequestsState('success');
+        // Regla 3 de §7.9.1: si la solicitud elegida ya no está, se limpia.
+        if (selectedRef.current && !flat.some((r) => r.id === selectedRef.current)) {
+          selectRequest('');
+          setRequestId(null);
+        }
+      })
+      .catch((err: unknown) => {
+        setRequestsError(err instanceof Error ? err.message : null);
+        setRequestsState('error');
+      });
   }, [selectRequest, setRequestId]);
+  const loadRequests = React.useCallback(() => {
+    setRequestsState('loading');
+    return fetchRequests();
+  }, [fetchRequests]);
 
   // Recarga también al cambiar de actor, como hasta ahora. Gating cosmético,
   // como en Indicadores y Aprobaciones: sin el módulo plan no se llama al
   // backend (respondería 403) y se muestra el aviso de rol.
-  React.useEffect(() => {
+  // Al cambiar de usuario o de permisos se vuelve a mostrar la carga.
+  useResetOnChange([actorId, permissionsLoaded, planAllowed], () => {
     if (!permissionsLoaded || !planAllowed) return;
     setPlanForbidden(false);
-    void loadRequests();
-  }, [loadRequests, actorId, permissionsLoaded, planAllowed]);
+    setRequestsState('loading');
+    setPeopleState('loading');
+  });
+  React.useEffect(() => {
+    if (!permissionsLoaded || !planAllowed) return;
+    void fetchRequests();
+  }, [fetchRequests, actorId, permissionsLoaded, planAllowed]);
 
   // Personas para el selector de Responsable. peopleState distingue el fallo de
   // carga (motivo "No se pudieron cargar las personas") de una lista
@@ -266,7 +277,6 @@ export function PlanView(): React.ReactElement {
   React.useEffect(() => {
     if (!permissionsLoaded || !planAllowed) return;
     let active = true;
-    setPeopleState('loading');
     void listCoordinationPeople()
       .then((data) => {
         if (!active) return;
@@ -302,45 +312,64 @@ export function PlanView(): React.ReactElement {
     setRequestId(id);
   }
 
-  const loadPlan = React.useCallback(async (requestId: string) => {
+  const handlePlanLoadError = React.useCallback((err: unknown) => {
+    if (err instanceof PlanError && err.status === 404) {
+      // Aún no hay plan para esta solicitud: ofrecer crearlo.
+      setPlan(null);
+      setPhases([]);
+      setTasks([]);
+      setGuide(null);
+      setPlanState('missing');
+    } else if (err instanceof PlanError && err.status === 403) {
+      setPlanForbidden(true);
+      setPlanState('error');
+    } else {
+      setPlanState('error');
+    }
+  }, []);
+  const fetchPlan = React.useCallback((requestId: string) => {
+    return getPlan(requestId)
+      .then((current) =>
+        Promise.all([
+          listPhases(current.id),
+          listPlanTasks(current.id),
+          getPlanGuide(requestId),
+        ]).then(([phaseList, taskList, guideData]) => {
+          setPlan(current);
+          setPhases(phaseList);
+          setTasks(taskList);
+          setGuide(guideData);
+          setPlanState('success');
+        }),
+      )
+      .catch((err: unknown) => {
+        handlePlanLoadError(err);
+      });
+  }, [handlePlanLoadError]);
+  const loadPlan = React.useCallback((requestId: string) => {
     if (!requestId) {
       setPlan(null);
       setPlanState('idle');
-      return;
+      return Promise.resolve();
     }
     setPlanState('loading');
-    try {
-      const current = await getPlan(requestId);
-      const [phaseList, taskList, guideData] = await Promise.all([
-        listPhases(current.id),
-        listPlanTasks(current.id),
-        getPlanGuide(requestId),
-      ]);
-      setPlan(current);
-      setPhases(phaseList);
-      setTasks(taskList);
-      setGuide(guideData);
-      setPlanState('success');
-    } catch (err) {
-      if (err instanceof PlanError && err.status === 404) {
-        // Aún no hay plan para esta solicitud: ofrecer crearlo.
-        setPlan(null);
-        setPhases([]);
-        setTasks([]);
-        setGuide(null);
-        setPlanState('missing');
-      } else if (err instanceof PlanError && err.status === 403) {
-        setPlanForbidden(true);
-        setPlanState('error');
-      } else {
-        setPlanState('error');
-      }
-    }
-  }, []);
+    return fetchPlan(requestId);
+  }, [fetchPlan]);
 
+
+  // Al cambiar de solicitud: sin solicitud, se vacía el plan; con solicitud, se
+  // vuelve a mostrar la carga.
+  useResetOnChange([selectedId], () => {
+    if (!selectedId) {
+      setPlan(null);
+      setPlanState('idle');
+    } else {
+      setPlanState('loading');
+    }
+  });
   React.useEffect(() => {
-    void loadPlan(selectedId);
-  }, [selectedId, loadPlan]);
+    if (selectedId) void fetchPlan(selectedId);
+  }, [selectedId, fetchPlan]);
 
   const refreshPlanData = React.useCallback(async () => {
     if (!plan || !selectedId) return;

@@ -102,44 +102,57 @@ export function AuditoriaView(): React.ReactElement {
     return Promise.all([processesRef.current, peopleRef.current]);
   }, []);
 
-  const load = React.useCallback(
-    async (
+  const fetchEvents = React.useCallback(
+    (
       objectType: AuditObjectType | typeof ALL,
       action: AuditAction | typeof ALL,
       requestedPage: number,
       requestedPageSize: ClientTablePageSize,
     ) => {
       const requestId = ++requestRef.current;
-      setState('loading');
-      try {
-        // Procesos y personas solo dan nombres legibles: si fallan, no bloquean la auditoría.
-        const [result] = await Promise.all([
-          listAuditEvents({
-            page: requestedPage,
-            pageSize: requestedPageSize,
-            ...(objectType === ALL ? {} : { objectType }),
-            ...(action === ALL ? {} : { action }),
-          }),
-          loadLookups(),
-        ]);
-        if (requestId !== requestRef.current) return;
-        setEvents(result.data);
-        setTotal(result.total);
-        // El servidor acota page/pageSize; se refleja lo aplicado realmente.
-        setPage(result.page);
-        setState('success');
-      } catch (err) {
-        if (requestId !== requestRef.current) return;
-        setErrorMessage(err instanceof Error ? err.message : null);
-        setState('error');
-      }
+      // Procesos y personas solo dan nombres legibles: si fallan, no bloquean la auditoría.
+      return Promise.all([
+        listAuditEvents({
+          page: requestedPage,
+          pageSize: requestedPageSize,
+          ...(objectType === ALL ? {} : { objectType }),
+          ...(action === ALL ? {} : { action }),
+        }),
+        loadLookups(),
+      ])
+        .then(([result]) => {
+          if (requestId !== requestRef.current) return;
+          setEvents(result.data);
+          setTotal(result.total);
+          // El servidor acota page/pageSize; se refleja lo aplicado realmente.
+          setPage(result.page);
+          setState('success');
+        })
+        .catch((err: unknown) => {
+          if (requestId !== requestRef.current) return;
+          setErrorMessage(err instanceof Error ? err.message : null);
+          setState('error');
+        });
     },
     [loadLookups],
   );
+  const load = React.useCallback(
+    (
+      objectType: AuditObjectType | typeof ALL,
+      action: AuditAction | typeof ALL,
+      requestedPage: number,
+      requestedPageSize: ClientTablePageSize,
+    ) => {
+      setState('loading');
+      return fetchEvents(objectType, action, requestedPage, requestedPageSize);
+    },
+    [fetchEvents],
+  );
 
   React.useEffect(() => {
-    void load(ALL, ALL, 1, DEFAULT_PAGE_SIZE);
-  }, [load]);
+    // El estado inicial ya es 'loading': la carga de montaje no lo vuelve a fijar.
+    void fetchEvents(ALL, ALL, 1, DEFAULT_PAGE_SIZE);
+  }, [fetchEvents]);
 
   const processById = React.useMemo(() => new Map(processes.map((p) => [p.id, p])), [processes]);
   const personById = React.useMemo(() => new Map(people.map((p) => [p.id, p.name])), [people]);

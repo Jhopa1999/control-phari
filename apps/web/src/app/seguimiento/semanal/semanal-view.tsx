@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Plus, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -144,32 +145,41 @@ export function SemanalView(): React.ReactElement {
    * Carga el detalle. `silent` (tras guardar o enviar) no pasa por el estado de
    * carga: los campos siguen montados y conservan el foco.
    */
-  const loadDetail = React.useCallback(async (id: string, silent = false) => {
+  const fetchDetail = React.useCallback((id: string) => {
     latestDetailIdRef.current = id;
-    if (!silent) setDetailState('loading');
-    try {
-      const d = await getWeeklyReport(id);
-      if (latestDetailIdRef.current !== id) return;
-      setDetail(d);
-      setSections(sectionsOf(d));
-      setDetailError(null);
-      setDetailState('success');
-    } catch (err) {
-      if (latestDetailIdRef.current !== id) return;
-      setDetail(null);
-      setDetailError(err instanceof WorklogError ? err.message : null);
-      setDetailState('error');
-    }
+    return getWeeklyReport(id)
+      .then((d) => {
+        if (latestDetailIdRef.current !== id) return;
+        setDetail(d);
+        setSections(sectionsOf(d));
+        setDetailError(null);
+        setDetailState('success');
+      })
+      .catch((err: unknown) => {
+        if (latestDetailIdRef.current !== id) return;
+        setDetail(null);
+        setDetailError(err instanceof WorklogError ? err.message : null);
+        setDetailState('error');
+      });
   }, []);
+  const loadDetail = React.useCallback((id: string, silent = false) => {
+    if (!silent) setDetailState('loading');
+    return fetchDetail(id);
+  }, [fetchDetail]);
 
+  // Al cambiar de reporte: sin selección se vacía el detalle; con selección se
+  // vuelve a mostrar la carga.
+  useResetOnChange([selectedId], () => {
+    if (!selectedId) setDetail(null);
+    else setDetailState('loading');
+  });
   React.useEffect(() => {
     if (!selectedId) {
       latestDetailIdRef.current = null;
-      setDetail(null);
       return;
     }
-    void loadDetail(selectedId);
-  }, [selectedId, loadDetail]);
+    void fetchDetail(selectedId);
+  }, [selectedId, fetchDetail]);
 
   const processName = React.useCallback(
     (id: string) => processes.find((p) => p.id === id)?.name ?? id,
