@@ -326,6 +326,58 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
   const actorDisplay = selectedActor?.name ?? actorId;
   const userName = authUser?.name ?? 'Usuario';
 
+  // Controles del pie en una sola fila (auditoría UX A4): antes eran tres filas
+  // de texto (contraer, usuario, cerrar sesión) que quitaban ~64 px al menú.
+  // Son botones de icono con nombre accesible y tooltip; el riel los apila.
+  const footerControls = (
+    <div className="flex shrink-0 items-center gap-0.5 rail:flex-col">
+      {!isDrawer ? (
+        <>
+          <LabelTooltip label="Contraer menú">
+            <Button
+              ref={collapseRef}
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-sidebar-foreground rail:hidden"
+              aria-label="Contraer menú"
+              onClick={handleToggle}
+            >
+              <PanelLeftClose aria-hidden="true" />
+            </Button>
+          </LabelTooltip>
+          <LabelTooltip label="Expandir menú" side="right">
+            <Button
+              ref={expandRef}
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="hidden rail:inline-flex"
+              aria-label="Expandir menú"
+              onClick={handleToggle}
+            >
+              <PanelLeftOpen aria-hidden="true" />
+            </Button>
+          </LabelTooltip>
+        </>
+      ) : null}
+      {isJwt ? (
+        <LabelTooltip label="Cerrar sesión" side="right">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="text-sidebar-foreground"
+            aria-label="Cerrar sesión"
+            onClick={handleLogout}
+          >
+            <LogOut aria-hidden="true" />
+          </Button>
+        </LabelTooltip>
+      ) : null}
+    </div>
+  );
+
   const content = (
     <>
       <div className={cn('flex h-14 shrink-0 items-center px-3 rail:justify-center rail:px-0', isDrawer && 'pr-12')}>
@@ -350,38 +402,13 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
       </nav>
 
       <div className="flex flex-col gap-1 border-t border-sidebar-border p-2 rail:items-center">
-        {!isDrawer ? (
-          <>
-            <Button
-              ref={collapseRef}
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start text-sidebar-foreground rail:hidden"
-              onClick={handleToggle}
+        <div className="flex w-full items-center gap-1 rail:flex-col">
+          {isJwt ? (
+            <div
+              role="group"
+              aria-label="Usuario autenticado"
+              className="flex min-w-0 flex-1 items-center gap-2 px-1 rail:flex-none rail:px-0"
             >
-              <PanelLeftClose aria-hidden="true" />
-              Contraer menú
-            </Button>
-            <LabelTooltip label="Expandir menú" side="right">
-              <Button
-                ref={expandRef}
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="hidden rail:inline-flex"
-                aria-label="Expandir menú"
-                onClick={handleToggle}
-              >
-                <PanelLeftOpen aria-hidden="true" />
-              </Button>
-            </LabelTooltip>
-          </>
-        ) : null}
-
-        {isJwt ? (
-          <div role="group" aria-label="Usuario autenticado" className="flex w-full flex-col gap-1 rail:items-center">
-            <div className="flex min-w-0 items-center gap-2 px-1.5 py-1 rail:px-0">
               <span
                 aria-hidden="true"
                 title={isRail ? userName : undefined}
@@ -398,30 +425,13 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
                 ) : null}
               </span>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start text-sidebar-foreground rail:hidden"
-              onClick={handleLogout}
-            >
-              <LogOut aria-hidden="true" />
-              Cerrar sesión
-            </Button>
-            <LabelTooltip label="Cerrar sesión" side="right">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="hidden rail:inline-flex"
-                aria-label="Cerrar sesión"
-                onClick={handleLogout}
-              >
-                <LogOut aria-hidden="true" />
-              </Button>
-            </LabelTooltip>
-          </div>
-        ) : (
+          ) : (
+            <span className="flex-1 rail:hidden" />
+          )}
+          {footerControls}
+        </div>
+
+        {isJwt ? null : (
           <>
             <div className="flex w-full flex-col gap-1.5 px-1 pb-1 pt-1.5 rail:hidden">
               <Label htmlFor={actorSelectId} className="text-xs">

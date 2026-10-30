@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
-import { Inbox } from 'lucide-react';
+import { ChevronDown, Inbox } from 'lucide-react';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { PageHeader } from '@/components/page-header';
@@ -62,8 +62,15 @@ function DistributionTable({
   rows: DistributionRow[];
   total: number;
 }): React.ReactElement {
+  // La tabla lista solo lo que tiene solicitudes; los valores en cero se pliegan
+  // debajo (auditoría UX M1: once filas en cero tapaban las pocas con datos).
+  // Si todo está en cero se muestran todas las filas.
+  const withData = rows.filter((row) => row.count > 0);
+  const visibleRows = withData.length > 0 ? withData : rows;
+  const emptyRows = withData.length > 0 ? rows.filter((row) => row.count === 0) : [];
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
+    <div className="flex flex-col gap-3">
+    <div className="overflow-hidden rounded-xl border bg-card shadow-card">
       <Table density="compact">
         <TableCaption>{caption}</TableCaption>
         <TableHeader>
@@ -78,7 +85,7 @@ function DistributionTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => {
+          {visibleRows.map((row) => {
             const width = total > 0 ? Math.min((row.count / total) * 100, 100) : 0;
             return (
               <TableRow
@@ -107,6 +114,25 @@ function DistributionTable({
           })}
         </TableBody>
       </Table>
+    </div>
+    {emptyRows.length > 0 ? (
+      <details className="group text-meta text-muted-foreground">
+        <summary className="inline-flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-sm underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+          {`Sin solicitudes (${emptyRows.length})`}
+          <ChevronDown
+            aria-hidden="true"
+            className="size-3.5 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+          />
+        </summary>
+        <ul className="mt-2 flex flex-wrap gap-2">
+          {emptyRows.map((row) => (
+            <li key={row.key}>
+              <StatusBadge kind={kind} value={row.key} />
+            </li>
+          ))}
+        </ul>
+      </details>
+    ) : null}
     </div>
   );
 }
