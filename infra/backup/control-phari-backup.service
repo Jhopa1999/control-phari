@@ -1,0 +1,11 @@
+[Unit]
+Description=Respaldo diario de la base de datos de control-phari a S3
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# S3_BUCKET y el resto de la configuracion (sin secretos) viven aqui.
+EnvironmentFile=/etc/control-phari-backup.env
+ExecStart=/opt/control-phari-ops/backup-db.sh
+TimeoutStartSec=900
