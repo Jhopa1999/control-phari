@@ -234,6 +234,21 @@ export function DocumentosView(): React.ReactElement {
     [assetById, isJefe, leaderProcessIds],
   );
 
+  // Enlace directo (?documentId=, p. ej. desde una notificación): tras la primera
+  // carga correcta abre el documento o avisa si no está en el alcance. Solo una vez.
+  const deepLinkDone = React.useRef(false);
+  const openDeepLink = React.useCallback((docs: Document[]) => {
+    if (deepLinkDone.current) return;
+    deepLinkDone.current = true;
+    const id = new URLSearchParams(window.location.search).get('documentId');
+    const doc = id ? docs.find((d) => d.id === id) : undefined;
+    if (doc) {
+      setViewDoc(doc);
+      setViewOpen(true);
+    } else if (id) {
+      toast.error('El documento no existe o está fuera de tu alcance.');
+    }
+  }, []);
   const loadData = React.useCallback(() => {
     return Promise.all([
       listDocuments(),
@@ -253,12 +268,13 @@ export function DocumentosView(): React.ReactElement {
         setOwners(usrs);
         setCategoryOptions(cats);
         setState('success');
+        openDeepLink(docs);
       })
       .catch((err: unknown) => {
         setErrorMessage(messageOf(err));
         setState('error');
       });
-  }, []);
+  }, [openDeepLink]);
   const load = React.useCallback(async () => {
     setState('loading');
     await loadData();
@@ -268,20 +284,6 @@ export function DocumentosView(): React.ReactElement {
     void loadData();
   }, [loadData]);
 
-  // Enlace directo (notificaciones/aprobaciones): ?documentId=… abre el documento.
-  const deepLinkDone = React.useRef(false);
-  React.useEffect(() => {
-    if (state !== 'success' || deepLinkDone.current) return;
-    deepLinkDone.current = true;
-    const id = new URLSearchParams(window.location.search).get('documentId');
-    const doc = id ? documents.find((d) => d.id === id) : undefined;
-    if (doc) {
-      setViewDoc(doc);
-      setViewOpen(true);
-    } else if (id) {
-      toast.error('El documento no existe o está fuera de tu alcance.');
-    }
-  }, [state, documents]);
 
   const assetName = React.useCallback(
     // Ids que no vienen en las listas del alcance: nunca un UUID visible (§13.1).

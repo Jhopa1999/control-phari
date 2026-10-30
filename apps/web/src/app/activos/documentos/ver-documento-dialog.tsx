@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
@@ -50,12 +51,16 @@ export function VerDocumentoDialog({
   // Sin DialogTrigger, el foco vuelve al botón «Ver» de la fila (NIT 4).
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
-  React.useEffect(() => {
+  // Al abrir (o cambiar de documento o recargar) se vuelve a mostrar la carga.
+  useResetOnChange([open, document, reloadKey], () => {
     if (!open || !document) return;
-    let cancelled = false;
     setState('loading');
     setContent(null);
     setErrorMessage(null);
+  });
+  React.useEffect(() => {
+    if (!open || !document) return;
+    let cancelled = false;
     getCurrentContent(document.id)
       .then((data) => {
         if (cancelled) return;
