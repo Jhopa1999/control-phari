@@ -5,6 +5,7 @@ import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Plus, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DescriptionList } from '@/components/description-list';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { Field } from '@/components/field';
@@ -311,24 +312,33 @@ export function SemanalView(): React.ReactElement {
               El reporte se envió; sus secciones ya no se pueden editar.
             </InlineNotice>
           ) : null}
-          <form noValidate onSubmit={handleSaveSections} className="grid max-w-[720px] gap-4">
-            {SECTION_FIELDS.map((field) => (
-              <Field key={field.id} id={field.id} label={field.label} help={field.help}>
-                <Textarea
-                  value={sections[field.key]}
-                  disabled={!isDraft}
-                  onChange={(e) => setSection(field.key, e.target.value)}
-                />
-              </Field>
-            ))}
-            {isDraft ? (
+          {isDraft ? (
+            <form noValidate onSubmit={handleSaveSections} className="grid max-w-[720px] gap-4">
+              {SECTION_FIELDS.map((field) => (
+                <Field key={field.id} id={field.id} label={field.label} help={field.help}>
+                  <Textarea
+                    value={sections[field.key]}
+                    onChange={(e) => setSection(field.key, e.target.value)}
+                  />
+                </Field>
+              ))}
               <div className="flex justify-end">
                 <Button type="submit" variant="secondary" loading={saving}>
                   {saving ? 'Guardando…' : 'Guardar secciones'}
                 </Button>
               </div>
-            ) : null}
-          </form>
+            </form>
+          ) : (
+            // Reporte enviado: se lee como texto (un campo deshabilitado y vacío
+            // parecía un formulario roto).
+            <DescriptionList
+              className="max-w-[720px]"
+              items={SECTION_FIELDS.map((field) => ({
+                term: field.label,
+                value: sections[field.key],
+              }))}
+            />
+          )}
         </Section>
       </>
     );

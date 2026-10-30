@@ -133,7 +133,7 @@ export type CreateCommitment = components['schemas']['CreateCommitmentDto'];
 export type UpdateCommitment = components['schemas']['UpdateCommitmentDto'];
 /** Cuerpo de una transicion de estado (Issue/Commitment). */
 export type Transition = components['schemas']['TransitionDto'];
-/** Estado destino valido de una transicion (maestra RECORD_STATE). */
+/** Estado destino válido de una transicion (maestra RECORD_STATE). */
 export type RecordState = Transition['toState'];
 // --- Fase 6 (activos y documentos): tipos derivados del contrato OpenAPI ---
 export type Asset = components['schemas']['AssetResponseDto'];
@@ -141,7 +141,7 @@ export type CreateAsset = components['schemas']['CreateAssetDto'];
 export type UpdateAsset = components['schemas']['UpdateAssetDto'];
 export type ChangeAssetStatus =
   components['schemas']['ChangeAssetStatusDto'];
-/** Estado destino valido de un activo (AssetStatus). */
+/** Estado destino válido de un activo (AssetStatus). */
 export type AssetStatus = ChangeAssetStatus['targetStatus'];
 export type Document = components['schemas']['DocumentResponseDto'];
 export type CreateDocument = components['schemas']['CreateDocumentDto'];
@@ -154,7 +154,7 @@ export type DocumentContent =
   components['schemas']['DocumentContentResponseDto'];
 export type ChangeDocumentStatus =
   components['schemas']['ChangeDocumentStatusDto'];
-/** Estado destino valido de un documento (DocStatus). */
+/** Estado destino válido de un documento (DocStatus). */
 export type DocumentStatus = ChangeDocumentStatus['targetStatus'];
 // --- Actividades recurrentes (FEAT-002): tipos del contrato OpenAPI ---
 export type RecurringActivity =
@@ -199,9 +199,9 @@ export type SmtpTestRequest = components['schemas']['SmtpTestRequestDto'];
 export type SmtpTestResult = components['schemas']['SmtpTestResultDto'];
 export type AdminUser = components['schemas']['AdminUserResponseDto'];
 export type SetAdminFlag = components['schemas']['SetAdminFlagDto'];
-/** Fuente efectiva de la configuracion SMTP (db | env | none). */
+/** Fuente efectiva de la configuración SMTP (db | env | none). */
 export type SmtpConfigSource = SmtpConfig['source'];
-// --- IA Fase 1 (configuracion de agentes + sugerencia de triage) ---
+// --- IA Fase 1 (configuración de agentes + sugerencia de triage) ---
 /** Estado combinado de IA (GET /admin/ai/config): global + agentes + catalogo de modelos. */
 export type AiConfig = components['schemas']['AiConfigResponseDto'];
 export type AiGlobalConfig = components['schemas']['AiGlobalConfigResponseDto'];
@@ -212,7 +212,7 @@ export type UpdateAiGlobalConfig =
   components['schemas']['UpdateAiGlobalConfigDto'];
 export type UpdateAiAgentConfig =
   components['schemas']['UpdateAiAgentConfigDto'];
-/** Resultado de la prueba de conexion de un agente ({ ok, message }). */
+/** Resultado de la prueba de conexión de un agente ({ ok, message }). */
 export type AiConnectionTest = components['schemas']['AiConnectionTestDto'];
 /** Sugerencia de triage generada por IA (no persiste nada). */
 export type TriageSuggestion =
@@ -228,19 +228,19 @@ export type AiCredentialMode = AiGlobalConfig['credentialMode'];
 export const ACTOR_STORAGE_KEY = 'actorId';
 /**
  * Clave de localStorage donde se guarda el JWT de la sesion en modo 'jwt'.
- * No es un secreto de configuracion: es el token emitido por el backend para
+ * No es un secreto de configuración: es el token emitido por el backend para
  * la sesion del navegador. Coherente con el patron de ACTOR_STORAGE_KEY.
  */
 export const TOKEN_STORAGE_KEY = 'authToken';
 /**
- * URL base de la API, leida de la configuracion publica del frontend.
+ * URL base de la API, leida de la configuración publica del frontend.
  * No es un secreto (no contiene credenciales). Si falta, se produce un error
  * entendible en lugar de usar un valor hardcodeado.
  */
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 if (!baseUrl) {
   throw new Error(
-    'Falta la configuracion NEXT_PUBLIC_API_BASE_URL. Define la URL de la API ' +
+    'Falta la configuración NEXT_PUBLIC_API_BASE_URL. Define la URL de la API ' +
       'en apps/web/.env.local (ver apps/web/.env.example).',
   );
 }
@@ -250,7 +250,7 @@ if (!baseUrl) {
 export const api = createApiClient({ baseUrl });
 /**
  * Middleware de request: inyecta UNA sola cabecera de identidad segun el modo
- * de autenticacion, nunca ambas. Solo corre en el navegador; en el servidor
+ * de autenticación, nunca ambas. Solo corre en el navegador; en el servidor
  * localStorage no existe y no se anade cabecera.
  *
  * - modo 'jwt': si hay token guardado -> Authorization: Bearer <token>. Sin

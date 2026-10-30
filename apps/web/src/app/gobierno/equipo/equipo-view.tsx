@@ -11,7 +11,7 @@ import { ErrorState } from '@/components/error-state';
 import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
-import { RowActionsCell } from '@/components/row-actions';
+import { RowActions, RowActionsCell } from '@/components/row-actions';
 import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -366,25 +366,31 @@ export function EquipoView(): React.ReactElement {
                         <StatusBadge kind="active" value={String(user.active)} />
                       </TableCell>
                       <RowActionsCell>
-                        {/* Label único «Reenviar invitación»: el endpoint reenvía el
-                            correo de activación en ambos casos (invitado o ya activo),
-                            y User no expone si ya se activó alguna vez. El texto visible
-                            es el nombre accesible, por eso no hace falta aria-label. */}
-                        <Button
-                          id={inviteButtonId(user.id)}
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          loading={invitingUserId === user.id}
-                          disabled={invitingUserId !== null && invitingUserId !== user.id}
-                          onClick={() => {
-                            setInviteTarget(user);
-                            setInviteOpen(true);
-                          }}
-                        >
-                          <Mail aria-hidden="true" />
-                          {invitingUserId === user.id ? 'Enviando…' : 'Reenviar invitación'}
-                        </Button>
+                        {/* «Reenviar invitación»: el endpoint reenvía el correo de
+                            activación en ambos casos (invitado o ya activo), y User
+                            no expone si ya se activó alguna vez, así que la acción
+                            no se puede ocultar por estado. Se muestra como botón solo
+                            icono (con tooltip y aria-label) para no repetir nueve
+                            veces el mismo texto en la tabla. */}
+                        <RowActions
+                          rowLabel={user.name}
+                          actions={[
+                            {
+                              key: 'invite',
+                              id: inviteButtonId(user.id),
+                              label: 'Reenviar invitación',
+                              icon: Mail,
+                              iconOnly: true,
+                              busy: invitingUserId === user.id,
+                              busyLabel: 'Enviando…',
+                              disabled: invitingUserId !== null && invitingUserId !== user.id,
+                              onSelect: () => {
+                                setInviteTarget(user);
+                                setInviteOpen(true);
+                              },
+                            },
+                          ]}
+                        />
                       </RowActionsCell>
                     </TableRow>
                   ))}

@@ -243,7 +243,6 @@ export function AuditoriaView(): React.ReactElement {
         <Field
           id="aud-filtro-objeto"
           label="Objeto"
-          help="Vuelve a consultar al servidor."
           className="w-full sm:w-auto"
         >
           {(control) => (
@@ -265,7 +264,6 @@ export function AuditoriaView(): React.ReactElement {
         <Field
           id="aud-filtro-accion"
           label="Acción"
-          help="Vuelve a consultar al servidor."
           className="w-full sm:w-auto"
         >
           {(control) => (

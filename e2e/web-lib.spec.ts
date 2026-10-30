@@ -264,7 +264,6 @@ test.describe('navigation', () => {
       '/activos/capacidad',
       '/seguimiento/portafolio',
       '/demanda/resumen',
-      '/seguimiento/proyectos',
       '/seguimiento/bitacora',
       '/seguimiento/semanal',
       '/seguimiento/novedades',

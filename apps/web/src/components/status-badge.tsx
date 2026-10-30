@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { ChevronDown, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
@@ -111,17 +112,26 @@ export function PriorityBadge({
  * porque un badge no es enfocable.
  */
 export function PriorityLegend({ className }: { className?: string }): React.ReactElement {
+  // Desplegable nativo (<details>): una sola línea cerrada, accesible por teclado
+  // sin JavaScript. Antes la leyenda ocupaba dos líneas encima de cada tabla.
   return (
-    <ul
-      aria-label="Bandas de prioridad"
-      className={cn('flex flex-wrap gap-x-4 gap-y-1 text-meta text-muted-foreground', className)}
-    >
-      {(['P1', 'P2', 'P3', 'P4'] as const).map((band) => (
-        <li key={band} className="flex items-center gap-1.5">
-          <StatusBadge kind="band" value={band} />
-          {PRIORITY_BAND_COPY[band]}
-        </li>
-      ))}
-    </ul>
+    <details className={cn('group text-meta text-muted-foreground', className)}>
+      <summary className="inline-flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-sm underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+        <Info aria-hidden="true" className="size-3.5" />
+        ¿Qué significan P1 a P4?
+        <ChevronDown
+          aria-hidden="true"
+          className="size-3.5 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+        />
+      </summary>
+      <ul aria-label="Bandas de prioridad" className="mt-2 flex flex-col gap-1.5">
+        {(['P1', 'P2', 'P3', 'P4'] as const).map((band) => (
+          <li key={band} className="flex items-center gap-1.5">
+            <StatusBadge kind="band" value={band} />
+            {PRIORITY_BAND_COPY[band]}
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

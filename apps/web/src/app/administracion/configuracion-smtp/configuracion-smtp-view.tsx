@@ -57,7 +57,7 @@ function messageOf(err: unknown): string {
   return err instanceof ApiError ? err.message : 'Ocurrio un error inesperado.';
 }
 /**
- * Configuracion del sistema (solo ADMIN): servidor SMTP en runtime y gestion de
+ * Configuración del sistema (solo ADMIN): servidor SMTP en runtime y gestion de
  * administradores. El password es write-only: nunca se recibe del backend; un
  * control decide si se conserva, se reemplaza o se limpia (design e.2). NO hay
  * campo APP_WEB_URL (lo gestiona el entorno, design d.1).
@@ -82,7 +82,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
   const [password, setPassword] = React.useState('');
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [saving, setSaving] = React.useState(false);
-  // Prueba de envio.
+  // Prueba de envío.
   const [testOpen, setTestOpen] = React.useState(false);
   const [testTo, setTestTo] = React.useState('');
   const [testing, setTesting] = React.useState(false);
@@ -137,7 +137,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
       next.port = 'El puerto debe ser un entero entre 1 y 65535.';
     }
     if (fromAddress.trim() === '' || !fromAddress.includes('@')) {
-      next.fromAddress = 'La direccion remitente debe ser un correo valido.';
+      next.fromAddress = 'La dirección remitente debe ser un correo válido.';
     }
     return Object.keys(next).length > 0 ? next : null;
   }
@@ -171,7 +171,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
       const saved = await updateSmtpConfig(body);
       setConfig(saved);
       fillForm(saved);
-      toast.success('Configuracion SMTP guardada.');
+      toast.success('Configuración SMTP guardada.');
     } catch (err) {
       const message = messageOf(err);
       setErrors({ form: message });
@@ -182,7 +182,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
   }
   async function handleTest(): Promise<void> {
     if (testTo.trim() === '' || !testTo.includes('@')) {
-      toast.error('Indica una direccion de destino valida.');
+      toast.error('Indica una dirección de destino válida.');
       return;
     }
     setTesting(true);
@@ -223,12 +223,12 @@ export function ConfiguracionSmtpView(): React.ReactElement {
     return (
       <PageLayout>
         <PageHeader
-          title="Configuracion del sistema"
+          title="Configuración del sistema"
           description="Servidor SMTP y administradores del sistema."
         />
         <InlineNotice
           tone="neutral"
-          title="Esta pantalla no esta disponible para tu rol."
+          title="Esta pantalla no está disponible para tu rol."
           action={
             allowedModules.has('permissions') ? (
               <Link
@@ -241,7 +241,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
           }
         >
           <p className="text-muted-foreground">
-            La configuracion del sistema corresponde al rol de administrador.
+            La configuración del sistema corresponde al rol de administrador.
           </p>
         </InlineNotice>
       </PageLayout>
@@ -258,7 +258,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
   } else if (state === 'error') {
     content = (
       <div className="rounded-lg border bg-card">
-        <InlineNotice tone="danger" title="No fue posible cargar la configuracion.">
+        <InlineNotice tone="danger" title="No fue posible cargar la configuración.">
           <p className="text-muted-foreground">{loadError ?? 'Reintenta en unos momentos.'}</p>
           <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
             Reintentar
@@ -269,7 +269,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
   } else {
     const source = config?.source ?? 'none';
     // Avisos de coherencia (ayuda visual en el frontend, NO bloquean Guardar):
-    // la logica de negocio y el envio real los decide el backend.
+    // la logica de negocio y el envío real los decide el backend.
     const portNum = Number(port);
     const warnSecure587 = secure && portNum === 587;
     const warnInsecure465 = !secure && portNum === 465;
@@ -282,7 +282,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
       <>
         <Section
           title="Servidor SMTP"
-          description="Se usa para enviar correos de reestablecimiento de contrasena e invitaciones."
+          description="Se usa para enviar correos de restablecimiento de contraseña e invitaciones."
         >
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -291,18 +291,18 @@ export function ConfiguracionSmtpView(): React.ReactElement {
               <span className="text-sm">{SOURCE_LABELS[source]}</span>
             </div>
             {source === 'env' ? (
-              <InlineNotice tone="info" title="La configuracion efectiva proviene del entorno.">
+              <InlineNotice tone="info" title="La configuración efectiva proviene del entorno.">
                 <p className="text-muted-foreground">
                   No hay una fila completa en base de datos; mientras tanto se usan las variables de
-                  entorno. Guarda la configuracion para gestionarla desde aqui.
+                  entorno. Guarda la configuración para gestionarla desde aquí.
                 </p>
               </InlineNotice>
             ) : null}
             {source === 'none' ? (
-              <InlineNotice tone="warning" title="El correo esta deshabilitado.">
+              <InlineNotice tone="warning" title="El correo está deshabilitado.">
                 <p className="text-muted-foreground">
-                  No hay configuracion valida ni en base de datos ni en el entorno. Las invitaciones
-                  y los reestablecimientos no se enviaran hasta configurar el servidor.
+                  No hay configuración válida ni en base de datos ni en el entorno. Las invitaciones
+                  y los restablecimientos no se enviarán hasta configurar el servidor.
                 </p>
               </InlineNotice>
             ) : null}
@@ -337,18 +337,18 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   checked={secure}
                   onChange={(e) => setSecure(e.target.checked)}
                 />
-                Puerto 465 = marca esta casilla (SSL directo). Puerto 587 = dejala desmarcada
+                Puerto 465 = marca esta casilla (SSL directo). Puerto 587 = déjala desmarcada
                 (STARTTLS).
               </label>
               {warnSecure587 ? (
                 <InlineNotice
                   tone="warning"
                   role="status"
-                  title="Revisa la conexion segura."
+                  title="Revisa la conexión segura."
                 >
                   <p className="text-muted-foreground">
                     El puerto 587 suele usar STARTTLS. Si la prueba falla, desmarca la casilla de
-                    conexion segura.
+                    conexión segura.
                   </p>
                 </InlineNotice>
               ) : null}
@@ -356,11 +356,11 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                 <InlineNotice
                   tone="warning"
                   role="status"
-                  title="Revisa la conexion segura."
+                  title="Revisa la conexión segura."
                 >
                   <p className="text-muted-foreground">
                     El puerto 465 suele requerir SSL directo. Si la prueba falla, marca la casilla de
-                    conexion segura.
+                    conexión segura.
                   </p>
                 </InlineNotice>
               ) : null}
@@ -368,7 +368,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                 <Field
                   id="smtp-username"
                   label="Usuario"
-                  help="Opcional. Algunos relays no requieren autenticacion."
+                  help="Opcional. Algunos relays no requieren autenticación."
                 >
                   <Input
                     value={username}
@@ -378,11 +378,11 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                 </Field>
                 <Field
                   id="smtp-password"
-                  label="Contrasena"
+                  label="Contraseña"
                   help={
                     config?.passwordSet
-                      ? 'Hay una contrasena configurada. Puedes conservarla, cambiarla o limpiarla.'
-                      : 'No hay contrasena configurada.'
+                      ? 'Hay una contraseña configurada. Puedes conservarla, cambiarla o limpiarla.'
+                      : 'No hay contraseña configurada.'
                   }
                 >
                   {(control) => (
@@ -428,7 +428,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                         placeholder={
                           config?.passwordSet && passwordMode === 'keep'
                             ? 'configurada'
-                            : 'Nueva contrasena'
+                            : 'Nueva contraseña'
                         }
                         autoComplete="new-password"
                         onChange={(e) => setPassword(e.target.value)}
@@ -465,14 +465,14 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                 >
                   <p className="text-muted-foreground">
                     El correo remitente y el usuario autenticado pertenecen a dominios diferentes.
-                    Office365 suele rechazar el envio (SendAsDenied); usa un remitente del mismo
+                    Office365 suele rechazar el envío (SendAsDenied); usa un remitente del mismo
                     dominio que la cuenta autenticada.
                   </p>
                 </InlineNotice>
               ) : null}
               <div className="flex flex-wrap gap-3">
                 <Button type="submit" loading={saving}>
-                  Guardar configuracion
+                  Guardar configuración
                 </Button>
                 <Button
                   type="button"
@@ -484,7 +484,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   }}
                 >
                   <Send aria-hidden="true" />
-                  Probar envio
+                  Probar envío
                 </Button>
               </div>
             </form>
@@ -492,7 +492,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
               <InlineNotice
                 tone={lastTest.ok ? 'success' : 'danger'}
                 role={lastTest.ok ? 'status' : 'alert'}
-                title={lastTest.ok ? 'Conexion verificada' : 'La prueba fallo'}
+                title={lastTest.ok ? 'Conexión verificada' : 'La prueba falló'}
               >
                 <p>{lastTest.message}</p>
                 {lastTest.hint ? (
@@ -509,7 +509,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
         </Section>
         <Section
           title="Administradores del sistema"
-          description="Los administradores pueden configurar el sistema. No se puede degradar al ultimo administrador activo."
+          description="Los administradores pueden configurar el sistema. No se puede degradar al último administrador activo."
           count={adminUsers.length}
         >
           <div className="overflow-hidden rounded-lg border bg-card">
@@ -554,7 +554,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
   return (
     <PageLayout>
       <PageHeader
-        title="Configuracion del sistema"
+        title="Configuración del sistema"
         description="Servidor SMTP y administradores del sistema."
       />
       {content}
@@ -566,9 +566,9 @@ export function ConfiguracionSmtpView(): React.ReactElement {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Probar envio de correo</DialogTitle>
+            <DialogTitle>Probar envío de correo</DialogTitle>
             <DialogDescription>
-              Te enviaremos un correo de prueba a esta direccion para confirmar que la configuracion
+              Te enviaremos un correo de prueba a esta dirección para confirmar que la configuración
               funciona.
             </DialogDescription>
           </DialogHeader>

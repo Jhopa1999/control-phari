@@ -464,7 +464,7 @@ export function SolicitudesView(): React.ReactElement {
                 sort={table.sort}
                 onSort={table.toggleSort}
               />
-              <TableHead>Triage</TableHead>
+              <TableHead>Decisión de triage</TableHead>
               <SortableTableHead
                 label="Prioridad"
                 sortKey="priority"
