@@ -283,6 +283,14 @@
                                              "docs/aplicacion/frontend-pantallas.md"
                                          ],
                         "summary":  "UX fase 3: Panel del area lista solo estados y bandas con solicitudes (los demas plegados) y el pie del menu lateral se compacta en una fila con iconos."
+                    },
+                    {
+                        "timestamp":  "2026-10-30T14:10:00Z",
+                        "trigger_file":  "apps/web/src/app/seguimiento/portafolio/portafolio-view.tsx",
+                        "updated_docs":  [
+                                             "docs/aplicacion/frontend-pantallas.md"
+                                         ],
+                        "summary":  "UX fase 4: Portafolio pasa de 11 a 7 columnas (proceso y ruta bajo el titulo, bloqueo junto al estado, compromiso junto al objetivo) y los listados con busqueda pliegan los filtros bajo Filtros en movil."
                     }
                 ]
 }

@@ -91,6 +91,19 @@ function messageOf(err: unknown): string {
     : 'Ocurrió un error inesperado.';
 }
 
+/**
+ * Línea bajo el título: proceso y, si la hay, la ruta de gobierno. Sustituye a
+ * las columnas «Proceso» y «Ruta» (auditoría UX A2: la tabla de 11 columnas se
+ * cortaba a 1440 px).
+ */
+function rowMeta(item: PortfolioItem, routes: CatalogItem[]): string {
+  const route = routeLabel(item.governanceRoute, routes);
+  const hasRoute = route !== '' && route !== '—';
+  return [item.mainProcessName, hasRoute ? `Ruta: ${route}` : null]
+    .filter((part): part is string => Boolean(part))
+    .join(' · ');
+}
+
 /** Barra de avance del proyecto; «—» si aún no tiene tareas. */
 function ProgressCell({ value }: { value: number | null | undefined }): React.ReactElement {
   if (value === null || value === undefined) {
@@ -252,6 +265,7 @@ export function PortafolioView(): React.ReactElement {
 
       <Toolbar
         label="Filtros del portafolio"
+        collapseOnMobile
         end={
           <>
             {state !== 'error' ? (
@@ -345,17 +359,15 @@ export function PortafolioView(): React.ReactElement {
       >
         <Table scrollLabel="Tabla del portafolio">
           <TableCaption>
-            Iniciativas del portafolio dentro de tu alcance, con proceso, estado operativo, banda de
-            prioridad, ruta de gobierno, responsable y fechas clave.
+            Iniciativas del portafolio dentro de tu alcance. Bajo cada título se indican el proceso y la
+            ruta de gobierno; el estado incluye el bloqueo, y el objetivo incluye la fecha de compromiso.
           </TableCaption>
           <TableHeader>
             <TableRow>
               <SortableTableHead label="Título" sortKey="title" sort={table.sort} onSort={table.toggleSort} />
-              <TableHead>Proceso</TableHead>
               <SortableTableHead label="Estado" sortKey="state" sort={table.sort} onSort={table.toggleSort} />
               <SortableTableHead label="Banda" sortKey="band" sort={table.sort} onSort={table.toggleSort} />
               <TableHead>Avance</TableHead>
-              <TableHead>Ruta</TableHead>
               <TableHead>Responsable</TableHead>
               <SortableTableHead
                 label="Registro"
@@ -364,21 +376,36 @@ export function PortafolioView(): React.ReactElement {
                 onSort={table.toggleSort}
               />
               <SortableTableHead label="Objetivo" sortKey="target" sort={table.sort} onSort={table.toggleSort} />
-              <TableHead>Compromiso</TableHead>
-              <TableHead>Bloqueo</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {table.pageRows.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="min-w-56 max-w-[28rem]">
-                  <CellTitle href={`/demanda/solicitudes/${encodeURIComponent(item.id)}`}>
+                  <CellTitle
+                    href={`/demanda/solicitudes/${encodeURIComponent(item.id)}`}
+                    meta={rowMeta(item, routes)}
+                  >
                     {item.title}
                   </CellTitle>
                 </TableCell>
-                <TableCell className="min-w-32 text-muted-foreground">{item.mainProcessName}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  <StatusBadge kind="request" value={item.operationalState} />
+                <TableCell className="min-w-36">
+                  <div className="flex flex-col items-start gap-1 py-0.5">
+                    <StatusBadge kind="request" value={item.operationalState} />
+                    {item.blocked ? (
+                      <>
+                        <StatusBadge kind="blocked" value="true" />
+                        {item.blockedReason ? (
+                          <span
+                            className="line-clamp-2 max-w-[16rem] text-meta wrap-break-word text-muted-foreground"
+                            title={item.blockedReason}
+                          >
+                            {item.blockedReason}
+                          </span>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <PriorityBadge variant="compact" band={item.priorityBand} label={item.priorityLabel} />
@@ -386,7 +413,6 @@ export function PortafolioView(): React.ReactElement {
                 <TableCell className="min-w-32">
                   <ProgressCell value={item.progressPercent} />
                 </TableCell>
-                <TableCell className="whitespace-nowrap">{routeLabel(item.governanceRoute, routes)}</TableCell>
                 <TableCell className="min-w-44 max-w-[16rem]">
                   {item.responsibleName ? (
                     <span className="line-clamp-2 wrap-break-word" title={item.responsibleName}>
@@ -403,27 +429,12 @@ export function PortafolioView(): React.ReactElement {
                   <div className="flex flex-col items-start gap-0.5">
                     <span className="tabular-nums">{formatDateOnly(item.targetDate)}</span>
                     <DueBadge status={item.dueStatus} days={item.daysToTarget} />
+                    {item.initialCommitmentDate ? (
+                      <span className="text-meta tabular-nums text-muted-foreground">
+                        {`Compromiso: ${formatDateOnly(item.initialCommitmentDate)}`}
+                      </span>
+                    ) : null}
                   </div>
-                </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums">
-                  {formatDateOnly(item.initialCommitmentDate)}
-                </TableCell>
-                <TableCell className="min-w-40 max-w-[16rem]">
-                  {item.blocked ? (
-                    <div className="flex flex-col items-start gap-0.5 py-0.5">
-                      <StatusBadge kind="blocked" value="true" />
-                      {item.blockedReason ? (
-                        <span
-                          className="line-clamp-2 text-meta wrap-break-word text-muted-foreground"
-                          title={item.blockedReason}
-                        >
-                          {item.blockedReason}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
                 </TableCell>
               </TableRow>
             ))}
