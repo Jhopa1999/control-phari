@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import Link from 'next/link';
 import { CircleCheck, CircleDashed, FilePlus2, Lock, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -424,13 +425,13 @@ function ClosureDocumentDialog({
   const [formError, setFormError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
-  React.useEffect(() => {
+  useResetOnChange([open, request.title], () => {
     if (!open) return;
     setTitle(`Acta de cierre · ${request.title}`.slice(0, 300));
     setContent('');
     setErrors({});
     setFormError(null);
-  }, [open, request.title]);
+  });
 
   async function handleSubmit(event: React.FormEvent): Promise<void> {
     event.preventDefault();

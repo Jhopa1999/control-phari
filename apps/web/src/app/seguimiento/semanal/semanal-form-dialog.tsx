@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
@@ -68,13 +69,13 @@ export function SemanalFormDialog({
 
   // Inicializa al abrir. El reset solo ocurre aquí; ante fallo del POST el
   // padre mantiene el diálogo abierto con los valores (AC-031).
-  React.useEffect(() => {
+  useResetOnChange([open], () => {
     if (!open) return;
     setFieldErrors({});
     setProcessId('');
     // Lunes de la semana actual en el calendario local (design §7.9, regla 2).
     setWeekStart(localWeekMondayInputValue());
-  }, [open]);
+  });
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();

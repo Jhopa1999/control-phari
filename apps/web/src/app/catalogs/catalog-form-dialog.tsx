@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
@@ -97,7 +98,7 @@ export function CatalogFormDialog({
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
   // Reinicia el formulario cada vez que se abre (crear o editar).
-  React.useEffect(() => {
+  useResetOnChange([open, editing], () => {
     if (!open) return;
     setErrors(NO_ERRORS);
     if (editing) {
@@ -111,7 +112,7 @@ export function CatalogFormDialog({
     } else {
       setValues(EMPTY);
     }
-  }, [open, editing]);
+  });
 
   function updatePair(key: 'catalog' | 'code', value: string): void {
     setValues((v) => ({ ...v, [key]: value }));

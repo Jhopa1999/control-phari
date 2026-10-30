@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Field, FormError } from '@/components/field';
@@ -54,11 +55,11 @@ export function AssetBasePanel({
   const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   // Si cambia la solicitud (o su activo), vuelve a mostrar el estado asociado.
-  React.useEffect(() => {
+  useResetOnChange([request.id, request.assetId], () => {
     setEditing(request.assetId === null);
     setAssetId('');
     setFormError(null);
-  }, [request.id, request.assetId]);
+  });
 
   // Carga tolerante a fallo: si falla, el selector queda vacío. La lista ya
   // viene filtrada por el backend a los activos visibles para el actor.

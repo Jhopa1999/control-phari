@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
@@ -112,7 +113,7 @@ export function ActivoFormDialog({
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
   // Inicializa al abrir. El reset solo ocurre aquí (AC-031).
-  React.useEffect(() => {
+  useResetOnChange([open, editing], () => {
     if (!open) return;
     setFieldErrors({});
     if (editing) {
@@ -129,7 +130,7 @@ export function ActivoFormDialog({
     } else {
       setValues(EMPTY);
     }
-  }, [open, editing]);
+  });
 
   const activeProcesses = React.useMemo(() => processes.filter((p) => p.active), [processes]);
 

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { toast } from 'sonner';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
@@ -72,7 +73,7 @@ export function PhaseDialog({
   const nameRef = React.useRef<HTMLInputElement>(null);
 
   // Prellenar al abrir (reset solo en éxito, AC-031).
-  React.useEffect(() => {
+  useResetOnChange([open, phase], () => {
     if (open) {
       setName(phase?.name ?? '');
       setStartDate(toDateInput(phase?.startDate));
@@ -82,7 +83,7 @@ export function PhaseDialog({
       setDateError(null);
       setFormError(null);
     }
-  }, [open, phase]);
+  });
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();

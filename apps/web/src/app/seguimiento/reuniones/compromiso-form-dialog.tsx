@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
@@ -113,7 +114,7 @@ export function CompromisoFormDialog({
 
   // Inicializa al abrir. El reset solo ocurre aquí; ante fallo del POST/PATCH
   // el padre mantiene el diálogo abierto con los valores (AC-031).
-  React.useEffect(() => {
+  useResetOnChange([open, editing, fixedMeeting], () => {
     if (!open) return;
     setFieldErrors({});
     if (editing) {
@@ -136,7 +137,7 @@ export function CompromisoFormDialog({
       setExpectedResult('');
       setBlockers('');
     }
-  }, [open, editing, fixedMeeting]);
+  });
 
   // Actas a las que se puede ligar: abiertas y del mismo proceso (más la actual).
   const meetingOptions = React.useMemo(

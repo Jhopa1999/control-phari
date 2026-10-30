@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
@@ -108,7 +109,7 @@ export function ProcesoFormDialog({
     return area ? `${area.name} (${area.code})` : editing.areaId;
   }, [editing, areas]);
 
-  React.useEffect(() => {
+  useResetOnChange([open, editing], () => {
     if (!open) return;
     setErrors(NO_ERRORS);
     if (editing) {
@@ -123,7 +124,7 @@ export function ProcesoFormDialog({
     } else {
       setValues(EMPTY);
     }
-  }, [open, editing]);
+  });
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();

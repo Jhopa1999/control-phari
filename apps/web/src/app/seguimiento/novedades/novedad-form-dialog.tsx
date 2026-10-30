@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
@@ -117,7 +118,7 @@ export function NovedadFormDialog({
 
   // Inicializa al abrir. El reset solo ocurre aquí; ante fallo del POST/PATCH
   // el padre mantiene el diálogo abierto con los valores (AC-031).
-  React.useEffect(() => {
+  useResetOnChange([open, editing], () => {
     if (!open) return;
     setFieldErrors({});
     if (editing) {
@@ -142,7 +143,7 @@ export function NovedadFormDialog({
       setTargetDate('');
       setResolution('');
     }
-  }, [open, editing]);
+  });
 
   function clearError(key: FieldKey) {
     setFieldErrors((prev) => ({ ...prev, [key]: undefined }));

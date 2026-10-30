@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import {
@@ -76,7 +77,8 @@ export function AreaFormDialog({
   const nameRef = React.useRef<HTMLInputElement>(null);
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
-  React.useEffect(() => {
+  // Al abrir (o cambiar de registro) se reinician los campos y los errores.
+  useResetOnChange([open, editing], () => {
     if (!open) return;
     setErrors(NO_ERRORS);
     if (editing) {
@@ -89,7 +91,7 @@ export function AreaFormDialog({
     } else {
       setValues(EMPTY);
     }
-  }, [open, editing]);
+  });
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();

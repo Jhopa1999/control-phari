@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
@@ -143,7 +144,7 @@ export function DefinitionFormDialog({
   const titleRef = React.useRef<HTMLInputElement>(null);
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
-  React.useEffect(() => {
+  useResetOnChange([open, editing], () => {
     if (!open) return;
     setErrors(NO_ERRORS);
     if (editing) {
@@ -163,7 +164,7 @@ export function DefinitionFormDialog({
     } else {
       setValues(emptyValues());
     }
-  }, [open, editing]);
+  });
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();

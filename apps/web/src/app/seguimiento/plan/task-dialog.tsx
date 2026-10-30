@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { toast } from 'sonner';
 import { Field, FieldSet, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
@@ -145,7 +146,7 @@ export function TaskDialog({
     };
   }, [open]);
 
-  React.useEffect(() => {
+  useResetOnChange([open, task], () => {
     if (open) {
       setTitle(task?.title ?? '');
       setResponsibleUserId(task?.responsibleUserId ?? '');
@@ -164,7 +165,7 @@ export function TaskDialog({
       setFieldErrors({});
       setFormError(null);
     }
-  }, [open, task]);
+  });
 
   // Candidatas a predecesora: tareas del mismo plan, sin ofrecer la propia.
   const candidates = React.useMemo(
