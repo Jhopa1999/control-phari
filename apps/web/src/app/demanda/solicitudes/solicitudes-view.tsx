@@ -350,6 +350,7 @@ export function SolicitudesView(): React.ReactElement {
 
       <Toolbar
         label="Filtros de solicitudes"
+        collapseOnMobile
         end={
           <>
             {state !== 'error' ? (

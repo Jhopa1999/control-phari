@@ -144,6 +144,7 @@ export function MiTrabajoView(): React.ReactElement {
 
       <Toolbar
         label="Filtros de mi trabajo"
+        collapseOnMobile
         end={
           <>
             {state !== 'error' ? (

@@ -589,6 +589,7 @@ export function DocumentosView(): React.ReactElement {
 
       <Toolbar
         label="Filtros de documentos"
+        collapseOnMobile
         end={
           <>
             {state !== 'error' ? (

@@ -339,6 +339,7 @@ export function ActivosView(): React.ReactElement {
 
       <Toolbar
         label="Filtros de activos"
+        collapseOnMobile
         end={
           <>
             {state !== 'error' ? (
