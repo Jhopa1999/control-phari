@@ -122,6 +122,7 @@ export function ActorProvider({
       // localStorage no disponible: se trata como "sin sesion".
       identity = { actorId: null, authUser: null };
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- lee la sesión de localStorage tras montar (no existe en el servidor); la identidad e identityReady se publican en la misma tanda.
     setAuthUser(identity.authUser);
     setActorIdState(identity.actorId);
     setIdentityReady(true);
@@ -165,6 +166,7 @@ export function ActorProvider({
     [authMode, clearSession],
   );
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga los permisos cuando cambia la identidad; el paso a 'loading' es parte del contrato del contexto (lo usa el guard de rutas).
     void loadPermissions(actorId);
   }, [actorId, loadPermissions]);
   const setActorId = React.useCallback((identifier: string | null) => {

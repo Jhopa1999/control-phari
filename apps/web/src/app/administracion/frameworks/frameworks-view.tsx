@@ -192,6 +192,7 @@ export function FrameworksView(): React.ReactElement {
   React.useEffect(() => {
     if (listState !== 'success' || !urlId || urlId === selectedRef.current) return;
     if (requests.some((r) => r.id === urlId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la selección con ?requestId= de la URL (sistema externo, vía router) una vez cargada la lista.
       setNotice(null);
       selectRequest(urlId);
     } else {
@@ -457,6 +458,7 @@ export function FrameworksView(): React.ReactElement {
         <div className="rounded-lg border bg-card">
           <ErrorState
             title="No fue posible cargar el tablero de gobierno."
+            // eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render.
             onRetry={() => void loadDetail(selectedId)}
           />
         </div>
@@ -491,6 +493,7 @@ export function FrameworksView(): React.ReactElement {
                     canReview={canReview}
                     busy={busy}
                     peopleById={peopleById}
+                    // eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render.
                     onApprove={() => void handleApprove(gate.gateCode)}
                     onWaive={() => openWaive(gate.gateCode)}
                     onShowValidations={showValidations}

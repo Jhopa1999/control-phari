@@ -53,6 +53,7 @@ export function ReunionesView(): React.ReactElement {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- lee la pestaña y los ids de la URL tras montar (window no existe en el servidor).
     setTab(readParam('tab') === 'compromisos' ? 'compromisos' : 'actas');
     setInitialMeetingId(readParam('meetingId'));
     setInitialCommitmentId(readParam('commitmentId'));

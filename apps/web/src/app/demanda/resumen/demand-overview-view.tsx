@@ -396,6 +396,7 @@ export function DemandOverviewView(): React.ReactElement {
   const [to, setTo] = React.useState<string>('');
   React.useEffect(() => {
     const period = localMonthPeriod();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- valor por defecto con la fecha local del navegador; se fija tras montar para no desajustar la hidratación (el servidor no conoce la zona horaria del usuario).
     setFrom((v) => v || period.from);
     setTo((v) => v || period.to);
   }, []);
