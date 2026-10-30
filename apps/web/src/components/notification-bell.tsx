@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useRouter } from 'next/navigation';
 import { Bell, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -43,23 +44,33 @@ export function NotificationBell({ className }: { className?: string }): React.R
   const [error, setError] = React.useState<string | null>(null);
   const signedIn = permissions !== null;
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await listNotifications(20);
-      setItems(data.items);
-      setUnread(data.unreadCount);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'No fue posible cargar las notificaciones.');
-    } finally {
-      setLoading(false);
-    }
+  const fetchNotifications = React.useCallback(() => {
+    return listNotifications(20)
+      .then((data) => {
+        setItems(data.items);
+        setUnread(data.unreadCount);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof ApiError ? err.message : 'No fue posible cargar las notificaciones.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
+  const load = React.useCallback(() => {
+    setLoading(true);
+    return fetchNotifications();
+  }, [fetchNotifications]);
 
+  // Al iniciar sesión o cambiar de usuario se marca la carga inicial.
+  useResetOnChange([signedIn, actorId], () => {
+    if (signedIn) setLoading(true);
+  });
   React.useEffect(() => {
     if (!signedIn) return;
-    void load();
+    void fetchNotifications();
+    // Sondeo y vuelta a la pestaña: se ejecutan en callbacks, no en el efecto.
     const timer = window.setInterval(() => void load(), POLL_MS);
     const onVisible = (): void => {
       if (document.visibilityState === 'visible') void load();
@@ -69,7 +80,7 @@ export function NotificationBell({ className }: { className?: string }): React.R
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [signedIn, actorId, load]);
+  }, [signedIn, actorId, load, fetchNotifications]);
 
   if (!signedIn) return null;
 

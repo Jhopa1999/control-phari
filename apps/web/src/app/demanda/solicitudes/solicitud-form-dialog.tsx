@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Lock } from 'lucide-react';
 import { Field, FieldSet, FormError, RequiredHint } from '@/components/field';
 import { StatusBadge } from '@/components/status-badge';
@@ -191,17 +192,20 @@ export function SolicitudFormDialog({
   // aquí; ante fallo del POST/PATCH el padre mantiene el diálogo abierto con los
   // valores intactos (AC-031).
   React.useEffect(() => {
+    if (!open || !editing) return;
+    // Carga el historial de aprobación (tolerante a fallo); race-safe por id.
+    const editingId = editing.id;
+    void listApprovals(editingId)
+      .then((list) => setApprovals((prev) => (editingId === editing.id ? list : prev)))
+      .catch(() => {
+        /* Sin historial visible si falla; la ficha sigue usable. */
+      });
+  }, [open, editing]);
+  useResetOnChange([open, editing], () => {
     if (!open) return;
     setFieldErrors({});
     setApprovals([]);
     if (editing) {
-      // Carga el historial de aprobación (tolerante a fallo); race-safe por id.
-      const editingId = editing.id;
-      void listApprovals(editingId)
-        .then((list) => setApprovals((prev) => (editingId === editing.id ? list : prev)))
-        .catch(() => {
-          /* Sin historial visible si falla; la ficha sigue usable. */
-        });
       setValues({
         title: editing.title,
         mainProcessId: editing.mainProcessId,
@@ -217,7 +221,7 @@ export function SolicitudFormDialog({
     } else {
       setValues(emptyValues());
     }
-  }, [open, editing]);
+  });
 
   const activeProcesses = React.useMemo(() => processes.filter((p) => p.active), [processes]);
 

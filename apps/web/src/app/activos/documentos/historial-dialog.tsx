@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
@@ -75,11 +76,15 @@ export function HistorialDialog({
     [owners],
   );
 
+  // Al abrir (o cambiar de documento o recargar) se vuelve a mostrar la carga.
+  useResetOnChange([open, document, reloadKey], () => {
+    if (!open || !document) return;
+    setState('loading');
+    setSelected(null);
+  });
   React.useEffect(() => {
     if (!open || !document) return;
     let cancelled = false;
-    setState('loading');
-    setSelected(null);
     listDocumentVersions(document.id)
       .then((list) => {
         if (cancelled) return;
