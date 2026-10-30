@@ -1,0 +1,105 @@
+GIBO | GOVERNANCE & DATA
+PAQUETE DE IDENTIDAD VISUAL - VERSIÓN 1.0
+Fecha de edición: 29 de octubre de 2026
+
+ENTREGA
+
+Este paquete convierte las imágenes de referencia en una identidad reproducible:
+logotipo principal, wordmark, isotipo, icono cuadrado, versiones de contraste,
+recursos de aplicación y documentación de uso.
+
+El resultado es una reconstrucción vectorial normalizada. Conserva la composición,
+el nodo de la G y la O con órbita y tres nodos, con curvas y colores consistentes.
+No constituye la recuperación del archivo vectorial original ni una identificación
+concluyente de su tipografía. La paleta final es una decisión de diseño autorizada
+por el encargo, no una supuesta extracción exacta de tres tintas originales.
+
+POR DÓNDE EMPEZAR
+
+1. Consulte la guía visual y la auditoría dentro de 01_Guia.
+2. Para diseño, web o impresión, use preferentemente los archivos de 02_SVG.
+3. Para aplicaciones que requieren imágenes raster, use 03_PNG.
+4. Para navegador y pantallas de inicio, use 04_App_Icon.
+5. Para implementar tipografía y colores, consulte 05_Web.
+
+CONTENIDO POR CARPETA
+
+01_Guia       Guía de marca y auditoría de referencia.
+02_SVG        Maestros vectoriales con contornos y geometrías editables.
+03_PNG        Exportaciones transparentes de alta resolución.
+04_App_Icon   Favicons, iconos móviles, iconos maskable y manifiesto de ejemplo.
+05_Web        Tokens CSS/JSON e instrucciones de integración.
+06_Fuentes    Montserrat e Inter, con sus licencias OFL.
+07_Fuente     Código de generación e instrucciones para reproducir los activos.
+08_Preview    Lámina de presentación del sistema de identidad.
+09_Control_Calidad  Inventario y comprobaciones de la entrega.
+
+SELECCIÓN DE VERSIONES
+
+positivo      Marino #0F2557 con acentos #176BEB y #20BFD1; fondos claros.
+negativo      Sustituye el marino por blanco y conserva los acentos; fondos oscuros.
+negro         Una tinta negra; detalles internos resueltos mediante calados.
+blanco        Una tinta blanca; detalles internos resueltos mediante calados.
+
+Los SVG y PNG de 02_SVG y 03_PNG tienen fondo transparente. Una vista previa blanca
+no implica que el archivo tenga fondo blanco. La versión blanca necesita colocarse
+sobre una superficie oscura para apreciarse.
+
+Los iconos móviles de 04_App_Icon incorporan una base opaca azul marino con isotipo
+negativo para mantener una presentación estable en pantallas de inicio. Conservan
+el lienzo cuadrado completo, sin precortar esquinas. Son recursos específicos de app;
+no sustituyen al isotipo transparente de uso general. Los favicons PNG tienen una
+apariencia fija; favicon.svg adapta su contraste al esquema de color del navegador.
+
+NOMBRES Y RESOLUCIONES
+
+SVG: 02_SVG/{principal,wordmark,isotipo,icono}/
+     gibo-{recurso}-{positivo,negativo,negro,blanco}.svg
+
+PNG: 03_PNG/{principal,wordmark,isotipo,icono}/
+     gibo-{recurso}-{variante}-{resolucion}.png
+
+Principal y wordmark: anchos de exportación 1600 y 3200 px.
+Isotipo e icono: exportaciones 512 y 2048 px.
+El número del nombre corresponde al lienzo exportado, que incluye el respiro.
+No corresponde necesariamente al ancho visible del dibujo.
+
+REGLAS ESENCIALES
+
+Mantenga las proporciones, la posición de los nodos y la relación entre letras.
+No escriba GIBO con una fuente para reemplazar el wordmark: sus letras son dibujo.
+No altere los acentos por separado ni aplique sombras, brillos o degradados.
+Respete el área de protección y los mínimos indicados en la guía.
+Use el wordmark o isotipo cuando el tagline deje de ser legible.
+Las versiones monocromas tienen huecos reales: no los rellene de blanco.
+
+COLOR E IMPRESIÓN
+
+Los HEX/RGB son las especificaciones digitales maestras del paquete.
+Los porcentajes CMYK de la guía son aproximaciones algebraicas orientativas.
+La conversión final de imprenta depende del perfil ICC, el papel y el proceso.
+Para producción, convierta desde el vector, acuerde el perfil con el proveedor
+y revise una prueba al tamaño real. Este paquete no declara tintas Pantone.
+
+TIPOGRAFÍA Y LICENCIAS
+
+Montserrat se propone para titulares y continuidad visual con el tagline.
+Inter se propone para interfaz, datos, tablas y textos de lectura.
+El logo final se entrega trazado y no necesita fuentes instaladas.
+Los archivos de fuente incorporados conservan sus licencias OFL; revise los
+OFL.txt de 06_Fuentes antes de redistribuir o modificar las fuentes.
+
+ACCESIBILIDAD
+
+La guía documenta combinaciones de contraste concretas. No certifica conformidad
+WCAG de una aplicación completa. Por ejemplo, el cian no debe usarse como texto
+pequeño sobre blanco. Revise también estados, foco, tamaño y fondo efectivo.
+
+REPRODUCIBILIDAD
+
+Para regenerar activos, siga 07_Fuente/REGENERAR.txt. Mantenga una copia de trabajo
+si desea experimentar con colores o geometría y conserve intactos los maestros.
+El generador reproduce los activos gráficos; no vuelve a crear el manual PDF,
+ni los documentos editoriales de este paquete. La lámina se regenera con
+07_Fuente/crear_vista_previa.py después de generar los activos.
+

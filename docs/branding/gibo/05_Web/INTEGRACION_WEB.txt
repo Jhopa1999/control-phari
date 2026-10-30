@@ -1,0 +1,148 @@
+GIBO - INTEGRACIÓN WEB
+
+1. ORGANIZACIÓN
+
+Copie las carpetas que necesite a un directorio público de su aplicación, por
+ejemplo /brand/. Conserve la relación entre 05_Web y 06_Fuentes para que funcionen
+las rutas relativas de las fuentes incluidas en gibo-tokens.css.
+
+El CSS aporta variables y @font-face. No modifica automáticamente componentes,
+estilos globales ni el tema de una aplicación existente.
+
+2. CARGA DE TIPOGRAFÍA Y COLORES
+
+En el <head>:
+
+  <link rel="stylesheet" href="/brand/05_Web/gibo-tokens.css">
+
+Ejemplo de consumo en la hoja de estilos de la aplicación:
+
+  body {
+    font-family: var(--gibo-font-body);
+    color: var(--gibo-color-text);
+    background: var(--gibo-color-background);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--gibo-font-heading);
+    font-weight: var(--gibo-weight-heading);
+  }
+
+  a {
+    color: var(--gibo-color-link);
+    text-decoration: underline;
+  }
+
+  a:hover {
+    color: var(--gibo-color-link-hover);
+  }
+
+  .boton-primario {
+    color: var(--gibo-color-on-primary);
+    background: var(--gibo-color-primary);
+  }
+
+El hover del botón puede usar --gibo-color-primary-hover. Defina además foco
+visible, estados deshabilitados y tamaños de interacción en el sistema de diseño
+de la aplicación; este paquete de marca no sustituye ese trabajo.
+
+Para activar los roles oscuros de forma explícita:
+
+  <html lang="es" data-gibo-theme="dark">
+
+El estado del atributo puede proceder de la preferencia de usuario de su app.
+La selección de la variante del logo se hace por separado.
+
+3. SELECCIÓN DEL LOGO
+
+Sobre fondo claro:
+
+  <img src="/brand/02_SVG/principal/gibo-principal-positivo.svg"
+       alt="GIBO - Governance & Data"
+       style="width: 360px; max-width: 100%; height: auto;">
+
+Sobre fondo oscuro, cambie el archivo por gibo-principal-negativo.svg.
+Use wordmark cuando no haya espacio para mantener el tagline legible.
+Use isotipo o icono para avatares, accesos y espacios cuadrados.
+
+No recomponga GIBO con Montserrat o Inter: el logo tiene geometría propia.
+No aplique filtros CSS de inversión a una versión de color. Seleccione el archivo
+de contraste adecuado para conservar los acentos definidos.
+
+El tamaño visible del dibujo es menor que el lienzo debido al margen transparente
+incluido. Calcule las dimensiones a partir del viewBox real del SVG, sin recortarlo.
+
+4. FAVICON Y PANTALLA DE INICIO
+
+Ejemplo de referencias dentro del <head>:
+
+  <link rel="icon" href="/brand/04_App_Icon/favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" type="image/svg+xml" sizes="any"
+        href="/brand/04_App_Icon/favicon.svg">
+  <link rel="apple-touch-icon"
+        href="/brand/04_App_Icon/apple-touch-icon.png">
+  <link rel="manifest" href="/brand/04_App_Icon/site.webmanifest">
+  <meta name="theme-color" content="#0F2557">
+
+favicon.svg incorpora una adaptación de contraste mediante prefers-color-scheme.
+Los PNG e ICO tienen apariencia fija. favicon-16.png y favicon-32.png incorporan
+una adaptación óptica para tamaños pequeños; no son el maestro general del símbolo.
+
+Los recursos apple-touch-icon, android-chrome y maskable usan un lienzo opaco
+marino con isotipo negativo. Las esquinas quedan sin precortar para que el sistema
+aplique su presentación. Los iconos móviles estándar reservan 12.5% de margen por
+lado. El símbolo de los maskable queda dentro de un círculo de diámetro 75%
+del lienzo, por lo que respeta la zona segura circular de diámetro 80% descrita
+en la especificación de Web App Manifest. Se reutiliza la misma geometría.
+No reemplace un archivo maskable por el icono transparente sin revisar ese margen.
+
+Revise las rutas del manifiesto después de moverlo y ajuste name, short_name,
+start_url y scope al despliegue real. El manifiesto es un punto de partida; no
+constituye por sí solo una implementación completa de PWA.
+
+5. CONTRASTE: COMBINACIONES CONCRETAS
+
+Marino sobre blanco:                      14.76:1
+Marino sobre lienzo #F4F6F8:               13.63:1
+Blanco sobre azul eléctrico #176BEB:        4.84:1
+Azul funcional #145CCB sobre #F4F6F8:       5.66:1
+Cian sobre marino:                         6.63:1
+Blanco sobre oscuro #08152E:               18.15:1
+Cian sobre oscuro #08152E:                  8.15:1
+
+El azul eléctrico sobre #F4F6F8 alcanza 4.467:1, inferior al umbral de 4.5:1
+para texto normal. Por eso los roles claros usan #145CCB para enlaces sobre ese
+lienzo. El azul eléctrico sí alcanza 4.840:1 sobre blanco.
+
+El cian sobre blanco alcanza 2.226:1. Úselo como acento decorativo, o colóquelo
+sobre una superficie oscura cuando deba comunicar texto o información.
+
+Los ratios se calculan a partir de los HEX sRGB mediante luminancia relativa.
+Los valores mostrados están redondeados para lectura; la comparación con un
+umbral debe hacerse sin redondeo. Esta tabla no certifica accesibilidad global.
+
+Referencia del método y los umbrales:
+https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html
+
+6. FUENTES Y LICENCIAS
+
+Montserrat: titulares; peso recomendado 700.
+Inter: texto e interfaz; pesos recomendados 400, 500 y 600.
+Son alternativas propuestas para el sistema de marca, no una prueba concluyente
+de la fuente utilizada en la imagen original.
+
+Fuentes originales incluidas:
+../06_Fuentes/Montserrat/Montserrat-variable.ttf
+../06_Fuentes/Inter/Inter-variable.ttf
+
+Conserve los archivos OFL.txt asociados al redistribuir las fuentes.
+Para optimizar una aplicación, puede preparar un subconjunto WOFF2 respetando
+la licencia y los caracteres necesarios. Los TTF incluidos priorizan un archivo
+fuente completo y reproducible.
+
+Referencias oficiales:
+https://fonts.google.com/specimen/Montserrat
+https://fonts.google.com/specimen/Inter
+https://openfontlicense.org/
+https://www.w3.org/TR/appmanifest/#icon-masks-and-safe-zone
+

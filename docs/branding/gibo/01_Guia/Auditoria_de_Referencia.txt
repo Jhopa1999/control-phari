@@ -1,0 +1,152 @@
+GIBO - AUDITORÍA DE REFERENCIA Y DECISIONES DE NORMALIZACIÓN
+29 de octubre de 2026
+
+1. MATERIAL EXAMINADO
+
+Referencia de interfaz: image(20261030-042055).png.
+Referencia del logo ampliado: image(20261030-042218).png.
+
+Ambos archivos tienen 1024 x 765 píxeles, modo RGB y carecen de canal alfa.
+El damero gris y blanco está integrado en la imagen. Por tanto, las referencias
+no son archivos transparentes utilizables directamente como maestros de marca.
+
+2. QUÉ PUEDE MEDIRSE Y QUÉ NO
+
+Es posible medir el tamaño del raster, sus píxeles y la posición aproximada de
+los elementos. No es posible recuperar de forma concluyente a partir de estos
+archivos la fuente original, el archivo vectorial maestro, la intención exacta
+de cada curva ni un perfil de impresión no suministrado.
+
+El resultado entregado se identifica como reconstrucción vectorial normalizada,
+basada en las referencias. Las curvas, nodos, espacios y colores se estabilizan
+para uso técnico. No se pretende conservar irregularidades del raster como si
+fueran decisiones deliberadas del diseño original.
+
+3. MÉTODO DE MUESTREO
+
+Se seleccionaron regiones por ubicación y por intervalos RGB de marino, azul y
+cian. La erosión de 5 x 5 píxeles en la referencia principal redujo la influencia
+de bordes suavizados. Se calcularon mediana y moda por grupo. Estos estadísticos
+describen las regiones muestreadas; no implican que toda la zona tenga una tinta
+uniforme ni que esos colores fueran los valores originales de diseño.
+
+COLORES DEL LOGO AMPLIADO
+
+Elemento               Mediana RGB       Mediana HEX    Moda RGB
+Marino                 11, 34, 82        #0B2252        10, 34, 82
+Nodo azul de la G      24, 121, 218      #1879DA        24, 121, 216
+Órbita y nodos cian    29, 192, 215      #1DC0D7        28, 194, 216
+
+Las muestras interiores del marino varían aproximadamente entre RGB(10,32,79)
+y RGB(12,35,84) en sus percentiles 10 y 90. El cian también muestra variaciones.
+Estas diferencias justifican definir una paleta plana explícita para el paquete.
+
+MOODBOARD: CÓDIGO IMPRESO FRENTE A COLOR RENDERIZADO
+
+Color          HEX impreso       Mediana observada
+Marino         #0F2557           #0A204E
+Azul           #00A8FF           #02A3FD
+Cian           #00E8C6           #0AE1C6
+Coral          #FF5722           #FC5D2A
+Lienzo claro   #F4F6F8           #F2F6F9
+
+El cian del moodboard es más verdoso que el del símbolo ampliado. No existe una
+paleta única y perfectamente coherente entre ambas referencias. El coral figura
+como color de interfaz en el moodboard, pero no forma parte del logo ampliado;
+no se incorpora a los tres colores maestros de la marca entregada.
+
+4. GEOMETRÍA OBSERVADA
+
+Coordenadas aproximadas en el raster ampliado, en píxeles; extremos inclusivos:
+
+Elemento       x1     y1     x2     y2
+G             127    234    335    450
+I             370    239    419    446
+B             457    239    647    446
+O             664    227    896    456
+Descriptor    142    489    881    536
+
+Nodo de la G: centro aproximado (249.84, 344.00); radio visual 17.5 px.
+Nodos de la O: centros aproximados (780.10, 256.58), (693.54, 341.95) y
+(845.47, 400.07); radios próximos a 18 px.
+Órbita: radio central mediano aproximado 85.8 px; grosor cercano a 9 px.
+O exterior: caja aproximada de 233 x 230 px; ligeras irregularidades del raster.
+Hueco de la O: diámetro aproximado de 114 px horizontal y 113 px vertical.
+
+La O sobresale aproximadamente 11-12 px respecto a I/B por arriba y por abajo.
+Esa compensación óptica ayuda a que una forma redonda tenga presencia comparable
+a las letras rectas. Los valores del maestro normalizado se documentan en la guía.
+
+5. PALETA FINAL ADOPTADA
+
+Color          HEX         RGB             CMYK algebraico aproximado (%)
+Navy           #0F2557     15, 37, 87      82.8 / 57.5 / 0.0 / 65.9
+Electric       #176BEB     23, 107, 235    90.2 / 54.5 / 0.0 / 7.8
+Cyan           #20BFD1     32, 191, 209    84.7 / 8.6 / 0.0 / 18.0
+
+El marino retoma el código explícito del moodboard. El azul se profundiza para
+permitir blanco sobre un botón de ese color con una relación de contraste 4.84:1.
+El cian se aproxima al símbolo ampliado y unifica órbita y nodos.
+
+Los HEX/RGB son los valores digitales de referencia. CMYK se calculó por la
+conversión algebraica habitual basada en el máximo canal RGB. No se aplicó perfil
+ICC de imprenta: los porcentajes son una orientación, no una equivalencia física
+exacta. El proveedor debe efectuar la conversión para su soporte y proceso.
+
+Colores de apoyo digital:
+Blanco #FFFFFF; negro #000000; lienzo #F4F6F8; fondo oscuro #08152E;
+azul funcional para enlaces/hover #145CCB.
+
+6. CONTRASTE DE LAS COMBINACIONES PRINCIPALES
+
+Navy / blanco:                         14.762:1
+Navy / lienzo claro:                   13.626:1
+Blanco / Electric:                      4.840:1
+Electric / lienzo claro:                4.467:1
+Azul funcional #145CCB / lienzo claro:   5.663:1
+Cyan / Navy:                            6.632:1
+Cyan / blanco:                          2.226:1
+Blanco / fondo oscuro #08152E:          18.150:1
+Cyan / fondo oscuro #08152E:             8.154:1
+
+Método: linealización sRGB, luminancia relativa y cociente (Lclara + 0.05) /
+(Loscura + 0.05). Cifras redondeadas para presentación.
+
+El umbral de referencia para texto normal es 4.5:1. Por eso Electric sobre el
+lienzo claro no se declara apto para texto normal, aunque se aproxime al umbral.
+Se usa #145CCB para ese rol. Cyan sobre blanco se reserva como acento decorativo.
+La marca y una interfaz completa requieren decisiones diferentes; estos cálculos
+no constituyen una certificación global de accesibilidad de una aplicación.
+
+Fuente del método y criterios:
+https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html
+
+7. TIPOGRAFÍA
+
+Montserrat e Inter aparecen nombradas en el moodboard. No puede demostrarse solo
+con el raster que todas las letras del logo se generaran con una de esas fuentes.
+La G y la O incorporan intervenciones gráficas propias.
+
+Se adopta Montserrat como alternativa geométrica para titulares y descriptor,
+y se recomienda Inter para interfaz, tablas y lectura. Los maestros del logo
+tienen contornos: su apariencia no depende de fuentes instaladas.
+
+Los archivos originales de ambas familias y sus licencias OFL se incluyen en
+06_Fuentes. La licencia de las fuentes no demuestra exclusividad ni registro
+del nombre o símbolo de marca.
+
+Fuentes oficiales:
+https://fonts.google.com/specimen/Montserrat
+https://fonts.google.com/specimen/Inter
+https://openfontlicense.org/
+
+8. REGLAS DE PRODUCCIÓN
+
+- Fondo transparente real en los recursos generales SVG/PNG.
+- Blanco en lugar de marino para la versión negativa, con los acentos conservados.
+- Calados transparentes en negro y blanco para preservar nodo, órbita y tres nodos.
+- Variante micro para favicon, revisada a escala pequeña.
+- Base opaca solo en los recursos móviles específicos de 04_App_Icon.
+- Sin degradados, sombras o damero integrado en los maestros finales.
+- Revisar impresiones y sellos al tamaño real antes de producción.
+

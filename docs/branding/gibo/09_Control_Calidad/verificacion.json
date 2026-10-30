@@ -1,0 +1,62 @@
+{
+  "edicion": "GIBO v1.0",
+  "fecha": "2026-10-29",
+  "resultado": "Verificación completada sin incidencias bloqueantes",
+  "svg": {
+    "cantidad": 22,
+    "vector_real": true,
+    "sin_raster_incrustado": true,
+    "sin_fuentes_externas": true,
+    "texto_convertido_a_contornos": true
+  },
+  "png_recursos": {
+    "cantidad": 41,
+    "integridad_png": "41 de 41 válidos",
+    "marca_rgba_transparente": 32,
+    "favicon_rgba": 3,
+    "movil_rgb_opaco": 6
+  },
+  "png_presentacion": {
+    "cantidad": 1,
+    "dimensiones": [
+      2000,
+      1740
+    ],
+    "fondo_opaco": true
+  },
+  "ico": {
+    "dimensiones": [
+      [
+        16,
+        16
+      ],
+      [
+        32,
+        32
+      ],
+      [
+        48,
+        48
+      ]
+    ],
+    "coincidencia_con_png": "Píxel por píxel en cada tamaño"
+  },
+  "geometria": {
+    "nodos_en_O": 3,
+    "nodo_en_G": 1,
+    "orbitas_segmentadas": 3,
+    "hueco_O_transparente": true,
+    "monocromos_con_calados_reales": true
+  },
+  "variantes": {
+    "negativa": "Base blanca con acentos #176BEB y #20BFD1 sin cambios",
+    "mono": "Negra y blanca, con alfa en los detalles internos"
+  },
+  "pdf": {
+    "paginas": 10,
+    "texto_seleccionable": true,
+    "revision_visual": "10 páginas renderizadas y revisadas"
+  },
+  "alcance": "Control de archivos y coherencia de identidad. Los ratios de contraste corresponden a parejas concretas de color; no certifica una aplicación completa. Los valores CMYK son orientativos sin perfil ICC.",
+  "reconstruccion": "Geometría normalizada y descriptor tipográfico sustituido de forma controlada desde dos referencias raster aportadas por el usuario; no se recuperó un maestro vectorial original."
+}

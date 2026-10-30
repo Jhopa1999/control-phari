@@ -1,0 +1,77 @@
+/* GIBO | Governance & Data | Identidad v1.0
+ * Fuentes locales: mantenga la estructura 05_Web / 06_Fuentes.
+ * HEX/RGB son los valores digitales maestros; no son especificaciones CMYK.
+ */
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("../06_Fuentes/Montserrat/Montserrat-variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("../06_Fuentes/Inter/Inter-variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  /* Paleta maestra */
+  --gibo-navy: #0f2557;
+  --gibo-electric: #176beb;
+  --gibo-cyan: #20bfd1;
+  --gibo-white: #ffffff;
+  --gibo-black: #000000;
+  --gibo-canvas: #f4f6f8;
+  --gibo-dark: #08152e;
+
+  /* Variante funcional más oscura: 5.66:1 sobre el lienzo claro. */
+  --gibo-link-hover: #145ccb;
+  --gibo-link-on-white: var(--gibo-electric);
+  --gibo-link-on-canvas: var(--gibo-link-hover);
+
+  /* Tipografía: el wordmark es vectorial y no se recompone con estas fuentes. */
+  --gibo-font-heading: "Montserrat", Arial, sans-serif;
+  --gibo-font-body: "Inter", Arial, sans-serif;
+  --gibo-weight-body: 400;
+  --gibo-weight-medium: 500;
+  --gibo-weight-label: 600;
+  --gibo-weight-heading: 700;
+
+  /* Roles por defecto: interfaz clara con lienzo #F4F6F8. */
+  --gibo-color-background: var(--gibo-canvas);
+  --gibo-color-surface: var(--gibo-white);
+  --gibo-color-text: var(--gibo-navy);
+  --gibo-color-heading: var(--gibo-navy);
+  --gibo-color-link: var(--gibo-link-on-canvas);
+  --gibo-color-link-hover: var(--gibo-navy);
+  --gibo-color-primary: var(--gibo-electric);
+  --gibo-color-on-primary: var(--gibo-white);
+  --gibo-color-primary-hover: var(--gibo-link-hover);
+  --gibo-color-accent: var(--gibo-cyan);
+  --gibo-color-on-accent: var(--gibo-navy);
+  --gibo-color-focus: var(--gibo-navy);
+}
+
+/* Activación explícita: <html data-gibo-theme="dark">.
+ * El CSS no cambia el tema de una aplicación existente automáticamente.
+ */
+[data-gibo-theme="dark"] {
+  --gibo-color-background: var(--gibo-dark);
+  --gibo-color-surface: var(--gibo-navy);
+  --gibo-color-text: var(--gibo-white);
+  --gibo-color-heading: var(--gibo-white);
+  --gibo-color-link: var(--gibo-cyan);
+  --gibo-color-link-hover: var(--gibo-white);
+  --gibo-color-primary: var(--gibo-electric);
+  --gibo-color-on-primary: var(--gibo-white);
+  --gibo-color-primary-hover: var(--gibo-link-hover);
+  --gibo-color-accent: var(--gibo-cyan);
+  --gibo-color-on-accent: var(--gibo-navy);
+  --gibo-color-focus: var(--gibo-white);
+}
+
