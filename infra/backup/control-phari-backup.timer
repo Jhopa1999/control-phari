@@ -1,0 +1,12 @@
+[Unit]
+Description=Programa el respaldo diario de la base de datos de control-phari
+
+[Timer]
+# 03:00 UTC = 22:00 hora de Colombia: fuera del horario de uso.
+OnCalendar=*-*-* 03:00:00 UTC
+# Si el servidor estaba apagado a esa hora, corre el respaldo al encenderse.
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

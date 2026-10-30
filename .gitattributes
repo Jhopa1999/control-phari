@@ -1,0 +1,6 @@
+# Scripts de shell y unidades de systemd: siempre LF.
+# En Windows, core.autocrlf=true los dejaria con CRLF y fallarian en Linux
+# ("bad interpreter" / "\r: command not found") al copiarlos a un servidor.
+*.sh text eol=lf
+*.service text eol=lf
+*.timer text eol=lf

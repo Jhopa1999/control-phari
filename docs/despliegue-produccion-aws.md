@@ -138,7 +138,10 @@ Notas prácticas aprendidas en esta instalación:
    al servidor (S3 prefirmado + `curl`), extrayendo en `/opt/control-phari`.
 2. `docker compose -f compose.prod.yaml -f compose.https.yaml --env-file
    .env.production build` y `… up -d`. Las imágenes **no** se reconstruyen solas.
-3. Si cambió el schema: correr las migraciones (ver arriba).
+3. Si cambió el schema: haz antes un respaldo manual
+   (`systemctl start control-phari-backup.service`, ver
+   [respaldo-restauracion-bd.md](respaldo-restauracion-bd.md)) y corre las
+   migraciones (ver arriba).
 4. Si cambió la config de Nginx: `docker exec control-phari-nginx-1 nginx -s
    reload` (un `up -d nginx` no relee la config montada si el servicio no cambió).
 
@@ -149,5 +152,7 @@ Notas prácticas aprendidas en esta instalación:
   reemitir el certificado para ese nombre, cambiar `server_name` en Nginx y
   actualizar `APP_WEB_URL`.
 - **Endurecer el Security Group** a solo 80/443 y SSH restringido.
-- **Backups de PostgreSQL** programados y almacenados fuera del servidor (ver
-  [deployment.md](deployment.md#backups)).
+- ~~**Backups de PostgreSQL** programados y almacenados fuera del servidor~~
+  **Hecho (BL-004):** respaldo diario a S3 con retención de 30 días. Ver
+  [respaldo-restauracion-bd.md](respaldo-restauracion-bd.md). Pendiente dentro de
+  eso: alertas si un respaldo falla.
