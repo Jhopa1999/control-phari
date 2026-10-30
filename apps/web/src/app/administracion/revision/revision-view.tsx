@@ -61,6 +61,9 @@ export function RevisionView(): React.ReactElement {
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [actingId, setActingId] = React.useState<string | null>(null);
   const [approvingId, setApprovingId] = React.useState<string | null>(null);
+  // Cambiar la clave remonta las secciones de planes y de documentación/cierres,
+  // que cargan sus datos al montarse: un único «Actualizar» en la cabecera.
+  const [refreshKey, setRefreshKey] = React.useState(0);
 
   const [devolver, setDevolver] = React.useState<Request | null>(null);
   const [devolverError, setDevolverError] = React.useState<string | null>(null);
@@ -140,6 +143,11 @@ export function RevisionView(): React.ReactElement {
     }
   }
 
+  function handleRefresh(): void {
+    void load();
+    setRefreshKey((key) => key + 1);
+  }
+
   const header = (
     <PageHeader
       title="Aprobaciones"
@@ -183,18 +191,21 @@ export function RevisionView(): React.ReactElement {
 
   return (
     <PageLayout>
-      {header}
+      <PageHeader
+        title="Aprobaciones"
+        description="Decide el compromiso de las solicitudes priorizadas y autoriza los planes enviados."
+        actions={
+          <Button type="button" variant="outline" onClick={handleRefresh}>
+            <RefreshCw aria-hidden="true" />
+            Actualizar
+          </Button>
+        }
+      />
 
       <Section
         title="Compromisos por aprobar"
         count={state === 'success' ? queue.length : undefined}
         headingRef={headingRef}
-        actions={
-          <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
-            <RefreshCw aria-hidden="true" />
-            Actualizar
-          </Button>
-        }
       >
         <InlineNotice tone="info" className="py-2">
           {canDecide
@@ -212,6 +223,7 @@ export function RevisionView(): React.ReactElement {
           }}
           empty={{
             icon: BadgeCheck,
+            size: 'inline',
             title: 'No hay solicitudes pendientes de aprobación.',
             description: 'Las solicitudes priorizadas aparecerán aquí para su revisión.',
           }}
@@ -282,10 +294,10 @@ export function RevisionView(): React.ReactElement {
 
       {/* Autorización de planes: se añade a la cola de compromiso. Oculta para
           quien no tiene el módulo review. */}
-      <PlanAuthorizationSection />
+      <PlanAuthorizationSection key={`plans-${refreshKey}`} />
 
       {/* Documentación y cierres de proyecto por aprobar (APR-01 / CIE-01). */}
-      <PendingReviewsSections />
+      <PendingReviewsSections key={`reviews-${refreshKey}`} />
 
       <DevolverDialog
         kind="solicitud"

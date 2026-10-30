@@ -47,6 +47,36 @@ export interface RequestContextBarProps {
 
 const OTHER_GROUP_LABEL = 'Otras solicitudes';
 
+export interface RequestBucket {
+  label: string;
+  items: Request[];
+}
+
+/**
+ * Reparte las solicitudes en los grupos dados: cada una cae en el primer grupo
+ * que la acepta y el resto va a «Otras solicitudes». Sin grupos devuelve un
+ * único bloque con `fallbackLabel`. Los bloques vacíos se omiten. Lo comparten
+ * el selector de la barra y la bandeja.
+ */
+export function groupRequests(
+  requests: Request[],
+  groups: RequestPickerGroup[] | undefined,
+  fallbackLabel = 'Solicitudes',
+): RequestBucket[] {
+  if (!groups || groups.length === 0) {
+    return requests.length > 0 ? [{ label: fallbackLabel, items: requests }] : [];
+  }
+  const lists: RequestBucket[] = groups.map((group) => ({ label: group.label, items: [] }));
+  const others: Request[] = [];
+  for (const request of requests) {
+    const index = groups.findIndex((group) => group.match(request));
+    if (index >= 0) lists[index].items.push(request);
+    else others.push(request);
+  }
+  lists.push({ label: OTHER_GROUP_LABEL, items: others });
+  return lists.filter((list) => list.items.length > 0);
+}
+
 function optionLabel(request: Request): string {
   return `${request.title} · ${getStatus('request', request.operationalState).label}`;
 }
@@ -69,18 +99,10 @@ export function RequestContextBar({
   actions,
 }: RequestContextBarProps): React.ReactElement {
   const helperId = `${id}-helper`;
-  const buckets = React.useMemo(() => {
-    if (!groups || groups.length === 0) return null;
-    const lists = groups.map((group) => ({ label: group.label, items: [] as Request[] }));
-    const others: Request[] = [];
-    for (const request of requests) {
-      const index = groups.findIndex((group) => group.match(request));
-      if (index >= 0) lists[index].items.push(request);
-      else others.push(request);
-    }
-    lists.push({ label: OTHER_GROUP_LABEL, items: others });
-    return lists.filter((list) => list.items.length > 0);
-  }, [groups, requests]);
+  const buckets = React.useMemo(
+    () => (groups && groups.length > 0 ? groupRequests(requests, groups) : null),
+    [groups, requests],
+  );
 
   return (
     <div className="grid gap-3 rounded-lg border bg-surface-subtle p-3 lg:grid-cols-[minmax(0,28rem)_1fr_auto] lg:items-end">
@@ -134,8 +156,9 @@ export function RequestSummary({
   request: Request;
   show?: RequestSummaryItem[];
 }): React.ReactElement {
+  // <span>, no <div>: la bandeja lo coloca dentro de un <button>.
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <span className="flex flex-wrap items-center gap-2">
       {show.map((item) => {
         switch (item) {
           case 'state':
@@ -167,7 +190,7 @@ export function RequestSummary({
             return null;
         }
       })}
-    </div>
+    </span>
   );
 }
 

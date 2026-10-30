@@ -11,6 +11,7 @@ import { Field, FormError } from '@/components/field';
 import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
+import { RequestInbox } from '@/components/request-inbox';
 import {
   RequestContextBar,
   RequestFacts,
@@ -511,13 +512,12 @@ export function PriorizacionView(): React.ReactElement {
             </section>
           </div>
         ) : (
-          <div className="rounded-lg border bg-card">
-            <EmptyState
-              icon={ChartColumn}
-              title="Elige una solicitud para empezar."
-              description="Las solicitudes listas para priorizar aparecen primero en el selector."
-            />
-          </div>
+          <RequestInbox
+            requests={requests}
+            groups={GROUPS}
+            show={['state', 'triage', 'registered']}
+            onPick={handlePick}
+          />
         )}
       </>
     );

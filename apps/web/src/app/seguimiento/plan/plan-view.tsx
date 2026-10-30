@@ -24,6 +24,7 @@ import { ErrorState } from '@/components/error-state';
 import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
+import { RequestInbox } from '@/components/request-inbox';
 import { RequestContextBar, type RequestPickerGroup } from '@/components/request-context-bar';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { Section } from '@/components/section';
@@ -1335,13 +1336,12 @@ export function PlanView(): React.ReactElement {
           // eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render.
           renderPlan()
         ) : (
-          <div className="rounded-lg border bg-card">
-            <EmptyState
-              icon={ClipboardList}
-              title="Elige una solicitud para empezar."
-              description="En el selector, las solicitudes están agrupadas por estado: comprometidas, en planificación y en ejecución."
-            />
-          </div>
+          <RequestInbox
+            requests={requests}
+            groups={GROUPS}
+            show={['state', 'priority', 'registered']}
+            onPick={handlePick}
+          />
         )}
       </>
     );
