@@ -9,7 +9,6 @@ import {
   Database,
   FileText,
   FolderKanban,
-  FolderOpen,
   FolderTree,
   Gauge,
   Inbox,
@@ -135,14 +134,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/seguimiento/plan', label: 'Planificación', moduleKey: 'plan', icon: ChartGantt },
       { href: '/activos/capacidad', label: 'Capacidad', moduleKey: 'capacity', icon: Gauge },
       { href: '/seguimiento/portafolio', label: 'Portafolio', moduleKey: 'portfolio', icon: FolderKanban },
+      // «Proyectos» queda fuera del menú hasta que la sección exista: la ruta
+      // /seguimiento/proyectos se conserva, pero un ítem que no lleva a nada útil
+      // solo añade ruido (auditoría UX, fase 1).
       { href: '/demanda/resumen', label: 'Indicadores', moduleKey: 'demandOverview', icon: ChartLine },
-      {
-        href: '/seguimiento/proyectos',
-        label: 'Proyectos',
-        moduleKey: 'project',
-        icon: FolderOpen,
-        badge: 'Próximamente',
-      },
     ],
   },
   {
@@ -210,7 +205,7 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       {
         href: '/administracion/configuracion-smtp',
-        label: 'Configuracion SMTP',
+        label: 'Configuración SMTP',
         moduleKey: 'systemSettings',
         icon: Mail,
       },

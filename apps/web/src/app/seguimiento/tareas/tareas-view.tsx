@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ListChecks } from 'lucide-react';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader, type Crumb } from '@/components/page-header';
@@ -18,11 +18,21 @@ import { TaskDetail } from './task-detail';
 export function TareasView(): React.ReactElement {
   const searchParams = useSearchParams();
   const taskIdParam = searchParams.get('taskId');
+  const router = useRouter();
   const { allowedModules } = useActor();
 
   const breadcrumbs: Crumb[] | undefined = allowedModules.has('assigned')
     ? [{ label: 'Mi trabajo', href: '/mi-trabajo' }]
     : undefined;
+
+  // Sin ?taskId= esta página no tiene contenido propio: quien puede ver «Mi
+  // trabajo» aterriza ahí (auditoría UX B1). Quien no, ve el estado vacío.
+  const redirectToMyWork = !taskIdParam && allowedModules.has('assigned');
+  React.useEffect(() => {
+    if (redirectToMyWork) router.replace('/mi-trabajo');
+  }, [redirectToMyWork, router]);
+
+  if (redirectToMyWork) return <PageLayout>{null}</PageLayout>;
 
   if (!taskIdParam) {
     return (

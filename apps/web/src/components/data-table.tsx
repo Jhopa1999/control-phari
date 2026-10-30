@@ -253,7 +253,7 @@ export interface CellTitleProps {
 }
 
 const CELL_TITLE_CONTROL =
-  'inline-block max-w-full rounded-sm text-left font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+  'inline-block min-h-6 max-w-full rounded-sm text-left font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 /**
  * Celda de título: identificador legible y acción principal de la fila. El

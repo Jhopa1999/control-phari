@@ -259,6 +259,14 @@
                                              "docs/aplicacion/modelo-datos.md"
                                          ],
                         "summary":  "IA: la API asegura al arrancar el agente TRIAGE por defecto (apagado, upsert sin pisar cambios del admin) con valores compartidos con el seed en ai-defaults.ts."
+                    },
+                    {
+                        "timestamp":  "2026-10-30T11:45:00Z",
+                        "trigger_file":  "apps/web/src/lib/navigation.ts",
+                        "updated_docs":  [
+                                             "docs/aplicacion/frontend-pantallas.md"
+                                         ],
+                        "summary":  "UX fase 1: Proyectos sale del menu, Indicadores sin placeholders de dato futuro, Reporte semanal enviado en solo lectura, Equipo con Reenviar invitacion como icono, leyenda P1 a P4 desplegable y /seguimiento/tareas redirige a Mi trabajo."
                     }
                 ]
 }

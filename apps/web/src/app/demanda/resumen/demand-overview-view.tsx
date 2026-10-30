@@ -346,31 +346,6 @@ function IndicatorGroups({ indicators }: { indicators: AreaIndicators }): React.
               </SubTable>
             ) : null}
           </IndicatorRow>
-          <IndicatorRow
-            title="Cambios fallidos"
-            description="Indicador de dato futuro."
-            value={<NotApplicable status={indicators.failedChanges.status} />}
-          />
-        </IndicatorList>
-      </Section>
-
-      <Section title="Revisión operativa">
-        <IndicatorList>
-          <IndicatorRow
-            title="Recuperación"
-            description="Indicador de dato futuro."
-            value={<NotApplicable status={indicators.recovery.status} />}
-          />
-        </IndicatorList>
-      </Section>
-
-      <Section title="Revisión de valor">
-        <IndicatorList>
-          <IndicatorRow
-            title="Adopción y valor"
-            description="Indicador de dato futuro."
-            value={<NotApplicable status={indicators.adoptionValue.status} />}
-          />
         </IndicatorList>
       </Section>
     </>
