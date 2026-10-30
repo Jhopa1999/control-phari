@@ -75,7 +75,8 @@ export function EquipoView(): React.ReactElement {
   const [users, setUsers] = React.useState<User[]>([]);
   const [grants, setGrants] = React.useState<Grant[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
-  const [state, setState] = React.useState<LoadState>('loading');
+  const [loadedState, setState] = React.useState<LoadState>('loading');
+  const state: LoadState = permissionsLoaded && !teamAllowed ? 'forbidden' : loadedState;
   const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const [userDialogOpen, setUserDialogOpen] = React.useState(false);
@@ -98,37 +99,38 @@ export function EquipoView(): React.ReactElement {
   // deshabilita; las demás filas quedan intactas.
   const [invitingUserId, setInvitingUserId] = React.useState<string | null>(null);
 
+  const loadData = React.useCallback(() => {
+    return Promise.all([listUsers(), listGrants(), listProcesses()])
+      .then(([u, g, p]) => {
+        setUsers(u);
+        setGrants(g);
+        setProcesses(p);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiError && err.status === 403) {
+          setState('forbidden');
+          return;
+        }
+        setLoadError(err instanceof Error ? err.message : null);
+        setState('error');
+      });
+  }, []);
   const load = React.useCallback(async (silent = false) => {
     // Tras una acción se recarga sin el esqueleto: las tablas siguen montadas y
     // el foco puede volver a sus filas.
     if (!silent) setState('loading');
-    try {
-      const [u, g, p] = await Promise.all([listUsers(), listGrants(), listProcesses()]);
-      setUsers(u);
-      setGrants(g);
-      setProcesses(p);
-      setState('success');
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
-        setState('forbidden');
-        return;
-      }
-      setLoadError(err instanceof Error ? err.message : null);
-      setState('error');
-    }
-  }, []);
+    await loadData();
+  }, [loadData]);
 
   // Gating cosmético, como en Aprobaciones e Indicadores: sin el módulo team no
   // se llama al backend (respondería 403) y se muestra el aviso; un 403 lleva
   // al mismo aviso.
   React.useEffect(() => {
     if (!permissionsLoaded) return;
-    if (!teamAllowed) {
-      setState('forbidden');
-      return;
-    }
-    void load();
-  }, [permissionsLoaded, teamAllowed, load]);
+    if (!teamAllowed) return;
+    void loadData();
+  }, [permissionsLoaded, teamAllowed, loadData]);
 
   const usersById = React.useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
   const processesById = React.useMemo(() => new Map(processes.map((p) => [p.id, p])), [processes]);

@@ -96,21 +96,25 @@ export function CatalogsView(): React.ReactElement {
     return filters;
   }, [catalogInput, activeFilter]);
 
+  const loadData = React.useCallback(() => {
+    return listCatalogItems(buildFilters())
+      .then((data) => {
+        setItems(data);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        setErrorMessage(messageOf(err));
+        setState('error');
+      });
+  }, [buildFilters]);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      const data = await listCatalogItems(buildFilters());
-      setItems(data);
-      setState('success');
-    } catch (err) {
-      setErrorMessage(messageOf(err));
-      setState('error');
-    }
-  }, [buildFilters]);
+    await loadData();
+  }, [loadData]);
 
   // Carga inicial.
   React.useEffect(() => {
-    void load();
+    void loadData();
     // Solo al montar; los filtros se aplican con el botón «Aplicar».
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

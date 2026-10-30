@@ -109,24 +109,28 @@ export function CompliancePanel({
     return map;
   }, [areas]);
 
+  const loadData = React.useCallback(() => {
+    const query: { from?: string; to?: string } = {};
+    if (from !== '') query.from = from;
+    if (to !== '') query.to = to;
+    return getCompliance(query)
+      .then((result) => {
+        setData(result);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        setError(messageOf(err));
+        setState('error');
+      });
+  }, [from, to]);
   const load = React.useCallback(async () => {
     setState('loading');
     setError(null);
-    try {
-      const query: { from?: string; to?: string } = {};
-      if (from !== '') query.from = from;
-      if (to !== '') query.to = to;
-      const result = await getCompliance(query);
-      setData(result);
-      setState('success');
-    } catch (err) {
-      setError(messageOf(err));
-      setState('error');
-    }
-  }, [from, to]);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
-    void load();
+    void loadData();
     // Carga inicial sin filtros; recargas posteriores son manuales.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

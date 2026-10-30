@@ -152,37 +152,41 @@ export function FrameworksView(): React.ReactElement {
     [loadDetail],
   );
 
+  const loadListData = React.useCallback(() => {
+    return Promise.all([
+      listRequests(),
+      listCatalogItems({ catalog: 'GOVERNANCE_ROUTE', active: true }),
+      listCatalogItems({ catalog: 'VALIDATION_TYPE', active: true }),
+      listCatalogItems({ catalog: 'VALIDATION_RESULT', active: true }),
+      // Solo da nombres (responsables y ejecutor): si falla, se degrada a [].
+      listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
+    ])
+      .then(([reqs, routes, types, results, persons]) => {
+        setRequests(reqs);
+        setRouteCatalog(routes);
+        setTypeCatalog(types);
+        setResultCatalog(results);
+        setPeople(persons);
+        setListState('success');
+        // Regla 3 de §7.9.1: si la solicitud elegida ya no está, se limpia.
+        if (selectedRef.current && !reqs.some((r) => r.id === selectedRef.current)) {
+          selectRequest('');
+          setRequestId(null);
+        }
+      })
+      .catch((err: unknown) => {
+        setListError(err instanceof Error ? err.message : null);
+        setListState('error');
+      });
+  }, [selectRequest, setRequestId]);
   const loadList = React.useCallback(async () => {
     setListState('loading');
-    try {
-      const [reqs, routes, types, results, persons] = await Promise.all([
-        listRequests(),
-        listCatalogItems({ catalog: 'GOVERNANCE_ROUTE', active: true }),
-        listCatalogItems({ catalog: 'VALIDATION_TYPE', active: true }),
-        listCatalogItems({ catalog: 'VALIDATION_RESULT', active: true }),
-        // Solo da nombres (responsables y ejecutor): si falla, se degrada a [].
-        listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
-      ]);
-      setRequests(reqs);
-      setRouteCatalog(routes);
-      setTypeCatalog(types);
-      setResultCatalog(results);
-      setPeople(persons);
-      setListState('success');
-      // Regla 3 de §7.9.1: si la solicitud elegida ya no está, se limpia.
-      if (selectedRef.current && !reqs.some((r) => r.id === selectedRef.current)) {
-        selectRequest('');
-        setRequestId(null);
-      }
-    } catch (err) {
-      setListError(err instanceof Error ? err.message : null);
-      setListState('error');
-    }
-  }, [selectRequest, setRequestId]);
+    await loadListData();
+  }, [loadListData]);
 
   React.useEffect(() => {
-    void loadList();
-  }, [loadList]);
+    void loadListData();
+  }, [loadListData]);
 
   // Regla 1 de §7.9.1: adoptar ?requestId= al terminar la carga y cuando cambia.
   React.useEffect(() => {

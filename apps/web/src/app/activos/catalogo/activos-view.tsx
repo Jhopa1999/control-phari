@@ -135,29 +135,33 @@ export function ActivosView(): React.ReactElement {
   const [formError, setFormError] = React.useState<string | null>(null);
   const [statusBusyId, setStatusBusyId] = React.useState<string | null>(null);
 
+  const loadData = React.useCallback(() => {
+    return Promise.all([
+      listAssets(),
+      listProcesses().catch(() => [] as Process[]),
+      listRequests().catch(() => [] as Request[]),
+      listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
+    ])
+      .then(([list, procs, reqs, usrs]) => {
+        setAssets(list);
+        setProcesses(procs);
+        setRequests(reqs);
+        setOwners(usrs);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        setErrorMessage(messageOf(err));
+        setState('error');
+      });
+  }, []);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      const [list, procs, reqs, usrs] = await Promise.all([
-        listAssets(),
-        listProcesses().catch(() => [] as Process[]),
-        listRequests().catch(() => [] as Request[]),
-        listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
-      ]);
-      setAssets(list);
-      setProcesses(procs);
-      setRequests(reqs);
-      setOwners(usrs);
-      setState('success');
-    } catch (err) {
-      setErrorMessage(messageOf(err));
-      setState('error');
-    }
-  }, []);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    void loadData();
+  }, [loadData]);
 
   const processName = React.useCallback(
     (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS,

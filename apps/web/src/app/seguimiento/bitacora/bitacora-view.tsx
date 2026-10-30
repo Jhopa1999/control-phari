@@ -141,35 +141,39 @@ export function BitacoraView(): React.ReactElement {
   const activitiesHeadingRef = React.useRef<HTMLHeadingElement>(null);
   const focusAfterDeleteRef = React.useRef<string | null>(null);
 
+  const loadData = React.useCallback(() => {
+    return Promise.all([
+      listDailyLogs(),
+      listProcesses().catch(() => [] as Process[]),
+      listRequests().catch(() => [] as Request[]),
+      listMyWork().catch(() => [] as MyWorkItem[]),
+    ])
+      .then(([lgs, procs, reqs, mw]) => {
+        setLogs(lgs);
+        setProcesses(procs);
+        setRequests(reqs);
+        setTasks(mw);
+        setLoadError(null);
+        setState('success');
+        // Mantiene la selección si sigue existiendo; si no, toma el primero.
+        setSelectedId((prev) => {
+          if (prev && lgs.some((l) => l.id === prev)) return prev;
+          return lgs[0]?.id ?? null;
+        });
+      })
+      .catch((err: unknown) => {
+        setLoadError(err instanceof WorklogError ? err.message : null);
+        setState('error');
+      });
+  }, []);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      const [lgs, procs, reqs, mw] = await Promise.all([
-        listDailyLogs(),
-        listProcesses().catch(() => [] as Process[]),
-        listRequests().catch(() => [] as Request[]),
-        listMyWork().catch(() => [] as MyWorkItem[]),
-      ]);
-      setLogs(lgs);
-      setProcesses(procs);
-      setRequests(reqs);
-      setTasks(mw);
-      setLoadError(null);
-      setState('success');
-      // Mantiene la selección si sigue existiendo; si no, toma el primero.
-      setSelectedId((prev) => {
-        if (prev && lgs.some((l) => l.id === prev)) return prev;
-        return lgs[0]?.id ?? null;
-      });
-    } catch (err) {
-      setLoadError(err instanceof WorklogError ? err.message : null);
-      setState('error');
-    }
-  }, []);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
-    void load();
-  }, [load]);
+    void loadData();
+  }, [loadData]);
 
   /**
    * Carga el detalle. `silent` (tras guardar o eliminar) no pasa por el estado

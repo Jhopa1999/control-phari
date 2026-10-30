@@ -74,7 +74,8 @@ export function IaAgentesView(): React.ReactElement {
   const permissionsLoaded = permissions !== null;
   const aiAllowed = allowedModules.has('aiSettings');
 
-  const [state, setState] = React.useState<LoadState>('loading');
+  const [loadedState, setState] = React.useState<LoadState>('loading');
+  const state: LoadState = permissionsLoaded && !aiAllowed ? 'forbidden' : loadedState;
   const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const [global, setGlobal] = React.useState<AiGlobalConfig | null>(null);
@@ -99,33 +100,34 @@ export function IaAgentesView(): React.ReactElement {
     setSecret('');
   }, []);
 
+  const loadData = React.useCallback(() => {
+    return getAiConfig()
+      .then((config) => {
+        setGlobal(config.global);
+        setAgents(config.agents);
+        setModels(config.models);
+        fillGlobal(config.global);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiError && err.status === 403) {
+          setState('forbidden');
+          return;
+        }
+        setLoadError(err instanceof Error ? err.message : null);
+        setState('error');
+      });
+  }, [fillGlobal]);
   const load = React.useCallback(async () => {
     setState('loading');
-    try {
-      const config = await getAiConfig();
-      setGlobal(config.global);
-      setAgents(config.agents);
-      setModels(config.models);
-      fillGlobal(config.global);
-      setState('success');
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
-        setState('forbidden');
-        return;
-      }
-      setLoadError(err instanceof Error ? err.message : null);
-      setState('error');
-    }
-  }, [fillGlobal]);
+    await loadData();
+  }, [loadData]);
 
   React.useEffect(() => {
     if (!permissionsLoaded) return;
-    if (!aiAllowed) {
-      setState('forbidden');
-      return;
-    }
-    void load();
-  }, [permissionsLoaded, aiAllowed, load]);
+    if (!aiAllowed) return;
+    void loadData();
+  }, [permissionsLoaded, aiAllowed, loadData]);
 
   async function handleSaveGlobal(event: React.FormEvent): Promise<void> {
     event.preventDefault();
