@@ -583,7 +583,7 @@ export function TriageView(): React.ReactElement {
                     <li key={dup.requestId} className="flex flex-col gap-0.5">
                       <Link
                         href={`/demanda/solicitudes/${encodeURIComponent(dup.requestId)}`}
-                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                        className="text-sm font-medium text-link underline-offset-4 hover:underline"
                       >
                         {dup.title}
                       </Link>

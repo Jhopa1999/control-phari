@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-labelledby="gibo-title gibo-desc">
+<title id="gibo-title">GIBO</title>
+<desc id="gibo-desc">Favicon vectorial adaptativo. Marino en modo claro y blanco en modo oscuro, con acentos cian.</desc>
+<style>:root{--gibo-base:#0F2557}@media(prefers-color-scheme:dark){:root{--gibo-base:#FFFFFF}}</style>
+<g transform="translate(2 2) scale(0.12069)"><g id="isotipo"><path id="anillo" fill="var(--gibo-base)" fill-rule="evenodd" d="M232 116 A116 116 0 1 0 0 116 A116 116 0 1 0 232 116 Z M173 116 A57 57 0 1 0 59 116 A57 57 0 1 0 173 116 Z"/><g id="orbita" fill="#20BFD1"><path id="arco-1" d="M150.83841 29.7719 A93 93 0 0 1 203.39141 147.80787 L190.23572 143.01959 A79 79 0 0 0 145.59392 42.75248 Z"/><path id="arco-2" d="M156.76852 199.58785 A93 93 0 0 1 29.7719 150.83841 L42.75248 145.59392 A79 79 0 0 0 150.63132 187.00473 Z"/><path id="arco-3" d="M29.7719 81.16159 A93 93 0 0 1 81.16159 29.7719 L86.40608 42.75248 A79 79 0 0 0 42.75248 86.40608 Z"/></g><g id="tres-nodos" fill="#20BFD1"><path id="nodo-1" d="M136.5 30 A20.5 20.5 0 1 0 95.5 30 A20.5 20.5 0 1 0 136.5 30 Z"/><path id="nodo-2" d="M200.41045 173.54523 A20.5 20.5 0 1 0 159.41045 173.54523 A20.5 20.5 0 1 0 200.41045 173.54523 Z"/><path id="nodo-3" d="M50.5 116 A20.5 20.5 0 1 0 9.5 116 A20.5 20.5 0 1 0 50.5 116 Z"/></g></g></g>
+</svg>

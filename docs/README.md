@@ -222,17 +222,30 @@ defecto de la plantilla.
   que `text-neutral` y `bg-neutral-subtle` sean tokens propios. `text-meta`
   (13/18 px) es un tamaño propio y `cn()` lo registra en tailwind-merge para
   que no lo confunda con un color.
-- Cambiar el acento corporativo: editar solo `--primary`, `--primary-hover`,
-  `--primary-foreground` y `--primary-subtle` en el bloque marcado al inicio de
-  `:root` y de `.dark`; `--ring` lo sigue solo. Condiciones de contraste:
-  `--primary-foreground` sobre `--primary` ≥ 4.5:1, y `--primary` como texto
-  sobre `#fff` y sobre `--muted` ≥ 4.5:1.
-- Tipografía: Inter con `next/font/google` (se autoaloja en el build; variable
-  `--font-inter` en `<html>`). Si el build no puede descargarla (entorno sin
-  salida a internet), se quita el import de `layout.tsx` y `--font-sans` queda
-  en la pila de sistema (`system-ui`, `Segoe UI`, Roboto…).
-- El tema oscuro queda preparado en `.dark`, pero no hay selector de tema; los
-  toasts usan tema claro fijo hasta que exista.
+- Marca GIBO (Governance & Data): la identidad vive en `docs/branding/gibo/`
+  (guía, tokens, logos, fuentes) y sus reglas de aplicación en
+  `.kiro/steering/25-marca-gibo.md`. Concepto «Lienzo Claro» (claro) y «Dark
+  Tech» (oscuro). Para cambiar el acento editar `--primary`, `--primary-hover`,
+  `--primary-foreground` y `--primary-subtle` en `:root` y `.dark`; `--ring` lo
+  sigue solo. El texto en azul usa `--link` (`text-link`), no `text-primary`:
+  el azul eléctrico `#176BEB` da 4.84:1 con texto blanco como fondo de botón,
+  pero sobre el lienzo `#F4F6F8` como texto queda en 4.47:1 (< 4.5:1), y
+  `--link` (`#145CCB`, y cian en oscuro) cumple. `--radius` es `0.75rem`; las
+  tarjetas y tablas usan `rounded-xl`, borde casi invisible y la utilidad
+  `shadow-card` (`--shadow-card`). Los badges (`ui/badge.tsx`) usan fondo
+  translúcido del tono y texto saturado, medidos a ≥ 4.5:1 en ambos temas.
+- Logo (`components/brand.tsx`): `BrandMark` es el isotipo y `BrandName` el
+  wordmark con su tagline (no se usan juntos, el wordmark ya incluye el aro).
+  Los SVG oficiales están en `apps/web/public/brand/svg`; la variante positiva
+  o negativa se elige por CSS con `dark:`. Íconos, favicon y manifiesto se
+  declaran en `metadata` de `layout.tsx` desde `public/brand/app-icon`.
+- Tipografía: Inter (texto e interfaz) y Montserrat (titulares h1–h3 vía
+  `--font-heading`), autoalojadas con `next/font/local` desde
+  `apps/web/src/app/fonts` (módulo `fonts.ts`, licencias OFL incluidas). No hay
+  descarga externa en el build. Las variables `--font-inter` y
+  `--font-montserrat` se aplican en `<html>`.
+- El tema oscuro (`.dark`) se activa con `next-themes` y el selector de tema
+  del menú lateral y de la barra móvil.
 - Utilidades de presentación en `apps/web/src/lib`, sin reglas de negocio:
   `format.ts` define las únicas reglas de fechas del portal (una fecha de
   calendario guardada se muestra en UTC; un valor por defecto, como "hoy" o el

@@ -5,7 +5,7 @@ import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { AppSidebar } from '@/components/app-sidebar';
-import { BrandMark } from '@/components/brand';
+import { BrandName } from '@/components/brand';
 import { NotificationBell } from '@/components/notification-bell';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -53,8 +53,7 @@ export function MobileNav(): React.ReactElement {
           <AppSidebar variant="drawer" onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
-      <BrandMark />
-      <span className="truncate text-sm font-semibold">Portal del área</span>
+      <BrandName showTagline={false} className="min-w-0" />
       <NotificationBell className="ml-auto" />
       <ThemeToggle />
     </header>

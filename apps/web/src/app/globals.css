@@ -37,35 +37,48 @@
   }
 }
 
+/*
+ * Marca GIBO (steering 25-marca-gibo.md). Valores maestros HEX en
+ * docs/branding/gibo/05_Web/gibo-tokens.css; aquí en OKLCH:
+ *   navy #0F2557 = oklch(0.281 0.095 263.6)   electric #176BEB = oklch(0.559 0.208 259.8)
+ *   link #145CCB = oklch(0.502 0.186 259.8)   cyan #20BFD1 = oklch(0.738 0.122 207.3)
+ *   lienzo #F4F6F8 = oklch(0.972 0.003 247.9) oscuro #08152E = oklch(0.200 0.053 261.9)
+ * «Lienzo Claro» (claro) y «Dark Tech» (oscuro). El texto en azul usa --link
+ * (más oscuro) porque el azul eléctrico sobre el lienzo da 4.47:1 (< 4.5:1).
+ */
 :root {
-  /* Acento de marca: único punto a cambiar cuando exista color corporativo */
-  --primary: oklch(0.47 0.15 258);
-  --primary-hover: oklch(0.42 0.14 258);
-  --primary-foreground: oklch(0.985 0.003 264);
-  --primary-subtle: oklch(0.955 0.017 258);
+  --primary: oklch(0.559 0.208 259.8);
+  --primary-hover: oklch(0.502 0.186 259.8);
+  --primary-foreground: oklch(1 0 0);
+  --primary-subtle: oklch(0.95 0.03 259.8);
+  --link: oklch(0.502 0.186 259.8);
+  --link-hover: oklch(0.281 0.095 263.6);
 
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.21 0.014 264);
-  --surface-subtle: oklch(0.975 0.003 264);
+  --background: oklch(0.972 0.003 247.9);
+  --foreground: oklch(0.281 0.095 263.6);
+  --surface-subtle: oklch(0.985 0.002 248);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.014 264);
+  --card-foreground: oklch(0.281 0.095 263.6);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.014 264);
-  --muted: oklch(0.965 0.004 264);
-  --muted-foreground: oklch(0.48 0.018 264);
-  --secondary: oklch(0.955 0.004 264);
-  --secondary-hover: oklch(0.925 0.008 264);
-  --secondary-foreground: oklch(0.21 0.014 264);
-  --accent: oklch(0.955 0.005 264);
-  --accent-foreground: oklch(0.21 0.014 264);
+  --popover-foreground: oklch(0.281 0.095 263.6);
+  --muted: oklch(0.945 0.006 250);
+  --muted-foreground: oklch(0.46 0.04 262);
+  --secondary: oklch(0.94 0.008 255);
+  --secondary-hover: oklch(0.91 0.012 255);
+  --secondary-foreground: oklch(0.281 0.095 263.6);
+  --accent: oklch(0.94 0.008 255);
+  --accent-foreground: oklch(0.281 0.095 263.6);
   --ring: var(--primary);
-  --border: oklch(0.915 0.006 264);
-  /* L bajado de 0.86 a 0.66: el borde de controles (botón outline, segmented,
-     radio-cards, badge outline) alcanza 3:1 sobre --background (WCAG 1.4.11). */
-  --border-strong: oklch(0.66 0.008 264);
-  --input: oklch(0.62 0.012 264);
+  /* Borde sutil (marino al 9 %): las tarjetas se separan con sombra, no con línea. */
+  --border: oklch(0.281 0.095 263.6 / 9%);
+  /* Borde de controles: 3:1 sobre el lienzo y sobre blanco (WCAG 1.4.11). */
+  --border-strong: oklch(0.62 0.03 260);
+  --input: oklch(0.6 0.03 260);
+
+  /* Sombra de tarjeta flotante (marino, muy suave). */
+  --shadow-card: 0 1px 2px oklch(0.281 0.095 263.6 / 6%), 0 6px 20px -6px oklch(0.281 0.095 263.6 / 10%);
 
   --success: oklch(0.46 0.12 150);
   --success-subtle: oklch(0.96 0.035 152);
@@ -80,49 +93,52 @@
   --info: oklch(0.47 0.13 258);
   --info-subtle: oklch(0.955 0.017 258);
   --info-border: oklch(0.86 0.04 258);
-  --neutral: oklch(0.42 0.016 264);
-  --neutral-subtle: oklch(0.955 0.004 264);
-  --neutral-border: oklch(0.88 0.008 264);
+  --neutral: oklch(0.42 0.03 262);
+  --neutral-subtle: oklch(0.945 0.006 250);
+  --neutral-border: oklch(0.88 0.01 255);
   --destructive: oklch(0.52 0.19 27);
   --destructive-hover: oklch(0.47 0.18 27);
   --destructive-foreground: oklch(0.985 0.003 264);
 
-  --sidebar: oklch(0.972 0.004 264);
-  --sidebar-foreground: oklch(0.36 0.016 264);
-  --sidebar-muted-foreground: oklch(0.49 0.016 264);
-  --sidebar-accent: oklch(0.925 0.008 264);
-  --sidebar-accent-foreground: oklch(0.21 0.014 264);
-  --sidebar-border: oklch(0.915 0.006 264);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.34 0.07 262);
+  --sidebar-muted-foreground: oklch(0.48 0.04 262);
+  --sidebar-accent: oklch(0.95 0.02 259.8);
+  --sidebar-accent-foreground: oklch(0.281 0.095 263.6);
+  --sidebar-border: oklch(0.281 0.095 263.6 / 9%);
 }
 
-/* Tema oscuro preparado; todavía no hay selector de tema en la interfaz. */
+/* «Dark Tech»: fondo marino profundo y superficies más claras que el fondo.
+   La tarjeta es un tono derivado entre #08152E y el marino #0F2557. */
 .dark {
-  /* Acento de marca: único punto a cambiar cuando exista color corporativo */
-  --primary: oklch(0.72 0.12 256);
-  --primary-hover: oklch(0.77 0.11 256);
-  --primary-foreground: oklch(0.18 0.03 262);
-  --primary-subtle: oklch(0.28 0.05 258);
+  --primary: oklch(0.559 0.208 259.8);
+  --primary-hover: oklch(0.502 0.186 259.8);
+  --primary-foreground: oklch(1 0 0);
+  --primary-subtle: oklch(0.31 0.09 262);
+  --link: oklch(0.738 0.122 207.3);
+  --link-hover: oklch(1 0 0);
 
-  --background: oklch(0.17 0.01 264);
-  --foreground: oklch(0.95 0.004 264);
-  --surface-subtle: oklch(0.195 0.011 264);
-  --card: oklch(0.2 0.011 264);
-  --card-foreground: oklch(0.95 0.004 264);
-  --popover: oklch(0.2 0.011 264);
-  --popover-foreground: oklch(0.95 0.004 264);
-  --muted: oklch(0.23 0.012 264);
-  --muted-foreground: oklch(0.72 0.014 264);
-  --secondary: oklch(0.25 0.012 264);
-  --secondary-hover: oklch(0.29 0.013 264);
-  --secondary-foreground: oklch(0.95 0.004 264);
-  --accent: oklch(0.25 0.012 264);
-  --accent-foreground: oklch(0.95 0.004 264);
+  --background: oklch(0.2 0.053 261.9);
+  --foreground: oklch(0.97 0.005 250);
+  --surface-subtle: oklch(0.215 0.058 262);
+  --card: oklch(0.245 0.068 262.5);
+  --card-foreground: oklch(0.97 0.005 250);
+  --popover: oklch(0.265 0.07 263);
+  --popover-foreground: oklch(0.97 0.005 250);
+  --muted: oklch(0.275 0.06 262.5);
+  --muted-foreground: oklch(0.76 0.03 255);
+  --secondary: oklch(0.295 0.065 263);
+  --secondary-hover: oklch(0.335 0.07 263);
+  --secondary-foreground: oklch(0.97 0.005 250);
+  --accent: oklch(0.295 0.065 263);
+  --accent-foreground: oklch(0.97 0.005 250);
   --ring: var(--primary);
   --border: oklch(1 0 0 / 10%);
-  /* L subido de 0.36 a 0.49: el borde de controles alcanza 3:1 sobre
-     --background en oscuro (WCAG 1.4.11). */
-  --border-strong: oklch(0.49 0.012 264);
-  --input: oklch(0.52 0.014 264);
+  /* Borde de controles: 3:1 sobre el fondo y sobre la tarjeta (WCAG 1.4.11). */
+  --border-strong: oklch(0.56 0.06 260);
+  --input: oklch(0.58 0.06 260);
+
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 30%), 0 8px 24px -8px oklch(0 0 0 / 40%);
 
   --success: oklch(0.8 0.13 152);
   --success-subtle: oklch(0.27 0.04 152);
@@ -137,21 +153,25 @@
   --info: oklch(0.78 0.1 256);
   --info-subtle: oklch(0.28 0.05 258);
   --info-border: oklch(0.42 0.07 258);
-  --neutral: oklch(0.82 0.01 264);
-  --neutral-subtle: oklch(0.27 0.01 264);
-  --neutral-border: oklch(0.36 0.012 264);
+  --neutral: oklch(0.82 0.02 255);
+  --neutral-subtle: oklch(0.285 0.04 262);
+  --neutral-border: oklch(0.38 0.05 262);
   --destructive: oklch(0.54 0.19 25);
   --destructive-hover: oklch(0.49 0.18 25);
   --destructive-foreground: oklch(0.985 0.003 264);
 
-  --sidebar: oklch(0.145 0.009 264);
-  --sidebar-foreground: oklch(0.82 0.01 264);
-  --sidebar-muted-foreground: oklch(0.66 0.014 264);
-  --sidebar-accent: oklch(0.25 0.012 264);
-  --sidebar-accent-foreground: oklch(0.97 0.003 264);
+  --sidebar: oklch(0.165 0.05 262);
+  --sidebar-foreground: oklch(0.86 0.02 255);
+  --sidebar-muted-foreground: oklch(0.72 0.03 258);
+  --sidebar-accent: oklch(0.285 0.07 263);
+  --sidebar-accent-foreground: oklch(0.98 0.003 250);
   --sidebar-border: oklch(1 0 0 / 8%);
 }
 
+/* Tarjeta flotante: superficie con sombra suave y sin contorno duro. */
+@utility shadow-card {
+  box-shadow: var(--shadow-card);
+}
 /* Se elimina la paleta neutral-50…950 de Tailwind (no se usa) para que
    text-neutral, bg-neutral-subtle y border-neutral-border sean los tokens
    semánticos. text-meta es el tamaño de 13/18 px de §5.2. */
@@ -162,6 +182,7 @@
 }
 
 @theme inline {
+  --font-heading: var(--font-montserrat, ui-sans-serif), system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-sans: var(--font-inter, ui-sans-serif), system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -187,6 +208,8 @@
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-subtle: var(--primary-subtle);
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
   --color-destructive: var(--destructive);
   --color-destructive-hover: var(--destructive-hover);
   --color-destructive-foreground: var(--destructive-foreground);
@@ -222,6 +245,11 @@
   * {
     border-color: var(--border);
     outline-color: var(--ring);
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
   }
   body {
     background-color: var(--background);

@@ -82,7 +82,7 @@ export function DataView({
     content = children;
   }
   return (
-    <div className={cn(bordered && 'overflow-hidden rounded-lg border bg-card')}>
+    <div className={cn(bordered && 'overflow-hidden rounded-xl border bg-card shadow-card')}>
       {statusText !== undefined ? (
         <p role="status" className="sr-only">
           {statusText}

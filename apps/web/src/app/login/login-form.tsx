@@ -147,7 +147,7 @@ export function LoginForm(): React.ReactElement {
           <div className="text-meta">
             <Link
               href="/olvide-contrasena"
-              className="text-primary underline-offset-4 hover:underline"
+              className="text-link underline-offset-4 hover:underline"
             >
               ¿Olvidaste tu contraseña?
             </Link>
