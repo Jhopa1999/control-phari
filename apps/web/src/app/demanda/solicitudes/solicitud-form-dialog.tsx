@@ -327,7 +327,11 @@ export function SolicitudFormDialog({
               {/* Fases del flujo: solo informativas. Las fases siguientes se
                   resuelven en sus propios módulos (Triage, Priorización y
                   Aprobaciones) y se muestran con candado (UI-04). */}
-              <nav aria-label="Fases del flujo">
+              <nav aria-label="Fases del flujo" className="flex flex-col gap-1.5">
+                {/* Título visible: sin él, las fases se leían como pestañas. */}
+                <p aria-hidden="true" className="text-meta font-medium text-muted-foreground">
+                  Fases del flujo
+                </p>
                 <ol className="flex flex-wrap gap-2">
                   {PHASES.map((phase, index) => {
                     const current = phase.key === 'solicitud';
@@ -352,7 +356,7 @@ export function SolicitudFormDialog({
               </nav>
               <p className="text-meta text-muted-foreground">
                 {isEdit
-                  ? 'El triage está disponible tras registrar; la priorización, solo si el triage es Continuar; la aprobación, tras priorizar. Cada fase se resuelve en su módulo.'
+                  ? 'Las fases con candado se resuelven en su propio módulo: la priorización, solo si el triage es Continuar; la aprobación, tras priorizar.'
                   : 'Al registrarla quedará en estado Registrada y habilitará el triage.'}
               </p>
             </div>

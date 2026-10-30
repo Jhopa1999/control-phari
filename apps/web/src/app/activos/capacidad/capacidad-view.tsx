@@ -640,14 +640,8 @@ export function CapacidadView(): React.ReactElement {
           empty={{
             icon: CalendarClock,
             title: 'Aún no hay disponibilidad este mes.',
-            description: 'Registra las horas que cada persona tiene en el mes.',
-            size: 'compact',
-            action: (
-              <Button variant="outline" size="sm" onClick={openCreateDisp}>
-                <Plus aria-hidden="true" />
-                Registrar disponibilidad
-              </Button>
-            ),
+            description: 'Usa «Registrar disponibilidad» para indicar las horas de cada persona.',
+            size: 'inline',
           }}
         >
           <Table scrollLabel="Tabla de disponibilidad">
@@ -708,14 +702,8 @@ export function CapacidadView(): React.ReactElement {
           empty={{
             icon: CalendarClock,
             title: 'Aún no hay asignaciones este mes.',
-            description: 'Asigna horas de una persona a un proceso o a una solicitud.',
-            size: 'compact',
-            action: (
-              <Button variant="outline" size="sm" onClick={openCreateAsig}>
-                <Plus aria-hidden="true" />
-                Nueva asignación
-              </Button>
-            ),
+            description: 'Usa «Nueva asignación» para asignar horas a un proceso o a una solicitud.',
+            size: 'inline',
           }}
         >
           <Table scrollLabel="Tabla de asignaciones">
