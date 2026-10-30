@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { CalendarClock, Plus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
@@ -127,53 +128,67 @@ export function ActividadesRecurrentesView(): React.ReactElement {
   const [defSubmitting, setDefSubmitting] = React.useState(false);
   const [defFormError, setDefFormError] = React.useState<string | null>(null);
 
-  const loadOccurrences = React.useCallback(async () => {
+  const fetchOccurrences = React.useCallback(() => {
+    return listOccurrences({ scope: 'mine', pageSize: 100 })
+      .then((page) => {
+        setOccurrences(page.data);
+        setOccState('success');
+      })
+      .catch((err: unknown) => {
+        setOccError(messageOf(err));
+        setOccState('error');
+      });
+  }, []);
+  const loadOccurrences = React.useCallback(() => {
     setOccState('loading');
-    try {
-      const page = await listOccurrences({ scope: 'mine', pageSize: 100 });
-      setOccurrences(page.data);
-      setOccState('success');
-    } catch (err) {
-      setOccError(messageOf(err));
-      setOccState('error');
-    }
-  }, []);
+    return fetchOccurrences();
+  }, [fetchOccurrences]);
 
-  const loadActivities = React.useCallback(async () => {
+  const fetchActivities = React.useCallback(() => {
+    return listActivities()
+      .then((data) => {
+        setActivities(data);
+        setDefState('success');
+      })
+      .catch((err: unknown) => {
+        setDefError(messageOf(err));
+        setDefState('error');
+      });
+  }, []);
+  const loadActivities = React.useCallback(() => {
     setDefState('loading');
-    try {
-      const data = await listActivities();
-      setActivities(data);
-      setDefState('success');
-    } catch (err) {
-      setDefError(messageOf(err));
-      setDefState('error');
-    }
+    return fetchActivities();
+  }, [fetchActivities]);
+
+  const loadReferences = React.useCallback(() => {
+    return Promise.all([
+      listCatalogItems({ catalog: ACTIVITY_TYPE_CATALOG, active: true }),
+      listUsers(),
+      listAreas({ active: true }),
+    ])
+      .then(([types, userList, areaList]) => {
+        setActivityTypes(types);
+        setUsers(userList);
+        setAreas(areaList);
+      })
+      .catch(() => {
+        // Las referencias son auxiliares; su fallo no rompe la vista principal.
+      });
   }, []);
 
-  const loadReferences = React.useCallback(async () => {
-    try {
-      const [types, userList, areaList] = await Promise.all([
-        listCatalogItems({ catalog: ACTIVITY_TYPE_CATALOG, active: true }),
-        listUsers(),
-        listAreas({ active: true }),
-      ]);
-      setActivityTypes(types);
-      setUsers(userList);
-      setAreas(areaList);
-    } catch {
-      // Las referencias son auxiliares; su fallo no rompe la vista principal.
-    }
-  }, []);
-
+  // Al cambiar de usuario se vuelve a mostrar la carga.
+  useResetOnChange([actorId], () => setOccState('loading'));
   React.useEffect(() => {
-    void loadOccurrences();
+    void fetchOccurrences();
     void loadReferences();
-  }, [loadOccurrences, loadReferences, actorId]);
+  }, [fetchOccurrences, loadReferences, actorId]);
 
+  useResetOnChange([canManage, actorId], () => {
+    if (canManage) setDefState('loading');
+  });
   React.useEffect(() => {
-    if (canManage) void loadActivities();
-  }, [canManage, loadActivities, actorId]);
+    if (canManage) void fetchActivities();
+  }, [canManage, fetchActivities, actorId]);
 
   // --- Acciones de ocurrencias ---
   function openComplete(occurrence: RecurringOccurrence): void {

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { ChartGantt, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { CellTitle } from '@/components/data-table';
@@ -58,34 +59,44 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
   const bodyRef = React.useRef<HTMLTableSectionElement>(null);
   const headingRef = React.useRef<HTMLHeadingElement>(null);
 
-  const load = React.useCallback(async () => {
-    setState('loading');
-    try {
-      // No existe un endpoint de «planes pendientes»: se derivan de las
-      // solicitudes EN_PLANIFICACION en alcance y se filtra por estado del plan.
-      const requests = await listRequests({ state: 'EN_PLANIFICACION' });
-      const settled = await Promise.allSettled(
-        requests.map(async (request) => {
-          const plan = await getPlan(request.id);
-          return { plan, request };
-        }),
-      );
-      const pending = settled
-        .filter(
-          (r): r is PromiseFulfilledResult<PlanRow> =>
-            r.status === 'fulfilled' && r.value.plan.status === 'EN_AUTORIZACION',
-        )
-        .map((r) => r.value);
-      setRows(pending);
-      setState('success');
-    } catch {
-      setState('error');
-    }
+  const fetchPlans = React.useCallback(() => {
+    // No existe un endpoint de «planes pendientes»: se derivan de las
+    // solicitudes EN_PLANIFICACION en alcance y se filtra por estado del plan.
+    return listRequests({ state: 'EN_PLANIFICACION' })
+      .then((requests) =>
+        Promise.allSettled(
+          requests.map(async (request) => {
+            const plan = await getPlan(request.id);
+            return { plan, request };
+          }),
+        ),
+      )
+      .then((settled) => {
+        const pending = settled
+          .filter(
+            (r): r is PromiseFulfilledResult<PlanRow> =>
+              r.status === 'fulfilled' && r.value.plan.status === 'EN_AUTORIZACION',
+          )
+          .map((r) => r.value);
+        setRows(pending);
+        setState('success');
+      })
+      .catch(() => {
+        setState('error');
+      });
   }, []);
+  const load = React.useCallback(() => {
+    setState('loading');
+    return fetchPlans();
+  }, [fetchPlans]);
 
+  // Al cambiar de usuario se vuelve a mostrar la carga.
+  useResetOnChange([canReview, actorId], () => {
+    if (canReview) setState('loading');
+  });
   React.useEffect(() => {
-    if (canReview) void load();
-  }, [canReview, load, actorId]);
+    if (canReview) void fetchPlans();
+  }, [canReview, fetchPlans, actorId]);
 
   const returnFocusTo = React.useCallback(
     () => focusTargetAfterRemoval(bodyRef.current, rowIndexRef.current, headingRef.current),
