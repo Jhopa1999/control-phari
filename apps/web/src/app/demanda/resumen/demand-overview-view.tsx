@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import Link from 'next/link';
 import { ErrorState } from '@/components/error-state';
 import { InlineNotice } from '@/components/inline-notice';
@@ -400,37 +401,44 @@ export function DemandOverviewView(): React.ReactElement {
   }, []);
 
   const [indicators, setIndicators] = React.useState<AreaIndicators | null>(null);
-  const [state, setState] = React.useState<LoadState>('loading');
+  const [loadedState, setState] = React.useState<LoadState>('loading');
+  const state: LoadState = permissionsLoaded && !moduleAllowed ? 'forbidden' : loadedState;
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  const load = React.useCallback(async (rangeFrom: string, rangeTo: string) => {
+  const fetchIndicators = React.useCallback((rangeFrom: string, rangeTo: string) => {
+    return getAreaIndicators({ from: rangeFrom, to: rangeTo })
+      .then((data) => {
+        setIndicators(data);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiError && err.status === 403) {
+          setState('forbidden');
+          return;
+        }
+        setErrorMessage(messageOf(err));
+        setState('error');
+      });
+  }, []);
+  const load = React.useCallback((rangeFrom: string, rangeTo: string) => {
     setState('loading');
     setErrorMessage(null);
-    try {
-      const data = await getAreaIndicators({ from: rangeFrom, to: rangeTo });
-      setIndicators(data);
-      setState('success');
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
-        setState('forbidden');
-        return;
-      }
-      setErrorMessage(messageOf(err));
-      setState('error');
-    }
-  }, []);
+    return fetchIndicators(rangeFrom, rangeTo);
+  }, [fetchIndicators]);
 
+  // Al cambiar el periodo se vuelve a mostrar la carga.
+  useResetOnChange([from, to], () => {
+    if (!from || !to) return;
+    setState('loading');
+    setErrorMessage(null);
+  });
   React.useEffect(() => {
     // No llamar mientras no se conozcan los permisos; si el módulo no está
-    // permitido, mostrar el aviso sin llamar al backend.
-    if (!permissionsLoaded) return;
-    if (!moduleAllowed) {
-      setState('forbidden');
-      return;
-    }
+    // permitido, el aviso sale del estado derivado y no se llama al backend.
+    if (!permissionsLoaded || !moduleAllowed) return;
     if (!from || !to) return;
-    void load(from, to);
-  }, [permissionsLoaded, moduleAllowed, from, to, load]);
+    void fetchIndicators(from, to);
+  }, [permissionsLoaded, moduleAllowed, from, to, fetchIndicators]);
 
   let content: React.ReactNode;
   if (state === 'forbidden') {

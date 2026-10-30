@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
@@ -93,25 +94,31 @@ export function TaskDetail({
   const progressRef = React.useRef<HTMLInputElement>(null);
   const formId = embedded ? 'task-status-form-panel' : 'task-status-form';
 
-  const load = React.useCallback(async (id: string) => {
-    setState('loading');
-    try {
-      const data = await getTask(id);
-      setTask(data);
-      setProgress(String(data.progress));
-      setEvidenceUrl(data.evidenceUrl ?? '');
-      setNextStatus('');
-      setFieldErrors({});
-      setFormError(null);
-      setState('success');
-    } catch {
-      setState('error');
-    }
+  const fetchTask = React.useCallback((id: string) => {
+    return getTask(id)
+      .then((data) => {
+        setTask(data);
+        setProgress(String(data.progress));
+        setEvidenceUrl(data.evidenceUrl ?? '');
+        setNextStatus('');
+        setFieldErrors({});
+        setFormError(null);
+        setState('success');
+      })
+      .catch(() => {
+        setState('error');
+      });
   }, []);
+  const load = React.useCallback((id: string) => {
+    setState('loading');
+    return fetchTask(id);
+  }, [fetchTask]);
 
+  // Al cambiar de tarea se vuelve a mostrar la carga.
+  useResetOnChange([taskId], () => setState('loading'));
   React.useEffect(() => {
-    void load(taskId);
-  }, [taskId, load]);
+    void fetchTask(taskId);
+  }, [taskId, fetchTask]);
 
   function clearFieldError(key: FieldKey): void {
     setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));

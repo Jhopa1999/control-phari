@@ -81,13 +81,15 @@ export function ClosurePanel({
   const [dialogError, setDialogError] = React.useState<string | null>(null);
   const [docOpen, setDocOpen] = React.useState(false);
 
-  const load = React.useCallback(async () => {
-    try {
-      setStatus(await getClosureStatus(request.id));
-      setLoadError(null);
-    } catch (err) {
-      setLoadError(messageOf(err));
-    }
+  const load = React.useCallback(() => {
+    return getClosureStatus(request.id)
+      .then((next) => {
+        setStatus(next);
+        setLoadError(null);
+      })
+      .catch((err: unknown) => {
+        setLoadError(messageOf(err));
+      });
   }, [request.id]);
 
   React.useEffect(() => {

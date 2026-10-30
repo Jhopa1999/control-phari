@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { FolderKanban } from 'lucide-react';
 import {
   CellTitle,
@@ -169,24 +170,27 @@ export function PortafolioView(): React.ReactElement {
       .catch(() => setRoutes([]));
   }, []);
 
-  const load = React.useCallback(
-    async (filters: {
-      mainProcessId?: string;
-      state?: string;
-      band?: string;
-    }) => {
-      setState('loading');
-      setErrorMessage(null);
-      try {
-        const data = await listPortfolio(filters);
-        setItems(data);
-        setState('success');
-      } catch (err) {
-        setErrorMessage(messageOf(err));
-        setState('error');
-      }
+  const fetchPortfolio = React.useCallback(
+    (filters: { mainProcessId?: string; state?: string; band?: string }) => {
+      return listPortfolio(filters)
+        .then((data) => {
+          setItems(data);
+          setState('success');
+        })
+        .catch((err: unknown) => {
+          setErrorMessage(messageOf(err));
+          setState('error');
+        });
     },
     [],
+  );
+  const load = React.useCallback(
+    (filters: { mainProcessId?: string; state?: string; band?: string }) => {
+      setState('loading');
+      setErrorMessage(null);
+      return fetchPortfolio(filters);
+    },
+    [fetchPortfolio],
   );
 
   const activeFilters = React.useMemo(
@@ -199,9 +203,14 @@ export function PortafolioView(): React.ReactElement {
   );
 
   // Filtros de servidor: recarga automática al cambiar, como hasta ahora.
+  // Al cambiar los filtros se vuelve a mostrar la carga.
+  useResetOnChange([activeFilters], () => {
+    setState('loading');
+    setErrorMessage(null);
+  });
   React.useEffect(() => {
-    void load(activeFilters);
-  }, [activeFilters, load]);
+    void fetchPortfolio(activeFilters);
+  }, [activeFilters, fetchPortfolio]);
 
   const hasServerFilters = processId !== ANY || stateFilter !== ANY || bandFilter !== ANY;
   const hasFilters = hasServerFilters || query.trim() !== '';

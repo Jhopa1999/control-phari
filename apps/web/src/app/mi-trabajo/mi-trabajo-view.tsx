@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { ListChecks, RefreshCw } from 'lucide-react';
 import {
   CellTitle,
@@ -76,22 +77,28 @@ export function MiTrabajoView(): React.ReactElement {
   const [status, setStatus] = React.useState(ALL);
   const searchRef = React.useRef<HTMLInputElement>(null);
 
-  const load = React.useCallback(async () => {
-    setState('loading');
-    try {
-      const data = await listMyWork();
-      setItems(data);
-      setState('success');
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : null);
-      setState('error');
-    }
+  const fetchItems = React.useCallback(() => {
+    return listMyWork()
+      .then((data) => {
+        setItems(data);
+        setState('success');
+      })
+      .catch((err: unknown) => {
+        setErrorMessage(err instanceof Error ? err.message : null);
+        setState('error');
+      });
   }, []);
+  const load = React.useCallback(() => {
+    setState('loading');
+    return fetchItems();
+  }, [fetchItems]);
 
   // Recarga también al cambiar de actor, como hasta ahora.
+  // Al cambiar de usuario se vuelve a mostrar la carga.
+  useResetOnChange([actorId], () => setState('loading'));
   React.useEffect(() => {
-    void load();
-  }, [load, actorId]);
+    void fetchItems();
+  }, [fetchItems, actorId]);
 
   const hasFilters = query.trim() !== '' || status !== ALL;
   const filter = React.useCallback(
