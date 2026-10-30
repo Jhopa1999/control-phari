@@ -67,7 +67,8 @@ export function ConfiguracionSmtpView(): React.ReactElement {
   const permissionsLoaded = permissions !== null;
   const settingsAllowed = allowedModules.has('systemSettings');
   const [config, setConfig] = React.useState<SmtpConfig | null>(null);
-  const [state, setState] = React.useState<LoadState>('loading');
+  const [loadedState, setState] = React.useState<LoadState>('loading');
+  const state: LoadState = permissionsLoaded && !settingsAllowed ? 'forbidden' : loadedState;
   const [loadError, setLoadError] = React.useState<string | null>(null);
   // Campos del formulario SMTP.
   const [host, setHost] = React.useState('');
@@ -100,34 +101,34 @@ export function ConfiguracionSmtpView(): React.ReactElement {
     setPasswordMode('keep');
     setPassword('');
   }, []);
-  const load = React.useCallback(
-    async (silent = false) => {
-      if (!silent) setState('loading');
-      try {
-        const [c, users] = await Promise.all([getSmtpConfig(), listAdminUsers()]);
+  const fetchConfig = React.useCallback(() => {
+    return Promise.all([getSmtpConfig(), listAdminUsers()])
+      .then(([c, users]) => {
         setConfig(c);
         setAdminUsers(users);
         fillForm(c);
         setState('success');
-      } catch (err) {
+      })
+      .catch((err: unknown) => {
         if (err instanceof ApiError && err.status === 403) {
           setState('forbidden');
           return;
         }
         setLoadError(err instanceof Error ? err.message : null);
         setState('error');
-      }
+      });
+  }, [fillForm]);
+  const load = React.useCallback(
+    (silent = false) => {
+      if (!silent) setState('loading');
+      return fetchConfig();
     },
-    [fillForm],
+    [fetchConfig],
   );
   React.useEffect(() => {
-    if (!permissionsLoaded) return;
-    if (!settingsAllowed) {
-      setState('forbidden');
-      return;
-    }
-    void load();
-  }, [permissionsLoaded, settingsAllowed, load]);
+    if (!permissionsLoaded || !settingsAllowed) return;
+    void fetchConfig();
+  }, [permissionsLoaded, settingsAllowed, fetchConfig]);
   function validate(): FormErrors | null {
     const next: FormErrors = {};
     if (host.trim() === '') next.host = 'El host es obligatorio.';

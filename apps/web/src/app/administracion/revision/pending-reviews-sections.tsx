@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { FileCheck2, Lock, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { CellTitle } from '@/components/data-table';
@@ -55,23 +56,33 @@ export function PendingReviewsSections(): React.ReactElement | null {
   const [rejecting, setRejecting] = React.useState<Rejecting | null>(null);
   const [rejectError, setRejectError] = React.useState<string | null>(null);
 
-  const load = React.useCallback(async () => {
+  const fetchPending = React.useCallback(() => {
+    return Promise.allSettled([listPendingDocuments(), listPendingClosures()]).then(([d, c]) => {
+      if (d.status === 'fulfilled') {
+        setDocs(d.value);
+        setDocState('success');
+      } else setDocState('error');
+      if (c.status === 'fulfilled') {
+        setClosures(c.value);
+        setClosureState('success');
+      } else setClosureState('error');
+    });
+  }, []);
+  const load = React.useCallback(() => {
     setDocState('loading');
     setClosureState('loading');
-    const [d, c] = await Promise.allSettled([listPendingDocuments(), listPendingClosures()]);
-    if (d.status === 'fulfilled') {
-      setDocs(d.value);
-      setDocState('success');
-    } else setDocState('error');
-    if (c.status === 'fulfilled') {
-      setClosures(c.value);
-      setClosureState('success');
-    } else setClosureState('error');
-  }, []);
+    return fetchPending();
+  }, [fetchPending]);
 
+  // Al cambiar de usuario se vuelve a mostrar la carga.
+  useResetOnChange([canReview, actorId], () => {
+    if (!canReview) return;
+    setDocState('loading');
+    setClosureState('loading');
+  });
   React.useEffect(() => {
-    if (canReview) void load();
-  }, [canReview, load, actorId]);
+    if (canReview) void fetchPending();
+  }, [canReview, fetchPending, actorId]);
 
   if (!canReview) return null;
 
