@@ -73,9 +73,8 @@ test.describe('móvil 375×800', () => {
     expect(noHorizontalScroll).toBe(true);
 
     // Cada tarjeta lleva su menú «…» con objetivo táctil de 44 px.
-    const menu = list
-      .getByRole('button', { name: 'Más acciones para «Solicitud e2e 01»' })
-      .first();
+    const menu = list.getByRole('button', { name: /^Más acciones para «Solicitud e2e/ }).first();
+    await expect(menu).toBeVisible();
     const box = await menu.boundingBox();
     expect(box?.width).toBeGreaterThanOrEqual(44);
     expect(box?.height).toBeGreaterThanOrEqual(44);
