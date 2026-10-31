@@ -25,9 +25,9 @@ cueste poco. La propuesta está diseñada alrededor de esas tres garantías.
 
 | # | Decisión | Por qué, en una línea |
 |---|----------|----------------------|
-| D1 | Agente propio en NestJS sobre la API Converse de Bedrock (no Bedrock Agents ni AgentCore) | Bedrock Agents Classic está cerrado a cuentas nuevas desde el 30-jul-2026; AgentCore añade una plataforma que duplicaría permisos y auditoría |
-| D2 | **El agente nunca escribe**: propone borradores y la persona los confirma con los endpoints REST de siempre | Cero reglas de negocio duplicadas y cero caminos de escritura nuevos |
-| D3 | El agente actúa **como el usuario** (su alcance, sus roles, su auditoría) | La seguridad de hoy se hereda sin reescribirla |
+| D1 | Agente propio en NestJS sobre la API Converse de Bedrock (no Bedrock Agents ni AgentCore) que **usa el MCP del portal como única puerta de herramientas** | Bedrock Agents Classic está cerrado a cuentas nuevas desde el 30-jul-2026; AgentCore duplicaría permisos y auditoría; el MCP ya es el catálogo de capacidades del portal |
+| D2 | **El agente nunca escribe por su cuenta**: propone borradores y, cuando la persona confirma, se ejecuta la misma herramienta del MCP con el token de esa persona | Cero reglas de negocio duplicadas y cero caminos de escritura nuevos; la API sigue aplicando sus reglas y su auditoría |
+| D3 | El agente actúa **como el usuario**: su token viaja al MCP y de ahí a la API | Alcance, roles y auditoría de hoy se heredan sin reescribirlos |
 | D4 | Todo lo que entra (imagen, PDF, audio) se convierte en **texto visible y editable** antes de usarse | Transparente, auditable y barato; el humano corrige errores del OCR o de la transcripción |
 | D5 | Conocimiento en **PostgreSQL con pgvector**, filtrado por alcance en SQL | Los permisos nunca quedan desactualizados; un solo respaldo; sin servicios nuevos |
 | D6 | Modelos y prompts **en la base de datos**, con catálogo de capacidades | Cumple el principio «todo se gestiona desde la plataforma» y evita romper con modelos nuevos |
@@ -82,7 +82,7 @@ repositorio y en decisiones previas):
 | Almacenamiento | `StorageService` + bucket S3 privado + subida multipart | Sirve para adjuntos |
 | Documentos | `Document` / `DocumentVersion` en Markdown con aprobación | Primera fuente de conocimiento |
 | Scheduler | `@nestjs/schedule` en uso (actividades recurrentes) | Procesos en segundo plano sin infraestructura nueva |
-| MCP | 47 herramientas por HTTP con token por persona | Referencia de qué operaciones existen; no se usa dentro del asistente |
+| MCP | 47 herramientas por HTTP con token por persona por petición | **Es la capa de herramientas del asistente.** Hay que mejorarla: contrato completo, esquemas tipados, anotaciones de solo lectura y familias que faltan (sección 5.2) |
 | UI | Barra superior con notificaciones y menú de usuario, `Sheet`, `Dialog`, `Tabs` | Lugar natural para el asistente |
 
 ### 3.2 Hallazgos del entorno que condicionan el diseño
@@ -102,6 +102,8 @@ repositorio y en decisiones previas):
 | H11 | Los **Knowledge Bases gestionados** cambiaron su API en oct-2026 (`retrieve_and_generate` ya no sirve con ellos) | Fuente secundaria (blog), **no verificado** con AWS | Señal de que atarse a su API cuesta mantenimiento |
 | H12 | Amazon Transcribe español: variantes `es-ES`, `es-US` y `es-MX` (no hay `es-CO`) | Documentación de AWS | Se usa `es-US` (neutro latinoamericano) |
 | H13 | Bedrock **no almacena** los textos, imágenes ni documentos que se le envían; solo los usa para generar la respuesta | Documentación de la API Converse | Respalda el uso con datos internos; la política de la empresa debe confirmarlo |
+| H14 | El MCP cubre **47 de 186 endpoints** (25 %) y **21 de 76 lecturas** (28 %); 0 herramientas declaran ser de solo lectura y 25 reciben un `body` sin campos | Medido (contrato y MCP en marcha) | Mejorarlo (MCP v2) es el primer paso para que cualquier agente trabaje bien, incluido Kiro |
+| H15 | El OpenAPI omite 28 filtros de 8 listados porque se genera con `tsx` | Medido: generado desde código compilado el cambio es solo aditivo | Corregir la generación del contrato es un cambio pequeño y seguro con efecto grande |
 
 ### 3.3 Pruebas que ejecuté (resultados medidos)
 
@@ -151,7 +153,7 @@ flowchart LR
   subgraph API["apps/api (módulo assistant)"]
     S["POST /assistant/...<br/>(SSE en streaming)"]
     L["Bucle del agente<br/>(Converse + herramientas)"]
-    T["Registro de herramientas<br/>lectura + proponer"]
+    T["Cliente MCP + compuerta<br/>(lectura / propuesta)"]
     I["Ingesta: texto / imagen /<br/>PDF-Office / audio"]
     R["Recuperación híbrida<br/>(vector + texto, con alcance)"]
     G["Presupuesto, auditoría,<br/>bitácora de uso"]
@@ -169,8 +171,10 @@ flowchart LR
   A --> API
   S --> L --> T
   L --> B
-  T -->|servicios existentes<br/>con el actor del usuario| PG
-  T --> R --> PG
+  T -->|token del usuario| M["MCP del portal<br/>(capa delgada)"]
+  M --> AP["API REST<br/>reglas, alcance, auditoría"] --> PG
+  K["Clientes externos<br/>(Kiro…)"] --> M
+  R -.herramienta buscar_conocimiento<br/>expuesta por API y MCP.-> PG
   I --> S3
   I --> TR
   I --> B
@@ -183,11 +187,13 @@ flowchart LR
 1. La persona escribe (o adjunta). El backend arma el contexto: instrucciones del
    agente (de BD), historial reciente, página desde la que se invocó y, si aplica,
    los fragmentos recuperados.
-2. Se llama a Bedrock con la API **Converse** y la lista de herramientas
-   permitidas para ese agente y ese rol.
-3. Si el modelo pide una herramienta, el backend la ejecuta **con el actor del
-   usuario** y devuelve el resultado; se repite hasta un máximo de turnos
-   configurable (6 por defecto).
+2. Se llama a Bedrock con la API **Converse** y las herramientas del MCP que ese
+   agente y ese rol tienen permitidas (lista obtenida del MCP con el token de la
+   persona y filtrada por la compuerta).
+3. Si el modelo pide una herramienta, la compuerta decide: las de solo lectura se
+   ejecutan en el MCP **con el token de la persona** y su resultado vuelve al
+   modelo; las demás se convierten en propuesta (sección 5.3). Se repite hasta un
+   máximo de turnos configurable (6 por defecto).
 4. La respuesta se entrega por **SSE** (texto parcial, avisos de progreso como
    «Buscando duplicados…» y tarjetas de propuesta).
 5. Cada turno guarda mensajes, herramientas usadas, modelo, tokens y latencia.
@@ -195,48 +201,101 @@ flowchart LR
 Con las pruebas: 3 turnos tardan 6 a 10 s, por eso el streaming y el progreso
 visible no son opcionales.
 
-### 5.2 Herramientas del agente
+### 5.2 Herramientas: el MCP del portal es la única puerta
 
-**Lectura** (siempre dentro del alcance del usuario, reutilizando servicios):
-`buscar_solicitudes`, `ver_solicitud`, `ver_plan_y_tareas`,
-`listar_pendientes_y_vencidos`, `buscar_documentos`, `buscar_conocimiento`,
-`ver_maestras` (códigos válidos de ruta, criticidad, tamaño, etc.),
-`ver_adjunto` (texto extraído).
+El asistente **no tiene un catálogo de herramientas propio**. Usa el MCP del
+portal, el mismo que usa Kiro:
 
-**Propuesta** (no escriben; devuelven un borrador validado y lo guardan como
-*propuesta pendiente*): `proponer_solicitud`, `proponer_cambio_de_solicitud`,
-`proponer_triage`, `proponer_tareas`, `proponer_resumen_de_estado`,
-`proponer_compromisos_de_reunion`.
+```text
+API REST (fuente de verdad: reglas, alcance, auditoría)
+      ▲
+MCP del portal (catálogo de herramientas, capa delgada)
+      ▲                         ▲
+Clientes externos (Kiro…)       Asistente del portal (cliente MCP dentro del backend)
+```
 
-Reglas de diseño de las herramientas:
+- El backend del asistente se conecta al MCP por la red interna
+  (`http://mcp:3002`) como cliente Streamable HTTP y **reenvía el token de la
+  persona en cada llamada**, exactamente igual que un cliente externo. Los
+  permisos, el alcance y la auditoría son los de esa persona; el asistente no
+  tiene privilegios propios.
+- **Viabilidad medida** contra el MCP en marcha: conectar 107 ms, listar las 47
+  herramientas 22 ms, llamadas de lectura de 34 a 164 ms. El salto extra es
+  insignificante frente a los 2 a 3 s que tarda cada turno del modelo.
+- Se respeta la regla del MCP: **no se inventan herramientas**; cada una mapea un
+  endpoint del contrato OpenAPI. Si el asistente necesita una capacidad nueva,
+  primero se crea en la API y luego se expone en el MCP.
 
-- **Los esquemas de entrada salen de los DTO y del OpenAPI existentes**, no de
-  una copia a mano. Un borrador que no pasa la validación del DTO ni se muestra.
-- **No existen herramientas de borrado ni de cambio de estado** en la primera
-  versión. Lo que no existe no se puede inducir (la prueba de inyección lo
-  confirmó: el modelo respondió que no tenía esa herramienta).
-- Las listas cerradas (rutas, criticidad, tamaño…) se entregan como opciones
-  reales de las maestras y se verifican después, igual que hace hoy el triage.
+**Análisis del contrato y del MCP (medido sobre el repositorio y el MCP en marcha):**
+
+- El contrato OpenAPI tiene **186 endpoints**; el MCP expone **47 (25 %)**. De los
+  **76 de lectura, solo 21 (28 %)**. Es decir: casi todo lo que el asistente
+  necesita para responder sobre proyectos **ya existe en la API**; falta exponerlo
+  bien. No hay que inventar lógica de negocio, sí completar la puerta.
+- Sin ninguna herramienta hoy: bitácora y reportes semanales (5 lecturas),
+  documentos (6), actividades recurrentes (5), capacidad (4), activos (3),
+  indicadores y «requiere atención» (3), reuniones (2), compromisos (2), novedades
+  (2), cierre de proyecto (2), evidencias de tareas (2), notificaciones, «mi
+  trabajo», fases del plan, predecesoras y validaciones de gobierno.
+
+| Hallazgo | Efecto en un modelo | Solución («MCP v2») |
+|----------|--------------------|--------------------|
+| **El contrato omite 28 filtros en 8 listados** (documentos, activos, tareas del plan, bitácora, reportes semanales, novedades, reuniones y compromisos) y el cuerpo de `/auth/login`. Causa: el OpenAPI se genera con `tsx`, que no emite los metadatos de decoradores que NestJS necesita para leer los DTO de consulta | Ni el cliente tipado ni el MCP pueden filtrar (por ejemplo, documentos por solicitud) | Generar el contrato desde el **código compilado**. Probado: el cambio es **solo aditivo** (0 operaciones, parámetros, esquemas o respuestas quitados o modificados; +28 parámetros; +1 esquema) |
+| 25 de 47 herramientas reciben un `body` libre | El modelo no ve los campos (`request.create` solo dice «un objeto»), así que los adivina | Esquemas de entrada **generados desde el OpenAPI** (una sola fuente, sin copias a mano) y con descripciones en español |
+| 0 de 47 declaran si son de solo lectura | No se puede decidir automáticamente qué ejecutar y qué pedir confirmar | **Anotaciones estándar de MCP** (`readOnlyHint`, `destructiveHint`, `idempotentHint`) en cada herramienta |
+| Faltan familias enteras: documentos, activos, reuniones y compromisos, novedades, bitácora, capacidad, indicadores y «requiere atención», cierre de proyecto, actividades recurrentes, notificaciones | No puede responder preguntas sobre esas áreas | Herramientas de **solo lectura** para cada familia, apoyadas en endpoints que ya existen |
+| Para entender un proyecto hay que encadenar muchas llamadas (solicitud, triage, prioridad, aprobación, plan, tareas, gates, cierre…), y novedades, reuniones y compromisos **ni siquiera se pueden filtrar por solicitud** (solo por proceso, estado o responsable) | Más turnos, más latencia y más costo, y respuestas incompletas | Un endpoint agregado **ficha del proyecto** (`GET /requests/{id}/dossier`) que reúne todo con el alcance de la persona, y su herramienta `project.dossier` |
+
+Estas mejoras **benefician también a Kiro y a cualquier otro cliente MCP**: es un
+producto en sí mismo, por eso va como fase propia (F1).
+
+**Compuerta del asistente** (entre el modelo y el MCP):
+
+- Herramientas con `readOnlyHint` se ejecutan solas, dentro del alcance de la persona.
+- Las demás **no se ejecutan**: se convierten en una *propuesta pendiente*
+  (sección 5.3).
+- Administración puede, por agente y por rol, **permitir, negar o exigir
+  confirmación** de cada herramienta (tabla en BD, sin redeploy).
+- En la primera versión **no se exponen al asistente** las herramientas
+  administrativas (`user.*`, `grant.*`, `catalog.*`, `process.*`) ni ninguna de
+  borrado. Lo que no existe no se puede inducir (la prueba de inyección lo
+  confirmó).
+
+**Preguntas sobre proyectos.** «Proyecto» es una solicitud con todo su ciclo.
+Ejemplos que debe resolver: «¿cómo va el tablero de ventas?», «¿qué está
+bloqueado y desde cuándo?», «¿qué tareas vencen esta semana y de quién?»,
+«¿por qué se devolvió la solicitud de Finanzas?», «¿qué se aprobó este mes?»,
+«¿quién tiene más carga?». Se resuelven con la ficha del proyecto, el portafolio,
+los indicadores, la auditoría y, desde F5, el conocimiento (documentos, actas,
+decisiones), siempre con enlaces a la pantalla correspondiente.
+
+**Ayuda sobre el uso del portal.** La documentación que ya se mantiene sola
+(`docs/aplicacion/`, unos 108 KB ≈ 32,000 tokens) se entrega al asistente como
+contexto con **caché de instrucciones**, sin necesidad de búsqueda vectorial. Así
+responde «¿cómo apruebo un documento?» desde la primera versión.
 
 ### 5.3 Propuesta y confirmación (la garantía central)
 
 ```text
-Persona ──pide──▶ Agente ──llama proponer_solicitud──▶ Propuesta (PENDIENTE, en BD)
-                                                           │
+Persona ──pide──▶ Agente ──llama request.create (herramienta de escritura)──▶ COMPUERTA
+                                                                               │ no la ejecuta:
+                                       valida el borrador contra el esquema     │ crea PROPUESTA
+                                                                               ▼ (PENDIENTE, en BD)
    Tarjeta en el chat: «Crear solicitud» · «Editar» · «Descartar»
-                                                           │ (la persona confirma)
-Navegador ──POST /requests con SU token y el borrador──▶ API existente
-                                                           │
-                                  Reglas, alcance y auditoría de siempre
-                                                           ▼
-                                    Propuesta pasa a APLICADA (con el id creado)
+                                                                               │ (la persona confirma)
+Navegador ──POST /assistant/proposals/{id}/confirm con SU token──▶ Backend del asistente
+                                                                               │ ejecuta la MISMA llamada al MCP
+                                                                               │ con el token de la persona
+                                                                               ▼
+                         API: reglas, alcance y auditoría de siempre ──▶ Propuesta APLICADA (con el id creado)
 ```
 
-Ventajas: el agente no puede crear nada por su cuenta, no hay reglas duplicadas,
-el borrador es editable antes de confirmar y la auditoría queda con el usuario
-real. Para flujos de varios pasos (crear solicitud + triage + tareas) se podrá
-añadir más adelante un endpoint de confirmación en el servidor que ejecute los
-servicios existentes en una transacción; es una mejora, no un requisito.
+Ventajas: el agente no puede crear nada por su cuenta; no hay reglas duplicadas;
+el borrador es editable antes de confirmar; la auditoría de la API queda con la
+persona real y el asistente registra además un evento propio que enlaza la
+propuesta con lo que se creó. Para flujos de varios pasos (crear solicitud +
+triage + tareas) la confirmación podrá ejecutar varias llamadas en orden y
+detenerse en el primer error.
 
 ### 5.4 Entradas: todo se vuelve texto visible
 
@@ -315,8 +374,8 @@ conversaciones). Las migraciones son aditivas.
 | Amenaza | Control |
 |---------|---------|
 | **Inyección de instrucciones** en un documento, correo o audio adjunto | El contenido adjunto se entrega marcado como *datos no confiables*. El agente no tiene herramientas destructivas ni de red. Todo lo que escribe pasa por confirmación humana. Prueba medida: instrucción maliciosa rechazada. Opcional: filtro de ataques de Guardrails |
-| **Ver lo que no corresponde** | Las herramientas llaman a los servicios con el actor del usuario; la búsqueda aplica el alcance en SQL; cada fragmento citado se revalida antes de mostrarlo |
-| **Escritura no autorizada** | Solo propuestas; la escritura la hace el navegador con el token de la persona contra los endpoints existentes |
+| **Ver lo que no corresponde** | Toda herramienta pasa por el MCP con el token de la persona, así que la API aplica su alcance; la búsqueda de conocimiento aplica el alcance en SQL; cada fragmento citado se revalida antes de mostrarlo |
+| **Escritura no autorizada** | Solo propuestas; la compuerta bloquea cualquier herramienta que no sea de solo lectura hasta que la persona confirma, y entonces se ejecuta con el token de esa persona, de modo que la API decide si está permitido |
 | **Fuga de datos hacia fuera** | Sin herramientas de internet ni de correo. Salidas con Markdown saneado (sin HTML) y enlaces solo internos o de las fuentes citadas |
 | **Gasto descontrolado** | Máximo de turnos y tokens por petición, presupuesto por usuario y mensual, interruptor general, límite de peticiones por minuto |
 | **Datos personales** | Retención configurable, borrado de conversaciones por el dueño, aviso de uso en la interfaz; filtro de datos sensibles de Guardrails como mejora opcional (no verificado en español) |
@@ -398,33 +457,49 @@ tope mensual existen justamente para verlos reales desde la primera semana.
 
 ## 9. Plan por fases
 
-Cada fase es un conjunto de PR pequeños, desplegable por separado y detrás de un
-interruptor. La IA seguirá naciendo apagada.
+Principios del plan: **cada fase deja algo útil por sí sola**, se empieza por
+**solo lectura** (bajo riesgo, valor inmediato) y la escritura llega después con
+confirmación. Cada fase son PR pequeños, desplegables por separado y detrás de un
+interruptor; la IA sigue naciendo apagada.
 
-| Fase | Entrega | Tamaño | Despliegue |
-|------|---------|--------|-----------|
-| **F0. Cimientos** | Catálogo de modelos en BD con capacidades y precios; cliente con herramientas, streaming y parámetros opcionales; registro de uso y presupuesto; tipos de auditoría del asistente; política IAM; base del agente `ASISTENTE` | L | Migración aditiva + permisos IAM. Sin cambios visibles |
-| **F1. Asistente conversacional** | Conversaciones, panel y página, herramientas de lectura, propuesta/confirmación de solicitudes, administración de agentes y uso | L | Migración. Mejora visible |
-| **F2. Entradas multimodales** | Adjuntos, extracción de imágenes y documentos, grabación y transcripción de audio, flujo «convertir en solicitud» | L | Sin cambios de BD de riesgo; permiso de Transcribe |
-| **F3. Conocimiento** | Imagen de PostgreSQL con pgvector, indexador, búsqueda híbrida con alcance, `buscar_conocimiento`, citas y administración | L | **Cambia la imagen del contenedor de BD** (respaldo previo, ver riesgos) |
-| **F4. Evolución de solicitudes** | Resumen de estado, sugerencia de tareas y plan, riesgos y bloqueos, borrador de reporte semanal, compromisos desde actas, avisos proactivos opcionales | M a L | Solo aplicación |
-| **F5. Endurecimiento** | Guardrails, presupuestos por usuario, evaluaciones periódicas, pruebas de abuso, salida al rol de instancia, puente con el MCP | M | Configuración y permisos |
+| Fase | Nombre | Qué podrá hacer la persona | Qué se construye | Tamaño | Depende de |
+|------|--------|---------------------------|------------------|--------|-----------|
+| **F0** | Cimientos | Nada visible | Catálogo de modelos en BD con capacidades y precios; cliente de Bedrock con herramientas, streaming y parámetros opcionales (corrige el fallo de `temperature`); bitácora de uso y presupuesto; agente `ASISTENTE` apagado; permisos IAM | L | — |
+| **F1** | MCP v2 y ficha de proyecto | Kiro y cualquier cliente MCP funcionan mejor | (1) Contrato OpenAPI completo, generado desde código compilado; (2) esquemas tipados desde el OpenAPI y anotaciones de solo lectura; (3) cobertura de las 55 lecturas que faltan; (4) endpoint `dossier` y herramienta `project.dossier`; (5) pruebas que impiden herramientas sin anotar o sin esquema | L | — (en paralelo con F0) |
+| **F2** | **Asistente de consulta** (solo lectura) | **Preguntar por sus proyectos y por cómo usar el portal**, con respuestas citadas y enlaces | Panel lateral y página, streaming, cliente MCP con el token de la persona, compuerta de solo lectura, ayuda del portal con caché, historial, Admin del agente (modelo, prompt, uso y tope) | L | F0, F1 |
+| **F3** | Asistente que propone | **Crear y editar solicitudes, triage y tareas con confirmación**; detectar duplicados | Propuestas y tarjetas, confirmación, edición previa, auditoría del origen, permisos por herramienta | L | F2 |
+| **F4** | Entradas multimodales | **Adjuntar correo, captura, PDF, Excel o audio** y convertirlo en solicitud | Adjuntos en S3, extracción de imágenes y documentos, grabación y Transcribe, texto siempre editable | L | F3 |
+| **F5** | Conocimiento | **Preguntar por documentos, decisiones y actas** con cita de la fuente | pgvector, indexador, búsqueda híbrida con alcance, herramienta `buscar_conocimiento` (API + MCP) y administración de fuentes | L | F2 (independiente de F3 y F4) |
+| **F6** | Evolución y proactividad | Resúmenes de estado, tareas sugeridas, riesgos y bloqueos, borrador del reporte semanal, compromisos desde actas, avisos opcionales | Herramientas de apoyo y tareas programadas con una identidad de servicio de solo lectura y acotada | M a L | F3, F5 |
+| **F7** | Endurecimiento | Nada visible | Guardrails, presupuestos por usuario, evaluaciones periódicas, pruebas de abuso, rol de instancia | M | todas |
 
-Orden recomendado: **F0 → F1 → F2 → F3 → F4 → F5**. F2 y F3 son independientes y
-pueden intercambiarse. Esto absorbe y reemplaza los pendientes **BL-008, BL-009
-y BL-010** del backlog.
+**Por qué este orden.** F1 va antes que el asistente porque la calidad de un
+agente depende de la calidad de sus herramientas (hoy el modelo no ve los campos
+de 25 de ellas). F2 es el primer momento en que el equipo **usa** el asistente y
+sin ningún riesgo de escritura. F5 puede adelantarse a F3 si preocupa más
+«preguntar» que «crear». El cambio de la imagen de PostgreSQL queda aislado en F5.
 
-Criterios de aceptación por fase (ejemplos): F1, una solicitud completa creada
-solo con texto en menos de 60 s y con la persona confirmando; F2, 10 de 10
-adjuntos de prueba extraídos y editables, y ningún borrador con campos inventados
-sin marcar; F3, ninguna respuesta cita un documento fuera del alcance del usuario
-en una batería de pruebas con 3 perfiles; F4, el resumen coincide con el estado
-real en un conjunto de solicitudes de control.
+**Ejemplo de lo que se puede hacer al terminar F2:** «¿Qué proyectos de BI están
+bloqueados y desde cuándo?», «¿cómo va el tablero de ventas de Finanzas?»,
+«¿qué tareas vencen esta semana?», «¿cómo se aprueba un documento?». Cada
+respuesta lleva enlaces a las pantallas.
+
+Esto absorbe y reemplaza los pendientes **BL-008, BL-009 y BL-010**.
+
+Criterios de aceptación (ejemplos): F1, cada herramienta nueva con esquema
+generado del OpenAPI y anotada, y una prueba que falla si aparece una herramienta
+sin anotar; F2, 20 preguntas de control sobre proyectos reales respondidas con
+datos correctos y ninguna información fuera del alcance de la persona; F3, una
+solicitud completa creada en menos de 60 s con la persona confirmando; F4, 10 de
+10 adjuntos de prueba extraídos y editables; F5, ninguna cita fuera del alcance en
+una batería con 3 perfiles; F6, el resumen coincide con el estado real en un
+conjunto de solicitudes de control.
 
 ---
 
 ## 10. Calidad y pruebas
 
+- **MCP v2:** una prueba que falla si aparece una herramienta sin anotación de solo lectura o con un `body` sin esquema, y otra que compara cada esquema con el OpenAPI generado.
 - **Doble del cliente de Bedrock** con conversaciones guionadas (el mismo patrón
   que hoy usa el triage): el bucle, las herramientas y los límites se prueban sin red.
 - **Pruebas de alcance:** tres perfiles (jefe, líder, integrante) intentan ver
@@ -487,6 +562,9 @@ que no es crítico para la recuperación.
 | Costo mayor al previsto | Media / bajo | Panel de uso, tope mensual con corte, Haiku por defecto, caché de instrucciones |
 | Fuga de permisos por el conocimiento | Baja / alto | Alcance en SQL, revalidación al citar, pruebas con tres perfiles en CI |
 | El disco de producción se llena | Media / medio | Limpiar carpetas `prev` antiguas antes de F3; el índice cabe en pocos cientos de MB |
+| El asistente depende de que el MCP esté arriba (otro contenedor) | Baja / medio | Mismo ciclo de vida que la API en el compose, comprobación de salud, reintento corto y mensaje claro a la persona |
+| Herramientas del MCP mal descritas hacen que el modelo adivine campos | Alta hoy / medio | MCP v2 (F1) antes del asistente; evaluaciones con casos reales |
+| El token de la persona caduca a mitad de una conversación (8 h) | Media / bajo | Se detecta el 401, se pide iniciar sesión de nuevo y la conversación se conserva |
 | Dependencia de un solo proveedor de modelos | Baja / medio | Cliente tras una interfaz; el catálogo admite otros proveedores de Bedrock |
 | Rechazo de los usuarios por respuestas lentas | Media / medio | Streaming, progreso visible, modelo rápido por defecto, acciones en contexto |
 
@@ -496,8 +574,9 @@ que no es crítico para la recuperación.
 
 Todas tienen un valor por defecto; si respondes «dale», se aplican.
 
-1. **Arquitectura.** ¿Confirmas la opción B (agente propio en el backend) con
-   pgvector? *Por defecto: sí.*
+1. **Arquitectura.** ¿Confirmas la opción B (agente propio en el backend que usa el
+   MCP del portal como única puerta de herramientas, y pgvector para el
+   conocimiento)? *Por defecto: sí.*
 2. **Residencia de datos.** ¿Perfiles `us.` (datos en EE. UU., ~10 % más caros) o
    `global.`? *Por defecto: `us.`.*
 3. **Quién lo usa.** ¿Todos los roles con su alcance, o empezamos por jefe y
@@ -510,7 +589,12 @@ Todas tienen un valor por defecto; si respondes «dale», se aplican.
    aviso en pantalla; 180 días, configurable.*
 6. **Audio.** ¿Grabación en el navegador y subida de archivos desde la primera
    entrega del audio? *Por defecto: sí, hasta 10 MB.*
-7. **Orden de las fases.** *Por defecto: F0 → F1 → F2 → F3 → F4 → F5.*
+7. **Orden de las fases.** *Por defecto: F0 y F1 en paralelo → F2 (consulta) → F3
+   (propone) → F4 y F5 → F6 → F7.*
+8. **Qué herramientas del MCP ve el asistente.** *Por defecto: lectura de todo lo
+   que cubre el MCP y, con confirmación, solicitudes, triage, plan y tareas; sin
+   herramientas administrativas (usuarios, permisos, maestras, procesos) ni de
+   borrado.*
 
 ---
 
