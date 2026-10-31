@@ -437,7 +437,7 @@ test.describe('status-presentation', () => {
   });
 
   test('parseBand toma la banda del prefijo de la etiqueta de la API', () => {
-    expect(parseBand('P2 · Programacion en el horizonte cercano')).toBe('P2');
+    expect(parseBand('P2 · Programación en el horizonte cercano')).toBe('P2');
     expect(parseBand('P10')).toBeNull();
     expect(parseBand('Sin priorizar')).toBeNull();
     expect(parseBand(null)).toBeNull();

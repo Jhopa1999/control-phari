@@ -87,37 +87,37 @@ describe('RequestStateService', () => {
   describe('priorityLabel (design §1.1 cortes 80/65/45)', () => {
     it('>=80 -> glosa P1', () => {
       expect(service.priorityLabel(80)).toBe(
-        'P1 · Primera consideracion para compromiso',
+        'P1 · Primera consideración para compromiso',
       );
       expect(service.priorityLabel(100)).toBe(
-        'P1 · Primera consideracion para compromiso',
+        'P1 · Primera consideración para compromiso',
       );
     });
     it('>=65 -> glosa P2', () => {
       expect(service.priorityLabel(65)).toBe(
-        'P2 · Programacion en el horizonte cercano',
+        'P2 · Programación en el horizonte cercano',
       );
       expect(service.priorityLabel(79)).toBe(
-        'P2 · Programacion en el horizonte cercano',
+        'P2 · Programación en el horizonte cercano',
       );
     });
     it('>=45 -> glosa P3 (el caso 45-49 ya no es "Baja")', () => {
       expect(service.priorityLabel(45)).toBe(
-        'P3 · Planificacion ordinaria segun capacidad',
+        'P3 · Planificación ordinaria según capacidad',
       );
       expect(service.priorityLabel(49)).toBe(
-        'P3 · Planificacion ordinaria segun capacidad',
+        'P3 · Planificación ordinaria según capacidad',
       );
       expect(service.priorityLabel(64)).toBe(
-        'P3 · Planificacion ordinaria segun capacidad',
+        'P3 · Planificación ordinaria según capacidad',
       );
     });
     it('<45 -> glosa P4', () => {
       expect(service.priorityLabel(44)).toBe(
-        'P4 · Reserva de demanda, reformulacion o cierre motivado',
+        'P4 · Reserva de demanda, reformulación o cierre motivado',
       );
       expect(service.priorityLabel(20)).toBe(
-        'P4 · Reserva de demanda, reformulacion o cierre motivado',
+        'P4 · Reserva de demanda, reformulación o cierre motivado',
       );
     });
   });

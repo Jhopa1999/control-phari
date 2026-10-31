@@ -106,7 +106,7 @@ describe('PriorityService', () => {
     expect((m.prismaObj.priorityEvaluation as any).create.mock.calls[0][0].data.score).toBe(100);
     expect(res.score).toBe(100);
     expect(res.thresholdLabel).toBe(
-      'P1 · Primera consideracion para compromiso',
+      'P1 · Primera consideración para compromiso',
     );
     // Nombre del evaluador resuelto desde la relacion incluida en la query.
     expect(res.evaluatedByName).toBe('Beto');

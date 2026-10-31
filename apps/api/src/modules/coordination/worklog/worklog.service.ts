@@ -273,7 +273,7 @@ export class WorklogService {
         break;
       case 'SOPORTE':
         if (!notEmpty(fields.assetRef)) {
-          throw new BadRequestException('Operacion/soporte requiere activo.');
+          throw new BadRequestException('Operación/soporte requiere activo.');
         }
         break;
       case 'EXTRAORDINARIA':

@@ -243,8 +243,8 @@ export class RequestStateService {
  * coincidir con los labels sembrados en el catalogo PRIORITY_BAND del seed.
  */
 const PRIORITY_BAND_LABELS: Record<'P1' | 'P2' | 'P3' | 'P4', string> = {
-  P1: 'P1 · Primera consideracion para compromiso',
-  P2: 'P2 · Programacion en el horizonte cercano',
-  P3: 'P3 · Planificacion ordinaria segun capacidad',
-  P4: 'P4 · Reserva de demanda, reformulacion o cierre motivado',
+  P1: 'P1 · Primera consideración para compromiso',
+  P2: 'P2 · Programación en el horizonte cercano',
+  P3: 'P3 · Planificación ordinaria según capacidad',
+  P4: 'P4 · Reserva de demanda, reformulación o cierre motivado',
 };
