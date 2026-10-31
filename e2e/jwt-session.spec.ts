@@ -177,7 +177,16 @@ test('cerrar sesión lleva a /login sin next y una recarga no la recupera', asyn
   await settled(page);
   await expect(mainHeading(page)).toBeVisible();
 
+  // Pide confirmación: cancelar conserva la sesión; confirmar la cierra.
   await logoutButton(page).click();
+  const confirmDialog = page.getByRole('dialog', { name: /¿Cerrar sesi[oó]n\?/ });
+  await expect(confirmDialog).toBeVisible();
+  await confirmDialog.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(confirmDialog).toBeHidden();
+  await expect(page).toHaveURL('/demanda/solicitudes');
+
+  await logoutButton(page).click();
+  await confirmDialog.getByRole('button', { name: /Cerrar sesi[oó]n/ }).click();
   await expect(loginForm(page)).toBeVisible();
   await expect(loginHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/login');
