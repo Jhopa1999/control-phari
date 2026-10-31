@@ -27,6 +27,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import { matchesSearch } from './table-sort';
 
 /*
  * Arquitectura de información del portal (design §8.5). Ninguna URL cambia:
@@ -38,8 +39,8 @@ import {
  * GET /me/permissions. Es un filtrado cosmético: el control real lo hace el
  * servidor.
  *
- * Módulo puro (design §7.9.2): solo importa lucide-react, así que
- * e2e/web-lib.spec.ts lo carga en Node.
+ * Módulo puro (design §7.9.2): solo importa lucide-react y table-sort (también
+ * puro), así que e2e/web-lib.spec.ts lo carga en Node.
  */
 
 /** Claves de módulo exactas de MODULE_MATRIX (apps/api/src/modules/auth/module-matrix.ts). */
@@ -263,6 +264,28 @@ export function getVisibleNavGroups(allowed: ReadonlySet<string>): NavGroup[] {
     ...group,
     items: group.items.filter((item) => allowed.has(item.moduleKey)),
   })).filter((group) => group.items.length > 0);
+}
+
+export interface NavSearchResult {
+  item: NavItem;
+  /** Título del grupo del ítem (null en el grupo de entrada, que no lo tiene). */
+  groupLabel: string | null;
+}
+
+/**
+ * Buscador de pantallas del menú (BL-027): ítems cuya etiqueta o cuyo grupo
+ * contienen el texto, sin distinguir mayúsculas ni tildes («priorizacion»
+ * encuentra «Priorización»; «demanda» lista las pantallas del grupo Demanda).
+ * Recibe los grupos ya filtrados por permisos y conserva el orden del menú. Una
+ * búsqueda vacía no devuelve nada: el menú se muestra agrupado.
+ */
+export function searchNavItems(groups: readonly NavGroup[], query: string): NavSearchResult[] {
+  if (query.trim() === '') return [];
+  return groups.flatMap((group) =>
+    group.items
+      .filter((item) => matchesSearch(`${group.label ?? ''} ${item.label}`, query))
+      .map((item) => ({ item, groupLabel: group.label })),
+  );
 }
 
 /** El ítem está activo en su ruta, en las de `activeFor` y en sus subrutas. */

@@ -308,6 +308,14 @@
                                              "docs/aplicacion/frontend-pantallas.md"
                                          ],
                         "summary":  "BL-024: Solicitudes, Portafolio, Mi trabajo, Activos y Documentos muestran tarjetas por fila por debajo de 768 px (con Ordenar por y menu de 44 px) y la tabla desde 768 px."
+                    },
+                    {
+                        "timestamp":  "2026-10-31T19:00:00Z",
+                        "trigger_file":  "apps/web/src/lib/navigation.ts",
+                        "updated_docs":  [
+                                             "docs/aplicacion/frontend-pantallas.md"
+                                         ],
+                        "summary":  "BL-027: el menu lateral permite plegar sus grupos (se recuerdan en el navegador) y suma un buscador de pantallas por nombre o grupo."
                     }
                 ]
 }
