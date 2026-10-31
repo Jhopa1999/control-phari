@@ -1,0 +1,12 @@
+[Unit]
+Description=Programa la comprobacion diaria de que existe un respaldo reciente
+
+[Timer]
+# 12:00 UTC = 07:00 hora de Colombia, unas 9 horas despues del respaldo (03:00 UTC):
+# da margen para que termine y el aviso llegue en horario laboral.
+OnCalendar=*-*-* 12:00:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

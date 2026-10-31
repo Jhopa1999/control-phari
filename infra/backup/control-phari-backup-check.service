@@ -1,0 +1,10 @@
+[Unit]
+Description=Vigilante: comprueba que haya un respaldo reciente de la base de datos de control-phari
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/control-phari-backup.env
+ExecStart=/opt/control-phari-ops/check-backup-fresh.sh
+TimeoutStartSec=300
