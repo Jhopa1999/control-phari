@@ -27,6 +27,8 @@ export type DemandSummary =
 export type StateCount = components['schemas']['StateCountDto'];
 export type BandCount = components['schemas']['BandCountDto'];
 
+export type Attention = components['schemas']['AttentionResponseDto'];
+
 /** Filtro de periodo compartido por los dos endpoints de control del area. */
 export interface PeriodFilter {
   from?: string;
@@ -75,6 +77,23 @@ export async function getDemandSummary(
       '/area-control/demand-summary',
       { params: { query: periodQuery(filter) } },
     );
+    if (error || !data) {
+      throw toApiError(response.status);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/**
+ * Conteos que requieren atención (GET /area-control/attention), a hoy y dentro
+ * del alcance del actor. Los calcula el backend; el cliente solo los presenta.
+ */
+export async function getAttention(): Promise<Attention> {
+  try {
+    const { data, error, response } = await api.GET('/area-control/attention');
     if (error || !data) {
       throw toApiError(response.status);
     }

@@ -4,6 +4,7 @@ import { Prisma } from '../../generated/prisma/client';
 import { CurrentActor } from '../auth/current-actor';
 import { RecordState } from '../coordination/record-state';
 import { REQUEST_STATES } from '../request/request-state';
+import { RequestState } from '../request/request-state';
 import { RequestStateService } from '../request/request-state.service';
 import { PortfolioScopeService } from './portfolio-scope.service';
 import { daysBetween, median, percentage } from './indicators';
@@ -11,6 +12,7 @@ import { dateToIsoDate, resolvePeriod } from './period';
 import { AreaControlQueryDto } from './dto/area-control-query.dto';
 import {
   AreaIndicatorsResponseDto,
+  AttentionResponseDto,
   BandCountDto,
   BlockCauseDto,
   DeliveryTimeGroupDto,
@@ -504,6 +506,82 @@ export class AreaControlService {
       blockedActive,
       byState,
       byPriorityBand,
+    };
+  }
+
+  // --- 4. Requiere atencion -------------------------------------------------
+
+  /**
+   * Conteos accionables del Panel (BL-025), "a hoy" y dentro del alcance del
+   * actor. Cada conteo replica el criterio de la mesa a la que enlaza:
+   * triage (REGISTRADA), priorizacion (EN_TRIAGE con triage CONTINUAR vigente),
+   * aprobacion (BACKLOG_PRIORIZADO) y tareas vencidas.
+   */
+  async attention(actor: CurrentActor): Promise<AttentionResponseDto> {
+    const requestScope = this.scope.requestScope(actor);
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const [pendingTriage, inTriage, pendingApproval, overdueTasks] =
+      await Promise.all([
+        this.prisma.request.count({
+          where: {
+            AND: [requestScope, { operationalState: RequestState.REGISTRADA }],
+          },
+        }),
+        this.prisma.request.findMany({
+          where: {
+            AND: [requestScope, { operationalState: RequestState.EN_TRIAGE }],
+          },
+          select: {
+            triages: {
+              orderBy: { decidedAt: 'desc' },
+              take: 1,
+              select: { decision: true },
+            },
+          },
+        }),
+        this.prisma.request.count({
+          where: {
+            AND: [
+              requestScope,
+              { operationalState: RequestState.BACKLOG_PRIORIZADO },
+            ],
+          },
+        }),
+        this.prisma.task.count({
+          where: {
+            AND: [
+              this.scope.taskScope(actor),
+              { status: { not: 'TERMINADA' } },
+              { endDate: { lt: today } },
+              {
+                phase: {
+                  plan: {
+                    request: {
+                      operationalState: {
+                        notIn: [
+                          RequestState.CERRADA,
+                          RequestState.RETIRADA,
+                          RequestState.RECHAZADA,
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        }),
+      ]);
+
+    return {
+      pendingTriage,
+      readyToPrioritize: inTriage.filter(
+        (req) => req.triages[0]?.decision === 'CONTINUAR',
+      ).length,
+      pendingApproval,
+      overdueTasks,
     };
   }
 }

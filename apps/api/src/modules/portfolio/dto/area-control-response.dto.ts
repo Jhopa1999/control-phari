@@ -186,3 +186,31 @@ export class DemandSummaryResponseDto {
   @ApiProperty({ type: [BandCountDto], description: 'Conteo por banda (incl. SIN_PRIORIZAR).' })
   byPriorityBand!: BandCountDto[];
 }
+
+export class AttentionResponseDto {
+  @ApiProperty({
+    type: Number,
+    description: 'Solicitudes REGISTRADAS que esperan la decision de triage.',
+  })
+  pendingTriage!: number;
+
+  @ApiProperty({
+    type: Number,
+    description:
+      'Solicitudes en triage con decision CONTINUAR vigente, listas para priorizar.',
+  })
+  readyToPrioritize!: number;
+
+  @ApiProperty({
+    type: Number,
+    description: 'Solicitudes en backlog priorizado que esperan aprobacion del compromiso.',
+  })
+  pendingApproval!: number;
+
+  @ApiProperty({
+    type: Number,
+    description:
+      'Tareas no terminadas con fecha de fin anterior a hoy, de solicitudes aun abiertas.',
+  })
+  overdueTasks!: number;
+}

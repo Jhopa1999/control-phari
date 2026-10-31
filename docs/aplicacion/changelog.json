@@ -291,6 +291,15 @@
                                              "docs/aplicacion/frontend-pantallas.md"
                                          ],
                         "summary":  "UX fase 4: Portafolio pasa de 11 a 7 columnas (proceso y ruta bajo el titulo, bloqueo junto al estado, compromiso junto al objetivo) y los listados con busqueda pliegan los filtros bajo Filtros en movil."
+                    },
+                    {
+                        "timestamp":  "2026-10-31T15:00:00Z",
+                        "trigger_file":  "apps/api/src/modules/portfolio/area-control.service.ts",
+                        "updated_docs":  [
+                                             "docs/aplicacion/modulos-backend.md",
+                                             "docs/aplicacion/frontend-pantallas.md"
+                                         ],
+                        "summary":  "BL-025: nuevo GET /area-control/attention (conteos de triage, priorizacion, aprobacion y tareas vencidas) y bloque Requiere tu atencion en el Panel del area."
                     }
                 ]
 }

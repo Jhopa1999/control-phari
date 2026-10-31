@@ -8,7 +8,7 @@ import { PortfolioScopeService } from './portfolio-scope.service';
 function createMocks() {
   const prismaObj: Record<string, unknown> = {
     request: { findMany: jest.fn(), count: jest.fn() },
-    task: { findMany: jest.fn() },
+    task: { findMany: jest.fn(), count: jest.fn() },
     issue: { findMany: jest.fn() },
     auditEvent: { findFirst: jest.fn(), findMany: jest.fn() },
   };
@@ -528,6 +528,49 @@ describe('AreaControlService', () => {
       await service.demandSummary(lider(['p1']), PERIOD);
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
       expect(where).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
+    });
+  });
+
+  // --- 4. Requiere atencion -----------------------------------------------
+
+  describe('attention', () => {
+    it('cuenta listas para priorizar solo con triage CONTINUAR vigente en EN_TRIAGE', async () => {
+      // count: pendientes de triage (3) y por aprobar (2), en ese orden.
+      (m.prismaObj.request as any).count
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(2);
+      (m.prismaObj.request as any).findMany.mockResolvedValueOnce([
+        { triages: [{ decision: 'CONTINUAR' }] },
+        { triages: [{ decision: 'DEVOLVER' }] },
+        { triages: [] },
+        { triages: [{ decision: 'CONTINUAR' }] },
+      ]);
+      (m.prismaObj.task as any).count.mockResolvedValue(5);
+
+      const res = await service.attention(jefe());
+
+      expect(res).toEqual({
+        pendingTriage: 3,
+        readyToPrioritize: 2,
+        pendingApproval: 2,
+        overdueTasks: 5,
+      });
+    });
+
+    it('aplica el alcance del actor y excluye tareas terminadas y de solicitudes cerradas', async () => {
+      await service.attention(lider(['p1']));
+
+      const requestWhere = (m.prismaObj.request as any).count.mock.calls[0][0].where;
+      expect(requestWhere.AND[0]).toEqual({
+        deletedAt: null,
+        mainProcessId: { in: ['p1'] },
+      });
+
+      const taskWhere = (m.prismaObj.task as any).count.mock.calls[0][0].where;
+      const flat = JSON.stringify(taskWhere);
+      expect(flat).toContain('"status":{"not":"TERMINADA"}');
+      expect(flat).toContain('"notIn":["CERRADA","RETIRADA","RECHAZADA"]');
+      expect(flat).toContain('"mainProcessId":{"in":["p1"]}');
     });
   });
 });
