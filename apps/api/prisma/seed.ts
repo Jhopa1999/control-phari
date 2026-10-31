@@ -66,7 +66,7 @@ const PROCESSES: Array<{
   { code: 'FIAA', name: 'IA', framework: 'INS-004', kind: 'PROCESS', sortOrder: 3 },
   {
     code: 'FMAA',
-    name: 'Coordinacion multiproceso',
+    name: 'Coordinación multiproceso',
     framework: 'INS-007',
     kind: 'COORDINATION',
     sortOrder: 4,
@@ -139,9 +139,9 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'CRITICALITY', code: 'BAJA', label: 'Baja', sortOrder: 1 },
     { catalog: 'CRITICALITY', code: 'MEDIA', label: 'Media', sortOrder: 2 },
     { catalog: 'CRITICALITY', code: 'ALTA', label: 'Alta', sortOrder: 3 },
-    { catalog: 'CRITICALITY', code: 'CRITICA', label: 'Critica', sortOrder: 4 },
+    { catalog: 'CRITICALITY', code: 'CRITICA', label: 'Crítica', sortOrder: 4 },
     // DATA_AVAILABILITY
-    { catalog: 'DATA_AVAILABILITY', code: 'SI', label: 'Si', sortOrder: 1 },
+    { catalog: 'DATA_AVAILABILITY', code: 'SI', label: 'Sí', sortOrder: 1 },
     { catalog: 'DATA_AVAILABILITY', code: 'PARCIAL', label: 'Parcial', sortOrder: 2 },
     { catalog: 'DATA_AVAILABILITY', code: 'NO', label: 'No', sortOrder: 3 },
     // PRIORITY
@@ -153,7 +153,7 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'TASK_STATUS', code: 'POR_HACER', label: 'Por hacer', sortOrder: 1 },
     { catalog: 'TASK_STATUS', code: 'EN_CURSO', label: 'En curso', sortOrder: 2 },
     { catalog: 'TASK_STATUS', code: 'BLOQUEADA', label: 'Bloqueada', sortOrder: 3 },
-    { catalog: 'TASK_STATUS', code: 'EN_REVISION', label: 'En revision', sortOrder: 4 },
+    { catalog: 'TASK_STATUS', code: 'EN_REVISION', label: 'En revisión', sortOrder: 4 },
     { catalog: 'TASK_STATUS', code: 'TERMINADA', label: 'Terminada', sortOrder: 5 },
     // DOC_STATUS
     { catalog: 'DOC_STATUS', code: 'BORRADOR', label: 'Borrador', sortOrder: 1 },
@@ -163,19 +163,19 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'DOC_STATUS', code: 'RECHAZADO', label: 'Rechazado', sortOrder: 5 },
     // DEMAND_TYPE
     { catalog: 'DEMAND_TYPE', code: 'DESARROLLO', label: 'Desarrollo', sortOrder: 1 },
-    { catalog: 'DEMAND_TYPE', code: 'EVOLUCION', label: 'Evolucion', sortOrder: 2 },
+    { catalog: 'DEMAND_TYPE', code: 'EVOLUCION', label: 'Evolución', sortOrder: 2 },
     {
       catalog: 'DEMAND_TYPE',
       code: 'SOPORTE_INCIDENTE',
       label: 'Soporte-Incidente',
       sortOrder: 3,
     },
-    { catalog: 'DEMAND_TYPE', code: 'DEUDA_TECNICA', label: 'Deuda tecnica', sortOrder: 4 },
-    { catalog: 'DEMAND_TYPE', code: 'EXPLORACION', label: 'Exploracion', sortOrder: 5 },
+    { catalog: 'DEMAND_TYPE', code: 'DEUDA_TECNICA', label: 'Deuda técnica', sortOrder: 4 },
+    { catalog: 'DEMAND_TYPE', code: 'EXPLORACION', label: 'Exploración', sortOrder: 5 },
     // ASSET_TYPE
     { catalog: 'ASSET_TYPE', code: 'MODELO_DATOS', label: 'Modelo de datos', sortOrder: 1 },
     { catalog: 'ASSET_TYPE', code: 'DASHBOARD', label: 'Dashboard', sortOrder: 2 },
-    { catalog: 'ASSET_TYPE', code: 'INTEGRACION', label: 'Integracion', sortOrder: 3 },
+    { catalog: 'ASSET_TYPE', code: 'INTEGRACION', label: 'Integración', sortOrder: 3 },
     { catalog: 'ASSET_TYPE', code: 'API', label: 'API', sortOrder: 4 },
     { catalog: 'ASSET_TYPE', code: 'AGENTE', label: 'Agente', sortOrder: 5 },
     { catalog: 'ASSET_TYPE', code: 'MODELO_IA', label: 'Modelo de IA', sortOrder: 6 },
@@ -195,8 +195,8 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'TRIAGE_SIZE', code: 'XL', label: 'XL', sortOrder: 4 },
     // ACTIVITY_CLASS (Fase 5 · BR-014) - clasificacion de actividad del diario.
     { catalog: 'ACTIVITY_CLASS', code: 'PLANIFICADA', label: 'Trabajo planificado', sortOrder: 1 },
-    { catalog: 'ACTIVITY_CLASS', code: 'SOPORTE', label: 'Operacion/soporte', sortOrder: 2 },
-    { catalog: 'ACTIVITY_CLASS', code: 'INTERNA', label: 'Gestion interna', sortOrder: 3 },
+    { catalog: 'ACTIVITY_CLASS', code: 'SOPORTE', label: 'Operación/soporte', sortOrder: 2 },
+    { catalog: 'ACTIVITY_CLASS', code: 'INTERNA', label: 'Gestión interna', sortOrder: 3 },
     { catalog: 'ACTIVITY_CLASS', code: 'EXTRAORDINARIA', label: 'Extraordinaria', sortOrder: 4 },
     // ISSUE_TYPE (Fase 5) - BLOQUEO confirmado por `29`; el resto es seed P
     // reversible (`20` lista la familia pero no enumera estos codigos, §1.7/NIT-2).
@@ -227,7 +227,7 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'SOURCE', code: 'API', label: 'API', sortOrder: 2 },
     { catalog: 'SOURCE', code: 'BASE_DATOS', label: 'Base de datos', sortOrder: 3 },
     { catalog: 'SOURCE', code: 'ARCHIVO', label: 'Archivo', sortOrder: 4 },
-    { catalog: 'SOURCE', code: 'APLICACION', label: 'Aplicacion', sortOrder: 5 },
+    { catalog: 'SOURCE', code: 'APLICACION', label: 'Aplicación', sortOrder: 5 },
     // FREQUENCY (frecuencia; valores de ejemplo P).
     { catalog: 'FREQUENCY', code: 'TIEMPO_REAL', label: 'Tiempo real', sortOrder: 1 },
     { catalog: 'FREQUENCY', code: 'CADA_HORA', label: 'Cada hora', sortOrder: 2 },
@@ -236,7 +236,7 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'FREQUENCY', code: 'MENSUAL', label: 'Mensual', sortOrder: 5 },
     { catalog: 'FREQUENCY', code: 'BAJO_DEMANDA', label: 'Bajo demanda', sortOrder: 6 },
     // DOC_CATEGORY (categoria de documento; conjunto minimo reversible P).
-    { catalog: 'DOC_CATEGORY', code: 'TECNICA', label: 'Tecnica', sortOrder: 1 },
+    { catalog: 'DOC_CATEGORY', code: 'TECNICA', label: 'Técnica', sortOrder: 1 },
     { catalog: 'DOC_CATEGORY', code: 'FUNCIONAL', label: 'Funcional', sortOrder: 2 },
     { catalog: 'DOC_CATEGORY', code: 'OPERATIVA', label: 'Operativa', sortOrder: 3 },
     { catalog: 'DOC_CATEGORY', code: 'OTRO', label: 'Otro', sortOrder: 4 },
@@ -249,22 +249,22 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     // GOVERNANCE_ROUTE (marco §6).
     { catalog: 'GOVERNANCE_ROUTE', code: 'COMPLETA', label: 'Ruta completa', sortOrder: 1 },
     { catalog: 'GOVERNANCE_ROUTE', code: 'SIMPLIFICADA', label: 'Ruta simplificada', sortOrder: 2 },
-    { catalog: 'GOVERNANCE_ROUTE', code: 'EXPLORACION', label: 'Ruta de exploracion', sortOrder: 3 },
+    { catalog: 'GOVERNANCE_ROUTE', code: 'EXPLORACION', label: 'Ruta de exploración', sortOrder: 3 },
     // VALIDATION_TYPE (6 tipos exactos del marco §7).
     {
       catalog: 'VALIDATION_TYPE',
       code: 'FUNCIONAL_ACEPTACION',
-      label: 'Funcional y aceptacion',
+      label: 'Funcional y aceptación',
       sortOrder: 1,
     },
     {
       catalog: 'VALIDATION_TYPE',
       code: 'COMPONENTE_INTEGRACION',
-      label: 'Componente e integracion',
+      label: 'Componente e integración',
       sortOrder: 2,
     },
-    { catalog: 'VALIDATION_TYPE', code: 'REGRESION', label: 'Regresion', sortOrder: 3 },
-    { catalog: 'VALIDATION_TYPE', code: 'INFORMACION', label: 'Informacion', sortOrder: 4 },
+    { catalog: 'VALIDATION_TYPE', code: 'REGRESION', label: 'Regresión', sortOrder: 3 },
+    { catalog: 'VALIDATION_TYPE', code: 'INFORMACION', label: 'Información', sortOrder: 4 },
     {
       catalog: 'VALIDATION_TYPE',
       code: 'ACCESO_SEGURIDAD',
@@ -293,32 +293,32 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     {
       catalog: 'PRIORITY_BAND',
       code: 'P1',
-      label: 'P1 · Primera consideracion para compromiso',
+      label: 'P1 · Primera consideración para compromiso',
       sortOrder: 1,
     },
     {
       catalog: 'PRIORITY_BAND',
       code: 'P2',
-      label: 'P2 · Programacion en el horizonte cercano',
+      label: 'P2 · Programación en el horizonte cercano',
       sortOrder: 2,
     },
     {
       catalog: 'PRIORITY_BAND',
       code: 'P3',
-      label: 'P3 · Planificacion ordinaria segun capacidad',
+      label: 'P3 · Planificación ordinaria según capacidad',
       sortOrder: 3,
     },
     {
       catalog: 'PRIORITY_BAND',
       code: 'P4',
-      label: 'P4 · Reserva de demanda, reformulacion o cierre motivado',
+      label: 'P4 · Reserva de demanda, reformulación o cierre motivado',
       sortOrder: 4,
     },
     // RECURRING_ACTIVITY_TYPE (FEAT-001) - tipo de actividad recurrente. Seed
     // inicial reversible (ampliable por gestion de maestras sin migracion).
     { catalog: 'RECURRING_ACTIVITY_TYPE', code: 'REPORTE', label: 'Reporte', sortOrder: 1 },
-    { catalog: 'RECURRING_ACTIVITY_TYPE', code: 'VALIDACION', label: 'Validacion', sortOrder: 2 },
-    { catalog: 'RECURRING_ACTIVITY_TYPE', code: 'REVISION', label: 'Revision', sortOrder: 3 },
+    { catalog: 'RECURRING_ACTIVITY_TYPE', code: 'VALIDACION', label: 'Validación', sortOrder: 2 },
+    { catalog: 'RECURRING_ACTIVITY_TYPE', code: 'REVISION', label: 'Revisión', sortOrder: 3 },
   ];
 
 // --- Ejecucion idempotente --------------------------------------------------

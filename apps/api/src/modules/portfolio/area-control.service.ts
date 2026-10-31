@@ -38,7 +38,7 @@ const CLOSED_ISSUE_STATES: string[] = [
 const ROUTE_LABELS: Record<string, string> = {
   COMPLETA: 'Ruta completa',
   SIMPLIFICADA: 'Ruta simplificada',
-  EXPLORACION: 'Ruta de exploracion',
+  EXPLORACION: 'Ruta de exploración',
 };
 
 /**

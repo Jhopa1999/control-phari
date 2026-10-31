@@ -198,7 +198,7 @@ describe('RequestService', () => {
       expect(res.currentTriageDecision).toBe('CONTINUAR');
       expect(res.currentScore).toBe(72);
       expect(res.priorityLabel).toBe(
-        'P2 · Programacion en el horizonte cercano',
+        'P2 · Programación en el horizonte cercano',
       );
     });
   });

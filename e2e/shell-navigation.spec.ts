@@ -249,10 +249,10 @@ const FIXTURE_STATES = [
 ];
 const FIXTURE_BANDS: Array<[number, string] | null> = [
   null,
-  [84, 'P1 · Primera consideracion para compromiso'],
-  [70, 'P2 · Programacion en el horizonte cercano'],
-  [52, 'P3 · Planificacion ordinaria segun capacidad'],
-  [30, 'P4 · Reserva de demanda, reformulacion o cierre motivado'],
+  [84, 'P1 · Primera consideración para compromiso'],
+  [70, 'P2 · Programación en el horizonte cercano'],
+  [52, 'P3 · Planificación ordinaria según capacidad'],
+  [30, 'P4 · Reserva de demanda, reformulación o cierre motivado'],
 ]; // mismas glosas que devuelve la API
 
 function fakeRequest(i: number): Request {

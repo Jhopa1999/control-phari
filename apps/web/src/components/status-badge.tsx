@@ -60,7 +60,7 @@ function toBand(value: string): PriorityBand | null {
 export interface PriorityBadgeProps {
   /** priorityBand o band de la API ('P1'…'P4'; 'SIN_PRIORIZAR' o null sin banda). */
   band?: string | null;
-  /** priorityLabel de la API («P1 · Primera consideracion para compromiso»). */
+  /** priorityLabel de la API («P1 · Primera consideración para compromiso»). */
   label?: string | null;
   /** currentScore: solo se muestra, nunca se calcula. */
   score?: number | null;
