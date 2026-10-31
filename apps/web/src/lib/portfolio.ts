@@ -1,5 +1,5 @@
 import { api } from './api-client';
-import type { components } from '@plantilla-portales/api-client';
+import type { components, paths } from '@plantilla-portales/api-client';
 import { ApiError, toApiError } from './api-error';
 
 export { ApiError };
@@ -15,6 +15,8 @@ export type PortfolioItem =
  * Filtros opcionales del portafolio. Intersectan el alcance que devuelve el
  * backend; nunca lo amplian (patron de capacity.listAssignments).
  */
+type PortfolioListQuery = NonNullable<paths['/portfolio']['get']['parameters']['query']>;
+
 export interface PortfolioFilters {
   mainProcessId?: string;
   state?: string;
@@ -36,8 +38,8 @@ export async function listPortfolio(
           ...(filters.mainProcessId
             ? { mainProcessId: filters.mainProcessId }
             : {}),
-          ...(filters.state ? { state: filters.state } : {}),
-          ...(filters.band ? { band: filters.band } : {}),
+          ...(filters.state ? { state: filters.state as PortfolioListQuery['state'] } : {}),
+          ...(filters.band ? { band: filters.band as PortfolioListQuery['band'] } : {}),
         },
       },
     });

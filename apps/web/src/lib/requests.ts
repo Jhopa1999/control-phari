@@ -1,3 +1,4 @@
+import type { paths } from '@plantilla-portales/api-client';
 import {
   api,
   type CreateRequest,
@@ -44,6 +45,15 @@ function toRequestError(status: number | undefined): RequestError {
   return new RequestError(messageForStatus(status), status);
 }
 
+/** Filtros de GET /requests tal como los publica el contrato. */
+type RequestListQuery = NonNullable<paths['/requests']['get']['parameters']['query']>;
+
+/**
+ * La interfaz trabaja con el texto de los selectores; el contrato exige la lista
+ * cerrada de estados. El backend valida y responde 400 ante un valor invalido
+ * (no se duplica la validacion aqui), por eso el ajuste de tipo vive solo en el
+ * borde de la llamada.
+ */
 export interface RequestFilters {
   mainProcessId?: string;
   state?: string;
@@ -60,7 +70,7 @@ export async function listRequests(
           ...(filters.mainProcessId
             ? { mainProcessId: filters.mainProcessId }
             : {}),
-          ...(filters.state ? { state: filters.state } : {}),
+          ...(filters.state ? { state: filters.state as RequestListQuery['state'] } : {}),
         },
       },
     });

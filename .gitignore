@@ -57,3 +57,5 @@ contracts.txt
 
 # Config local de Kiro con secretos/rutas de máquina (no versionar)
 .kiro/settings/
+# Carpeta temporal de la generacion del contrato OpenAPI (apps/api/scripts/generate-openapi.mjs)
+.openapi-build/

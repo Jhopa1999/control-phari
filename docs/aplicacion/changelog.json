@@ -316,6 +316,14 @@
                                              "docs/aplicacion/frontend-pantallas.md"
                                          ],
                         "summary":  "BL-027: el menu lateral permite plegar sus grupos (se recuerdan en el navegador) y suma un buscador de pantallas por nombre o grupo."
+                    },
+                    {
+                        "timestamp":  "2026-10-31T21:00:00Z",
+                        "trigger_file":  "apps/api/scripts/generate-openapi.mjs",
+                        "updated_docs":  [
+                                             "docs/aplicacion/README.md"
+                                         ],
+                        "summary":  "Sincronia API, contrato, MCP y documentacion: el contrato OpenAPI se genera desde codigo compilado (publica 28 filtros que faltaban y tipa el login), regla 55 de steering, plantilla de PR, hook ampliado a DTO y apps/mcp, y pruebas del MCP en CI."
                     }
                 ]
 }

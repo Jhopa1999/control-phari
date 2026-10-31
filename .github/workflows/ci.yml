@@ -69,6 +69,10 @@ jobs:
       - name: Pruebas unitarias (Jest)
         run: npm run test:unit
 
+      # Pruebas del MCP (node --test). Incluyen la alineacion con el contrato.
+      - name: Pruebas del MCP
+        run: npm run test:mcp
+
       - name: Lint (web)
         run: npm run lint --workspace apps/web
 

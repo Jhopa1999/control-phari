@@ -6,8 +6,11 @@
  * JSON.
  */
 import { z } from 'zod';
+import type { paths } from '@plantilla-portales/api-client';
 import type { McpContext } from '../server.js';
 import { runApiTool } from './shared.js';
+
+type PortfolioQuery = NonNullable<paths['/portfolio']['get']['parameters']['query']>;
 
 /** Registra la tool de portafolio en el server. */
 export function registerPortfolioTools(ctx: McpContext): void {
@@ -30,8 +33,8 @@ export function registerPortfolioTools(ctx: McpContext): void {
         api.client.GET('/portfolio', {
           params: {
             query: {
-              band: args.band,
-              state: args.state,
+              band: args.band as PortfolioQuery['band'],
+              state: args.state as PortfolioQuery['state'],
               mainProcessId: args.mainProcessId,
             },
           },

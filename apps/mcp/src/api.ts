@@ -18,17 +18,6 @@ import { getCurrentHttpToken } from './http/token-store.js';
 type LoginResponse = components['schemas']['LoginResponseDto'];
 
 /**
- * Cuerpo de POST /auth/login. ÚNICA excepción documentada en la que se tipa un
- * body a mano: el contrato OpenAPI no expone el requestBody de /auth/login
- * (ver apps/api/src/modules/auth/dto/login-request.dto.ts, cuyos campos son
- * `identifier` y `password`).
- */
-interface LoginBody {
-  identifier: string;
-  password: string;
-}
-
-/**
  * API del MCP: el cliente tipado, el helper de login perezoso y utilidades para
  * el re-login reactivo ante 401 (ver más abajo).
  */
@@ -98,13 +87,12 @@ export function createMcpApi(config: McpConfig): McpApi {
     if (identity.mode !== 'jwt' || identity.kind !== 'login') {
       return false;
     }
-    const body: LoginBody = {
-      identifier: identity.identifier,
-      password: identity.password,
-    };
-    // El contrato no tipa el body de /auth/login; se castea el body local.
+    // El cuerpo viene tipado del contrato (LoginRequestDto): sin casts.
     const result = await client.POST('/auth/login', {
-      body: body as never,
+      body: {
+        identifier: identity.identifier,
+        password: identity.password,
+      },
     });
     if (result.error != null || result.data == null) {
       return false;

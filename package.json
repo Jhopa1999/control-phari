@@ -35,6 +35,7 @@
     "api-client:generate": "npm run generate --workspace packages/api-client",
     "contracts:generate": "npm run openapi:generate && npm run api-client:generate",
     "test:unit": "npm run test --workspace apps/api",
+    "test:mcp": "npm run test --workspace apps/mcp",
     "test:e2e": "playwright test",
     "test:all": "npm run test:unit && npm run test:e2e",
     "docker:prod:build": "docker compose -f compose.prod.yaml --env-file .env.production build",
