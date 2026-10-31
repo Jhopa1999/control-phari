@@ -1,0 +1,9 @@
+[Unit]
+Description=Aviso por SNS de que el respaldo de la base de datos de control-phari fallo
+# Lo dispara control-phari-backup.service con OnFailure=.
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/control-phari-backup.env
+ExecStart=/opt/control-phari-ops/notify-sns.sh "control-phari: el respaldo de la BD FALLO" "El servicio control-phari-backup.service termino con error en %H. Detalle: journalctl -u control-phari-backup.service -n 50. Runbook: docs/respaldo-restauracion-bd.md."
+TimeoutStartSec=120

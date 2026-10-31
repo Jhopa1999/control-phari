@@ -1,0 +1,16 @@
+{
+  "Role": "arn:aws:iam::<CUENTA>:role/control-phari-backups-replication",
+  "Rules": [
+    {
+      "ID": "replicar-respaldos-postgres",
+      "Status": "Enabled",
+      "Priority": 1,
+      "Filter": { "Prefix": "postgres/" },
+      "DeleteMarkerReplication": { "Status": "Disabled" },
+      "Destination": {
+        "Bucket": "arn:aws:s3:::control-phari-backups-<CUENTA>-usw2",
+        "StorageClass": "STANDARD"
+      }
+    }
+  ]
+}

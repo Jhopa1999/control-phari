@@ -2,6 +2,8 @@
 Description=Respaldo diario de la base de datos de control-phari a S3
 After=docker.service network-online.target
 Requires=docker.service
+# Si el respaldo falla, avisa por SNS (BL-022).
+OnFailure=control-phari-backup-alert.service
 
 [Service]
 Type=oneshot
