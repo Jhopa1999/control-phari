@@ -44,6 +44,7 @@ import {
   NAV_GROUPS,
   getVisibleNavGroups,
   isNavItemActive,
+  searchNavItems,
   type NavItem,
 } from '../apps/web/src/lib/navigation';
 import {
@@ -321,6 +322,29 @@ test.describe('navigation', () => {
       expect(labels, visible).toContain(visible);
     }
     expect(integrante.every((group) => group.items.length > 0)).toBe(true);
+  });
+
+  test('searchNavItems busca por etiqueta o grupo sin distinguir tildes ni mayúsculas', () => {
+    const groups = getVisibleNavGroups(new Set(NAV_GROUPS.flatMap((g) => g.items.map((i) => i.moduleKey))));
+    const labels = (query: string): string[] =>
+      searchNavItems(groups, query).map((result) => result.item.label);
+
+    // Sin tildes encuentra «Priorización».
+    expect(labels('priorizacion')).toEqual(['Priorización']);
+    expect(labels('  PRIORIZ ')).toEqual(['Priorización']);
+    // El título del grupo también cuenta y se conserva el orden del menú.
+    expect(labels('demanda')).toEqual(
+      expect.arrayContaining(['Solicitudes', 'Triage', 'Priorización', 'Aprobaciones']),
+    );
+    expect(searchNavItems(groups, 'solicitudes')[0].groupLabel).toBe('Demanda');
+    // El grupo de entrada no tiene título.
+    expect(searchNavItems(groups, 'panel')[0].groupLabel).toBeNull();
+    // Vacío o sin coincidencias: lista vacía.
+    expect(searchNavItems(groups, '')).toEqual([]);
+    expect(searchNavItems(groups, '   ')).toEqual([]);
+    expect(labels('zzz inexistente')).toEqual([]);
+    // Respeta los grupos recibidos (permisos ya aplicados).
+    expect(searchNavItems(getVisibleNavGroups(new Set(['dashboard'])), 'solicitudes')).toEqual([]);
   });
 
   test('isNavItemActive usa igualdad o prefijo de ruta, también en activeFor', () => {

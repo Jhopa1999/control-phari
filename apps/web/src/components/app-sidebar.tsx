@@ -2,11 +2,12 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Info, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { ChevronDown, Info, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { BrandMark, BrandName } from '@/components/brand';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -22,8 +23,10 @@ import { listDevActors } from '@/lib/dev-actors';
 import {
   getVisibleNavGroups,
   isNavItemActive,
+  searchNavItems,
   type NavItem,
 } from '@/lib/navigation';
+import { useCollapsedNavGroups } from '@/lib/use-collapsed-nav-groups';
 import { initialsOf } from '@/lib/user-initials';
 import { useSidebarMode } from '@/lib/use-sidebar-mode';
 import { cn } from '@/lib/utils';
@@ -49,11 +52,14 @@ function NavLink({
   active,
   isRail,
   onNavigate,
+  hint,
 }: {
   item: NavItem;
   active: boolean;
   isRail: boolean;
   onNavigate?: () => void;
+  /** Grupo del ítem, solo en los resultados de la búsqueda. */
+  hint?: string | null;
 }): React.ReactElement {
   const Icon = item.icon;
   // El tooltip repite el nombre del enlace (no lo describe) y solo existe en riel.
@@ -79,6 +85,11 @@ function NavLink({
             )}
           />
           <span className="min-w-0 truncate rail:sr-only">{item.label}</span>
+          {hint ? (
+            <span className="ml-auto shrink-0 truncate pl-2 text-xs text-sidebar-muted-foreground rail:sr-only">
+              {hint}
+            </span>
+          ) : null}
           {item.badge ? (
             <>
               {' '}
@@ -128,6 +139,13 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
 
   const actorSelectId = isDrawer ? 'drawer-actor-select' : 'actor-select';
   const groupLabelId = (group: string): string => `${isDrawer ? 'drawer-' : ''}nav-g-${group}`;
+  const searchId = isDrawer ? 'drawer-nav-search' : 'nav-search';
+
+  const router = useRouter();
+  const { collapsed, toggle, expand } = useCollapsedNavGroups();
+  const [query, setQuery] = React.useState('');
+  // Pestaña del grupo ya desplegado para la ruta actual (ver el efecto de abajo).
+  const expandedForPathRef = React.useRef<string | null>(null);
 
   const collapseRef = React.useRef<HTMLButtonElement>(null);
   const expandRef = React.useRef<HTMLButtonElement>(null);
@@ -175,6 +193,42 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
     () => (permState === 'success' ? getVisibleNavGroups(allowedModules) : []),
     [permState, allowedModules],
   );
+
+  // Con texto en el buscador el menú pasa a una lista plana de coincidencias.
+  // En riel no hay buscador, así que tampoco se filtra.
+  const searching = !isRail && query.trim() !== '';
+  const results = React.useMemo(
+    () => (searching ? searchNavItems(visibleGroups, query) : []),
+    [searching, visibleGroups, query],
+  );
+
+  // Al llegar a una pantalla de un grupo plegado (enlace, buscador, URL directa),
+  // el grupo se despliega para que la página actual no quede oculta. Solo una
+  // vez por ruta: si el usuario pliega después ese grupo, se respeta.
+  React.useEffect(() => {
+    if (visibleGroups.length === 0 || expandedForPathRef.current === pathname) return;
+    expandedForPathRef.current = pathname;
+    const active = visibleGroups.find((group) =>
+      group.items.some((item) => isNavItemActive(item, pathname)),
+    );
+    if (active) expand(active.id);
+  }, [pathname, visibleGroups, expand]);
+
+  function handleNavigate(): void {
+    setQuery('');
+    onNavigate?.();
+  }
+
+  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>): void {
+    if (event.key === 'Escape' && query !== '') {
+      event.preventDefault();
+      setQuery('');
+    } else if (event.key === 'Enter' && results.length > 0) {
+      event.preventDefault();
+      router.push(results[0].item.href);
+      handleNavigate();
+    }
+  }
 
   // Mismas condiciones que antes del rediseño. Mientras la identidad no se ha
   // leído o los permisos aún no empezaron a cargar ('none' con actor), se
@@ -272,35 +326,119 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
       default:
         return (
           <div className="flex flex-col gap-4 rail:gap-2">
-            {visibleGroups.map((group, index) => (
-              <div
-                key={group.id}
-                className={cn(index > 0 && 'rail:border-t rail:border-sidebar-border rail:pt-2')}
-              >
-                {group.label ? (
-                  <span
-                    id={groupLabelId(group.id)}
-                    className="block px-2.5 text-xs font-medium text-sidebar-muted-foreground rail:sr-only"
-                  >
-                    {group.label}
-                  </span>
-                ) : null}
-                <ul
-                  aria-labelledby={group.label ? groupLabelId(group.id) : undefined}
-                  className={cn('flex flex-col gap-0.5', group.label && 'mt-1 rail:mt-0')}
-                >
-                  {group.items.map((item) => (
+            {/* Buscador de pantallas (BL-027): solo con el menú expandido. */}
+            <div className="flex flex-col gap-1 px-0.5 rail:hidden">
+              <Label htmlFor={searchId} className="sr-only">
+                Buscar pantalla
+              </Label>
+              <div className="relative">
+                <Search
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-sidebar-muted-foreground"
+                />
+                <Input
+                  id={searchId}
+                  type="search"
+                  value={query}
+                  placeholder="Buscar pantalla…"
+                  autoComplete="off"
+                  className="h-8 bg-background pl-8 text-sm"
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                />
+              </div>
+              {/* Región viva: anuncia cuántas pantallas coinciden. */}
+              <p role="status" className="sr-only">
+                {searching
+                  ? results.length === 0
+                    ? 'Sin resultados'
+                    : `${results.length} ${results.length === 1 ? 'pantalla' : 'pantallas'}`
+                  : ''}
+              </p>
+            </div>
+
+            {searching ? (
+              results.length === 0 ? (
+                <p className="px-2.5 text-sm text-sidebar-muted-foreground">
+                  Ninguna pantalla coincide con «{query.trim()}». Prueba con otra palabra.
+                </p>
+              ) : (
+                <ul aria-label="Resultados de la búsqueda" className="flex flex-col gap-0.5">
+                  {results.map(({ item, groupLabel }) => (
                     <NavLink
                       key={item.href}
                       item={item}
                       active={isNavItemActive(item, pathname)}
                       isRail={isRail}
-                      onNavigate={onNavigate}
+                      hint={groupLabel}
+                      onNavigate={handleNavigate}
                     />
                   ))}
                 </ul>
-              </div>
-            ))}
+              )
+            ) : (
+              visibleGroups.map((group, index) => {
+                // El grupo de entrada no tiene título y no se pliega. En riel
+                // todos los grupos se ven (solo iconos): el plegado no aplica.
+                const foldable = group.label !== null && !isRail;
+                const isCollapsed = foldable && collapsed.has(group.id);
+                const listId = `${groupLabelId(group.id)}-list`;
+                return (
+                  <div
+                    key={group.id}
+                    className={cn(index > 0 && 'rail:border-t rail:border-sidebar-border rail:pt-2')}
+                  >
+                    {group.label ? (
+                      foldable ? (
+                        <button
+                          type="button"
+                          id={groupLabelId(group.id)}
+                          aria-expanded={!isCollapsed}
+                          aria-controls={listId}
+                          onClick={() => toggle(group.id)}
+                          className="flex w-full items-center justify-between rounded-md px-2.5 py-0.5 text-left text-xs font-medium text-sidebar-muted-foreground hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring pointer-coarse:min-h-10"
+                        >
+                          {group.label}
+                          <ChevronDown
+                            aria-hidden="true"
+                            className={cn(
+                              'size-3.5 shrink-0 transition-transform motion-reduce:transition-none',
+                              isCollapsed && '-rotate-90',
+                            )}
+                          />
+                        </button>
+                      ) : (
+                        <span
+                          id={groupLabelId(group.id)}
+                          className="block px-2.5 text-xs font-medium text-sidebar-muted-foreground rail:sr-only"
+                        >
+                          {group.label}
+                        </span>
+                      )
+                    ) : null}
+                    <ul
+                      id={listId}
+                      aria-labelledby={group.label ? groupLabelId(group.id) : undefined}
+                      className={cn(
+                        'flex flex-col gap-0.5',
+                        group.label && 'mt-1 rail:mt-0',
+                        isCollapsed && 'hidden',
+                      )}
+                    >
+                      {group.items.map((item) => (
+                        <NavLink
+                          key={item.href}
+                          item={item}
+                          active={isNavItemActive(item, pathname)}
+                          isRail={isRail}
+                          onNavigate={onNavigate}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })
+            )}
           </div>
         );
     }

@@ -7,6 +7,11 @@ envoltura delgada que delega en su componente de vista (`*-view.tsx`) y consume 
 del backend. El frontend no accede a la base de datos ni usa Prisma.
 
 El menú lateral se define en `apps/web/src/lib/navigation.ts`: 7 grupos y 27 ítems.
+Con el menú expandido (no en el riel de iconos), cada grupo con título se puede
+plegar con su encabezado; el navegador recuerda los grupos plegados y un grupo se
+vuelve a abrir al llegar a una de sus pantallas. Arriba hay un buscador de
+pantallas que filtra por nombre o por grupo sin distinguir tildes ni mayúsculas
+(Enter abre la primera coincidencia, Esc limpia el texto).
 Cada ítem declara una `moduleKey` que coincide con las claves de `MODULE_MATRIX` del
 backend; el menú se filtra de forma **cosmética** según `allowedModules` de
 `GET /me/permissions`. El control real de acceso lo hace siempre el servidor. Ver
