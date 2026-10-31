@@ -58,7 +58,7 @@ jobs:
 
       - name: Verificar que los contratos estan actualizados
         run: |
-          if ! git diff --exit-code -- apps/api/openapi/openapi.json packages/api-client/src/generated/schema.d.ts; then
+          if ! git diff --exit-code -- apps/api/openapi/openapi.json packages/api-client/src/generated/schema.d.ts packages/api-client/src/generated/openapi.json; then
             echo "::error::Los contratos generados no estan actualizados. Ejecute 'npm run contracts:generate' y versione los cambios."
             exit 1
           fi

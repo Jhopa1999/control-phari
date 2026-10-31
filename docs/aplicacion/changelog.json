@@ -324,6 +324,16 @@
                                              "docs/aplicacion/README.md"
                                          ],
                         "summary":  "Sincronia API, contrato, MCP y documentacion: el contrato OpenAPI se genera desde codigo compilado (publica 28 filtros que faltaban y tipa el login), regla 55 de steering, plantilla de PR, hook ampliado a DTO y apps/mcp, y pruebas del MCP en CI."
+                    },
+                    {
+                        "timestamp":  "2026-11-01T12:00:00Z",
+                        "trigger_file":  "apps/mcp/src/tools/register.ts",
+                        "updated_docs":  [
+                                             "docs/aplicacion/README.md",
+                                             "docs/aplicacion/auditoria-mcp.md",
+                                             "apps/mcp/README.md"
+                                         ],
+                        "summary":  "Catalogo declarativo del MCP (BL-032 F1 entrega 2): las 47 tools pasan a entradas de datos con motor generico, contrato OpenAPI entregado por el api-client, exclusiones con motivo y guard de cobertura MCP-contrato; audit.events.list sigue el contrato vigente (page/pageSize/action)."
                     }
                 ]
 }

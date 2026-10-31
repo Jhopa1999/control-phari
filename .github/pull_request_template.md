@@ -12,7 +12,7 @@
 
 - [ ] **No toca la API** (controllers, DTO, filtros, permisos), o bien todo lo siguiente está hecho:
 - [ ] Endpoints y DTO documentados en OpenAPI (`@ApiOperation`, `@ApiResponse`, `@ApiPropertyOptional`)
-- [ ] Contrato regenerado: `npm run contracts:generate` (`openapi.json` y `schema.d.ts`)
+- [ ] Contrato regenerado: `npm run contracts:generate` (`openapi.json`, `schema.d.ts` y la copia `generated/openapi.json` del api-client)
 - [ ] MCP: cada operación nueva o cambiada tiene tool (con anotaciones) o exclusión motivada; las retiradas se quitaron
 - [ ] Documentación en `docs/aplicacion/` y entrada en `changelog.json`
 - [ ] `apps/mcp/README.md` si cambió el catálogo o la identidad del MCP

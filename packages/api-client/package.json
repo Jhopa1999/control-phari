@@ -10,13 +10,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./openapi.json": "./dist/generated/openapi.json"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "generate": "openapi-typescript ../../apps/api/openapi/openapi.json -o ./src/generated/schema.d.ts",
+    "generate": "openapi-typescript ../../apps/api/openapi/openapi.json -o ./src/generated/schema.d.ts && node ./scripts/copy-openapi.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "tsc -p tsconfig.json && node ./scripts/copy-schema.mjs"
   },

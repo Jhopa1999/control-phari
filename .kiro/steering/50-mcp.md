@@ -29,6 +29,16 @@ y errores. Su contrato de referencia es `apps/mcp/README.md`; respétalo.
   cliente tipado generado (incluido `POST /auth/login`, cuyo cuerpo
   `LoginRequestDto` ya está en el contrato). Los esquemas de entrada de las tools
   se derivan del OpenAPI.
+- **Las tools son un catálogo declarativo**, no código: una entrada `ToolSpec`
+  (`name`, `operation`, `description`, `access`) en `apps/mcp/src/tools/specs/`
+  y un motor genérico (`openapi.ts`, `register.ts`) que deriva esquema, llamada
+  y anotaciones. No se escribe un handler por tool; solo `health.check` y
+  `dev.actors.list` son manuales (`manual.ts`). El contrato llega en runtime
+  desde `@plantilla-portales/api-client/openapi.json`.
+- **Cobertura frente al contrato.** Toda operación del contrato tiene tool o una
+  exclusión con motivo en `apps/mcp/src/tools/exclusions.ts`. Las exclusiones
+  «PENDIENTE» están acotadas por `MAX_PENDIENTES`, que solo puede bajar. Lo
+  verifica `coverage.test.ts` (bloquea el CI).
 - Todo cambio de API actualiza, en el mismo PR, el contrato, el MCP y la
   documentación: ver `.kiro/steering/55-sincronia-api-mcp-docs.md`. Cada tool
   declara anotaciones (`readOnlyHint`, `destructiveHint`, `idempotentHint`).
