@@ -3,6 +3,7 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { MobileNav } from '@/components/mobile-nav';
 import { NotificationBell } from '@/components/notification-bell';
 import { SkipLink } from '@/components/skip-link';
+import { UserMenu } from '@/components/user-menu';
 
 /**
  * Shell del portal (design §8.1): «Saltar al contenido», menú lateral (≥1024 px),
@@ -22,6 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }): React.Rea
           {/* Barra superior de escritorio: centro de notificaciones (NOT-01). */}
           <div className="sticky top-0 z-30 hidden h-12 items-center justify-end gap-2 border-b bg-background/95 px-4 backdrop-blur lg:flex md:px-6 xl:px-8">
             <NotificationBell />
+            <UserMenu />
           </div>
           <main
             id="contenido"

@@ -2,19 +2,11 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Info, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Info, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { BrandMark, BrandName } from '@/components/brand';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -32,6 +24,7 @@ import {
   isNavItemActive,
   type NavItem,
 } from '@/lib/navigation';
+import { initialsOf } from '@/lib/user-initials';
 import { useSidebarMode } from '@/lib/use-sidebar-mode';
 import { cn } from '@/lib/utils';
 import type { DevActor } from '@/lib/api-client';
@@ -44,15 +37,6 @@ export interface AppSidebarProps {
   variant: 'desktop' | 'drawer';
   /** Se llama al pulsar cualquier enlace del menú o la marca (el cajón se cierra). */
   onNavigate?: () => void;
-}
-
-/** Iniciales para el avatar: primera letra del primer y del último nombre. */
-function initialsOf(name: string | null | undefined): string {
-  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  const first = parts[0].charAt(0);
-  const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
-  return `${first}${last}`.toUpperCase();
 }
 
 /** Primer elemento de la lista que se ve (los botones alternados se ocultan con display: none). */
@@ -126,7 +110,6 @@ function NavLink({
  */
 export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.ReactElement {
   const pathname = usePathname();
-  const router = useRouter();
   const {
     authMode,
     actorId,
@@ -134,9 +117,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
     allowedModules,
     state: permState,
     reload,
-    authUser,
     identityReady,
-    logout,
   } = useActor();
   const mode = useSidebarMode();
   const isDrawer = variant === 'drawer';
@@ -154,7 +135,6 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
   const noticeRef = React.useRef<HTMLDivElement>(null);
   const focusActorSelectRef = React.useRef(false);
 
-  const [confirmLogoutOpen, setConfirmLogoutOpen] = React.useState(false);
   const [actors, setActors] = React.useState<DevActor[]>([]);
   const [actorsState, setActorsState] = React.useState<ActorsState>('loading');
 
@@ -227,12 +207,6 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
   function handleAvatarClick(): void {
     focusActorSelectRef.current = true;
     mode.setPref('expanded');
-  }
-
-  function handleLogout(): void {
-    setConfirmLogoutOpen(false);
-    logout();
-    router.replace('/login');
   }
 
   function renderNotice(message: string, options?: { alert?: boolean; retry?: boolean }): React.ReactElement {
@@ -334,11 +308,9 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
 
   const selectedActor = actors.find((actor) => actor.identifier === actorId);
   const actorDisplay = selectedActor?.name ?? actorId;
-  const userName = authUser?.name ?? 'Usuario';
 
-  // Controles del pie en una sola fila (auditoría UX A4): antes eran tres filas
-  // de texto (contraer, usuario, cerrar sesión) que quitaban ~64 px al menú.
-  // Son botones de icono con nombre accesible y tooltip; el riel los apila.
+  // Controles del pie: botón de icono con nombre accesible y tooltip (el riel
+  // los apila). La identidad y el cierre de sesión viven en UserMenu.
   const footerControls = (
     <div className="flex shrink-0 items-center gap-0.5 rail:flex-col">
       {!isDrawer ? (
@@ -371,40 +343,6 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
           </LabelTooltip>
         </>
       ) : null}
-      {isJwt ? (
-        <LabelTooltip label="Cerrar sesión" side="right">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="text-sidebar-foreground"
-            aria-label="Cerrar sesión"
-            onClick={() => setConfirmLogoutOpen(true)}
-          >
-            <LogOut aria-hidden="true" />
-          </Button>
-        </LabelTooltip>
-      ) : null}
-      {isJwt ? (
-        <Dialog open={confirmLogoutOpen} onOpenChange={setConfirmLogoutOpen}>
-          <DialogContent size="sm">
-            <DialogHeader>
-              <DialogTitle>¿Cerrar sesión?</DialogTitle>
-              <DialogDescription>
-                Saldrás del portal y tendrás que iniciar sesión de nuevo para continuar.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setConfirmLogoutOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="button" onClick={handleLogout}>
-                Cerrar sesión
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      ) : null}
     </div>
   );
 
@@ -431,33 +369,9 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
         {renderMenu()}
       </nav>
 
-      <div className="flex flex-col gap-1 border-t border-sidebar-border p-2 rail:items-center">
+      <div className={cn('flex flex-col gap-1 border-t border-sidebar-border p-2 rail:items-center', isDrawer && isJwt && 'hidden')}>
         <div className="flex w-full items-center gap-1 rail:flex-col">
-          {isJwt ? (
-            <div
-              role="group"
-              aria-label="Usuario autenticado"
-              className="flex min-w-0 flex-1 items-center gap-2 px-1 rail:flex-none rail:px-0"
-            >
-              <span
-                aria-hidden="true"
-                title={isRail ? userName : undefined}
-                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-xs font-semibold text-link"
-              >
-                {initialsOf(authUser?.name)}
-              </span>
-              <span className="flex min-w-0 flex-col rail:sr-only">
-                <span className="truncate text-sm font-medium">{userName}</span>
-                {authUser?.identifier ? (
-                  <span className="truncate text-xs text-sidebar-muted-foreground">
-                    {authUser.identifier}
-                  </span>
-                ) : null}
-              </span>
-            </div>
-          ) : (
-            <span className="flex-1 rail:hidden" />
-          )}
+          <span className="flex-1 rail:hidden" />
           {footerControls}
         </div>
 
