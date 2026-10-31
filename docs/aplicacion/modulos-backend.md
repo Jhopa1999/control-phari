@@ -257,6 +257,7 @@ Vistas de solo lectura: el portafolio de iniciativas y el control del área
 | --- | --- | --- |
 | GET | `/area-control/indicators` | Indicadores del área para el periodo (jefe/líder; integrante → `403`). |
 | GET | `/area-control/demand-summary` | Panorama de demanda en alcance (los 3 roles). |
+| GET | `/area-control/attention` | Conteos «Requiere tu atención» a hoy y en alcance (los 3 roles): solicitudes `REGISTRADA` (triage), `EN_TRIAGE` con triage `CONTINUAR` vigente (priorizar), `BACKLOG_PRIORIZADO` (aprobar) y tareas no terminadas con `endDate` anterior a hoy de solicitudes no cerradas, retiradas ni rechazadas. |
 
 ## capacity — Capacidad (disponibilidad y asignaciones)
 

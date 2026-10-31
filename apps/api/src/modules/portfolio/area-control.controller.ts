@@ -4,6 +4,7 @@ import { AreaControlService } from './area-control.service';
 import { AreaControlQueryDto } from './dto/area-control-query.dto';
 import {
   AreaIndicatorsResponseDto,
+  AttentionResponseDto,
   DemandSummaryResponseDto,
 } from './dto/area-control-response.dto';
 import { CurrentActor } from '../auth/current-actor.decorator';
@@ -53,5 +54,14 @@ export class AreaControlController {
     @Query() query: AreaControlQueryDto,
   ) {
     return this.areaControlService.demandSummary(actor, query);
+  }
+
+  @Get('attention')
+  @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE)
+  @ApiOperation({ summary: 'Conteos que requieren atencion, a hoy y en alcance (3 roles).' })
+  @ApiResponse({ status: 200, description: 'Conteos de atencion.', type: AttentionResponseDto })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  attention(@CurrentActor() actor: CurrentActorType) {
+    return this.areaControlService.attention(actor);
   }
 }

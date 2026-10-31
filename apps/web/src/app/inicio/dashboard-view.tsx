@@ -10,6 +10,7 @@ import { PageLayout } from '@/components/page-layout';
 import { PeriodFieldset } from '@/components/period-fieldset';
 import { Section } from '@/components/section';
 import { StatStrip, StatTile } from '@/components/stat-tile';
+import { AttentionSection } from './attention-section';
 import { StatusBadge } from '@/components/status-badge';
 import { TableSkeleton } from '@/components/table-skeleton';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -289,6 +290,7 @@ export function DashboardView(): React.ReactElement {
         title="Panel del área"
         description="Demanda del área en el periodo: volumen, bloqueos y distribución por estado y prioridad."
       />
+      <AttentionSection />
       <PeriodFieldset
         fromId="dashboard-from"
         toId="dashboard-to"

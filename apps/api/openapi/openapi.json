@@ -6611,6 +6611,31 @@
         ]
       }
     },
+    "/area-control/attention": {
+      "get": {
+        "operationId": "AreaControlController_attention",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Conteos de atencion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttentionResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Conteos que requieren atencion, a hoy y en alcance (3 roles).",
+        "tags": [
+          "area-control"
+        ]
+      }
+    },
     "/portfolio": {
       "get": {
         "operationId": "PortfolioController_list",
@@ -14116,6 +14141,33 @@
           "blockedActive",
           "byState",
           "byPriorityBand"
+        ]
+      },
+      "AttentionResponseDto": {
+        "type": "object",
+        "properties": {
+          "pendingTriage": {
+            "type": "number",
+            "description": "Solicitudes REGISTRADAS que esperan la decision de triage."
+          },
+          "readyToPrioritize": {
+            "type": "number",
+            "description": "Solicitudes en triage con decision CONTINUAR vigente, listas para priorizar."
+          },
+          "pendingApproval": {
+            "type": "number",
+            "description": "Solicitudes en backlog priorizado que esperan aprobacion del compromiso."
+          },
+          "overdueTasks": {
+            "type": "number",
+            "description": "Tareas no terminadas con fecha de fin anterior a hoy, de solicitudes aun abiertas."
+          }
+        },
+        "required": [
+          "pendingTriage",
+          "readyToPrioritize",
+          "pendingApproval",
+          "overdueTasks"
         ]
       },
       "PortfolioItemResponseDto": {
