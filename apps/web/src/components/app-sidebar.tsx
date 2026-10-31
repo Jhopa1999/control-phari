@@ -7,6 +7,14 @@ import { Info, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { BrandMark, BrandName } from '@/components/brand';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -146,6 +154,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
   const noticeRef = React.useRef<HTMLDivElement>(null);
   const focusActorSelectRef = React.useRef(false);
 
+  const [confirmLogoutOpen, setConfirmLogoutOpen] = React.useState(false);
   const [actors, setActors] = React.useState<DevActor[]>([]);
   const [actorsState, setActorsState] = React.useState<ActorsState>('loading');
 
@@ -221,6 +230,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
   }
 
   function handleLogout(): void {
+    setConfirmLogoutOpen(false);
     logout();
     router.replace('/login');
   }
@@ -369,11 +379,31 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
             size="icon-sm"
             className="text-sidebar-foreground"
             aria-label="Cerrar sesión"
-            onClick={handleLogout}
+            onClick={() => setConfirmLogoutOpen(true)}
           >
             <LogOut aria-hidden="true" />
           </Button>
         </LabelTooltip>
+      ) : null}
+      {isJwt ? (
+        <Dialog open={confirmLogoutOpen} onOpenChange={setConfirmLogoutOpen}>
+          <DialogContent size="sm">
+            <DialogHeader>
+              <DialogTitle>¿Cerrar sesión?</DialogTitle>
+              <DialogDescription>
+                Saldrás del portal y tendrás que iniciar sesión de nuevo para continuar.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setConfirmLogoutOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={handleLogout}>
+                Cerrar sesión
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </div>
   );
