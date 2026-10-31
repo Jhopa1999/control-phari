@@ -10,6 +10,7 @@ import { NotificationBell } from '@/components/notification-bell';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { UserMenu } from '@/components/user-menu';
 
 /** A partir de aquí manda el sidebar de escritorio (lg). */
 const DESKTOP_QUERY = '(min-width: 1024px)';
@@ -56,6 +57,7 @@ export function MobileNav(): React.ReactElement {
       <BrandName showTagline={false} className="min-w-0" />
       <NotificationBell className="ml-auto" />
       <ThemeToggle />
+      <UserMenu />
     </header>
   );
 }

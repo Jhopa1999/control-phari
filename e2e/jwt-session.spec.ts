@@ -70,8 +70,8 @@ const loginHeading = (page: Page) =>
 const loginForm = (page: Page) => page.locator('#password');
 const expiredNotice = (page: Page) =>
   page.getByRole('status').filter({ hasText: /expir/i });
-const logoutButton = (page: Page) =>
-  page.getByRole('button', { name: /Cerrar sesi[oó]n/ });
+const userMenuButton = (page: Page) =>
+  page.getByRole('button', { name: /Men[uú] de usuario/ });
 
 /** Espera a que terminen las peticiones (y una posible redirección en curso). */
 async function settled(page: Page): Promise<void> {
@@ -178,14 +178,16 @@ test('cerrar sesión lleva a /login sin next y una recarga no la recupera', asyn
   await expect(mainHeading(page)).toBeVisible();
 
   // Pide confirmación: cancelar conserva la sesión; confirmar la cierra.
-  await logoutButton(page).click();
+  await userMenuButton(page).click();
+  await page.getByRole('menuitem', { name: /Cerrar sesi[oó]n/ }).click();
   const confirmDialog = page.getByRole('dialog', { name: /¿Cerrar sesi[oó]n\?/ });
   await expect(confirmDialog).toBeVisible();
   await confirmDialog.getByRole('button', { name: 'Cancelar' }).click();
   await expect(confirmDialog).toBeHidden();
   await expect(page).toHaveURL('/demanda/solicitudes');
 
-  await logoutButton(page).click();
+  await userMenuButton(page).click();
+  await page.getByRole('menuitem', { name: /Cerrar sesi[oó]n/ }).click();
   await confirmDialog.getByRole('button', { name: /Cerrar sesi[oó]n/ }).click();
   await expect(loginForm(page)).toBeVisible();
   await expect(loginHeading(page)).toBeVisible();
