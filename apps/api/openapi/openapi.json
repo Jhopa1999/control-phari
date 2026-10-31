@@ -112,6 +112,16 @@
       "post": {
         "operationId": "AuthLoginController_login",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequestDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Credenciales validas.",
@@ -204,41 +214,10 @@
         "operationId": "AuditController_findMany",
         "parameters": [
           {
-            "name": "pageSize",
-            "required": false,
-            "in": "query",
-            "description": "Tamano de pagina (acotado a 100). Por defecto 25.",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "description": "Pagina (1-based). Por defecto 1.",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "action",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "CREATE",
-                "UPDATE",
-                "DELETE",
-                "REVOKE"
-              ],
-              "type": "string"
-            }
-          },
-          {
             "name": "objectType",
             "required": false,
             "in": "query",
+            "description": "Filtra por tipo de objeto.",
             "schema": {
               "enum": [
                 "PROCESS",
@@ -274,6 +253,44 @@
                 "RECURRING_ACTIVITY_OCCURRENCE"
               ],
               "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por verbo de la mutacion.",
+            "schema": {
+              "enum": [
+                "CREATE",
+                "UPDATE",
+                "DELETE",
+                "REVOKE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Pagina (1-based). Por defecto 1.",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Tamano de pagina (acotado a 100). Por defecto 25.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
             }
           }
         ],
@@ -392,7 +409,8 @@
             "in": "path",
             "description": "Identificador UUID del elemento.",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -428,7 +446,8 @@
             "in": "path",
             "description": "Identificador UUID del elemento.",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -477,6 +496,7 @@
             "name": "active",
             "required": false,
             "in": "query",
+            "description": "Filtra por estado activo.",
             "schema": {
               "type": "boolean"
             }
@@ -554,7 +574,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -586,7 +607,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -632,19 +654,22 @@
         "operationId": "RequesterController_findMany",
         "parameters": [
           {
-            "name": "areaId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
             "name": "active",
             "required": false,
             "in": "query",
+            "description": "Filtra por estado activo.",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "areaId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por area.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -720,7 +745,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -755,7 +781,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -801,19 +828,23 @@
         "operationId": "NotificationController_list",
         "parameters": [
           {
-            "name": "take",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
             "name": "unreadOnly",
             "required": false,
             "in": "query",
+            "description": "Solo no leídas.",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "description": "Máximo de resultados (30 por defecto).",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
             }
           }
         ],
@@ -869,7 +900,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -924,7 +956,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -956,7 +989,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -990,7 +1024,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1037,7 +1072,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1109,7 +1145,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1147,7 +1184,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1196,18 +1234,40 @@
         "operationId": "RequestController_findMany",
         "parameters": [
           {
-            "name": "mainProcessId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
             "name": "state",
             "required": false,
             "in": "query",
-            "schema": {}
+            "description": "Filtra por estado operativo.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "REGISTRADA",
+                "EN_TRIAGE",
+                "DEVUELTA",
+                "RECHAZADA",
+                "BACKLOG_PRIORIZADO",
+                "COMPROMETIDA",
+                "EN_PLANIFICACION",
+                "EN_EJECUCION",
+                "BLOQUEADA",
+                "EN_VALIDACION",
+                "LISTA_PARA_LIBERAR",
+                "EN_ESTABILIZACION",
+                "OPERATIVA",
+                "CERRADA",
+                "RETIRADA"
+              ]
+            }
+          },
+          {
+            "name": "mainProcessId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por proceso principal.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1279,7 +1339,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1311,7 +1372,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1342,7 +1404,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1389,7 +1452,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1424,7 +1488,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1477,7 +1542,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1530,7 +1596,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1568,7 +1635,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1615,7 +1683,53 @@
     "/assets": {
       "get": {
         "operationId": "AssetController_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por proceso.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "requestId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por solicitud.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BORRADOR",
+                "ACTIVO",
+                "RETIRADO"
+              ]
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "description": "Maximo de resultados.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "type": "number"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Activos.",
@@ -1688,7 +1802,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1723,7 +1838,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1773,7 +1889,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1813,7 +1930,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1857,7 +1975,85 @@
     "/documents": {
       "get": {
         "operationId": "DocumentController_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "assetId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por activo.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por proceso (del activo).",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "requestId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por solicitud (del activo).",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryCode",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por categoría (maestra DOC_CATEGORY).",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BORRADOR",
+                "PENDIENTE_APROBACION",
+                "VIGENTE",
+                "RECHAZADO",
+                "ARCHIVADA"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Busqueda por texto en el titulo.",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "description": "Maximo de resultados.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "type": "number"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Documentos.",
@@ -1964,7 +2160,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -1999,7 +2196,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2049,7 +2247,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2100,7 +2299,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2136,19 +2336,21 @@
         "operationId": "DocumentController_getVersionContent",
         "parameters": [
           {
-            "name": "versionId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2185,7 +2387,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2222,7 +2425,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2265,7 +2469,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2315,7 +2520,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2361,23 +2567,25 @@
         "operationId": "ProcessController_findMany",
         "parameters": [
           {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado activo.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "kind",
             "required": false,
             "in": "query",
+            "description": "Filtra por tipo de proceso.",
             "schema": {
               "enum": [
                 "PROCESS",
                 "COORDINATION"
               ],
               "type": "string"
-            }
-          },
-          {
-            "name": "active",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "boolean"
             }
           }
         ],
@@ -2453,7 +2661,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2485,7 +2694,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2602,7 +2812,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2637,7 +2848,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2687,7 +2899,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2713,27 +2926,32 @@
         "operationId": "GrantController_findMany",
         "parameters": [
           {
-            "name": "active",
+            "name": "userId",
             "required": false,
             "in": "query",
+            "description": "Filtra por usuario.",
             "schema": {
-              "type": "boolean"
+              "format": "uuid",
+              "type": "string"
             }
           },
           {
             "name": "processId",
             "required": false,
             "in": "query",
+            "description": "Filtra por proceso.",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           },
           {
-            "name": "userId",
+            "name": "active",
             "required": false,
             "in": "query",
+            "description": "Filtra por estado activo.",
             "schema": {
-              "format": "uuid"
+              "type": "boolean"
             }
           }
         ],
@@ -2812,7 +3030,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2877,7 +3096,53 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por estado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "POR_HACER",
+                "EN_CURSO",
+                "BLOQUEADA",
+                "EN_REVISION",
+                "TERMINADA"
+              ]
+            }
+          },
+          {
+            "name": "phaseId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por fase.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "mine",
+            "required": false,
+            "in": "query",
+            "description": "Solo mis tareas (\"true\"/\"false\").",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Busqueda por titulo.",
+            "schema": {
+              "maxLength": 255,
+              "type": "string"
             }
           }
         ],
@@ -2917,7 +3182,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -2967,7 +3233,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3002,7 +3269,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3050,7 +3318,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3083,7 +3352,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3136,7 +3406,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3186,7 +3457,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3234,7 +3506,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3269,7 +3542,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3316,7 +3590,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3353,7 +3628,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3390,7 +3666,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3420,7 +3697,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3450,7 +3728,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3503,7 +3782,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3556,7 +3836,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3606,7 +3887,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3656,7 +3938,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3709,7 +3992,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3747,7 +4031,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3794,7 +4079,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3843,19 +4129,21 @@
         "operationId": "PhaseController_update",
         "parameters": [
           {
-            "name": "phaseId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
             "name": "planId",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "phaseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3899,19 +4187,21 @@
         "operationId": "PhaseController_remove",
         "parameters": [
           {
-            "name": "phaseId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
             "name": "planId",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "phaseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3944,7 +4234,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -3982,7 +4273,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4031,19 +4323,21 @@
         "operationId": "DependencyController_remove",
         "parameters": [
           {
-            "name": "predecessorTaskId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "predecessorTaskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4076,7 +4370,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4111,7 +4406,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4157,19 +4453,21 @@
         "operationId": "EvidenceController_download",
         "parameters": [
           {
-            "name": "evidenceId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
             "name": "taskId",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "evidenceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4199,19 +4497,21 @@
         "operationId": "EvidenceController_remove",
         "parameters": [
           {
-            "name": "evidenceId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
             "name": "taskId",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "evidenceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4240,8 +4540,11 @@
             "name": "month",
             "required": true,
             "in": "query",
+            "description": "Mes a resumir en formato YYYY-MM.",
             "schema": {
-              "example": "2025-03"
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2025-03",
+              "type": "string"
             }
           }
         ],
@@ -4308,8 +4611,11 @@
             "name": "month",
             "required": true,
             "in": "query",
+            "description": "Mes a consultar en formato YYYY-MM.",
             "schema": {
-              "example": "2025-03"
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2025-03",
+              "type": "string"
             }
           }
         ],
@@ -4391,7 +4697,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4437,35 +4744,44 @@
         "operationId": "CapacityController_listAssignments",
         "parameters": [
           {
-            "name": "requestId",
-            "required": false,
+            "name": "month",
+            "required": true,
             "in": "query",
+            "description": "Mes a consultar en formato YYYY-MM.",
             "schema": {
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "userId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid"
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2025-03",
+              "type": "string"
             }
           },
           {
             "name": "processId",
             "required": false,
             "in": "query",
+            "description": "Filtra por proceso.",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           },
           {
-            "name": "month",
-            "required": true,
+            "name": "userId",
+            "required": false,
             "in": "query",
+            "description": "Filtra por persona.",
             "schema": {
-              "example": "2025-03"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "requestId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por solicitud.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4544,7 +4860,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4592,7 +4909,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4644,7 +4962,38 @@
     "/worklog/daily": {
       "get": {
         "operationId": "WorklogController_listDailyLogs",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por dia (YYYY-MM-DD).",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por proceso.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorUserId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por autor.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Diarios.",
@@ -4717,7 +5066,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4749,7 +5099,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4791,7 +5142,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4818,7 +5170,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4855,7 +5208,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4902,7 +5256,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4947,7 +5302,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -4968,7 +5324,28 @@
     "/weekly-reports": {
       "get": {
         "operationId": "WorklogController_listWeeklyReports",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "weekStart",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por semana (cualquier dia, YYYY-MM-DD).",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por proceso.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Semanales.",
@@ -5041,7 +5418,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5073,7 +5451,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5117,7 +5496,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5148,7 +5528,49 @@
     "/issues": {
       "get": {
         "operationId": "IssueController_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BORRADOR",
+                "EN_CURSO",
+                "BLOQUEADO",
+                "COMPLETADO",
+                "ARCHIVADO"
+              ]
+            }
+          },
+          {
+            "name": "typeCode",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por tipo.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BLOQUEO",
+                "INCIDENTE",
+                "CALIDAD_DATOS",
+                "SOLICITUD_APOYO"
+              ]
+            }
+          },
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por proceso.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Novedades.",
@@ -5218,7 +5640,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5250,7 +5673,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5295,7 +5719,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5322,7 +5747,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5363,7 +5789,34 @@
     "/meetings": {
       "get": {
         "operationId": "MeetingController_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por proceso.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BORRADOR",
+                "EN_CURSO",
+                "BLOQUEADO",
+                "COMPLETADO",
+                "ARCHIVADO"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Reuniones.",
@@ -5433,7 +5886,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5465,7 +5919,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5513,7 +5968,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5543,7 +5999,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5583,7 +6040,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5617,7 +6075,44 @@
     "/commitments": {
       "get": {
         "operationId": "CommitmentController_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BORRADOR",
+                "EN_CURSO",
+                "BLOQUEADO",
+                "COMPLETADO",
+                "ARCHIVADO"
+              ]
+            }
+          },
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por proceso.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "assignedUserId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por asignado.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Compromisos.",
@@ -5687,7 +6182,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5719,7 +6215,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5764,7 +6261,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5791,7 +6289,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5838,7 +6337,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5871,18 +6371,21 @@
         "operationId": "GateCheckController_addPendingItem",
         "parameters": [
           {
-            "name": "gateCode",
-            "required": true,
-            "in": "path",
-            "description": "GC1..GC5",
-            "schema": {}
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "gateCode",
+            "required": true,
+            "in": "path",
+            "description": "GC1..GC5",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -5925,11 +6428,12 @@
         "operationId": "GateCheckController_resolvePendingItem",
         "parameters": [
           {
-            "name": "itemId",
+            "name": "id",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           },
           {
@@ -5937,14 +6441,17 @@
             "required": true,
             "in": "path",
             "description": "GC1..GC5",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "name": "id",
+            "name": "itemId",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -5991,7 +6498,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6038,7 +6546,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6085,7 +6594,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6128,18 +6638,21 @@
         "operationId": "GateCheckController_approve",
         "parameters": [
           {
-            "name": "gateCode",
-            "required": true,
-            "in": "path",
-            "description": "GC4 o GC5",
-            "schema": {}
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "gateCode",
+            "required": true,
+            "in": "path",
+            "description": "GC4 o GC5",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -6182,18 +6695,21 @@
         "operationId": "GateCheckController_waive",
         "parameters": [
           {
-            "name": "gateCode",
-            "required": true,
-            "in": "path",
-            "description": "GC1..GC5",
-            "schema": {}
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "gateCode",
+            "required": true,
+            "in": "path",
+            "description": "GC1..GC5",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -6240,7 +6756,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6290,7 +6807,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6337,7 +6855,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6384,7 +6903,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6422,7 +6942,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6468,19 +6989,21 @@
         "operationId": "ValidationController_resolveBlocking",
         "parameters": [
           {
-            "name": "validationId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "validationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6526,19 +7049,25 @@
         "operationId": "AreaControlController_indicators",
         "parameters": [
           {
-            "name": "to",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": "2025-04-01"
-            }
-          },
-          {
             "name": "from",
             "required": false,
             "in": "query",
+            "description": "Inicio del periodo (inclusivo), YYYY-MM-DD.",
             "schema": {
-              "example": "2025-03-01"
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+              "example": "2025-03-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Fin del periodo (exclusivo), YYYY-MM-DD.",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+              "example": "2025-04-01",
+              "type": "string"
             }
           }
         ],
@@ -6571,19 +7100,25 @@
         "operationId": "AreaControlController_demandSummary",
         "parameters": [
           {
-            "name": "to",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "example": "2025-04-01"
-            }
-          },
-          {
             "name": "from",
             "required": false,
             "in": "query",
+            "description": "Inicio del periodo (inclusivo), YYYY-MM-DD.",
             "schema": {
-              "example": "2025-03-01"
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+              "example": "2025-03-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Fin del periodo (exclusivo), YYYY-MM-DD.",
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+              "example": "2025-04-01",
+              "type": "string"
             }
           }
         ],
@@ -6641,25 +7176,56 @@
         "operationId": "PortfolioController_list",
         "parameters": [
           {
-            "name": "band",
+            "name": "mainProcessId",
             "required": false,
             "in": "query",
+            "description": "Filtra por proceso principal.",
             "schema": {
-              "example": "P1"
+              "format": "uuid",
+              "type": "string"
             }
           },
           {
             "name": "state",
             "required": false,
             "in": "query",
-            "schema": {}
+            "description": "Filtra por estado operativo.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "REGISTRADA",
+                "EN_TRIAGE",
+                "DEVUELTA",
+                "RECHAZADA",
+                "BACKLOG_PRIORIZADO",
+                "COMPROMETIDA",
+                "EN_PLANIFICACION",
+                "EN_EJECUCION",
+                "BLOQUEADA",
+                "EN_VALIDACION",
+                "LISTA_PARA_LIBERAR",
+                "EN_ESTABILIZACION",
+                "OPERATIVA",
+                "CERRADA",
+                "RETIRADA"
+              ]
+            }
           },
           {
-            "name": "mainProcessId",
+            "name": "band",
             "required": false,
             "in": "query",
+            "description": "Filtra por banda de prioridad o SIN_PRIORIZAR.",
             "schema": {
-              "format": "uuid"
+              "example": "P1",
+              "type": "string",
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4",
+                "SIN_PRIORIZAR"
+              ]
             }
           }
         ],
@@ -6838,7 +7404,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6951,7 +7518,9 @@
             "required": true,
             "in": "path",
             "description": "Code del agente (p. ej. TRIAGE).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -6985,7 +7554,9 @@
             "required": true,
             "in": "path",
             "description": "Code del agente (p. ej. TRIAGE).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -7034,7 +7605,9 @@
             "required": true,
             "in": "path",
             "description": "Code del agente (p. ej. TRIAGE).",
-            "schema": {}
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -7070,7 +7643,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -7112,64 +7686,30 @@
         "operationId": "OccurrenceController_findAll",
         "parameters": [
           {
-            "name": "pageSize",
+            "name": "scope",
             "required": false,
             "in": "query",
-            "description": "Tamano de pagina (acotado a 100). Por defecto 25.",
+            "description": "Alcance: \"mine\" (por defecto) o \"all\" (solo jefe/admin).",
             "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "description": "Pagina (1-based). Por defecto 1.",
-            "schema": {
-              "type": "number"
-            }
-          },
-          {
-            "name": "responsibleAreaId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid",
+              "enum": [
+                "mine",
+                "all"
+              ],
               "type": "string"
             }
           },
           {
-            "name": "responsibleUserId",
+            "name": "status",
             "required": false,
             "in": "query",
+            "description": "Filtra por estado de la ocurrencia.",
             "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": false,
-            "in": "query",
-            "description": "Dia objetivo hasta (inclusive).",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": false,
-            "in": "query",
-            "description": "Dia objetivo desde (inclusive).",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "activityType",
-            "required": false,
-            "in": "query",
-            "schema": {
+              "enum": [
+                "PENDIENTE",
+                "EN_CURSO",
+                "COMPLETADA",
+                "VENCIDA"
+              ],
               "type": "string"
             }
           },
@@ -7177,6 +7717,7 @@
             "name": "cadence",
             "required": false,
             "in": "query",
+            "description": "Filtra por cadencia de la definicion.",
             "schema": {
               "enum": [
                 "SEMANAL",
@@ -7189,29 +7730,75 @@
             }
           },
           {
-            "name": "status",
+            "name": "activityType",
             "required": false,
             "in": "query",
+            "description": "Filtra por tipo de actividad (catalogo).",
             "schema": {
-              "enum": [
-                "PENDIENTE",
-                "EN_CURSO",
-                "COMPLETADA",
-                "VENCIDA"
-              ],
               "type": "string"
             }
           },
           {
-            "name": "scope",
+            "name": "from",
             "required": false,
             "in": "query",
+            "description": "Dia objetivo desde (inclusive).",
             "schema": {
-              "enum": [
-                "mine",
-                "all"
-              ],
+              "format": "date-time",
               "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Dia objetivo hasta (inclusive).",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "responsibleUserId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por usuario responsable de la definicion (scope=all).",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "responsibleAreaId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por area responsable de la definicion (scope=all).",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Pagina (1-based). Por defecto 1.",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Tamano de pagina (acotado a 100). Por defecto 25.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
             }
           }
         ],
@@ -7248,7 +7835,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -7282,7 +7870,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -7319,7 +7908,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -7450,20 +8040,12 @@
         "operationId": "RecurringActivityController_compliance",
         "parameters": [
           {
-            "name": "responsibleAreaId",
+            "name": "from",
             "required": false,
             "in": "query",
+            "description": "Dia objetivo desde (inclusive).",
             "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "responsibleUserId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "format": "uuid",
+              "format": "date-time",
               "type": "string"
             }
           },
@@ -7473,15 +8055,27 @@
             "in": "query",
             "description": "Dia objetivo hasta (inclusive).",
             "schema": {
+              "format": "date-time",
               "type": "string"
             }
           },
           {
-            "name": "from",
+            "name": "responsibleUserId",
             "required": false,
             "in": "query",
-            "description": "Dia objetivo desde (inclusive).",
+            "description": "Filtra por usuario responsable de la definicion.",
             "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "responsibleAreaId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por area responsable de la definicion.",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
@@ -7516,7 +8110,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -7551,7 +8146,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -7602,7 +8198,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -7941,6 +8538,25 @@
         "required": [
           "identifier",
           "name"
+        ]
+      },
+      "LoginRequestDto": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "Identificador funcional del usuario.",
+            "example": "jefe@demo.local"
+          },
+          "password": {
+            "type": "string",
+            "description": "Contrasena del usuario.",
+            "example": "dev1234"
+          }
+        },
+        "required": [
+          "identifier",
+          "password"
         ]
       },
       "LoginUserDto": {

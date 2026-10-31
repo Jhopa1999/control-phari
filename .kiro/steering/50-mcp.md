@@ -25,9 +25,13 @@ y errores. Su contrato de referencia es `apps/mcp/README.md`; respétalo.
 - Las tools mapean el contrato OpenAPI del backend. No inventes tools ni campos
   fuera del contrato. Si una tool necesita una capacidad nueva, primero existe
   en `apps/api` y en el contrato; el MCP la reutiliza después.
-- Única excepción documentada de tipado manual: el body de `POST /auth/login`,
-  porque el contrato no expone su `requestBody` (ver `apps/mcp/src/api.ts`). No
-  amplíes esta excepción sin justificación explícita.
+- No hay tipado manual de contratos: cuerpos, parámetros y respuestas salen del
+  cliente tipado generado (incluido `POST /auth/login`, cuyo cuerpo
+  `LoginRequestDto` ya está en el contrato). Los esquemas de entrada de las tools
+  se derivan del OpenAPI.
+- Todo cambio de API actualiza, en el mismo PR, el contrato, el MCP y la
+  documentación: ver `.kiro/steering/55-sincronia-api-mcp-docs.md`. Cada tool
+  declara anotaciones (`readOnlyHint`, `destructiveHint`, `idempotentHint`).
 
 # Identidad y secretos
 

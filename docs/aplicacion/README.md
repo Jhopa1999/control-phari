@@ -124,6 +124,14 @@ renombre sin impacto en endpoints/modelo/pantallas).
 complementarios y no se pisan: uno asiste durante la edición, el otro verifica
 al integrar.
 
+**Sincronía API, MCP y documentación.** La API es la fuente de verdad; el
+contrato OpenAPI, el cliente tipado, el MCP y esta documentación se actualizan
+en el **mismo PR**. La regla completa, con la lista de verificación y los
+controles automáticos (contratos regenerados y pruebas del MCP en CI, aviso de
+documentación, plantilla de PR y hook del editor), está en
+`.kiro/steering/55-sincronia-api-mcp-docs.md`. El hook
+`actualizar-docs-aplicacion.json` también cubre ahora los DTO y `apps/mcp`.
+
 ## Administración del sistema (rol ADMIN)
 Existe un rol de **sistema** `ADMIN` (origen: `User.isAdmin`), separado de los roles de
 área (`JEFE_AREA`/`LIDER_PROCESO`/`INTEGRANTE`). El administrador configura el sistema

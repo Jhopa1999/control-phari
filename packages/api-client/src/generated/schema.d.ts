@@ -2372,6 +2372,18 @@ export interface components {
              */
             name: string;
         };
+        LoginRequestDto: {
+            /**
+             * @description Identificador funcional del usuario.
+             * @example jefe@demo.local
+             */
+            identifier: string;
+            /**
+             * @description Contrasena del usuario.
+             * @example dev1234
+             */
+            password: string;
+        };
         LoginUserDto: {
             /**
              * Format: uuid
@@ -6140,7 +6152,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequestDto"];
+            };
+        };
         responses: {
             /** @description Credenciales validas. */
             200: {
@@ -6230,12 +6246,14 @@ export interface operations {
     AuditController_findMany: {
         parameters: {
             query?: {
-                /** @description Tamano de pagina (acotado a 100). Por defecto 25. */
-                pageSize?: number;
+                /** @description Filtra por tipo de objeto. */
+                objectType?: "PROCESS" | "AREA" | "REQUESTER" | "PROJECT_CLOSURE" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD" | "RECURRING_ACTIVITY" | "RECURRING_ACTIVITY_OCCURRENCE";
+                /** @description Filtra por verbo de la mutacion. */
+                action?: "CREATE" | "UPDATE" | "DELETE" | "REVOKE";
                 /** @description Pagina (1-based). Por defecto 1. */
                 page?: number;
-                action?: "CREATE" | "UPDATE" | "DELETE" | "REVOKE";
-                objectType?: "PROCESS" | "AREA" | "REQUESTER" | "PROJECT_CLOSURE" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD" | "RECURRING_ACTIVITY" | "RECURRING_ACTIVITY_OCCURRENCE";
+                /** @description Tamano de pagina (acotado a 100). Por defecto 25. */
+                pageSize?: number;
             };
             header?: never;
             path?: never;
@@ -6344,7 +6362,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Identificador UUID del elemento. */
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -6381,7 +6399,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Identificador UUID del elemento. */
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -6426,6 +6444,7 @@ export interface operations {
     AreaController_findMany: {
         parameters: {
             query?: {
+                /** @description Filtra por estado activo. */
                 active?: boolean;
             };
             header?: never;
@@ -6502,7 +6521,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -6531,7 +6550,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -6576,8 +6595,10 @@ export interface operations {
     RequesterController_findMany: {
         parameters: {
             query?: {
-                areaId?: unknown;
+                /** @description Filtra por estado activo. */
                 active?: boolean;
+                /** @description Filtra por area. */
+                areaId?: string;
             };
             header?: never;
             path?: never;
@@ -6651,7 +6672,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -6686,7 +6707,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -6730,8 +6751,10 @@ export interface operations {
     NotificationController_list: {
         parameters: {
             query?: {
-                take?: number;
+                /** @description Solo no leídas. */
                 unreadOnly?: boolean;
+                /** @description Máximo de resultados (30 por defecto). */
+                take?: number;
             };
             header?: never;
             path?: never;
@@ -6780,7 +6803,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -6833,7 +6856,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -6861,7 +6884,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -6889,7 +6912,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -6928,7 +6951,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -6987,7 +7010,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7023,7 +7046,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7075,8 +7098,10 @@ export interface operations {
     RequestController_findMany: {
         parameters: {
             query?: {
-                mainProcessId?: unknown;
-                state?: unknown;
+                /** @description Filtra por estado operativo. */
+                state?: "REGISTRADA" | "EN_TRIAGE" | "DEVUELTA" | "RECHAZADA" | "BACKLOG_PRIORIZADO" | "COMPROMETIDA" | "EN_PLANIFICACION" | "EN_EJECUCION" | "BLOQUEADA" | "EN_VALIDACION" | "LISTA_PARA_LIBERAR" | "EN_ESTABILIZACION" | "OPERATIVA" | "CERRADA" | "RETIRADA";
+                /** @description Filtra por proceso principal. */
+                mainProcessId?: string;
             };
             header?: never;
             path?: never;
@@ -7145,7 +7170,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7174,7 +7199,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7215,7 +7240,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7255,7 +7280,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7291,7 +7316,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7345,7 +7370,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7399,7 +7424,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7435,7 +7460,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7486,7 +7511,16 @@ export interface operations {
     };
     AssetController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filtra por proceso. */
+                processId?: string;
+                /** @description Filtra por solicitud. */
+                requestId?: string;
+                /** @description Filtra por estado. */
+                status?: "BORRADOR" | "ACTIVO" | "RETIRADO";
+                /** @description Maximo de resultados. */
+                take?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -7561,7 +7595,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7597,7 +7631,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7644,7 +7678,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7680,7 +7714,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7724,7 +7758,22 @@ export interface operations {
     };
     DocumentController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filtra por activo. */
+                assetId?: string;
+                /** @description Filtra por proceso (del activo). */
+                processId?: string;
+                /** @description Filtra por solicitud (del activo). */
+                requestId?: string;
+                /** @description Filtra por categoría (maestra DOC_CATEGORY). */
+                categoryCode?: string;
+                /** @description Filtra por estado. */
+                status?: "BORRADOR" | "PENDIENTE_APROBACION" | "VIGENTE" | "RECHAZADO" | "ARCHIVADA";
+                /** @description Busqueda por texto en el titulo. */
+                q?: string;
+                /** @description Maximo de resultados. */
+                take?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -7840,7 +7889,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7876,7 +7925,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7923,7 +7972,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -7959,7 +8008,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8013,8 +8062,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                versionId: unknown;
-                id: unknown;
+                id: string;
+                versionId: string;
             };
             cookie?: never;
         };
@@ -8050,7 +8099,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8086,7 +8135,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8136,7 +8185,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8183,7 +8232,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8228,8 +8277,10 @@ export interface operations {
     ProcessController_findMany: {
         parameters: {
             query?: {
-                kind?: "PROCESS" | "COORDINATION";
+                /** @description Filtra por estado activo. */
                 active?: boolean;
+                /** @description Filtra por tipo de proceso. */
+                kind?: "PROCESS" | "COORDINATION";
             };
             header?: never;
             path?: never;
@@ -8305,7 +8356,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8334,7 +8385,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8453,7 +8504,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8489,7 +8540,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8536,7 +8587,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8568,9 +8619,12 @@ export interface operations {
     GrantController_findMany: {
         parameters: {
             query?: {
+                /** @description Filtra por usuario. */
+                userId?: string;
+                /** @description Filtra por proceso. */
+                processId?: string;
+                /** @description Filtra por estado activo. */
                 active?: boolean;
-                processId?: unknown;
-                userId?: unknown;
             };
             header?: never;
             path?: never;
@@ -8653,7 +8707,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8713,10 +8767,19 @@ export interface operations {
     };
     TaskController_findForPlan: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filtrar por estado. */
+                status?: "POR_HACER" | "EN_CURSO" | "BLOQUEADA" | "EN_REVISION" | "TERMINADA";
+                /** @description Filtrar por fase. */
+                phaseId?: string;
+                /** @description Solo mis tareas ("true"/"false"). */
+                mine?: string;
+                /** @description Busqueda por titulo. */
+                q?: string;
+            };
             header?: never;
             path: {
-                planId: unknown;
+                planId: string;
             };
             cookie?: never;
         };
@@ -8752,7 +8815,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                phaseId: unknown;
+                phaseId: string;
             };
             cookie?: never;
         };
@@ -8799,7 +8862,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8835,7 +8898,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8876,7 +8939,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8923,7 +8986,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -8977,7 +9040,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -9024,7 +9087,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9060,7 +9123,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9107,7 +9170,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9147,7 +9210,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9183,7 +9246,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9219,7 +9282,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9253,7 +9316,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9287,7 +9350,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9341,7 +9404,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9395,7 +9458,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9442,7 +9505,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9489,7 +9552,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: unknown;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -9543,7 +9606,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                planId: unknown;
+                planId: string;
             };
             cookie?: never;
         };
@@ -9579,7 +9642,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                planId: unknown;
+                planId: string;
             };
             cookie?: never;
         };
@@ -9619,7 +9682,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                planId: unknown;
+                planId: string;
             };
             cookie?: never;
         };
@@ -9666,8 +9729,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                phaseId: unknown;
-                planId: unknown;
+                planId: string;
+                phaseId: string;
             };
             cookie?: never;
         };
@@ -9708,8 +9771,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                phaseId: unknown;
-                planId: unknown;
+                planId: string;
+                phaseId: string;
             };
             cookie?: never;
         };
@@ -9756,7 +9819,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -9792,7 +9855,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -9846,8 +9909,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                predecessorTaskId: unknown;
-                id: unknown;
+                id: string;
+                predecessorTaskId: string;
             };
             cookie?: never;
         };
@@ -9888,7 +9951,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                taskId: unknown;
+                taskId: string;
             };
             cookie?: never;
         };
@@ -9916,7 +9979,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                taskId: unknown;
+                taskId: string;
             };
             cookie?: never;
         };
@@ -9962,8 +10025,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                evidenceId: unknown;
-                taskId: unknown;
+                taskId: string;
+                evidenceId: string;
             };
             cookie?: never;
         };
@@ -9991,8 +10054,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                evidenceId: unknown;
-                taskId: unknown;
+                taskId: string;
+                evidenceId: string;
             };
             cookie?: never;
         };
@@ -10024,7 +10087,8 @@ export interface operations {
     CapacityController_summary: {
         parameters: {
             query: {
-                month: unknown;
+                /** @description Mes a resumir en formato YYYY-MM. */
+                month: string;
             };
             header?: never;
             path?: never;
@@ -10087,7 +10151,8 @@ export interface operations {
     CapacityController_listAvailability: {
         parameters: {
             query: {
-                month: unknown;
+                /** @description Mes a consultar en formato YYYY-MM. */
+                month: string;
             };
             header?: never;
             path?: never;
@@ -10177,7 +10242,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10222,10 +10287,14 @@ export interface operations {
     CapacityController_listAssignments: {
         parameters: {
             query: {
-                requestId?: unknown;
-                userId?: unknown;
-                processId?: unknown;
-                month: unknown;
+                /** @description Mes a consultar en formato YYYY-MM. */
+                month: string;
+                /** @description Filtra por proceso. */
+                processId?: string;
+                /** @description Filtra por persona. */
+                userId?: string;
+                /** @description Filtra por solicitud. */
+                requestId?: string;
             };
             header?: never;
             path?: never;
@@ -10308,7 +10377,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10342,7 +10411,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10413,7 +10482,14 @@ export interface operations {
     };
     WorklogController_listDailyLogs: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filtra por dia (YYYY-MM-DD). */
+                date?: string;
+                /** @description Filtra por proceso. */
+                processId?: string;
+                /** @description Filtra por autor. */
+                authorUserId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -10488,7 +10564,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10517,7 +10593,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10544,7 +10620,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10577,7 +10653,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10613,7 +10689,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10653,7 +10729,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10680,7 +10756,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10717,7 +10793,12 @@ export interface operations {
     };
     WorklogController_listWeeklyReports: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filtra por semana (cualquier dia, YYYY-MM-DD). */
+                weekStart?: string;
+                /** @description Filtra por proceso. */
+                processId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -10792,7 +10873,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10821,7 +10902,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10854,7 +10935,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10887,7 +10968,14 @@ export interface operations {
     };
     IssueController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filtra por estado. */
+                state?: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+                /** @description Filtra por tipo. */
+                typeCode?: "BLOQUEO" | "INCIDENTE" | "CALIDAD_DATOS" | "SOLICITUD_APOYO";
+                /** @description Filtra por proceso. */
+                processId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -10955,7 +11043,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -10984,7 +11072,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11011,7 +11099,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11051,7 +11139,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11088,7 +11176,12 @@ export interface operations {
     };
     MeetingController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filtra por proceso. */
+                processId?: string;
+                /** @description Filtra por estado. */
+                state?: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11156,7 +11249,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11185,7 +11278,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11219,7 +11312,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11266,7 +11359,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11309,7 +11402,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11349,7 +11442,14 @@ export interface operations {
     };
     CommitmentController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filtra por estado. */
+                state?: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+                /** @description Filtra por proceso. */
+                processId?: string;
+                /** @description Filtra por asignado. */
+                assignedUserId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11417,7 +11517,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11446,7 +11546,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11473,7 +11573,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11513,7 +11613,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11553,7 +11653,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11588,9 +11688,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                id: string;
                 /** @description GC1..GC5 */
-                gateCode: unknown;
-                id: unknown;
+                gateCode: string;
             };
             cookie?: never;
         };
@@ -11629,10 +11729,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                itemId: unknown;
+                id: string;
                 /** @description GC1..GC5 */
-                gateCode: unknown;
-                id: unknown;
+                gateCode: string;
+                itemId: string;
             };
             cookie?: never;
         };
@@ -11671,7 +11771,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11710,7 +11810,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11749,7 +11849,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11788,9 +11888,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                id: string;
                 /** @description GC4 o GC5 */
-                gateCode: unknown;
-                id: unknown;
+                gateCode: string;
             };
             cookie?: never;
         };
@@ -11829,9 +11929,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                id: string;
                 /** @description GC1..GC5 */
-                gateCode: unknown;
-                id: unknown;
+                gateCode: string;
             };
             cookie?: never;
         };
@@ -11870,7 +11970,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11916,7 +12016,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11955,7 +12055,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -11994,7 +12094,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -12029,7 +12129,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -12075,8 +12175,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                validationId: unknown;
-                id: unknown;
+                id: string;
+                validationId: string;
             };
             cookie?: never;
         };
@@ -12120,8 +12220,10 @@ export interface operations {
     AreaControlController_indicators: {
         parameters: {
             query?: {
-                to?: unknown;
-                from?: unknown;
+                /** @description Inicio del periodo (inclusivo), YYYY-MM-DD. */
+                from?: string;
+                /** @description Fin del periodo (exclusivo), YYYY-MM-DD. */
+                to?: string;
             };
             header?: never;
             path?: never;
@@ -12157,8 +12259,10 @@ export interface operations {
     AreaControlController_demandSummary: {
         parameters: {
             query?: {
-                to?: unknown;
-                from?: unknown;
+                /** @description Inicio del periodo (inclusivo), YYYY-MM-DD. */
+                from?: string;
+                /** @description Fin del periodo (exclusivo), YYYY-MM-DD. */
+                to?: string;
             };
             header?: never;
             path?: never;
@@ -12221,9 +12325,12 @@ export interface operations {
     PortfolioController_list: {
         parameters: {
             query?: {
-                band?: unknown;
-                state?: unknown;
-                mainProcessId?: unknown;
+                /** @description Filtra por proceso principal. */
+                mainProcessId?: string;
+                /** @description Filtra por estado operativo. */
+                state?: "REGISTRADA" | "EN_TRIAGE" | "DEVUELTA" | "RECHAZADA" | "BACKLOG_PRIORIZADO" | "COMPROMETIDA" | "EN_PLANIFICACION" | "EN_EJECUCION" | "BLOQUEADA" | "EN_VALIDACION" | "LISTA_PARA_LIBERAR" | "EN_ESTABILIZACION" | "OPERATIVA" | "CERRADA" | "RETIRADA";
+                /** @description Filtra por banda de prioridad o SIN_PRIORIZAR. */
+                band?: "P1" | "P2" | "P3" | "P4" | "SIN_PRIORIZAR";
             };
             header?: never;
             path?: never;
@@ -12419,7 +12526,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -12551,7 +12658,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Code del agente (p. ej. TRIAGE). */
-                code: unknown;
+                code: string;
             };
             cookie?: never;
         };
@@ -12588,7 +12695,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Code del agente (p. ej. TRIAGE). */
-                code: unknown;
+                code: string;
             };
             cookie?: never;
         };
@@ -12636,7 +12743,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Code del agente (p. ej. TRIAGE). */
-                code: unknown;
+                code: string;
             };
             cookie?: never;
         };
@@ -12672,7 +12779,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -12727,20 +12834,26 @@ export interface operations {
     OccurrenceController_findAll: {
         parameters: {
             query?: {
-                /** @description Tamano de pagina (acotado a 100). Por defecto 25. */
-                pageSize?: number;
-                /** @description Pagina (1-based). Por defecto 1. */
-                page?: number;
-                responsibleAreaId?: string;
-                responsibleUserId?: string;
-                /** @description Dia objetivo hasta (inclusive). */
-                to?: string;
+                /** @description Alcance: "mine" (por defecto) o "all" (solo jefe/admin). */
+                scope?: "mine" | "all";
+                /** @description Filtra por estado de la ocurrencia. */
+                status?: "PENDIENTE" | "EN_CURSO" | "COMPLETADA" | "VENCIDA";
+                /** @description Filtra por cadencia de la definicion. */
+                cadence?: "SEMANAL" | "MENSUAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
+                /** @description Filtra por tipo de actividad (catalogo). */
+                activityType?: string;
                 /** @description Dia objetivo desde (inclusive). */
                 from?: string;
-                activityType?: string;
-                cadence?: "SEMANAL" | "MENSUAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
-                status?: "PENDIENTE" | "EN_CURSO" | "COMPLETADA" | "VENCIDA";
-                scope?: "mine" | "all";
+                /** @description Dia objetivo hasta (inclusive). */
+                to?: string;
+                /** @description Filtra por usuario responsable de la definicion (scope=all). */
+                responsibleUserId?: string;
+                /** @description Filtra por area responsable de la definicion (scope=all). */
+                responsibleAreaId?: string;
+                /** @description Pagina (1-based). Por defecto 1. */
+                page?: number;
+                /** @description Tamano de pagina (acotado a 100). Por defecto 25. */
+                pageSize?: number;
             };
             header?: never;
             path?: never;
@@ -12778,7 +12891,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -12807,7 +12920,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -12843,7 +12956,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -12985,12 +13098,14 @@ export interface operations {
     RecurringActivityController_compliance: {
         parameters: {
             query?: {
-                responsibleAreaId?: string;
-                responsibleUserId?: string;
-                /** @description Dia objetivo hasta (inclusive). */
-                to?: string;
                 /** @description Dia objetivo desde (inclusive). */
                 from?: string;
+                /** @description Dia objetivo hasta (inclusive). */
+                to?: string;
+                /** @description Filtra por usuario responsable de la definicion. */
+                responsibleUserId?: string;
+                /** @description Filtra por area responsable de la definicion. */
+                responsibleAreaId?: string;
             };
             header?: never;
             path?: never;
@@ -13021,7 +13136,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -13057,7 +13172,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };
@@ -13091,7 +13206,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: unknown;
+                id: string;
             };
             cookie?: never;
         };

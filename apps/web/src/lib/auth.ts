@@ -15,21 +15,15 @@ export interface LoginCredentials {
  * Autentica contra POST /auth/login reutilizando la respuesta tipada del
  * cliente (LoginResponseDto).
  *
- * Nota de contrato: el schema OpenAPI generado declara `requestBody?: never`
- * para esta operacion (laguna del contrato generado: el cuerpo
- * { identifier, password } no quedo tipado). Mientras no se regenere el
- * contrato (requiere el pipeline del backend, fuera de alcance de esta tarea),
- * el cuerpo se pasa con un unico cast localizado y comentado. No se duplica el
- * contrato a mano: la respuesta sigue siendo la tipada del cliente.
+ * El cuerpo ya viene tipado del contrato (LoginRequestDto): no hay casts ni tipos
+ * manuales de la peticion.
  */
 export async function login(
   credentials: LoginCredentials,
 ): Promise<LoginResponse> {
   try {
     const { data, error, response } = await api.POST('/auth/login', {
-      // Workaround por la laguna del contrato (requestBody?: never). Unico
-      // punto con tipo forzado; evita `any` y queda acotado a esta llamada.
-      body: credentials as never,
+      body: credentials,
     });
     if (error || !data) {
       throw toApiError(response.status);

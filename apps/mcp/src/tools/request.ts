@@ -14,7 +14,7 @@
  * backend y casteado al DTO del contrato.
  */
 import { z } from 'zod';
-import type { components } from '@plantilla-portales/api-client';
+import type { components, paths } from '@plantilla-portales/api-client';
 import type { McpContext } from '../server.js';
 import { runApiTool } from './shared.js';
 
@@ -24,6 +24,8 @@ type CreateTriageDto = components['schemas']['CreateTriageDto'];
 type CreatePriorityEvaluationDto =
   components['schemas']['CreatePriorityEvaluationDto'];
 type CreateApprovalDto = components['schemas']['CreateApprovalDto'];
+
+type RequestListQuery = NonNullable<paths['/requests']['get']['parameters']['query']>;
 
 const bodySchema = z.record(z.string(), z.unknown());
 
@@ -46,7 +48,10 @@ export function registerRequestTools(ctx: McpContext): void {
       runApiTool(api, () =>
         api.client.GET('/requests', {
           params: {
-            query: { mainProcessId: args.mainProcessId, state: args.state },
+            query: {
+              mainProcessId: args.mainProcessId,
+              state: args.state as RequestListQuery['state'],
+            },
           },
         }),
       ),

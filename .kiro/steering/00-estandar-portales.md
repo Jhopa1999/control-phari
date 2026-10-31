@@ -74,6 +74,8 @@ packages/api-client
 - No duplicar reglas de negocio entre frontend y backend.
 - El futuro MCP no debe implementar una segunda lógica de negocio.
 - MCP deberá reutilizar capacidades controladas por el backend.
+- Todo cambio de API actualiza, en el mismo PR, el contrato, el cliente, el MCP y
+  la documentación: ver `.kiro/steering/55-sincronia-api-mcp-docs.md`.
 - TypeScript debe permanecer en modo estricto.
 - Evitar `any` salvo justificación técnica explícita.
 - No almacenar secretos en Git.
