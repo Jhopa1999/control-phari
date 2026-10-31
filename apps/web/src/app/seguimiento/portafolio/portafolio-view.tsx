@@ -9,6 +9,7 @@ import {
   ResultCount,
   SortableTableHead,
 } from '@/components/data-table';
+import { DataCardList } from '@/components/data-card-list';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
@@ -346,6 +347,7 @@ export function PortafolioView(): React.ReactElement {
       <DataView
         state={viewState}
         loading={{ rows: 8, columns: 11 }}
+        mobileCards
         error={{
           title: 'No fue posible cargar el portafolio.',
           message: errorMessage,
@@ -357,6 +359,7 @@ export function PortafolioView(): React.ReactElement {
           description: 'Las solicitudes de los procesos de tu alcance aparecen aquí desde su registro.',
         }}
       >
+        <div className="hidden md:block">
         <Table scrollLabel="Tabla del portafolio">
           <TableCaption>
             Iniciativas del portafolio dentro de tu alcance. Bajo cada título se indican el proceso y la
@@ -440,6 +443,61 @@ export function PortafolioView(): React.ReactElement {
             ))}
           </TableBody>
         </Table>
+        </div>
+        <DataCardList
+          label="Iniciativas del portafolio"
+          rows={table.pageRows}
+          getKey={(item) => item.id}
+          sort={{
+            value: table.sort,
+            onChange: table.setSort,
+            options: [
+              { key: 'title', label: 'Título' },
+              { key: 'state', label: 'Estado' },
+              { key: 'band', label: 'Banda' },
+              { key: 'registered', label: 'Registro' },
+              { key: 'target', label: 'Objetivo' },
+            ],
+          }}
+          card={(item) => ({
+            title: (
+              <CellTitle touch href={`/demanda/solicitudes/${encodeURIComponent(item.id)}`}>
+                {item.title}
+              </CellTitle>
+            ),
+            subtitle: rowMeta(item, routes),
+            badges: [
+              <StatusBadge key="state" kind="request" value={item.operationalState} />,
+              item.blocked ? <StatusBadge key="blocked" kind="blocked" value="true" /> : null,
+              <PriorityBadge
+                key="band"
+                variant="compact"
+                band={item.priorityBand}
+                label={item.priorityLabel}
+              />,
+            ],
+            note: item.blocked ? item.blockedReason : null,
+            meta: [
+              { label: 'Avance', value: <ProgressCell value={item.progressPercent} /> },
+              { label: 'Responsable', value: item.responsibleName ?? '—' },
+              {
+                label: 'Objetivo',
+                value: (
+                  <span className="flex flex-col items-start gap-0.5">
+                    <span>{formatDateOnly(item.targetDate)}</span>
+                    <DueBadge status={item.dueStatus} days={item.daysToTarget} />
+                    {item.initialCommitmentDate ? (
+                      <span className="text-muted-foreground">
+                        {`Compromiso: ${formatDateOnly(item.initialCommitmentDate)}`}
+                      </span>
+                    ) : null}
+                  </span>
+                ),
+              },
+              { label: 'Registro', value: formatDateOnly(item.registeredAt) },
+            ],
+          })}
+        />
         <DataTablePagination
           id="portafolio-paginacion"
           page={table.page}

@@ -19,7 +19,8 @@ Límites: producción tenía pocos datos, no hubo pruebas con lectores de pantal
 | M6 Reporte semanal enviado | Texto de solo lectura | #25 |
 | M7 Columna Triage | Renombrada a «Decisión de triage» | #25 |
 | A2 Portafolio | De 11 a 7 columnas | #28 |
-| A3 (parcial) Móvil | Filtros plegables bajo «Filtros» | #28 |
+| A3 Móvil | Filtros plegables bajo «Filtros» (#28) y tarjetas por fila en lugar de tablas por debajo de 768 px (BL-024, `tarjetas-moviles-bl-024.md`) | #28 |
+| M1 Bloque «Requiere tu atención» | `GET /area-control/attention` y bloque en el Panel | #33 |
 | M8 Diálogo de solicitud | Título visible «Fases del flujo» y texto más corto | #29 |
 | B1, B3 | Redirección de `/seguimiento/tareas`; título de fila de al menos 24 px | #25 |
 | B2 Capacidad | Vacíos en una línea y sin botón duplicado | #29 |
@@ -30,8 +31,6 @@ Límites: producción tenía pocos datos, no hubo pruebas con lectores de pantal
 | Hallazgo | Backlog |
 | --- | --- |
 | Desplegar estas fases | BL-023 |
-| A3 Tablas a tarjetas en móvil | BL-024 |
-| M1 Bloque «Requiere tu atención» (necesita endpoint) | BL-025 |
 | A5 Datos maestros sin tilde (viven en la BD) | BL-026 |
 | A4 Reagrupar o colapsar el menú, búsqueda rápida | BL-027 |
 | M10, M11 Auditoría y Maestras legibles | BL-028 |

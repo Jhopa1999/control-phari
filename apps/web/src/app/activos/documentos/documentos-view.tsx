@@ -10,6 +10,7 @@ import {
   ResultCount,
   SortableTableHead,
 } from '@/components/data-table';
+import { DataCardList } from '@/components/data-card-list';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { DisabledReason } from '@/components/disabled-reason';
 import { PageHeader } from '@/components/page-header';
@@ -684,6 +685,7 @@ export function DocumentosView(): React.ReactElement {
       <DataView
         state={viewState}
         loading={{ rows: 6, columns: 6 }}
+        mobileCards
         error={{
           title: 'No fue posible cargar los documentos.',
           message: errorMessage,
@@ -710,6 +712,7 @@ export function DocumentosView(): React.ReactElement {
               }
         }
       >
+        <div className="hidden md:block">
         <Table scrollLabel="Tabla de documentos">
           <TableHeader>
             <TableRow>
@@ -783,6 +786,51 @@ export function DocumentosView(): React.ReactElement {
             })}
           </TableBody>
         </Table>
+        </div>
+        <DataCardList
+          label="Documentos"
+          rows={table.pageRows}
+          getKey={(doc) => doc.id}
+          sort={{
+            value: table.sort,
+            onChange: table.setSort,
+            options: [
+              { key: 'title', label: 'Título' },
+              { key: 'asset', label: 'Activo' },
+              { key: 'version', label: 'Versión' },
+              { key: 'status', label: 'Estado' },
+            ],
+          }}
+          card={(doc) => {
+            const asset = assetById.get(doc.assetId);
+            return {
+              title: (
+                <CellTitle
+                  touch
+                  meta={
+                    doc.status === 'RECHAZADO' && doc.reviewReason
+                      ? `Motivo del rechazo: ${doc.reviewReason}`
+                      : doc.categoryCode === CLOSURE_CATEGORY
+                        ? 'Documentación de cierre'
+                        : undefined
+                  }
+                >
+                  {doc.title}
+                </CellTitle>
+              ),
+              subtitle: assetName(doc.assetId),
+              badges: [<StatusBadge key="status" kind="document" value={doc.status} />],
+              meta: [
+                { label: 'Proceso', value: asset ? processName(asset.processId) : '—' },
+                {
+                  label: 'Versión',
+                  value: doc.currentVersion ? `v${doc.currentVersion.versionNumber}` : '—',
+                },
+              ],
+              actions: <RowActions menuOnly rowLabel={doc.title} actions={rowActions(doc)} />,
+            };
+          }}
+        />
         <DataTablePagination
           id="doc-paginacion"
           page={table.page}
