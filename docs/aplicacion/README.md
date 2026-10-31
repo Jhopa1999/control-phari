@@ -132,6 +132,14 @@ documentación, plantilla de PR y hook del editor), está en
 `.kiro/steering/55-sincronia-api-mcp-docs.md`. El hook
 `actualizar-docs-aplicacion.json` también cubre ahora los DTO y `apps/mcp`.
 
+**Catálogo declarativo del MCP.** Las tools de `apps/mcp` son entradas de datos
+(`src/tools/specs/`) que un motor genérico convierte en tools usando el contrato
+OpenAPI que entrega el api-client (`openapi.json`, versionado junto a
+`schema.d.ts`). Las operaciones no expuestas están listadas con motivo en
+`src/tools/exclusions.ts` y un test de cobertura (`npm run test:mcp`) bloquea el
+CI si el MCP y el contrato se desalinean. Detalle y procedimiento para añadir una
+tool en `apps/mcp/README.md`.
+
 ## Administración del sistema (rol ADMIN)
 Existe un rol de **sistema** `ADMIN` (origen: `User.isAdmin`), separado de los roles de
 área (`JEFE_AREA`/`LIDER_PROCESO`/`INTEGRANTE`). El administrador configura el sistema

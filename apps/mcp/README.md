@@ -5,6 +5,60 @@ transportes: **stdio** (local, por defecto) y **HTTP** (por red, ver más abajo)
 Expone, como _tools_ MCP, las operaciones del backend (`apps/api`) mapeadas
 **1:1** al contrato OpenAPI, para que un LLM pueda operar el portal.
 
+## Catálogo declarativo de tools
+
+Las tools no se escriben a mano: son **entradas de datos** en
+`src/tools/specs/*.ts` (un archivo por dominio), cada una con `name`,
+`operation` (`'METHOD /path'` del contrato), `description` en español y `access`
+(`read` | `write` | `destructive`). El motor genérico (`src/tools/openapi.ts` y
+`register.ts`) deriva de cada entrada:
+
+- el **esquema de entrada** (zod, vía `z.fromJSONSchema`) desde el OpenAPI;
+  argumentos **planos**: parámetros de ruta con su nombre (`id`, `requestId`...),
+  parámetros de query con su nombre (`active`, `objectType`...) y `body` de
+  primer nivel con el DTO del contrato (objetos cerrados, sin claves libres);
+- la **llamada** al api-client (con re-login reactivo ante 401 y traducción de
+  errores) y el `resourceId` de los 404 (primer parámetro de ruta);
+- las **anotaciones** MCP: `readOnlyHint` solo en `read`; `destructiveHint` solo
+  en `destructive` (`DELETE` y `plan.import`); `idempotentHint` en
+  GET/PATCH/PUT/DELETE.
+
+`optionalBody: true` hace opcional el `body` y envía `{}` si falta (DTO con todos
+los campos opcionales: `plan.submit`, `plan.authorize`, avance y aprobación de
+gates). Las únicas tools manuales son `health.check` y `dev.actors.list`
+(`src/tools/manual.ts`), por su comportamiento propio.
+
+El contrato llega al MCP **en runtime** desde `@plantilla-portales/api-client`
+(`import '@plantilla-portales/api-client/openapi.json'`): `npm run
+contracts:generate` copia `apps/api/openapi/openapi.json` a
+`packages/api-client/src/generated/openapi.json` y el build lo deja en
+`dist/generated/` (el Dockerfile solo copia ese paquete).
+
+### Cómo añadir una tool
+
+1. Asegura que la operación existe en la API y en el contrato (`npm run
+   contracts:generate`).
+2. Añade **una entrada** al archivo de su dominio en `src/tools/specs/` (o crea
+   uno y regístralo en `specs/index.ts`).
+3. Quita la operación de `src/tools/exclusions.ts` y **baja `MAX_PENDIENTES`**.
+4. `npm run test:mcp`. No hay código por tool.
+
+### Exclusiones y guard de cobertura
+
+`src/tools/exclusions.ts` lista las operaciones del contrato que **no** se
+exponen, cada una con su motivo: **permanentes** (autenticación, administración,
+descargas/subidas binarias, `/health/ready`, sugerencia de IA) y **PENDIENTE**
+(se expondrán en las siguientes entregas; acotadas por `MAX_PENDIENTES`, que solo
+puede bajar). El test `src/__tests__/coverage.test.ts` **falla** si una
+operación no tiene tool ni exclusión, si una exclusión está obsoleta, si una
+tool no tiene operación en el contrato, si falta una anotación, si una tool GET
+no es de solo lectura, si un `body` es de forma libre o si hay más pendientes
+que el tope. Hoy hay 47 tools sobre 186 operaciones (21 exclusiones permanentes
+y 118 pendientes).
+
+> Nota: `audit.events.list` ahora sigue el contrato vigente (`objectType`,
+> `action`, `page`, `pageSize`); el argumento `take` ya no existe en la API.
+
 Es una **capa delgada**: no contiene lógica de negocio, ni autorización, ni
 validación de dominio, ni accede a Prisma/PostgreSQL. Toda esa responsabilidad
 vive en `apps/api`. El MCP reutiliza el cliente tipado `@plantilla-portales/api-client`
@@ -88,7 +142,8 @@ stderr). Un fallo de login **no** es fatal: el login es perezoso.
 **Framework: runner nativo de Node (`node --test`).** El workspace es ESM puro;
 el runner nativo evita la fricción de configurar Jest-ESM y no añade
 dependencias nuevas. Las pruebas son unitarias y **sin red** (config, mapeo de
-errores e `inputSchema` de tools representativas con el api-client mockeado); no
+errores, `inputSchema`/argumentos del motor y el **guard de cobertura** del
+catálogo frente al contrato, con el api-client mockeado); no
 prueban reglas de negocio (eso corresponde a `apps/api`). El agregado
 `test:unit` de la raíz sigue cubriendo solo `apps/api` y no se toca.
 

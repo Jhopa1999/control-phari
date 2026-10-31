@@ -2,6 +2,11 @@
 
 Fecha: 2026-10-14
 
+> Nota (2026-11): las referencias a `apps/mcp/src/tools/{request,governance,health,audit}.ts`
+> corresponden a la versión previa. Desde BL-032 F1 las tools se declaran en el
+> catálogo `apps/mcp/src/tools/specs/` y las ejecuta un motor genérico
+> (`openapi.ts`, `register.ts`); la conclusión de capa delgada se mantiene.
+
 ## Alcance y referencia
 
 Esta auditoría verifica que `apps/mcp` cumple su contrato de **capa delgada**: no
