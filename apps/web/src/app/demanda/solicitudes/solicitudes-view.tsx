@@ -10,6 +10,7 @@ import {
   ResultCount,
   SortableTableHead,
 } from '@/components/data-table';
+import { DataCardList } from '@/components/data-card-list';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
@@ -432,6 +433,7 @@ export function SolicitudesView(): React.ReactElement {
       <DataView
         state={viewState}
         loading={{ rows: 8, columns: 7 }}
+        mobileCards
         error={{
           title: 'No fue posible cargar las solicitudes.',
           message: errorMessage,
@@ -449,6 +451,7 @@ export function SolicitudesView(): React.ReactElement {
           ),
         }}
       >
+        <div className="hidden md:block">
         <Table scrollLabel="Tabla de solicitudes">
           <TableHeader>
             <TableRow>
@@ -513,6 +516,44 @@ export function SolicitudesView(): React.ReactElement {
             ))}
           </TableBody>
         </Table>
+        </div>
+        <DataCardList
+          label="Solicitudes"
+          rows={table.pageRows}
+          getKey={(r) => r.id}
+          sort={{
+            value: table.sort,
+            onChange: table.setSort,
+            options: [
+              { key: 'title', label: 'Título' },
+              { key: 'state', label: 'Estado' },
+              { key: 'priority', label: 'Prioridad' },
+              { key: 'registered', label: 'Registro' },
+            ],
+          }}
+          card={(r) => ({
+            title: (
+              <CellTitle touch onOpen={() => openEdit(r)}>
+                {r.title}
+              </CellTitle>
+            ),
+            subtitle: processName(r.mainProcessId) ?? '—',
+            badges: [
+              <StatusBadge key="state" kind="request" value={r.operationalState} />,
+              r.currentTriageDecision ? (
+                <StatusBadge key="triage" kind="triage" value={r.currentTriageDecision} />
+              ) : null,
+              <PriorityBadge
+                key="priority"
+                variant="compact"
+                score={r.currentScore}
+                label={r.priorityLabel}
+              />,
+            ],
+            meta: [{ label: 'Registro', value: formatDate(r.registeredAt) }],
+            actions: <RowActions menuOnly rowLabel={r.title} actions={rowActions(r)} />,
+          })}
+        />
         <DataTablePagination
           id="sol-paginacion"
           page={table.page}

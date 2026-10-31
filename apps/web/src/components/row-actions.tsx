@@ -43,6 +43,11 @@ export interface RowActionsProps {
   actions: RowAction[];
   /** Nombre de la fila, para «Más acciones para «{rowLabel}»». */
   rowLabel: string;
+  /**
+   * Tarjetas móviles (BL-024): todas las acciones van al menú «…», cuyo
+   * disparador mide 44 × 44 px (objetivo táctil).
+   */
+  menuOnly?: boolean;
 }
 
 // En densidad compacta los botones miden 28 px (por encima de los 24 px de WCAG 2.5.8).
@@ -211,8 +216,14 @@ function MenuAction({ action }: { action: RowAction }): React.ReactElement {
  * solo (§14). Con alguna acción del menú en curso, el disparador muestra
  * LoaderCircle y aria-busy, y sigue habilitado.
  */
-export function RowActions({ actions, rowLabel }: RowActionsProps): React.ReactElement {
-  const { inline, menu } = splitActions(actions);
+export function RowActions({
+  actions,
+  rowLabel,
+  menuOnly = false,
+}: RowActionsProps): React.ReactElement {
+  const { inline, menu } = menuOnly
+    ? { inline: [] as RowAction[], menu: actions }
+    : splitActions(actions);
   const menuBusy = menu.some((action) => action.busy);
   return (
     <div className="flex justify-end gap-1">
@@ -226,7 +237,7 @@ export function RowActions({ actions, rowLabel }: RowActionsProps): React.ReactE
               type="button"
               variant="ghost"
               size="icon-sm"
-              className={COMPACT_ICON}
+              className={cn(COMPACT_ICON, menuOnly && 'size-11')}
               aria-label={`Más acciones para «${rowLabel}»`}
               aria-busy={menuBusy ? true : undefined}
             >

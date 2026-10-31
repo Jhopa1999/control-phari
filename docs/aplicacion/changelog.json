@@ -300,6 +300,14 @@
                                              "docs/aplicacion/frontend-pantallas.md"
                                          ],
                         "summary":  "BL-025: nuevo GET /area-control/attention (conteos de triage, priorizacion, aprobacion y tareas vencidas) y bloque Requiere tu atencion en el Panel del area."
+                    },
+                    {
+                        "timestamp":  "2026-10-31T17:00:00Z",
+                        "trigger_file":  "apps/web/src/app/demanda/solicitudes/solicitudes-view.tsx",
+                        "updated_docs":  [
+                                             "docs/aplicacion/frontend-pantallas.md"
+                                         ],
+                        "summary":  "BL-024: Solicitudes, Portafolio, Mi trabajo, Activos y Documentos muestran tarjetas por fila por debajo de 768 px (con Ordenar por y menu de 44 px) y la tabla desde 768 px."
                     }
                 ]
 }

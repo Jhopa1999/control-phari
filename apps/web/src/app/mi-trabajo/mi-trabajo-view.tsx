@@ -9,6 +9,7 @@ import {
   ResultCount,
   SortableTableHead,
 } from '@/components/data-table';
+import { DataCardList } from '@/components/data-card-list';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
@@ -191,6 +192,7 @@ export function MiTrabajoView(): React.ReactElement {
       <DataView
         state={viewState}
         loading={{ rows: 6, columns: 5 }}
+        mobileCards
         error={{
           title: 'No fue posible cargar tu trabajo.',
           message: errorMessage,
@@ -202,6 +204,7 @@ export function MiTrabajoView(): React.ReactElement {
           description: 'Las tareas de las que seas responsable aparecerán aquí.',
         }}
       >
+        <div className="hidden md:block">
         <Table scrollLabel="Tabla de mis tareas">
           <TableHeader>
             <TableRow>
@@ -260,6 +263,44 @@ export function MiTrabajoView(): React.ReactElement {
             ))}
           </TableBody>
         </Table>
+        </div>
+        <DataCardList
+          label="Mis tareas"
+          rows={table.pageRows}
+          getKey={(item) => item.taskId}
+          sort={{
+            value: table.sort,
+            onChange: table.setSort,
+            options: [
+              { key: 'title', label: 'Tarea' },
+              { key: 'endDate', label: 'Vence' },
+              { key: 'status', label: 'Estado' },
+            ],
+          }}
+          card={(item) => ({
+            title: (
+              <div className="flex items-center gap-2">
+                <CellTitle
+                  touch
+                  href={`/seguimiento/tareas?taskId=${encodeURIComponent(item.taskId)}`}
+                >
+                  {item.title}
+                </CellTitle>
+                {item.isMilestone ? (
+                  <Badge variant="outline" className="shrink-0">
+                    Hito
+                  </Badge>
+                ) : null}
+              </div>
+            ),
+            subtitle: [item.requestTitle, item.phaseName].filter(Boolean).join(' · '),
+            badges: [<StatusBadge key="status" kind="task" value={item.status} />],
+            meta: [
+              { label: 'Vence', value: formatDateOnly(item.endDate) },
+              { label: 'Avance', value: formatPercent(item.progress) },
+            ],
+          })}
+        />
         <DataTablePagination
           id="mt-paginacion"
           page={table.page}

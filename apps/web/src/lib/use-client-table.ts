@@ -41,6 +41,8 @@ export interface ClientTable<T, K extends string> {
   setPageSize(size: ClientTablePageSize): void;
   sort: SortState<K> | null;
   toggleSort(key: K): void;
+  /** Fija el orden directamente (selector «Ordenar por» de las tarjetas móviles). */
+  setSort(next: SortState<K> | null): void;
 }
 
 /**
@@ -115,6 +117,11 @@ export function useClientTable<T, K extends string>(
     [defaultSort],
   );
 
+  const applySort = React.useCallback((next: SortState<K> | null) => {
+    setSort(next);
+    setPageState(1);
+  }, []);
+
   return {
     pageRows: view.pageRows,
     total: view.total,
@@ -128,5 +135,6 @@ export function useClientTable<T, K extends string>(
     setPageSize,
     sort,
     toggleSort,
+    setSort: applySort,
   };
 }

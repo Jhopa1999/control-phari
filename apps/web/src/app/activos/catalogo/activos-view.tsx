@@ -9,6 +9,7 @@ import {
   ResultCount,
   SortableTableHead,
 } from '@/components/data-table';
+import { DataCardList } from '@/components/data-card-list';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
@@ -418,6 +419,7 @@ export function ActivosView(): React.ReactElement {
       <DataView
         state={viewState}
         loading={{ rows: 6, columns: 6 }}
+        mobileCards
         error={{
           title: 'No fue posible cargar los activos.',
           message: errorMessage,
@@ -435,6 +437,7 @@ export function ActivosView(): React.ReactElement {
           ) : undefined,
         }}
       >
+        <div className="hidden md:block">
         <Table scrollLabel="Tabla de activos">
           <TableHeader>
             <TableRow>
@@ -488,6 +491,31 @@ export function ActivosView(): React.ReactElement {
             ))}
           </TableBody>
         </Table>
+        </div>
+        <DataCardList
+          label="Activos"
+          rows={table.pageRows}
+          getKey={(asset) => asset.id}
+          sort={{
+            value: table.sort,
+            onChange: table.setSort,
+            options: [
+              { key: 'name', label: 'Nombre' },
+              { key: 'process', label: 'Proceso' },
+              { key: 'status', label: 'Estado' },
+            ],
+          }}
+          card={(asset) => ({
+            title: <CellTitle touch>{asset.name}</CellTitle>,
+            subtitle: processName(asset.processId),
+            badges: [<StatusBadge key="status" kind="asset" value={asset.status} />],
+            meta: [
+              { label: 'Solicitud', value: requestTitle(asset.requestId) },
+              { label: 'Responsable', value: ownerName(asset.ownerUserId) },
+            ],
+            actions: <RowActions menuOnly rowLabel={asset.name} actions={rowActions(asset)} />,
+          })}
+        />
         <DataTablePagination
           id="activos-paginacion"
           page={table.page}

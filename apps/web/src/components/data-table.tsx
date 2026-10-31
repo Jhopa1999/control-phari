@@ -195,7 +195,7 @@ export function DataTablePagination({
               if (size !== undefined) onPageSizeChange(size);
             }}
           >
-            <SelectTrigger id={selectId} className="h-8 w-20 text-foreground">
+            <SelectTrigger id={selectId} className="h-8 w-20 text-foreground max-md:h-11">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -215,6 +215,7 @@ export function DataTablePagination({
               type="button"
               variant="outline"
               size="icon-sm"
+              className="max-md:size-11"
               aria-label="Página anterior"
               disabled={page <= 1}
               onClick={() => goTo(page - 1, 'previous')}
@@ -228,6 +229,7 @@ export function DataTablePagination({
               type="button"
               variant="outline"
               size="icon-sm"
+              className="max-md:size-11"
               aria-label="Página siguiente"
               disabled={page >= pageCount}
               onClick={() => goTo(page + 1, 'next')}
@@ -250,6 +252,8 @@ export interface CellTitleProps {
   href?: string;
   /** Segunda línea en text-meta. */
   meta?: React.ReactNode;
+  /** Tarjetas móviles: objetivo táctil de al menos 44 px de alto. */
+  touch?: boolean;
 }
 
 const CELL_TITLE_CONTROL =
@@ -261,18 +265,25 @@ const CELL_TITLE_CONTROL =
  * outline de foco rodee las dos líneas. La celda que lo contiene lleva
  * "min-w-56 max-w-[28rem]".
  */
-export function CellTitle({ children, onOpen, href, meta }: CellTitleProps): React.ReactElement {
+export function CellTitle({
+  children,
+  onOpen,
+  href,
+  meta,
+  touch = false,
+}: CellTitleProps): React.ReactElement {
   const text = <span className="line-clamp-2 wrap-break-word">{children}</span>;
+  const controlClass = cn(CELL_TITLE_CONTROL, touch && 'inline-flex min-h-11 items-center');
   let control: React.ReactElement;
   if (onOpen) {
     control = (
-      <button type="button" onClick={onOpen} title={children} className={CELL_TITLE_CONTROL}>
+      <button type="button" onClick={onOpen} title={children} className={controlClass}>
         {text}
       </button>
     );
   } else if (href) {
     control = (
-      <Link href={href} title={children} className={CELL_TITLE_CONTROL}>
+      <Link href={href} title={children} className={controlClass}>
         {text}
       </Link>
     );
