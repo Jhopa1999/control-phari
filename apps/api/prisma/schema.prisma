@@ -207,6 +207,7 @@ model User {
   aiAgentConfigsUpdated  AiAgentConfig[]  @relation("AiAgentConfigUpdatedBy")
   aiUsages               AiUsage[]        @relation("AiUsageUser")
   aiConversations        AiConversation[] @relation("AiConversationUser")
+  aiProposals            AiProposal[]     @relation("AiProposalUser")
 
   // Actividades recurrentes (FEAT-001): definiciones cuyo responsable es ESTA
   // persona (responsibleKind=USER) y ocurrencias que esta persona completo.
@@ -1255,7 +1256,8 @@ model AiConversation {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user     User        @relation("AiConversationUser", fields: [userId], references: [id], onDelete: Cascade)
-  messages AiMessage[]
+  messages  AiMessage[]
+  proposals AiProposal[]
 
   @@index([userId, updatedAt])
   @@map("ai_conversation")
@@ -1277,6 +1279,36 @@ model AiMessage {
 
   @@index([conversationId, createdAt])
   @@map("ai_message")
+}
+
+/// Propuesta de accion del asistente (BL-032 F3). El asistente NUNCA ejecuta
+/// una escritura: registra una propuesta que la persona confirma o descarta.
+/// Al confirmar, el backend ejecuta la MISMA llamada por el MCP con el token de
+/// esa persona (la API aplica sus permisos). Estados: PENDIENTE, EJECUTANDO,
+/// CONFIRMADA, FALLIDA, DESCARTADA. Vence a las 24 h sin respuesta (se calcula
+/// al leer). `args` son los argumentos de la tool (sin el resumen).
+model AiProposal {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  /// Turno del asistente al que pertenece; se asigna al guardar el mensaje.
+  messageId      String?   @map("message_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  toolName       String    @map("tool_name")
+  /// Frase para la persona (la escribe el modelo): que hara la accion.
+  summary        String
+  args           Json
+  status         String    @default("PENDIENTE")
+  resultText     String?   @map("result_text") @db.Text
+  errorText      String?   @map("error_text") @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at")
+  resolvedAt     DateTime? @map("resolved_at")
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User           @relation("AiProposalUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([userId, status])
+  @@map("ai_proposal")
 }
 
 /// Registro de consumo de IA: una fila por llamada al modelo (BL-032 F0). Base

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
+  argEntries,
   COUNTER_VISIBLE_FROM,
   COUNTER_WARNING_FROM,
   MAX_MESSAGE_LENGTH,
@@ -9,6 +10,7 @@ import {
   counterState,
   groupConversations,
   groupOf,
+  proposalHref,
   runningText,
   toolsSummary,
 } from '../apps/web/src/lib/assistant-format';
@@ -49,6 +51,43 @@ test.describe('assistant-sse', () => {
     const parser = createSseParser();
     const [event] = parser.push('event: text\ndata: {"delta":"a\\nb"}\n\n');
     expect(event).toEqual({ event: 'text', data: { delta: 'a\nb' } });
+  });
+});
+
+test.describe('propuestas de acción', () => {
+  test('el parser entiende el evento proposal', () => {
+    const [event] = createSseParser().push(
+      'event: proposal\ndata: {"id":"p1","toolName":"request.create","title":"Crear solicitud","summary":"Crear X","args":{},"status":"PENDIENTE","resultId":null,"resultTitle":null,"error":null,"createdAt":"2026-11-02T10:00:00Z"}\n\n',
+    );
+    expect(event.event).toBe('proposal');
+    expect((event.data as { id: string }).id).toBe('p1');
+  });
+
+  test('argEntries aplana body y omite vacíos', () => {
+    expect(
+      argEntries({
+        id: 'abc',
+        body: { title: 'Reporte', note: '', owner: null, tags: ['a', 'b'], extra: { deep: 1 } },
+      }),
+    ).toEqual([
+      ['id', 'abc'],
+      ['title', 'Reporte'],
+      ['tags', 'a, b'],
+      ['extra.deep', '1'],
+    ]);
+    expect(argEntries({})).toEqual([]);
+  });
+
+  test('proposalHref lleva a la solicitud afectada y solo a ella', () => {
+    const ID = '22030f4f-e5a8-463b-abf1-d5d507d69975';
+    const link = `/demanda/solicitudes/${ID}`;
+    expect(proposalHref({ toolName: 'request.create', args: {}, resultId: ID })).toBe(link);
+    expect(proposalHref({ toolName: 'request.update', args: { id: ID }, resultId: 'otro' })).toBe(link);
+    expect(proposalHref({ toolName: 'request.triage.create', args: { id: ID }, resultId: 'x' })).toBe(link);
+    // Sin id válido o en tools sin pantalla propia: sin enlace.
+    expect(proposalHref({ toolName: 'request.create', args: {}, resultId: null })).toBeNull();
+    expect(proposalHref({ toolName: 'request.update', args: { id: '../x' }, resultId: null })).toBeNull();
+    expect(proposalHref({ toolName: 'task.create', args: {}, resultId: ID })).toBeNull();
   });
 });
 

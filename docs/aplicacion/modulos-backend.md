@@ -585,7 +585,7 @@ persona autenticada). Responde preguntas sobre proyectos/solicitudes y uso del p
 Es un **bucle de agente** sobre Bedrock Converse cuya única fuente de datos son las
 **herramientas de solo lectura del MCP**, ejecutadas con el **token de la persona** (hereda su
 alcance y permisos; la API reenvía el `Authorization: Bearer` del propio usuario). Nunca escribe
-datos en esta fase. Usa el agente `ASISTENTE` (configurable en Admin IA), registra el consumo y
+datos por sí solo: las escrituras son propuestas que la persona confirma. Usa el agente `ASISTENTE` (configurable en Admin IA), registra el consumo y
 respeta el presupuesto mensual.
 
 | Método | Ruta | Descripción |
@@ -595,10 +595,25 @@ respeta el presupuesto mensual.
 | GET | `/assistant/conversations` | Las 50 conversaciones más recientes **de la persona**. |
 | GET | `/assistant/conversations/:id` | Conversación propia con sus mensajes y las herramientas consultadas por turno. `404` si no es suya. |
 | DELETE | `/assistant/conversations/:id` | Elimina una conversación propia (`204`). |
+| POST | `/assistant/proposals/:id/confirm` | Confirma una propuesta de acción y la **ejecuta** con el token y los permisos de la persona. Responde la propuesta resuelta: `CONFIRMADA` (con `resultId`/`resultTitle`) o `FALLIDA` (con el motivo de la API). `404` si no es suya; `409` si ya no está pendiente (vencida, confirmada, descartada o en ejecución). |
+| POST | `/assistant/proposals/:id/discard` | Descarta una propuesta pendiente sin ejecutarla. |
+
+**Propuestas de acción (F3).** El asistente nunca escribe datos: solo puede *proponer* con una lista
+cerrada de tools de escritura (`request.create`, `request.update`, `request.triage.create`,
+`request.priority.create`, `plan.create`, `task.create`, `task.update`, `task.status.update`). Quedan
+fuera las decisiones (aprobar, autorizar o devolver, aceptar tareas, compuertas de gobierno), el borrado
+y la administración. Al pedir una de esas tools el modelo debe rellenar `resumen_para_la_persona` (frase
+con nombres; no viaja a la API); el servicio valida ese resumen y los campos obligatorios del esquema, y
+guarda una propuesta `PENDIENTE` (máximo 5 por turno) que emite como evento SSE `proposal`. Solo la
+persona dueña puede confirmarla; la transición `PENDIENTE → EJECUTANDO` es atómica (no se ejecuta dos
+veces), la llamada va por el MCP con su token, y la API aplica sus permisos y audita la escritura como
+cualquier otra. Una propuesta sin respuesta vence a las 24 h (`EXPIRADA`, calculado al leer) y una
+ejecución sin terminar tras 10 min se muestra como `FALLIDA`. `GET /assistant/conversations/:id` incluye
+las propuestas de cada mensaje con su estado.
 
 Reglas: máximo 8 rondas de herramientas por turno; los resultados de herramientas se recortan a
-30 000 caracteres; no se ofrecen al modelo las tools `dev.*` ni `health.*` ni las que no sean de
-solo lectura; el contexto del modelo son los últimos 30 mensajes (texto). Las conversaciones son
+30 000 caracteres; no se ofrecen al modelo las tools `dev.*` ni `health.*`, y de las de escritura solo
+las propuestas anteriores; el contexto del modelo son los últimos 30 mensajes (texto). Las conversaciones son
 **privadas** (ni siquiera un administrador las ve por la API). Las rutas del asistente están
 excluidas del MCP (es un cliente del MCP). Nginx da 300 s de lectura a `/api/` y el flujo envía
 `X-Accel-Buffering: no`.

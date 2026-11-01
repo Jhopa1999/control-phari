@@ -4,6 +4,8 @@
  * pueden cortar un evento a la mitad— y devuelve los eventos completos.
  */
 
+import type { Proposal } from './api-client';
+
 /** Evento del flujo del asistente (contrato de POST /assistant/chat). */
 export type AssistantStreamEvent =
   | { event: 'conversation'; data: { conversationId: string; title: string } }
@@ -17,10 +19,18 @@ export type AssistantStreamEvent =
         status: 'running' | 'done' | 'error';
       };
     }
+  | { event: 'proposal'; data: Proposal }
   | { event: 'done'; data: { messageId: string } }
   | { event: 'error'; data: { message: string } };
 
-const KNOWN_EVENTS = new Set(['conversation', 'text', 'tool', 'done', 'error']);
+const KNOWN_EVENTS = new Set([
+  'conversation',
+  'text',
+  'tool',
+  'proposal',
+  'done',
+  'error',
+]);
 
 export interface SseParser {
   /** Procesa un fragmento y devuelve los eventos que quedaron completos. */

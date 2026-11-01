@@ -118,3 +118,39 @@ export function classifyLink(href: string | undefined): LinkKind {
     return 'unsafe';
   }
 }
+/** Pantalla del portal donde ver el registro afectado por una propuesta (o null). */
+export function proposalHref(proposal: {
+  toolName: string;
+  args: Record<string, unknown>;
+  resultId: string | null;
+}): string | null {
+  const request = (id: unknown): string | null =>
+    typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id) ? `/demanda/solicitudes/${id}` : null;
+  switch (proposal.toolName) {
+    case 'request.create':
+      return request(proposal.resultId);
+    case 'request.update':
+    case 'request.triage.create':
+    case 'request.priority.create':
+      return request(proposal.args.id);
+    default:
+      return null;
+  }
+}
+
+/** Argumentos de la acción en lista legible (aplana `body`); los ids se muestran tal cual. */
+export function argEntries(args: Record<string, unknown>): Array<[string, string]> {
+  const flat: Array<[string, string]> = [];
+  const walk = (value: unknown, prefix: string): void => {
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [key, inner] of Object.entries(value)) {
+        walk(inner, prefix === '' || prefix === 'body' ? key : `${prefix}.${key}`);
+      }
+      return;
+    }
+    if (value === undefined || value === null || value === '') return;
+    flat.push([prefix, Array.isArray(value) ? value.join(', ') : String(value)]);
+  };
+  walk(args, '');
+  return flat;
+}

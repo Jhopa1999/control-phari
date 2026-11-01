@@ -23,12 +23,14 @@ import { CurrentActor } from '../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../auth/current-actor';
 import { CurrentUserGuard } from '../auth/current-user.guard';
 import { RolesGuard } from '../auth/roles.guard';
+import { AssistantProposalsService } from './assistant-proposals.service';
 import { AssistantEvent, AssistantService } from './assistant.service';
 import {
   AssistantStatusDto,
   ChatRequestDto,
   ConversationDetailDto,
   ConversationSummaryDto,
+  ProposalDto,
 } from './dto/assistant.dto';
 
 /** Parte de la peticion HTTP (Express) que usa el flujo SSE. */
@@ -61,7 +63,10 @@ export function formatSse(event: AssistantEvent): string {
 @Controller('assistant')
 @UseGuards(CurrentUserGuard, RolesGuard)
 export class AssistantController {
-  constructor(private readonly assistant: AssistantService) {}
+  constructor(
+    private readonly assistant: AssistantService,
+    private readonly proposals: AssistantProposalsService,
+  ) {}
 
   @Get('status')
   @ApiOperation({
@@ -122,6 +127,38 @@ export class AssistantController {
     } finally {
       if (!res.writableEnded) res.end();
     }
+  }
+
+  @Post('proposals/:id/confirm')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Confirma una propuesta de acción del asistente y la ejecuta con los permisos de la persona. Solo la persona que la recibió puede confirmarla.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Propuesta resuelta: CONFIRMADA o FALLIDA (con el motivo).', type: ProposalDto })
+  @ApiResponse({ status: 404, description: 'No existe o no es de la persona.' })
+  @ApiResponse({ status: 409, description: 'Ya no está pendiente (vencida, confirmada o descartada) o falta sesión con token.' })
+  confirmProposal(
+    @CurrentActor() actor: CurrentActorType,
+    @Req() req: SseRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ProposalDto> {
+    return this.proposals.confirm(actor, req.headers.authorization, id);
+  }
+
+  @Post('proposals/:id/discard')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Descarta una propuesta de acción del asistente sin ejecutarla.' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Propuesta descartada.', type: ProposalDto })
+  @ApiResponse({ status: 404, description: 'No existe o no es de la persona.' })
+  @ApiResponse({ status: 409, description: 'Ya no está pendiente.' })
+  discardProposal(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ProposalDto> {
+    return this.proposals.discard(actor, id);
   }
 
   @Get('conversations')

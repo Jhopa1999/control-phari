@@ -6,12 +6,13 @@ import {
   type ChatRequest,
   type ConversationDetail,
   type ConversationSummary,
+  type Proposal,
 } from './api-client';
 import { ApiError, toApiError } from './api-error';
 import { createSseParser, type AssistantStreamEvent } from './assistant-sse';
 
 export { ApiError };
-export type { AssistantStatus, ConversationDetail, ConversationSummary };
+export type { AssistantStatus, ConversationDetail, ConversationSummary, Proposal };
 export type { AssistantStreamEvent };
 
 /**
@@ -69,6 +70,48 @@ export async function deleteConversation(id: string): Promise<void> {
     if (err instanceof ApiError) throw err;
     throw toApiError(undefined);
   }
+}
+
+/** Confirma una propuesta: el backend la ejecuta con los permisos de la persona. */
+export async function confirmProposal(id: string): Promise<Proposal> {
+  try {
+    const { data, error, response } = await api.POST('/assistant/proposals/{id}/confirm', {
+      params: { path: { id } },
+    });
+    if (error || !data) throw proposalError(response, error);
+    return data;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/** Descarta una propuesta sin ejecutarla. */
+export async function discardProposal(id: string): Promise<Proposal> {
+  try {
+    const { data, error, response } = await api.POST('/assistant/proposals/{id}/discard', {
+      params: { path: { id } },
+    });
+    if (error || !data) throw proposalError(response, error);
+    return data;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/** Error de una propuesta: en 409 el servidor explica por qué (venció, ya resuelta...). */
+function proposalError(response: Response, body: unknown): ApiError {
+  // El cliente tipado ya leyo el cuerpo: el motivo del 409 viene en ody.
+  const serverMessage =
+    response.status === 409 &&
+    body !== null &&
+    typeof body === 'object' &&
+    typeof (body as { message?: unknown }).message === 'string'
+      ? (body as { message: string }).message
+      : undefined;
+  const base = toApiError(response.status);
+  return new ApiError(serverMessage ?? base.message, response.status);
 }
 
 /** Mensaje del backend ante un 4xx/5xx previo al flujo (p. ej. 409 «desactivado»). */

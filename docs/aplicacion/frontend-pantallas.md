@@ -97,7 +97,7 @@ abrir, cada minuto y al volver a la pestaña.
 
 ## Asistente de IA (`/asistente/*`)
 
-Asistente conversacional de consulta (solo lectura): responde preguntas sobre solicitudes y
+Asistente conversacional: responde preguntas sobre solicitudes y
 proyectos consultando datos con herramientas del MCP, con los permisos de la persona. No hay
 ítem en el menú lateral: se abre con el botón **Asistente** del encabezado (escritorio) o su
 icono en la barra móvil, disponible en todo el portal. Especificación visual:
@@ -109,6 +109,15 @@ icono en la barra móvil, disponible en todo el portal. Especificación visual:
 | `/asistente` | Historial | Lista de conversaciones agrupada por fecha (en ≥1280 px, junto a la conversación en dos columnas). Abrir y eliminar con confirmación. |
 | `/asistente/nueva` | Conversación nueva | Estado vacío con cinco preguntas sugeridas que se envían al pulsarlas. Al primer mensaje la URL pasa a `/asistente/{id}` sin recargar. |
 | `/asistente/{id}` | Conversación | Hilo con respuestas en Markdown (tablas desplazables, enlaces a pantallas del portal), fuentes consultadas expandibles, copiar, detener y reintentar. |
+
+**Propuestas de acción.** Cuando el asistente prepara una escritura (crear o editar una solicitud,
+registrar triage o prioridad, crear un plan o tareas) muestra una **tarjeta de propuesta** dentro de su
+respuesta: título de la acción, resumen en palabras, los datos exactos plegables («Ver los datos
+exactos») y los botones **Confirmar** y **Descartar**. Nunca se confirma sola. Estados: pendiente de tu
+confirmación, ejecutando, confirmada (con enlace «Ver solicitud» cuando aplica), no se realizó (con el
+motivo que dio la API; no se aplicó ningún cambio), descartada y vencida (a las 24 h). Las tarjetas
+se conservan al reabrir la conversación. Mientras el asistente sigue respondiendo, los botones están
+deshabilitados.
 
 Comportamiento: Enter envía (Mayús+Enter salto de línea; en táctil Enter inserta salto); límite
 de 4 000 caracteres con contador desde 3 500; si el asistente no está disponible (IA apagada,
