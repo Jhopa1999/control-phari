@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsInt, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 /** Consulta a la ayuda del portal. */
 export class HelpSearchQueryDto {
@@ -28,6 +28,7 @@ export class HelpSearchQueryDto {
   @Transform(({ value }: { value: unknown }) =>
     value === undefined || value === '' ? undefined : Number(value),
   )
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(8)
