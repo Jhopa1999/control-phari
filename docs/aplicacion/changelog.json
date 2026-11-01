@@ -405,6 +405,15 @@
                                 "docs/aplicacion/frontend-pantallas.md"
                             ],
                             "summary": "BL-032 F2 (interfaz): asistente de IA con panel lateral en todo el portal y páginas /asistente, /asistente/nueva y /asistente/{id}; respuestas en streaming, fuentes consultadas, historial y estados de error/no disponible."
+                        },
+                        {
+                            "timestamp": "2026-11-02T12:00:00Z",
+                            "trigger_file": "apps/api/src/modules/help/help.controller.ts",
+                            "updated_docs": [
+                                "docs/aplicacion/modulos-backend.md",
+                                "apps/mcp/README.md"
+                            ],
+                            "summary": "Ayuda del portal: GET /help/search busca en la documentación de uso (filas de tablas como secciones, sin secciones técnicas) y se expone en el MCP como help.search; el asistente la usa para dudas de uso."
                         }
                 ]
 }

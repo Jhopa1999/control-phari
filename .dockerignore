@@ -38,3 +38,8 @@ infra
 docs
 e2e
 *.md
+# La API empaqueta la documentacion de uso para la ayuda del asistente (help.search).
+!docs/aplicacion
+!docs/aplicacion/README.md
+!docs/aplicacion/frontend-pantallas.md
+!docs/aplicacion/autenticacion-autorizacion.md

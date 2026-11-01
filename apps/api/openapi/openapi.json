@@ -8019,6 +8019,58 @@
         ]
       }
     },
+    "/help/search": {
+      "get": {
+        "operationId": "HelpController_search",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Pregunta o palabras clave (p. ej. «aprobar un documento»).",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Máximo de secciones a devolver (1..8).",
+            "schema": {
+              "minimum": 1,
+              "maximum": 8,
+              "default": 4,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Secciones relevantes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpSearchResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Consulta vacía o demasiado corta."
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          }
+        },
+        "summary": "Busca en la documentación de uso del portal (pantallas, roles y permisos, flujo de trabajo) las secciones que responden una pregunta.",
+        "tags": [
+          "help"
+        ]
+      }
+    },
     "/recurring-activities/occurrences": {
       "get": {
         "operationId": "OccurrenceController_findAll",
@@ -16254,6 +16306,58 @@
           "id",
           "title",
           "messages"
+        ]
+      },
+      "HelpMatchDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Documento de origen (p. ej. «Pantallas del portal»)."
+          },
+          "file": {
+            "type": "string",
+            "description": "Archivo de origen en docs/aplicacion."
+          },
+          "heading": {
+            "type": "string",
+            "description": "Encabezado de la sección (con el padre si aplica)."
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "Texto de la sección en Markdown (recortado)."
+          },
+          "score": {
+            "type": "number",
+            "description": "Relevancia relativa respecto a la consulta."
+          }
+        },
+        "required": [
+          "source",
+          "file",
+          "heading",
+          "excerpt",
+          "score"
+        ]
+      },
+      "HelpSearchResponseDto": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Consulta tal como se evaluó."
+          },
+          "results": {
+            "description": "Secciones más relevantes, de mayor a menor; vacío si nada coincide.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HelpMatchDto"
+            }
+          }
+        },
+        "required": [
+          "query",
+          "results"
         ]
       },
       "OccurrenceResponseDto": {

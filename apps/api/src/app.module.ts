@@ -23,6 +23,7 @@ import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
 import { AiModule } from './modules/ai/ai.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
+import { HelpModule } from './modules/help/help.module';
 import { RecurringActivityModule } from './modules/recurring-activity/recurring-activity.module';
 
 @Module({
@@ -53,6 +54,7 @@ import { RecurringActivityModule } from './modules/recurring-activity/recurring-
     SystemSettingsModule,
     AiModule,
     AssistantModule,
+    HelpModule,
     RecurringActivityModule,
   ],
 })
