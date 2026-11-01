@@ -53,7 +53,7 @@ puede bajar). El test `src/__tests__/coverage.test.ts` **falla** si una
 operación no tiene tool ni exclusión, si una exclusión está obsoleta, si una
 tool no tiene operación en el contrato, si falta una anotación, si una tool GET
 no es de solo lectura, si un `body` es de forma libre o si hay más pendientes
-que el tope. Hoy hay 92 tools sobre 189 operaciones (24 exclusiones permanentes
+que el tope. Hoy hay 92 tools sobre 190 operaciones (25 exclusiones permanentes
 y 73 pendientes, todas de escritura). Todas las lecturas (GET) del contrato
 están expuestas salvo las descargas binarias.
 

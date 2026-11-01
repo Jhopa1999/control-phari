@@ -69,6 +69,8 @@ export class AiModelCatalogService implements OnModuleInit {
       supportsTools: row.supportsTools,
       supportsVision: row.supportsVision,
       supportsDocuments: row.supportsDocuments,
+      inputUsdPerMTok: row.inputUsdPerMTok,
+      outputUsdPerMTok: row.outputUsdPerMTok,
     };
   }
 
@@ -138,6 +140,12 @@ export class AiModelCatalogService implements OnModuleInit {
             ? { supportsDocuments: dto.supportsDocuments }
             : {}),
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+          ...(dto.inputUsdPerMTok !== undefined
+            ? { inputUsdPerMTok: dto.inputUsdPerMTok }
+            : {}),
+          ...(dto.outputUsdPerMTok !== undefined
+            ? { outputUsdPerMTok: dto.outputUsdPerMTok }
+            : {}),
         },
       });
       await this.audit.record(tx, {
@@ -183,6 +191,12 @@ export class AiModelCatalogService implements OnModuleInit {
             ? { supportsDocuments: dto.supportsDocuments }
             : {}),
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+          ...(dto.inputUsdPerMTok !== undefined
+            ? { inputUsdPerMTok: dto.inputUsdPerMTok }
+            : {}),
+          ...(dto.outputUsdPerMTok !== undefined
+            ? { outputUsdPerMTok: dto.outputUsdPerMTok }
+            : {}),
         },
       });
       await this.audit.record(tx, {

@@ -12,6 +12,7 @@ import { CurrentActor } from '../auth/current-actor';
 import { RequestStateService } from '../request/request-state.service';
 import { decryptSecret } from './ai-crypto';
 import { AiModelCatalogService } from './ai-model-catalog.service';
+import { AiUsageService } from './ai-usage.service';
 import {
   BEDROCK_CLIENT,
   BedrockClient,
@@ -74,6 +75,7 @@ export class TriageSuggestionService {
     @Inject(BEDROCK_CLIENT) private readonly bedrock: BedrockClient,
     @Inject(AiModelCatalogService)
     private readonly models: AiModelCatalogService,
+    @Inject(AiUsageService) private readonly usage: AiUsageService,
   ) {}
 
   async suggest(
@@ -95,6 +97,9 @@ export class TriageSuggestionService {
     if (!globalRow?.enabled || !agent?.enabled) {
       throw new ConflictException('La sugerencia de IA esta desactivada.');
     }
+
+    // 2b) Presupuesto mensual: agotado -> 409 SIN invocar Bedrock.
+    await this.usage.assertWithinBudget();
 
     // 3) Contexto: maestras activas (code/label) + solicitudes en alcance como
     // candidatas a duplicado + ficha de la solicitud. El prompt se arma con el
@@ -142,15 +147,26 @@ export class TriageSuggestionService {
     let raw: string;
     try {
       const withTemperature = await this.models.supportsTemperature(agent.model);
-      raw = await this.bedrock.invoke({
+      const startedAt = Date.now();
+      const result = await this.bedrock.converse({
         region: agent.region,
         modelId: agent.model,
-        prompt,
+        messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
         ...(withTemperature ? { temperature: agent.temperature } : {}),
         maxTokens: agent.maxTokens,
         timeoutMs: agent.timeoutMs,
         ...(credentials ? { credentials } : {}),
       });
+      await this.usage.record({
+        userId: actor.userId,
+        agentCode: TRIAGE_AGENT_CODE,
+        modelId: agent.model,
+        usage: result.usage,
+        durationMs: Date.now() - startedAt,
+      });
+      raw = result.content
+        .map((block) => (block.type === 'text' ? block.text : ''))
+        .join('');
     } catch (error) {
       if (error instanceof BedrockTimeoutError) {
         throw new ServiceUnavailableException('La IA no respondio a tiempo.');

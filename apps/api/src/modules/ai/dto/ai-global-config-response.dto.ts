@@ -32,6 +32,16 @@ export class AiGlobalConfigResponseDto {
   })
   accessKeyIdLast4!: string | null;
 
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: 'Tope de gasto mensual de IA en USD, o null si no hay tope.',
+  })
+  monthlyBudgetUsd!: number | null;
+
+  @ApiProperty({ type: Number, description: 'Porcentaje del tope a partir del cual se avisa.' })
+  budgetAlertPct!: number;
+
   @ApiProperty({ type: String, nullable: true, description: 'Ultima actualizacion (ISO) o null.' })
   updatedAt!: string | null;
 }

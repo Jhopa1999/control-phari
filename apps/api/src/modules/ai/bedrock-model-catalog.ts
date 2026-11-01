@@ -37,6 +37,10 @@ export interface BedrockModelDefinition {
   /** Si el modelo acepta documentos (PDF, Excel...) como entrada. */
   supportsDocuments: boolean;
   sortOrder: number;
+  /** USD por millon de tokens de entrada (null = sin precio conocido). */
+  inputUsdPerMTok: number | null;
+  /** USD por millon de tokens de salida (null = sin precio conocido). */
+  outputUsdPerMTok: number | null;
 }
 
 /** Modelo por defecto del agente de triage (Claude Haiku). */
@@ -54,6 +58,8 @@ export const DEFAULT_MODEL_CATALOG: readonly BedrockModelDefinition[] = [
     supportsVision: true,
     supportsDocuments: true,
     sortOrder: 10,
+    inputUsdPerMTok: 1,
+    outputUsdPerMTok: 5,
   },
   {
     modelId: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
@@ -64,6 +70,8 @@ export const DEFAULT_MODEL_CATALOG: readonly BedrockModelDefinition[] = [
     supportsVision: true,
     supportsDocuments: true,
     sortOrder: 20,
+    inputUsdPerMTok: 3,
+    outputUsdPerMTok: 15,
   },
 ];
 

@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
@@ -59,6 +60,18 @@ export class UpdateAiModelDto {
   @IsInt()
   @Min(0)
   sortOrder?: number;
+
+  @ApiPropertyOptional({ type: Number, description: 'USD por millon de tokens de entrada.', minimum: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  inputUsdPerMTok?: number;
+
+  @ApiPropertyOptional({ type: Number, description: 'USD por millon de tokens de salida.', minimum: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  outputUsdPerMTok?: number;
 }
 
 /** Alta de un modelo: `modelId` obligatorio e inmutable despues. */

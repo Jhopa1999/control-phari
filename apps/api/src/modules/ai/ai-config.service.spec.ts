@@ -195,6 +195,26 @@ describe('AiConfigService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('updateGlobal guarda el tope mensual (null lo quita) y el % de alerta', async () => {
+    const { service, txClient } = makeDeps({
+      global: { id: 'g-1', enabled: true, credentialMode: 'iam-role' },
+    });
+    await service.updateGlobal(adminActor(), baseDto({ monthlyBudgetUsd: null, budgetAlertPct: 90 }));
+    const data = txClient.aiGlobalConfig.update.mock.calls[0][0].data;
+    expect(data.monthlyBudgetUsd).toBeNull();
+    expect(data.budgetAlertPct).toBe(90);
+  });
+
+  it('updateGlobal sin campos de presupuesto no los toca', async () => {
+    const { service, txClient } = makeDeps({
+      global: { id: 'g-1', enabled: true, credentialMode: 'iam-role' },
+    });
+    await service.updateGlobal(adminActor(), baseDto({ enabled: false }));
+    const data = txClient.aiGlobalConfig.update.mock.calls[0][0].data;
+    expect(data).not.toHaveProperty('monthlyBudgetUsd');
+    expect(data).not.toHaveProperty('budgetAlertPct');
+  });
+
   it('updateAgent con modelo deshabilitado => 400', async () => {
     const { service } = makeDeps({
       agent: { id: 'a-1', code: 'TRIAGE', displayName: 'Triage', enabled: false, region: 'us-east-2', model: DEFAULT_TRIAGE_MODEL, basePrompt: 'p', temperature: 0.2, maxTokens: 1024, timeoutMs: 20000 },

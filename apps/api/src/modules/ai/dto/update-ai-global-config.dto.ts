@@ -1,6 +1,16 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -67,4 +77,28 @@ export class UpdateAiGlobalConfigDto {
   @IsOptional()
   @IsBoolean()
   clearCredentials?: boolean;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 0,
+    description:
+      'Tope de gasto mensual de IA en USD. null quita el tope; ausente lo conserva. Al alcanzarlo las llamadas de IA se rechazan.',
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  monthlyBudgetUsd?: number | null;
+
+  @ApiPropertyOptional({
+    type: Number,
+    minimum: 1,
+    maximum: 100,
+    description: 'Porcentaje del tope a partir del cual se avisa (1..100).',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  budgetAlertPct?: number;
 }

@@ -40,4 +40,18 @@ export class AiModelCatalogEntryDto {
 
   @ApiProperty({ type: Boolean, description: 'Si el modelo acepta documentos.' })
   supportsDocuments!: boolean;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: 'Precio en USD por millon de tokens de entrada, o null si no se conoce.',
+  })
+  inputUsdPerMTok!: number | null;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: 'Precio en USD por millon de tokens de salida, o null si no se conoce.',
+  })
+  outputUsdPerMTok!: number | null;
 }

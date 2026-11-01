@@ -6,6 +6,7 @@ import { RequestModule } from '../request/request.module';
 import { AiConfigController } from './ai-config.controller';
 import { AiConfigService } from './ai-config.service';
 import { AiModelCatalogService } from './ai-model-catalog.service';
+import { AiUsageService } from './ai-usage.service';
 import { TriageSuggestionController } from './triage-suggestion.controller';
 import { TriageSuggestionService } from './triage-suggestion.service';
 import { AwsBedrockClient, BEDROCK_CLIENT } from './bedrock.client';
@@ -26,6 +27,7 @@ import { AwsBedrockClient, BEDROCK_CLIENT } from './bedrock.client';
   providers: [
     AiConfigService,
     AiModelCatalogService,
+    AiUsageService,
     TriageSuggestionService,
     { provide: BEDROCK_CLIENT, useClass: AwsBedrockClient },
   ],

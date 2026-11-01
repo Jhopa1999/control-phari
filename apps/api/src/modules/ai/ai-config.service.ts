@@ -101,6 +101,8 @@ export class AiConfigService implements OnModuleInit {
       ),
       accessKeyIdLast4:
         accessKeyId && accessKeyId.length >= 4 ? accessKeyId.slice(-4) : null,
+      monthlyBudgetUsd: row ? row.monthlyBudgetUsd : 100,
+      budgetAlertPct: row?.budgetAlertPct ?? 80,
       updatedAt: row?.updatedAt ? row.updatedAt.toISOString() : null,
     };
   }
@@ -196,6 +198,12 @@ export class AiConfigService implements OnModuleInit {
             ...(secretCipher !== undefined
               ? { awsSecretAccessKeyCipher: secretCipher }
               : {}),
+            ...(dto.monthlyBudgetUsd !== undefined
+              ? { monthlyBudgetUsd: dto.monthlyBudgetUsd }
+              : {}),
+            ...(dto.budgetAlertPct !== undefined
+              ? { budgetAlertPct: dto.budgetAlertPct }
+              : {}),
             updatedByUserId: actor.userId,
           },
         });
@@ -209,6 +217,12 @@ export class AiConfigService implements OnModuleInit {
               accessKeyIdTarget === undefined ? null : accessKeyIdTarget,
             awsSecretAccessKeyCipher:
               secretCipher === undefined ? null : secretCipher,
+            ...(dto.monthlyBudgetUsd !== undefined
+              ? { monthlyBudgetUsd: dto.monthlyBudgetUsd }
+              : {}),
+            ...(dto.budgetAlertPct !== undefined
+              ? { budgetAlertPct: dto.budgetAlertPct }
+              : {}),
             updatedByUserId: actor.userId,
           },
         });
