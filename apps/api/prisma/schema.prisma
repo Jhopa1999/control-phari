@@ -1209,6 +1209,30 @@ model AiAgentConfig {
   @@map("ai_agent_config")
 }
 
+/// Catalogo de modelos de IA (Bedrock) gestionable desde el Admin, con las
+/// CAPACIDADES de cada modelo (BL-032 F0). Sustituye a la lista cerrada en
+/// codigo: un modelo nuevo se da de alta sin desplegar. `modelId` es el id
+/// invocable (perfil de inferencia). Las capacidades gobiernan como se invoca:
+/// p. ej. los Claude 5.x rechazan `temperature` (supportsTemperature=false).
+model AiModel {
+  id                  String   @id @default(uuid()) @db.Uuid
+  modelId             String   @unique @map("model_id")
+  label               String
+  /// 'default' | 'premium' | 'other' (orientativo para el selector).
+  tier                String   @default("other")
+  enabled             Boolean  @default(true)
+  supportsTemperature Boolean  @default(true) @map("supports_temperature")
+  supportsTools       Boolean  @default(true) @map("supports_tools")
+  supportsVision      Boolean  @default(false) @map("supports_vision")
+  supportsDocuments   Boolean  @default(false) @map("supports_documents")
+  sortOrder           Int      @default(0) @map("sort_order")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([enabled, sortOrder])
+  @@map("ai_model")
+}
+
 /// DEFINICION de una actividad recurrente (FEAT-001, design §2). Describe QUE
 /// se repite y CON QUE cadencia; no es una tarea concreta. El motor
 /// (scheduler) materializa sus RecurringActivityOccurrence (OCURRENCIAS) a

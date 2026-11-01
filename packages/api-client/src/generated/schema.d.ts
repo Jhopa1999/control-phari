@@ -2079,6 +2079,41 @@ export interface paths {
         patch: operations["AiConfigController_updateConfig"];
         trace?: never;
     };
+    "/admin/ai/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalogo completo de modelos de IA con sus capacidades, incluidos los deshabilitados (solo ADMIN). */
+        get: operations["AiConfigController_listModels"];
+        put?: never;
+        /** Da de alta un modelo de IA en el catalogo (solo ADMIN). */
+        post: operations["AiConfigController_createModel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ai/models/{modelId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita un modelo del catalogo: nombre, capacidades, habilitado (solo ADMIN). */
+        patch: operations["AiConfigController_updateModel"];
+        trace?: never;
+    };
     "/admin/ai/agents/{code}": {
         parameters: {
             query?: never;
@@ -5646,6 +5681,16 @@ export interface components {
              * @enum {string}
              */
             tier: "default" | "premium" | "other";
+            /** @description Si el modelo esta disponible para asignarse a agentes. */
+            enabled: boolean;
+            /** @description Si el modelo acepta el parametro temperature. */
+            supportsTemperature: boolean;
+            /** @description Si el modelo soporta tool use. */
+            supportsTools: boolean;
+            /** @description Si el modelo acepta imagenes. */
+            supportsVision: boolean;
+            /** @description Si el modelo acepta documentos. */
+            supportsDocuments: boolean;
         };
         AiConfigResponseDto: {
             /** @description Estado global de IA (encendido, modo de credenciales, secretSet, last4). */
@@ -5669,6 +5714,50 @@ export interface components {
             awsSecretAccessKey?: string;
             /** @description true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio. */
             clearCredentials?: boolean;
+        };
+        CreateAiModelDto: {
+            /** @description Nombre legible. */
+            label?: string;
+            /**
+             * @description Categoria orientativa.
+             * @enum {string}
+             */
+            tier?: "default" | "premium" | "other";
+            /** @description Disponible para asignarse a agentes. */
+            enabled?: boolean;
+            /** @description Acepta temperature. */
+            supportsTemperature?: boolean;
+            /** @description Soporta tool use. */
+            supportsTools?: boolean;
+            /** @description Acepta imagenes. */
+            supportsVision?: boolean;
+            /** @description Acepta documentos. */
+            supportsDocuments?: boolean;
+            /** @description Orden en el selector (menor primero). */
+            sortOrder?: number;
+            /** @description ID invocable en Bedrock (perfil de inferencia, p. ej. us.anthropic.claude-...). */
+            modelId: string;
+        };
+        UpdateAiModelDto: {
+            /** @description Nombre legible. */
+            label?: string;
+            /**
+             * @description Categoria orientativa.
+             * @enum {string}
+             */
+            tier?: "default" | "premium" | "other";
+            /** @description Disponible para asignarse a agentes. */
+            enabled?: boolean;
+            /** @description Acepta temperature. */
+            supportsTemperature?: boolean;
+            /** @description Soporta tool use. */
+            supportsTools?: boolean;
+            /** @description Acepta imagenes. */
+            supportsVision?: boolean;
+            /** @description Acepta documentos. */
+            supportsDocuments?: boolean;
+            /** @description Orden en el selector (menor primero). */
+            sortOrder?: number;
         };
         UpdateAiAgentConfigDto: {
             /** @description Enciende/apaga este agente. */
@@ -12651,6 +12740,126 @@ export interface operations {
             };
             /** @description Rol insuficiente. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_listModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Modelos del catalogo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModelCatalogEntryDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_createModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAiModelDto"];
+            };
+        };
+        responses: {
+            /** @description Modelo creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModelCatalogEntryDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe un modelo con ese id. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_updateModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID invocable del modelo en Bedrock. */
+                modelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAiModelDto"];
+            };
+        };
+        responses: {
+            /** @description Modelo actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModelCatalogEntryDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Modelo no encontrado. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -350,6 +350,16 @@
                                 "docs/aplicacion/modulos-backend.md"
                             ],
                             "summary": "Filtro requestId en GET /issues, /meetings y /commitments (reuniones y compromisos incluyen proyecto relacionado); las tools del MCP lo exponen desde el contrato."
+                        },
+                        {
+                            "timestamp": "2026-11-01T19:00:00Z",
+                            "trigger_file": "apps/api/prisma/schema.prisma",
+                            "updated_docs": [
+                                "docs/aplicacion/modelo-datos.md",
+                                "docs/aplicacion/modulos-backend.md",
+                                "apps/mcp/README.md"
+                            ],
+                            "summary": "BL-032 F0: catalogo de modelos de IA en BD (ai_model) con capacidades y endpoints admin /admin/ai/models; temperature opcional segun el modelo; operaciones admin excluidas del MCP."
                         }
                 ]
 }

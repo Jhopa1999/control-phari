@@ -7539,6 +7539,124 @@
         ]
       }
     },
+    "/admin/ai/models": {
+      "get": {
+        "operationId": "AiConfigController_listModels",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Modelos del catalogo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AiModelCatalogEntryDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Catalogo completo de modelos de IA con sus capacidades, incluidos los deshabilitados (solo ADMIN).",
+        "tags": [
+          "admin-ai"
+        ]
+      },
+      "post": {
+        "operationId": "AiConfigController_createModel",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAiModelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Modelo creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiModelCatalogEntryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "Ya existe un modelo con ese id."
+          }
+        },
+        "summary": "Da de alta un modelo de IA en el catalogo (solo ADMIN).",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/admin/ai/models/{modelId}": {
+      "patch": {
+        "operationId": "AiConfigController_updateModel",
+        "parameters": [
+          {
+            "name": "modelId",
+            "required": true,
+            "in": "path",
+            "description": "ID invocable del modelo en Bedrock.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAiModelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Modelo actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiModelCatalogEntryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Modelo no encontrado."
+          }
+        },
+        "summary": "Edita un modelo del catalogo: nombre, capacidades, habilitado (solo ADMIN).",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
     "/admin/ai/agents/{code}": {
       "get": {
         "operationId": "AiConfigController_getAgent",
@@ -15245,12 +15363,37 @@
               "other"
             ],
             "description": "Categoria orientativa: default (recomendado), premium (mayor calidad) u other."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Si el modelo esta disponible para asignarse a agentes."
+          },
+          "supportsTemperature": {
+            "type": "boolean",
+            "description": "Si el modelo acepta el parametro temperature."
+          },
+          "supportsTools": {
+            "type": "boolean",
+            "description": "Si el modelo soporta tool use."
+          },
+          "supportsVision": {
+            "type": "boolean",
+            "description": "Si el modelo acepta imagenes."
+          },
+          "supportsDocuments": {
+            "type": "boolean",
+            "description": "Si el modelo acepta documentos."
           }
         },
         "required": [
           "id",
           "label",
-          "tier"
+          "tier",
+          "enabled",
+          "supportsTemperature",
+          "supportsTools",
+          "supportsVision",
+          "supportsDocuments"
         ]
       },
       "AiConfigResponseDto": {
@@ -15312,6 +15455,102 @@
           "clearCredentials": {
             "type": "boolean",
             "description": "true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio."
+          }
+        }
+      },
+      "CreateAiModelDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Nombre legible.",
+            "maxLength": 120
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "default",
+              "premium",
+              "other"
+            ],
+            "description": "Categoria orientativa."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Disponible para asignarse a agentes."
+          },
+          "supportsTemperature": {
+            "type": "boolean",
+            "description": "Acepta temperature."
+          },
+          "supportsTools": {
+            "type": "boolean",
+            "description": "Soporta tool use."
+          },
+          "supportsVision": {
+            "type": "boolean",
+            "description": "Acepta imagenes."
+          },
+          "supportsDocuments": {
+            "type": "boolean",
+            "description": "Acepta documentos."
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden en el selector (menor primero).",
+            "minimum": 0
+          },
+          "modelId": {
+            "type": "string",
+            "description": "ID invocable en Bedrock (perfil de inferencia, p. ej. us.anthropic.claude-...).",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "modelId"
+        ]
+      },
+      "UpdateAiModelDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Nombre legible.",
+            "maxLength": 120
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "default",
+              "premium",
+              "other"
+            ],
+            "description": "Categoria orientativa."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Disponible para asignarse a agentes."
+          },
+          "supportsTemperature": {
+            "type": "boolean",
+            "description": "Acepta temperature."
+          },
+          "supportsTools": {
+            "type": "boolean",
+            "description": "Soporta tool use."
+          },
+          "supportsVision": {
+            "type": "boolean",
+            "description": "Acepta imagenes."
+          },
+          "supportsDocuments": {
+            "type": "boolean",
+            "description": "Acepta documentos."
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden en el selector (menor primero).",
+            "minimum": 0
           }
         }
       },

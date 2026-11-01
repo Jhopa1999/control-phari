@@ -22,7 +22,8 @@ export interface BedrockInvocation {
   region: string;
   modelId: string;
   prompt: string;
-  temperature: number;
+  /** Omitir para modelos que rechazan temperature (p. ej. Claude 5.x). */
+  temperature?: number;
   maxTokens: number;
   timeoutMs: number;
   credentials?: BedrockCredentials;
@@ -64,7 +65,9 @@ export class AwsBedrockClient implements BedrockClient {
     const { client, command } = this.buildCommand({
       region: input.region,
       modelId: input.modelId,
-      temperature: input.temperature,
+      ...(input.temperature !== undefined
+        ? { temperature: input.temperature }
+        : {}),
       maxTokens: input.maxTokens,
       timeoutMs: input.timeoutMs,
       credentials: input.credentials,
@@ -81,7 +84,7 @@ export class AwsBedrockClient implements BedrockClient {
     const { client, command } = this.buildCommand({
       region: input.region,
       modelId: input.modelId,
-      temperature: 0,
+      ...(input.temperature !== undefined ? { temperature: 0 } : {}),
       maxTokens: 1,
       timeoutMs: input.timeoutMs,
       credentials: input.credentials,
@@ -116,7 +119,10 @@ export class AwsBedrockClient implements BedrockClient {
         },
       ],
       inferenceConfig: {
-        temperature: input.temperature,
+        // Los modelos que rechazan `temperature` (Claude 5.x) la reciben omitida.
+        ...(input.temperature !== undefined
+          ? { temperature: input.temperature }
+          : {}),
         maxTokens: input.maxTokens,
       },
     });

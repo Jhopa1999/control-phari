@@ -9,8 +9,9 @@ import {
   TRIAGE_AGENT_CODE,
   TRIAGE_BASE_PROMPT,
 } from './ai-defaults';
+import { AiModelCatalogService } from './ai-model-catalog.service';
 import {
-  assertModelAllowed,
+  DEFAULT_MODEL_CATALOG,
   DEFAULT_TRIAGE_MODEL,
 } from './bedrock-model-catalog';
 import { BedrockClient } from './bedrock.client';
@@ -52,7 +53,11 @@ describe('AiConfigService', () => {
     global?: Record<string, unknown> | null;
     agent?: Record<string, unknown> | null;
     ping?: () => Promise<void>;
+    models?: Array<Record<string, unknown>>;
   }) {
+    const modelRows =
+      opts.models ??
+      DEFAULT_MODEL_CATALOG.map((m) => ({ ...m, enabled: true }));
     const txClient = {
       aiGlobalConfig: {
         create: jest.fn().mockResolvedValue({ id: 'g-1' }),
@@ -71,6 +76,14 @@ describe('AiConfigService', () => {
         findUnique: jest.fn().mockResolvedValue(opts.agent ?? null),
         upsert: jest.fn().mockResolvedValue({ id: 'a-1' }),
       },
+      aiModel: {
+        findMany: jest.fn().mockResolvedValue(modelRows),
+        findUnique: jest.fn(
+          async ({ where }: { where: { modelId: string } }) =>
+            modelRows.find((m) => m.modelId === where.modelId) ?? null,
+        ),
+        upsert: jest.fn().mockResolvedValue({}),
+      },
       $transaction: jest.fn(async (cb: (tx: unknown) => Promise<unknown>) =>
         cb(txClient),
       ),
@@ -83,7 +96,12 @@ describe('AiConfigService', () => {
       invoke: jest.fn().mockResolvedValue('{}'),
       ping: jest.fn(ping),
     } as unknown as BedrockClient;
-    const service = new AiConfigService(prisma, audit, bedrock);
+    const service = new AiConfigService(
+      prisma,
+      audit,
+      bedrock,
+      new AiModelCatalogService(prisma, audit),
+    );
     return { service, prisma, audit, bedrock, txClient };
   }
 
@@ -177,6 +195,36 @@ describe('AiConfigService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('updateAgent con modelo deshabilitado => 400', async () => {
+    const { service } = makeDeps({
+      agent: { id: 'a-1', code: 'TRIAGE', displayName: 'Triage', enabled: false, region: 'us-east-2', model: DEFAULT_TRIAGE_MODEL, basePrompt: 'p', temperature: 0.2, maxTokens: 1024, timeoutMs: 20000 },
+      models: [{ modelId: 'm-off', label: 'Off', tier: 'other', enabled: false, supportsTemperature: true }],
+    });
+    await expect(
+      service.updateAgent(adminActor(), 'TRIAGE', { model: 'm-off' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('testAgent omite temperature si el modelo no la soporta', async () => {
+    const { service, bedrock } = makeDeps({
+      global: { id: 'g-1', enabled: true, credentialMode: 'iam-role' },
+      agent: { id: 'a-1', code: 'TRIAGE', displayName: 'Triage', enabled: true, region: 'us-east-2', model: 'm-notemp', basePrompt: 'p', temperature: 0.2, maxTokens: 1024, timeoutMs: 20000 },
+      models: [{ modelId: 'm-notemp', label: 'Sin temp', tier: 'other', enabled: true, supportsTemperature: false }],
+    });
+    const res = await service.testAgent('TRIAGE');
+    expect(res.ok).toBe(true);
+    expect((bedrock.ping as jest.Mock).mock.calls[0][0]).not.toHaveProperty('temperature');
+  });
+
+  it('testAgent envia temperature si el modelo la soporta', async () => {
+    const { service, bedrock } = makeDeps({
+      global: { id: 'g-1', enabled: true, credentialMode: 'iam-role' },
+      agent: { id: 'a-1', code: 'TRIAGE', displayName: 'Triage', enabled: true, region: 'us-east-2', model: DEFAULT_TRIAGE_MODEL, basePrompt: 'p', temperature: 0.2, maxTokens: 1024, timeoutMs: 20000 },
+    });
+    await service.testAgent('TRIAGE');
+    expect((bedrock.ping as jest.Mock).mock.calls[0][0].temperature).toBe(0.2);
+  });
+
   it('getAgent inexistente => 404', async () => {
     const { service } = makeDeps({ agent: null });
     await expect(service.getAgent('TRIAGE')).rejects.toBeInstanceOf(
@@ -235,9 +283,10 @@ describe('AiConfigService', () => {
       expect(arg.create.model).toBe(DEFAULT_TRIAGE_MODEL);
     });
 
-    it('el modelo por defecto esta dentro del catalogo cerrado (si no, el Admin no podria guardar)', () => {
+    it('el modelo por defecto de cada agente esta en el catalogo sembrado (si no, el Admin no podria guardar)', () => {
+      const ids = DEFAULT_MODEL_CATALOG.map((m) => m.modelId);
       for (const agent of DEFAULT_AGENT_CONFIGS) {
-        expect(() => assertModelAllowed(agent.model)).not.toThrow();
+        expect(ids).toContain(agent.model);
       }
     });
 

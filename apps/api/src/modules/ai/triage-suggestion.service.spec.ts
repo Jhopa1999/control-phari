@@ -9,6 +9,7 @@ import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import { TriageSuggestionService } from './triage-suggestion.service';
 import { BedrockClient, BedrockTimeoutError } from './bedrock.client';
+import { AiModelCatalogService } from './ai-model-catalog.service';
 
 /**
  * Pruebas del agente de sugerencia de triage: SUGIERE sin persistir y degrada
@@ -68,6 +69,7 @@ describe('TriageSuggestionService', () => {
     agent?: Record<string, unknown> | null;
     invoke?: () => Promise<string>;
     inScopeDuplicates?: Array<{ id: string; title: string }>;
+    supportsTemperature?: boolean;
   }) {
     const requestWrite = jest.fn();
     const prisma = {
@@ -121,7 +123,12 @@ describe('TriageSuggestionService', () => {
       ping: jest.fn().mockResolvedValue(undefined),
     } as unknown as BedrockClient;
 
-    const service = new TriageSuggestionService(prisma, state, bedrock);
+    const models = {
+      supportsTemperature: jest
+        .fn()
+        .mockResolvedValue(opts.supportsTemperature ?? true),
+    } as unknown as AiModelCatalogService;
+    const service = new TriageSuggestionService(prisma, state, bedrock, models);
     return { service, prisma, state, bedrock, requestWrite, requestFindMany: prisma.request.findMany };
   }
 
@@ -143,6 +150,19 @@ describe('TriageSuggestionService', () => {
       ConflictException,
     );
     expect(bedrock.invoke).not.toHaveBeenCalled();
+  });
+
+  it('modelo que no soporta temperature => se invoca SIN temperature', async () => {
+    const { service, bedrock } = makeDeps({ supportsTemperature: false });
+    await service.suggest(jefeActor(), REQUEST_ID);
+    const arg = (bedrock.invoke as jest.Mock).mock.calls[0][0];
+    expect(arg).not.toHaveProperty('temperature');
+  });
+
+  it('modelo que soporta temperature => se envia la configurada', async () => {
+    const { service, bedrock } = makeDeps({});
+    await service.suggest(jefeActor(), REQUEST_ID);
+    expect((bedrock.invoke as jest.Mock).mock.calls[0][0].temperature).toBe(0.2);
   });
 
   it('timeout de Bedrock => 503', async () => {
