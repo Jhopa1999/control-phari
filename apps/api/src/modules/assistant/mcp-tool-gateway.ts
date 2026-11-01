@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import type { ConverseTool } from '../ai/bedrock-converse';
 import {
   isToolAllowed,
+  type AssistantTool,
   type AssistantToolGateway,
   type AssistantToolResult,
   type AssistantToolSession,
@@ -53,14 +53,21 @@ export class McpToolGateway implements AssistantToolGateway {
     await client.connect(transport);
 
     return {
-      async listTools(): Promise<ConverseTool[]> {
+      async listTools(): Promise<AssistantTool[]> {
         const { tools } = await client.listTools();
         return tools
-          .filter((t) => isToolAllowed(t.name, t.annotations?.readOnlyHint === true))
+          .filter((t) =>
+            isToolAllowed(
+              t.name,
+              t.annotations?.readOnlyHint === true,
+              t.annotations?.destructiveHint === true,
+            ),
+          )
           .map((t) => ({
             name: t.name,
             description: t.description ?? t.name,
             inputSchema: t.inputSchema as Record<string, unknown>,
+            readOnly: t.annotations?.readOnlyHint === true,
           }));
       },
 

@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { capitalize, runningText, toolsSummary, type ToolView } from '@/lib/assistant-format';
 import { cn } from '@/lib/utils';
 import { useAssistant, type AssistantMessageView } from './assistant-provider';
+import { ProposalCard } from './proposal-card';
 
 /** Superficie del mensaje: sobre el lienzo (panel) o dentro de una tarjeta (página). */
 export type MessageSurface = 'canvas' | 'card';
@@ -164,7 +165,10 @@ function AssistantMessageBase({
   footer,
 }: AssistantMessageProps): React.ReactElement {
   const waiting =
-    message.status === 'streaming' && message.text === '' && message.tools.length === 0;
+    message.status === 'streaming' &&
+    message.text === '' &&
+    message.tools.length === 0 &&
+    message.proposals.length === 0;
   const finished = message.status === 'done' || message.status === 'stopped';
 
   return (
@@ -185,6 +189,14 @@ function AssistantMessageBase({
         <ToolActivity tools={message.tools} />
         {message.text !== '' ? (
           <MarkdownViewContent content={message.text} variant="chat" />
+        ) : null}
+
+        {message.proposals.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {message.proposals.map((proposal) => (
+              <ProposalCard key={proposal.id} proposal={proposal} />
+            ))}
+          </div>
         ) : null}
 
         {message.status === 'stopped' ? (

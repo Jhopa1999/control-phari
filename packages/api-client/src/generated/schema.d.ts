@@ -2217,6 +2217,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assistant/proposals/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirma una propuesta de acción del asistente y la ejecuta con los permisos de la persona. Solo la persona que la recibió puede confirmarla. */
+        post: operations["AssistantController_confirmProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/proposals/{id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Descarta una propuesta de acción del asistente sin ejecutarla. */
+        post: operations["AssistantController_discardProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/assistant/conversations": {
         parameters: {
             query?: never;
@@ -6007,6 +6041,30 @@ export interface components {
             /** @description Mensaje de la persona. */
             message: string;
         };
+        ProposalDto: {
+            /** Format: uuid */
+            id: string;
+            /** @description Herramienta del MCP que se ejecutará al confirmar. */
+            toolName: string;
+            /** @description Título de la acción (p. ej. «Crear solicitud»). */
+            title: string;
+            /** @description Qué hará la acción, en palabras (lo escribe el asistente). */
+            summary: string;
+            /** @description Argumentos exactos con los que se ejecutará la herramienta. */
+            args: {
+                [key: string]: unknown;
+            };
+            /** @enum {string} */
+            status: "PENDIENTE" | "EJECUTANDO" | "CONFIRMADA" | "FALLIDA" | "DESCARTADA" | "EXPIRADA";
+            /** @description Id del registro creado o modificado, si la acción lo devolvió. */
+            resultId: string | null;
+            /** @description Título o nombre del registro resultante, si lo devolvió. */
+            resultTitle: string | null;
+            /** @description Motivo legible si la acción falló o la propuesta venció. */
+            error: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
         ConversationSummaryDto: {
             /** Format: uuid */
             id: string;
@@ -6038,6 +6096,8 @@ export interface components {
             text: string;
             /** @description Herramientas consultadas en este turno. */
             tools: components["schemas"]["ToolCallDto"][];
+            /** @description Propuestas de acción hechas en este turno (con su estado actual). */
+            proposals: components["schemas"]["ProposalDto"][];
             /** Format: date-time */
             createdAt: string;
         };
@@ -13396,6 +13456,78 @@ export interface operations {
                 content?: never;
             };
             /** @description Asistente desactivado, sin presupuesto o sin sesión con token. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssistantController_confirmProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Propuesta resuelta: CONFIRMADA o FALLIDA (con el motivo). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalDto"];
+                };
+            };
+            /** @description No existe o no es de la persona. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya no está pendiente (vencida, confirmada o descartada) o falta sesión con token. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssistantController_discardProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Propuesta descartada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalDto"];
+                };
+            };
+            /** @description No existe o no es de la persona. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya no está pendiente. */
             409: {
                 headers: {
                     [name: string]: unknown;

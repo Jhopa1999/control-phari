@@ -7930,6 +7930,82 @@
         ]
       }
     },
+    "/assistant/proposals/{id}/confirm": {
+      "post": {
+        "operationId": "AssistantController_confirmProposal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Propuesta resuelta: CONFIRMADA o FALLIDA (con el motivo).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o no es de la persona."
+          },
+          "409": {
+            "description": "Ya no está pendiente (vencida, confirmada o descartada) o falta sesión con token."
+          }
+        },
+        "summary": "Confirma una propuesta de acción del asistente y la ejecuta con los permisos de la persona. Solo la persona que la recibió puede confirmarla.",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/assistant/proposals/{id}/discard": {
+      "post": {
+        "operationId": "AssistantController_discardProposal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Propuesta descartada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o no es de la persona."
+          },
+          "409": {
+            "description": "Ya no está pendiente."
+          }
+        },
+        "summary": "Descarta una propuesta de acción del asistente sin ejecutarla.",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
     "/assistant/conversations": {
       "get": {
         "operationId": "AssistantController_listConversations",
@@ -16198,6 +16274,74 @@
           "message"
         ]
       },
+      "ProposalDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "toolName": {
+            "type": "string",
+            "description": "Herramienta del MCP que se ejecutará al confirmar."
+          },
+          "title": {
+            "type": "string",
+            "description": "Título de la acción (p. ej. «Crear solicitud»)."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Qué hará la acción, en palabras (lo escribe el asistente)."
+          },
+          "args": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Argumentos exactos con los que se ejecutará la herramienta."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDIENTE",
+              "EJECUTANDO",
+              "CONFIRMADA",
+              "FALLIDA",
+              "DESCARTADA",
+              "EXPIRADA"
+            ]
+          },
+          "resultId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Id del registro creado o modificado, si la acción lo devolvió."
+          },
+          "resultTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Título o nombre del registro resultante, si lo devolvió."
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo legible si la acción falló o la propuesta venció."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "toolName",
+          "title",
+          "summary",
+          "args",
+          "status",
+          "resultId",
+          "resultTitle",
+          "error",
+          "createdAt"
+        ]
+      },
       "ConversationSummaryDto": {
         "type": "object",
         "properties": {
@@ -16272,6 +16416,13 @@
               "$ref": "#/components/schemas/ToolCallDto"
             }
           },
+          "proposals": {
+            "description": "Propuestas de acción hechas en este turno (con su estado actual).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProposalDto"
+            }
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -16282,6 +16433,7 @@
           "role",
           "text",
           "tools",
+          "proposals",
           "createdAt"
         ]
       },

@@ -1,14 +1,18 @@
 'use client';
 
 import * as React from 'react';
+import { toast } from 'sonner';
 import {
   ApiError,
+  confirmProposal as confirmProposalRequest,
   deleteConversation,
+  discardProposal as discardProposalRequest,
   getAssistantStatus,
   getConversation,
   listConversations,
   streamChat,
   type ConversationSummary,
+  type Proposal,
 } from '@/lib/assistant';
 import { MAX_MESSAGE_LENGTH, capitalize, type ToolView } from '@/lib/assistant-format';
 
@@ -25,6 +29,8 @@ export interface AssistantMessageView {
   role: 'assistant';
   text: string;
   tools: ToolView[];
+  /** Acciones que el asistente propone; solo se ejecutan al confirmarlas la persona. */
+  proposals: Proposal[];
   status: 'streaming' | 'done' | 'stopped' | 'error';
   errorMessage?: string;
 }
@@ -73,6 +79,8 @@ export interface AssistantContextValue {
   draft: string;
   setDraft: (value: string) => void;
   send: (text: string) => void;
+  confirmProposal: (id: string) => void;
+  discardProposal: (id: string) => void;
   stop: () => void;
   retry: () => void;
   newConversation: () => void;
@@ -247,7 +255,14 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
       setMessages((prev) => [
         ...prev,
         { id: nextLocalId('u'), role: 'user', text },
-        { id: nextLocalId('a'), role: 'assistant', text: '', tools: [], status: 'streaming' },
+        {
+          id: nextLocalId('a'),
+          role: 'assistant',
+          text: '',
+          tools: [],
+          proposals: [],
+          status: 'streaming',
+        },
       ]);
       announce('Mensaje enviado. El asistente está pensando.');
       let announcedTool = false;
@@ -282,6 +297,10 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
               });
               break;
             }
+            case 'proposal':
+              announce('El asistente preparó una acción para que la confirmes.');
+              patchAssistant((m) => ({ ...m, proposals: [...m.proposals, event.data] }));
+              break;
             case 'text':
               if (!announcedText) {
                 announcedText = true;
@@ -358,6 +377,58 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
     [announce, flush, patchAssistant, refreshAvailability, reloadHistory, scheduleFlush],
   );
 
+  /** Reemplaza una propuesta por id en cualquier mensaje del hilo. */
+  const replaceProposal = React.useCallback((id: string, next: (p: Proposal) => Proposal) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.role === 'assistant' && m.proposals.some((p) => p.id === id)
+          ? { ...m, proposals: m.proposals.map((p) => (p.id === id ? next(p) : p)) }
+          : m,
+      ),
+    );
+  }, []);
+
+  const confirmProposal = React.useCallback(
+    (id: string) => {
+      replaceProposal(id, (p) => ({ ...p, status: 'EJECUTANDO' }));
+      announce('Ejecutando la acción.');
+      confirmProposalRequest(id)
+        .then((saved) => {
+          replaceProposal(id, () => saved);
+          announce(
+            saved.status === 'CONFIRMADA'
+              ? 'Acción realizada.'
+              : 'La acción no se pudo realizar.',
+          );
+        })
+        .catch((error: unknown) => {
+          if (error instanceof ApiError && error.status !== undefined) {
+            // El servidor respondió (venció, ya resuelta...): se muestra su motivo.
+            replaceProposal(id, (p) => ({ ...p, status: 'FALLIDA', error: error.message }));
+            announce('La acción no se pudo realizar.');
+          } else {
+            replaceProposal(id, (p) => ({ ...p, status: 'PENDIENTE' }));
+            toast.error('No se pudo confirmar. Revisa tu conexión e inténtalo de nuevo.');
+          }
+        });
+    },
+    [announce, replaceProposal],
+  );
+
+  const discardProposal = React.useCallback(
+    (id: string) => {
+      discardProposalRequest(id)
+        .then((saved) => {
+          replaceProposal(id, () => saved);
+          announce('Propuesta descartada.');
+        })
+        .catch(() => {
+          toast.error('No se pudo descartar. Inténtalo de nuevo.');
+        });
+    },
+    [announce, replaceProposal],
+  );
+
   const stop = React.useCallback(() => {
     abortRef.current?.abort();
   }, []);
@@ -420,6 +491,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
                     role: 'assistant',
                     text: m.text,
                     status: 'done',
+                    proposals: m.proposals,
                     tools: m.tools.map((t) => ({
                       name: t.name,
                       label: t.label,
@@ -477,6 +549,8 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
       draft,
       setDraft,
       send,
+      confirmProposal,
+      discardProposal,
       stop,
       retry,
       newConversation,
@@ -505,6 +579,8 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
       turnError,
       draft,
       send,
+      confirmProposal,
+      discardProposal,
       stop,
       retry,
       newConversation,

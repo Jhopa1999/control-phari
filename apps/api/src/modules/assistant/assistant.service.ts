@@ -23,19 +23,28 @@ import type {
 } from '../ai/bedrock-converse';
 import {
   ASSISTANT_TOOL_GATEWAY,
+  PROPOSAL_SUMMARY_FIELD,
+  asProposalTool,
+  missingRequired,
+  proposalTitle,
   toolLabel,
+  type AssistantTool,
   type AssistantToolGateway,
 } from './assistant-tools';
+import { AssistantProposalsService } from './assistant-proposals.service';
 import {
   AssistantStatusDto,
   ChatRequestDto,
   ConversationDetailDto,
   ConversationSummaryDto,
+  ProposalDto,
   ToolCallDto,
 } from './dto/assistant.dto';
 
 /** Maximo de rondas modelo -> herramientas en un mismo turno. */
 export const MAX_TOOL_STEPS = 8;
+/** Maximo de propuestas de accion que el asistente puede hacer en un turno. */
+export const MAX_PROPOSALS_PER_TURN = 5;
 /** Mensajes previos que se envian al modelo como contexto. */
 const HISTORY_LIMIT = 30;
 /** Largo maximo del titulo de una conversacion. */
@@ -54,6 +63,7 @@ export type AssistantEvent =
         status: 'running' | 'done' | 'error';
       };
     }
+  | { event: 'proposal'; data: ProposalDto }
   | { event: 'done'; data: { messageId: string } }
   | { event: 'error'; data: { message: string } };
 
@@ -114,6 +124,8 @@ export class AssistantService {
     @Inject(AiModelCatalogService) private readonly models: AiModelCatalogService,
     @Inject(AiUsageService) private readonly usage: AiUsageService,
     @Inject(ASSISTANT_TOOL_GATEWAY) private readonly gateway: AssistantToolGateway,
+    @Inject(AssistantProposalsService)
+    private readonly proposals: AssistantProposalsService,
   ) {}
 
   // ------------------------------------------------------------ disponibilidad
@@ -177,6 +189,7 @@ export class AssistantService {
       orderBy: { createdAt: 'asc' },
       take: 200,
     });
+    const proposalsByMessage = await this.proposals.byMessage(id);
     return {
       id: conversation.id,
       title: conversation.title,
@@ -185,6 +198,7 @@ export class AssistantService {
         role: m.role === 'assistant' ? 'assistant' : 'user',
         text: m.text,
         tools: Array.isArray(m.tools) ? (m.tools as unknown as ToolCallDto[]) : [],
+        proposals: proposalsByMessage.get(m.id) ?? [],
         createdAt: m.createdAt.toISOString(),
       })),
     };
@@ -266,6 +280,7 @@ export class AssistantService {
     basePrompt: string,
     actor: CurrentActor,
     hasHelp: boolean,
+    hasProposals: boolean,
   ): string {
     const roles = [...actor.roleCodes].join(', ') || 'sin rol';
     return [
@@ -279,6 +294,12 @@ export class AssistantService {
         ? [
             '',
             'Para dudas sobre cómo usar el portal (pantallas, roles, flujo de trabajo) usa la herramienta help.search y responde con lo que devuelva, indicando la sección; si no aparece, di que no está documentado.',
+          ]
+        : []),
+      ...(hasProposals
+        ? [
+            '',
+            'Las herramientas que crean o modifican datos NO se ejecutan: registran una propuesta que la persona confirma o descarta en una tarjeta. Antes de proponer, reúne los datos con las herramientas de lectura y confirma con la persona lo que no sepas; usa nombres, no identificadores, en el resumen. Tras proponer, resume lo propuesto y pídele que la confirme. No repitas una propuesta ya hecha ni propongas decisiones (aprobar, autorizar, borrar).',
           ]
         : []),
     ].join('\n');
@@ -309,12 +330,17 @@ export class AssistantService {
 
     let fullText = '';
     const toolSummaries: ToolCallDto[] = [];
+    const proposalIds: string[] = [];
     let session: Awaited<ReturnType<AssistantToolGateway['open']>> | null = null;
 
     try {
       session = await this.gateway.open(ctx.authorization);
-      const tools: ConverseTool[] = await session.listTools();
-      const allowed = new Set(tools.map((t) => t.name));
+      const available: AssistantTool[] = await session.listTools();
+      const byName = new Map(available.map((t) => [t.name, t]));
+      const allowed = new Set(byName.keys());
+      // El modelo ve las de lectura tal cual y las de escritura como PROPUESTA.
+      const tools: ConverseTool[] = available.map((t) => (t.readOnly ? t : asProposalTool(t)));
+      const hasProposals = available.some((t) => !t.readOnly);
 
       const recent = await this.prisma.aiMessage.findMany({
         where: { conversationId: ctx.conversationId },
@@ -322,7 +348,12 @@ export class AssistantService {
         take: HISTORY_LIMIT,
       });
       const messages = toConverseHistory(recent.reverse());
-      const system = this.systemPrompt(agent.basePrompt, actor, allowed.has('help.search'));
+      const system = this.systemPrompt(
+        agent.basePrompt,
+        actor,
+        allowed.has('help.search'),
+        hasProposals,
+      );
       const withTemperature = await this.models.supportsTemperature(agent.model);
 
       for (let step = 0; step < MAX_TOOL_STEPS && !signal.aborted; step++) {
@@ -381,6 +412,18 @@ export class AssistantService {
 
         const results: ConverseBlock[] = [];
         for (const use of toolUses) {
+          const found = byName.get(use.name);
+          if (found && !found.readOnly) {
+            // Escritura: nunca se ejecuta desde el modelo; se registra una propuesta.
+            const outcome = await this.proposeAction(ctx, found, use.input, proposalIds, emit);
+            results.push({
+              type: 'toolResult',
+              toolUseId: use.toolUseId,
+              text: outcome.text,
+              isError: outcome.isError,
+            });
+            continue;
+          }
           const label = toolLabel(use.name);
           emit({
             event: 'tool',
@@ -424,6 +467,7 @@ export class AssistantService {
         fullText,
         toolSummaries,
       );
+      await this.proposals.attachToMessage(proposalIds, messageId);
       if (!signal.aborted) {
         emit({ event: 'done', data: { messageId } });
       }
@@ -432,10 +476,15 @@ export class AssistantService {
         `Fallo del asistente: ${error instanceof Error ? error.message : 'error desconocido'}`,
       );
       // Conserva lo ya generado para que la conversacion no pierda el turno.
-      if (fullText.trim() !== '') {
-        await this.saveAssistantMessage(ctx.conversationId, fullText, toolSummaries).catch(
-          () => undefined,
-        );
+      if (fullText.trim() !== '' || proposalIds.length > 0) {
+        const savedId = await this.saveAssistantMessage(
+          ctx.conversationId,
+          fullText,
+          toolSummaries,
+        ).catch(() => undefined);
+        if (savedId) {
+          await this.proposals.attachToMessage(proposalIds, savedId).catch(() => undefined);
+        }
       }
       emit({
         event: 'error',
@@ -451,6 +500,57 @@ export class AssistantService {
         await session.close().catch(() => undefined);
       }
     }
+  }
+
+  /**
+   * Una herramienta de escritura pedida por el modelo NO se ejecuta: se valida
+   * lo mínimo (resumen para la persona y campos obligatorios), se registra una
+   * propuesta PENDIENTE y se avisa a la interfaz para que muestre la tarjeta.
+   * Lo que se devuelve al modelo es un texto que le indica que espere la
+   * confirmación de la persona.
+   */
+  private async proposeAction(
+    ctx: { actor: CurrentActor; conversationId: string },
+    tool: AssistantTool,
+    input: unknown,
+    proposalIds: string[],
+    emit: (event: AssistantEvent) => void,
+  ): Promise<{ text: string; isError: boolean }> {
+    const fail = (text: string): { text: string; isError: boolean } => ({ text, isError: true });
+    const { [PROPOSAL_SUMMARY_FIELD]: summaryRaw, ...args } = asRecord(input);
+    const summary = typeof summaryRaw === 'string' ? summaryRaw.trim() : '';
+    if (summary === '') {
+      return fail(
+        `Falta ${PROPOSAL_SUMMARY_FIELD}: describe en una frase, con nombres, qué hará esta acción.`,
+      );
+    }
+    if (proposalIds.length >= MAX_PROPOSALS_PER_TURN) {
+      return fail(
+        'Ya hiciste el máximo de propuestas de este turno. Pídele a la persona que confirme o descarte las anteriores antes de preparar más.',
+      );
+    }
+    const missing = missingRequired(tool.inputSchema, args);
+    if (missing.length > 0) {
+      return fail(
+        `Faltan datos obligatorios: ${missing.join(', ')}. Pregúntaselos a la persona o consúltalos con las herramientas de lectura antes de proponer.`,
+      );
+    }
+    const proposal = await this.proposals.create({
+      userId: ctx.actor.userId,
+      conversationId: ctx.conversationId,
+      toolName: tool.name,
+      summary: summary.slice(0, 500),
+      args,
+    });
+    proposalIds.push(proposal.id);
+    emit({ event: 'proposal', data: proposal });
+    return {
+      text:
+        `Propuesta «${proposalTitle(tool.name)}» registrada (id ${proposal.id}). NO se ejecutó: ` +
+        'la persona debe confirmarla o descartarla en la tarjeta que ve en pantalla. ' +
+        'Resume brevemente lo propuesto y pídele que la confirme.',
+      isError: false,
+    };
   }
 
   /** Guarda el turno del asistente y actualiza la conversacion. */

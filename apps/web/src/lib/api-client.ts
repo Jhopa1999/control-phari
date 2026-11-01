@@ -225,6 +225,8 @@ export type ConversationSummary = components['schemas']['ConversationSummaryDto'
 export type ConversationDetail = components['schemas']['ConversationDetailDto'];
 export type ConversationMessage = components['schemas']['ConversationMessageDto'];
 export type ChatRequest = components['schemas']['ChatRequestDto'];
+/** Propuesta de acción del asistente (se ejecuta solo al confirmarla la persona). */
+export type Proposal = components['schemas']['ProposalDto'];
 /** Modo de credenciales de IA (iam-role | access-keys). */
 export type AiCredentialMode = AiGlobalConfig['credentialMode'];
 /**

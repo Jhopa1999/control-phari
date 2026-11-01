@@ -88,6 +88,72 @@ export class ConversationMessageDto {
   @ApiProperty({ type: [ToolCallDto], description: 'Herramientas consultadas en este turno.' })
   tools!: ToolCallDto[];
 
+  @ApiProperty({
+    type: () => [ProposalDto],
+    description: 'Propuestas de acción hechas en este turno (con su estado actual).',
+  })
+  proposals!: ProposalDto[];
+
+  @ApiProperty({ type: String, format: 'date-time' })
+  createdAt!: string;
+}
+
+/** Estados de una propuesta de acción. */
+export const PROPOSAL_STATUSES = [
+  'PENDIENTE',
+  'EJECUTANDO',
+  'CONFIRMADA',
+  'FALLIDA',
+  'DESCARTADA',
+  'EXPIRADA',
+] as const;
+export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
+
+/** Propuesta de acción del asistente: nada se ejecuta hasta que la persona confirma. */
+export class ProposalDto {
+  @ApiProperty({ type: String, format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ type: String, description: 'Herramienta del MCP que se ejecutará al confirmar.' })
+  toolName!: string;
+
+  @ApiProperty({ type: String, description: 'Título de la acción (p. ej. «Crear solicitud»).' })
+  title!: string;
+
+  @ApiProperty({ type: String, description: 'Qué hará la acción, en palabras (lo escribe el asistente).' })
+  summary!: string;
+
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: true,
+    description: 'Argumentos exactos con los que se ejecutará la herramienta.',
+  })
+  args!: Record<string, unknown>;
+
+  @ApiProperty({ type: String, enum: PROPOSAL_STATUSES })
+  status!: ProposalStatus;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Id del registro creado o modificado, si la acción lo devolvió.',
+  })
+  resultId!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Título o nombre del registro resultante, si lo devolvió.',
+  })
+  resultTitle!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Motivo legible si la acción falló o la propuesta venció.',
+  })
+  error!: string | null;
+
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt!: string;
 }

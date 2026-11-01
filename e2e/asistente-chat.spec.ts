@@ -17,8 +17,15 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 const CONVERSATION_ID = '11111111-1111-4111-8111-111111111111';
 
 /** Cuerpo SSE de una respuesta que consultó una herramienta y devolvió una tabla. */
-function sseBody(): string {
-  const events: Array<[string, unknown]> = [
+function sseBody(withProposal = false): string {
+  const events: Array<[string, unknown]> = withProposal
+    ? [
+        ['conversation', { conversationId: CONVERSATION_ID, title: 'Crear solicitud' }],
+        ['text', { delta: 'Preparé la solicitud; confírmala para crearla.' }],
+        ['proposal', PROPOSAL],
+        ['done', { messageId: '22222222-2222-4222-8222-222222222222' }],
+      ]
+    : [
     ['conversation', { conversationId: CONVERSATION_ID, title: '¿Cuántas solicitudes hay?' }],
     ['tool', { id: 't1', name: 'request.list', label: 'solicitudes', status: 'running' }],
     ['tool', { id: 't1', name: 'request.list', label: 'solicitudes', status: 'done' }],
@@ -31,7 +38,27 @@ function sseBody(): string {
     .join('');
 }
 
+/** Propuesta pendiente que el asistente prepara en los tests de acciones. */
+const PROPOSAL_ID = '33333333-3333-4333-8333-333333333333';
+const REQUEST_ID = '44444444-4444-4444-8444-444444444444';
+const PROPOSAL = {
+  id: PROPOSAL_ID,
+  toolName: 'request.create',
+  title: 'Crear solicitud',
+  summary: 'Crear la solicitud «Reporte de ventas» en el proceso BI',
+  args: { body: { title: 'Reporte de ventas', mainProcessId: 'proc-bi' } },
+  status: 'PENDIENTE',
+  resultId: null,
+  resultTitle: null,
+  error: null,
+  createdAt: new Date().toISOString(),
+};
+
 interface MockOptions {
+  /** El asistente responde con una propuesta de acción. */
+  proposal?: boolean;
+  /** Resultado de confirmar: ok (por defecto), rechazada por la API o vencida (409). */
+  confirm?: 'ok' | 'rechazada' | 'vencida';
   available?: boolean;
   reason?: string | null;
   chatStatus?: number;
@@ -39,7 +66,7 @@ interface MockOptions {
 
 /** Intercepta las rutas del asistente. Devuelve contadores para afirmar. */
 async function mockAssistant(page: Page, options: MockOptions = {}) {
-  const calls = { chat: 0, deleted: [] as string[] };
+  const calls = { chat: 0, confirm: 0, discard: 0, deleted: [] as string[] };
   let conversations = [
     { id: CONVERSATION_ID, title: 'Estado de mis proyectos', updatedAt: new Date().toISOString() },
   ];
@@ -60,8 +87,28 @@ async function mockAssistant(page: Page, options: MockOptions = {}) {
     await route.fulfill({
       status: 200,
       headers: { 'Content-Type': 'text/event-stream; charset=utf-8' },
-      body: sseBody(),
+      body: sseBody(options.proposal),
     });
+  });
+
+  await page.route(/\/assistant\/proposals\/[^/]+\/(confirm|discard)$/, async (route: Route) => {
+    const action = /\/(confirm|discard)$/.exec(route.request().url())?.[1];
+    if (action === 'discard') {
+      calls.discard += 1;
+      await route.fulfill({ status: 200, json: { ...PROPOSAL, status: 'DESCARTADA' } });
+      return;
+    }
+    calls.confirm += 1;
+    if (options.confirm === 'vencida') {
+      await route.fulfill({ status: 409, json: { message: 'La propuesta venció. Pídele al asistente que la vuelva a preparar.' } });
+    } else if (options.confirm === 'rechazada') {
+      await route.fulfill({ status: 200, json: { ...PROPOSAL, status: 'FALLIDA', error: 'No tienes acceso a esta acción.' } });
+    } else {
+      await route.fulfill({
+        status: 200,
+        json: { ...PROPOSAL, status: 'CONFIRMADA', resultId: REQUEST_ID, resultTitle: 'Reporte de ventas' },
+      });
+    }
   });
 
   await page.route(/\/assistant\/conversations(\/[^/?]+)?(\?.*)?$/, async (route: Route) => {
@@ -80,12 +127,13 @@ async function mockAssistant(page: Page, options: MockOptions = {}) {
           id: match[1],
           title: 'Estado de mis proyectos',
           messages: [
-            { id: 'm1', role: 'user', text: '¿Cómo van mis proyectos?', tools: [], createdAt: new Date().toISOString() },
+            { id: 'm1', role: 'user', text: '¿Cómo van mis proyectos?', tools: [], proposals: [], createdAt: new Date().toISOString() },
             {
               id: 'm2',
               role: 'assistant',
               text: 'Todo va **bien**.',
               tools: [{ name: 'portfolio.get', label: 'portafolio', status: 'done' }],
+              proposals: options.proposal ? [PROPOSAL] : [],
               createdAt: new Date().toISOString(),
             },
           ],
@@ -236,4 +284,92 @@ test('en móvil el panel ocupa la pantalla y el campo es utilizable', async ({ p
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+// ---------------------------------------------------------------- propuestas
+
+/** Pide una acción al asistente y devuelve la tarjeta de la propuesta. */
+async function askForProposal(page: Page) {
+  await openPanel(page);
+  const panel = page.getByRole('dialog', { name: 'Asistente' });
+  const input = panel.getByRole('textbox', { name: 'Mensaje para el asistente' });
+  await input.fill('Crea una solicitud de reporte de ventas en BI');
+  await input.press('Enter');
+  const card = panel.getByRole('region', { name: 'Propuesta: Crear solicitud' });
+  await expect(card).toBeVisible();
+  return { panel, card };
+}
+
+test('el asistente PROPONE una acción: no se ejecuta hasta que la persona confirma', async ({ page }) => {
+  const calls = await mockAssistant(page, { proposal: true });
+  const { card } = await askForProposal(page);
+
+  await expect(card).toContainText('Crear la solicitud «Reporte de ventas» en el proceso BI');
+  await expect(card).toContainText('Pendiente de tu confirmación');
+  await expect(card.getByRole('button', { name: 'Confirmar' })).toBeEnabled();
+  await expect(card.getByRole('button', { name: 'Descartar' })).toBeEnabled();
+  // Nada se confirmó por sí solo.
+  expect(calls.confirm).toBe(0);
+
+  // Los datos exactos están disponibles pero plegados.
+  const details = card.getByRole('button', { name: 'Ver los datos exactos' });
+  await expect(details).toHaveAttribute('aria-expanded', 'false');
+  await details.click();
+  await expect(card.getByText('Reporte de ventas', { exact: true })).toBeVisible();
+});
+
+test('al confirmar se ejecuta, se informa el resultado y se enlaza el registro', async ({ page }) => {
+  const calls = await mockAssistant(page, { proposal: true });
+  const { card } = await askForProposal(page);
+
+  await card.getByRole('button', { name: 'Confirmar' }).click();
+  await expect(card.getByText('Listo, la acción se realizó')).toBeVisible();
+  await expect(card.getByRole('link', { name: 'Ver solicitud' })).toHaveAttribute(
+    'href',
+    '/demanda/solicitudes/44444444-4444-4444-8444-444444444444',
+  );
+  // Ya no se puede confirmar ni descartar de nuevo.
+  await expect(card.getByRole('button', { name: 'Confirmar' })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: 'Descartar' })).toHaveCount(0);
+  expect(calls.confirm).toBe(1);
+});
+
+test('descartar no ejecuta nada', async ({ page }) => {
+  const calls = await mockAssistant(page, { proposal: true });
+  const { card } = await askForProposal(page);
+
+  await card.getByRole('button', { name: 'Descartar' }).click();
+  await expect(card.getByText('Descartaste esta propuesta.')).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Confirmar' })).toHaveCount(0);
+  expect(calls.discard).toBe(1);
+  expect(calls.confirm).toBe(0);
+});
+
+test('si la API rechaza la acción, se explica el motivo y no se enlaza nada', async ({ page }) => {
+  await mockAssistant(page, { proposal: true, confirm: 'rechazada' });
+  const { card } = await askForProposal(page);
+
+  await card.getByRole('button', { name: 'Confirmar' }).click();
+  const alert = card.getByRole('alert');
+  await expect(alert).toContainText('No se pudo realizar la acción');
+  await expect(alert).toContainText('No tienes acceso a esta acción.');
+  await expect(alert).toContainText('No se aplicó ningún cambio');
+  await expect(card.getByRole('link', { name: 'Ver solicitud' })).toHaveCount(0);
+});
+
+test('una propuesta vencida (409) muestra el motivo del servidor', async ({ page }) => {
+  await mockAssistant(page, { proposal: true, confirm: 'vencida' });
+  const { card } = await askForProposal(page);
+
+  await card.getByRole('button', { name: 'Confirmar' }).click();
+  await expect(card.getByRole('alert')).toContainText('La propuesta venció');
+});
+
+test('las propuestas se conservan en el historial de la conversación', async ({ page }) => {
+  await mockAssistant(page, { proposal: true });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/asistente/${CONVERSATION_ID}`);
+  const card = page.getByRole('region', { name: 'Propuesta: Crear solicitud' });
+  await expect(card).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Confirmar' })).toBeEnabled();
 });

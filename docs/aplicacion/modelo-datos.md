@@ -140,6 +140,16 @@ Solo métricas, nunca el contenido de prompts ni respuestas.
 Presupuesto: `AiGlobalConfig` suma `monthlyBudgetUsd?` (`monthly_budget_usd`, default `100`,
 `null` = sin tope) y `budgetAlertPct` (`budget_alert_pct`, default `80`).
 
+### AiProposal (`ai_proposal`)
+Propuesta de acción del asistente: el asistente nunca ejecuta una escritura, la registra aquí y la
+persona la confirma o descarta. Privada de su usuario.
+- Campos clave: `conversationId` (FK a `AiConversation`, `onDelete: Cascade`), `messageId?` (turno del
+  asistente al que pertenece), `userId` (FK a `User`, `onDelete: Cascade`), `toolName`, `summary`
+  (frase para la persona), `args` (JSON con los argumentos exactos de la tool, sin el resumen),
+  `status` (`PENDIENTE` por defecto, `EJECUTANDO`, `CONFIRMADA`, `FALLIDA`, `DESCARTADA`; `EXPIRADA`
+  se calcula al leer a las 24 h), `resultText?`, `errorText?`, `createdAt`, `resolvedAt?`.
+- Índices: `conversationId`; (`userId`, `status`).
+
 ### AiConversation (`ai_conversation`) y AiMessage (`ai_message`)
 Conversaciones del asistente de IA. **Privadas de su usuario**: solo el dueño las lee o borra.
 - `AiConversation`: `userId` (FK a `User`, `onDelete: Cascade`), `title` (inicio del primer
@@ -484,3 +494,4 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
 26. `20261101180000_ai_consumo_presupuesto` (aditiva: tabla `ai_usage`; columnas de presupuesto en
     `ai_global_config` y de precio en `ai_model`; precios de los modelos por defecto)
 27. `20261102120000_ai_conversaciones` (aditiva: tablas `ai_conversation` y `ai_message`)
+28. `20261103120000_ai_propuestas` (aditiva: tabla `ai_proposal`)

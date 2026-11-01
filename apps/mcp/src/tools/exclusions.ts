@@ -112,6 +112,8 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
       'GET /assistant/conversations',
       'GET /assistant/conversations/{id}',
       'DELETE /assistant/conversations/{id}',
+      'POST /assistant/proposals/{id}/confirm',
+      'POST /assistant/proposals/{id}/discard',
     ],
   ),
   ...permanente(
