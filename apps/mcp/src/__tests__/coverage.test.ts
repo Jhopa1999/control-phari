@@ -120,8 +120,8 @@ describe('catálogo de tools', () => {
     );
   });
 
-  it('mantiene las 47 tools de la versión anterior', () => {
-    assert.equal(ALL_SPECS.length, 47);
+  it('expone 92 tools: las 47 originales y las 45 de lectura', () => {
+    assert.equal(ALL_SPECS.length, 92);
   });
 });
 

@@ -25,12 +25,11 @@ export interface Exclusion {
 }
 
 /**
- * Tope (ratchet) de exclusiones PENDIENTES. Hoy el MCP cubre 47 de 186
- * operaciones: 118 están pendientes (45 de lectura y 73 de
- * escritura). La entrega 3 de BL-032 F1 añade las tools de lectura y reduce
- * este tope; el objetivo final es 0.
+ * Tope (ratchet) de exclusiones PENDIENTES. Las lecturas ya están expuestas
+ * (BL-032 F1 entrega 3); quedan 73 pendientes, todas de escritura. Solo puede
+ * BAJAR; el objetivo final es 0.
  */
-export const MAX_PENDIENTES = 118;
+export const MAX_PENDIENTES = 73;
 
 function permanente(
   reason: string,
@@ -105,153 +104,6 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
     'La sugerencia de IA se orquesta desde el asistente del portal y consume el LLM configurado; el MCP no encadena agentes entre sí.',
     [
       'POST /requests/{id}/ai/triage-suggestion',
-    ],
-  ),
-
-  // ------------------------------------------- pendientes: lectura (entrega 3)
-  ...pendiente(
-    'lectura · areas',
-    [
-      'GET /areas',
-      'GET /areas/{id}',
-    ],
-  ),
-  ...pendiente(
-    'lectura · requesters',
-    [
-      'GET /requesters',
-      'GET /requesters/{id}',
-    ],
-  ),
-  ...pendiente(
-    'lectura · notifications',
-    [
-      'GET /notifications',
-    ],
-  ),
-  ...pendiente(
-    'lectura · closure',
-    [
-      'GET /closures/pending',
-      'GET /requests/{id}/closure',
-    ],
-  ),
-  ...pendiente(
-    'lectura · approval',
-    [
-      'GET /requests/pending-approval',
-    ],
-  ),
-  ...pendiente(
-    'lectura · priority',
-    [
-      'GET /requests/{id}/priority',
-    ],
-  ),
-  ...pendiente(
-    'lectura · assets',
-    [
-      'GET /assets',
-      'GET /assets/{id}',
-      'GET /assets/{id}/requests',
-    ],
-  ),
-  ...pendiente(
-    'lectura · documents',
-    [
-      'GET /documents',
-      'GET /documents/pending-approval',
-      'GET /documents/{id}',
-      'GET /documents/{id}/versions',
-    ],
-  ),
-  ...pendiente(
-    'lectura · tasks',
-    [
-      'GET /my-work',
-      'GET /tasks/{taskId}/evidence',
-    ],
-  ),
-  ...pendiente(
-    'lectura · plan',
-    [
-      'GET /requests/{requestId}/plan/guide',
-    ],
-  ),
-  ...pendiente(
-    'lectura · plan-phases',
-    [
-      'GET /plans/{planId}/phases',
-    ],
-  ),
-  ...pendiente(
-    'lectura · task-dependencies',
-    [
-      'GET /tasks/{id}/dependencies',
-    ],
-  ),
-  ...pendiente(
-    'lectura · capacity',
-    [
-      'GET /capacity/summary',
-      'GET /capacity/people',
-      'GET /capacity/availability',
-      'GET /capacity/assignments',
-    ],
-  ),
-  ...pendiente(
-    'lectura · worklog',
-    [
-      'GET /coordination/people',
-      'GET /worklog/daily',
-      'GET /worklog/daily/{id}',
-      'GET /weekly-reports',
-      'GET /weekly-reports/{id}',
-    ],
-  ),
-  ...pendiente(
-    'lectura · issues',
-    [
-      'GET /issues',
-      'GET /issues/{id}',
-    ],
-  ),
-  ...pendiente(
-    'lectura · meetings',
-    [
-      'GET /meetings',
-      'GET /meetings/{id}',
-    ],
-  ),
-  ...pendiente(
-    'lectura · commitments',
-    [
-      'GET /commitments',
-      'GET /commitments/{id}',
-    ],
-  ),
-  ...pendiente(
-    'lectura · governance-validations',
-    [
-      'GET /requests/{id}/validations',
-    ],
-  ),
-  ...pendiente(
-    'lectura · area-control',
-    [
-      'GET /area-control/indicators',
-      'GET /area-control/demand-summary',
-      'GET /area-control/attention',
-    ],
-  ),
-  ...pendiente(
-    'lectura · recurring-activity',
-    [
-      'GET /recurring-activities/occurrences',
-      'GET /recurring-activities/occurrences/{id}',
-      'GET /recurring-activities',
-      'GET /recurring-activities/compliance',
-      'GET /recurring-activities/{id}',
     ],
   ),
 
