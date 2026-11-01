@@ -16,10 +16,7 @@ import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
 import { DEFAULT_AGENT_CONFIGS } from './ai-defaults';
 import { encryptSecret, decryptSecret } from './ai-crypto';
-import {
-  assertModelAllowed,
-  BEDROCK_MODEL_CATALOG_ENTRIES,
-} from './bedrock-model-catalog';
+import { AiModelCatalogService } from './ai-model-catalog.service';
 import { AiConfigResponseDto } from './dto/ai-config-response.dto';
 import { BEDROCK_CLIENT, BedrockClient } from './bedrock.client';
 import { AiGlobalConfigResponseDto } from './dto/ai-global-config-response.dto';
@@ -45,6 +42,8 @@ export class AiConfigService implements OnModuleInit {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(BEDROCK_CLIENT) private readonly bedrock: BedrockClient,
+    @Inject(AiModelCatalogService)
+    private readonly models: AiModelCatalogService,
   ) {}
 
   /**
@@ -127,18 +126,15 @@ export class AiConfigService implements OnModuleInit {
    * selector del Admin sin duplicar la lista en el frontend.
    */
   async getConfig(): Promise<AiConfigResponseDto> {
-    const [globalRow, agentRows] = await Promise.all([
+    const [globalRow, agentRows, models] = await Promise.all([
       this.loadGlobal(),
       this.prisma.aiAgentConfig.findMany({ orderBy: { code: 'asc' } }),
+      this.models.listEnabled(),
     ]);
     return {
       global: this.toGlobalResponse(globalRow),
       agents: agentRows.map((a) => this.toAgentResponse(a)),
-      models: BEDROCK_MODEL_CATALOG_ENTRIES.map((m) => ({
-        id: m.id,
-        label: m.label,
-        tier: m.tier,
-      })),
+      models,
     };
   }
 
@@ -258,7 +254,7 @@ export class AiConfigService implements OnModuleInit {
     const existing = await this.requireAgent(code);
 
     if (dto.model !== undefined) {
-      assertModelAllowed(dto.model);
+      await this.models.assertAllowed(dto.model);
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -328,10 +324,11 @@ export class AiConfigService implements OnModuleInit {
     }
 
     try {
+      const withTemperature = await this.models.supportsTemperature(agent.model);
       await this.bedrock.ping({
         region: agent.region,
         modelId: agent.model,
-        temperature: agent.temperature,
+        ...(withTemperature ? { temperature: agent.temperature } : {}),
         maxTokens: agent.maxTokens,
         timeoutMs: agent.timeoutMs,
         ...(credentials ? { credentials } : {}),

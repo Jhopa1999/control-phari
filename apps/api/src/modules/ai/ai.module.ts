@@ -5,6 +5,7 @@ import { AuditModule } from '../audit/audit.module';
 import { RequestModule } from '../request/request.module';
 import { AiConfigController } from './ai-config.controller';
 import { AiConfigService } from './ai-config.service';
+import { AiModelCatalogService } from './ai-model-catalog.service';
 import { TriageSuggestionController } from './triage-suggestion.controller';
 import { TriageSuggestionService } from './triage-suggestion.service';
 import { AwsBedrockClient, BEDROCK_CLIENT } from './bedrock.client';
@@ -24,6 +25,7 @@ import { AwsBedrockClient, BEDROCK_CLIENT } from './bedrock.client';
   controllers: [AiConfigController, TriageSuggestionController],
   providers: [
     AiConfigService,
+    AiModelCatalogService,
     TriageSuggestionService,
     { provide: BEDROCK_CLIENT, useClass: AwsBedrockClient },
   ],

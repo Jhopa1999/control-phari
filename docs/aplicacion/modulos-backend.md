@@ -533,10 +533,13 @@ Configuración de IA (`ai-config.controller.ts`), base `/admin/ai`, solo `ADMIN`
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/admin/ai/config` | Estado global + lista de agentes + catálogo de modelos permitidos (`models`: `id`, `label`, `tier`) para alimentar el selector del Admin. Nunca incluye el secret ni el ciphertext (solo `secretSet` y `accessKeyIdLast4`). |
+| GET | `/admin/ai/config` | Estado global + lista de agentes + catálogo de modelos permitidos (`models`: modelos habilitados con `id`, `label`, `tier` y capacidades; viene de la tabla `ai_model`) para alimentar el selector del Admin. Nunca incluye el secret ni el ciphertext (solo `secretSet` y `accessKeyIdLast4`). |
+| GET | `/admin/ai/models` | Catálogo completo de modelos de IA con sus capacidades (`supportsTemperature`, `supportsTools`, `supportsVision`, `supportsDocuments`, `enabled`), incluidos los deshabilitados. |
+| POST | `/admin/ai/models` | Da de alta un modelo (`modelId` invocable, nombre, tier y capacidades). `409` si el id ya existe. Audita `AI_CONFIG`. |
+| PATCH | `/admin/ai/models/:modelId` | Edita nombre, tier, capacidades, orden o habilitado de un modelo. `404` si no existe. Los modelos por defecto se siembran al arrancar sin pisar cambios. |
 | PATCH | `/admin/ai/config` | Actualiza la configuración global (encendido, modo de credenciales, claves). Regla determinista del secret como en SMTP. |
 | GET | `/admin/ai/agents/:code` | Configuración de un agente por `code` (p. ej. `TRIAGE`). `404` si no existe. |
-| PATCH | `/admin/ai/agents/:code` | Actualiza un agente (encendido, región, modelo, prompt, temperatura, tokens, timeout). Valida el modelo contra el catálogo → `400`. |
+| PATCH | `/admin/ai/agents/:code` | Actualiza un agente (encendido, región, modelo, prompt, temperatura, tokens, timeout). Valida que el modelo exista y esté habilitado en el catálogo → `400`. Si el modelo no soporta `temperature`, la invocación la omite. |
 | POST | `/admin/ai/agents/:code/test` | Prueba la conexión con Bedrock; responde `{ ok, message }` sin secretos ni stack. En modo `access-keys` descifra el secret solo en ese momento; si falla → `{ ok:false }`. |
 
 Agentes por defecto: el Admin solo EDITA agentes existentes (no hay endpoint de creación). Al arrancar, `AiConfigService.onModuleInit` llama a `ensureDefaultAgents`, que crea (apagado) el agente `TRIAGE` si falta, con `upsert` de `update` vacío: nunca pisa lo que el admin haya cambiado. Un fallo al asegurarlo se registra y no impide arrancar la API. Los valores por defecto (prompt, modelo, parámetros) viven en `ai-defaults.ts` y los comparte el seed de Prisma.

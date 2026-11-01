@@ -116,6 +116,17 @@ Admin. Arranca apagado. No guarda secretos (las credenciales viven en `AiGlobalC
 - Restricciones/índices: `code` único e indexado.
 - Relaciones: `updatedBy` → `User` (`onDelete: SetNull`, relación `AiAgentConfigUpdatedBy`).
 
+### AiModel (`ai_model`)
+Catálogo de modelos de IA (Bedrock) gestionable desde el Admin, con las capacidades de cada
+modelo. Sustituye a la lista cerrada en código. La API siembra los modelos por defecto al
+arrancar (`ensureDefaults`, valores en `bedrock-model-catalog.ts`) sin pisar cambios del admin.
+- Campos clave: `modelId` (`model_id`, único; id invocable/perfil de inferencia), `label`,
+  `tier` (`default`/`premium`/`other`), `enabled` (default `true`), `supportsTemperature`,
+  `supportsTools`, `supportsVision`, `supportsDocuments`, `sortOrder`.
+- Reglas: un agente solo puede usar un modelo existente y habilitado; si el modelo no soporta
+  `temperature` (p. ej. Claude 5.x) la invocación la omite.
+- Restricciones/índices: `model_id` único; índice por (`enabled`, `sort_order`).
+
 
 ## Flujo de demanda
 
@@ -448,3 +459,4 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     y de revisión en `documents`; siembra idempotente de `DOC_CATEGORY=CIERRE` y
     `DOC_STATUS=PENDIENTE_APROBACION/RECHAZADO`)
 24. `20261028234216_documento_proyecto` (aditiva: `documents.request_id` + FK a `requests`)
+25. `20261101120000_ai_model_catalogo` (aditiva: tabla `ai_model`, catálogo de modelos de IA con capacidades)

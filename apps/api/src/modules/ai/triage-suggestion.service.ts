@@ -11,6 +11,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RequestStateService } from '../request/request-state.service';
 import { decryptSecret } from './ai-crypto';
+import { AiModelCatalogService } from './ai-model-catalog.service';
 import {
   BEDROCK_CLIENT,
   BedrockClient,
@@ -71,6 +72,8 @@ export class TriageSuggestionService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(RequestStateService) private readonly state: RequestStateService,
     @Inject(BEDROCK_CLIENT) private readonly bedrock: BedrockClient,
+    @Inject(AiModelCatalogService)
+    private readonly models: AiModelCatalogService,
   ) {}
 
   async suggest(
@@ -138,11 +141,12 @@ export class TriageSuggestionService {
     // generico (sin stack).
     let raw: string;
     try {
+      const withTemperature = await this.models.supportsTemperature(agent.model);
       raw = await this.bedrock.invoke({
         region: agent.region,
         modelId: agent.model,
         prompt,
-        temperature: agent.temperature,
+        ...(withTemperature ? { temperature: agent.temperature } : {}),
         maxTokens: agent.maxTokens,
         timeoutMs: agent.timeoutMs,
         ...(credentials ? { credentials } : {}),

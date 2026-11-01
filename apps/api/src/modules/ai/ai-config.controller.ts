@@ -7,6 +7,9 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RoleCode } from '../auth/role-code';
 import { AiConfigService } from './ai-config.service';
+import { AiModelCatalogService } from './ai-model-catalog.service';
+import { AiModelCatalogEntryDto } from './dto/ai-model-catalog-entry.dto';
+import { CreateAiModelDto, UpdateAiModelDto } from './dto/save-ai-model.dto';
 import { AiConfigResponseDto } from './dto/ai-config-response.dto';
 import { AiGlobalConfigResponseDto } from './dto/ai-global-config-response.dto';
 import { AiAgentConfigResponseDto } from './dto/ai-agent-config-response.dto';
@@ -24,7 +27,10 @@ import { UpdateAiAgentConfigDto } from './dto/update-ai-agent-config.dto';
 @UseGuards(CurrentUserGuard, RolesGuard)
 @Roles(RoleCode.ADMIN)
 export class AiConfigController {
-  constructor(private readonly aiConfigService: AiConfigService) {}
+  constructor(
+    private readonly aiConfigService: AiConfigService,
+    private readonly models: AiModelCatalogService,
+  ) {}
 
   @Get('config')
   @ApiOperation({
@@ -53,6 +59,46 @@ export class AiConfigController {
     @Body() dto: UpdateAiGlobalConfigDto,
   ): Promise<AiGlobalConfigResponseDto> {
     return this.aiConfigService.updateGlobal(actor, dto);
+  }
+
+  @Get('models')
+  @ApiOperation({
+    summary: 'Catalogo completo de modelos de IA con sus capacidades, incluidos los deshabilitados (solo ADMIN).',
+  })
+  @ApiResponse({ status: 200, description: 'Modelos del catalogo.', type: [AiModelCatalogEntryDto] })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  listModels(): Promise<AiModelCatalogEntryDto[]> {
+    return this.models.listAll();
+  }
+
+  @Post('models')
+  @ApiOperation({ summary: 'Da de alta un modelo de IA en el catalogo (solo ADMIN).' })
+  @ApiBody({ type: CreateAiModelDto })
+  @ApiResponse({ status: 201, description: 'Modelo creado.', type: AiModelCatalogEntryDto })
+  @ApiResponse({ status: 400, description: 'Datos invalidos.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 409, description: 'Ya existe un modelo con ese id.' })
+  createModel(
+    @CurrentActor() actor: CurrentActorType,
+    @Body() dto: CreateAiModelDto,
+  ): Promise<AiModelCatalogEntryDto> {
+    return this.models.create(actor, dto);
+  }
+
+  @Patch('models/:modelId')
+  @ApiOperation({ summary: 'Edita un modelo del catalogo: nombre, capacidades, habilitado (solo ADMIN).' })
+  @ApiParam({ name: 'modelId', description: 'ID invocable del modelo en Bedrock.' })
+  @ApiBody({ type: UpdateAiModelDto })
+  @ApiResponse({ status: 200, description: 'Modelo actualizado.', type: AiModelCatalogEntryDto })
+  @ApiResponse({ status: 400, description: 'Datos invalidos.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Modelo no encontrado.' })
+  updateModel(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('modelId') modelId: string,
+    @Body() dto: UpdateAiModelDto,
+  ): Promise<AiModelCatalogEntryDto> {
+    return this.models.update(actor, modelId, dto);
   }
 
   @Get('agents/:code')

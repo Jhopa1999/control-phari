@@ -1,15 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { BedrockModelTier } from '../bedrock-model-catalog';
-
-/** Tiers posibles de un modelo del catalogo (para el enum de @ApiProperty). */
-const MODEL_TIERS: readonly BedrockModelTier[] = ['default', 'premium', 'other'];
+import {
+  BEDROCK_MODEL_TIERS,
+  type BedrockModelTier,
+} from '../bedrock-model-catalog';
 
 /**
- * Entrada del catalogo de modelos de Bedrock expuesta al Admin: `id` invocable,
- * `label` legible y `tier` orientativo. Permite que el selector del Admin
- * muestre nombres entendibles y marque el default/premium sin hardcodear la
- * lista en el frontend. Deriva de BEDROCK_MODEL_CATALOG (fuente de verdad en el
- * backend); no agrega modelos ni cambia el comportamiento del endpoint.
+ * Entrada del catalogo de modelos de IA expuesta al Admin: `id` invocable,
+ * `label` legible, `tier` orientativo y las capacidades del modelo. Deriva de la
+ * tabla `ai_model` (fuente de verdad en el backend).
  */
 export class AiModelCatalogEntryDto {
   @ApiProperty({
@@ -23,8 +21,23 @@ export class AiModelCatalogEntryDto {
 
   @ApiProperty({
     type: String,
-    enum: MODEL_TIERS,
+    enum: BEDROCK_MODEL_TIERS,
     description: 'Categoria orientativa: default (recomendado), premium (mayor calidad) u other.',
   })
   tier!: BedrockModelTier;
+
+  @ApiProperty({ type: Boolean, description: 'Si el modelo esta disponible para asignarse a agentes.' })
+  enabled!: boolean;
+
+  @ApiProperty({ type: Boolean, description: 'Si el modelo acepta el parametro temperature.' })
+  supportsTemperature!: boolean;
+
+  @ApiProperty({ type: Boolean, description: 'Si el modelo soporta tool use.' })
+  supportsTools!: boolean;
+
+  @ApiProperty({ type: Boolean, description: 'Si el modelo acepta imagenes.' })
+  supportsVision!: boolean;
+
+  @ApiProperty({ type: Boolean, description: 'Si el modelo acepta documentos.' })
+  supportsDocuments!: boolean;
 }
