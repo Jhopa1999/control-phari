@@ -528,6 +528,13 @@ el resto del backend no depende del SDK y se puede sustituir por un doble en pru
 catálogo de modelos permitidos es una lista **cerrada** (`bedrock-model-catalog.ts`); un
 modelo fuera del catálogo → `400`.
 
+Consumo y presupuesto de IA (`ai-usage.service.ts`): cada llamada al modelo registra una fila en
+`ai_usage` (agente, usuario, modelo, tokens, costo estimado, duración; nunca el contenido). El costo
+usa el precio por millón de tokens del catálogo de modelos (`ai_model`); un modelo sin precio registra
+costo `null`. Antes de invocar, el triage (y en adelante el asistente) llama a `assertWithinBudget`:
+si el gasto del mes alcanzó el tope → `409` sin tocar Bedrock. Al cruzar el umbral de alerta y el
+tope se escribe un aviso en el log del servidor. Los meses se miden en UTC.
+
 Cliente de IA (`bedrock.client.ts`, interno, sin endpoints nuevos): además de `invoke`/`ping`,
 expone `converse` y `converseStream` (API Converse de Bedrock) para conversaciones multi-turno con
 tool use, imágenes y documentos. Los tipos propios y la traducción al SDK viven en
@@ -540,10 +547,11 @@ Configuración de IA (`ai-config.controller.ts`), base `/admin/ai`, solo `ADMIN`
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/admin/ai/config` | Estado global + lista de agentes + catálogo de modelos permitidos (`models`: modelos habilitados con `id`, `label`, `tier` y capacidades; viene de la tabla `ai_model`) para alimentar el selector del Admin. Nunca incluye el secret ni el ciphertext (solo `secretSet` y `accessKeyIdLast4`). |
+| GET | `/admin/ai/usage` | Consumo de IA del mes (`?month=YYYY-MM`, UTC): llamadas, tokens, costo estimado, desglose por agente y por modelo, llamadas sin precio y estado del presupuesto (`budget`: tope, gasto, `usedPct`, `alert`, `exceeded`). |
 | GET | `/admin/ai/models` | Catálogo completo de modelos de IA con sus capacidades (`supportsTemperature`, `supportsTools`, `supportsVision`, `supportsDocuments`, `enabled`), incluidos los deshabilitados. |
 | POST | `/admin/ai/models` | Da de alta un modelo (`modelId` invocable, nombre, tier y capacidades). `409` si el id ya existe. Audita `AI_CONFIG`. |
 | PATCH | `/admin/ai/models/:modelId` | Edita nombre, tier, capacidades, orden o habilitado de un modelo. `404` si no existe. Los modelos por defecto se siembran al arrancar sin pisar cambios. |
-| PATCH | `/admin/ai/config` | Actualiza la configuración global (encendido, modo de credenciales, claves). Regla determinista del secret como en SMTP. |
+| PATCH | `/admin/ai/config` | Actualiza la configuración global (encendido, modo de credenciales, claves, tope mensual `monthlyBudgetUsd` —`null` lo quita; por defecto 100 USD— y `budgetAlertPct`, por defecto 80). Regla determinista del secret como en SMTP. |
 | GET | `/admin/ai/agents/:code` | Configuración de un agente por `code` (p. ej. `TRIAGE`). `404` si no existe. |
 | PATCH | `/admin/ai/agents/:code` | Actualiza un agente (encendido, región, modelo, prompt, temperatura, tokens, timeout). Valida que el modelo exista y esté habilitado en el catálogo → `400`. Si el modelo no soporta `temperature`, la invocación la omite. |
 | POST | `/admin/ai/agents/:code/test` | Prueba la conexión con Bedrock; responde `{ ok, message }` sin secretos ni stack. En modo `access-keys` descifra el secret solo en ese momento; si falla → `{ ok:false }`. |

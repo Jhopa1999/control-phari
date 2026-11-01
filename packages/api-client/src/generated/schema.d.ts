@@ -2061,6 +2061,23 @@ export interface paths {
         patch: operations["AdminUsersController_setAdminFlag"];
         trace?: never;
     };
+    "/admin/ai/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consumo de IA del mes (llamadas, tokens, costo estimado, por agente y modelo) y estado del presupuesto (solo ADMIN). */
+        get: operations["AiConfigController_getUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/ai/config": {
         parameters: {
             query?: never;
@@ -5634,6 +5651,54 @@ export interface components {
             /** @description true promueve a ADMIN de sistema; false degrada. */
             isAdmin: boolean;
         };
+        AiUsageBreakdownDto: {
+            /** @description Agente (p. ej. TRIAGE) o id del modelo. */
+            key: string;
+            /** @description Llamadas. */
+            calls: number;
+            /** @description Tokens de entrada. */
+            inputTokens: number;
+            /** @description Tokens de salida. */
+            outputTokens: number;
+            /** @description Costo estimado en USD (solo llamadas con precio). */
+            costUsd: number;
+        };
+        AiBudgetStatusDto: {
+            /** @description Mes (YYYY-MM, UTC) al que corresponde. */
+            month: string;
+            /** @description Tope mensual en USD, o null si no hay tope. */
+            budgetUsd: number | null;
+            /** @description Porcentaje del tope a partir del cual hay alerta. */
+            alertPct: number;
+            /** @description Gasto estimado del mes en USD. */
+            spentUsd: number;
+            /** @description Porcentaje del tope consumido, o null si no hay tope. */
+            usedPct: number | null;
+            /** @description Se alcanzo el umbral de alerta. */
+            alert: boolean;
+            /** @description Se agoto el tope: las llamadas de IA se rechazan hasta el mes siguiente o hasta subir el tope. */
+            exceeded: boolean;
+        };
+        AiUsageSummaryDto: {
+            /** @description Mes (YYYY-MM, UTC). */
+            month: string;
+            /** @description Llamadas al modelo en el mes. */
+            calls: number;
+            /** @description Tokens de entrada del mes. */
+            inputTokens: number;
+            /** @description Tokens de salida del mes. */
+            outputTokens: number;
+            /** @description Costo estimado del mes en USD. */
+            costUsd: number;
+            /** @description Llamadas de modelos sin precio configurado (no suman al costo). */
+            unpricedCalls: number;
+            /** @description Consumo por agente. */
+            byAgent: components["schemas"]["AiUsageBreakdownDto"][];
+            /** @description Consumo por modelo. */
+            byModel: components["schemas"]["AiUsageBreakdownDto"][];
+            /** @description Estado del presupuesto del mes. */
+            budget: components["schemas"]["AiBudgetStatusDto"];
+        };
         AiGlobalConfigResponseDto: {
             /** @description IA encendida globalmente. */
             enabled: boolean;
@@ -5646,6 +5711,10 @@ export interface components {
             secretSet: boolean;
             /** @description Ultimos 4 caracteres del AWS Access Key ID guardado, o null. */
             accessKeyIdLast4: string | null;
+            /** @description Tope de gasto mensual de IA en USD, o null si no hay tope. */
+            monthlyBudgetUsd: number | null;
+            /** @description Porcentaje del tope a partir del cual se avisa. */
+            budgetAlertPct: number;
             /** @description Ultima actualizacion (ISO) o null. */
             updatedAt: string | null;
         };
@@ -5691,6 +5760,10 @@ export interface components {
             supportsVision: boolean;
             /** @description Si el modelo acepta documentos. */
             supportsDocuments: boolean;
+            /** @description Precio en USD por millon de tokens de entrada, o null si no se conoce. */
+            inputUsdPerMTok: number | null;
+            /** @description Precio en USD por millon de tokens de salida, o null si no se conoce. */
+            outputUsdPerMTok: number | null;
         };
         AiConfigResponseDto: {
             /** @description Estado global de IA (encendido, modo de credenciales, secretSet, last4). */
@@ -5714,6 +5787,10 @@ export interface components {
             awsSecretAccessKey?: string;
             /** @description true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio. */
             clearCredentials?: boolean;
+            /** @description Tope de gasto mensual de IA en USD. null quita el tope; ausente lo conserva. Al alcanzarlo las llamadas de IA se rechazan. */
+            monthlyBudgetUsd?: number | null;
+            /** @description Porcentaje del tope a partir del cual se avisa (1..100). */
+            budgetAlertPct?: number;
         };
         CreateAiModelDto: {
             /** @description Nombre legible. */
@@ -5735,6 +5812,10 @@ export interface components {
             supportsDocuments?: boolean;
             /** @description Orden en el selector (menor primero). */
             sortOrder?: number;
+            /** @description USD por millon de tokens de entrada. */
+            inputUsdPerMTok?: number;
+            /** @description USD por millon de tokens de salida. */
+            outputUsdPerMTok?: number;
             /** @description ID invocable en Bedrock (perfil de inferencia, p. ej. us.anthropic.claude-...). */
             modelId: string;
         };
@@ -5758,6 +5839,10 @@ export interface components {
             supportsDocuments?: boolean;
             /** @description Orden en el selector (menor primero). */
             sortOrder?: number;
+            /** @description USD por millon de tokens de entrada. */
+            inputUsdPerMTok?: number;
+            /** @description USD por millon de tokens de salida. */
+            outputUsdPerMTok?: number;
         };
         UpdateAiAgentConfigDto: {
             /** @description Enciende/apaga este agente. */
@@ -12661,6 +12746,43 @@ export interface operations {
             };
             /** @description Usuario no encontrado. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_getUsage: {
+        parameters: {
+            query?: {
+                /** @description Mes a consultar en formato YYYY-MM (UTC). Por defecto, el mes actual. */
+                month?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumen de consumo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiUsageSummaryDto"];
+                };
+            };
+            /** @description Mes con formato invalido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentActor } from '../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../auth/current-actor';
@@ -8,6 +8,8 @@ import { Roles } from '../auth/roles.decorator';
 import { RoleCode } from '../auth/role-code';
 import { AiConfigService } from './ai-config.service';
 import { AiModelCatalogService } from './ai-model-catalog.service';
+import { AiUsageService } from './ai-usage.service';
+import { AiUsageQueryDto, AiUsageSummaryDto } from './dto/ai-usage.dto';
 import { AiModelCatalogEntryDto } from './dto/ai-model-catalog-entry.dto';
 import { CreateAiModelDto, UpdateAiModelDto } from './dto/save-ai-model.dto';
 import { AiConfigResponseDto } from './dto/ai-config-response.dto';
@@ -30,7 +32,20 @@ export class AiConfigController {
   constructor(
     private readonly aiConfigService: AiConfigService,
     private readonly models: AiModelCatalogService,
+    private readonly usage: AiUsageService,
   ) {}
+
+  @Get('usage')
+  @ApiOperation({
+    summary:
+      'Consumo de IA del mes (llamadas, tokens, costo estimado, por agente y modelo) y estado del presupuesto (solo ADMIN).',
+  })
+  @ApiResponse({ status: 200, description: 'Resumen de consumo.', type: AiUsageSummaryDto })
+  @ApiResponse({ status: 400, description: 'Mes con formato invalido.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  getUsage(@Query() query: AiUsageQueryDto): Promise<AiUsageSummaryDto> {
+    return this.usage.summary(query.month);
+  }
 
   @Get('config')
   @ApiOperation({

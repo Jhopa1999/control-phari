@@ -368,6 +368,16 @@
                                 "docs/aplicacion/modulos-backend.md"
                             ],
                             "summary": "BL-032 F0: cliente Bedrock con Converse y ConverseStream (tool use, imagenes, documentos, streaming) y traduccion de nombres de tool del MCP; sin cambios de contrato."
+                        },
+                        {
+                            "timestamp": "2026-11-01T23:00:00Z",
+                            "trigger_file": "apps/api/prisma/schema.prisma",
+                            "updated_docs": [
+                                "docs/aplicacion/modelo-datos.md",
+                                "docs/aplicacion/modulos-backend.md",
+                                "apps/mcp/README.md"
+                            ],
+                            "summary": "BL-032 F0: registro de consumo de IA (ai_usage), precios por modelo y presupuesto mensual (tope y alerta, 409 al agotarse); GET /admin/ai/usage; triage usa Converse y registra consumo."
                         }
                 ]
 }

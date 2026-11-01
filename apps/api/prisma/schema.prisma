@@ -205,6 +205,7 @@ model User {
   // (Prisma exige nombres distintos para desambiguar). onDelete SetNull.
   aiGlobalConfigsUpdated AiGlobalConfig[] @relation("AiGlobalConfigUpdatedBy")
   aiAgentConfigsUpdated  AiAgentConfig[]  @relation("AiAgentConfigUpdatedBy")
+  aiUsages               AiUsage[]        @relation("AiUsageUser")
 
   // Actividades recurrentes (FEAT-001): definiciones cuyo responsable es ESTA
   // persona (responsibleKind=USER) y ocurrencias que esta persona completo.
@@ -1177,6 +1178,12 @@ model AiGlobalConfig {
   credentialMode           String   @default("iam-role") @map("credential_mode")
   awsAccessKeyId           String?  @map("aws_access_key_id")
   awsSecretAccessKeyCipher String?  @map("aws_secret_access_key_ciphertext")
+  /// Tope de gasto mensual de IA en USD (BL-032 F0). null = sin tope. Al
+  /// alcanzarlo, las llamadas de IA se rechazan hasta el mes siguiente o hasta
+  /// que el admin lo suba.
+  monthlyBudgetUsd         Float?   @default(100) @map("monthly_budget_usd")
+  /// Porcentaje del tope a partir del cual se avisa (alerta).
+  budgetAlertPct           Int      @default(80) @map("budget_alert_pct")
   updatedByUserId          String?  @map("updated_by_user_id") @db.Uuid
   updatedBy                User?    @relation("AiGlobalConfigUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
   createdAt                DateTime @default(now()) @map("created_at")
@@ -1226,11 +1233,40 @@ model AiModel {
   supportsVision      Boolean  @default(false) @map("supports_vision")
   supportsDocuments   Boolean  @default(false) @map("supports_documents")
   sortOrder           Int      @default(0) @map("sort_order")
+  /// Precio en USD por millon de tokens (entrada/salida) para estimar el costo.
+  /// null = sin precio: el consumo se registra sin costo y se reporta aparte.
+  inputUsdPerMTok     Float?   @map("input_usd_per_mtok")
+  outputUsdPerMTok    Float?   @map("output_usd_per_mtok")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
   @@index([enabled, sortOrder])
   @@map("ai_model")
+}
+
+/// Registro de consumo de IA: una fila por llamada al modelo (BL-032 F0). Base
+/// del presupuesto mensual y de los reportes de costo. No guarda contenido de
+/// prompts ni respuestas, solo metricas. `costUsd` null = modelo sin precio.
+model AiUsage {
+  id                   String   @id @default(uuid()) @db.Uuid
+  createdAt            DateTime @default(now()) @map("created_at")
+  userId               String?  @map("user_id") @db.Uuid
+  /// Agente/origen de la llamada (p. ej. TRIAGE, ASISTENTE).
+  agentCode            String   @map("agent_code")
+  modelId              String   @map("model_id")
+  inputTokens          Int      @map("input_tokens")
+  outputTokens         Int      @map("output_tokens")
+  cacheReadInputTokens Int      @default(0) @map("cache_read_input_tokens")
+  cacheWriteInputTokens Int     @default(0) @map("cache_write_input_tokens")
+  costUsd              Float?   @map("cost_usd")
+  durationMs           Int      @map("duration_ms")
+
+  user User? @relation("AiUsageUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([agentCode, createdAt])
+  @@map("ai_usage")
 }
 
 /// DEFINICION de una actividad recurrente (FEAT-001, design §2). Describe QUE

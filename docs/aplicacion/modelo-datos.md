@@ -126,6 +126,19 @@ arrancar (`ensureDefaults`, valores en `bedrock-model-catalog.ts`) sin pisar cam
 - Reglas: un agente solo puede usar un modelo existente y habilitado; si el modelo no soporta
   `temperature` (p. ej. Claude 5.x) la invocación la omite.
 - Restricciones/índices: `model_id` único; índice por (`enabled`, `sort_order`).
+- Precios: `inputUsdPerMTok` / `outputUsdPerMTok` (`input_usd_per_mtok`, `output_usd_per_mtok`,
+  USD por millón de tokens, nullables) para estimar el costo del consumo.
+
+### AiUsage (`ai_usage`)
+Una fila por llamada al modelo de IA: base del presupuesto mensual y de los reportes de costo.
+Solo métricas, nunca el contenido de prompts ni respuestas.
+- Campos clave: `createdAt`, `userId?` (FK a `User`, `onDelete: SetNull`), `agentCode`
+  (p. ej. `TRIAGE`), `modelId`, `inputTokens`, `outputTokens`, `cacheReadInputTokens`,
+  `cacheWriteInputTokens`, `costUsd?` (null si el modelo no tiene precio), `durationMs`.
+- Índices: `createdAt`; (`userId`, `createdAt`); (`agentCode`, `createdAt`).
+
+Presupuesto: `AiGlobalConfig` suma `monthlyBudgetUsd?` (`monthly_budget_usd`, default `100`,
+`null` = sin tope) y `budgetAlertPct` (`budget_alert_pct`, default `80`).
 
 
 ## Flujo de demanda
@@ -460,3 +473,5 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     `DOC_STATUS=PENDIENTE_APROBACION/RECHAZADO`)
 24. `20261028234216_documento_proyecto` (aditiva: `documents.request_id` + FK a `requests`)
 25. `20261101120000_ai_model_catalogo` (aditiva: tabla `ai_model`, catálogo de modelos de IA con capacidades)
+26. `20261101180000_ai_consumo_presupuesto` (aditiva: tabla `ai_usage`; columnas de presupuesto en
+    `ai_global_config` y de precio en `ai_model`; precios de los modelos por defecto)

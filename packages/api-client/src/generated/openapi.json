@@ -7472,6 +7472,45 @@
         ]
       }
     },
+    "/admin/ai/usage": {
+      "get": {
+        "operationId": "AiConfigController_getUsage",
+        "parameters": [
+          {
+            "name": "month",
+            "required": false,
+            "in": "query",
+            "description": "Mes a consultar en formato YYYY-MM (UTC). Por defecto, el mes actual.",
+            "schema": {
+              "example": "2026-11",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen de consumo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiUsageSummaryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mes con formato invalido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Consumo de IA del mes (llamadas, tokens, costo estimado, por agente y modelo) y estado del presupuesto (solo ADMIN).",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
     "/admin/ai/config": {
       "get": {
         "operationId": "AiConfigController_getConfig",
@@ -15248,6 +15287,144 @@
           "isAdmin"
         ]
       },
+      "AiUsageBreakdownDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Agente (p. ej. TRIAGE) o id del modelo."
+          },
+          "calls": {
+            "type": "number",
+            "description": "Llamadas."
+          },
+          "inputTokens": {
+            "type": "number",
+            "description": "Tokens de entrada."
+          },
+          "outputTokens": {
+            "type": "number",
+            "description": "Tokens de salida."
+          },
+          "costUsd": {
+            "type": "number",
+            "description": "Costo estimado en USD (solo llamadas con precio)."
+          }
+        },
+        "required": [
+          "key",
+          "calls",
+          "inputTokens",
+          "outputTokens",
+          "costUsd"
+        ]
+      },
+      "AiBudgetStatusDto": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "Mes (YYYY-MM, UTC) al que corresponde."
+          },
+          "budgetUsd": {
+            "type": "number",
+            "nullable": true,
+            "description": "Tope mensual en USD, o null si no hay tope."
+          },
+          "alertPct": {
+            "type": "number",
+            "description": "Porcentaje del tope a partir del cual hay alerta."
+          },
+          "spentUsd": {
+            "type": "number",
+            "description": "Gasto estimado del mes en USD."
+          },
+          "usedPct": {
+            "type": "number",
+            "nullable": true,
+            "description": "Porcentaje del tope consumido, o null si no hay tope."
+          },
+          "alert": {
+            "type": "boolean",
+            "description": "Se alcanzo el umbral de alerta."
+          },
+          "exceeded": {
+            "type": "boolean",
+            "description": "Se agoto el tope: las llamadas de IA se rechazan hasta el mes siguiente o hasta subir el tope."
+          }
+        },
+        "required": [
+          "month",
+          "budgetUsd",
+          "alertPct",
+          "spentUsd",
+          "usedPct",
+          "alert",
+          "exceeded"
+        ]
+      },
+      "AiUsageSummaryDto": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "Mes (YYYY-MM, UTC)."
+          },
+          "calls": {
+            "type": "number",
+            "description": "Llamadas al modelo en el mes."
+          },
+          "inputTokens": {
+            "type": "number",
+            "description": "Tokens de entrada del mes."
+          },
+          "outputTokens": {
+            "type": "number",
+            "description": "Tokens de salida del mes."
+          },
+          "costUsd": {
+            "type": "number",
+            "description": "Costo estimado del mes en USD."
+          },
+          "unpricedCalls": {
+            "type": "number",
+            "description": "Llamadas de modelos sin precio configurado (no suman al costo)."
+          },
+          "byAgent": {
+            "description": "Consumo por agente.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiUsageBreakdownDto"
+            }
+          },
+          "byModel": {
+            "description": "Consumo por modelo.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiUsageBreakdownDto"
+            }
+          },
+          "budget": {
+            "description": "Estado del presupuesto del mes.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AiBudgetStatusDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "month",
+          "calls",
+          "inputTokens",
+          "outputTokens",
+          "costUsd",
+          "unpricedCalls",
+          "byAgent",
+          "byModel",
+          "budget"
+        ]
+      },
       "AiGlobalConfigResponseDto": {
         "type": "object",
         "properties": {
@@ -15272,6 +15449,15 @@
             "nullable": true,
             "description": "Ultimos 4 caracteres del AWS Access Key ID guardado, o null."
           },
+          "monthlyBudgetUsd": {
+            "type": "number",
+            "nullable": true,
+            "description": "Tope de gasto mensual de IA en USD, o null si no hay tope."
+          },
+          "budgetAlertPct": {
+            "type": "number",
+            "description": "Porcentaje del tope a partir del cual se avisa."
+          },
           "updatedAt": {
             "type": "string",
             "nullable": true,
@@ -15283,6 +15469,8 @@
           "credentialMode",
           "secretSet",
           "accessKeyIdLast4",
+          "monthlyBudgetUsd",
+          "budgetAlertPct",
           "updatedAt"
         ]
       },
@@ -15383,6 +15571,16 @@
           "supportsDocuments": {
             "type": "boolean",
             "description": "Si el modelo acepta documentos."
+          },
+          "inputUsdPerMTok": {
+            "type": "number",
+            "nullable": true,
+            "description": "Precio en USD por millon de tokens de entrada, o null si no se conoce."
+          },
+          "outputUsdPerMTok": {
+            "type": "number",
+            "nullable": true,
+            "description": "Precio en USD por millon de tokens de salida, o null si no se conoce."
           }
         },
         "required": [
@@ -15393,7 +15591,9 @@
           "supportsTemperature",
           "supportsTools",
           "supportsVision",
-          "supportsDocuments"
+          "supportsDocuments",
+          "inputUsdPerMTok",
+          "outputUsdPerMTok"
         ]
       },
       "AiConfigResponseDto": {
@@ -15455,6 +15655,18 @@
           "clearCredentials": {
             "type": "boolean",
             "description": "true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio."
+          },
+          "monthlyBudgetUsd": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Tope de gasto mensual de IA en USD. null quita el tope; ausente lo conserva. Al alcanzarlo las llamadas de IA se rechazan."
+          },
+          "budgetAlertPct": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Porcentaje del tope a partir del cual se avisa (1..100)."
           }
         }
       },
@@ -15498,6 +15710,16 @@
           "sortOrder": {
             "type": "number",
             "description": "Orden en el selector (menor primero).",
+            "minimum": 0
+          },
+          "inputUsdPerMTok": {
+            "type": "number",
+            "description": "USD por millon de tokens de entrada.",
+            "minimum": 0
+          },
+          "outputUsdPerMTok": {
+            "type": "number",
+            "description": "USD por millon de tokens de salida.",
             "minimum": 0
           },
           "modelId": {
@@ -15550,6 +15772,16 @@
           "sortOrder": {
             "type": "number",
             "description": "Orden en el selector (menor primero).",
+            "minimum": 0
+          },
+          "inputUsdPerMTok": {
+            "type": "number",
+            "description": "USD por millon de tokens de entrada.",
+            "minimum": 0
+          },
+          "outputUsdPerMTok": {
+            "type": "number",
+            "description": "USD por millon de tokens de salida.",
             "minimum": 0
           }
         }

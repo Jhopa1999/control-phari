@@ -10,6 +10,7 @@ import { RoleCode } from '../auth/role-code';
 import { TriageSuggestionService } from './triage-suggestion.service';
 import { BedrockClient, BedrockTimeoutError } from './bedrock.client';
 import { AiModelCatalogService } from './ai-model-catalog.service';
+import { AiUsageService } from './ai-usage.service';
 
 /**
  * Pruebas del agente de sugerencia de triage: SUGIERE sin persistir y degrada
@@ -70,6 +71,7 @@ describe('TriageSuggestionService', () => {
     invoke?: () => Promise<string>;
     inScopeDuplicates?: Array<{ id: string; title: string }>;
     supportsTemperature?: boolean;
+    budgetExceeded?: boolean;
   }) {
     const requestWrite = jest.fn();
     const prisma = {
@@ -118,8 +120,18 @@ describe('TriageSuggestionService', () => {
     } as unknown as RequestStateService;
 
     const invoke = opts.invoke ?? jest.fn().mockResolvedValue(JSON.stringify(validSuggestion()));
+    // El service usa `converse`: el doble envuelve el texto que simula el modelo.
     const bedrock = {
-      invoke: jest.fn(invoke),
+      converse: jest.fn(async () => ({
+        content: [{ type: 'text', text: await invoke() }],
+        stopReason: 'end_turn',
+        usage: {
+          inputTokens: 100,
+          outputTokens: 20,
+          cacheReadInputTokens: 0,
+          cacheWriteInputTokens: 0,
+        },
+      })),
       ping: jest.fn().mockResolvedValue(undefined),
     } as unknown as BedrockClient;
 
@@ -128,8 +140,14 @@ describe('TriageSuggestionService', () => {
         .fn()
         .mockResolvedValue(opts.supportsTemperature ?? true),
     } as unknown as AiModelCatalogService;
-    const service = new TriageSuggestionService(prisma, state, bedrock, models);
-    return { service, prisma, state, bedrock, requestWrite, requestFindMany: prisma.request.findMany };
+    const usage = {
+      assertWithinBudget: opts.budgetExceeded
+        ? jest.fn().mockRejectedValue(new ConflictException('presupuesto'))
+        : jest.fn().mockResolvedValue(undefined),
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AiUsageService;
+    const service = new TriageSuggestionService(prisma, state, bedrock, models, usage);
+    return { service, prisma, state, bedrock, usage, requestWrite, requestFindMany: prisma.request.findMany };
   }
 
   it('IA global apagada => 409 SIN invocar Bedrock', async () => {
@@ -139,7 +157,7 @@ describe('TriageSuggestionService', () => {
     await expect(service.suggest(jefeActor(), REQUEST_ID)).rejects.toBeInstanceOf(
       ConflictException,
     );
-    expect(bedrock.invoke).not.toHaveBeenCalled();
+    expect(bedrock.converse).not.toHaveBeenCalled();
   });
 
   it('agente apagado => 409 SIN invocar Bedrock', async () => {
@@ -149,20 +167,42 @@ describe('TriageSuggestionService', () => {
     await expect(service.suggest(jefeActor(), REQUEST_ID)).rejects.toBeInstanceOf(
       ConflictException,
     );
-    expect(bedrock.invoke).not.toHaveBeenCalled();
+    expect(bedrock.converse).not.toHaveBeenCalled();
+  });
+
+  it('presupuesto mensual agotado => 409 SIN invocar Bedrock', async () => {
+    const { service, bedrock, usage } = makeDeps({ budgetExceeded: true });
+    await expect(service.suggest(jefeActor(), REQUEST_ID)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(bedrock.converse).not.toHaveBeenCalled();
+    expect(usage.record).not.toHaveBeenCalled();
+  });
+
+  it('caso feliz registra el consumo del agente TRIAGE con el usuario y el modelo', async () => {
+    const { service, usage } = makeDeps({});
+    await service.suggest(jefeActor(), REQUEST_ID);
+    expect(usage.record).toHaveBeenCalledTimes(1);
+    const entry = (usage.record as jest.Mock).mock.calls[0][0];
+    expect(entry).toMatchObject({
+      userId: 'u-1',
+      agentCode: 'TRIAGE',
+      modelId: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+    });
+    expect(entry.usage.inputTokens).toBe(100);
   });
 
   it('modelo que no soporta temperature => se invoca SIN temperature', async () => {
     const { service, bedrock } = makeDeps({ supportsTemperature: false });
     await service.suggest(jefeActor(), REQUEST_ID);
-    const arg = (bedrock.invoke as jest.Mock).mock.calls[0][0];
+    const arg = (bedrock.converse as jest.Mock).mock.calls[0][0];
     expect(arg).not.toHaveProperty('temperature');
   });
 
   it('modelo que soporta temperature => se envia la configurada', async () => {
     const { service, bedrock } = makeDeps({});
     await service.suggest(jefeActor(), REQUEST_ID);
-    expect((bedrock.invoke as jest.Mock).mock.calls[0][0].temperature).toBe(0.2);
+    expect((bedrock.converse as jest.Mock).mock.calls[0][0].temperature).toBe(0.2);
   });
 
   it('timeout de Bedrock => 503', async () => {
@@ -273,6 +313,6 @@ describe('TriageSuggestionService', () => {
     await expect(service.suggest(jefeActor(), REQUEST_ID)).rejects.toBeInstanceOf(
       ConflictException,
     );
-    expect(bedrock.invoke).not.toHaveBeenCalled();
+    expect(bedrock.converse).not.toHaveBeenCalled();
   });
 });

@@ -77,6 +77,7 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
       'POST /admin/smtp-config/test',
       'GET /admin/users',
       'PATCH /admin/users/{id}/admin-flag',
+      'GET /admin/ai/usage',
       'GET /admin/ai/models',
       'POST /admin/ai/models',
       'PATCH /admin/ai/models/{modelId}',
