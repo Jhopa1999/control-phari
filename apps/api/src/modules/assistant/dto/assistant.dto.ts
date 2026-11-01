@@ -1,0 +1,107 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
+
+/** Largo maximo de un mensaje del usuario. */
+export const MAX_MESSAGE_LENGTH = 4000;
+
+/** Mensaje del usuario al asistente. */
+export class ChatRequestDto {
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description: 'Conversación existente. Si se omite, se crea una nueva.',
+  })
+  @IsOptional()
+  @IsUUID()
+  conversationId?: string;
+
+  @ApiProperty({
+    type: String,
+    minLength: 1,
+    maxLength: MAX_MESSAGE_LENGTH,
+    description: 'Mensaje de la persona.',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1, { message: 'El mensaje no puede estar vacío.' })
+  @MaxLength(MAX_MESSAGE_LENGTH, {
+    message: `El mensaje no puede superar ${MAX_MESSAGE_LENGTH} caracteres.`,
+  })
+  message!: string;
+}
+
+/** Disponibilidad del asistente para la persona actual. */
+export class AssistantStatusDto {
+  @ApiProperty({ type: Boolean, description: 'El asistente puede usarse ahora.' })
+  available!: boolean;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Motivo legible (en español) cuando no está disponible; null si lo está.',
+  })
+  reason!: string | null;
+}
+
+/** Resumen de una conversación para el historial. */
+export class ConversationSummaryDto {
+  @ApiProperty({ type: String, format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ type: String, description: 'Título (inicio del primer mensaje).' })
+  title!: string;
+
+  @ApiProperty({ type: String, format: 'date-time', description: 'Última actividad (ISO).' })
+  updatedAt!: string;
+}
+
+/** Herramienta consultada por el asistente en un turno. */
+export class ToolCallDto {
+  @ApiProperty({ type: String, description: 'Nombre de la herramienta del MCP.' })
+  name!: string;
+
+  @ApiProperty({ type: String, description: 'Etiqueta legible (p. ej. «solicitudes»).' })
+  label!: string;
+
+  @ApiProperty({ type: String, enum: ['done', 'error'], description: 'Resultado de la consulta.' })
+  status!: 'done' | 'error';
+}
+
+/** Mensaje de una conversación. */
+export class ConversationMessageDto {
+  @ApiProperty({ type: String, format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ type: String, enum: ['user', 'assistant'] })
+  role!: 'user' | 'assistant';
+
+  @ApiProperty({ type: String, description: 'Texto del mensaje (Markdown en el asistente).' })
+  text!: string;
+
+  @ApiProperty({ type: [ToolCallDto], description: 'Herramientas consultadas en este turno.' })
+  tools!: ToolCallDto[];
+
+  @ApiProperty({ type: String, format: 'date-time' })
+  createdAt!: string;
+}
+
+/** Conversación completa con sus mensajes. */
+export class ConversationDetailDto {
+  @ApiProperty({ type: String, format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ type: String })
+  title!: string;
+
+  @ApiProperty({ type: [ConversationMessageDto] })
+  messages!: ConversationMessageDto[];
+}

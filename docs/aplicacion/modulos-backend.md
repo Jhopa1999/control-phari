@@ -578,6 +578,31 @@ La sugerencia valida cada `suggested*Code` contra las maestras activas (code inv
 `null` + nota) y descarta duplicados cuyo `requestId` no estaba en el contexto. Los cambios
 de configuración se auditan como `AI_CONFIG`.
 
+## assistant — Asistente de IA (consulta, solo lectura)
+
+Asistente conversacional del portal (`assistant.controller.ts`, base `/assistant`, cualquier
+persona autenticada). Responde preguntas sobre proyectos/solicitudes y uso del portal.
+Es un **bucle de agente** sobre Bedrock Converse cuya única fuente de datos son las
+**herramientas de solo lectura del MCP**, ejecutadas con el **token de la persona** (hereda su
+alcance y permisos; la API reenvía el `Authorization: Bearer` del propio usuario). Nunca escribe
+datos en esta fase. Usa el agente `ASISTENTE` (configurable en Admin IA), registra el consumo y
+respeta el presupuesto mensual.
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| GET | `/assistant/status` | `{ available, reason }`: disponible si el MCP está configurado (`ASSISTANT_MCP_URL`), la IA y el agente `ASISTENTE` están encendidos y el presupuesto no se agotó. |
+| POST | `/assistant/chat` | Envía `{ conversationId?, message }` (1..4000) y responde `text/event-stream` con los eventos `conversation`, `text`, `tool`, `done` y `error`. `409` si está desactivado, sin presupuesto o sin sesión con token; `404` si la conversación no es de la persona. |
+| GET | `/assistant/conversations` | Las 50 conversaciones más recientes **de la persona**. |
+| GET | `/assistant/conversations/:id` | Conversación propia con sus mensajes y las herramientas consultadas por turno. `404` si no es suya. |
+| DELETE | `/assistant/conversations/:id` | Elimina una conversación propia (`204`). |
+
+Reglas: máximo 8 rondas de herramientas por turno; los resultados de herramientas se recortan a
+30 000 caracteres; no se ofrecen al modelo las tools `dev.*` ni `health.*` ni las que no sean de
+solo lectura; el contexto del modelo son los últimos 30 mensajes (texto). Las conversaciones son
+**privadas** (ni siquiera un administrador las ve por la API). Las rutas del asistente están
+excluidas del MCP (es un cliente del MCP). Nginx da 300 s de lectura a `/api/` y el flujo envía
+`X-Accel-Buffering: no`.
+
 ## recurring-activity — Actividades recurrentes (motor de tiempo)
 
 Gestiona las actividades que se repiten con una cadencia (reporte semanal a presidencia,

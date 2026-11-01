@@ -105,6 +105,16 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
     ],
   ),
   ...permanente(
+    'El asistente de IA del portal es un CLIENTE del MCP: no se expone a sí mismo como tool (evita recursión) y su chat es un flujo de eventos (SSE), no una respuesta JSON.',
+    [
+      'GET /assistant/status',
+      'POST /assistant/chat',
+      'GET /assistant/conversations',
+      'GET /assistant/conversations/{id}',
+      'DELETE /assistant/conversations/{id}',
+    ],
+  ),
+  ...permanente(
     'La sugerencia de IA se orquesta desde el asistente del portal y consume el LLM configurado; el MCP no encadena agentes entre sí.',
     [
       'POST /requests/{id}/ai/triage-suggestion',

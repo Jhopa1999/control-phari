@@ -2183,6 +2183,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assistant/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Indica si el asistente está disponible para usarse y, si no, el motivo. */
+        get: operations["AssistantController_getStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Envía un mensaje al asistente y devuelve la respuesta en streaming (text/event-stream). Eventos: conversation, text, tool, done, error. */
+        post: operations["AssistantController_chat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las conversaciones de la persona (las 50 más recientes). */
+        get: operations["AssistantController_listConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/conversations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtiene una conversación propia con sus mensajes. */
+        get: operations["AssistantController_getConversation"];
+        put?: never;
+        post?: never;
+        /** Elimina una conversación propia. */
+        delete: operations["AssistantController_removeConversation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recurring-activities/occurrences": {
         parameters: {
             query?: never;
@@ -5905,6 +5974,61 @@ export interface components {
             model: string;
             /** @description Code del agente que genero la sugerencia. */
             agentCode: string;
+        };
+        AssistantStatusDto: {
+            /** @description El asistente puede usarse ahora. */
+            available: boolean;
+            /** @description Motivo legible (en español) cuando no está disponible; null si lo está. */
+            reason: string | null;
+        };
+        ChatRequestDto: {
+            /**
+             * Format: uuid
+             * @description Conversación existente. Si se omite, se crea una nueva.
+             */
+            conversationId?: string;
+            /** @description Mensaje de la persona. */
+            message: string;
+        };
+        ConversationSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            /** @description Título (inicio del primer mensaje). */
+            title: string;
+            /**
+             * Format: date-time
+             * @description Última actividad (ISO).
+             */
+            updatedAt: string;
+        };
+        ToolCallDto: {
+            /** @description Nombre de la herramienta del MCP. */
+            name: string;
+            /** @description Etiqueta legible (p. ej. «solicitudes»). */
+            label: string;
+            /**
+             * @description Resultado de la consulta.
+             * @enum {string}
+             */
+            status: "done" | "error";
+        };
+        ConversationMessageDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            role: "user" | "assistant";
+            /** @description Texto del mensaje (Markdown en el asistente). */
+            text: string;
+            /** @description Herramientas consultadas en este turno. */
+            tools: components["schemas"]["ToolCallDto"][];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ConversationDetailDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            messages: components["schemas"]["ConversationMessageDto"][];
         };
         OccurrenceResponseDto: {
             /**
@@ -13161,6 +13285,166 @@ export interface operations {
             };
             /** @description La IA no respondio a tiempo o no esta disponible. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssistantController_getStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disponibilidad. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantStatusDto"];
+                };
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssistantController_chat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequestDto"];
+            };
+        };
+        responses: {
+            /** @description Flujo de eventos del asistente. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mensaje vacío o demasiado largo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conversación no encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Asistente desactivado, sin presupuesto o sin sesión con token. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssistantController_listConversations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversaciones. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSummaryDto"][];
+                };
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssistantController_getConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversación. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationDetailDto"];
+                };
+            };
+            /** @description No existe o no es de la persona. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssistantController_removeConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversación eliminada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no es de la persona. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

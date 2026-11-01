@@ -70,6 +70,9 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       EVIDENCE_MAX_BYTES: ${EVIDENCE_MAX_BYTES:-}
       PORTFOLIO_DUE_SOON_DAYS: ${PORTFOLIO_DUE_SOON_DAYS:-}
+      # Asistente de IA: URL interna del MCP (herramientas de solo lectura con
+      # el token de la persona). Sin ella el asistente queda no disponible.
+      ASSISTANT_MCP_URL: ${ASSISTANT_MCP_URL:-http://mcp:3002}
     depends_on:
       postgres:
         condition: service_healthy
