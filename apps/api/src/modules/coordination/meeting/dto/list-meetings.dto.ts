@@ -13,4 +13,14 @@ export class ListMeetingsDto {
   @IsOptional()
   @IsIn(RECORD_STATES, { message: 'Estado invalido.' })
   state?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description:
+      'Filtra por solicitud (proyecto): relacionada o proyecto relacionado.',
+  })
+  @IsOptional()
+  @IsUUID()
+  requestId?: string;
 }

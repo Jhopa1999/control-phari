@@ -149,6 +149,9 @@ export class IssueService {
     if (filters.processId !== undefined) {
       and.push({ processId: filters.processId });
     }
+    if (filters.requestId !== undefined) {
+      and.push({ relatedRequestId: filters.requestId });
+    }
 
     const rows = await this.prisma.issue.findMany({
       where,

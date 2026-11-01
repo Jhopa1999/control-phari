@@ -338,6 +338,16 @@ describe('CommitmentService', () => {
       expect(and).toContainEqual({ assignedUserId: 'ui' });
     });
 
+    it('filtra por solicitud (relacionada o proyecto) sin saltarse el alcance', async () => {
+      m.prismaObj.commitment.findMany.mockResolvedValue([]);
+      await m.service.list(integrante(), { requestId: 'r1' } as any);
+      const and = m.prismaObj.commitment.findMany.mock.calls[0][0].where.AND;
+      expect(and).toHaveLength(2);
+      expect(and).toContainEqual({
+        OR: [{ relatedRequestId: 'r1' }, { relatedProjectRequestId: 'r1' }],
+      });
+    });
+
     it('sin filtros devuelve solo alcance', async () => {
       m.prismaObj.commitment.findMany.mockResolvedValue([]);
       const res = await m.service.list(integrante(), {} as any);

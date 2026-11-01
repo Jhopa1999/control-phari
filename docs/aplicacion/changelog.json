@@ -342,6 +342,14 @@
                                 "apps/mcp/README.md"
                             ],
                             "summary": "MCP (BL-032 F1 entrega 3): 45 tools de solo lectura nuevas (92 en total); PENDIENTES baja de 118 a 73, todas de escritura."
+                        },
+                        {
+                            "timestamp": "2026-11-01T17:00:00Z",
+                            "trigger_file": "apps/api/src/modules/coordination/issue/issue.service.ts",
+                            "updated_docs": [
+                                "docs/aplicacion/modulos-backend.md"
+                            ],
+                            "summary": "Filtro requestId en GET /issues, /meetings y /commitments (reuniones y compromisos incluyen proyecto relacionado); las tools del MCP lo exponen desde el contrato."
                         }
                 ]
 }

@@ -181,6 +181,14 @@ export class MeetingService {
     if (filters.state !== undefined) {
       and.push({ state: filters.state });
     }
+    if (filters.requestId !== undefined) {
+      and.push({
+        OR: [
+          { relatedRequestId: filters.requestId },
+          { relatedProjectRequestId: filters.requestId },
+        ],
+      });
+    }
 
     const rows = await this.prisma.meeting.findMany({
       where,
