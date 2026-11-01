@@ -528,6 +528,12 @@ el resto del backend no depende del SDK y se puede sustituir por un doble en pru
 catálogo de modelos permitidos es una lista **cerrada** (`bedrock-model-catalog.ts`); un
 modelo fuera del catálogo → `400`.
 
+Cliente de IA (`bedrock.client.ts`, interno, sin endpoints nuevos): además de `invoke`/`ping`,
+expone `converse` y `converseStream` (API Converse de Bedrock) para conversaciones multi-turno con
+tool use, imágenes y documentos. Los tipos propios y la traducción al SDK viven en
+`bedrock-converse.ts`; los nombres de tool del MCP (con punto) se codifican como `__` hacia Bedrock
+y se decodifican al volver. `temperature` se omite si no se informa (modelos que la rechazan).
+
 Configuración de IA (`ai-config.controller.ts`), base `/admin/ai`, solo `ADMIN`
 (`@UseGuards(CurrentUserGuard, RolesGuard)` + `@Roles(ADMIN)`, PATCH no PUT):
 

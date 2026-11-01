@@ -1,8 +1,20 @@
 import {
   BedrockRuntimeClient,
   ConverseCommand,
+  ConverseStreamCommand,
   type ConverseCommandOutput,
 } from '@aws-sdk/client-bedrock-runtime';
+import {
+  fromSdkBlocks,
+  mapConverseStream,
+  mapStopReason,
+  mapUsage,
+  toSdkMessages,
+  toSdkToolConfig,
+  type ConverseRequest,
+  type ConverseResult,
+  type ConverseStreamEvent,
+} from './bedrock-converse';
 
 /**
  * Cliente de IA (AWS Bedrock) AISLADO tras una interfaz (IA Fase 1, FEAT-001).
@@ -37,6 +49,16 @@ export interface BedrockInvocation {
 export interface BedrockClient {
   invoke(input: BedrockInvocation): Promise<string>;
   ping(input: Omit<BedrockInvocation, 'prompt'>): Promise<void>;
+  /**
+   * Conversacion multi-turno con tool use (asistente). Devuelve la respuesta
+   * completa del turno: bloques de texto/tool use, motivo de parada y consumo.
+   */
+  converse(input: ConverseRequest): Promise<ConverseResult>;
+  /**
+   * Igual que `converse` pero emitiendo la respuesta a medida que llega (texto
+   * incremental, tool uses completos y un `done` final con el consumo).
+   */
+  converseStream(input: ConverseRequest): AsyncGenerator<ConverseStreamEvent>;
 }
 
 /** Token de inyeccion para sustituir el cliente por un doble en tests. */
@@ -91,6 +113,88 @@ export class AwsBedrockClient implements BedrockClient {
       prompt: 'ping',
     });
     await this.run(client, command, input.timeoutMs);
+  }
+
+  async converse(input: ConverseRequest): Promise<ConverseResult> {
+    const client = this.createClient(input);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), input.timeoutMs);
+    try {
+      const output = (await client.send(
+        new ConverseCommand(this.toConverseInput(input)),
+        { abortSignal: controller.signal },
+      )) as ConverseCommandOutput;
+      return {
+        content: fromSdkBlocks(output.output?.message?.content),
+        stopReason: mapStopReason(output.stopReason),
+        usage: mapUsage(output.usage),
+      };
+    } catch (error) {
+      if (controller.signal.aborted) throw new BedrockTimeoutError();
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      client.destroy();
+    }
+  }
+
+  async *converseStream(
+    input: ConverseRequest,
+  ): AsyncGenerator<ConverseStreamEvent> {
+    const client = this.createClient(input);
+    const controller = new AbortController();
+    // El timeout cubre la respuesta completa, no solo el primer byte.
+    const timer = setTimeout(() => controller.abort(), input.timeoutMs);
+    try {
+      const output = await client.send(
+        new ConverseStreamCommand(this.toConverseInput(input)),
+        { abortSignal: controller.signal },
+      );
+      if (!output.stream) {
+        throw new Error('Bedrock no devolvio un flujo de respuesta.');
+      }
+      yield* mapConverseStream(output.stream);
+    } catch (error) {
+      if (controller.signal.aborted) throw new BedrockTimeoutError();
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      client.destroy();
+    }
+  }
+
+  /** Cliente del SDK por llamada (region y credenciales cambian desde el Admin). */
+  private createClient(input: {
+    region: string;
+    credentials?: BedrockCredentials;
+  }): BedrockRuntimeClient {
+    return new BedrockRuntimeClient({
+      region: input.region,
+      ...(input.credentials
+        ? {
+            credentials: {
+              accessKeyId: input.credentials.accessKeyId,
+              secretAccessKey: input.credentials.secretAccessKey,
+            },
+          }
+        : {}),
+    });
+  }
+
+  private toConverseInput(input: ConverseRequest) {
+    const toolConfig = toSdkToolConfig(input.tools);
+    return {
+      modelId: input.modelId,
+      messages: toSdkMessages(input.messages),
+      ...(input.system ? { system: [{ text: input.system }] } : {}),
+      ...(toolConfig ? { toolConfig } : {}),
+      inferenceConfig: {
+        ...(input.temperature !== undefined
+          ? { temperature: input.temperature }
+          : {}),
+        maxTokens: input.maxTokens,
+      },
+    };
   }
 
   private buildCommand(input: BedrockInvocation): {
