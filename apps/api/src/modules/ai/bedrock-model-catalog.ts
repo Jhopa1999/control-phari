@@ -75,5 +75,5 @@ export const DEFAULT_MODEL_CATALOG: readonly BedrockModelDefinition[] = [
   },
 ];
 
-/** Catalogo cerrado de codes de agente de IA (Fase 1: solo triage). */
-export type AiAgentCode = 'TRIAGE';
+/** Catalogo cerrado de codes de agente de IA: triage y asistente del portal. */
+export type AiAgentCode = 'TRIAGE' | 'ASISTENTE';

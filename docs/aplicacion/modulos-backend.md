@@ -528,6 +528,11 @@ el resto del backend no depende del SDK y se puede sustituir por un doble en pru
 catálogo de modelos permitidos es una lista **cerrada** (`bedrock-model-catalog.ts`); un
 modelo fuera del catálogo → `400`.
 
+Agentes de IA sembrados (`ai-defaults.ts`): `TRIAGE` y `ASISTENTE` (asistente conversacional del
+portal; su prompt base fija el uso obligatorio de herramientas, la honestidad ante la falta de datos
+y que las acciones que modifican datos se proponen y las confirma una persona). Ambos nacen apagados
+y se editan desde el Admin; el chat del asistente llega en una fase posterior.
+
 Consumo y presupuesto de IA (`ai-usage.service.ts`): cada llamada al modelo registra una fila en
 `ai_usage` (agente, usuario, modelo, tokens, costo estimado, duración; nunca el contenido). El costo
 usa el precio por millón de tokens del catálogo de modelos (`ai_model`); un modelo sin precio registra

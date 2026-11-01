@@ -5,6 +5,8 @@ import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import { AiConfigService } from './ai-config.service';
 import {
+  ASSISTANT_AGENT_CODE,
+  ASSISTANT_BASE_PROMPT,
   DEFAULT_AGENT_CONFIGS,
   TRIAGE_AGENT_CODE,
   TRIAGE_BASE_PROMPT,
@@ -308,6 +310,28 @@ describe('AiConfigService', () => {
       for (const agent of DEFAULT_AGENT_CONFIGS) {
         expect(ids).toContain(agent.model);
       }
+    });
+
+    it('ensureDefaultAgents tambien crea el asistente del portal, apagado y con su prompt base', async () => {
+      const { service, prisma } = makeDeps({});
+      await service.ensureDefaultAgents();
+      const upsert = prisma.aiAgentConfig.upsert as jest.Mock;
+      const arg = upsert.mock.calls
+        .map((c) => c[0])
+        .find((a) => a.where.code === ASSISTANT_AGENT_CODE);
+      expect(arg).toBeDefined();
+      expect(arg.update).toEqual({});
+      expect(arg.create.enabled).toBe(false);
+      expect(arg.create.basePrompt).toBe(ASSISTANT_BASE_PROMPT);
+      // El asistente conversa con tools: mas tokens y tiempo que el triage.
+      expect(arg.create.maxTokens).toBeGreaterThan(1024);
+      expect(arg.create.timeoutMs).toBeLessThanOrEqual(60000);
+    });
+
+    it('el prompt del asistente exige usar tools y proponer (no ejecutar) cambios', () => {
+      expect(ASSISTANT_BASE_PROMPT).toMatch(/herramientas/i);
+      expect(ASSISTANT_BASE_PROMPT).toMatch(/propones|proponer/i);
+      expect(ASSISTANT_BASE_PROMPT).toMatch(/inventes/i);
     });
 
     it('onModuleInit asegura los agentes al arrancar', async () => {

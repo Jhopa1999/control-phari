@@ -378,6 +378,15 @@
                                 "apps/mcp/README.md"
                             ],
                             "summary": "BL-032 F0: registro de consumo de IA (ai_usage), precios por modelo y presupuesto mensual (tope y alerta, 409 al agotarse); GET /admin/ai/usage; triage usa Converse y registra consumo."
+                        },
+                        {
+                            "timestamp": "2026-11-02T01:00:00Z",
+                            "trigger_file": "apps/api/src/modules/ai/ai-defaults.ts",
+                            "updated_docs": [
+                                "docs/aplicacion/modelo-datos.md",
+                                "docs/aplicacion/modulos-backend.md"
+                            ],
+                            "summary": "BL-032 F0: agente ASISTENTE sembrado (apagado) con prompt base, 2048 tokens y 60 s; editable desde el Admin de IA existente."
                         }
                 ]
 }
