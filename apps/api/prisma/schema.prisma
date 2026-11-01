@@ -206,6 +206,7 @@ model User {
   aiGlobalConfigsUpdated AiGlobalConfig[] @relation("AiGlobalConfigUpdatedBy")
   aiAgentConfigsUpdated  AiAgentConfig[]  @relation("AiAgentConfigUpdatedBy")
   aiUsages               AiUsage[]        @relation("AiUsageUser")
+  aiConversations        AiConversation[] @relation("AiConversationUser")
 
   // Actividades recurrentes (FEAT-001): definiciones cuyo responsable es ESTA
   // persona (responsibleKind=USER) y ocurrencias que esta persona completo.
@@ -1242,6 +1243,40 @@ model AiModel {
 
   @@index([enabled, sortOrder])
   @@map("ai_model")
+}
+
+/// Conversacion del asistente de IA (BL-032 F2). Es PRIVADA de su usuario: solo
+/// el dueño la ve; nadie mas (ni siquiera admin) a traves de la API.
+model AiConversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User        @relation("AiConversationUser", fields: [userId], references: [id], onDelete: Cascade)
+  messages AiMessage[]
+
+  @@index([userId, updatedAt])
+  @@map("ai_conversation")
+}
+
+/// Mensaje de una conversacion. `role` = 'user' | 'assistant'. `tools` guarda
+/// el resumen de las herramientas que consulto el asistente en ese turno
+/// (nombre, etiqueta y estado) para mostrarlo en la interfaz; no guarda los
+/// resultados de las herramientas.
+model AiMessage {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  role           String
+  text           String   @db.Text
+  tools          Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("ai_message")
 }
 
 /// Registro de consumo de IA: una fila por llamada al modelo (BL-032 F0). Base

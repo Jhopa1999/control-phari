@@ -31,5 +31,8 @@ import { AwsBedrockClient, BEDROCK_CLIENT } from './bedrock.client';
     TriageSuggestionService,
     { provide: BEDROCK_CLIENT, useClass: AwsBedrockClient },
   ],
+  // El asistente (AssistantModule) reutiliza el cliente de Bedrock, el catalogo
+  // de modelos y el registro de consumo/presupuesto.
+  exports: [BEDROCK_CLIENT, AiModelCatalogService, AiUsageService],
 })
 export class AiModule {}

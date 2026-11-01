@@ -7868,6 +7868,157 @@
         ]
       }
     },
+    "/assistant/status": {
+      "get": {
+        "operationId": "AssistantController_getStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Disponibilidad.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantStatusDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          }
+        },
+        "summary": "Indica si el asistente está disponible para usarse y, si no, el motivo.",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/assistant/chat": {
+      "post": {
+        "operationId": "AssistantController_chat",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Flujo de eventos del asistente."
+          },
+          "400": {
+            "description": "Mensaje vacío o demasiado largo."
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          },
+          "404": {
+            "description": "Conversación no encontrada."
+          },
+          "409": {
+            "description": "Asistente desactivado, sin presupuesto o sin sesión con token."
+          }
+        },
+        "summary": "Envía un mensaje al asistente y devuelve la respuesta en streaming (text/event-stream). Eventos: conversation, text, tool, done, error.",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/assistant/conversations": {
+      "get": {
+        "operationId": "AssistantController_listConversations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Conversaciones.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationSummaryDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          }
+        },
+        "summary": "Lista las conversaciones de la persona (las 50 más recientes).",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/assistant/conversations/{id}": {
+      "get": {
+        "operationId": "AssistantController_getConversation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o no es de la persona."
+          }
+        },
+        "summary": "Obtiene una conversación propia con sus mensajes.",
+        "tags": [
+          "assistant"
+        ]
+      },
+      "delete": {
+        "operationId": "AssistantController_removeConversation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Conversación eliminada."
+          },
+          "404": {
+            "description": "No existe o no es de la persona."
+          }
+        },
+        "summary": "Elimina una conversación propia.",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
     "/recurring-activities/occurrences": {
       "get": {
         "operationId": "OccurrenceController_findAll",
@@ -15956,6 +16107,153 @@
           "missingInformation",
           "model",
           "agentCode"
+        ]
+      },
+      "AssistantStatusDto": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "El asistente puede usarse ahora."
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo legible (en español) cuando no está disponible; null si lo está."
+          }
+        },
+        "required": [
+          "available",
+          "reason"
+        ]
+      },
+      "ChatRequestDto": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Conversación existente. Si se omite, se crea una nueva."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Mensaje de la persona."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "ConversationSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "Título (inicio del primer mensaje)."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Última actividad (ISO)."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "updatedAt"
+        ]
+      },
+      "ToolCallDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre de la herramienta del MCP."
+          },
+          "label": {
+            "type": "string",
+            "description": "Etiqueta legible (p. ej. «solicitudes»)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "error"
+            ],
+            "description": "Resultado de la consulta."
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "status"
+        ]
+      },
+      "ConversationMessageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "description": "Texto del mensaje (Markdown en el asistente)."
+          },
+          "tools": {
+            "description": "Herramientas consultadas en este turno.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolCallDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "text",
+          "tools",
+          "createdAt"
+        ]
+      },
+      "ConversationDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationMessageDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "messages"
         ]
       },
       "OccurrenceResponseDto": {

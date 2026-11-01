@@ -140,6 +140,14 @@ Solo métricas, nunca el contenido de prompts ni respuestas.
 Presupuesto: `AiGlobalConfig` suma `monthlyBudgetUsd?` (`monthly_budget_usd`, default `100`,
 `null` = sin tope) y `budgetAlertPct` (`budget_alert_pct`, default `80`).
 
+### AiConversation (`ai_conversation`) y AiMessage (`ai_message`)
+Conversaciones del asistente de IA. **Privadas de su usuario**: solo el dueño las lee o borra.
+- `AiConversation`: `userId` (FK a `User`, `onDelete: Cascade`), `title` (inicio del primer
+  mensaje, máx. 60), `createdAt`, `updatedAt`. Índice (`userId`, `updatedAt`).
+- `AiMessage`: `conversationId` (FK, `onDelete: Cascade`), `role` (`user`/`assistant`), `text`,
+  `tools?` (JSON con el resumen `{name, label, status}` de las herramientas consultadas en el
+  turno; no guarda los resultados), `createdAt`. Índice (`conversationId`, `createdAt`).
+
 
 ## Flujo de demanda
 
@@ -475,3 +483,4 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
 25. `20261101120000_ai_model_catalogo` (aditiva: tabla `ai_model`, catálogo de modelos de IA con capacidades)
 26. `20261101180000_ai_consumo_presupuesto` (aditiva: tabla `ai_usage`; columnas de presupuesto en
     `ai_global_config` y de precio en `ai_model`; precios de los modelos por defecto)
+27. `20261102120000_ai_conversaciones` (aditiva: tablas `ai_conversation` y `ai_message`)
