@@ -10975,6 +10975,8 @@ export interface operations {
                 typeCode?: "BLOQUEO" | "INCIDENTE" | "CALIDAD_DATOS" | "SOLICITUD_APOYO";
                 /** @description Filtra por proceso. */
                 processId?: string;
+                /** @description Filtra por solicitud (proyecto) relacionada. */
+                requestId?: string;
             };
             header?: never;
             path?: never;
@@ -11181,6 +11183,8 @@ export interface operations {
                 processId?: string;
                 /** @description Filtra por estado. */
                 state?: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+                /** @description Filtra por solicitud (proyecto): relacionada o proyecto relacionado. */
+                requestId?: string;
             };
             header?: never;
             path?: never;
@@ -11449,6 +11453,8 @@ export interface operations {
                 processId?: string;
                 /** @description Filtra por asignado. */
                 assignedUserId?: string;
+                /** @description Filtra por solicitud (proyecto): relacionada o proyecto relacionado. */
+                requestId?: string;
             };
             header?: never;
             path?: never;

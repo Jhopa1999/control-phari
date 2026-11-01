@@ -180,6 +180,14 @@ export class CommitmentService {
     if (filters.assignedUserId !== undefined) {
       and.push({ assignedUserId: filters.assignedUserId });
     }
+    if (filters.requestId !== undefined) {
+      and.push({
+        OR: [
+          { relatedRequestId: filters.requestId },
+          { relatedProjectRequestId: filters.requestId },
+        ],
+      });
+    }
 
     const rows = await this.prisma.commitment.findMany({
       where,

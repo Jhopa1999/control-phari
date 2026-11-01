@@ -5569,6 +5569,16 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "requestId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por solicitud (proyecto) relacionada.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5814,6 +5824,16 @@
                 "COMPLETADO",
                 "ARCHIVADO"
               ]
+            }
+          },
+          {
+            "name": "requestId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por solicitud (proyecto): relacionada o proyecto relacionado.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6107,6 +6127,16 @@
             "required": false,
             "in": "query",
             "description": "Filtra por asignado.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "requestId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por solicitud (proyecto): relacionada o proyecto relacionado.",
             "schema": {
               "format": "uuid",
               "type": "string"

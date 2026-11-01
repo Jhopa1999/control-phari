@@ -22,4 +22,13 @@ export class ListIssuesDto {
   @IsOptional()
   @IsUUID()
   processId?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description: 'Filtra por solicitud (proyecto) relacionada.',
+  })
+  @IsOptional()
+  @IsUUID()
+  requestId?: string;
 }

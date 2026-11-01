@@ -308,7 +308,7 @@ Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reun
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/issues` | Lista novedades en alcance (filtros opcionales). |
+| GET | `/issues` | Lista novedades en alcance (filtros opcionales: `state`, `typeCode`, `processId`, `requestId` = solicitud relacionada). |
 | POST | `/issues` | Crea una novedad (tipo por defecto BLOQUEO). |
 | GET | `/issues/:id` | Detalle de una novedad. |
 | PATCH | `/issues/:id` | Edita una novedad (un registro por incidente). |
@@ -319,7 +319,7 @@ Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reun
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/meetings` | Lista reuniones en alcance (filtros opcionales). |
+| GET | `/meetings` | Lista reuniones en alcance (filtros opcionales: `processId`, `state`, `requestId` = solicitud relacionada o proyecto relacionado). |
 | POST | `/meetings` | Crea una reunión (estado inicial BORRADOR). |
 | GET | `/meetings/:id` | Detalle del acta: participantes y sus compromisos (`commitments`, `commitmentsTotal`, `commitmentsOpen`, `closed`). |
 | PATCH | `/meetings/:id` | Edita un acta abierta (incluye el set de participantes); `409` si está cerrada. |
@@ -331,7 +331,7 @@ Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reun
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/commitments` | Lista compromisos en alcance (filtros opcionales). |
+| GET | `/commitments` | Lista compromisos en alcance (filtros opcionales: `state`, `processId`, `assignedUserId`, `requestId` = solicitud relacionada o proyecto relacionado). |
 | POST | `/commitments` | Crea un compromiso (vencimiento requerido). |
 | GET | `/commitments/:id` | Detalle de un compromiso. |
 | PATCH | `/commitments/:id` | Edita un compromiso. |

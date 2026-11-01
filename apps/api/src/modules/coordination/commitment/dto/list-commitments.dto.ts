@@ -18,4 +18,14 @@ export class ListCommitmentsDto {
   @IsOptional()
   @IsUUID()
   assignedUserId?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description:
+      'Filtra por solicitud (proyecto): relacionada o proyecto relacionado.',
+  })
+  @IsOptional()
+  @IsUUID()
+  requestId?: string;
 }

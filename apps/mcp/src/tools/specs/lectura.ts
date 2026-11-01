@@ -168,18 +168,18 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   ),
 
   // Hallazgos, reuniones y compromisos
-  lectura('issue.list', 'GET /issues', 'Lista los hallazgos (GET /issues), con filtros opcionales.'),
+  lectura('issue.list', 'GET /issues', 'Lista los hallazgos (GET /issues), con filtros opcionales; usa requestId para ver los de un proyecto.'),
   lectura('issue.get', 'GET /issues/{id}', 'Obtiene un hallazgo por id (GET /issues/{id}).'),
   lectura(
     'meeting.list',
     'GET /meetings',
-    'Lista las reuniones (GET /meetings), con filtros opcionales.',
+    'Lista las reuniones (GET /meetings), con filtros opcionales; usa requestId para ver las de un proyecto.',
   ),
   lectura('meeting.get', 'GET /meetings/{id}', 'Obtiene una reunión por id (GET /meetings/{id}).'),
   lectura(
     'commitment.list',
     'GET /commitments',
-    'Lista los compromisos (GET /commitments), con filtros opcionales.',
+    'Lista los compromisos (GET /commitments), con filtros opcionales; usa requestId para ver los de un proyecto.',
   ),
   lectura(
     'commitment.get',

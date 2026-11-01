@@ -330,6 +330,14 @@ describe('IssueService', () => {
       expect(and).toContainEqual({ processId: 'p1' });
     });
 
+    it('filtra por solicitud relacionada sin saltarse el alcance', async () => {
+      m.prismaObj.issue.findMany.mockResolvedValue([]);
+      await m.service.list(integrante(), { requestId: 'r1' } as any);
+      const and = m.prismaObj.issue.findMany.mock.calls[0][0].where.AND;
+      expect(and).toHaveLength(2);
+      expect(and).toContainEqual({ relatedRequestId: 'r1' });
+    });
+
     it('sin filtros devuelve solo alcance', async () => {
       m.prismaObj.issue.findMany.mockResolvedValue([]);
       const res = await m.service.list(integrante(), {} as any);

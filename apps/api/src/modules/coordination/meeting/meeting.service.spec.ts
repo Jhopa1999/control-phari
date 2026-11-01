@@ -270,6 +270,16 @@ describe('MeetingService', () => {
       expect(and).toContainEqual({ state: 'BORRADOR' });
     });
 
+    it('filtra por solicitud (relacionada o proyecto) sin saltarse el alcance', async () => {
+      m.prismaObj.meeting.findMany.mockResolvedValue([]);
+      await m.service.list(lider(['p1']), { requestId: 'r1' } as any);
+      const and = m.prismaObj.meeting.findMany.mock.calls[0][0].where.AND;
+      expect(and).toHaveLength(2);
+      expect(and).toContainEqual({
+        OR: [{ relatedRequestId: 'r1' }, { relatedProjectRequestId: 'r1' }],
+      });
+    });
+
     it('sin filtros devuelve solo alcance', async () => {
       m.prismaObj.meeting.findMany.mockResolvedValue([]);
       const res = await m.service.list(lider(['p1']), {} as any);
