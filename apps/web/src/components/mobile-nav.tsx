@@ -5,6 +5,7 @@ import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { AppSidebar } from '@/components/app-sidebar';
+import { AssistantTrigger } from '@/components/assistant/assistant-trigger';
 import { BrandName } from '@/components/brand';
 import { NotificationBell } from '@/components/notification-bell';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -55,7 +56,10 @@ export function MobileNav(): React.ReactElement {
         </SheetContent>
       </Sheet>
       <BrandName showTagline={false} className="min-w-0" />
-      <NotificationBell className="ml-auto" />
+      <div className="ml-auto flex items-center gap-1">
+        <AssistantTrigger iconOnly />
+        <NotificationBell />
+      </div>
       <ThemeToggle />
       <UserMenu />
     </header>

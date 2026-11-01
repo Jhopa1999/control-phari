@@ -95,6 +95,28 @@ abrir, cada minuto y al volver a la pestaña.
 | `/administracion/configuracion-smtp` | Configuración SMTP | Configurar el servidor SMTP en runtime (host, puerto, remitente, contraseña write-only) con prueba de envío, y gestionar los administradores del sistema (toggle `isAdmin`). Solo rol ADMIN (`systemSettings`). |
 | `/administracion/ia` | Agentes de IA | Configurar los agentes de IA (credenciales de AWS Bedrock, modelo, prompt y parámetros) desde la plataforma. Solo rol ADMIN (`aiSettings`). |
 
+## Asistente de IA (`/asistente/*`)
+
+Asistente conversacional de consulta (solo lectura): responde preguntas sobre solicitudes y
+proyectos consultando datos con herramientas del MCP, con los permisos de la persona. No hay
+ítem en el menú lateral: se abre con el botón **Asistente** del encabezado (escritorio) o su
+icono en la barra móvil, disponible en todo el portal. Especificación visual:
+`docs/design/asistente-chat-ui.md`.
+
+| Ruta | Pantalla | Qué permite hacer |
+| --- | --- | --- |
+| *(panel)* | Panel lateral del asistente | Sheet derecho (pantalla completa en móvil) con la conversación, el historial interno y el acceso a la página completa. El estado (conversación activa, borrador, respuesta en curso) vive en `AssistantProvider` del shell. |
+| `/asistente` | Historial | Lista de conversaciones agrupada por fecha (en ≥1280 px, junto a la conversación en dos columnas). Abrir y eliminar con confirmación. |
+| `/asistente/nueva` | Conversación nueva | Estado vacío con cinco preguntas sugeridas que se envían al pulsarlas. Al primer mensaje la URL pasa a `/asistente/{id}` sin recargar. |
+| `/asistente/{id}` | Conversación | Hilo con respuestas en Markdown (tablas desplazables, enlaces a pantallas del portal), fuentes consultadas expandibles, copiar, detener y reintentar. |
+
+Comportamiento: Enter envía (Mayús+Enter salto de línea; en táctil Enter inserta salto); límite
+de 4 000 caracteres con contador desde 3 500; si el asistente no está disponible (IA apagada,
+presupuesto agotado o sin MCP) el botón del encabezado queda como acción no disponible con el
+motivo en un tooltip y el campo se deshabilita; un fallo antes de empezar la respuesta conserva el
+mensaje y ofrece «Reintentar». La región viva anuncia hitos (no el texto). Cambiar de conversación
+o de pantalla durante una respuesta la detiene; lo recibido se conserva.
+
 ## Catálogos (`/catalogs`) — funcionalidad base
 
 | Ruta | Pantalla | Qué permite hacer |

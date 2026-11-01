@@ -219,6 +219,12 @@ export type TriageSuggestion =
   components['schemas']['TriageSuggestionResponseDto'];
 export type DuplicateCandidate =
   components['schemas']['DuplicateCandidateDto'];
+// --- Asistente de IA (BL-032 F2) ---
+export type AssistantStatus = components['schemas']['AssistantStatusDto'];
+export type ConversationSummary = components['schemas']['ConversationSummaryDto'];
+export type ConversationDetail = components['schemas']['ConversationDetailDto'];
+export type ConversationMessage = components['schemas']['ConversationMessageDto'];
+export type ChatRequest = components['schemas']['ChatRequestDto'];
 /** Modo de credenciales de IA (iam-role | access-keys). */
 export type AiCredentialMode = AiGlobalConfig['credentialMode'];
 /**
@@ -259,19 +265,23 @@ export const api = createApiClient({ baseUrl });
  * - modo 'dev-header': se mantiene el comportamiento historico de X-Actor-Id
  *   leyendo el actor seleccionado en el selector dev (design 5.3).
  */
+export function authHeaders(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  if (getAuthMode() === 'jwt') {
+    const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+  const actorId = window.localStorage.getItem(ACTOR_STORAGE_KEY);
+  return actorId ? { 'X-Actor-Id': actorId } : {};
+}
+
+/** URL base de la API (la usan las llamadas que no pasan por el cliente tipado, como el stream SSE). */
+export const apiBaseUrl: string = baseUrl;
+
 api.use({
   onRequest({ request }) {
-    if (typeof window === 'undefined') return request;
-    if (getAuthMode() === 'jwt') {
-      const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
-      if (token) {
-        request.headers.set('Authorization', `Bearer ${token}`);
-      }
-      return request;
-    }
-    const actorId = window.localStorage.getItem(ACTOR_STORAGE_KEY);
-    if (actorId) {
-      request.headers.set('X-Actor-Id', actorId);
+    for (const [name, value] of Object.entries(authHeaders())) {
+      request.headers.set(name, value);
     }
     return request;
   },
