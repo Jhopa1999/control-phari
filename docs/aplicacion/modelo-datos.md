@@ -108,7 +108,7 @@ o apaga la IA y elige el modo de credenciales sin tocar código. Arranca apagada
 
 ### AiAgentConfig (`ai_agent_config`)
 Configuración por agente de IA (uno por `code`, p. ej. `TRIAGE`). Todo editable desde el
-Admin. Arranca apagado. No guarda secretos (las credenciales viven en `AiGlobalConfig`). La API crea la fila `TRIAGE` al arrancar si falta (`ensureDefaultAgents`, valores en `ai-defaults.ts`, el mismo origen que usa el seed); el Admin solo edita agentes existentes.
+Admin. Arranca apagado. No guarda secretos (las credenciales viven en `AiGlobalConfig`). La API crea las filas `TRIAGE` (sugerencia de triage) y `ASISTENTE` (asistente conversacional del portal, con más tokens y tiempo) al arrancar si faltan (`ensureDefaultAgents`, valores en `ai-defaults.ts`, el mismo origen que usa el seed); ambas nacen apagadas; el Admin solo edita agentes existentes.
 - Campos clave: `code` (único), `displayName` (`display_name`), `enabled` (default
   `false`), `region` (default `us-east-2`), `model`, `basePrompt` (`base_prompt`, texto),
   `temperature` (default `0.2`), `maxTokens` (`max_tokens`, default `1024`), `timeoutMs`
