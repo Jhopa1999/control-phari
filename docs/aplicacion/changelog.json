@@ -425,6 +425,12 @@
                                 "apps/mcp/README.md"
                             ],
                             "summary": "BL-032 F3: propuestas de acción del asistente (ai_proposal): el asistente propone escrituras de una lista cerrada y la persona las confirma o descarta; POST /assistant/proposals/{id}/confirm|discard; tarjeta de propuesta en el chat."
-                        }
-                ]
+                        },
+    {
+      "timestamp": "2026-11-03T15:00:00Z",
+      "trigger_file": "apps/mcp/src/tools/specs/escritura.ts",
+      "updated_docs": ["docs/aplicacion/modulos-backend.md", "apps/mcp/README.md"],
+      "summary": "MCP: 8 tools de escritura de coordinación (hallazgos, reuniones, compromisos), permitidas como propuestas del asistente; pendientes 73 a 65."
+    }
+  ]
 }

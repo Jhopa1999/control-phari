@@ -600,7 +600,9 @@ respeta el presupuesto mensual.
 
 **Propuestas de acción (F3).** El asistente nunca escribe datos: solo puede *proponer* con una lista
 cerrada de tools de escritura (`request.create`, `request.update`, `request.triage.create`,
-`request.priority.create`, `plan.create`, `task.create`, `task.update`, `task.status.update`). Quedan
+`request.priority.create`, `plan.create`, `task.create`, `task.update`, `task.status.update`,
+`issue.create`, `issue.update`, `issue.transition`, `meeting.create`, `meeting.update`,
+`commitment.create`, `commitment.update`, `commitment.transition`). Quedan
 fuera las decisiones (aprobar, autorizar o devolver, aceptar tareas, compuertas de gobierno), el borrado
 y la administración. Al pedir una de esas tools el modelo debe rellenar `resumen_para_la_persona` (frase
 con nombres; no viaja a la API); el servicio valida ese resumen y los campos obligatorios del esquema, y
