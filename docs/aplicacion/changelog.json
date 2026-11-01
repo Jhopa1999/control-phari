@@ -360,6 +360,14 @@
                                 "apps/mcp/README.md"
                             ],
                             "summary": "BL-032 F0: catalogo de modelos de IA en BD (ai_model) con capacidades y endpoints admin /admin/ai/models; temperature opcional segun el modelo; operaciones admin excluidas del MCP."
+                        },
+                        {
+                            "timestamp": "2026-11-01T21:00:00Z",
+                            "trigger_file": "apps/api/src/modules/ai/bedrock.client.ts",
+                            "updated_docs": [
+                                "docs/aplicacion/modulos-backend.md"
+                            ],
+                            "summary": "BL-032 F0: cliente Bedrock con Converse y ConverseStream (tool use, imagenes, documentos, streaming) y traduccion de nombres de tool del MCP; sin cambios de contrato."
                         }
                 ]
 }
