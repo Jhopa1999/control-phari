@@ -14,6 +14,7 @@ import { PLAN_SPECS } from './plan.js';
 import { AUDIT_SPECS } from './audit.js';
 import { GOVERNANCE_SPECS } from './governance.js';
 import { LECTURA_SPECS } from './lectura.js';
+import { ESCRITURA_SPECS } from './escritura.js';
 
 export const TOOL_SPECS: ReadonlyArray<ToolSpec> = [
   ...USER_SPECS,
@@ -25,4 +26,5 @@ export const TOOL_SPECS: ReadonlyArray<ToolSpec> = [
   ...AUDIT_SPECS,
   ...GOVERNANCE_SPECS,
   ...LECTURA_SPECS,
+  ...ESCRITURA_SPECS,
 ];

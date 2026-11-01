@@ -62,6 +62,14 @@ export const PROPOSAL_TOOLS: Readonly<Record<string, string>> = {
   'task.create': 'Crear tarea',
   'task.update': 'Editar tarea',
   'task.status.update': 'Cambiar estado de tarea',
+  'issue.create': 'Registrar hallazgo',
+  'issue.update': 'Editar hallazgo',
+  'issue.transition': 'Cambiar estado de hallazgo',
+  'meeting.create': 'Registrar reunión',
+  'meeting.update': 'Editar reunión',
+  'commitment.create': 'Registrar compromiso',
+  'commitment.update': 'Editar compromiso',
+  'commitment.transition': 'Cambiar estado de compromiso',
 };
 
 export function isProposalTool(name: string): boolean {
