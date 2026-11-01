@@ -7,9 +7,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-
-/** Largo maximo de un mensaje del usuario. */
-export const MAX_MESSAGE_LENGTH = 4000;
+import { MAX_MESSAGE_LENGTH } from '../assistant.constants';
 
 /** Mensaje del usuario al asistente. */
 export class ChatRequestDto {

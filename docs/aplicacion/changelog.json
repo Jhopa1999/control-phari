@@ -397,6 +397,14 @@
                                 "apps/mcp/README.md"
                             ],
                             "summary": "BL-032 F2 (backend): asistente de IA de consulta: /assistant/status, chat por SSE con herramientas de solo lectura del MCP con el token de la persona, conversaciones privadas (ai_conversation, ai_message); rutas excluidas del MCP."
+                        },
+                        {
+                            "timestamp": "2026-11-02T08:00:00Z",
+                            "trigger_file": "apps/web/src/components/assistant/assistant-panel.tsx",
+                            "updated_docs": [
+                                "docs/aplicacion/frontend-pantallas.md"
+                            ],
+                            "summary": "BL-032 F2 (interfaz): asistente de IA con panel lateral en todo el portal y páginas /asistente, /asistente/nueva y /asistente/{id}; respuestas en streaming, fuentes consultadas, historial y estados de error/no disponible."
                         }
                 ]
 }
