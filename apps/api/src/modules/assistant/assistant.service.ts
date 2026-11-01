@@ -262,7 +262,11 @@ export class AssistantService {
       });
   }
 
-  private systemPrompt(basePrompt: string, actor: CurrentActor): string {
+  private systemPrompt(
+    basePrompt: string,
+    actor: CurrentActor,
+    hasHelp: boolean,
+  ): string {
     const roles = [...actor.roleCodes].join(', ') || 'sin rol';
     return [
       basePrompt,
@@ -271,6 +275,12 @@ export class AssistantService {
       `- Fecha actual: ${new Date().toISOString().slice(0, 10)}`,
       `- Persona: ${actor.name}`,
       `- Roles: ${roles}`,
+      ...(hasHelp
+        ? [
+            '',
+            'Para dudas sobre cómo usar el portal (pantallas, roles, flujo de trabajo) usa la herramienta help.search y responde con lo que devuelva, indicando la sección; si no aparece, di que no está documentado.',
+          ]
+        : []),
     ].join('\n');
   }
 
@@ -312,7 +322,7 @@ export class AssistantService {
         take: HISTORY_LIMIT,
       });
       const messages = toConverseHistory(recent.reverse());
-      const system = this.systemPrompt(agent.basePrompt, actor);
+      const system = this.systemPrompt(agent.basePrompt, actor, allowed.has('help.search'));
       const withTemperature = await this.models.supportsTemperature(agent.model);
 
       for (let step = 0; step < MAX_TOOL_STEPS && !signal.aborted; step++) {

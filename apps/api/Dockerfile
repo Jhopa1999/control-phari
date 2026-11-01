@@ -40,6 +40,8 @@ COPY --from=build /repo/apps/api/dist ./apps/api/dist
 COPY --from=build /repo/apps/api/src/generated ./apps/api/src/generated
 COPY --from=build /repo/apps/api/prisma ./apps/api/prisma
 COPY --from=build /repo/apps/api/prisma.config.ts ./apps/api/prisma.config.ts
+# Documentacion de uso del portal: alimenta la ayuda del asistente (GET /help/search).
+COPY docs/aplicacion/README.md docs/aplicacion/frontend-pantallas.md docs/aplicacion/autenticacion-autorizacion.md ./docs/aplicacion/
 
 # Ejecutar como usuario no-root (el usuario "node" ya existe en la imagen).
 USER node

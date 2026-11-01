@@ -375,6 +375,26 @@ describe('AssistantService · turno', () => {
   });
 });
 
+describe('AssistantService · ayuda del portal', () => {
+  it('si el MCP ofrece help.search, el prompt le indica usarla para dudas de uso', async () => {
+    const deps = makeDeps({
+      tools: [
+        { name: 'help.search', description: 'Ayuda', inputSchema: { type: 'object' } },
+      ],
+    });
+    await runTurn(deps);
+    const system = (deps.converseStream.mock.calls[0][0] as unknown as { system: string }).system;
+    expect(system).toContain('help.search');
+  });
+
+  it('sin help.search no se menciona (no se promete una herramienta que no existe)', async () => {
+    const deps = makeDeps();
+    await runTurn(deps);
+    const system = (deps.converseStream.mock.calls[0][0] as unknown as { system: string }).system;
+    expect(system).not.toContain('help.search');
+  });
+});
+
 describe('AssistantService · conversaciones privadas', () => {
   it('lista solo las conversaciones de la persona', async () => {
     const deps = makeDeps();

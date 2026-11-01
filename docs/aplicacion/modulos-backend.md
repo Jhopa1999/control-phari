@@ -603,6 +603,23 @@ solo lectura; el contexto del modelo son los últimos 30 mensajes (texto). Las c
 excluidas del MCP (es un cliente del MCP). Nginx da 300 s de lectura a `/api/` y el flujo envía
 `X-Accel-Buffering: no`.
 
+## help — Ayuda del portal (búsqueda en la documentación de uso)
+
+Busca en la documentación de uso para responder «¿cómo hago X?» sin inventar (`help.controller.ts`,
+base `/help`, cualquier persona autenticada; la documentación no contiene datos de negocio).
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| GET | `/help/search` | `?q=` (2..200 caracteres) y `limit` (1..8, por defecto 4). Devuelve `{ query, results: [{ source, file, heading, excerpt, score }] }`; lista vacía si nada coincide. |
+
+Cómo funciona: lee al primer uso `docs/aplicacion/README.md`, `frontend-pantallas.md` y
+`autenticacion-autorizacion.md` (carpeta configurable con `HELP_DOCS_DIR`; la imagen de la API las
+incluye) y las parte en secciones por encabezado `##`/`###`; **cada fila de una tabla es su propia
+sección**, titulada con el nombre de la pantalla. Puntúa por coincidencia de raíz de palabra sin
+distinguir tildes (el encabezado pesa más que el cuerpo). Excluye las secciones técnicas pensadas para
+quien desarrolla (sincronía de documentación, límites de arquitectura, guards, actor, credenciales por
+correo). Está expuesta en el MCP como la tool `help.search`; el asistente la usa para dudas de uso.
+
 ## recurring-activity — Actividades recurrentes (motor de tiempo)
 
 Gestiona las actividades que se repiten con una cadencia (reporte semanal a presidencia,

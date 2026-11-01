@@ -17,6 +17,13 @@ function lectura(
 }
 
 export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
+  // Ayuda del portal
+  lectura(
+    'help.search',
+    'GET /help/search',
+    'Busca en la documentación de uso del portal (pantallas, roles y permisos, flujo de trabajo) las secciones que responden una pregunta sobre cómo usarlo (GET /help/search). Úsala para dudas de uso; no devuelve datos de negocio.',
+  ),
+
   // Áreas y solicitantes
   lectura('area.list', 'GET /areas', 'Lista las áreas de la organización (GET /areas).'),
   lectura('area.get', 'GET /areas/{id}', 'Obtiene un área por id (GET /areas/{id}).'),

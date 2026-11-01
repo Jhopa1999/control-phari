@@ -2252,6 +2252,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/help/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Busca en la documentación de uso del portal (pantallas, roles y permisos, flujo de trabajo) las secciones que responden una pregunta. */
+        get: operations["HelpController_search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recurring-activities/occurrences": {
         parameters: {
             query?: never;
@@ -6029,6 +6046,24 @@ export interface components {
             id: string;
             title: string;
             messages: components["schemas"]["ConversationMessageDto"][];
+        };
+        HelpMatchDto: {
+            /** @description Documento de origen (p. ej. «Pantallas del portal»). */
+            source: string;
+            /** @description Archivo de origen en docs/aplicacion. */
+            file: string;
+            /** @description Encabezado de la sección (con el padre si aplica). */
+            heading: string;
+            /** @description Texto de la sección en Markdown (recortado). */
+            excerpt: string;
+            /** @description Relevancia relativa respecto a la consulta. */
+            score: number;
+        };
+        HelpSearchResponseDto: {
+            /** @description Consulta tal como se evaluó. */
+            query: string;
+            /** @description Secciones más relevantes, de mayor a menor; vacío si nada coincide. */
+            results: components["schemas"]["HelpMatchDto"][];
         };
         OccurrenceResponseDto: {
             /**
@@ -13445,6 +13480,45 @@ export interface operations {
             };
             /** @description No existe o no es de la persona. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HelpController_search: {
+        parameters: {
+            query: {
+                /** @description Pregunta o palabras clave (p. ej. «aprobar un documento»). */
+                q: string;
+                /** @description Máximo de secciones a devolver (1..8). */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Secciones relevantes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HelpSearchResponseDto"];
+                };
+            };
+            /** @description Consulta vacía o demasiado corta. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

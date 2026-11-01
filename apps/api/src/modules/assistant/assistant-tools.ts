@@ -71,6 +71,7 @@ const LABELS: Record<string, string> = {
   commitment: 'compromisos',
   validation: 'validaciones',
   recurring: 'actividades recurrentes',
+  help: 'la ayuda del portal',
 };
 
 export function toolLabel(name: string): string {
