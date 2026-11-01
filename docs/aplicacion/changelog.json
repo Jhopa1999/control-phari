@@ -334,6 +334,14 @@
                                              "apps/mcp/README.md"
                                          ],
                         "summary":  "Catalogo declarativo del MCP (BL-032 F1 entrega 2): las 47 tools pasan a entradas de datos con motor generico, contrato OpenAPI entregado por el api-client, exclusiones con motivo y guard de cobertura MCP-contrato; audit.events.list sigue el contrato vigente (page/pageSize/action)."
-                    }
+                    },
+                        {
+                            "timestamp": "2026-11-01T15:00:00Z",
+                            "trigger_file": "apps/mcp/src/tools/specs/lectura.ts",
+                            "updated_docs": [
+                                "apps/mcp/README.md"
+                            ],
+                            "summary": "MCP (BL-032 F1 entrega 3): 45 tools de solo lectura nuevas (92 en total); PENDIENTES baja de 118 a 73, todas de escritura."
+                        }
                 ]
 }
