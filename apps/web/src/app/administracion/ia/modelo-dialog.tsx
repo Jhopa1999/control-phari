@@ -36,9 +36,9 @@ interface ModeloDialogProps {
   onSaved: (saved: AiModelCatalogEntry) => void;
 }
 
-function priceValue(text: string): number | undefined {
+function priceValue(text: string): number | null {
   const value = text.trim().replace(',', '.');
-  return value === '' ? undefined : Number(value);
+  return value === '' ? null : Number(value);
 }
 
 /**
@@ -63,12 +63,13 @@ export function ModeloDialog({ model, onClose, onSaved }: ModeloDialogProps): Re
   const [outputPrice, setOutputPrice] = React.useState(
     model?.outputUsdPerMTok == null ? '' : String(model.outputUsdPerMTok),
   );
+  const [sortOrder, setSortOrder] = React.useState(String(model?.sortOrder ?? 100));
   const [errors, setErrors] = React.useState<ModelErrors>({});
   const [saving, setSaving] = React.useState(false);
 
   async function handleSubmit(event: React.FormEvent): Promise<void> {
     event.preventDefault();
-    const validation = validateModel({ modelId, label, inputPrice, outputPrice }, creating);
+    const validation = validateModel({ modelId, label, inputPrice, outputPrice, sortOrder }, creating);
     if (hasModelErrors(validation)) {
       setErrors(validation);
       return;
@@ -81,6 +82,7 @@ export function ModeloDialog({ model, onClose, onSaved }: ModeloDialogProps): Re
       ...caps,
       inputUsdPerMTok: priceValue(inputPrice),
       outputUsdPerMTok: priceValue(outputPrice),
+      sortOrder: Number(sortOrder),
     };
     try {
       const saved = creating
@@ -215,6 +217,24 @@ export function ModeloDialog({ model, onClose, onSaved }: ModeloDialogProps): Re
                 />
               </Field>
             </div>
+            <Field
+              id="ai-model-sort-order"
+              label="Orden"
+              help="Los menores aparecen primero."
+              error={errors.sortOrder}
+            >
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1}
+                value={sortOrder}
+                onChange={(e) => {
+                  setSortOrder(e.target.value);
+                  setErrors((p) => ({ ...p, sortOrder: undefined }));
+                }}
+              />
+            </Field>
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="outline" disabled={saving} onClick={onClose}>

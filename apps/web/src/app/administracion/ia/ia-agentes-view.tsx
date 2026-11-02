@@ -84,6 +84,8 @@ export function IaAgentesView(): React.ReactElement {
   const [global, setGlobal] = React.useState<AiGlobalConfig | null>(null);
   const [agents, setAgents] = React.useState<AiAgentConfig[]>([]);
   const [models, setModels] = React.useState<AiModelCatalogEntry[]>([]);
+  /** Catálogo completo (con deshabilitados), para mostrar nombres en el consumo. */
+  const [allModels, setAllModels] = React.useState<AiModelCatalogEntry[]>([]);
   /** Cambia al guardar el presupuesto para que el consumo se recargue. */
   const [usageReloadKey, setUsageReloadKey] = React.useState(0);
 
@@ -92,8 +94,8 @@ export function IaAgentesView(): React.ReactElement {
     [agents],
   );
   const modelLabels = React.useMemo(
-    () => Object.fromEntries(models.map((m) => [m.id, m.label])),
-    [models],
+    () => Object.fromEntries(allModels.map((m) => [m.id, m.label])),
+    [allModels],
   );
 
   // --- Estado global (switch + credenciales) ---
@@ -417,7 +419,10 @@ export function IaAgentesView(): React.ReactElement {
 
         <CatalogoModelosSection
           agents={agents}
-          onChanged={(all) => setModels(all.filter((m) => m.enabled))}
+          onChanged={(all) => {
+            setAllModels(all);
+            setModels(all.filter((m) => m.enabled));
+          }}
         />
       </>
     );

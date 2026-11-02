@@ -437,6 +437,12 @@
       "trigger_file": "apps/web/src/app/administracion/ia/ia-agentes-view.tsx",
       "updated_docs": ["docs/aplicacion/frontend-pantallas.md", "docs/aplicacion/modulos-backend.md"],
       "summary": "Administración > IA: consumo del mes, presupuesto y catálogo de modelos; la alerta del presupuesto se notifica a los administradores."
+    },
+    {
+      "timestamp": "2026-11-03T20:00:00Z",
+      "trigger_file": "apps/api/src/modules/ai/ai-model-catalog.service.ts",
+      "updated_docs": ["docs/aplicacion/modulos-backend.md"],
+      "summary": "Catálogo de modelos de IA: los precios aceptan null para quitarlos y la respuesta incluye sortOrder; el Admin muestra y edita el orden."
     }
   ]
 }

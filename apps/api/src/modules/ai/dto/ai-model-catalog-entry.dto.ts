@@ -54,4 +54,10 @@ export class AiModelCatalogEntryDto {
     description: 'Precio en USD por millon de tokens de salida, o null si no se conoce.',
   })
   outputUsdPerMTok!: number | null;
+
+  @ApiProperty({
+    type: Number,
+    description: 'Orden en el selector y el catalogo (menor primero).',
+  })
+  sortOrder!: number;
 }

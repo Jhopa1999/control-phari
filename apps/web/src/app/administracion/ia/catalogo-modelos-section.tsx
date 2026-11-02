@@ -49,6 +49,10 @@ export function CatalogoModelosSection({
   const [dialog, setDialog] = React.useState<{ model: AiModelCatalogEntry | null } | null>(null);
   const [pendingToggle, setPendingToggle] = React.useState<string | null>(null);
   const [confirmDisable, setConfirmDisable] = React.useState<AiModelCatalogEntry | null>(null);
+  const onChangedRef = React.useRef(onChanged);
+  React.useEffect(() => {
+    onChangedRef.current = onChanged;
+  });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -57,6 +61,7 @@ export function CatalogoModelosSection({
         if (cancelled) return;
         setModels(list);
         setState('success');
+        onChangedRef.current(list);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -178,6 +183,7 @@ export function CatalogoModelosSection({
                 <TableHead>Nivel</TableHead>
                 <TableHead>Capacidades</TableHead>
                 <TableHead>Precio</TableHead>
+                <TableHead className="text-right">Orden</TableHead>
                 <TableHead>Habilitado</TableHead>
                 <TableHead>
                   <span className="sr-only">Acciones</span>
@@ -211,6 +217,7 @@ export function CatalogoModelosSection({
                       </span>
                     </div>
                   </TableCell>
+                  <TableCell className="text-right tabular-nums">{model.sortOrder}</TableCell>
                   <TableCell>{toggle(model)}</TableCell>
                   <TableCell className="text-right">{editButton(model)}</TableCell>
                 </TableRow>
@@ -236,6 +243,7 @@ export function CatalogoModelosSection({
               { label: 'Capacidades', value: <CapabilityBadges model={model} /> },
               { label: 'Entrada', value: <PriceText value={model.inputUsdPerMTok} /> },
               { label: 'Salida', value: <PriceText value={model.outputUsdPerMTok} /> },
+              { label: 'Orden', value: model.sortOrder },
             ],
             actions: editButton(model),
           })}
