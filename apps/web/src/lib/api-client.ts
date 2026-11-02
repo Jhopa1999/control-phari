@@ -231,6 +231,9 @@ export type ConversationSummary = components['schemas']['ConversationSummaryDto'
 export type ConversationDetail = components['schemas']['ConversationDetailDto'];
 export type ConversationMessage = components['schemas']['ConversationMessageDto'];
 export type ChatRequest = components['schemas']['ChatRequestDto'];
+/** Archivo adjunto del chat con el texto que el asistente extrajo (BL-032 F4a). */
+export type Attachment = components['schemas']['AttachmentDto'];
+export type AttachmentLimits = components['schemas']['AttachmentLimitsDto'];
 /** Propuesta de acción del asistente (se ejecuta solo al confirmarla la persona). */
 export type Proposal = components['schemas']['ProposalDto'];
 /** Modo de credenciales de IA (iam-role | access-keys). */

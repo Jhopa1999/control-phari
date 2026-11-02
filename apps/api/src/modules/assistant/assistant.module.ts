@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../database/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { AiModule } from '../ai/ai.module';
+import { StorageModule } from '../storage/storage.module';
 import { AssistantController } from './assistant.controller';
+import { AssistantAttachmentsService } from './assistant-attachments.service';
 import { AssistantProposalsService } from './assistant-proposals.service';
 import { AssistantService } from './assistant.service';
 import { ASSISTANT_TOOL_GATEWAY } from './assistant-tools';
@@ -14,11 +16,12 @@ import { McpToolGateway } from './mcp-tool-gateway';
  * herramientas llegan por el MCP del portal (ASSISTANT_TOOL_GATEWAY).
  */
 @Module({
-  imports: [PrismaModule, AuthModule, AiModule],
+  imports: [PrismaModule, AuthModule, AiModule, StorageModule],
   controllers: [AssistantController],
   providers: [
     AssistantService,
     AssistantProposalsService,
+    AssistantAttachmentsService,
     { provide: ASSISTANT_TOOL_GATEWAY, useClass: McpToolGateway },
   ],
 })

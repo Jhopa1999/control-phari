@@ -1,13 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
-  MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { MAX_MESSAGE_LENGTH } from '../assistant.constants';
+import {
+  MAX_ATTACHMENT_TEXT_CHARS,
+  MAX_ATTACHMENTS_PER_MESSAGE,
+  MAX_MESSAGE_LENGTH,
+} from '../assistant.constants';
 
 /** Mensaje del usuario al asistente. */
 export class ChatRequestDto {
@@ -22,19 +28,114 @@ export class ChatRequestDto {
 
   @ApiProperty({
     type: String,
-    minLength: 1,
     maxLength: MAX_MESSAGE_LENGTH,
-    description: 'Mensaje de la persona.',
+    description:
+      'Mensaje de la persona. Puede ir vacío solo si se envían adjuntos (attachmentIds).',
   })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
   )
   @IsString()
-  @MinLength(1, { message: 'El mensaje no puede estar vacío.' })
   @MaxLength(MAX_MESSAGE_LENGTH, {
     message: `El mensaje no puede superar ${MAX_MESSAGE_LENGTH} caracteres.`,
   })
   message!: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    format: 'uuid',
+    maxItems: MAX_ATTACHMENTS_PER_MESSAGE,
+    description:
+      'Adjuntos ya subidos y listos (POST /assistant/attachments) que acompañan al mensaje. Su texto extraído se entrega al asistente como dato no confiable.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_ATTACHMENTS_PER_MESSAGE, {
+    message: `Máximo ${MAX_ATTACHMENTS_PER_MESSAGE} archivos por mensaje.`,
+  })
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  attachmentIds?: string[];
+}
+
+/** Adjunto del chat: archivo subido cuyo contenido se extrajo como texto. */
+export class AttachmentDto {
+  @ApiProperty({ type: String, format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ type: String, description: 'Nombre original del archivo.' })
+  fileName!: string;
+
+  @ApiProperty({ type: String, description: 'Tipo MIME declarado al subirlo.' })
+  contentType!: string;
+
+  @ApiProperty({ type: Number, description: 'Tamaño del archivo en bytes.' })
+  sizeBytes!: number;
+
+  @ApiProperty({ type: String, enum: ['imagen', 'documento'] })
+  kind!: 'imagen' | 'documento';
+
+  @ApiProperty({
+    type: String,
+    description: 'Texto que el asistente leerá (extraído del archivo; la persona puede editarlo antes de enviar).',
+  })
+  extractedText!: string;
+
+  @ApiProperty({
+    type: Boolean,
+    description: 'El texto extraído se recortó por superar el máximo de caracteres.',
+  })
+  truncated!: boolean;
+
+  @ApiProperty({ type: String, format: 'date-time' })
+  createdAt!: string;
+}
+
+/** Cambio del texto extraído de un adjunto aún no enviado. */
+export class UpdateAttachmentDto {
+  @ApiProperty({
+    type: String,
+    minLength: 1,
+    maxLength: MAX_ATTACHMENT_TEXT_CHARS,
+    description: 'Texto que se entregará al asistente.',
+  })
+  @IsString()
+  @MaxLength(MAX_ATTACHMENT_TEXT_CHARS, {
+    message: `El texto no puede superar ${MAX_ATTACHMENT_TEXT_CHARS} caracteres.`,
+  })
+  extractedText!: string;
+}
+
+/** Cuerpo multipart de la subida de un adjunto (documentación del contrato). */
+export class UploadAttachmentDto {
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description:
+      'Imagen (PNG, JPEG, WebP, GIF) o documento (PDF, Word, Excel, CSV, Markdown, TXT).',
+  })
+  file!: unknown;
+}
+
+/** Límites de los adjuntos, para que la interfaz no los duplique. */
+export class AttachmentLimitsDto {
+  @ApiProperty({ type: Number, description: 'Archivos por mensaje.' })
+  maxFiles!: number;
+
+  @ApiProperty({ type: Number, description: 'Tamaño máximo de una imagen, en bytes.' })
+  maxImageBytes!: number;
+
+  @ApiProperty({ type: Number, description: 'Tamaño máximo de un documento (PDF, Word, Excel), en bytes.' })
+  maxDocumentBytes!: number;
+
+  @ApiProperty({ type: Number, description: 'Tamaño máximo de un archivo de texto (CSV, Markdown, TXT), en bytes.' })
+  maxTextBytes!: number;
+
+  @ApiProperty({ type: Number, description: 'Caracteres máximos del texto extraído de un adjunto.' })
+  maxTextChars!: number;
+
+  @ApiProperty({ type: [String], description: 'Extensiones permitidas.' })
+  extensions!: string[];
 }
 
 /** Disponibilidad del asistente para la persona actual. */
@@ -48,6 +149,12 @@ export class AssistantStatusDto {
     description: 'Motivo legible (en español) cuando no está disponible; null si lo está.',
   })
   reason!: string | null;
+
+  @ApiProperty({
+    type: AttachmentLimitsDto,
+    description: 'Límites de los adjuntos del chat.',
+  })
+  attachments!: AttachmentLimitsDto;
 }
 
 /** Resumen de una conversación para el historial. */
@@ -87,6 +194,12 @@ export class ConversationMessageDto {
 
   @ApiProperty({ type: [ToolCallDto], description: 'Herramientas consultadas en este turno.' })
   tools!: ToolCallDto[];
+
+  @ApiProperty({
+    type: [AttachmentDto],
+    description: 'Archivos que la persona adjuntó a este mensaje.',
+  })
+  attachments!: AttachmentDto[];
 
   @ApiProperty({
     type: () => [ProposalDto],

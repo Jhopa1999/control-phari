@@ -6,13 +6,18 @@ import {
   HttpCode,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiProduces,
@@ -23,14 +28,19 @@ import { CurrentActor } from '../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../auth/current-actor';
 import { CurrentUserGuard } from '../auth/current-user.guard';
 import { RolesGuard } from '../auth/roles.guard';
+import { AssistantAttachmentsService, type UploadedAttachmentFile } from './assistant-attachments.service';
 import { AssistantProposalsService } from './assistant-proposals.service';
+import { MAX_UPLOAD_BYTES } from './assistant.constants';
 import { AssistantEvent, AssistantService } from './assistant.service';
 import {
   AssistantStatusDto,
+  AttachmentDto,
   ChatRequestDto,
   ConversationDetailDto,
   ConversationSummaryDto,
   ProposalDto,
+  UpdateAttachmentDto,
+  UploadAttachmentDto,
 } from './dto/assistant.dto';
 
 /** Parte de la peticion HTTP (Express) que usa el flujo SSE. */
@@ -66,6 +76,7 @@ export class AssistantController {
   constructor(
     private readonly assistant: AssistantService,
     private readonly proposals: AssistantProposalsService,
+    private readonly attachments: AssistantAttachmentsService,
   ) {}
 
   @Get('status')
@@ -127,6 +138,59 @@ export class AssistantController {
     } finally {
       if (!res.writableEnded) res.end();
     }
+  }
+
+  @Post('attachments')
+  @ApiOperation({
+    summary:
+      'Sube un archivo (imagen o documento) para el chat: lo guarda y extrae su contenido como texto, que la persona puede revisar y editar antes de enviarlo.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UploadAttachmentDto })
+  @ApiResponse({ status: 201, description: 'Adjunto listo, con el texto extraído.', type: AttachmentDto })
+  @ApiResponse({ status: 400, description: 'Archivo vacío, muy grande, de tipo no permitido o con contenido que no corresponde a su tipo.' })
+  @ApiResponse({ status: 401, description: 'No hay un usuario actual valido.' })
+  @ApiResponse({ status: 409, description: 'Asistente desactivado, sin presupuesto o con un modelo que no lee este tipo de archivo.' })
+  @ApiResponse({ status: 422, description: 'El archivo no tiene contenido legible.' })
+  @ApiResponse({ status: 502, description: 'No se pudo leer el archivo con el modelo.' })
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 } }))
+  uploadAttachment(
+    @CurrentActor() actor: CurrentActorType,
+    @UploadedFile() file: UploadedAttachmentFile | undefined,
+  ): Promise<AttachmentDto> {
+    return this.attachments.upload(actor, file);
+  }
+
+  @Patch('attachments/:id')
+  @ApiOperation({
+    summary: 'Corrige el texto extraído de un adjunto que aún no se envió.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ type: UpdateAttachmentDto })
+  @ApiResponse({ status: 200, description: 'Adjunto actualizado.', type: AttachmentDto })
+  @ApiResponse({ status: 400, description: 'Texto vacío o demasiado largo.' })
+  @ApiResponse({ status: 404, description: 'No existe o no es de la persona.' })
+  @ApiResponse({ status: 409, description: 'El adjunto ya se envió.' })
+  updateAttachment(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateAttachmentDto,
+  ): Promise<AttachmentDto> {
+    return this.attachments.updateText(actor, id, dto.extractedText);
+  }
+
+  @Delete('attachments/:id')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Quita un adjunto que aún no se envió (y borra su archivo).' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 204, description: 'Adjunto eliminado.' })
+  @ApiResponse({ status: 404, description: 'No existe o no es de la persona.' })
+  @ApiResponse({ status: 409, description: 'El adjunto ya se envió.' })
+  async removeAttachment(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    await this.attachments.remove(actor, id);
   }
 
   @Post('proposals/:id/confirm')

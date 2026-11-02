@@ -455,6 +455,12 @@
       "trigger_file": "apps/mcp/src/tools/specs/escritura.ts",
       "updated_docs": ["docs/aplicacion/modulos-backend.md", "apps/mcp/README.md"],
       "summary": "MCP: 10 tools de escritura de planes, fases, dependencias, activos y documentos, permitidas como propuestas del asistente; pendientes 65 a 55."
+    },
+    {
+      "timestamp": "2026-11-05T15:00:00Z",
+      "trigger_file": "apps/api/src/modules/assistant/assistant-attachments.service.ts",
+      "updated_docs": ["docs/aplicacion/modulos-backend.md", "docs/aplicacion/modelo-datos.md", "docs/aplicacion/frontend-pantallas.md"],
+      "summary": "Asistente: adjuntos de imágenes y documentos en el chat (tabla ai_attachment, POST/PATCH/DELETE /assistant/attachments, texto extraído editable y límites en /assistant/status)."
     }
   ]
 }

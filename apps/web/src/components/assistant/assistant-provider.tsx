@@ -4,16 +4,28 @@ import * as React from 'react';
 import { toast } from 'sonner';
 import {
   ApiError,
+  AttachmentUploadError,
   confirmProposal as confirmProposalRequest,
+  deleteAttachment,
   deleteConversation,
   discardProposal as discardProposalRequest,
   getAssistantStatus,
   getConversation,
   listConversations,
   streamChat,
+  updateAttachmentText,
+  uploadAttachment,
+  type Attachment,
   type ConversationSummary,
   type Proposal,
 } from '@/lib/assistant';
+import {
+  FALLBACK_LIMITS,
+  rejectedTitle,
+  validateAttachmentFile,
+  type AttachmentLimitsView,
+  type AttachmentStatus,
+} from '@/lib/assistant-attachments';
 import { MAX_MESSAGE_LENGTH, capitalize, type ToolView } from '@/lib/assistant-format';
 
 /** Mensaje de la persona en el hilo. */
@@ -21,6 +33,35 @@ export interface UserMessageView {
   id: string;
   role: 'user';
   text: string;
+  /** Archivos que acompañaron al mensaje (con el texto que leyó el asistente). */
+  attachments: Attachment[];
+}
+
+/** Adjunto en el compositor, antes de enviarse. */
+export interface AttachmentItem {
+  localId: string;
+  name: string;
+  size: number;
+  status: AttachmentStatus;
+  /** Avance de la subida (0 a 100) o null si no se puede medir. */
+  progress: number | null;
+  /** Datos del servidor cuando ya está listo. */
+  attachment: Attachment | null;
+  /** La persona corrigió el texto extraído. */
+  edited: boolean;
+  error: string | null;
+  retryable: boolean;
+  file: File;
+}
+
+/** Aviso de límites al adjuntar (tipo no permitido, demasiados archivos...). */
+export interface AttachmentNotice {
+  id: string;
+  tone: 'danger' | 'warning';
+  title: string;
+  message: string;
+  /** Detalle por archivo cuando se rechazaron varios. */
+  items?: string[];
 }
 
 /** Turno del asistente en el hilo. */
@@ -79,6 +120,14 @@ export interface AssistantContextValue {
   draft: string;
   setDraft: (value: string) => void;
   send: (text: string) => void;
+  attachments: AttachmentItem[];
+  attachmentLimits: AttachmentLimitsView;
+  attachmentNotices: AttachmentNotice[];
+  dismissAttachmentNotices: () => void;
+  addFiles: (files: File[]) => void;
+  removeAttachment: (localId: string) => void;
+  retryAttachment: (localId: string) => void;
+  saveAttachmentText: (localId: string, text: string) => Promise<void>;
   confirmProposal: (id: string) => void;
   discardProposal: (id: string) => void;
   stop: () => void;
@@ -170,6 +219,18 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
   const [historyLoading, setHistoryLoading] = React.useState(false);
   const [historyError, setHistoryError] = React.useState(false);
 
+  // Adjuntos del compositor. El ref es la fuente de verdad (lectura inmediata
+  // al enviar o al añadir varios seguidos); el estado solo refleja para renderizar.
+  const [attachments, setAttachments] = React.useState<AttachmentItem[]>([]);
+  const [attachmentLimits, setAttachmentLimits] =
+    React.useState<AttachmentLimitsView>(FALLBACK_LIMITS);
+  const [attachmentNotices, setAttachmentNotices] = React.useState<AttachmentNotice[]>([]);
+  const attachmentsRef = React.useRef<AttachmentItem[]>([]);
+  const limitsRef = React.useRef<AttachmentLimitsView>(FALLBACK_LIMITS);
+  const uploadControllers = React.useRef(new Map<string, AbortController>());
+  /** Adjuntos de un envío que falló antes de abrir el flujo: el reintento los reutiliza. */
+  const pendingRetryRef = React.useRef<Attachment[] | null>(null);
+
   const abortRef = React.useRef<AbortController | null>(null);
   const conversationRef = React.useRef<string | null>(null);
   const bufferRef = React.useRef('');
@@ -186,13 +247,17 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
 
   const refreshAvailability = React.useCallback(() => {
     getAssistantStatus()
-      .then((status) =>
+      .then((status) => {
+        // Los límites de los adjuntos los define la API; sin ellos, los de respaldo.
+        const limits = status.attachments ?? FALLBACK_LIMITS;
+        limitsRef.current = limits;
+        setAttachmentLimits(limits);
         setAvailability(
           status.available
             ? { state: 'available', reason: null }
             : { state: 'unavailable', reason: status.reason },
-        ),
-      )
+        );
+      })
       // Error de red al consultarlo: botón normal (optimista); si el chat falla, lo dirá el chat.
       .catch(() => setAvailability({ state: 'error', reason: null }));
   }, []);
@@ -211,6 +276,179 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
       .catch(() => setHistoryError(true))
       .finally(() => setHistoryLoading(false));
   }, []);
+
+  // ----------------------------------------------------------------- adjuntos
+
+  const commitAttachments = React.useCallback((next: AttachmentItem[]) => {
+    attachmentsRef.current = next;
+    setAttachments(next);
+  }, []);
+
+  const patchAttachment = React.useCallback(
+    (localId: string, patch: Partial<AttachmentItem>) => {
+      commitAttachments(
+        attachmentsRef.current.map((item) =>
+          item.localId === localId ? { ...item, ...patch } : item,
+        ),
+      );
+    },
+    [commitAttachments],
+  );
+
+  /** Sube el archivo y sigue su avance: subiendo -> extrayendo -> listo | error. */
+  const startUpload = React.useCallback(
+    (localId: string, file: File) => {
+      const controller = new AbortController();
+      uploadControllers.current.set(localId, controller);
+      patchAttachment(localId, { status: 'subiendo', progress: 0, error: null });
+      uploadAttachment(file, {
+        signal: controller.signal,
+        onProgress: (percent) => patchAttachment(localId, { progress: percent }),
+        onUploaded: () => patchAttachment(localId, { status: 'extrayendo', progress: null }),
+      })
+        .then((saved) => {
+          patchAttachment(localId, {
+            status: 'listo',
+            progress: null,
+            attachment: saved,
+            error: null,
+          });
+          announce(`${file.name} está listo.`);
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          const retryable = error instanceof AttachmentUploadError ? error.retryable : true;
+          patchAttachment(localId, {
+            status: 'error',
+            progress: null,
+            error:
+              error instanceof Error
+                ? error.message
+                : `No se pudo subir ${file.name}. Inténtalo de nuevo.`,
+            retryable,
+          });
+          announce(`No se pudo leer ${file.name}.`);
+        })
+        .finally(() => {
+          uploadControllers.current.delete(localId);
+        });
+    },
+    [announce, patchAttachment],
+  );
+
+  const addFiles = React.useCallback(
+    (files: File[]) => {
+      if (files.length === 0) return;
+      const limits = limitsRef.current;
+      let room = limits.maxFiles - attachmentsRef.current.length;
+      const accepted: File[] = [];
+      const rejected: Array<{ name: string; reason: string }> = [];
+      const overflow: string[] = [];
+      for (const file of files) {
+        const reason = validateAttachmentFile(file, limits);
+        if (reason) rejected.push({ name: file.name, reason });
+        else if (room <= 0) overflow.push(file.name);
+        else {
+          accepted.push(file);
+          room -= 1;
+        }
+      }
+
+      const notices: AttachmentNotice[] = [];
+      if (rejected.length > 0) {
+        notices.push(
+          rejected.length === 1
+            ? {
+                id: nextLocalId('n'),
+                tone: 'danger',
+                title: rejectedTitle(1, rejected[0].name),
+                message: rejected[0].reason,
+              }
+            : {
+                id: nextLocalId('n'),
+                tone: 'danger',
+                title: rejectedTitle(rejected.length, rejected[0].name),
+                message: 'Revisa el tipo y el tamaño de cada archivo.',
+                items: rejected.map((r) => `${r.name}: ${r.reason}`),
+              },
+        );
+      }
+      if (overflow.length > 0) {
+        notices.push({
+          id: nextLocalId('n'),
+          tone: 'warning',
+          title: `Máximo ${limits.maxFiles} archivos por mensaje`,
+          message:
+            accepted.length > 0
+              ? `Solo se adjuntaron los primeros ${accepted.length}. Quita alguno para añadir más.`
+              : 'Quita alguno para añadir más.',
+        });
+      }
+      // Los avisos se limpian solos al añadir archivos válidos sin rechazos.
+      setAttachmentNotices(notices);
+      if (notices.length > 0) {
+        announce(notices[0].title);
+      }
+
+      if (accepted.length === 0) return;
+      const items: AttachmentItem[] = accepted.map((file) => ({
+        localId: nextLocalId('att'),
+        name: file.name,
+        size: file.size,
+        status: 'subiendo',
+        progress: 0,
+        attachment: null,
+        edited: false,
+        error: null,
+        retryable: true,
+        file,
+      }));
+      commitAttachments([...attachmentsRef.current, ...items]);
+      announce(
+        items.length === 1 ? `Subiendo ${items[0].name}.` : `Subiendo ${items.length} archivos.`,
+      );
+      for (const item of items) startUpload(item.localId, item.file);
+    },
+    [announce, commitAttachments, startUpload],
+  );
+
+  const removeAttachment = React.useCallback(
+    (localId: string) => {
+      const item = attachmentsRef.current.find((i) => i.localId === localId);
+      if (!item) return;
+      uploadControllers.current.get(localId)?.abort();
+      uploadControllers.current.delete(localId);
+      commitAttachments(attachmentsRef.current.filter((i) => i.localId !== localId));
+      if (item.attachment) {
+        // El archivo ya estaba guardado: se borra (si falla, el servidor lo purga solo).
+        deleteAttachment(item.attachment.id).catch(() => undefined);
+      }
+      announce(`Se quitó ${item.name}.`);
+    },
+    [announce, commitAttachments],
+  );
+
+  const retryAttachment = React.useCallback(
+    (localId: string) => {
+      const item = attachmentsRef.current.find((i) => i.localId === localId);
+      if (!item || item.status !== 'error' || !item.retryable) return;
+      announce(`Subiendo ${item.name} otra vez.`);
+      startUpload(localId, item.file);
+    },
+    [announce, startUpload],
+  );
+
+  const saveAttachmentText = React.useCallback(
+    async (localId: string, text: string) => {
+      const item = attachmentsRef.current.find((i) => i.localId === localId);
+      if (!item?.attachment) return;
+      const saved = await updateAttachmentText(item.attachment.id, text);
+      patchAttachment(localId, { attachment: saved, edited: true });
+    },
+    [patchAttachment],
+  );
+
+  const dismissAttachmentNotices = React.useCallback(() => setAttachmentNotices([]), []);
 
   // ------------------------------------------------------------------- stream
 
@@ -243,18 +481,33 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
   );
 
   const send = React.useCallback(
-    (raw: string) => {
+    (raw: string, reuse?: Attachment[]) => {
       const text = raw.trim();
-      if (text === '' || text.length > MAX_MESSAGE_LENGTH || abortRef.current) return;
+      // Los adjuntos del compositor deben estar todos listos; un reintento reutiliza
+      // los que ya iban con el mensaje que falló antes de abrir el flujo.
+      const composerItems = attachmentsRef.current;
+      if (!reuse && composerItems.some((i) => i.status !== 'listo' || !i.attachment)) return;
+      const sentAttachments: Attachment[] =
+        reuse ??
+        composerItems.flatMap((i) => (i.attachment ? [i.attachment] : []));
+      if (
+        (text === '' && sentAttachments.length === 0) ||
+        text.length > MAX_MESSAGE_LENGTH ||
+        abortRef.current
+      ) {
+        return;
+      }
 
       const controller = new AbortController();
       abortRef.current = controller;
       setStreaming(true);
       setTurnError(null);
       setDraft('');
+      pendingRetryRef.current = null;
+      if (!reuse) commitAttachments([]);
       setMessages((prev) => [
         ...prev,
-        { id: nextLocalId('u'), role: 'user', text },
+        { id: nextLocalId('u'), role: 'user', text, attachments: sentAttachments },
         {
           id: nextLocalId('a'),
           role: 'assistant',
@@ -271,6 +524,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
 
       streamChat({
         message: text,
+        attachmentIds: sentAttachments.map((a) => a.id),
         conversationId: conversationRef.current,
         signal: controller.signal,
         onEvent: (event) => {
@@ -357,6 +611,8 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
           }
           if (!opened) {
             // Falló antes de abrir el flujo: se quita el turno vacío del asistente.
+            // Los adjuntos siguen sin enviarse en el servidor: el reintento los reutiliza.
+            pendingRetryRef.current = sentAttachments.length > 0 ? sentAttachments : null;
             setMessages((prev) => prev.slice(0, -1));
             setTurnError(turnErrorFor(error));
             if (error instanceof ApiError && error.status === 409) refreshAvailability();
@@ -374,7 +630,15 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
           setStreaming(false);
         });
     },
-    [announce, flush, patchAssistant, refreshAvailability, reloadHistory, scheduleFlush],
+    [
+      announce,
+      commitAttachments,
+      flush,
+      patchAssistant,
+      refreshAvailability,
+      reloadHistory,
+      scheduleFlush,
+    ],
   );
 
   /** Reemplaza una propuesta por id en cualquier mensaje del hilo. */
@@ -441,10 +705,13 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
     const index = snapshot.length - 1 - lastUserIndex;
     const lastUser = snapshot[index];
     if (lastUser.role !== 'user') return;
-    // Quita el último intercambio fallido y lo vuelve a enviar.
+    // Quita el último intercambio fallido y lo vuelve a enviar. Si falló antes de
+    // abrir el flujo, los adjuntos siguen disponibles y viajan otra vez; si no,
+    // ya quedaron en la conversación y el asistente los ve en el historial.
+    const reuse = pendingRetryRef.current ?? undefined;
     setMessages(snapshot.slice(0, index));
     setTurnError(null);
-    send(lastUser.text);
+    send(lastUser.text, reuse);
   }, [messages, send]);
 
   const resetThread = React.useCallback(() => {
@@ -485,7 +752,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
           setMessages(
             conversation.messages.map((m): ChatMessageView =>
               m.role === 'user'
-                ? { id: m.id, role: 'user', text: m.text }
+                ? { id: m.id, role: 'user', text: m.text, attachments: m.attachments ?? [] }
                 : {
                     id: m.id,
                     role: 'assistant',
@@ -525,8 +792,10 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
 
   // Cierra sesión / desmonta: corta cualquier stream abierto.
   React.useEffect(() => {
+    const controllers = uploadControllers.current;
     return () => {
       abortRef.current?.abort();
+      for (const controller of controllers.values()) controller.abort();
       if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
     };
   }, []);
@@ -549,6 +818,14 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
       draft,
       setDraft,
       send,
+      attachments,
+      attachmentLimits,
+      attachmentNotices,
+      dismissAttachmentNotices,
+      addFiles,
+      removeAttachment,
+      retryAttachment,
+      saveAttachmentText,
       confirmProposal,
       discardProposal,
       stop,
@@ -579,6 +856,14 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
       turnError,
       draft,
       send,
+      attachments,
+      attachmentLimits,
+      attachmentNotices,
+      dismissAttachmentNotices,
+      addFiles,
+      removeAttachment,
+      retryAttachment,
+      saveAttachmentText,
       confirmProposal,
       discardProposal,
       stop,

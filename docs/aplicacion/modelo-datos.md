@@ -158,6 +158,17 @@ Conversaciones del asistente de IA. **Privadas de su usuario**: solo el dueño l
   `tools?` (JSON con el resumen `{name, label, status}` de las herramientas consultadas en el
   turno; no guarda los resultados), `createdAt`. Índice (`conversationId`, `createdAt`).
 
+### AiAttachment (`ai_attachment`)
+Adjuntos del chat del asistente (imágenes y documentos). **Privados de quien los sube.** El original
+vive en S3 (`storageKey`, prefijo `asistente/{userId}/`) y aquí queda el **texto extraído**, que la
+persona revisa y puede corregir antes de enviarlo y que es lo único que recibe el modelo.
+- Campos: `userId` (FK, `onDelete: Cascade`), `conversationId?` y `messageId?` (FK, `onDelete: Cascade`;
+  `null` = subido y aún sin enviar), `fileName`, `contentType`, `sizeBytes`, `kind`
+  (`imagen`/`documento`), `storageKey`, `extractedText`, `truncated` (el texto se recortó al máximo),
+  `createdAt`. Índices (`userId`, `messageId`), (`messageId`), (`conversationId`).
+- Un adjunto sin enviar de más de 24 h se borra (fila y archivo) la siguiente vez que su dueño sube otro;
+  al eliminar una conversación se borran también los archivos de sus adjuntos en S3.
+
 
 ## Flujo de demanda
 

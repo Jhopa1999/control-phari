@@ -2217,6 +2217,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assistant/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sube un archivo (imagen o documento) para el chat: lo guarda y extrae su contenido como texto, que la persona puede revisar y editar antes de enviarlo. */
+        post: operations["AssistantController_uploadAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/attachments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Quita un adjunto que aún no se envió (y borra su archivo). */
+        delete: operations["AssistantController_removeAttachment"];
+        options?: never;
+        head?: never;
+        /** Corrige el texto extraído de un adjunto que aún no se envió. */
+        patch: operations["AssistantController_updateAttachment"];
+        trace?: never;
+    };
     "/assistant/proposals/{id}/confirm": {
         parameters: {
             query?: never;
@@ -6034,11 +6069,27 @@ export interface components {
             /** @description Code del agente que genero la sugerencia. */
             agentCode: string;
         };
+        AttachmentLimitsDto: {
+            /** @description Archivos por mensaje. */
+            maxFiles: number;
+            /** @description Tamaño máximo de una imagen, en bytes. */
+            maxImageBytes: number;
+            /** @description Tamaño máximo de un documento (PDF, Word, Excel), en bytes. */
+            maxDocumentBytes: number;
+            /** @description Tamaño máximo de un archivo de texto (CSV, Markdown, TXT), en bytes. */
+            maxTextBytes: number;
+            /** @description Caracteres máximos del texto extraído de un adjunto. */
+            maxTextChars: number;
+            /** @description Extensiones permitidas. */
+            extensions: string[];
+        };
         AssistantStatusDto: {
             /** @description El asistente puede usarse ahora. */
             available: boolean;
             /** @description Motivo legible (en español) cuando no está disponible; null si lo está. */
             reason: string | null;
+            /** @description Límites de los adjuntos del chat. */
+            attachments: components["schemas"]["AttachmentLimitsDto"];
         };
         ChatRequestDto: {
             /**
@@ -6046,8 +6097,39 @@ export interface components {
              * @description Conversación existente. Si se omite, se crea una nueva.
              */
             conversationId?: string;
-            /** @description Mensaje de la persona. */
+            /** @description Mensaje de la persona. Puede ir vacío solo si se envían adjuntos (attachmentIds). */
             message: string;
+            /** @description Adjuntos ya subidos y listos (POST /assistant/attachments) que acompañan al mensaje. Su texto extraído se entrega al asistente como dato no confiable. */
+            attachmentIds?: string[];
+        };
+        UploadAttachmentDto: {
+            /**
+             * Format: binary
+             * @description Imagen (PNG, JPEG, WebP, GIF) o documento (PDF, Word, Excel, CSV, Markdown, TXT).
+             */
+            file: string;
+        };
+        AttachmentDto: {
+            /** Format: uuid */
+            id: string;
+            /** @description Nombre original del archivo. */
+            fileName: string;
+            /** @description Tipo MIME declarado al subirlo. */
+            contentType: string;
+            /** @description Tamaño del archivo en bytes. */
+            sizeBytes: number;
+            /** @enum {string} */
+            kind: "imagen" | "documento";
+            /** @description Texto que el asistente leerá (extraído del archivo; la persona puede editarlo antes de enviar). */
+            extractedText: string;
+            /** @description El texto extraído se recortó por superar el máximo de caracteres. */
+            truncated: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        UpdateAttachmentDto: {
+            /** @description Texto que se entregará al asistente. */
+            extractedText: string;
         };
         ProposalDto: {
             /** Format: uuid */
@@ -6104,6 +6186,8 @@ export interface components {
             text: string;
             /** @description Herramientas consultadas en este turno. */
             tools: components["schemas"]["ToolCallDto"][];
+            /** @description Archivos que la persona adjuntó a este mensaje. */
+            attachments: components["schemas"]["AttachmentDto"][];
             /** @description Propuestas de acción hechas en este turno (con su estado actual). */
             proposals: components["schemas"]["ProposalDto"][];
             /** Format: date-time */
@@ -13464,6 +13548,146 @@ export interface operations {
                 content?: never;
             };
             /** @description Asistente desactivado, sin presupuesto o sin sesión con token. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssistantController_uploadAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["UploadAttachmentDto"];
+            };
+        };
+        responses: {
+            /** @description Adjunto listo, con el texto extraído. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentDto"];
+                };
+            };
+            /** @description Archivo vacío, muy grande, de tipo no permitido o con contenido que no corresponde a su tipo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Asistente desactivado, sin presupuesto o con un modelo que no lee este tipo de archivo. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El archivo no tiene contenido legible. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No se pudo leer el archivo con el modelo. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssistantController_removeAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Adjunto eliminado. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no es de la persona. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El adjunto ya se envió. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssistantController_updateAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAttachmentDto"];
+            };
+        };
+        responses: {
+            /** @description Adjunto actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentDto"];
+                };
+            };
+            /** @description Texto vacío o demasiado largo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no es de la persona. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El adjunto ya se envió. */
             409: {
                 headers: {
                     [name: string]: unknown;

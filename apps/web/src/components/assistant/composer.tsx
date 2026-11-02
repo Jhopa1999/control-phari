@@ -1,16 +1,21 @@
 'use client';
 
 import * as React from 'react';
-import { CircleAlert, SendHorizontal, Square } from 'lucide-react';
+import { CircleAlert, SendHorizontal, Square, Upload } from 'lucide-react';
+import { DisabledReason } from '@/components/disabled-reason';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { limitsSummary, sendBlockReason } from '@/lib/assistant-attachments';
 import {
   MAX_MESSAGE_LENGTH,
   counterAnnouncement,
   counterState,
 } from '@/lib/assistant-format';
 import { cn } from '@/lib/utils';
+import { AttachmentButton } from './attachment-button';
+import { AttachmentList } from './attachment-list';
 import { useAssistant } from './assistant-provider';
+import { useAttachmentDropzone } from './use-attachment-dropzone';
 
 export interface ComposerProps {
   value: string;
@@ -48,7 +53,9 @@ export function Composer({
   textareaRef,
   className,
 }: ComposerProps): React.ReactElement {
-  const { announce } = useAssistant();
+  const { announce, attachments, attachmentLimits, addFiles } = useAssistant();
+  const attachHelpId = React.useId();
+  const reasonId = React.useId();
   const helpId = React.useId();
   const counterId = React.useId();
   const errorId = React.useId();
@@ -66,7 +73,23 @@ export function Composer({
   const state = counterState(length);
   const over = state === 'over';
   const empty = value.trim() === '';
-  const canSend = !empty && !over && !disabled && !fieldDisabled && !streaming;
+  // Se puede enviar solo con adjuntos, pero nunca mientras alguno se lee o falló.
+  const blockReason = sendBlockReason(attachments);
+  const hasAttachments = attachments.length > 0;
+  const canSend =
+    (!empty || hasAttachments) &&
+    blockReason === null &&
+    !over &&
+    !disabled &&
+    !fieldDisabled &&
+    !streaming;
+  const maxReached = attachments.length >= attachmentLimits.maxFiles;
+  const { dragging, dropProps, onPaste } = useAttachmentDropzone(addFiles, !fieldDisabled);
+  const unavailableReason =
+    blockReason ??
+    (maxReached
+      ? `Ya adjuntaste ${attachmentLimits.maxFiles} archivos. Quita uno para añadir otro.`
+      : null);
 
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>): void => {
     const next = event.target.value;
@@ -82,25 +105,53 @@ export function Composer({
     if (canSend) onSend();
   };
 
-  const describedBy = [helpId, state !== 'hidden' ? counterId : null, over ? errorId : null]
+  const describedBy = [
+    helpId,
+    state !== 'hidden' ? counterId : null,
+    over ? errorId : null,
+    blockReason ? reasonId : null,
+  ]
     .filter(Boolean)
     .join(' ');
 
   return (
     <form
       aria-label="Enviar mensaje al asistente"
-      className={cn('flex flex-col gap-1.5', className)}
+      aria-busy={blockReason !== null && hasAttachments ? true : undefined}
+      className={cn(
+        'relative flex flex-col gap-1.5 rounded-xl',
+        dragging && 'border border-dashed border-primary bg-primary-subtle p-1',
+        className,
+      )}
       onSubmit={(event) => {
         event.preventDefault();
         if (canSend) onSend();
       }}
+      {...dropProps}
     >
+      {dragging ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-xl bg-primary-subtle/90 text-sm font-medium text-foreground"
+        >
+          <Upload className="size-4" />
+          Suelta los archivos para adjuntarlos
+        </div>
+      ) : null}
+      <AttachmentList />
       <div className="flex items-end gap-2">
+        <AttachmentButton
+          limits={attachmentLimits}
+          unavailable={fieldDisabled || maxReached}
+          describedBy={attachHelpId}
+          onFiles={addFiles}
+        />
         <Textarea
           ref={innerRef}
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          onPaste={onPaste}
           rows={1}
           disabled={fieldDisabled}
           aria-label="Mensaje para el asistente"
@@ -137,12 +188,20 @@ export function Composer({
         )}
       </div>
 
+      {unavailableReason && !streaming ? (
+        <DisabledReason id={reasonId}>{unavailableReason}</DisabledReason>
+      ) : null}
       <div className="flex items-start justify-between gap-3 text-meta text-muted-foreground">
-        <p id={helpId} className="sr-only md:not-sr-only">
-          {streaming
-            ? 'Espera a que termine o pulsa Detener.'
-            : 'Enter para enviar · Mayús+Enter para salto de línea'}
-        </p>
+        <div className="min-w-0">
+          <p id={helpId} className="sr-only md:not-sr-only">
+            {streaming
+              ? 'Espera a que termine o pulsa Detener.'
+              : 'Enter para enviar · Mayús+Enter para salto de línea'}
+          </p>
+          <p id={attachHelpId} className="sr-only md:not-sr-only">
+            {limitsSummary(attachmentLimits)}
+          </p>
+        </div>
         {state !== 'hidden' ? (
           <p
             id={counterId}

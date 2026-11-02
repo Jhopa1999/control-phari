@@ -208,6 +208,7 @@ model User {
   aiUsages               AiUsage[]        @relation("AiUsageUser")
   aiConversations        AiConversation[] @relation("AiConversationUser")
   aiProposals            AiProposal[]     @relation("AiProposalUser")
+  aiAttachments          AiAttachment[]   @relation("AiAttachmentUser")
 
   // Actividades recurrentes (FEAT-001): definiciones cuyo responsable es ESTA
   // persona (responsibleKind=USER) y ocurrencias que esta persona completo.
@@ -1261,6 +1262,7 @@ model AiConversation {
   user     User        @relation("AiConversationUser", fields: [userId], references: [id], onDelete: Cascade)
   messages  AiMessage[]
   proposals AiProposal[]
+  attachments AiAttachment[]
 
   @@index([userId, updatedAt])
   @@map("ai_conversation")
@@ -1279,11 +1281,41 @@ model AiMessage {
   createdAt      DateTime @default(now()) @map("created_at")
 
   conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  attachments  AiAttachment[]
 
   @@index([conversationId, createdAt])
   @@map("ai_message")
 }
 
+/// Adjunto del chat del asistente (BL-032 F4): imagen o documento que la persona
+/// sube; el original vive en S3 (storageKey) y el backend guarda el TEXTO extraido
+/// (visible y editable por la persona), que es lo que se entrega al modelo como
+/// dato no confiable. messageId null = subido pero aun no enviado.
+model AiAttachment {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  conversationId String?  @map("conversation_id") @db.Uuid
+  messageId      String?  @map("message_id") @db.Uuid
+  fileName       String   @map("file_name")
+  contentType    String   @map("content_type")
+  sizeBytes      Int      @map("size_bytes")
+  /// 'imagen' | 'documento'.
+  kind           String
+  storageKey     String   @map("storage_key")
+  extractedText  String   @default("") @map("extracted_text") @db.Text
+  /// El texto extraido se recorto por superar el maximo.
+  truncated      Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user         User             @relation("AiAttachmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  conversation AiConversation?  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message      AiMessage?       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([userId, messageId])
+  @@index([messageId])
+  @@index([conversationId])
+  @@map("ai_attachment")
+}
 /// Propuesta de accion del asistente (BL-032 F3). El asistente NUNCA ejecuta
 /// una escritura: registra una propuesta que la persona confirma o descarta.
 /// Al confirmar, el backend ejecuta la MISMA llamada por el MCP con el token de

@@ -110,6 +110,17 @@ icono en la barra móvil, disponible en todo el portal. Especificación visual:
 | `/asistente/nueva` | Conversación nueva | Estado vacío con cinco preguntas sugeridas que se envían al pulsarlas. Al primer mensaje la URL pasa a `/asistente/{id}` sin recargar. |
 | `/asistente/{id}` | Conversación | Hilo con respuestas en Markdown (tablas desplazables, enlaces a pantallas del portal), fuentes consultadas expandibles, copiar, detener y reintentar. |
 
+**Adjuntos.** En el campo de mensaje, el botón del clip (también arrastrando archivos sobre el campo
+o pegando una imagen) adjunta imágenes y documentos. Cada archivo se sube al instante y aparece como un
+chip con su estado (subiendo con avance, leyendo el contenido, listo o con error y motivo; en error
+recuperable se puede reintentar). Al terminar de leerlo, el chip abre **«Esto entendí del adjunto»**:
+el texto extraído, editable, con contador y aviso si se recortó; los cambios se guardan o se
+descartan con confirmación. No se puede enviar mientras un adjunto se sube, se lee o tiene error, y la
+razón se muestra junto al campo. Se puede enviar solo con adjuntos. Los límites (5 archivos, tamaño por
+tipo) vienen de la API; los archivos no permitidos se rechazan antes de subirlos explicando el motivo.
+Tras enviar, el mensaje muestra los archivos como chips que abren el texto que leyó el asistente en
+solo lectura (también al reabrir la conversación). Especificación: `docs/design/asistente-adjuntos.md`.
+
 **Propuestas de acción.** Cuando el asistente prepara una escritura (crear o editar una solicitud,
 registrar triage o prioridad, crear un plan o tareas) muestra una **tarjeta de propuesta** dentro de su
 respuesta: título de la acción, resumen en palabras, los datos exactos plegables («Ver los datos

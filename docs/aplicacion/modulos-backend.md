@@ -597,13 +597,27 @@ respeta el presupuesto mensual.
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/assistant/status` | `{ available, reason }`: disponible si el MCP está configurado (`ASSISTANT_MCP_URL`), la IA y el agente `ASISTENTE` están encendidos y el presupuesto no se agotó. |
-| POST | `/assistant/chat` | Envía `{ conversationId?, message }` (1..4000) y responde `text/event-stream` con los eventos `conversation`, `text`, `tool`, `done` y `error`. `409` si está desactivado, sin presupuesto o sin sesión con token; `404` si la conversación no es de la persona. |
+| GET | `/assistant/status` | `{ available, reason, attachments }`: disponible si el MCP está configurado (`ASSISTANT_MCP_URL`), la IA y el agente `ASISTENTE` están encendidos y el presupuesto no se agotó. `attachments` trae los límites de los adjuntos (archivos por mensaje, tamaño máximo por tipo, caracteres del texto extraído y extensiones permitidas) para que la interfaz no los duplique. |
+| POST | `/assistant/attachments` | Sube un archivo (multipart, campo `file`) y devuelve el adjunto con el **texto extraído**. `400` si el tipo o el contenido no corresponden o supera el máximo; `409` si el asistente está apagado, sin presupuesto o su modelo no lee ese tipo; `422` si no tiene contenido legible; `502` si el modelo falla. |
+| PATCH | `/assistant/attachments/:id` | Corrige el texto extraído de un adjunto propio **aún sin enviar** (`409` si ya se envió). |
+| DELETE | `/assistant/attachments/:id` | Quita un adjunto propio sin enviar y borra su archivo (`204`). |
+| POST | `/assistant/chat` | Envía `{ conversationId?, message, attachmentIds? }` (mensaje de hasta 4000; puede ir vacío solo si hay adjuntos, máx. 5) y responde `text/event-stream` con los eventos `conversation`, `text`, `tool`, `done` y `error`. `409` si está desactivado, sin presupuesto o sin sesión con token; `404` si la conversación no es de la persona. |
 | GET | `/assistant/conversations` | Las 50 conversaciones más recientes **de la persona**. |
 | GET | `/assistant/conversations/:id` | Conversación propia con sus mensajes y las herramientas consultadas por turno. `404` si no es suya. |
 | DELETE | `/assistant/conversations/:id` | Elimina una conversación propia (`204`). |
 | POST | `/assistant/proposals/:id/confirm` | Confirma una propuesta de acción y la **ejecuta** con el token y los permisos de la persona. Responde la propuesta resuelta: `CONFIRMADA` (con `resultId`/`resultTitle`) o `FALLIDA` (con el motivo de la API). `404` si no es suya; `409` si ya no está pendiente (vencida, confirmada, descartada o en ejecución). |
 | POST | `/assistant/proposals/:id/discard` | Descarta una propuesta pendiente sin ejecutarla. |
+
+**Adjuntos (F4a).** La persona sube imágenes (PNG, JPEG, WebP, GIF; hasta 3,75 MB) y documentos (PDF,
+Word, Excel; hasta 4,5 MB; CSV, Markdown y TXT hasta 1 MB, que se leen directamente), hasta 5 por
+mensaje (`assistant-attachments.service.ts`). El backend valida la extensión **y la firma real del
+archivo** (no acepta un ejecutable renombrado), guarda el original en S3 y pide al modelo del asistente
+(con visión o lectura de documentos, según su capacidad en el catálogo) el contenido **como texto**,
+recortado a 20 000 caracteres; el consumo se registra y respeta el presupuesto. La persona ve y puede
+corregir ese texto antes de enviar. Al enviar, el texto viaja al modelo dentro de `<adjunto nombre=… tipo=…>`
+como **dato no confiable**: el contenido no puede cerrar la etiqueta y el prompt del sistema indica que
+nunca se obedecen instrucciones que aparezcan en un adjunto. Los adjuntos de mensajes anteriores se
+incluyen en el historial de la conversación.
 
 **Propuestas de acción (F3).** El asistente nunca escribe datos: solo puede *proponer* con una lista
 cerrada de tools de escritura (`request.create`, `request.update`, `request.triage.create`,

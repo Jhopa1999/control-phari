@@ -121,6 +121,20 @@ export class AiModelCatalogService implements OnModuleInit {
     return row ? row.supportsPromptCache : false;
   }
 
+  /**
+   * Si el modelo acepta imágenes y documentos como entrada. Un modelo
+   * desconocido se asume sin ninguna de las dos.
+   */
+  async inputCapabilities(
+    modelId: string,
+  ): Promise<{ vision: boolean; documents: boolean }> {
+    const row = await this.prisma.aiModel.findUnique({ where: { modelId } });
+    return {
+      vision: row?.supportsVision ?? false,
+      documents: row?.supportsDocuments ?? false,
+    };
+  }
+
   async create(
     actor: CurrentActor,
     dto: CreateAiModelDto,
