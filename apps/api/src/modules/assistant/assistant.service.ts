@@ -36,6 +36,18 @@ import { AssistantProposalsService } from './assistant-proposals.service';
 import { AssistantAttachmentsService } from './assistant-attachments.service';
 import { wrapAttachmentText } from './assistant-attachments';
 import {
+  checkProposalIds,
+  collectSeenIds,
+  collectUuids,
+  compactArgs,
+  digestToolResult,
+  idProblemMessage,
+  publicToolCalls,
+  storedMemory,
+  turnContext,
+  type StoredToolCall,
+} from './assistant-memory';
+import {
   ATTACHMENT_EXTENSIONS,
   MAX_ATTACHMENT_TEXT_CHARS,
   MAX_ATTACHMENTS_PER_MESSAGE,
@@ -49,7 +61,6 @@ import {
   ConversationDetailDto,
   ConversationSummaryDto,
   ProposalDto,
-  ToolCallDto,
 } from './dto/assistant.dto';
 
 /** Maximo de rondas modelo -> herramientas en un mismo turno. */
@@ -100,6 +111,8 @@ export function toConverseHistory(
     role: string;
     text: string;
     attachments?: ReadonlyArray<{ fileName: string; kind: string; extractedText: string }>;
+    /** Memoria interna del turno (consultas y propuestas), solo del asistente. */
+    context?: string;
   }>,
 ): ConverseMessage[] {
   const out: ConverseMessage[] = [];
@@ -109,6 +122,9 @@ export function toConverseHistory(
     // Converse rechaza bloques de texto vacios: un mensaje solo con adjuntos
     // no lleva bloque de texto propio.
     const blocks: ConverseMessage['content'] = [];
+    if (row.context && row.context.trim() !== '') {
+      blocks.push({ type: 'text', text: row.context });
+    }
     if (row.text.trim() !== '') blocks.push({ type: 'text', text: row.text });
     for (const attachment of row.attachments ?? []) {
       blocks.push({
@@ -241,7 +257,8 @@ export class AssistantService {
         id: m.id,
         role: m.role === 'assistant' ? 'assistant' : 'user',
         text: m.text,
-        tools: Array.isArray(m.tools) ? (m.tools as unknown as ToolCallDto[]) : [],
+        // La memoria interna de las consultas no se expone: solo nombre, etiqueta y estado.
+        tools: publicToolCalls(m.tools),
         proposals: proposalsByMessage.get(m.id) ?? [],
         attachments: attachmentsByMessage.get(m.id) ?? [],
         createdAt: m.createdAt.toISOString(),
@@ -352,6 +369,16 @@ export class AssistantService {
         ? [
             '',
             'Las herramientas que crean o modifican datos NO se ejecutan: registran una propuesta que la persona confirma o descarta en una tarjeta. Antes de proponer, reúne los datos con las herramientas de lectura y confirma con la persona lo que no sepas; usa nombres, no identificadores, en el resumen. Tras proponer, resume lo propuesto y pídele que la confirme. No repitas una propuesta ya hecha ni propongas decisiones (aprobar, autorizar, borrar).',
+            '',
+            'Memoria: los bloques <memoria_herramientas> y <propuestas> son tu memoria interna de turnos anteriores (lo que consultaste, con sus identificadores, y el estado ACTUAL de tus propuestas). Úsalos, pero no los repitas ni los menciones. Si una propuesta figura como CONFIRMADA, ya se hizo: no la vuelvas a proponer y usa su resultado (su id) para el siguiente paso. Nunca inventes, completes ni copies de memoria identificadores: usa solo los que aparecen en una consulta o en esa memoria; si falta uno, consúltalo con las herramientas de lectura o pregúntaselo a la persona.',
+            '',
+            'Flujo de una solicitud: REGISTRADA → triage → priorización → aprobación → COMPROMETIDA → plan (EN_PLANIFICACION). Aprobar, autorizar o devolver son decisiones humanas que tú NO puedes tomar: cuando toque aprobar, dile a la persona que lo haga en la pantalla de Aprobaciones y que te avise para seguir. Antes de proponer un paso consulta el estado real con request.get y no propongas uno que ese estado no permite (por ejemplo, el plan solo se crea con la solicitud COMPROMETIDA). Si la persona pide llegar «hasta la planificación», explícale desde el inicio qué pasos haces tú con su confirmación y cuáles son suyos.',
+            '',
+            'Cronograma completo: para cargar fases y tareas (por ejemplo desde un Excel adjunto) NO propongas una acción por tarea; crea el plan con plan.create y después carga todo con UNA sola propuesta plan.import (documento con kind "control-phari-plan", formatVersion "1.0", plan, phases con sus tasks y dependencies). Solo funciona con el plan en borrador o devuelto. En el resumen indica cuántas fases y tareas incluye. Si la persona ya dijo «crea todo», no preguntes lo que puedas deducir o consultar; pide de una sola vez únicamente los datos obligatorios que falten.',
+            '',
+            'Una propuesta solo existe si llamaste a la herramienta de escritura: entonces la persona ve una tarjeta con Confirmar y Descartar. Nunca escribas «propuesta registrada» ni pidas confirmar en texto sin haber llamado a la herramienta; cuando ya tengas los datos, llámala directamente (no pidas permiso antes: la tarjeta ES la confirmación). Si te falta un dato que solo la persona conoce, pídelo y no propongas todavía.',
+            '',
+            'Triage y priorización: antes de pedir datos de catálogos (tipo de demanda, ruta, disponibilidad de datos, criticidad, tamaño, etc.) o el responsable, consulta request.triage.get: trae las opciones válidas de cada catálogo y las personas posibles. Propón con esas opciones, eligiendo la más razonable según lo que sabes de la solicitud, y pregunta solo lo que requiera criterio de negocio que no puedas deducir (por ejemplo, el esfuerzo en horas si no hay un cronograma).',
           ]
         : []),
     ].join('\n');
@@ -381,8 +408,10 @@ export class AssistantService {
     });
 
     let fullText = '';
-    const toolSummaries: ToolCallDto[] = [];
+    const toolSummaries: StoredToolCall[] = [];
     const proposalIds: string[] = [];
+    /** Identificadores que ya aparecieron en la conversación (para validar propuestas). */
+    let seenIds: Set<string> = new Set([actor.userId.toLowerCase()]);
     let session: Awaited<ReturnType<AssistantToolGateway['open']>> | null = null;
 
     try {
@@ -401,7 +430,20 @@ export class AssistantService {
         include: { attachments: true },
       });
       const hasAttachments = recent.some((m) => (m.attachments ?? []).length > 0);
-      const messages = toConverseHistory(recent.reverse());
+      // El modelo solo conserva el texto entre turnos: se le devuelve lo que
+      // consultó (con sus ids) y el estado ACTUAL de sus propuestas.
+      const proposalsByMessage = await this.proposals.byMessage(ctx.conversationId);
+      const ordered = recent.reverse();
+      seenIds = collectSeenIds(actor.userId, ordered, proposalsByMessage);
+      const messages = toConverseHistory(
+        ordered.map((m) => ({
+          ...m,
+          context:
+            m.role === 'assistant'
+              ? turnContext(storedMemory(m.tools), proposalsByMessage.get(m.id) ?? [])
+              : undefined,
+        })),
+      );
       const system = this.systemPrompt(
         agent.basePrompt,
         actor,
@@ -474,7 +516,14 @@ export class AssistantService {
           const found = byName.get(use.name);
           if (found && !found.readOnly) {
             // Escritura: nunca se ejecuta desde el modelo; se registra una propuesta.
-            const outcome = await this.proposeAction(ctx, found, use.input, proposalIds, emit);
+            const outcome = await this.proposeAction(
+              ctx,
+              found,
+              use.input,
+              proposalIds,
+              seenIds,
+              emit,
+            );
             results.push({
               type: 'toolResult',
               toolUseId: use.toolUseId,
@@ -504,7 +553,14 @@ export class AssistantService {
             }
           }
           const status = isError ? 'error' : 'done';
-          toolSummaries.push({ name: use.name, label, status });
+          const call: StoredToolCall = { name: use.name, label, status };
+          if (!isError) {
+            // Memoria para los turnos siguientes y ids que ya se pueden usar.
+            call.memory = digestToolResult(text);
+            call.args = compactArgs(use.input);
+            for (const id of collectUuids(text)) seenIds.add(id);
+          }
+          toolSummaries.push(call);
           emit({
             event: 'tool',
             data: { id: use.toolUseId, name: use.name, label, status },
@@ -573,6 +629,7 @@ export class AssistantService {
     tool: AssistantTool,
     input: unknown,
     proposalIds: string[],
+    seenIds: ReadonlySet<string>,
     emit: (event: AssistantEvent) => void,
   ): Promise<{ text: string; isError: boolean }> {
     const fail = (text: string): { text: string; isError: boolean } => ({ text, isError: true });
@@ -592,6 +649,22 @@ export class AssistantService {
     if (missing.length > 0) {
       return fail(
         `Faltan datos obligatorios: ${missing.join(', ')}. Pregúntaselos a la persona o consúltalos con las herramientas de lectura antes de proponer.`,
+      );
+    }
+    // Un identificador inventado o cortado se rechaza ANTES de mostrar la tarjeta.
+    const idProblem = idProblemMessage(checkProposalIds(args, seenIds));
+    if (idProblem) return fail(idProblem);
+    // Lo mismo ya propuesto (o ya hecho) no se vuelve a proponer.
+    const duplicate = await this.proposals.findActiveDuplicate(
+      ctx.conversationId,
+      tool.name,
+      args,
+    );
+    if (duplicate) {
+      return fail(
+        duplicate.status === 'CONFIRMADA'
+          ? `Esa acción ya se realizó: la persona la confirmó${duplicate.resultId ? ` (resultado id ${duplicate.resultId})` : ''}. No la repitas; usa ese resultado para el siguiente paso.`
+          : 'Ya existe una propuesta idéntica esperando la confirmación de la persona. No la repitas: pídele que la confirme o la descarte.',
       );
     }
     const proposal = await this.proposals.create({
@@ -616,7 +689,7 @@ export class AssistantService {
   private async saveAssistantMessage(
     conversationId: string,
     text: string,
-    tools: ToolCallDto[],
+    tools: StoredToolCall[],
   ): Promise<string> {
     const message = await this.prisma.aiMessage.create({
       data: {

@@ -80,7 +80,17 @@ export const PROPOSAL_TOOLS: Readonly<Record<string, string>> = {
   'document.create': 'Crear documento',
   'document.update': 'Editar documento',
   'document.version.create': 'Crear versión de documento',
+  'plan.import': 'Cargar el plan completo (reemplaza el contenido del borrador)',
 };
+
+/**
+ * Herramientas de la lista permitida que el MCP marca como destructivas pero que
+ * el asistente PUEDE proponer porque la propia API acota el daño y la persona
+ * confirma: `plan.import` solo reemplaza fases y tareas de un plan en BORRADOR o
+ * DEVUELTO (409 en cualquier otro estado). Cargar un cronograma completo con una
+ * propuesta por tarea sería inviable (máximo 5 propuestas por turno).
+ */
+const DESTRUCTIVE_BUT_ALLOWED: ReadonlySet<string> = new Set(['plan.import']);
 
 export function isProposalTool(name: string): boolean {
   return Object.prototype.hasOwnProperty.call(PROPOSAL_TOOLS, name);
@@ -102,7 +112,8 @@ export function isToolAllowed(
 ): boolean {
   if (EXCLUDED_PREFIXES.some((p) => name.startsWith(p))) return false;
   if (readOnly) return true;
-  return !destructive && isProposalTool(name);
+  if (!isProposalTool(name)) return false;
+  return !destructive || DESTRUCTIVE_BUT_ALLOWED.has(name);
 }
 
 /** Argumento extra que el modelo rellena en las herramientas de escritura. */

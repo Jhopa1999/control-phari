@@ -13,6 +13,7 @@ import {
   proposalTitle,
   type AssistantToolGateway,
 } from './assistant-tools';
+import { stableStringify } from './assistant-memory';
 import { ProposalDto, type ProposalStatus } from './dto/assistant.dto';
 import type { AiProposalModel } from '../../generated/prisma/models/AiProposal';
 
@@ -131,6 +132,35 @@ export class AssistantProposalsService {
       where: { id: { in: [...ids] } },
       data: { messageId },
     });
+  }
+
+  /**
+   * Propuesta vigente (pendiente, ejecutándose o ya confirmada) de la misma
+   * herramienta con exactamente los mismos argumentos. Evita que el asistente,
+   * al perder el hilo, vuelva a crear lo que ya se creó.
+   */
+  async findActiveDuplicate(
+    conversationId: string,
+    toolName: string,
+    args: Record<string, unknown>,
+  ): Promise<ProposalDto | null> {
+    const rows = await this.prisma.aiProposal.findMany({
+      where: {
+        conversationId,
+        toolName,
+        status: { in: ['PENDIENTE', 'EJECUTANDO', 'CONFIRMADA'] },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    const key = stableStringify(args);
+    for (const row of rows) {
+      if (stableStringify(asRecord(row.args)) !== key) continue;
+      const dto = this.toDto(row);
+      if (dto.status === 'PENDIENTE' || dto.status === 'EJECUTANDO' || dto.status === 'CONFIRMADA') {
+        return dto;
+      }
+    }
+    return null;
   }
 
   /** Propuestas de una conversación agrupadas por mensaje. */

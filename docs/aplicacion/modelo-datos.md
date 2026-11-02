@@ -155,7 +155,8 @@ Conversaciones del asistente de IA. **Privadas de su usuario**: solo el dueño l
 - `AiConversation`: `userId` (FK a `User`, `onDelete: Cascade`), `title` (inicio del primer
   mensaje, máx. 60), `createdAt`, `updatedAt`. Índice (`userId`, `updatedAt`).
 - `AiMessage`: `conversationId` (FK, `onDelete: Cascade`), `role` (`user`/`assistant`), `text`,
-  `tools?` (JSON con el resumen `{name, label, status}` de las herramientas consultadas en el
+  `tools?` (JSON con el resumen `{name, label, status}` de las herramientas consultadas y, solo para
+  uso interno, `memory` —renglones con los ids de lo que devolvió— y `args`; la API no los expone—, en el
   turno; no guarda los resultados), `createdAt`. Índice (`conversationId`, `createdAt`).
 
 ### AiAttachment (`ai_attachment`)
