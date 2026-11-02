@@ -538,7 +538,10 @@ Consumo y presupuesto de IA (`ai-usage.service.ts`): cada llamada al modelo regi
 usa el precio por millón de tokens del catálogo de modelos (`ai_model`); un modelo sin precio registra
 costo `null`. Antes de invocar, el triage (y en adelante el asistente) llama a `assertWithinBudget`:
 si el gasto del mes alcanzó el tope → `409` sin tocar Bedrock. Al cruzar el umbral de alerta y el
-tope se escribe un aviso en el log del servidor. Los meses se miden en UTC.
+tope se escribe un aviso en el log del servidor y se notifica en el centro de notificaciones a las
+personas administradoras activas (`isAdmin`), una sola vez por cruce: tipos `AI_BUDGET_ALERT` (llegó
+al umbral) y `AI_BUDGET_EXCEEDED` (se agotó el tope), con enlace a `/administracion/ia`. Los meses se
+miden en UTC.
 
 Cliente de IA (`bedrock.client.ts`, interno, sin endpoints nuevos): además de `invoke`/`ping`,
 expone `converse` y `converseStream` (API Converse de Bedrock) para conversaciones multi-turno con

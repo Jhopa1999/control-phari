@@ -19,6 +19,10 @@ export enum NotificationType {
   CLOSURE_REJECTED = 'CLOSURE_REJECTED',
   PROJECT_REOPENED = 'PROJECT_REOPENED',
   COMMITMENT_ASSIGNED = 'COMMITMENT_ASSIGNED',
+  /** El gasto de IA del mes alcanzó el umbral de alerta (solo administradores). */
+  AI_BUDGET_ALERT = 'AI_BUDGET_ALERT',
+  /** Se agotó el presupuesto mensual de IA (solo administradores). */
+  AI_BUDGET_EXCEEDED = 'AI_BUDGET_EXCEEDED',
 }
 
 export interface NotifyInput {

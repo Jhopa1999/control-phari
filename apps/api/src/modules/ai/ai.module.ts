@@ -3,6 +3,7 @@ import { PrismaModule } from '../../database/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
 import { RequestModule } from '../request/request.module';
+import { NotificationModule } from '../notification/notification.module';
 import { AiConfigController } from './ai-config.controller';
 import { AiConfigService } from './ai-config.service';
 import { AiModelCatalogService } from './ai-model-catalog.service';
@@ -22,7 +23,7 @@ import { AwsBedrockClient, BEDROCK_CLIENT } from './bedrock.client';
  *   sustituirlo por un doble en tests; la impl real es AwsBedrockClient.
  */
 @Module({
-  imports: [PrismaModule, AuthModule, AuditModule, RequestModule],
+  imports: [PrismaModule, AuthModule, AuditModule, RequestModule, NotificationModule],
   controllers: [AiConfigController, TriageSuggestionController],
   providers: [
     AiConfigService,

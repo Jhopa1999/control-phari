@@ -39,6 +39,9 @@ import {
   updateAiAgent,
   updateAiConfig,
 } from '@/lib/ai';
+import { CatalogoModelosSection } from './catalogo-modelos-section';
+import { ConsumoIaSection } from './consumo-ia-section';
+import { PresupuestoIaForm } from './presupuesto-ia-form';
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
 
@@ -81,6 +84,17 @@ export function IaAgentesView(): React.ReactElement {
   const [global, setGlobal] = React.useState<AiGlobalConfig | null>(null);
   const [agents, setAgents] = React.useState<AiAgentConfig[]>([]);
   const [models, setModels] = React.useState<AiModelCatalogEntry[]>([]);
+  /** Cambia al guardar el presupuesto para que el consumo se recargue. */
+  const [usageReloadKey, setUsageReloadKey] = React.useState(0);
+
+  const agentNames = React.useMemo(
+    () => Object.fromEntries(agents.map((a) => [a.code, a.displayName])),
+    [agents],
+  );
+  const modelLabels = React.useMemo(
+    () => Object.fromEntries(models.map((m) => [m.id, m.label])),
+    [models],
+  );
 
   // --- Estado global (switch + credenciales) ---
   const [enabled, setEnabled] = React.useState(false);
@@ -355,6 +369,23 @@ export function IaAgentesView(): React.ReactElement {
           </form>
         </Section>
 
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <ConsumoIaSection
+            reloadKey={usageReloadKey}
+            agentNames={agentNames}
+            modelLabels={modelLabels}
+          />
+          {global ? (
+            <PresupuestoIaForm
+              global={global}
+              onSaved={(saved) => {
+                setGlobal(saved);
+                setUsageReloadKey((k) => k + 1);
+              }}
+            />
+          ) : null}
+        </div>
+
         <Section
           title="Agentes"
           description="Cada agente usa un modelo del catálogo permitido y su propio prompt base."
@@ -383,6 +414,11 @@ export function IaAgentesView(): React.ReactElement {
             )}
           </div>
         </Section>
+
+        <CatalogoModelosSection
+          agents={agents}
+          onChanged={(all) => setModels(all.filter((m) => m.enabled))}
+        />
       </>
     );
   }

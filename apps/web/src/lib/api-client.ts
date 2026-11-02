@@ -208,6 +208,12 @@ export type AiGlobalConfig = components['schemas']['AiGlobalConfigResponseDto'];
 export type AiAgentConfig = components['schemas']['AiAgentConfigResponseDto'];
 export type AiModelCatalogEntry =
   components['schemas']['AiModelCatalogEntryDto'];
+/** Consumo de IA del mes y estado del presupuesto (GET /admin/ai/usage). */
+export type AiUsageSummary = components['schemas']['AiUsageSummaryDto'];
+export type AiBudgetStatus = components['schemas']['AiBudgetStatusDto'];
+export type AiUsageBreakdown = components['schemas']['AiUsageBreakdownDto'];
+export type CreateAiModel = components['schemas']['CreateAiModelDto'];
+export type UpdateAiModel = components['schemas']['UpdateAiModelDto'];
 export type UpdateAiGlobalConfig =
   components['schemas']['UpdateAiGlobalConfigDto'];
 export type UpdateAiAgentConfig =

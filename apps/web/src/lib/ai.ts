@@ -4,6 +4,10 @@ import {
   type AiConfig,
   type AiConnectionTest,
   type AiGlobalConfig,
+  type AiModelCatalogEntry,
+  type AiUsageSummary,
+  type CreateAiModel,
+  type UpdateAiModel,
   type UpdateAiAgentConfig,
   type UpdateAiGlobalConfig,
 } from './api-client';
@@ -101,6 +105,73 @@ export async function testAiAgent(code: string): Promise<AiConnectionTest> {
       '/admin/ai/agents/{code}/test',
       { params: { path: { code } } },
     );
+    if (error || !data) {
+      throw toApiError(response.status);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/**
+ * Consumo de IA del mes (GET /admin/ai/usage?month=YYYY-MM) con el estado del
+ * presupuesto. Sin `month` el backend usa el mes actual (UTC).
+ */
+export async function getAiUsage(month?: string): Promise<AiUsageSummary> {
+  try {
+    const { data, error, response } = await api.GET('/admin/ai/usage', {
+      params: { query: month ? { month } : {} },
+    });
+    if (error || !data) {
+      throw toApiError(response.status);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/** Catalogo completo de modelos, incluidos los deshabilitados (GET /admin/ai/models). */
+export async function listAiModels(): Promise<AiModelCatalogEntry[]> {
+  try {
+    const { data, error, response } = await api.GET('/admin/ai/models');
+    if (error || !data) {
+      throw toApiError(response.status);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/** Da de alta un modelo (POST /admin/ai/models). 409 si el id ya existe. */
+export async function createAiModel(input: CreateAiModel): Promise<AiModelCatalogEntry> {
+  try {
+    const { data, error, response } = await api.POST('/admin/ai/models', { body: input });
+    if (error || !data) {
+      throw toApiError(response.status);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/** Edita un modelo del catalogo (PATCH /admin/ai/models/{modelId}). */
+export async function updateAiModel(
+  modelId: string,
+  input: UpdateAiModel,
+): Promise<AiModelCatalogEntry> {
+  try {
+    const { data, error, response } = await api.PATCH('/admin/ai/models/{modelId}', {
+      params: { path: { modelId } },
+      body: input,
+    });
     if (error || !data) {
       throw toApiError(response.status);
     }

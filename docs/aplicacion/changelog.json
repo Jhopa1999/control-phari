@@ -431,6 +431,12 @@
       "trigger_file": "apps/mcp/src/tools/specs/escritura.ts",
       "updated_docs": ["docs/aplicacion/modulos-backend.md", "apps/mcp/README.md"],
       "summary": "MCP: 8 tools de escritura de coordinación (hallazgos, reuniones, compromisos), permitidas como propuestas del asistente; pendientes 73 a 65."
+    },
+    {
+      "timestamp": "2026-11-03T18:00:00Z",
+      "trigger_file": "apps/web/src/app/administracion/ia/ia-agentes-view.tsx",
+      "updated_docs": ["docs/aplicacion/frontend-pantallas.md", "docs/aplicacion/modulos-backend.md"],
+      "summary": "Administración > IA: consumo del mes, presupuesto y catálogo de modelos; la alerta del presupuesto se notifica a los administradores."
     }
   ]
 }
