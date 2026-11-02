@@ -61,17 +61,29 @@ export class UpdateAiModelDto {
   @Min(0)
   sortOrder?: number;
 
-  @ApiPropertyOptional({ type: Number, description: 'USD por millon de tokens de entrada.', minimum: 0 })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description:
+      'USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo).',
+    minimum: 0,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  inputUsdPerMTok?: number;
+  inputUsdPerMTok?: number | null;
 
-  @ApiPropertyOptional({ type: Number, description: 'USD por millon de tokens de salida.', minimum: 0 })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description:
+      'USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo).',
+    minimum: 0,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  outputUsdPerMTok?: number;
+  outputUsdPerMTok?: number | null;
 }
 
 /** Alta de un modelo: `modelId` obligatorio e inmutable despues. */

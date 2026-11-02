@@ -29,6 +29,7 @@ export interface ModelErrors {
   label?: string;
   inputPrice?: string;
   outputPrice?: string;
+  sortOrder?: string;
   form?: string | null;
 }
 
@@ -46,7 +47,13 @@ function priceError(text: string): string | undefined {
 
 /** Reglas del formulario de modelo; el id solo se valida al crear (es inmutable). */
 export function validateModel(
-  values: { modelId: string; label: string; inputPrice: string; outputPrice: string },
+  values: {
+    modelId: string;
+    label: string;
+    inputPrice: string;
+    outputPrice: string;
+    sortOrder: string;
+  },
   creating: boolean,
 ): ModelErrors {
   const errors: ModelErrors = {};
@@ -61,9 +68,15 @@ export function validateModel(
   if (inputPrice) errors.inputPrice = inputPrice;
   const outputPrice = priceError(values.outputPrice);
   if (outputPrice) errors.outputPrice = outputPrice;
+  const order = Number(values.sortOrder.trim());
+  if (values.sortOrder.trim() === '' || !Number.isInteger(order) || order < 0) {
+    errors.sortOrder = 'Escribe un entero igual o mayor que 0.';
+  }
   return errors;
 }
 
 export function hasModelErrors(errors: ModelErrors): boolean {
-  return Boolean(errors.modelId || errors.label || errors.inputPrice || errors.outputPrice);
+  return Boolean(
+    errors.modelId || errors.label || errors.inputPrice || errors.outputPrice || errors.sortOrder,
+  );
 }

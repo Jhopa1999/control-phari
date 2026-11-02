@@ -71,6 +71,7 @@ export class AiModelCatalogService implements OnModuleInit {
       supportsDocuments: row.supportsDocuments,
       inputUsdPerMTok: row.inputUsdPerMTok,
       outputUsdPerMTok: row.outputUsdPerMTok,
+      sortOrder: row.sortOrder,
     };
   }
 

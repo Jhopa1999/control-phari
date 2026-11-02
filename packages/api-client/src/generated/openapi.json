@@ -15860,6 +15860,10 @@
             "type": "number",
             "nullable": true,
             "description": "Precio en USD por millon de tokens de salida, o null si no se conoce."
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden en el selector y el catalogo (menor primero)."
           }
         },
         "required": [
@@ -15872,7 +15876,8 @@
           "supportsVision",
           "supportsDocuments",
           "inputUsdPerMTok",
-          "outputUsdPerMTok"
+          "outputUsdPerMTok",
+          "sortOrder"
         ]
       },
       "AiConfigResponseDto": {
@@ -15993,12 +15998,14 @@
           },
           "inputUsdPerMTok": {
             "type": "number",
-            "description": "USD por millon de tokens de entrada.",
+            "nullable": true,
+            "description": "USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo).",
             "minimum": 0
           },
           "outputUsdPerMTok": {
             "type": "number",
-            "description": "USD por millon de tokens de salida.",
+            "nullable": true,
+            "description": "USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo).",
             "minimum": 0
           },
           "modelId": {
@@ -16055,12 +16062,14 @@
           },
           "inputUsdPerMTok": {
             "type": "number",
-            "description": "USD por millon de tokens de entrada.",
+            "nullable": true,
+            "description": "USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo).",
             "minimum": 0
           },
           "outputUsdPerMTok": {
             "type": "number",
-            "description": "USD por millon de tokens de salida.",
+            "nullable": true,
+            "description": "USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo).",
             "minimum": 0
           }
         }

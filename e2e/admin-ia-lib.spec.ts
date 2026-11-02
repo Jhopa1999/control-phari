@@ -73,7 +73,7 @@ test.describe('ia-validation', () => {
     }
   });
 
-  const base = { modelId: 'us.anthropic.claude-x:0', label: 'Modelo X', inputPrice: '', outputPrice: '' };
+  const base = { modelId: 'us.anthropic.claude-x:0', label: 'Modelo X', inputPrice: '', outputPrice: '', sortOrder: '100' };
 
   test('modelo: alta válida con precios vacíos (sin precio)', () => {
     const errors = validateModel(base, true);
@@ -84,6 +84,13 @@ test.describe('ia-validation', () => {
     expect(validateModel({ ...base, modelId: 'a b' }, true).modelId).toBeDefined();
     expect(validateModel({ ...base, modelId: 'ab' }, true).modelId).toBeDefined();
     expect(validateModel({ ...base, modelId: '' }, false).modelId).toBeUndefined();
+  });
+
+  test('modelo: el orden es un entero igual o mayor que 0', () => {
+    for (const order of ['', '-1', '1.5', 'x']) {
+      expect(validateModel({ ...base, sortOrder: order }, true).sortOrder).toBeDefined();
+    }
+    expect(validateModel({ ...base, sortOrder: '0' }, true).sortOrder).toBeUndefined();
   });
 
   test('modelo: nombre obligatorio y precios no negativos', () => {

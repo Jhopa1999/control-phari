@@ -141,4 +141,23 @@ describe('AiModelCatalogService', () => {
     expect(tx.aiModel.update.mock.calls[0][0].data).toEqual({ enabled: false });
     expect(audit.record).toHaveBeenCalledTimes(1);
   });
+
+  it('update con precio null quita el precio (no lo ignora)', async () => {
+    const { service, tx } = makeDeps(row({ inputUsdPerMTok: 3, outputUsdPerMTok: 15 }));
+    await service.update(adminActor(), 'us.anthropic.test', {
+      inputUsdPerMTok: null,
+      outputUsdPerMTok: null,
+    });
+    expect(tx.aiModel.update.mock.calls[0][0].data).toEqual({
+      inputUsdPerMTok: null,
+      outputUsdPerMTok: null,
+    });
+  });
+
+  it('las entradas del catalogo incluyen sortOrder', async () => {
+    const { service, prisma } = makeDeps(row({ sortOrder: 7 }));
+    (prisma.aiModel.findMany as jest.Mock).mockResolvedValue([row({ sortOrder: 7 })]);
+    const [entry] = await service.listAll();
+    expect(entry.sortOrder).toBe(7);
+  });
 });

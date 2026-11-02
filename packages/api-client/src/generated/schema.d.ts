@@ -5884,6 +5884,8 @@ export interface components {
             inputUsdPerMTok: number | null;
             /** @description Precio en USD por millon de tokens de salida, o null si no se conoce. */
             outputUsdPerMTok: number | null;
+            /** @description Orden en el selector y el catalogo (menor primero). */
+            sortOrder: number;
         };
         AiConfigResponseDto: {
             /** @description Estado global de IA (encendido, modo de credenciales, secretSet, last4). */
@@ -5932,10 +5934,10 @@ export interface components {
             supportsDocuments?: boolean;
             /** @description Orden en el selector (menor primero). */
             sortOrder?: number;
-            /** @description USD por millon de tokens de entrada. */
-            inputUsdPerMTok?: number;
-            /** @description USD por millon de tokens de salida. */
-            outputUsdPerMTok?: number;
+            /** @description USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo). */
+            inputUsdPerMTok?: number | null;
+            /** @description USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo). */
+            outputUsdPerMTok?: number | null;
             /** @description ID invocable en Bedrock (perfil de inferencia, p. ej. us.anthropic.claude-...). */
             modelId: string;
         };
@@ -5959,10 +5961,10 @@ export interface components {
             supportsDocuments?: boolean;
             /** @description Orden en el selector (menor primero). */
             sortOrder?: number;
-            /** @description USD por millon de tokens de entrada. */
-            inputUsdPerMTok?: number;
-            /** @description USD por millon de tokens de salida. */
-            outputUsdPerMTok?: number;
+            /** @description USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo). */
+            inputUsdPerMTok?: number | null;
+            /** @description USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo). */
+            outputUsdPerMTok?: number | null;
         };
         UpdateAiAgentConfigDto: {
             /** @description Enciende/apaga este agente. */
