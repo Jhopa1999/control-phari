@@ -355,6 +355,9 @@ export class AssistantService {
         hasProposals,
       );
       const withTemperature = await this.models.supportsTemperature(agent.model);
+      // Las ~10k tokens de definiciones de tools y el prompt se reutilizan entre
+      // rondas y turnos si el modelo admite puntos de cache.
+      const withCache = await this.models.supportsPromptCache(agent.model);
 
       for (let step = 0; step < MAX_TOOL_STEPS && !signal.aborted; step++) {
         let stepText = '';
@@ -369,6 +372,7 @@ export class AssistantService {
           messages,
           tools,
           ...(withTemperature ? { temperature: agent.temperature } : {}),
+          ...(withCache ? { cache: true } : {}),
           maxTokens: agent.maxTokens,
           timeoutMs: agent.timeoutMs,
           ...(ctx.credentials ? { credentials: ctx.credentials } : {}),

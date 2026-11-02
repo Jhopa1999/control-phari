@@ -36,6 +36,8 @@ export interface BedrockModelDefinition {
   supportsVision: boolean;
   /** Si el modelo acepta documentos (PDF, Excel...) como entrada. */
   supportsDocuments: boolean;
+  /** Si el modelo acepta puntos de cache (cachePoint) para reutilizar el prompt. */
+  supportsPromptCache: boolean;
   sortOrder: number;
   /** USD por millon de tokens de entrada (null = sin precio conocido). */
   inputUsdPerMTok: number | null;
@@ -57,6 +59,7 @@ export const DEFAULT_MODEL_CATALOG: readonly BedrockModelDefinition[] = [
     supportsTools: true,
     supportsVision: true,
     supportsDocuments: true,
+    supportsPromptCache: true,
     sortOrder: 10,
     inputUsdPerMTok: 1,
     outputUsdPerMTok: 5,
@@ -69,6 +72,7 @@ export const DEFAULT_MODEL_CATALOG: readonly BedrockModelDefinition[] = [
     supportsTools: true,
     supportsVision: true,
     supportsDocuments: true,
+    supportsPromptCache: true,
     sortOrder: 20,
     inputUsdPerMTok: 3,
     outputUsdPerMTok: 15,

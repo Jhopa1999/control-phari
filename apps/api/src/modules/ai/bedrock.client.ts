@@ -10,6 +10,7 @@ import {
   mapStopReason,
   mapUsage,
   toSdkMessages,
+  toSdkSystem,
   toSdkToolConfig,
   type ConverseRequest,
   type ConverseResult,
@@ -182,11 +183,13 @@ export class AwsBedrockClient implements BedrockClient {
   }
 
   private toConverseInput(input: ConverseRequest) {
-    const toolConfig = toSdkToolConfig(input.tools);
+    const cache = input.cache === true;
+    const toolConfig = toSdkToolConfig(input.tools, cache);
+    const system = toSdkSystem(input.system, cache);
     return {
       modelId: input.modelId,
-      messages: toSdkMessages(input.messages),
-      ...(input.system ? { system: [{ text: input.system }] } : {}),
+      messages: toSdkMessages(input.messages, cache),
+      ...(system ? { system } : {}),
       ...(toolConfig ? { toolConfig } : {}),
       inferenceConfig: {
         ...(input.temperature !== undefined

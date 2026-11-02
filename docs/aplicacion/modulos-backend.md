@@ -536,7 +536,7 @@ y se editan desde el Admin; el chat del asistente llega en una fase posterior.
 Consumo y presupuesto de IA (`ai-usage.service.ts`): cada llamada al modelo registra una fila en
 `ai_usage` (agente, usuario, modelo, tokens, costo estimado, duración; nunca el contenido). El costo
 usa el precio por millón de tokens del catálogo de modelos (`ai_model`); un modelo sin precio registra
-costo `null`. Antes de invocar, el triage (y en adelante el asistente) llama a `assertWithinBudget`:
+costo `null`; los tokens de caché de prompt se estiman con la tarifa de Bedrock (lectura al 10 % y escritura al 125 % del precio de entrada). Antes de invocar, el triage (y en adelante el asistente) llama a `assertWithinBudget`:
 si el gasto del mes alcanzó el tope → `409` sin tocar Bedrock. Al cruzar el umbral de alerta y el
 tope se escribe un aviso en el log del servidor y se notifica en el centro de notificaciones a las
 personas administradoras activas (`isAdmin`), una sola vez por cruce: tipos `AI_BUDGET_ALERT` (llegó
@@ -548,6 +548,10 @@ expone `converse` y `converseStream` (API Converse de Bedrock) para conversacion
 tool use, imágenes y documentos. Los tipos propios y la traducción al SDK viven en
 `bedrock-converse.ts`; los nombres de tool del MCP (con punto) se codifican como `__` hacia Bedrock
 y se decodifican al volver. `temperature` se omite si no se informa (modelos que la rechazan).
+Con `cache: true` marca con `cachePoint` el final de las tools, del prompt de sistema y del último
+mensaje, para que el asistente reutilice las ~10 mil tokens de definiciones entre rondas y turnos
+(verificado en Bedrock: la primera llamada escribe en caché y la siguiente la lee). El asistente lo
+activa solo si el modelo tiene `supportsPromptCache`.
 
 Configuración de IA (`ai-config.controller.ts`), base `/admin/ai`, solo `ADMIN`
 (`@UseGuards(CurrentUserGuard, RolesGuard)` + `@Roles(ADMIN)`, PATCH no PUT):
@@ -556,7 +560,7 @@ Configuración de IA (`ai-config.controller.ts`), base `/admin/ai`, solo `ADMIN`
 | --- | --- | --- |
 | GET | `/admin/ai/config` | Estado global + lista de agentes + catálogo de modelos permitidos (`models`: modelos habilitados con `id`, `label`, `tier` y capacidades; viene de la tabla `ai_model`) para alimentar el selector del Admin. Nunca incluye el secret ni el ciphertext (solo `secretSet` y `accessKeyIdLast4`). |
 | GET | `/admin/ai/usage` | Consumo de IA del mes (`?month=YYYY-MM`, UTC): llamadas, tokens, costo estimado, desglose por agente y por modelo, llamadas sin precio y estado del presupuesto (`budget`: tope, gasto, `usedPct`, `alert`, `exceeded`). |
-| GET | `/admin/ai/models` | Catálogo completo de modelos de IA con sus capacidades (`supportsTemperature`, `supportsTools`, `supportsVision`, `supportsDocuments`, `enabled`), precios (`inputUsdPerMTok`, `outputUsdPerMTok`, `null` = sin precio) y `sortOrder`, incluidos los deshabilitados. |
+| GET | `/admin/ai/models` | Catálogo completo de modelos de IA con sus capacidades (`supportsTemperature`, `supportsTools`, `supportsVision`, `supportsDocuments`, `supportsPromptCache`, `enabled`), precios (`inputUsdPerMTok`, `outputUsdPerMTok`, `null` = sin precio) y `sortOrder`, incluidos los deshabilitados. |
 | POST | `/admin/ai/models` | Da de alta un modelo (`modelId` invocable, nombre, tier y capacidades). `409` si el id ya existe. Audita `AI_CONFIG`. |
 | PATCH | `/admin/ai/models/:modelId` | Edita nombre, tier, capacidades, precios (`null` quita el precio), orden o habilitado de un modelo. `404` si no existe. Los modelos por defecto se siembran al arrancar sin pisar cambios. |
 | PATCH | `/admin/ai/config` | Actualiza la configuración global (encendido, modo de credenciales, claves, tope mensual `monthlyBudgetUsd` —`null` lo quita; por defecto 100 USD— y `budgetAlertPct`, por defecto 80). Regla determinista del secret como en SMTP. |

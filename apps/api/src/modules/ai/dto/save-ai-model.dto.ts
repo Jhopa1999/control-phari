@@ -55,6 +55,14 @@ export class UpdateAiModelDto {
   @IsBoolean()
   supportsDocuments?: boolean;
 
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  supportsPromptCache?: boolean;
+
   @ApiPropertyOptional({ type: Number, description: 'Orden en el selector (menor primero).', minimum: 0 })
   @IsOptional()
   @IsInt()

@@ -41,6 +41,9 @@ export class AiModelCatalogEntryDto {
   @ApiProperty({ type: Boolean, description: 'Si el modelo acepta documentos.' })
   supportsDocuments!: boolean;
 
+  @ApiProperty({ type: Boolean, description: 'Si el modelo acepta puntos de cache de prompt.' })
+  supportsPromptCache!: boolean;
+
   @ApiProperty({
     type: Number,
     nullable: true,

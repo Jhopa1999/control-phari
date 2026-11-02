@@ -5880,6 +5880,8 @@ export interface components {
             supportsVision: boolean;
             /** @description Si el modelo acepta documentos. */
             supportsDocuments: boolean;
+            /** @description Si el modelo acepta puntos de cache de prompt. */
+            supportsPromptCache: boolean;
             /** @description Precio en USD por millon de tokens de entrada, o null si no se conoce. */
             inputUsdPerMTok: number | null;
             /** @description Precio en USD por millon de tokens de salida, o null si no se conoce. */
@@ -5932,6 +5934,8 @@ export interface components {
             supportsVision?: boolean;
             /** @description Acepta documentos. */
             supportsDocuments?: boolean;
+            /** @description Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente. */
+            supportsPromptCache?: boolean;
             /** @description Orden en el selector (menor primero). */
             sortOrder?: number;
             /** @description USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo). */
@@ -5959,6 +5963,8 @@ export interface components {
             supportsVision?: boolean;
             /** @description Acepta documentos. */
             supportsDocuments?: boolean;
+            /** @description Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente. */
+            supportsPromptCache?: boolean;
             /** @description Orden en el selector (menor primero). */
             sortOrder?: number;
             /** @description USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo). */

@@ -15851,6 +15851,10 @@
             "type": "boolean",
             "description": "Si el modelo acepta documentos."
           },
+          "supportsPromptCache": {
+            "type": "boolean",
+            "description": "Si el modelo acepta puntos de cache de prompt."
+          },
           "inputUsdPerMTok": {
             "type": "number",
             "nullable": true,
@@ -15875,6 +15879,7 @@
           "supportsTools",
           "supportsVision",
           "supportsDocuments",
+          "supportsPromptCache",
           "inputUsdPerMTok",
           "outputUsdPerMTok",
           "sortOrder"
@@ -15991,6 +15996,10 @@
             "type": "boolean",
             "description": "Acepta documentos."
           },
+          "supportsPromptCache": {
+            "type": "boolean",
+            "description": "Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente."
+          },
           "sortOrder": {
             "type": "number",
             "description": "Orden en el selector (menor primero).",
@@ -16054,6 +16063,10 @@
           "supportsDocuments": {
             "type": "boolean",
             "description": "Acepta documentos."
+          },
+          "supportsPromptCache": {
+            "type": "boolean",
+            "description": "Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente."
           },
           "sortOrder": {
             "type": "number",
