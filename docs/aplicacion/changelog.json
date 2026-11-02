@@ -449,6 +449,12 @@
       "trigger_file": "apps/api/src/modules/ai/bedrock-converse.ts",
       "updated_docs": ["docs/aplicacion/modulos-backend.md", "docs/aplicacion/modelo-datos.md"],
       "summary": "Caché de prompt del asistente: capacidad supportsPromptCache en ai_model, puntos de caché en Converse y costo estimado con tarifa de caché."
+    },
+    {
+      "timestamp": "2026-11-04T15:00:00Z",
+      "trigger_file": "apps/mcp/src/tools/specs/escritura.ts",
+      "updated_docs": ["docs/aplicacion/modulos-backend.md", "apps/mcp/README.md"],
+      "summary": "MCP: 10 tools de escritura de planes, fases, dependencias, activos y documentos, permitidas como propuestas del asistente; pendientes 65 a 55."
     }
   ]
 }

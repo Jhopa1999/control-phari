@@ -26,10 +26,10 @@ export interface Exclusion {
 
 /**
  * Tope (ratchet) de exclusiones PENDIENTES. Las lecturas ya están expuestas
- * (BL-032 F1 entrega 3); quedan 65 pendientes, todas de escritura. Solo puede
+ * (BL-032 F1 entrega 3); quedan 55 pendientes, todas de escritura. Solo puede
  * BAJAR; el objetivo final es 0.
  */
-export const MAX_PENDIENTES = 65;
+export const MAX_PENDIENTES = 55;
 
 function permanente(
   reason: string,
@@ -168,17 +168,12 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
   ...pendiente(
     'escritura · assets',
     [
-      'POST /assets',
-      'PATCH /assets/{id}',
       'POST /assets/{id}/status',
     ],
   ),
   ...pendiente(
     'escritura · documents',
     [
-      'POST /documents',
-      'PATCH /documents/{id}',
-      'POST /documents/{id}/versions',
       'POST /documents/{id}/submit-approval',
       'POST /documents/{id}/review',
       'POST /documents/{id}/status',
@@ -200,23 +195,18 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
   ...pendiente(
     'escritura · plan',
     [
-      'PATCH /requests/{requestId}/plan',
       'POST /requests/{requestId}/plan/import-excel',
     ],
   ),
   ...pendiente(
     'escritura · plan-phases',
     [
-      'POST /plans/{planId}/phases',
-      'PATCH /plans/{planId}/phases/reorder',
-      'PATCH /plans/{planId}/phases/{phaseId}',
       'DELETE /plans/{planId}/phases/{phaseId}',
     ],
   ),
   ...pendiente(
     'escritura · task-dependencies',
     [
-      'POST /tasks/{id}/dependencies',
       'DELETE /tasks/{id}/dependencies/{predecessorTaskId}',
     ],
   ),

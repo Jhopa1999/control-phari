@@ -609,7 +609,9 @@ respeta el presupuesto mensual.
 cerrada de tools de escritura (`request.create`, `request.update`, `request.triage.create`,
 `request.priority.create`, `plan.create`, `task.create`, `task.update`, `task.status.update`,
 `issue.create`, `issue.update`, `issue.transition`, `meeting.create`, `meeting.update`,
-`commitment.create`, `commitment.update`, `commitment.transition`). Quedan
+`commitment.create`, `commitment.update`, `commitment.transition`, `plan.update`, `phase.create`,
+`phase.update`, `phase.reorder`, `task.dependency.add`, `asset.create`, `asset.update`,
+`document.create`, `document.update`, `document.version.create`). Quedan
 fuera las decisiones (aprobar, autorizar o devolver, aceptar tareas, compuertas de gobierno), el borrado
 y la administración. Al pedir una de esas tools el modelo debe rellenar `resumen_para_la_persona` (frase
 con nombres; no viaja a la API); el servicio valida ese resumen y los campos obligatorios del esquema, y
