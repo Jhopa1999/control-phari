@@ -120,8 +120,8 @@ describe('catálogo de tools', () => {
     );
   });
 
-  it('expone 101 tools: las 47 originales, 45 de lectura, help.search y 8 de escritura de coordinación', () => {
-    assert.equal(ALL_SPECS.length, 101);
+  it('expone 111 tools: las 47 originales, 45 de lectura, help.search y 18 de escritura (coordinación, planes, activos y documentos)', () => {
+    assert.equal(ALL_SPECS.length, 111);
   });
 });
 

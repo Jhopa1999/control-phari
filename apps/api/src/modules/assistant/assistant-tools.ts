@@ -70,6 +70,16 @@ export const PROPOSAL_TOOLS: Readonly<Record<string, string>> = {
   'commitment.create': 'Registrar compromiso',
   'commitment.update': 'Editar compromiso',
   'commitment.transition': 'Cambiar estado de compromiso',
+  'plan.update': 'Editar plan',
+  'phase.create': 'Crear fase',
+  'phase.update': 'Editar fase',
+  'phase.reorder': 'Reordenar fases',
+  'task.dependency.add': 'Añadir predecesora a una tarea',
+  'asset.create': 'Crear activo',
+  'asset.update': 'Editar activo',
+  'document.create': 'Crear documento',
+  'document.update': 'Editar documento',
+  'document.version.create': 'Crear versión de documento',
 };
 
 export function isProposalTool(name: string): boolean {
