@@ -17,19 +17,28 @@ import { MarkdownViewContent } from '@/components/markdown-view-content';
 import { Button } from '@/components/ui/button';
 import { capitalize, runningText, toolsSummary, type ToolView } from '@/lib/assistant-format';
 import { cn } from '@/lib/utils';
+import type { Attachment } from '@/lib/assistant';
 import { useAssistant, type AssistantMessageView } from './assistant-provider';
+import { MessageAttachments } from './message-attachments';
 import { ProposalCard } from './proposal-card';
 
 /** Superficie del mensaje: sobre el lienzo (panel) o dentro de una tarjeta (página). */
 export type MessageSurface = 'canvas' | 'card';
 
-export function UserMessage({ text }: { text: string }): React.ReactElement {
+export function UserMessage({
+  text,
+  attachments = [],
+}: {
+  text: string;
+  attachments?: ReadonlyArray<Attachment>;
+}): React.ReactElement {
   return (
     <article
       aria-label="Tu mensaje"
-      className="ml-auto max-w-[85%] rounded-xl bg-primary-subtle px-3.5 py-2.5 text-sm wrap-break-word whitespace-pre-wrap text-foreground"
+      className="ml-auto max-w-[85%] rounded-xl bg-primary-subtle px-3.5 py-2.5 text-sm wrap-break-word text-foreground"
     >
-      {text}
+      {text !== '' ? <p className="whitespace-pre-wrap">{text}</p> : null}
+      <MessageAttachments attachments={attachments} />
     </article>
   );
 }

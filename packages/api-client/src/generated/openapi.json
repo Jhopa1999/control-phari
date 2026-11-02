@@ -7930,6 +7930,133 @@
         ]
       }
     },
+    "/assistant/attachments": {
+      "post": {
+        "operationId": "AssistantController_uploadAttachment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadAttachmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Adjunto listo, con el texto extraído.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Archivo vacío, muy grande, de tipo no permitido o con contenido que no corresponde a su tipo."
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          },
+          "409": {
+            "description": "Asistente desactivado, sin presupuesto o con un modelo que no lee este tipo de archivo."
+          },
+          "422": {
+            "description": "El archivo no tiene contenido legible."
+          },
+          "502": {
+            "description": "No se pudo leer el archivo con el modelo."
+          }
+        },
+        "summary": "Sube un archivo (imagen o documento) para el chat: lo guarda y extrae su contenido como texto, que la persona puede revisar y editar antes de enviarlo.",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/assistant/attachments/{id}": {
+      "patch": {
+        "operationId": "AssistantController_updateAttachment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAttachmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Adjunto actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Texto vacío o demasiado largo."
+          },
+          "404": {
+            "description": "No existe o no es de la persona."
+          },
+          "409": {
+            "description": "El adjunto ya se envió."
+          }
+        },
+        "summary": "Corrige el texto extraído de un adjunto que aún no se envió.",
+        "tags": [
+          "assistant"
+        ]
+      },
+      "delete": {
+        "operationId": "AssistantController_removeAttachment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Adjunto eliminado."
+          },
+          "404": {
+            "description": "No existe o no es de la persona."
+          },
+          "409": {
+            "description": "El adjunto ya se envió."
+          }
+        },
+        "summary": "Quita un adjunto que aún no se envió (y borra su archivo).",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
     "/assistant/proposals/{id}/confirm": {
       "post": {
         "operationId": "AssistantController_confirmProposal",
@@ -16259,6 +16386,46 @@
           "agentCode"
         ]
       },
+      "AttachmentLimitsDto": {
+        "type": "object",
+        "properties": {
+          "maxFiles": {
+            "type": "number",
+            "description": "Archivos por mensaje."
+          },
+          "maxImageBytes": {
+            "type": "number",
+            "description": "Tamaño máximo de una imagen, en bytes."
+          },
+          "maxDocumentBytes": {
+            "type": "number",
+            "description": "Tamaño máximo de un documento (PDF, Word, Excel), en bytes."
+          },
+          "maxTextBytes": {
+            "type": "number",
+            "description": "Tamaño máximo de un archivo de texto (CSV, Markdown, TXT), en bytes."
+          },
+          "maxTextChars": {
+            "type": "number",
+            "description": "Caracteres máximos del texto extraído de un adjunto."
+          },
+          "extensions": {
+            "description": "Extensiones permitidas.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "maxFiles",
+          "maxImageBytes",
+          "maxDocumentBytes",
+          "maxTextBytes",
+          "maxTextChars",
+          "extensions"
+        ]
+      },
       "AssistantStatusDto": {
         "type": "object",
         "properties": {
@@ -16270,11 +16437,20 @@
             "type": "string",
             "nullable": true,
             "description": "Motivo legible (en español) cuando no está disponible; null si lo está."
+          },
+          "attachments": {
+            "description": "Límites de los adjuntos del chat.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AttachmentLimitsDto"
+              }
+            ]
           }
         },
         "required": [
           "available",
-          "reason"
+          "reason",
+          "attachments"
         ]
       },
       "ChatRequestDto": {
@@ -16287,13 +16463,98 @@
           },
           "message": {
             "type": "string",
-            "minLength": 1,
             "maxLength": 4000,
-            "description": "Mensaje de la persona."
+            "description": "Mensaje de la persona. Puede ir vacío solo si se envían adjuntos (attachmentIds)."
+          },
+          "attachmentIds": {
+            "maxItems": 5,
+            "description": "Adjuntos ya subidos y listos (POST /assistant/attachments) que acompañan al mensaje. Su texto extraído se entrega al asistente como dato no confiable.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
           "message"
+        ]
+      },
+      "UploadAttachmentDto": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "Imagen (PNG, JPEG, WebP, GIF) o documento (PDF, Word, Excel, CSV, Markdown, TXT)."
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "AttachmentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "Nombre original del archivo."
+          },
+          "contentType": {
+            "type": "string",
+            "description": "Tipo MIME declarado al subirlo."
+          },
+          "sizeBytes": {
+            "type": "number",
+            "description": "Tamaño del archivo en bytes."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "imagen",
+              "documento"
+            ]
+          },
+          "extractedText": {
+            "type": "string",
+            "description": "Texto que el asistente leerá (extraído del archivo; la persona puede editarlo antes de enviar)."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "El texto extraído se recortó por superar el máximo de caracteres."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "fileName",
+          "contentType",
+          "sizeBytes",
+          "kind",
+          "extractedText",
+          "truncated",
+          "createdAt"
+        ]
+      },
+      "UpdateAttachmentDto": {
+        "type": "object",
+        "properties": {
+          "extractedText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000,
+            "description": "Texto que se entregará al asistente."
+          }
+        },
+        "required": [
+          "extractedText"
         ]
       },
       "ProposalDto": {
@@ -16438,6 +16699,13 @@
               "$ref": "#/components/schemas/ToolCallDto"
             }
           },
+          "attachments": {
+            "description": "Archivos que la persona adjuntó a este mensaje.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttachmentDto"
+            }
+          },
           "proposals": {
             "description": "Propuestas de acción hechas en este turno (con su estado actual).",
             "type": "array",
@@ -16455,6 +16723,7 @@
           "role",
           "text",
           "tools",
+          "attachments",
           "proposals",
           "createdAt"
         ]

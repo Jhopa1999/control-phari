@@ -107,7 +107,7 @@ export function ChatThread({
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
           {messages.map((message, index) =>
             message.role === 'user' ? (
-              <UserMessage key={message.id} text={message.text} />
+              <UserMessage key={message.id} text={message.text} attachments={message.attachments} />
             ) : (
               <AssistantMessage
                 key={message.id}
