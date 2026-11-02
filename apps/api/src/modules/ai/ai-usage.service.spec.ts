@@ -1,5 +1,9 @@
 import { ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import {
+  NotificationService,
+  NotificationType,
+} from '../notification/notification.service';
 import { AiUsageService } from './ai-usage.service';
 
 /**
@@ -50,8 +54,14 @@ describe('AiUsageService', () => {
           },
         ]),
       },
+      user: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'admin-1' }, { id: 'admin-2' }]),
+      },
     } as unknown as PrismaService;
-    return { service: new AiUsageService(prisma), prisma };
+    const notifications = {
+      notify: jest.fn().mockResolvedValue(undefined),
+    } as unknown as NotificationService;
+    return { service: new AiUsageService(prisma, notifications), prisma, notifications };
   }
 
   describe('record', () => {
@@ -116,6 +126,55 @@ describe('AiUsageService', () => {
           durationMs: 1,
         }),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('notificaciones al administrador', () => {
+    const entry = {
+      userId: 'u-1',
+      agentCode: 'ASISTENTE',
+      modelId: 'm',
+      usage: USAGE, // cuesta 2 USD
+      durationMs: 1,
+    };
+
+    it('al cruzar el umbral del 80% avisa a los administradores activos', async () => {
+      const { service, notifications, prisma } = makeDeps({ spent: 79 });
+      await service.record(entry);
+      expect(prisma.user.findMany).toHaveBeenCalledWith({
+        where: { isAdmin: true, active: true },
+        select: { id: true },
+      });
+      expect(notifications.notify).toHaveBeenCalledTimes(1);
+      expect(notifications.notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userIds: ['admin-1', 'admin-2'],
+          type: NotificationType.AI_BUDGET_ALERT,
+          link: '/administracion/ia',
+        }),
+      );
+    });
+
+    it('al agotar el tope avisa con el tipo de agotado', async () => {
+      const { service, notifications } = makeDeps({ spent: 99 });
+      await service.record(entry);
+      const types = (notifications.notify as jest.Mock).mock.calls.map((c) => c[0].type);
+      expect(types).toContain(NotificationType.AI_BUDGET_EXCEEDED);
+    });
+
+    it('si el umbral ya estaba cruzado no vuelve a avisar', async () => {
+      const { service, notifications } = makeDeps({ spent: 85 });
+      await service.record(entry);
+      expect(notifications.notify).not.toHaveBeenCalled();
+    });
+
+    it('sin tope no avisa', async () => {
+      const { service, notifications } = makeDeps({
+        spent: 9999,
+        config: { monthlyBudgetUsd: null, budgetAlertPct: 80 },
+      });
+      await service.record(entry);
+      expect(notifications.notify).not.toHaveBeenCalled();
     });
   });
 

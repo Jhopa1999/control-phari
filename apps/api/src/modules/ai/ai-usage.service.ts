@@ -1,5 +1,9 @@
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import {
+  NotificationService,
+  NotificationType,
+} from '../notification/notification.service';
 import type { ConverseUsage } from './bedrock-converse';
 import {
   AiBudgetStatusDto,
@@ -50,7 +54,10 @@ function round(value: number): number {
 export class AiUsageService {
   private readonly logger = new Logger(AiUsageService.name);
 
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(NotificationService) private readonly notifications: NotificationService,
+  ) {}
 
   /**
    * Registra una llamada. Un fallo al registrar NO debe romper la respuesta al
@@ -122,10 +129,39 @@ export class AiUsageService {
       this.logger.warn(
         `El gasto de IA del mes alcanzo el ${alertPct}% del tope (USD ${budget}).`,
       );
+      await this.notifyAdmins(
+        NotificationType.AI_BUDGET_ALERT,
+        'El gasto de IA llegó al umbral de alerta',
+        `El consumo estimado de IA del mes alcanzó el ${alertPct}% del tope mensual (USD ${budget}).`,
+      );
     }
     if (before < budget && before + added >= budget) {
       this.logger.warn(`Se agoto el presupuesto mensual de IA (USD ${budget}).`);
+      await this.notifyAdmins(
+        NotificationType.AI_BUDGET_EXCEEDED,
+        'Se agotó el presupuesto de IA del mes',
+        `El tope mensual de IA (USD ${budget}) se agotó: el asistente y las sugerencias de IA no responderán hasta el mes siguiente o hasta que subas el tope.`,
+      );
     }
+  }
+
+  /** Avisa a las personas administradoras (flag isAdmin) en el centro de notificaciones. */
+  private async notifyAdmins(
+    type: NotificationType,
+    title: string,
+    message: string,
+  ): Promise<void> {
+    const admins = await this.prisma.user.findMany({
+      where: { isAdmin: true, active: true },
+      select: { id: true },
+    });
+    await this.notifications.notify({
+      userIds: admins.map((a) => a.id),
+      type,
+      title,
+      message,
+      link: '/administracion/ia',
+    });
   }
 
   /** Estado del presupuesto del mes indicado (por defecto, el actual). */

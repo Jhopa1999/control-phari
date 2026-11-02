@@ -93,7 +93,7 @@ abrir, cada minuto y al volver a la pestaña.
 | `/administracion/areas` | Áreas | Crear y editar áreas organizativas (por ejemplo, Analítica) que agrupan procesos: listado, alta y edición de nombre/estado/orden. Roles ADMIN y jefe de área (`areas`). |
 | `/administracion/procesos` | Procesos | Crear y editar procesos (por ejemplo, BI, Integraciones, IA) agrupados por área: el alta exige un área activa y la edición no mueve el proceso de área. Rol ADMIN o jefe de área (`processesAdmin`). |
 | `/administracion/configuracion-smtp` | Configuración SMTP | Configurar el servidor SMTP en runtime (host, puerto, remitente, contraseña write-only) con prueba de envío, y gestionar los administradores del sistema (toggle `isAdmin`). Solo rol ADMIN (`systemSettings`). |
-| `/administracion/ia` | Agentes de IA | Configurar los agentes de IA (credenciales de AWS Bedrock, modelo, prompt y parámetros) desde la plataforma. Solo rol ADMIN (`aiSettings`). |
+| `/administracion/ia` | Agentes de IA | Configurar los agentes de IA (credenciales de AWS Bedrock, modelo, prompt y parámetros) desde la plataforma. Incluye el **consumo del mes** (selector de los últimos 12 meses, gasto, tope, porcentaje usado, llamadas y tokens, barra del presupuesto con la marca del umbral de alerta, aviso de llamadas sin precio y desglose por agente y por modelo), el **presupuesto** (tope mensual en USD, vacío = sin tope, y porcentaje de alerta; al llegar al umbral y al agotarse se notifica a los administradores) y el **catálogo de modelos** (alta, edición de nombre, nivel, capacidades y precios por millón de tokens, y habilitar o deshabilitar con confirmación si un agente lo usa). Solo rol ADMIN (`aiSettings`). |
 
 ## Asistente de IA (`/asistente/*`)
 
