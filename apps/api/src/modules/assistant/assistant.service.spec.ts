@@ -86,10 +86,14 @@ interface Opts {
   proposalsByMessage?: Map<string, unknown[]>;
   callTool?: jest.Mock;
   history?: Array<{
+    id?: string;
+    tools?: unknown;
     role: string;
     text: string;
     attachments?: Array<{ fileName: string; kind: string; extractedText: string }>;
   }>;
+  /** Propuesta idéntica ya existente que `findActiveDuplicate` devuelve. */
+  duplicate?: { status: string; resultId: string | null };
   /** Adjuntos que `requireForSend` devuelve al preparar el chat. */
   attachmentRows?: Array<{ id: string; fileName: string }>;
   ownedConversation?: boolean;
@@ -181,6 +185,7 @@ function makeDeps(opts: Opts = {}) {
       summary: input.summary,
     })),
     attachToMessage: jest.fn().mockResolvedValue(undefined),
+    findActiveDuplicate: jest.fn().mockResolvedValue(opts.duplicate ?? null),
   } as unknown as AssistantProposalsService;
   const attachments = {
     requireForSend: jest.fn().mockResolvedValue(opts.attachmentRows ?? []),
@@ -407,7 +412,16 @@ describe('AssistantService · turno', () => {
 
     const saved = deps.messagesCreated.find((m) => m.role === 'assistant');
     expect(saved?.text).toBe('Hay 1 solicitud.');
-    expect(saved?.tools).toEqual([{ name: 'request.list', label: 'solicitudes', status: 'done' }]);
+    // Además de lo que ve la interfaz, se guarda la memoria interna (resumen con ids).
+    expect(saved?.tools).toEqual([
+      {
+        name: 'request.list',
+        label: 'solicitudes',
+        status: 'done',
+        memory: '- id=r1',
+        args: '{"state":"REGISTRADA"}',
+      },
+    ]);
     expect(deps.usage.record).toHaveBeenCalledTimes(2);
   });
 
@@ -697,5 +711,244 @@ describe('AssistantService · conversaciones privadas', () => {
     const deps = makeDeps();
     await deps.service.removeConversation(actor(), CONV_ID);
     expect(deps.prisma.aiConversation.delete).toHaveBeenCalledWith({ where: { id: CONV_ID } });
+  });
+});
+
+describe('AssistantService · memoria entre turnos y validación de identificadores', () => {
+  const PROCESS_ID = '9f54f9ca-bf0d-4ec9-99d8-d51ec7438cbb';
+  const INVENTED_ID = '8c5a8c5a-8c5a-8c5a-8c5a-8c5a8c5a8c5a';
+  const WRITE_TOOL = {
+    name: 'request.create',
+    description: 'Crea una solicitud',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        body: {
+          type: 'object',
+          properties: { title: { type: 'string' }, mainProcessId: { type: 'string' } },
+          required: ['title', 'mainProcessId'],
+        },
+      },
+      required: ['body'],
+    },
+    readOnly: false,
+  };
+  const READ_TOOL = {
+    name: 'process.list',
+    description: 'Lista procesos',
+    inputSchema: { type: 'object' },
+    readOnly: true,
+  };
+
+  const propose = (mainProcessId: string): ConverseStreamEvent[][] => [
+    [
+      {
+        type: 'toolUse',
+        toolUseId: 't1',
+        name: 'request.create',
+        input: {
+          body: { title: 'LUL240', mainProcessId },
+          resumen_para_la_persona: 'Crear la solicitud «LUL240» en BI',
+        },
+      },
+      done('tool_use'),
+    ],
+    [{ type: 'text', text: 'Listo.' }, done('end_turn')],
+  ];
+
+  const toolResultText = (deps: ReturnType<typeof makeDeps>): string => {
+    const second = deps.converseStream.mock.calls[1][0] as unknown as {
+      messages: Array<{ content: Array<{ text?: string }> }>;
+    };
+    return second.messages[second.messages.length - 1].content[0].text ?? '';
+  };
+
+  it('rechaza una propuesta con un identificador que nunca apareció en la conversación', async () => {
+    const deps = makeDeps({ tools: [READ_TOOL, WRITE_TOOL], streams: propose(INVENTED_ID) });
+    await runTurn(deps);
+    expect(deps.proposals.create).not.toHaveBeenCalled();
+    expect(toolResultText(deps)).toContain(INVENTED_ID);
+    expect(toolResultText(deps)).toMatch(/no aparecieron en ninguna consulta/);
+  });
+
+  it('rechaza un identificador cortado o mal formado en un campo de id', async () => {
+    const deps = makeDeps({ tools: [READ_TOOL, WRITE_TOOL], streams: propose('c8d4e5f6-7890-...') });
+    await runTurn(deps);
+    expect(deps.proposals.create).not.toHaveBeenCalled();
+    expect(toolResultText(deps)).toMatch(/incompletos o mal formados/);
+  });
+
+  it('acepta un identificador que devolvió una consulta de ESTE turno', async () => {
+    const streams: ConverseStreamEvent[][] = [
+      [{ type: 'toolUse', toolUseId: 't0', name: 'process.list', input: {} }, done('tool_use')],
+      ...propose(PROCESS_ID),
+    ];
+    const deps = makeDeps({
+      tools: [READ_TOOL, WRITE_TOOL],
+      streams,
+      callTool: jest.fn().mockResolvedValue({
+        text: JSON.stringify([{ id: PROCESS_ID, code: 'BI', name: 'Business Intelligence' }]),
+        isError: false,
+      }),
+    });
+    await runTurn(deps);
+    expect(deps.proposals.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('acepta un identificador que quedó en la memoria de un turno anterior', async () => {
+    const deps = makeDeps({
+      tools: [READ_TOOL, WRITE_TOOL],
+      streams: propose(PROCESS_ID),
+      history: [
+        { role: 'user', text: 'crea la solicitud en BI' },
+        {
+          id: 'm-prev',
+          role: 'assistant',
+          text: 'Voy a crearla.',
+          tools: [
+            {
+              name: 'process.list',
+              label: 'procesos',
+              status: 'done',
+              memory: `- id=${PROCESS_ID} · code="BI" · name="Business Intelligence"`,
+            },
+          ],
+        },
+        { role: 'user', text: 'dale' },
+      ],
+    });
+    await runTurn(deps, 'dale');
+    expect(deps.proposals.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('el modelo recibe la memoria de las consultas y el estado ACTUAL de las propuestas', async () => {
+    const deps = makeDeps({
+      tools: [READ_TOOL, WRITE_TOOL],
+      history: [
+        { role: 'user', text: 'crea la solicitud en BI' },
+        {
+          id: 'm-prev',
+          role: 'assistant',
+          text: 'Preparé la solicitud.',
+          tools: [
+            {
+              name: 'process.list',
+              label: 'procesos',
+              status: 'done',
+              memory: `- id=${PROCESS_ID} · code="BI"`,
+            },
+          ],
+        },
+        { role: 'user', text: 'ahora qué sigue' },
+      ],
+      proposalsByMessage: new Map([
+        [
+          'm-prev',
+          [
+            {
+              id: 'p-1',
+              toolName: 'request.create',
+              title: 'Crear solicitud',
+              summary: 'Crear la solicitud «LUL240» en BI',
+              status: 'CONFIRMADA',
+              resultId: 'b94af6cd-8856-40c8-bd31-8eefefdf8e10',
+              resultTitle: 'LUL240',
+              error: null,
+            },
+          ],
+        ],
+      ]),
+    });
+    await runTurn(deps, 'ahora qué sigue');
+    const request = deps.converseStream.mock.calls[0][0] as unknown as {
+      system: string;
+      messages: Array<{ role: string; content: Array<{ text: string }> }>;
+    };
+    const assistantTexts = request.messages
+      .filter((m) => m.role === 'assistant')
+      .flatMap((m) => m.content.map((b) => b.text));
+    const joined = assistantTexts.join('\n');
+    expect(joined).toContain('<memoria_herramientas>');
+    expect(joined).toContain(`id=${PROCESS_ID}`);
+    expect(joined).toContain('<propuestas>');
+    expect(joined).toContain('CONFIRMADA');
+    expect(joined).toContain('b94af6cd-8856-40c8-bd31-8eefefdf8e10');
+    // La memoria va ANTES del texto del turno y el prompt explica cómo usarla.
+    expect(assistantTexts.indexOf('Preparé la solicitud.')).toBeGreaterThan(0);
+    expect(request.system).toMatch(/<memoria_herramientas>/);
+  });
+
+  it('una consulta correcta se guarda con su resumen de ids para los turnos siguientes', async () => {
+    const streams: ConverseStreamEvent[][] = [
+      [{ type: 'toolUse', toolUseId: 't0', name: 'process.list', input: { q: 'bi' } }, done('tool_use')],
+      [{ type: 'text', text: 'Encontré BI.' }, done('end_turn')],
+    ];
+    const deps = makeDeps({
+      tools: [READ_TOOL, WRITE_TOOL],
+      streams,
+      callTool: jest.fn().mockResolvedValue({
+        text: JSON.stringify([{ id: PROCESS_ID, code: 'BI', name: 'Business Intelligence' }]),
+        isError: false,
+      }),
+    });
+    await runTurn(deps);
+    const saved = deps.messagesCreated.find((m) => m.role === 'assistant') as {
+      tools: Array<{ name: string; memory?: string; args?: string }>;
+    };
+    expect(saved.tools[0].name).toBe('process.list');
+    expect(saved.tools[0].memory).toContain(`id=${PROCESS_ID}`);
+    expect(saved.tools[0].memory).toContain('code="BI"');
+    expect(saved.tools[0].args).toBe('{"q":"bi"}');
+  });
+
+  it('no repite una acción que la persona ya confirmó ni una pendiente idéntica', async () => {
+    const confirmed = makeDeps({
+      tools: [READ_TOOL, WRITE_TOOL],
+      streams: propose('proc-1'),
+      duplicate: { status: 'CONFIRMADA', resultId: 'b94af6cd-8856-40c8-bd31-8eefefdf8e10' },
+    });
+    await runTurn(confirmed);
+    expect(confirmed.proposals.create).not.toHaveBeenCalled();
+    expect(toolResultText(confirmed)).toMatch(/ya se realizó/);
+    expect(toolResultText(confirmed)).toContain('b94af6cd-8856-40c8-bd31-8eefefdf8e10');
+
+    const pending = makeDeps({
+      tools: [READ_TOOL, WRITE_TOOL],
+      streams: propose('proc-1'),
+      duplicate: { status: 'PENDIENTE', resultId: null },
+    });
+    await runTurn(pending);
+    expect(pending.proposals.create).not.toHaveBeenCalled();
+    expect(toolResultText(pending)).toMatch(/esperando la confirmación/);
+  });
+
+  it('el historial que ve la interfaz no expone la memoria interna', async () => {
+    const deps = makeDeps();
+    (deps.prisma.aiMessage.findMany as jest.Mock).mockResolvedValue([
+      {
+        id: 'm-1',
+        role: 'assistant',
+        text: 'Hola',
+        tools: [{ name: 'process.list', label: 'procesos', status: 'done', memory: '- id=x', args: '{}' }],
+        createdAt: new Date('2026-11-05T10:00:00Z'),
+      },
+    ]);
+    const detail = await deps.service.getConversation(actor(), CONV_ID);
+    expect(detail.messages[0].tools).toEqual([{ name: 'process.list', label: 'procesos', status: 'done' }]);
+  });
+
+  it('plan.import se ofrece como propuesta aunque el MCP lo marque destructivo, y el prompt explica el flujo', async () => {
+    const { isToolAllowed } = await import('./assistant-tools');
+    expect(isToolAllowed('plan.import', false, true)).toBe(true);
+    // Las demás destructivas siguen fuera.
+    expect(isToolAllowed('request.create', false, true)).toBe(false);
+    expect(isToolAllowed('request.delete', false, true)).toBe(false);
+
+    const deps = makeDeps({ tools: [READ_TOOL, WRITE_TOOL] });
+    await runTurn(deps);
+    const system = (deps.converseStream.mock.calls[0][0] as unknown as { system: string }).system;
+    expect(system).toMatch(/Flujo de una solicitud/);
+    expect(system).toMatch(/UNA sola propuesta plan\.import/);
+    expect(system).toMatch(/Nunca inventes/);
   });
 });

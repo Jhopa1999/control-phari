@@ -619,13 +619,30 @@ como **dato no confiable**: el contenido no puede cerrar la etiqueta y el prompt
 nunca se obedecen instrucciones que aparezcan en un adjunto. Los adjuntos de mensajes anteriores se
 incluyen en el historial de la conversación.
 
+**Memoria entre turnos.** El modelo solo conserva el texto de la conversación, así que antes inventaba
+identificadores y repetía acciones ya hechas. Ahora, por cada consulta correcta, el turno guarda en
+`ai_message.tools` un resumen con los ids (`memory`, un renglón por registro con su id y nombre, máx. 40)
+y los argumentos (`args`); al armar el historial se reinyecta como `<memoria_herramientas>` junto con
+`<propuestas>`, el estado **actual** de cada propuesta del turno (confirmada con el id creado, fallida con
+su motivo, pendiente, descartada o vencida). Esa memoria no se expone por la API (`GET
+/assistant/conversations/:id` sigue devolviendo solo nombre, etiqueta y estado). Antes de registrar una
+propuesta el servicio verifica que (1) todo identificador esté completo y haya aparecido en la
+conversación (en un mensaje, un adjunto, una consulta o el resultado de una acción ya hecha) y (2) no
+exista ya una propuesta idéntica pendiente o confirmada; si no, la rechaza con el motivo para que el modelo
+consulte el dato correcto o no repita la acción. El prompt de sistema explica el flujo de una solicitud
+(registrada → triage → priorización → aprobación humana → plan), pide consultar el estado antes de
+proponer un paso, cargar cronogramas con una sola propuesta `plan.import` y no pedir lo que se puede
+consultar. El agente `ASISTENTE` nace con 8192 tokens de salida (un plan largo no cabe en 2048).
+
 **Propuestas de acción (F3).** El asistente nunca escribe datos: solo puede *proponer* con una lista
 cerrada de tools de escritura (`request.create`, `request.update`, `request.triage.create`,
 `request.priority.create`, `plan.create`, `task.create`, `task.update`, `task.status.update`,
 `issue.create`, `issue.update`, `issue.transition`, `meeting.create`, `meeting.update`,
 `commitment.create`, `commitment.update`, `commitment.transition`, `plan.update`, `phase.create`,
 `phase.update`, `phase.reorder`, `task.dependency.add`, `asset.create`, `asset.update`,
-`document.create`, `document.update`, `document.version.create`). Quedan
+`document.create`, `document.update`, `document.version.create` y `plan.import`, que carga un cronograma
+completo —fases, tareas y dependencias— en **una sola** propuesta y es la única tool marcada como
+destructiva que se admite, porque la API solo la aplica sobre un plan en borrador o devuelto). Quedan
 fuera las decisiones (aprobar, autorizar o devolver, aceptar tareas, compuertas de gobierno), el borrado
 y la administración. Al pedir una de esas tools el modelo debe rellenar `resumen_para_la_persona` (frase
 con nombres; no viaja a la API); el servicio valida ese resumen y los campos obligatorios del esquema, y

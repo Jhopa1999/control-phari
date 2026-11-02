@@ -115,7 +115,9 @@ export const DEFAULT_AGENT_CONFIGS: readonly DefaultAgentConfig[] = [
     temperature: 0.3,
     // Respuestas conversacionales y varios turnos con herramientas: mas margen
     // de tokens y tiempo que el triage (el maximo permitido es 60 s).
-    maxTokens: 2048,
+    // 8192: cargar un cronograma completo (plan.import con decenas de tareas)
+    // genera un documento largo; con menos, la respuesta se corta a media tool.
+    maxTokens: 8192,
     timeoutMs: 60000,
   },
 ];
