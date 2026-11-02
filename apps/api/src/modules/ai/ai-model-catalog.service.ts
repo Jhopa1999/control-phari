@@ -69,6 +69,7 @@ export class AiModelCatalogService implements OnModuleInit {
       supportsTools: row.supportsTools,
       supportsVision: row.supportsVision,
       supportsDocuments: row.supportsDocuments,
+      supportsPromptCache: row.supportsPromptCache,
       inputUsdPerMTok: row.inputUsdPerMTok,
       outputUsdPerMTok: row.outputUsdPerMTok,
       sortOrder: row.sortOrder,
@@ -111,6 +112,15 @@ export class AiModelCatalogService implements OnModuleInit {
     return row ? row.supportsTemperature : true;
   }
 
+  /**
+   * Si el modelo acepta puntos de cache de prompt. Un modelo desconocido se asume
+   * que no (no enviar cachePoint a un modelo que podria rechazarlo).
+   */
+  async supportsPromptCache(modelId: string): Promise<boolean> {
+    const row = await this.prisma.aiModel.findUnique({ where: { modelId } });
+    return row ? row.supportsPromptCache : false;
+  }
+
   async create(
     actor: CurrentActor,
     dto: CreateAiModelDto,
@@ -139,6 +149,9 @@ export class AiModelCatalogService implements OnModuleInit {
             : {}),
           ...(dto.supportsDocuments !== undefined
             ? { supportsDocuments: dto.supportsDocuments }
+            : {}),
+          ...(dto.supportsPromptCache !== undefined
+            ? { supportsPromptCache: dto.supportsPromptCache }
             : {}),
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
           ...(dto.inputUsdPerMTok !== undefined
@@ -190,6 +203,9 @@ export class AiModelCatalogService implements OnModuleInit {
             : {}),
           ...(dto.supportsDocuments !== undefined
             ? { supportsDocuments: dto.supportsDocuments }
+            : {}),
+          ...(dto.supportsPromptCache !== undefined
+            ? { supportsPromptCache: dto.supportsPromptCache }
             : {}),
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
           ...(dto.inputUsdPerMTok !== undefined

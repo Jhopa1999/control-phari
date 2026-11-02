@@ -1234,6 +1234,9 @@ model AiModel {
   supportsTools       Boolean  @default(true) @map("supports_tools")
   supportsVision      Boolean  @default(false) @map("supports_vision")
   supportsDocuments   Boolean  @default(false) @map("supports_documents")
+  /// Acepta puntos de cache (cachePoint) de Converse: las definiciones de tools y el
+  /// prompt de sistema se reutilizan entre llamadas y se cobran mas barato.
+  supportsPromptCache Boolean  @default(false) @map("supports_prompt_cache")
   sortOrder           Int      @default(0) @map("sort_order")
   /// Precio en USD por millon de tokens (entrada/salida) para estimar el costo.
   /// null = sin precio: el consumo se registra sin costo y se reporta aparte.

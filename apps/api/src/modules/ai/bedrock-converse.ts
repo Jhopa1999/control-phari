@@ -102,6 +102,13 @@ export interface ConverseRequest {
   maxTokens: number;
   timeoutMs: number;
   credentials?: ConverseCredentials;
+  /**
+   * Cache de prompt: marca con `cachePoint` el final de las tools, del prompt de
+   * sistema y de la conversacion para reutilizarlos entre llamadas. Solo para
+   * modelos con la capacidad `supportsPromptCache`; un modelo que no la admite
+   * rechazaria el punto de cache.
+   */
+  cache?: boolean;
 }
 
 /** Respuesta completa (sin streaming). */
@@ -169,27 +176,52 @@ function toSdkBlock(block: ConverseBlock): ContentBlock {
   }
 }
 
-export function toSdkMessages(messages: ConverseMessage[]): Message[] {
-  return messages.map((m) => ({
+/** Punto de cache de Converse (TTL por defecto de 5 minutos). */
+const CACHE_POINT = { cachePoint: { type: 'default' as const } };
+
+/**
+ * Mensajes del SDK. Con `cache`, el ultimo mensaje termina en un punto de cache:
+ * en un turno con varias rondas de herramientas, cada ronda reutiliza lo ya
+ * enviado y solo paga como entrada lo nuevo.
+ */
+export function toSdkMessages(
+  messages: ConverseMessage[],
+  cache = false,
+): Message[] {
+  const out: Message[] = messages.map((m) => ({
     role: m.role,
     content: m.content.map(toSdkBlock),
   }));
+  if (cache && out.length > 0) {
+    const last = out[out.length - 1];
+    out[out.length - 1] = { ...last, content: [...(last.content ?? []), CACHE_POINT] };
+  }
+  return out;
+}
+
+/** Prompt de sistema; con `cache`, seguido de un punto de cache. */
+export function toSdkSystem(
+  system: string | undefined,
+  cache = false,
+): Array<{ text: string } | typeof CACHE_POINT> | undefined {
+  if (!system) return undefined;
+  return cache ? [{ text: system }, CACHE_POINT] : [{ text: system }];
 }
 
 /** `undefined` si no hay tools (Converse rechaza un toolConfig vacio). */
 export function toSdkToolConfig(
   tools: ConverseTool[] | undefined,
+  cache = false,
 ): ToolConfiguration | undefined {
   if (!tools || tools.length === 0) return undefined;
-  return {
-    tools: tools.map((t) => ({
-      toolSpec: {
-        name: toBedrockToolName(t.name),
-        description: t.description,
-        inputSchema: { json: t.inputSchema as never },
-      },
-    })),
-  };
+  const specs = tools.map((t) => ({
+    toolSpec: {
+      name: toBedrockToolName(t.name),
+      description: t.description,
+      inputSchema: { json: t.inputSchema as never },
+    },
+  }));
+  return { tools: cache ? [...specs, CACHE_POINT] : specs };
 }
 
 // ------------------------------------------------------------------ respuesta

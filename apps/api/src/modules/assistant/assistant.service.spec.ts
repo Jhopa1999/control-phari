@@ -138,6 +138,7 @@ function makeDeps(opts: Opts = {}) {
 
   const models = {
     supportsTemperature: jest.fn().mockResolvedValue(true),
+    supportsPromptCache: jest.fn().mockResolvedValue(true),
   } as unknown as AiModelCatalogService;
   const usage = {
     budgetStatus: jest.fn().mockResolvedValue({ exceeded: opts.exceeded ?? false }),
@@ -175,7 +176,7 @@ function makeDeps(opts: Opts = {}) {
     attachToMessage: jest.fn().mockResolvedValue(undefined),
   } as unknown as AssistantProposalsService;
   const service = new AssistantService(prisma, bedrock, models, usage, gateway, proposals);
-  return { service, prisma, converseStream, usage, session, gateway, messagesCreated, proposals };
+  return { service, prisma, converseStream, usage, session, gateway, messagesCreated, proposals, models };
 }
 
 async function runTurn(
@@ -563,6 +564,21 @@ describe('AssistantService · ayuda del portal', () => {
     await runTurn(deps);
     const system = (deps.converseStream.mock.calls[0][0] as unknown as { system: string }).system;
     expect(system).not.toContain('help.search');
+  });
+
+  it('con un modelo que admite cache de prompt pide los puntos de cache', async () => {
+    const deps = makeDeps();
+    await runTurn(deps);
+    const request = deps.converseStream.mock.calls[0][0] as unknown as { cache?: boolean };
+    expect(request.cache).toBe(true);
+  });
+
+  it('con un modelo sin cache de prompt no envia puntos de cache', async () => {
+    const deps = makeDeps();
+    (deps.models.supportsPromptCache as jest.Mock).mockResolvedValue(false);
+    await runTurn(deps);
+    const request = deps.converseStream.mock.calls[0][0] as unknown as { cache?: boolean };
+    expect(request.cache).toBeUndefined();
   });
 });
 

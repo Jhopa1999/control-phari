@@ -122,9 +122,9 @@ modelo. Sustituye a la lista cerrada en código. La API siembra los modelos por 
 arrancar (`ensureDefaults`, valores en `bedrock-model-catalog.ts`) sin pisar cambios del admin.
 - Campos clave: `modelId` (`model_id`, único; id invocable/perfil de inferencia), `label`,
   `tier` (`default`/`premium`/`other`), `enabled` (default `true`), `supportsTemperature`,
-  `supportsTools`, `supportsVision`, `supportsDocuments`, `sortOrder`.
+  `supportsTools`, `supportsVision`, `supportsDocuments`, `supportsPromptCache` (default `false`; la migración `20261104120000_ai_model_prompt_cache` la activa en los Claude 4.5 sembrados), `sortOrder`.
 - Reglas: un agente solo puede usar un modelo existente y habilitado; si el modelo no soporta
-  `temperature` (p. ej. Claude 5.x) la invocación la omite.
+  `temperature` (p. ej. Claude 5.x) la invocación la omite; si el modelo no soporta `supportsPromptCache`, el asistente no envía puntos de caché de prompt.
 - Restricciones/índices: `model_id` único; índice por (`enabled`, `sort_order`).
 - Precios: `inputUsdPerMTok` / `outputUsdPerMTok` (`input_usd_per_mtok`, `output_usd_per_mtok`,
   USD por millón de tokens, nullables) para estimar el costo del consumo.

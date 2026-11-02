@@ -7,6 +7,7 @@ import {
   mapUsage,
   toBedrockToolName,
   toSdkMessages,
+  toSdkSystem,
   toSdkToolConfig,
   type ConverseStreamEvent,
 } from './bedrock-converse';
@@ -98,6 +99,38 @@ describe('peticion', () => {
         inputSchema: { json: { type: 'object' } },
       },
     });
+    // Sin cache no hay punto de cache.
+    expect(cfg?.tools).toHaveLength(1);
+  });
+
+  it('cache: punto de cache tras las tools, el system y el ultimo mensaje', () => {
+    const tools = toSdkToolConfig(
+      [{ name: 'request.list', description: 'Lista', inputSchema: { type: 'object' } }],
+      true,
+    );
+    expect(tools?.tools).toHaveLength(2);
+    expect(tools?.tools?.[1]).toEqual({ cachePoint: { type: 'default' } });
+
+    expect(toSdkSystem('Eres un asistente')).toEqual([{ text: 'Eres un asistente' }]);
+    expect(toSdkSystem('Eres un asistente', true)).toEqual([
+      { text: 'Eres un asistente' },
+      { cachePoint: { type: 'default' } },
+    ]);
+    expect(toSdkSystem(undefined, true)).toBeUndefined();
+
+    const messages = toSdkMessages(
+      [
+        { role: 'user', content: [{ type: 'text', text: 'hola' }] },
+        { role: 'assistant', content: [{ type: 'text', text: 'ok' }] },
+      ],
+      true,
+    );
+    expect(messages[0].content).toEqual([{ text: 'hola' }]);
+    expect(messages[1].content).toEqual([{ text: 'ok' }, { cachePoint: { type: 'default' } }]);
+    // La entrada no se muta.
+    expect(toSdkMessages([{ role: 'user', content: [{ type: 'text', text: 'x' }] }])[0].content).toEqual([
+      { text: 'x' },
+    ]);
   });
 });
 

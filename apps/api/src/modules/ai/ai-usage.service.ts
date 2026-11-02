@@ -15,6 +15,10 @@ import {
 const DEFAULT_BUDGET_USD = 100;
 const DEFAULT_ALERT_PCT = 80;
 
+/** Factores sobre el precio de entrada para los tokens de cache de prompt. */
+const CACHE_READ_FACTOR = 0.1;
+const CACHE_WRITE_FACTOR = 1.25;
+
 /** Datos de una llamada al modelo a registrar. */
 export interface AiUsageEntry {
   userId: string | null;
@@ -101,9 +105,12 @@ export class AiUsageService {
     if (!model || model.inputUsdPerMTok === null || model.outputUsdPerMTok === null) {
       return null;
     }
-    // Los tokens de cache se cobran como entrada (estimacion conservadora).
+    // Tarifa de cache de Bedrock (TTL de 5 min): leer del cache cuesta el 10% de
+    // la entrada y escribirlo, un 25% mas. `inputTokens` no incluye los de cache.
     const input =
-      usage.inputTokens + usage.cacheReadInputTokens + usage.cacheWriteInputTokens;
+      usage.inputTokens +
+      usage.cacheReadInputTokens * CACHE_READ_FACTOR +
+      usage.cacheWriteInputTokens * CACHE_WRITE_FACTOR;
     return round(
       (input * model.inputUsdPerMTok + usage.outputTokens * model.outputUsdPerMTok) /
         1_000_000,

@@ -154,6 +154,12 @@ describe('AiModelCatalogService', () => {
     });
   });
 
+  it('supportsPromptCache: respeta la capacidad y asume false si el modelo es desconocido', async () => {
+    expect(await makeDeps(row({ supportsPromptCache: true })).service.supportsPromptCache('x')).toBe(true);
+    expect(await makeDeps(row({ supportsPromptCache: false })).service.supportsPromptCache('x')).toBe(false);
+    expect(await makeDeps(null).service.supportsPromptCache('x')).toBe(false);
+  });
+
   it('las entradas del catalogo incluyen sortOrder', async () => {
     const { service, prisma } = makeDeps(row({ sortOrder: 7 }));
     (prisma.aiModel.findMany as jest.Mock).mockResolvedValue([row({ sortOrder: 7 })]);

@@ -8,6 +8,7 @@ import {
   Star,
   Thermometer,
   Wrench,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,8 @@ type CapabilityKey =
   | 'supportsTemperature'
   | 'supportsTools'
   | 'supportsVision'
-  | 'supportsDocuments';
+  | 'supportsDocuments'
+  | 'supportsPromptCache';
 
 /** Nivel del modelo: tono, icono y etiqueta (nunca solo color). */
 export const TIERS: Record<
@@ -41,6 +43,7 @@ export const CAPABILITIES: ReadonlyArray<{
   { key: 'supportsTools', label: 'Herramientas', Icon: Wrench },
   { key: 'supportsVision', label: 'Visión', Icon: Eye },
   { key: 'supportsDocuments', label: 'Documentos', Icon: FileText },
+  { key: 'supportsPromptCache', label: 'Caché de prompt', Icon: Zap },
 ];
 
 export function ModelTierBadge({ tier }: { tier: Tier }): React.ReactElement {

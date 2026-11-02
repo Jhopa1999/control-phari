@@ -87,7 +87,7 @@ describe('AiUsageService', () => {
       });
     });
 
-    it('los tokens de cache se cobran como entrada', async () => {
+    it('los tokens leidos del cache cuestan el 10% de la entrada y los escritos un 25% mas', async () => {
       const { service, prisma } = makeDeps();
       await service.record({
         userId: null,
@@ -97,7 +97,20 @@ describe('AiUsageService', () => {
         durationMs: 1,
       });
       const data = (prisma.aiUsage.create as jest.Mock).mock.calls[0][0].data;
-      expect(data.costUsd).toBeCloseTo(1, 6);
+      // 1M leidos del cache * 0.1 * 1 USD = 0.1
+      expect(data.costUsd).toBeCloseTo(0.1, 6);
+
+      const second = makeDeps();
+      await second.service.record({
+        userId: null,
+        agentCode: 'ASISTENTE',
+        modelId: 'm',
+        usage: { ...USAGE, inputTokens: 0, outputTokens: 0, cacheWriteInputTokens: 1_000_000 },
+        durationMs: 1,
+      });
+      const written = (second.prisma.aiUsage.create as jest.Mock).mock.calls[0][0].data;
+      // 1M escritos en cache * 1.25 * 1 USD = 1.25
+      expect(written.costUsd).toBeCloseTo(1.25, 6);
     });
 
     it('modelo sin precio o desconocido => costo null (se registra igual)', async () => {

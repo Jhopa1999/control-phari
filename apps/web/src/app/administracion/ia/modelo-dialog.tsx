@@ -56,6 +56,7 @@ export function ModeloDialog({ model, onClose, onSaved }: ModeloDialogProps): Re
     supportsTools: model?.supportsTools ?? false,
     supportsVision: model?.supportsVision ?? false,
     supportsDocuments: model?.supportsDocuments ?? false,
+    supportsPromptCache: model?.supportsPromptCache ?? false,
   });
   const [inputPrice, setInputPrice] = React.useState(
     model?.inputUsdPerMTok == null ? '' : String(model.inputUsdPerMTok),
@@ -163,7 +164,12 @@ export function ModeloDialog({ model, onClose, onSaved }: ModeloDialogProps): Re
                 </Select>
               )}
             </Field>
-            <FieldSet id="ai-model-caps" kind="checkbox" legend="Capacidades">
+            <FieldSet
+              id="ai-model-caps"
+              kind="checkbox"
+              legend="Capacidades"
+              help="Activa «Caché de prompt» solo si el modelo la admite: el asistente reutiliza sus instrucciones y herramientas entre llamadas y gasta menos."
+            >
               <div className="grid grid-cols-2 gap-2">
                 {CAPABILITIES.map((cap) => (
                   <label
