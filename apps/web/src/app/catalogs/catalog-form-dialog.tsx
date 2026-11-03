@@ -17,12 +17,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import type { CatalogItem } from '@/lib/api-client';
 
 export interface CatalogFormValues {
   catalog: string;
   code: string;
   label: string;
+  description: string;
   active: boolean;
   sortOrder: number;
 }
@@ -46,6 +48,7 @@ const EMPTY: CatalogFormValues = {
   catalog: '',
   code: '',
   label: '',
+  description: '',
   active: true,
   sortOrder: 0,
 };
@@ -106,6 +109,7 @@ export function CatalogFormDialog({
         catalog: editing.catalog,
         code: editing.code,
         label: editing.label,
+        description: editing.description ?? '',
         active: editing.active,
         sortOrder: editing.sortOrder,
       });
@@ -145,6 +149,7 @@ export function CatalogFormDialog({
       catalog: values.catalog.trim(),
       code: values.code.trim(),
       label: values.label.trim(),
+      description: values.description.trim(),
       active: values.active,
       sortOrder: Number.isFinite(values.sortOrder) ? values.sortOrder : 0,
     });
@@ -206,6 +211,19 @@ export function CatalogFormDialog({
                   setValues((v) => ({ ...v, label }));
                   setErrors((prev) => (prev.labelError ? { ...prev, labelError: null } : prev));
                 }}
+              />
+            </Field>
+
+            <Field
+              id="description"
+              label="Descripción"
+              help="Opcional. Explica qué significa y cuándo elegirla; se muestra bajo la opción en los desplegables."
+            >
+              <Textarea
+                rows={3}
+                maxLength={500}
+                value={values.description}
+                onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
               />
             </Field>
 

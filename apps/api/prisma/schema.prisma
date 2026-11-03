@@ -15,14 +15,16 @@ datasource db {
 /// No representa ninguna maestra de negocio concreta: `catalog` identifica a
 /// que maestra pertenece cada opcion (p. ej. PRIORITY, STATUS, PROJECT_TYPE).
 model CatalogItem {
-  id        String   @id @default(uuid()) @db.Uuid
-  catalog   String
-  code      String
-  label     String
-  active    Boolean  @default(true)
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(uuid()) @db.Uuid
+  catalog     String
+  code        String
+  label       String
+  /// Explica al usuario que significa la opcion y cuando elegirla (opcional).
+  description String?  @db.Text
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Un codigo es unico dentro de un mismo catalogo, pero puede repetirse en
   // otros catalogos.
@@ -1259,9 +1261,9 @@ model AiConversation {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user     User        @relation("AiConversationUser", fields: [userId], references: [id], onDelete: Cascade)
-  messages  AiMessage[]
-  proposals AiProposal[]
+  user        User           @relation("AiConversationUser", fields: [userId], references: [id], onDelete: Cascade)
+  messages    AiMessage[]
+  proposals   AiProposal[]
   attachments AiAttachment[]
 
   @@index([userId, updatedAt])
@@ -1307,15 +1309,16 @@ model AiAttachment {
   truncated      Boolean  @default(false)
   createdAt      DateTime @default(now()) @map("created_at")
 
-  user         User             @relation("AiAttachmentUser", fields: [userId], references: [id], onDelete: Cascade)
-  conversation AiConversation?  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  message      AiMessage?       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user         User            @relation("AiAttachmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  conversation AiConversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message      AiMessage?      @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([userId, messageId])
   @@index([messageId])
   @@index([conversationId])
   @@map("ai_attachment")
 }
+
 /// Propuesta de accion del asistente (BL-032 F3). El asistente NUNCA ejecuta
 /// una escritura: registra una propuesta que la persona confirma o descarta.
 /// Al confirmar, el backend ejecuta la MISMA llamada por el MCP con el token de
@@ -1350,18 +1353,18 @@ model AiProposal {
 /// del presupuesto mensual y de los reportes de costo. No guarda contenido de
 /// prompts ni respuestas, solo metricas. `costUsd` null = modelo sin precio.
 model AiUsage {
-  id                   String   @id @default(uuid()) @db.Uuid
-  createdAt            DateTime @default(now()) @map("created_at")
-  userId               String?  @map("user_id") @db.Uuid
+  id                    String   @id @default(uuid()) @db.Uuid
+  createdAt             DateTime @default(now()) @map("created_at")
+  userId                String?  @map("user_id") @db.Uuid
   /// Agente/origen de la llamada (p. ej. TRIAGE, ASISTENTE).
-  agentCode            String   @map("agent_code")
-  modelId              String   @map("model_id")
-  inputTokens          Int      @map("input_tokens")
-  outputTokens         Int      @map("output_tokens")
-  cacheReadInputTokens Int      @default(0) @map("cache_read_input_tokens")
-  cacheWriteInputTokens Int     @default(0) @map("cache_write_input_tokens")
-  costUsd              Float?   @map("cost_usd")
-  durationMs           Int      @map("duration_ms")
+  agentCode             String   @map("agent_code")
+  modelId               String   @map("model_id")
+  inputTokens           Int      @map("input_tokens")
+  outputTokens          Int      @map("output_tokens")
+  cacheReadInputTokens  Int      @default(0) @map("cache_read_input_tokens")
+  cacheWriteInputTokens Int      @default(0) @map("cache_write_input_tokens")
+  costUsd               Float?   @map("cost_usd")
+  durationMs            Int      @map("duration_ms")
 
   user User? @relation("AiUsageUser", fields: [userId], references: [id], onDelete: SetNull)
 

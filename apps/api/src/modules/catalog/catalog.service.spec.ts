@@ -59,6 +59,7 @@ function makeItem(overrides: Partial<Record<string, unknown>> = {}) {
     catalog: 'PRIORITY',
     code: 'HIGH',
     label: 'Alta',
+    description: null,
     active: true,
     sortOrder: 0,
     createdAt: now,
@@ -215,6 +216,18 @@ describe('CatalogService', () => {
       expect(arg.data).toEqual({ label: 'Nueva', active: false, sortOrder: 9 });
       expect(arg.data).not.toHaveProperty('catalog');
       expect(arg.data).not.toHaveProperty('code');
+    });
+
+    it('guarda la descripcion y la borra (null) cuando llega vacia', async () => {
+      const existing = makeItem({ description: 'Texto previo' });
+      catalogItem.findUnique.mockResolvedValue(existing);
+      catalogItem.update.mockResolvedValue(makeItem({ description: null }));
+
+      await service.update(ACTOR, existing.id, { description: '' });
+      expect(catalogItem.update.mock.calls[0][0].data).toEqual({ description: null });
+
+      await service.update(ACTOR, existing.id, { description: 'Nuevo texto' });
+      expect(catalogItem.update.mock.calls[1][0].data).toEqual({ description: 'Nuevo texto' });
     });
 
     it('audita UPDATE con objectType CATALOG_ITEM', async () => {

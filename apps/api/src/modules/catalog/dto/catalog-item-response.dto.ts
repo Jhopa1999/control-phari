@@ -20,6 +20,9 @@ export class CatalogItemResponseDto {
   @ApiProperty({ type: String, description: 'Texto visible al usuario.', example: 'Alta' })
   label!: string;
 
+  @ApiProperty({ type: String, nullable: true, description: 'Explica que significa la opcion y cuando elegirla.', example: 'Cambio puntual y acotado.' })
+  description!: string | null;
+
   @ApiProperty({ type: Boolean, description: 'Indica si la opcion esta activa.', example: true })
   active!: boolean;
 

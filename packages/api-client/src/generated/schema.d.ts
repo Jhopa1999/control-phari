@@ -2715,6 +2715,11 @@ export interface components {
              */
             label: string;
             /**
+             * @description Explica que significa la opcion y cuando elegirla (se muestra en los desplegables).
+             * @example Cambio puntual y acotado, de un solo equipo.
+             */
+            description?: string;
+            /**
              * @description Indica si la opcion esta activa. Por defecto true.
              * @default true
              * @example true
@@ -2749,6 +2754,11 @@ export interface components {
              */
             label: string;
             /**
+             * @description Explica que significa la opcion y cuando elegirla.
+             * @example Cambio puntual y acotado.
+             */
+            description: string | null;
+            /**
              * @description Indica si la opcion esta activa.
              * @example true
              */
@@ -2775,6 +2785,11 @@ export interface components {
              * @example Alta
              */
             label?: string;
+            /**
+             * @description Explica que significa la opcion y cuando elegirla (se muestra en los desplegables).
+             * @example Cambio puntual y acotado, de un solo equipo.
+             */
+            description?: string;
             /**
              * @description Indica si la opcion esta activa.
              * @example false

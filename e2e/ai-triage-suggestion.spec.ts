@@ -101,6 +101,9 @@ test('la sugerencia se muestra como señal y «Usar» solo prefija el formulario
   await expect(panel.getByRole('heading', { name: 'Prioridad orientativa' })).toBeVisible();
   await expect(panel.getByText('Impacta un reporte de cierre mensual.')).toBeVisible();
   await expect(panel.getByText('Es una señal, no el score oficial de priorización.')).toBeVisible();
+  // Duplicados e información faltante van en secciones plegadas por defecto.
+  await panel.getByText(/Posibles duplicados/).click();
+  await panel.getByText(/Información faltante/).click();
   await expect(
     panel.getByRole('link', { name: 'Reporte de cierre mensual (anterior)' }),
   ).toBeVisible();

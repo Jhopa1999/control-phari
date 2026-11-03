@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ListFilter, Sparkles } from 'lucide-react';
+import { ChevronDown, ListFilter, Package, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -50,7 +50,7 @@ import { formatCount, formatDateTime } from '@/lib/format';
 import { listRequests } from '@/lib/requests';
 import { isPrioritizable, isTriageable } from '@/lib/request-state';
 import { listProcesses } from '@/lib/team';
-import { createTriage, listTriage, TriageError } from '@/lib/triage';
+import { associateAsset, createTriage, listTriage, TriageError } from '@/lib/triage';
 import { useRequestIdParam } from '@/lib/use-request-param';
 import { AssetBasePanel } from './asset-base-panel';
 
@@ -84,10 +84,12 @@ interface TriageFormValues {
   mainResponsibleUserId: string;
   dependencies: string;
   notes: string;
+  /** Activo base elegido en el formulario (obligatorio para Continuar). */
+  assetId: string;
   decision: Decision | '';
 }
 
-type FieldKey = 'totalEffortHours' | 'decision';
+type FieldKey = 'totalEffortHours' | 'decision' | 'assetId';
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 const EMPTY_FORM: TriageFormValues = {
@@ -100,6 +102,7 @@ const EMPTY_FORM: TriageFormValues = {
   mainResponsibleUserId: '',
   dependencies: '',
   notes: '',
+  assetId: '',
   decision: '',
 };
 
@@ -138,7 +141,7 @@ function selectedOrUndefined(value: string): string | undefined {
  * obligatoria y el esfuerzo, si se indica, es un entero mayor o igual a 0 (el
  * mismo min=0 del campo numérico, ahora con su mensaje junto al campo).
  */
-function validate(form: TriageFormValues): FieldErrors {
+function validate(form: TriageFormValues, hasAsset: boolean): FieldErrors {
   const errors: FieldErrors = {};
   const effort = form.totalEffortHours.trim();
   if (effort !== '') {
@@ -148,6 +151,9 @@ function validate(form: TriageFormValues): FieldErrors {
     }
   }
   if (!form.decision) errors.decision = 'La decisión es obligatoria.';
+  if (form.decision === 'CONTINUAR' && !hasAsset && !form.assetId) {
+    errors.assetId = 'Elige el activo base para continuar: sin él la solicitud no se puede priorizar.';
+  }
   return errors;
 }
 
@@ -351,11 +357,12 @@ export function TriageView(): React.ReactElement {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (!selected || submitting) return;
-    const errors = validate(form);
+    const errors = validate(form, selected.assetId !== null);
     setFieldErrors(errors);
-    if (errors.totalEffortHours || errors.decision) {
+    if (errors.totalEffortHours || errors.decision || errors.assetId) {
       // Foco al primer campo con error, en orden del DOM.
-      if (errors.totalEffortHours) effortRef.current?.focus();
+      if (errors.assetId) document.getElementById('triage-asset')?.focus();
+      else if (errors.totalEffortHours) effortRef.current?.focus();
       else document.getElementById('triage-decision-CONTINUAR')?.focus();
       return;
     }
@@ -377,6 +384,18 @@ export function TriageView(): React.ReactElement {
         dependencies: trimOrUndefined(form.dependencies),
         notes: trimOrUndefined(form.notes),
       });
+      // El activo se asocia tras registrar el triage (el backend solo lo admite desde EN_TRIAGE).
+      if (decision === 'CONTINUAR' && form.assetId && selected.assetId === null) {
+        try {
+          await associateAsset(selected.id, { assetId: form.assetId });
+        } catch (assocErr) {
+          toast.error(
+            assocErr instanceof Error
+              ? `El triage quedó registrado, pero no se pudo asociar el activo: ${assocErr.message}`
+              : 'El triage quedó registrado, pero no se pudo asociar el activo. Asócialo desde el panel Activo base.',
+          );
+        }
+      }
       const priorityHref = `/demanda/priorizacion?requestId=${encodeURIComponent(selected.id)}`;
       toast.success(
         'Triage registrado.',
@@ -439,7 +458,7 @@ export function TriageView(): React.ReactElement {
             <SelectContent>
               <SelectItem value={NONE}>Sin especificar</SelectItem>
               {items.map((item) => (
-                <SelectItem key={item.id} value={item.code}>
+                <SelectItem key={item.id} value={item.code} description={item.description}>
                   {item.label}
                 </SelectItem>
               ))}
@@ -495,23 +514,30 @@ export function TriageView(): React.ReactElement {
           },
         ]
       : [];
+    const applicable = rows.filter((row) => row.code);
+
+    function applyAll(): void {
+      setForm((f) => {
+        const next = { ...f };
+        for (const row of applicable) {
+          (next as Record<string, string>)[row.field] = row.code as string;
+        }
+        return next;
+      });
+    }
 
     return (
       <section
         aria-labelledby="triage-ai-title"
         className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4"
       >
-        <div className="flex items-center gap-2">
-          <Sparkles className="size-4 text-muted-foreground" aria-hidden="true" />
-          <h2 id="triage-ai-title" className="text-base font-semibold">
-            Sugerencia de IA
-          </h2>
-        </div>
-        <p className="text-meta text-muted-foreground">
-          Es una señal orientativa: nada se envía ni se registra por sí solo. Revisa y confirma en el
-          formulario de triage.
-        </p>
-        <div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-4 text-link" aria-hidden="true" />
+            <h2 id="triage-ai-title" className="text-base font-semibold">
+              Sugerencia de IA
+            </h2>
+          </div>
           <Button
             type="button"
             variant="outline"
@@ -523,6 +549,9 @@ export function TriageView(): React.ReactElement {
             {suggestion ? 'Volver a sugerir' : 'Sugerir con IA'}
           </Button>
         </div>
+        <p className="text-meta text-muted-foreground">
+          Señal orientativa: nada se registra por sí solo. Revisa y confirma en el formulario.
+        </p>
 
         {suggestionError ? (
           <InlineNotice tone="warning" role="status" title="No hay sugerencia disponible.">
@@ -531,24 +560,34 @@ export function TriageView(): React.ReactElement {
         ) : null}
 
         {suggestion ? (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold">Clasificación sugerida</h3>
-              <ul className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">Clasificación sugerida</h3>
+                {applicable.length > 0 ? (
+                  <Button type="button" variant="secondary" size="sm" onClick={applyAll}>
+                    Aplicar todo
+                  </Button>
+                ) : null}
+              </div>
+              <ul className="divide-y rounded-md border">
                 {rows.map((row) => (
                   <li
                     key={row.field}
-                    className="flex flex-wrap items-center justify-between gap-2"
+                    className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm"
                   >
-                    <span className="text-sm">
+                    <span className="min-w-0">
                       <span className="text-muted-foreground">{row.label}:</span>{' '}
-                      {row.code ? (catalogLabel(row.family, row.code) ?? row.code) : 'Sin sugerencia'}
+                      <span className="font-medium">
+                        {row.code ? (catalogLabel(row.family, row.code) ?? row.code) : 'Sin sugerencia'}
+                      </span>
                     </span>
                     {row.code ? (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
+                        className="shrink-0"
                         onClick={() => update(row.field, row.code as TriageFormValues[typeof row.field])}
                       >
                         Usar
@@ -560,8 +599,8 @@ export function TriageView(): React.ReactElement {
             </div>
 
             <div className="flex flex-col gap-1">
-              <h3 className="text-sm font-semibold">Prioridad orientativa</h3>
               <div className="flex items-center gap-2 text-sm">
+                <h3 className="font-semibold">Prioridad orientativa</h3>
                 {suggestion.tentativePriorityBand ? (
                   <StatusBadge kind="band" value={suggestion.tentativePriorityBand} />
                 ) : (
@@ -569,7 +608,9 @@ export function TriageView(): React.ReactElement {
                 )}
               </div>
               {suggestion.priorityRationale ? (
-                <p className="text-meta text-muted-foreground">{suggestion.priorityRationale}</p>
+                <p className="line-clamp-4 text-meta text-muted-foreground">
+                  {suggestion.priorityRationale}
+                </p>
               ) : null}
               <p className="text-meta text-muted-foreground">
                 Es una señal, no el score oficial de priorización.
@@ -577,9 +618,15 @@ export function TriageView(): React.ReactElement {
             </div>
 
             {suggestion.possibleDuplicates.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                <h3 className="text-sm font-semibold">Posibles duplicados</h3>
-                <ul className="flex flex-col gap-2">
+              <details className="group rounded-md border">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring">
+                  <span>Posibles duplicados ({suggestion.possibleDuplicates.length})</span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="size-4 text-muted-foreground transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <ul className="flex max-h-48 flex-col gap-2 overflow-y-auto border-t px-3 py-2">
                   {suggestion.possibleDuplicates.map((dup) => (
                     <li key={dup.requestId} className="flex flex-col gap-0.5">
                       <Link
@@ -594,18 +641,24 @@ export function TriageView(): React.ReactElement {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </details>
             ) : null}
 
             {suggestion.missingInformation.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                <h3 className="text-sm font-semibold">Información faltante</h3>
-                <ul className="list-disc pl-5 text-meta text-muted-foreground">
+              <details className="group rounded-md border">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring">
+                  <span>Información faltante ({suggestion.missingInformation.length})</span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="size-4 text-muted-foreground transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <ul className="max-h-48 list-disc overflow-y-auto border-t py-2 pr-3 pl-8 text-meta text-muted-foreground">
                   {suggestion.missingInformation.map((item, i) => (
                     <li key={i}>{item}</li>
                   ))}
                 </ul>
-              </div>
+              </details>
             ) : null}
           </div>
         ) : null}
@@ -727,6 +780,70 @@ export function TriageView(): React.ReactElement {
             Registrar triage
           </h2>
           <RequiredHint />
+        </div>
+
+        <div className="grid gap-3 rounded-lg border-2 border-primary/30 bg-primary-subtle/40 p-4">
+          <div className="flex items-start gap-3">
+            <span
+              aria-hidden="true"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            >
+              <Package className="size-5" />
+            </span>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <h3 className="text-sm font-semibold">Activo base</h3>
+              <p className="text-meta text-muted-foreground">
+                Toda solicitud se trabaja sobre un activo. Para decidir <strong>Continuar</strong> es
+                obligatorio elegirlo: sin él no se puede priorizar.
+                {processName ? (
+                  <>
+                    {' '}
+                    Proceso principal: <span className="font-medium text-foreground">{processName}</span>.
+                  </>
+                ) : null}
+              </p>
+            </div>
+          </div>
+          {selected?.assetId ? (
+            <p className="text-sm">
+              Activo asociado: <span className="font-medium">{assetName}</span>
+            </p>
+          ) : (
+            <>
+              <Field
+                id="triage-asset"
+                label="Activo"
+                error={fieldErrors.assetId}
+                help="Solo se listan activos habilitados para tus procesos."
+              >
+                {(control) => (
+                  <Select
+                    value={form.assetId || NONE}
+                    onValueChange={(v) => update('assetId', v === NONE ? '' : v)}
+                  >
+                    <SelectTrigger {...control} className="bg-card">
+                      <SelectValue placeholder="Elige un activo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>Sin activo por ahora</SelectItem>
+                      {assets.map((asset) => (
+                        <SelectItem key={asset.id} value={asset.id}>
+                          {asset.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </Field>
+              <p className="text-meta text-muted-foreground">
+                ¿No aparece? Debe crearlo el jefe de área en el{' '}
+                <Link href="/activos/catalogo" className="font-medium text-link underline-offset-4 hover:underline">
+                  módulo de Activos
+                </Link>
+                .
+              </p>
+            </>
+          )}
         </div>
 
         <div className="grid gap-4">
@@ -901,22 +1018,26 @@ export function TriageView(): React.ReactElement {
                 </h2>
                 <RequestFacts request={selected} processName={processName} />
               </section>
-              {isTriageable(selected) ? renderSuggestionPanel() : null}
-              <RequirementsPanel
-                id="triage-asset-requirement"
-                title="Falta el activo base"
-                description="La solicitud necesita un activo base para poder priorizarse."
-                doneTitle="Activo base listo"
-                items={[assetRequirement(selected)]}
-              />
-              {ASSET_ASSOCIABLE_STATES.includes(selected.operationalState) ? (
-                <AssetBasePanel
-                  request={selected}
-                  processName={processName}
-                  disabled={selected.operationalState === 'REGISTRADA'}
-                  onAssociated={() => void load()}
-                />
+              {selected.operationalState !== 'REGISTRADA' ? (
+                <>
+                  <RequirementsPanel
+                    id="triage-asset-requirement"
+                    title="Falta el activo base"
+                    description="La solicitud necesita un activo base para poder priorizarse."
+                    doneTitle="Activo base listo"
+                    items={[assetRequirement(selected)]}
+                  />
+                  {ASSET_ASSOCIABLE_STATES.includes(selected.operationalState) ? (
+                    <AssetBasePanel
+                      request={selected}
+                      processName={processName}
+                      disabled={false}
+                      onAssociated={() => void load()}
+                    />
+                  ) : null}
+                </>
               ) : null}
+              {isTriageable(selected) ? renderSuggestionPanel() : null}
             </div>
           </div>
         ) : (

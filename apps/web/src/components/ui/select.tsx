@@ -81,8 +81,11 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName;
 // Las opciones admiten dos líneas; Radix copia al trigger solo el ItemText.
 const SelectItem = React.forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & {
+    /** Segunda línea explicativa; no se copia al trigger. */
+    description?: string | null;
+  }
+>(({ className, children, description, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
@@ -96,8 +99,13 @@ const SelectItem = React.forwardRef<
         <Check className="size-4" aria-hidden="true" />
       </SelectPrimitive.ItemIndicator>
     </span>
-    <span className="line-clamp-2 whitespace-normal">
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    <span className="flex flex-col whitespace-normal">
+      <span className="line-clamp-2">
+        <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      </span>
+      {description ? (
+        <span className="text-xs font-normal text-muted-foreground">{description}</span>
+      ) : null}
     </span>
   </SelectPrimitive.Item>
 ));

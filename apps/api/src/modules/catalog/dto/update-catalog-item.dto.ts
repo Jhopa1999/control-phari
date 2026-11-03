@@ -18,7 +18,7 @@ const trim = ({ value }: { value: unknown }): unknown =>
 
 /**
  * Entrada para actualizar un CatalogItem.
- * Solo se permiten `label`, `active` y `sortOrder`. `catalog` y `code` son
+ * Solo se permiten `label`, `description`, `active` y `sortOrder`. `catalog` y `code` son
  * identificadores funcionales estables y NO se pueden modificar via PATCH
  * (si llegan, seran rechazados por el ValidationPipe con forbidNonWhitelisted).
  */
@@ -35,6 +35,18 @@ export class UpdateCatalogItemDto {
   @IsNotEmpty()
   @MaxLength(255)
   label?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Explica que significa la opcion y cuando elegirla (se muestra en los desplegables).',
+    example: 'Cambio puntual y acotado, de un solo equipo.',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(500)
+  description?: string;
 
   @ApiPropertyOptional({
     type: Boolean,
