@@ -350,7 +350,7 @@ export function SolicitudFormDialog({
 
         <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <DialogBody className="grid gap-5">
-            <div className="grid gap-3">
+            <div className="grid gap-3 rounded-lg bg-surface-subtle p-3">
               <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-meta text-muted-foreground">
                 <span>
                   Registro: {formatDate(isEdit ? editing?.registeredAt : new Date().toISOString())}
@@ -373,7 +373,7 @@ export function SolicitudFormDialog({
                 <p aria-hidden="true" className="text-meta font-medium text-muted-foreground">
                   Fases del flujo
                 </p>
-                <ol className="flex flex-wrap gap-2">
+                <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {PHASES.map((phase, index) => {
                     const current = phase.key === 'solicitud';
                     return (
@@ -381,10 +381,10 @@ export function SolicitudFormDialog({
                         key={phase.key}
                         aria-current={current ? 'step' : undefined}
                         className={cn(
-                          'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-meta',
+                          'inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-meta',
                           current
                             ? 'border-primary bg-primary-subtle font-medium text-foreground'
-                            : 'text-muted-foreground',
+                            : 'bg-card text-muted-foreground',
                         )}
                       >
                         {!current ? <Lock aria-hidden="true" className="size-3" /> : null}
@@ -395,11 +395,11 @@ export function SolicitudFormDialog({
                   })}
                 </ol>
               </nav>
-              <p className="text-meta text-muted-foreground">
-                {isEdit
-                  ? 'Las fases con candado se resuelven en su propio módulo: la priorización, solo si el triage es Continuar; la aprobación, tras priorizar.'
-                  : 'Al registrarla quedará en estado Registrada y habilitará el triage.'}
-              </p>
+              {isEdit ? (
+                <p className="text-meta text-muted-foreground">
+                  Las fases con candado se resuelven en su propio módulo: la priorización, solo si el triage es Continuar; la aprobación, tras priorizar.
+                </p>
+              ) : null}
             </div>
 
             <RequiredHint />
@@ -416,32 +416,41 @@ export function SolicitudFormDialog({
                 />
               </Field>
 
-              <Field
-                id="sol-main-process"
-                label="Proceso principal"
-                required={!isEdit}
-                error={fieldErrors.mainProcessId}
-                help={isEdit ? 'El proceso principal no se cambia al editar.' : undefined}
-              >
-                {(control) =>
-                  isEdit ? (
-                    <Input {...control} readOnly disabled value={mainProcessName(values.mainProcessId)} />
-                  ) : (
-                    <Select value={values.mainProcessId} onValueChange={changeMainProcess}>
-                      <SelectTrigger ref={processRef} {...control}>
-                        <SelectValue placeholder="Selecciona un proceso" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activeProcesses.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )
-                }
-              </Field>
+              <div className="grid items-start gap-4 sm:grid-cols-2">
+                <Field
+                  id="sol-main-process"
+                  label="Proceso principal"
+                  required={!isEdit}
+                  error={fieldErrors.mainProcessId}
+                  help={isEdit ? 'El proceso principal no se cambia al editar.' : undefined}
+                >
+                  {(control) =>
+                    isEdit ? (
+                      <Input {...control} readOnly disabled value={mainProcessName(values.mainProcessId)} />
+                    ) : (
+                      <Select value={values.mainProcessId} onValueChange={changeMainProcess}>
+                        <SelectTrigger ref={processRef} {...control}>
+                          <SelectValue placeholder="Selecciona un proceso" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeProcesses.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )
+                  }
+                </Field>
+                <Field id="sol-target" label="Fecha objetivo">
+                  <Input
+                    type="date"
+                    value={values.targetDate}
+                    onChange={(e) => update('targetDate', e.target.value)}
+                  />
+                </Field>
+              </div>
 
               <FieldSet
                 id="sol-participants"
@@ -449,7 +458,7 @@ export function SolicitudFormDialog({
                 legend="Participantes"
                 help="El proceso principal participa siempre y no se puede quitar."
               >
-                <div className="flex flex-col gap-1 rounded-md border p-3">
+                <div className="grid gap-x-4 gap-y-1 rounded-md border p-3 sm:grid-cols-2">
                   {values.mainProcessId ? (
                     <label className="flex min-h-8 items-center gap-2 text-sm">
                       <Checkbox
@@ -462,7 +471,7 @@ export function SolicitudFormDialog({
                       <Badge variant="outline">Principal</Badge>
                     </label>
                   ) : (
-                    <p className="text-meta text-muted-foreground">
+                    <p className="text-meta text-muted-foreground sm:col-span-2">
                       Selecciona primero el proceso principal.
                     </p>
                   )}
@@ -480,11 +489,35 @@ export function SolicitudFormDialog({
               </FieldSet>
             </div>
 
-            <div className="grid gap-4">
+            <div className="grid gap-4 border-t pt-5">
               <GroupHeading>Solicitante</GroupHeading>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid content-start gap-2">
-                <Field id="sol-requester" label="Solicitante" help={requesterHelp}>
+              <div className="grid items-start gap-4 sm:grid-cols-2">
+                <Field
+                  id="sol-requester"
+                  label="Solicitante"
+                  help={
+                    <>
+                      {requesterHelp}{' '}
+                      {canCreateRequester ? (
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-meta"
+                          onClick={openNewRequester}
+                        >
+                          <UserPlus aria-hidden="true" />
+                          ¿No está? Crear solicitante
+                        </Button>
+                      ) : (
+                        <>
+                          ¿No está? Pídele al administrador o a la jefatura de tu área que lo cree en
+                          Administración → Solicitantes.
+                        </>
+                      )}
+                    </>
+                  }
+                >
                   {(control) => (
                     <Select value={values.requesterId} onValueChange={(v) => update('requesterId', v)}>
                       <SelectTrigger {...control}>
@@ -500,24 +533,6 @@ export function SolicitudFormDialog({
                     </Select>
                   )}
                 </Field>
-                {canCreateRequester ? (
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto justify-start p-0"
-                    onClick={openNewRequester}
-                  >
-                    <UserPlus aria-hidden="true" />
-                    ¿No está en la lista? Crear solicitante
-                  </Button>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    ¿No encuentras al solicitante? Pídele al administrador o a la jefatura de tu
-                    área que lo cree en Administración → Solicitantes.
-                  </p>
-                )}
-                </div>
                 <Field id="sol-owner" label="Dueño funcional">
                   <Input
                     value={values.functionalOwner}
@@ -527,16 +542,8 @@ export function SolicitudFormDialog({
               </div>
             </div>
 
-            <div className="grid gap-4">
+            <div className="grid gap-4 border-t pt-5">
               <GroupHeading>Alcance</GroupHeading>
-              <Field id="sol-target" label="Fecha objetivo">
-                <Input
-                  type="date"
-                  className="sm:w-48"
-                  value={values.targetDate}
-                  onChange={(e) => update('targetDate', e.target.value)}
-                />
-              </Field>
               <Field id="sol-result" label="Resultado esperado">
                 <Textarea
                   value={values.expectedResult}
