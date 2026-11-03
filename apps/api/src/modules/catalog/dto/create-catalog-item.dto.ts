@@ -62,6 +62,18 @@ export class CreateCatalogItemDto {
   label!: string;
 
   @ApiPropertyOptional({
+    type: String,
+    description: 'Explica que significa la opcion y cuando elegirla (se muestra en los desplegables).',
+    example: 'Cambio puntual y acotado, de un solo equipo.',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @ApiPropertyOptional({
     type: Boolean,
     description: 'Indica si la opcion esta activa. Por defecto true.',
     default: true,

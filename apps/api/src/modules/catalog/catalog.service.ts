@@ -34,6 +34,7 @@ export class CatalogService {
       catalog: item.catalog,
       code: item.code,
       label: item.label,
+      description: item.description,
       active: item.active,
       sortOrder: item.sortOrder,
     };
@@ -53,6 +54,7 @@ export class CatalogService {
             catalog,
             code,
             label: dto.label,
+            ...(dto.description !== undefined ? { description: dto.description === '' ? null : dto.description } : {}),
             // active y sortOrder usan los defaults del modelo si no se envian.
             ...(dto.active !== undefined ? { active: dto.active } : {}),
             ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
@@ -122,6 +124,7 @@ export class CatalogService {
         where: { id },
         data: {
           ...(dto.label !== undefined ? { label: dto.label } : {}),
+          ...(dto.description !== undefined ? { description: dto.description === '' ? null : dto.description } : {}),
           ...(dto.active !== undefined ? { active: dto.active } : {}),
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
         },

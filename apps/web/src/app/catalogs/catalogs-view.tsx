@@ -152,6 +152,7 @@ export function CatalogsView(): React.ReactElement {
         // Al editar se envían solo etiqueta, activo y orden.
         await updateCatalogItem(editing.id, {
           label: values.label,
+          description: values.description,
           active: values.active,
           sortOrder: values.sortOrder,
         });
@@ -161,6 +162,7 @@ export function CatalogsView(): React.ReactElement {
           catalog: values.catalog,
           code: values.code,
           label: values.label,
+          description: values.description,
           active: values.active,
           sortOrder: values.sortOrder,
         });

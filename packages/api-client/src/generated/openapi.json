@@ -9362,6 +9362,12 @@
             "example": "Alta",
             "maxLength": 255
           },
+          "description": {
+            "type": "string",
+            "description": "Explica que significa la opcion y cuando elegirla (se muestra en los desplegables).",
+            "example": "Cambio puntual y acotado, de un solo equipo.",
+            "maxLength": 500
+          },
           "active": {
             "type": "boolean",
             "description": "Indica si la opcion esta activa. Por defecto true.",
@@ -9405,6 +9411,12 @@
             "description": "Texto visible al usuario.",
             "example": "Alta"
           },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Explica que significa la opcion y cuando elegirla.",
+            "example": "Cambio puntual y acotado."
+          },
           "active": {
             "type": "boolean",
             "description": "Indica si la opcion esta activa.",
@@ -9431,6 +9443,7 @@
           "catalog",
           "code",
           "label",
+          "description",
           "active",
           "sortOrder",
           "createdAt",
@@ -9445,6 +9458,12 @@
             "description": "Texto visible al usuario.",
             "example": "Alta",
             "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "Explica que significa la opcion y cuando elegirla (se muestra en los desplegables).",
+            "example": "Cambio puntual y acotado, de un solo equipo.",
+            "maxLength": 500
           },
           "active": {
             "type": "boolean",

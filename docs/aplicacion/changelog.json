@@ -479,6 +479,12 @@
       "trigger_file": "apps/web/src/app/globals.css",
       "updated_docs": ["docs/aplicacion/frontend-pantallas.md"],
       "summary": "Identidad visual: menú lateral marino con acento cian, lienzo con tinte azul, filete degradado en las barras superiores y acentos en indicadores, cabeceras y estados vacíos (tokens en globals.css)."
+    },
+    {
+      "timestamp": "2026-11-06T18:00:00Z",
+      "trigger_file": "apps/api/src/modules/catalog/catalog.service.ts",
+      "updated_docs": ["docs/aplicacion/modulos-backend.md", "docs/aplicacion/modelo-datos.md", "docs/aplicacion/frontend-pantallas.md"],
+      "summary": "Triage: descripción por opción de maestra (columna catalog_items.description, editable en Maestras y visible en los desplegables), activo base como primer bloque obligatorio para Continuar, panel de IA compacto con secciones plegables y filete degradado de las barras superiores restituido."
     }
   ]
 }

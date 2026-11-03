@@ -12,6 +12,7 @@
  * prisma.config.ts. Prisma 7 no autocarga el .env: lo cargamos explicitamente
  * desde la raiz del monorepo, igual que prisma.config.ts.
  */
+import { CATALOG_DESCRIPTIONS } from './catalog-descriptions';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
@@ -423,6 +424,7 @@ async function main(): Promise<void> {
         code: item.code,
         label: item.label,
         sortOrder: item.sortOrder,
+        description: CATALOG_DESCRIPTIONS[`${item.catalog}:${item.code}`] ?? null,
       },
     });
   }

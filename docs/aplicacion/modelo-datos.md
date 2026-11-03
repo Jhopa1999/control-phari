@@ -16,7 +16,7 @@ libre.
 
 ### CatalogItem (`catalog_items`) — funcionalidad base
 Maestra genérica reutilizable (no es una maestra de negocio concreta).
-- Campos clave: `catalog`, `code`, `label`, `active`, `sortOrder`.
+- Campos clave: `catalog`, `code`, `label`, `description` (texto opcional que explica qué significa la opción y cuándo elegirla; se muestra bajo la opción en los desplegables del triage), `active`, `sortOrder`.
 - Restricciones: único `(catalog, code)`; índices por `catalog`, `active`, `sortOrder`.
 
 ### Area (`areas`)

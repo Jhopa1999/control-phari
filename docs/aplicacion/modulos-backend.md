@@ -120,7 +120,7 @@ sus flujos. Lectura con actor; escritura solo `JEFE_AREA`.
 | POST | `/catalog-items` | Crea un elemento de catálogo (solo JEFE_AREA). |
 | GET | `/catalog-items` | Lista elementos, con filtros opcionales (`catalog`, `active`). |
 | GET | `/catalog-items/:id` | Obtiene un elemento por id. |
-| PATCH | `/catalog-items/:id` | Actualiza `label`/`active`/`sortOrder` (solo JEFE_AREA). |
+| PATCH | `/catalog-items/:id` | Actualiza `label`/`description`/`active`/`sortOrder` (solo JEFE_AREA). `description` (máx. 500, opcional; vacío la borra) también se acepta al crear. |
 
 ## request — Solicitud y flujo de demanda
 
