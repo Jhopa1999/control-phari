@@ -3343,6 +3343,47 @@
         ]
       }
     },
+    "/tasks/{id}/history": {
+      "get": {
+        "operationId": "TaskController_history",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eventos de la tarea, del más reciente al más antiguo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskHistoryEntryDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Tarea fuera de alcance."
+          }
+        },
+        "summary": "Traza de cambios de una tarea (quién, cuándo y qué cambió).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
     "/tasks/{id}/status": {
       "patch": {
         "operationId": "TaskController_changeStatus",
@@ -3392,6 +3433,60 @@
           }
         },
         "summary": "Cambia el estado de una tarea (gate de predecesoras).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/tasks/{id}/progress": {
+      "patch": {
+        "operationId": "TaskController_changeProgress",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTaskProgressDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Avance actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Avance fuera de 0-100."
+          },
+          "403": {
+            "description": "Rol insuficiente o tarea ajena (integrante)."
+          },
+          "404": {
+            "description": "Tarea fuera de alcance."
+          },
+          "409": {
+            "description": "La tarea está Por hacer o Terminada."
+          }
+        },
+        "summary": "Actualiza solo el avance (0-100) de una tarea, sin cambiar su estado.",
         "tags": [
           "tasks"
         ]
@@ -11845,6 +11940,79 @@
           "title"
         ]
       },
+      "TaskHistoryChangeDto": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Campo modificado: status, progress, accepted, title, phase, responsible, isMilestone, startDate, endDate, estimateHours, description, acceptanceCriteria, evidenceUrl o frameworkPhaseRequired.",
+            "example": "status"
+          },
+          "from": {
+            "type": "string",
+            "nullable": true,
+            "description": "Valor anterior como texto (fase y responsable ya vienen con su nombre; las fechas en ISO).",
+            "example": "POR_HACER"
+          },
+          "to": {
+            "type": "string",
+            "nullable": true,
+            "description": "Valor nuevo como texto.",
+            "example": "EN_CURSO"
+          }
+        },
+        "required": [
+          "field",
+          "from",
+          "to"
+        ]
+      },
+      "TaskHistoryEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador del evento."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha y hora del cambio."
+          },
+          "action": {
+            "type": "string",
+            "description": "Tipo de evento: CREATE (tarea creada), UPDATE (cambio) o DELETE.",
+            "example": "UPDATE"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Quién hizo el cambio."
+          },
+          "actorName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre de quien hizo el cambio."
+          },
+          "changes": {
+            "description": "Campos que cambiaron en este evento (vacío cuando la tarea se crea).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskHistoryChangeDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "action",
+          "actorUserId",
+          "actorName",
+          "changes"
+        ]
+      },
       "UpdateTaskDto": {
         "type": "object",
         "properties": {
@@ -11932,6 +12100,21 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "UpdateTaskProgressDto": {
+        "type": "object",
+        "properties": {
+          "progress": {
+            "type": "number",
+            "description": "Avance de la tarea en porcentaje (entero de 0 a 100).",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 40
+          }
+        },
+        "required": [
+          "progress"
         ]
       },
       "AcceptTaskDto": {

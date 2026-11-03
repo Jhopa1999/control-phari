@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }): React.Rea
       <SkipLink />
       <div className="flex min-h-dvh bg-background">
         <AppSidebar variant="desktop" />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
           <MobileNav />
           {/* Barra superior de escritorio: centro de notificaciones (NOT-01). */}
           <div className="sticky top-0 z-30 hidden h-12 items-center justify-end gap-2 bg-card/90 px-4 backdrop-blur lg:flex md:px-6 xl:px-8 print:hidden">

@@ -79,6 +79,9 @@ export type CreateTask = components['schemas']['CreateTaskDto'];
 export type UpdateTask = components['schemas']['UpdateTaskDto'];
 export type UpdateTaskStatus = components['schemas']['UpdateTaskStatusDto'];
 export type AcceptTask = components['schemas']['AcceptTaskDto'];
+export type UpdateTaskProgress = components['schemas']['UpdateTaskProgressDto'];
+export type TaskHistoryEntry = components['schemas']['TaskHistoryEntryDto'];
+export type TaskHistoryChange = components['schemas']['TaskHistoryChangeDto'];
 export type TaskDependency =
   components['schemas']['TaskDependencyResponseDto'];
 export type AddDependency = components['schemas']['AddDependencyDto'];

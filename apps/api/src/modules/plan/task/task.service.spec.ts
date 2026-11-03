@@ -531,6 +531,73 @@ describe('TaskService', () => {
     });
   });
 
+  describe('changeProgress (solo avance, sin cambiar el estado)', () => {
+    function scope(task: Record<string, unknown>) {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task: makeTask(task),
+        planId: 'plan1',
+        requestId: 'r1',
+        mainProcessId: 'p1',
+        requestState: 'EN_EJECUCION',
+      });
+    }
+
+    it('integrante sobre tarea ajena -> 403', async () => {
+      scope({ responsibleUserId: 'otro', status: TaskStatus.EN_CURSO });
+      await expect(
+        service.changeProgress(actorWith(RoleCode.INTEGRANTE, 'u1'), 't1', { progress: 50 }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('tarea Por hacer -> 409 sin escribir', async () => {
+      scope({ status: TaskStatus.POR_HACER });
+      await expect(
+        service.changeProgress(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1', { progress: 50 }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect((m.prismaObj.task as any).update).not.toHaveBeenCalled();
+    });
+
+    it('tarea Terminada -> 409 sin escribir', async () => {
+      scope({ status: TaskStatus.TERMINADA, progress: 100 });
+      await expect(
+        service.changeProgress(actorWith(RoleCode.JEFE_AREA, 'uj'), 't1', { progress: 60 }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect((m.prismaObj.task as any).update).not.toHaveBeenCalled();
+    });
+
+    it('responsable en curso: actualiza el avance, no toca el estado y audita', async () => {
+      scope({ responsibleUserId: 'u1', status: TaskStatus.EN_CURSO, progress: 10 });
+      (m.prismaObj.task as any).update.mockResolvedValue(
+        makeTask({ status: TaskStatus.EN_CURSO, progress: 60 }),
+      );
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(
+        makeTaskWithDeps({ status: TaskStatus.EN_CURSO, progress: 60 }),
+      );
+
+      const res = await service.changeProgress(actorWith(RoleCode.INTEGRANTE, 'u1'), 't1', {
+        progress: 60,
+      });
+
+      expect((m.prismaObj.task as any).update.mock.calls[0][0].data).toEqual({ progress: 60 });
+      expect((m.audit.record as jest.Mock).mock.calls[0][1]).toMatchObject({
+        objectType: 'TASK',
+        before: { status: TaskStatus.EN_CURSO, progress: 10 },
+        after: { status: TaskStatus.EN_CURSO, progress: 60 },
+      });
+      expect(res.progress).toBe(60);
+    });
+
+    it('mismo valor: no escribe ni audita', async () => {
+      scope({ status: TaskStatus.EN_CURSO, progress: 40 });
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(
+        makeTaskWithDeps({ status: TaskStatus.EN_CURSO, progress: 40 }),
+      );
+      await service.changeProgress(actorWith(RoleCode.JEFE_AREA, 'uj'), 't1', { progress: 40 });
+      expect((m.prismaObj.task as any).update).not.toHaveBeenCalled();
+      expect(m.audit.record).not.toHaveBeenCalled();
+    });
+  });
+
   describe('accept (retirar aceptacion)', () => {
     it('accepted=false -> disconnect de acceptedBy y audita', async () => {
       (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({

@@ -913,6 +913,23 @@ export interface paths {
         patch: operations["TaskController_update"];
         trace?: never;
     };
+    "/tasks/{id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Traza de cambios de una tarea (quién, cuándo y qué cambió). */
+        get: operations["TaskController_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks/{id}/status": {
         parameters: {
             query?: never;
@@ -928,6 +945,23 @@ export interface paths {
         head?: never;
         /** Cambia el estado de una tarea (gate de predecesoras). */
         patch: operations["TaskController_changeStatus"];
+        trace?: never;
+    };
+    "/tasks/{id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Actualiza solo el avance (0-100) de una tarea, sin cambiar su estado. */
+        patch: operations["TaskController_changeProgress"];
         trace?: never;
     };
     "/tasks/{id}/accept": {
@@ -3995,6 +4029,49 @@ export interface components {
             /** @description Evidencia como URL/texto. */
             evidenceUrl?: string;
         };
+        TaskHistoryChangeDto: {
+            /**
+             * @description Campo modificado: status, progress, accepted, title, phase, responsible, isMilestone, startDate, endDate, estimateHours, description, acceptanceCriteria, evidenceUrl o frameworkPhaseRequired.
+             * @example status
+             */
+            field: string;
+            /**
+             * @description Valor anterior como texto (fase y responsable ya vienen con su nombre; las fechas en ISO).
+             * @example POR_HACER
+             */
+            from: string | null;
+            /**
+             * @description Valor nuevo como texto.
+             * @example EN_CURSO
+             */
+            to: string | null;
+        };
+        TaskHistoryEntryDto: {
+            /**
+             * Format: uuid
+             * @description Identificador del evento.
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Fecha y hora del cambio.
+             */
+            createdAt: string;
+            /**
+             * @description Tipo de evento: CREATE (tarea creada), UPDATE (cambio) o DELETE.
+             * @example UPDATE
+             */
+            action: string;
+            /**
+             * Format: uuid
+             * @description Quién hizo el cambio.
+             */
+            actorUserId: string | null;
+            /** @description Nombre de quien hizo el cambio. */
+            actorName: string | null;
+            /** @description Campos que cambiaron en este evento (vacío cuando la tarea se crea). */
+            changes: components["schemas"]["TaskHistoryChangeDto"][];
+        };
         UpdateTaskDto: {
             /** @description Titulo de la tarea. */
             title?: string;
@@ -4041,6 +4118,13 @@ export interface components {
             progress?: number;
             /** @description Evidencia como URL/texto. */
             evidenceUrl?: string;
+        };
+        UpdateTaskProgressDto: {
+            /**
+             * @description Avance de la tarea en porcentaje (entero de 0 a 100).
+             * @example 40
+             */
+            progress: number;
         };
         AcceptTaskDto: {
             /** @description true acepta la tarea; false retira la aceptacion. */
@@ -9481,6 +9565,42 @@ export interface operations {
             };
         };
     };
+    TaskController_history: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Eventos de la tarea, del más reciente al más antiguo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskHistoryEntryDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tarea fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     TaskController_changeStatus: {
         parameters: {
             query?: never;
@@ -9527,6 +9647,60 @@ export interface operations {
                 content?: never;
             };
             /** @description Transicion no permitida o predecesora no satisfecha. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskController_changeProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTaskProgressDto"];
+            };
+        };
+        responses: {
+            /** @description Avance actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponseDto"];
+                };
+            };
+            /** @description Avance fuera de 0-100. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente o tarea ajena (integrante). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tarea fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La tarea está Por hacer o Terminada. */
             409: {
                 headers: {
                     [name: string]: unknown;

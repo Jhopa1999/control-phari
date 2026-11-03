@@ -221,6 +221,8 @@ Validaciones de fechas (backend y formularios): la fecha de fin de una fase o ta
 | PATCH | `/tasks/:id` | Edita una tarea (no estado/aceptación; regla de hito). |
 | DELETE | `/tasks/:id` | Borra una tarea (`409` si es predecesora de otra). |
 | PATCH | `/tasks/:id/status` | Cambia el estado (gate de predecesoras). |
+| PATCH | `/tasks/:id/progress` | Actualiza solo el avance (entero 0-100) sin cambiar el estado. Solo con la tarea En curso, Bloqueada o En revisión (`409` en Por hacer o Terminada); jefe, líder o el responsable (`403` si no). Audita el cambio. |
+| GET | `/tasks/:id/history` | Traza de cambios de la tarea (de la más reciente a la más antigua, máx. 200): quién, cuándo y cada campo con su valor anterior y nuevo; fase y responsable llegan con su nombre. Se arma con la auditoría de la tarea. |
 | PATCH | `/tasks/:id/accept` | Acepta/retira la aceptación (precondición TERMINADA). Ya no es requisito del gate de predecesoras ni se muestra en la UI; se conserva por compatibilidad. |
 | GET | `/tasks/:taskId/evidence` | Lista los archivos de evidencia de la tarea. |
 | POST | `/tasks/:taskId/evidence` | Adjunta un archivo (multipart, campo `file`) y lo guarda en el bucket S3 maestro (`proyectos/{requestId}/tareas/{taskId}/evidencias/…`). Solo el responsable de la tarea o jefe/líder; `400` si está vacío, supera `EVIDENCE_MAX_BYTES` (8 MB) o su tipo no está permitido; `409` en proyecto cerrado. |

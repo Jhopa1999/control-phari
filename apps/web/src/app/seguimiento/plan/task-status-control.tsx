@@ -30,6 +30,8 @@ export interface TaskStatusControlProps {
   onChange: (next: TaskStatus) => void;
   /** Título de la tarea, para el nombre accesible del disparador. */
   taskTitle: string;
+  /** Muestra el % de avance junto al estado (por defecto sí; la tabla lo tiene en su columna). */
+  showProgress?: boolean;
 }
 
 /**
@@ -48,6 +50,7 @@ export function TaskStatusControl({
   busy,
   onChange,
   taskTitle,
+  showProgress = true,
 }: TaskStatusControlProps): React.ReactElement {
   const transitions = nextTaskStatuses(status as TaskStatus);
   const reasonId = React.useId();
@@ -87,10 +90,12 @@ export function TaskStatusControl({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-      <span className="text-meta tabular-nums text-muted-foreground">
-        <span className="sr-only">avance </span>
-        {formatPercent(progress)}
-      </span>
+      {showProgress ? (
+        <span className="text-meta tabular-nums text-muted-foreground">
+          <span className="sr-only">avance </span>
+          {formatPercent(progress)}
+        </span>
+      ) : null}
       {describedBy ? (
         <span id={reasonId} hidden>
           {reason}

@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { Lock } from 'lucide-react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { toast } from 'sonner';
 import { Field, FieldSet, FormError, RequiredHint } from '@/components/field';
+import { InlineNotice } from '@/components/inline-notice';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -25,6 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { Task, CoordinationPerson, PlanPhase } from '@/lib/api-client';
+import { formatDateOnly } from '@/lib/format';
 import { PlanError } from '@/lib/plan';
 import { createTask, updateTask } from '@/lib/tasks';
 import {
@@ -37,6 +40,7 @@ import { listCoordinationPeople } from '@/lib/worklog';
 interface TaskDialogProps {
   open: boolean;
   task: Task | null;
+  /** Fase sugerida al crear (la de origen, la del filtro o la inicial). */
   phaseId: string | null;
   allTasks: Task[];
   phases: PlanPhase[];
@@ -47,7 +51,7 @@ interface TaskDialogProps {
 /** Id del formulario: el FormError lleva `task-form-error`. */
 const FORM_ID = 'task-form';
 
-type FieldKey = 'title' | 'hours' | 'dates';
+type FieldKey = 'title' | 'phase' | 'hours' | 'dates';
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 function toDateInput(iso: string | null | undefined): string {
@@ -94,10 +98,25 @@ function messageOf(err: unknown): string {
   return err instanceof PlanError ? err.message : 'Ocurrió un error inesperado.';
 }
 
+/** «5 ene 2026 – 30 ene 2026 · 3 tareas»: lo que ayuda a elegir la fase. */
+function phaseSummary(phase: PlanPhase, taskCount: number): string {
+  const range =
+    phase.startDate || phase.endDate
+      ? `${formatDateOnly(phase.startDate)} – ${formatDateOnly(phase.endDate)}`
+      : 'Sin fechas';
+  return `${range} · ${taskCount === 1 ? '1 tarea' : `${taskCount} tareas`}`;
+}
+
+function GroupHeading({ children }: { children: React.ReactNode }): React.ReactElement {
+  return <h3 className="text-sm font-semibold">{children}</h3>;
+}
+
 /**
- * Alta y edición de una tarea (design §9 E, tamaño md). Mismos campos, reglas y
- * llamadas que antes, ahora con todos los errores a la vez; las predecesoras
- * solo se gestionan al editar.
+ * Alta y edición de una tarea. Se organiza en bloques: qué y dónde (título y
+ * fase, esta última destacada y siempre preseleccionada al crear), quién y
+ * cuándo, detalle y predecesoras. Las reglas y llamadas son las de siempre; los
+ * errores se evalúan todos a la vez. La fase no se puede cambiar al editar (la
+ * API no lo admite) y las predecesoras solo se gestionan al editar.
  */
 export function TaskDialog({
   open,
@@ -109,6 +128,7 @@ export function TaskDialog({
   onSaved,
 }: TaskDialogProps): React.ReactElement {
   const [title, setTitle] = React.useState('');
+  const [selectedPhaseId, setSelectedPhaseId] = React.useState('');
   const [responsibleUserId, setResponsibleUserId] = React.useState('');
   const [startDate, setStartDate] = React.useState('');
   const [endDate, setEndDate] = React.useState('');
@@ -119,9 +139,11 @@ export function TaskDialog({
   const [formError, setFormError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const titleRef = React.useRef<HTMLInputElement>(null);
+  const phaseRef = React.useRef<HTMLButtonElement>(null);
   const hoursRef = React.useRef<HTMLInputElement>(null);
 
   const [users, setUsers] = React.useState<CoordinationPerson[]>([]);
+  const [peopleFailed, setPeopleFailed] = React.useState(false);
   const [predecessorIds, setPredecessorIds] = React.useState<Set<string>>(
     new Set(),
   );
@@ -129,17 +151,20 @@ export function TaskDialog({
   // Personas en alcance para el selector de responsable. Usa
   // /coordination/people (disponible para los 3 roles, filtrado por alcance),
   // NO /users (que es solo-jefe): quien gestiona el plan es el líder, y debe
-  // poder asignar responsables de su proceso. Si falla, se degrada a un
-  // selector vacío sin romper el formulario.
+  // poder asignar responsables de su proceso. Si falla, se avisa en el campo.
   React.useEffect(() => {
     if (!open) return;
     let active = true;
     void listCoordinationPeople()
       .then((data) => {
-        if (active) setUsers(data);
+        if (!active) return;
+        setUsers(data);
+        setPeopleFailed(false);
       })
       .catch(() => {
-        if (active) setUsers([]);
+        if (!active) return;
+        setUsers([]);
+        setPeopleFailed(true);
       });
     return () => {
       active = false;
@@ -149,6 +174,7 @@ export function TaskDialog({
   useResetOnChange([open, task], () => {
     if (open) {
       setTitle(task?.title ?? '');
+      setSelectedPhaseId(task?.phaseId ?? phaseId ?? phases[0]?.id ?? '');
       setResponsibleUserId(task?.responsibleUserId ?? '');
       setStartDate(toDateInput(task?.startDate));
       setEndDate(toDateInput(task?.endDate));
@@ -166,6 +192,17 @@ export function TaskDialog({
       setFormError(null);
     }
   });
+
+  const phase = React.useMemo(
+    () => phases.find((p) => p.id === selectedPhaseId),
+    [phases, selectedPhaseId],
+  );
+  const taskCountByPhase = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const t of allTasks) counts.set(t.phaseId, (counts.get(t.phaseId) ?? 0) + 1);
+    return counts;
+  }, [allTasks]);
+  const suggestedFromOrigin = !task && phaseId !== null && phaseId === selectedPhaseId;
 
   // Candidatas a predecesora: tareas del mismo plan, sin ofrecer la propia.
   const candidates = React.useMemo(
@@ -203,28 +240,23 @@ export function TaskDialog({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (submitting) return;
-    const effectiveEnd = endDate;
-    const effectiveStart = startDate;
     const hours = estimateHours.trim() === '' ? undefined : Number(estimateHours);
 
     // Las reglas de siempre, evaluadas todas a la vez (design §9).
     const errors: FieldErrors = {};
     if (!title.trim()) errors.title = 'El título de la tarea es obligatorio.';
+    if (!task && !selectedPhaseId) errors.phase = 'Elige la fase de la tarea.';
     if (hours !== undefined && (Number.isNaN(hours) || hours < 0)) {
       errors.hours = 'El esfuerzo debe ser un número de horas válido.';
     }
-    const dateError = validateTaskDates(
-      startDate,
-      endDate,
-      phases.find((p) => p.id === (task?.phaseId ?? phaseId)),
-    );
+    const dateError = validateTaskDates(startDate, endDate, phase);
     if (dateError) errors.dates = dateError;
-    const missingPhase = !task && !phaseId;
     setFieldErrors(errors);
-    setFormError(missingPhase ? 'Falta la fase de la tarea.' : null);
-    if (errors.title || errors.hours || errors.dates || missingPhase) {
-      // Foco al primer campo con error, en orden del DOM.
+    setFormError(null);
+    if (errors.title || errors.phase || errors.hours || errors.dates) {
+      // Foco al primer campo con error, en orden visual.
       if (errors.title) titleRef.current?.focus();
+      else if (errors.phase) phaseRef.current?.focus();
       else if (errors.hours) hoursRef.current?.focus();
       return;
     }
@@ -233,8 +265,8 @@ export function TaskDialog({
     const body = {
       title: title.trim(),
       responsibleUserId: responsibleUserId || undefined,
-      startDate: toIso(effectiveStart),
-      endDate: toIso(effectiveEnd),
+      startDate: toIso(startDate),
+      endDate: toIso(endDate),
       estimateHours: hours,
       description: description.trim() || undefined,
       acceptanceCriteria: acceptanceCriteria.trim() || undefined,
@@ -244,9 +276,9 @@ export function TaskDialog({
         await updateTask(task.id, body);
         await syncDependencies(task.id);
         toast.success('Tarea actualizada.');
-      } else if (phaseId) {
-        await createTask(phaseId, body);
-        toast.success('Tarea creada.');
+      } else {
+        await createTask(selectedPhaseId, body);
+        toast.success(phase ? `Tarea creada en «${phase.name}».` : 'Tarea creada.');
       }
       onSaved();
     } catch (err) {
@@ -257,122 +289,232 @@ export function TaskDialog({
     }
   }
 
+  const noPhases = !task && phases.length === 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="md">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>{task ? 'Editar tarea' : 'Nueva tarea'}</DialogTitle>
           <DialogDescription>
-            Define responsable, fechas, esfuerzo y predecesoras.
+            Define qué hay que hacer, en qué fase, quién lo hace y cuándo.
           </DialogDescription>
         </DialogHeader>
 
         <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <DialogBody className="grid gap-4">
+          <DialogBody className="grid gap-6">
             <RequiredHint />
-            <Field id="task-title" label="Título" required error={fieldErrors.title}>
-              <Input
-                ref={titleRef}
-                autoFocus
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  clearFieldError('title');
-                }}
-              />
-            </Field>
 
-            <Field id="task-responsible" label="Responsable">
-              {(control) => (
-                <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
-                  <SelectTrigger {...control}>
-                    <SelectValue placeholder="Sin asignar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </Field>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="task-start" label="Inicio" error={fieldErrors.dates}>
+            <div className="grid gap-4">
+              <GroupHeading>Qué y dónde</GroupHeading>
+              <Field
+                id="task-title"
+                label="Título"
+                required
+                error={fieldErrors.title}
+                help="Una frase corta con un verbo, por ejemplo «Configurar el servidor»."
+              >
                 <Input
-                  type="date"
-                  value={startDate}
+                  ref={titleRef}
+                  autoFocus={!task}
+                  value={title}
                   onChange={(e) => {
-                    setStartDate(e.target.value);
-                    clearFieldError('dates');
+                    setTitle(e.target.value);
+                    clearFieldError('title');
                   }}
                 />
               </Field>
-              <Field id="task-end" label="Vencimiento">
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
-                    clearFieldError('dates');
-                  }}
+
+              {noPhases ? (
+                <InlineNotice tone="warning" title="Primero crea una fase.">
+                  <p className="text-muted-foreground">
+                    Toda tarea vive dentro de una fase. Cierra este diálogo y usa «Nueva fase».
+                  </p>
+                </InlineNotice>
+              ) : (
+                <div className="rounded-xl bg-primary-subtle/50 p-3 ring-1 ring-primary/20">
+                  {task ? (
+                    <Field
+                      id="task-phase"
+                      label="Fase"
+                      help="La fase no se puede cambiar. Para moverla, crea la tarea en la otra fase y elimina esta."
+                    >
+                      <div className="flex h-11 items-center gap-2 rounded-md border bg-card px-3 text-base font-medium">
+                        <Lock className="size-4 text-muted-foreground" aria-hidden="true" />
+                        <span className="min-w-0 truncate">{phase?.name ?? 'Fase no disponible'}</span>
+                      </div>
+                    </Field>
+                  ) : (
+                    <Field
+                      id="task-phase"
+                      label="Fase"
+                      required
+                      error={fieldErrors.phase}
+                      help={
+                        suggestedFromOrigin && phase
+                          ? `Preseleccionada desde «${phase.name}». La tarea se crea dentro de esta fase.`
+                          : 'La tarea se crea dentro de esta fase.'
+                      }
+                    >
+                      {(control) => (
+                        <Select
+                          value={selectedPhaseId}
+                          onValueChange={(value) => {
+                            setSelectedPhaseId(value);
+                            clearFieldError('phase');
+                            clearFieldError('dates');
+                          }}
+                        >
+                          <SelectTrigger ref={phaseRef} {...control} className="h-11 bg-card text-base font-medium">
+                            <SelectValue placeholder="Elige la fase" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {phases.map((p) => (
+                              <SelectItem
+                                key={p.id}
+                                value={p.id}
+                                description={phaseSummary(p, taskCountByPhase.get(p.id) ?? 0)}
+                              >
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </Field>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="grid gap-4 border-t pt-5">
+              <GroupHeading>Quién y cuándo</GroupHeading>
+              <div className="grid items-start gap-4 sm:grid-cols-2">
+                <Field
+                  id="task-responsible"
+                  label="Responsable"
+                  help={
+                    peopleFailed
+                      ? 'No se pudieron cargar las personas. Cierra y vuelve a abrir el diálogo.'
+                      : 'Quien actualizará el estado y el avance.'
+                  }
+                >
+                  {(control) => (
+                    <Select value={responsibleUserId} onValueChange={setResponsibleUserId}>
+                      <SelectTrigger {...control}>
+                        <SelectValue placeholder="Sin asignar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </Field>
+                <Field id="task-hours" label="Esfuerzo (horas)" error={fieldErrors.hours} help="Opcional.">
+                  <Input
+                    ref={hoursRef}
+                    type="number"
+                    min={0}
+                    inputMode="decimal"
+                    value={estimateHours}
+                    onChange={(e) => {
+                      setEstimateHours(e.target.value);
+                      clearFieldError('hours');
+                    }}
+                  />
+                </Field>
+                <Field id="task-start" label="Inicio">
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      clearFieldError('dates');
+                    }}
+                  />
+                </Field>
+                <Field id="task-end" label="Vencimiento">
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      clearFieldError('dates');
+                    }}
+                  />
+                </Field>
+              </div>
+              {fieldErrors.dates ? (
+                <p role="alert" className="text-meta text-danger">
+                  {fieldErrors.dates}
+                </p>
+              ) : phase && (phase.startDate || phase.endDate) ? (
+                <p className="text-meta text-muted-foreground">
+                  {`Dentro del rango de la fase «${phase.name}»: ${formatDateOnly(phase.startDate)} – ${formatDateOnly(phase.endDate)}.`}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-4 border-t pt-5">
+              <GroupHeading>Detalle</GroupHeading>
+              <Field id="task-desc" label="Descripción">
+                <Textarea
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </Field>
+              <Field
+                id="task-criteria"
+                label="Criterios de aceptación"
+                help="Cómo sabrás que la tarea está lista."
+              >
+                <Textarea
+                  rows={3}
+                  value={acceptanceCriteria}
+                  onChange={(e) => setAcceptanceCriteria(e.target.value)}
                 />
               </Field>
             </div>
 
-            <Field id="task-hours" label="Esfuerzo (horas)" error={fieldErrors.hours}>
-              <Input
-                ref={hoursRef}
-                type="number"
-                min={0}
-                inputMode="decimal"
-                className="sm:w-40"
-                value={estimateHours}
-                onChange={(e) => {
-                  setEstimateHours(e.target.value);
-                  clearFieldError('hours');
-                }}
-              />
-            </Field>
-
-            <Field id="task-desc" label="Descripción">
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-            </Field>
-
-            <Field id="task-criteria" label="Criterios de aceptación">
-              <Textarea
-                value={acceptanceCriteria}
-                onChange={(e) => setAcceptanceCriteria(e.target.value)}
-              />
-            </Field>
-
-            {task ? (
-              <FieldSet id="task-predecessors-field" kind="checkbox" legend="Predecesoras">
-                {candidates.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No hay otras tareas en el plan.</p>
-                ) : (
-                  <ul className="flex max-h-48 flex-col overflow-y-auto rounded-md border px-3 py-1">
-                    {candidates.map((c) => (
-                      <li key={c.id}>
-                        <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
-                          <Checkbox
-                            checked={predecessorIds.has(c.id)}
-                            onChange={() => togglePredecessor(c.id)}
-                          />
-                          <span className="min-w-0 wrap-break-word">{c.title}</span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </FieldSet>
-            ) : (
-              <p className="text-meta text-muted-foreground">
-                Las predecesoras se gestionan tras crear la tarea.
-              </p>
-            )}
+            <div className="grid gap-4 border-t pt-5">
+              {task ? (
+                <FieldSet
+                  id="task-predecessors-field"
+                  kind="checkbox"
+                  legend={`Predecesoras${predecessorIds.size > 0 ? ` (${predecessorIds.size} seleccionadas)` : ''}`}
+                >
+                  {candidates.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No hay otras tareas en el plan.</p>
+                  ) : (
+                    <ul className="flex max-h-48 flex-col overflow-y-auto rounded-md border px-3 py-1">
+                      {candidates.map((c) => (
+                        <li key={c.id}>
+                          <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={predecessorIds.has(c.id)}
+                              onChange={() => togglePredecessor(c.id)}
+                            />
+                            <span className="min-w-0 wrap-break-word">{c.title}</span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </FieldSet>
+              ) : (
+                <>
+                  <GroupHeading>Predecesoras</GroupHeading>
+                  <InlineNotice tone="info">
+                    Podrás elegir las predecesoras después de crear la tarea.
+                  </InlineNotice>
+                </>
+              )}
+            </div>
 
             <FormError id={FORM_ID} message={formError} />
           </DialogBody>
@@ -386,7 +528,7 @@ export function TaskDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" loading={submitting}>
+            <Button type="submit" loading={submitting} disabled={noPhases}>
               {submitting ? 'Guardando…' : task ? 'Guardar cambios' : 'Crear tarea'}
             </Button>
           </DialogFooter>

@@ -22,10 +22,12 @@ import { TaskService } from './task.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
+import { UpdateTaskProgressDto } from './dto/update-task-progress.dto';
 import { AcceptTaskDto } from './dto/accept-task.dto';
 import { ListPlanTasksDto } from './dto/list-plan-tasks.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
 import { MyWorkItemDto } from './dto/my-work-item.dto';
+import { TaskHistoryEntryDto } from './dto/task-history-entry.dto';
 import { CurrentActor } from '../../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../../auth/current-actor';
 import { CurrentUserGuard } from '../../auth/current-user.guard';
@@ -101,6 +103,20 @@ export class TaskController {
     return this.taskService.findOne(actor, id);
   }
 
+  @Get('tasks/:id/history')
+  @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE)
+  @ApiOperation({ summary: 'Traza de cambios de una tarea (quién, cuándo y qué cambió).' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Eventos de la tarea, del más reciente al más antiguo.', type: [TaskHistoryEntryDto] })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Tarea fuera de alcance.' })
+  history(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.taskService.history(actor, id);
+  }
+
   @Patch('tasks/:id')
   @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO)
   @ApiOperation({ summary: 'Edita una tarea (no estado/aceptacion; regla hito).' })
@@ -150,6 +166,24 @@ export class TaskController {
     @Body() dto: UpdateTaskStatusDto,
   ) {
     return this.taskService.changeStatus(actor, id, dto);
+  }
+
+  @Patch('tasks/:id/progress')
+  @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE)
+  @ApiOperation({ summary: 'Actualiza solo el avance (0-100) de una tarea, sin cambiar su estado.' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ type: UpdateTaskProgressDto })
+  @ApiResponse({ status: 200, description: 'Avance actualizado.', type: TaskResponseDto })
+  @ApiResponse({ status: 400, description: 'Avance fuera de 0-100.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente o tarea ajena (integrante).' })
+  @ApiResponse({ status: 404, description: 'Tarea fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'La tarea está Por hacer o Terminada.' })
+  changeProgress(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTaskProgressDto,
+  ) {
+    return this.taskService.changeProgress(actor, id, dto);
   }
 
   @Patch('tasks/:id/accept')
