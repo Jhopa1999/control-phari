@@ -74,7 +74,7 @@ function NavLink({
           className={cn(
             'group relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm text-sidebar-foreground transition-colors pointer-coarse:min-h-10 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sidebar-ring rail:justify-center rail:px-0',
             active &&
-              'bg-sidebar-active font-medium text-sidebar-accent-foreground hover:bg-sidebar-active before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-sidebar-primary forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
+              'bg-sidebar-active font-medium text-sidebar-accent-foreground hover:bg-sidebar-active before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-white forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
           )}
         >
           <Icon
@@ -82,7 +82,7 @@ function NavLink({
             className={cn(
               'size-4 shrink-0',
               active
-                ? 'text-sidebar-primary'
+                ? 'text-sidebar-accent-foreground'
                 : 'text-sidebar-muted-foreground group-hover:text-sidebar-accent-foreground',
             )}
           />
@@ -590,18 +590,18 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
     );
   }
 
-  // La columna exterior se estira con la fila del shell (todo el alto de la
-  // página) y lleva el fondo y el borde; el aside, dentro, queda fijo al
-  // viewport (sticky + h-dvh) y su menú tiene scroll propio. Sin la columna,
-  // en páginas más altas que el viewport el fondo del menú terminaba en la
-  // primera pantalla (visible en capturas de página completa).
+  // Menú fijo al viewport (position: fixed, sin depender de sticky ni de dvh):
+  // el contenedor en flujo solo reserva el ancho (240 px o 56 px en riel) y el
+  // aside, fijo, ocupa todo el alto de la ventana y tiene su propio scroll.
   return (
-    <div className="hidden shrink-0 border-r border-sidebar-border bg-sidebar print:hidden lg:block">
+    <div
+      data-sidebar={mode.pref}
+      className="hidden w-60 shrink-0 transition-[width] duration-150 print:hidden lg:block rail:w-14"
+    >
       <aside
         id="app-sidebar"
         aria-label="Menú lateral"
-        data-sidebar={mode.pref}
-        className="sticky top-0 hidden h-dvh w-60 flex-col text-sidebar-foreground transition-[width] duration-150 lg:flex rail:w-14"
+        className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-150 lg:flex rail:w-14"
       >
         {content}
       </aside>

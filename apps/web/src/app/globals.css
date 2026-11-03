@@ -113,7 +113,7 @@
   --sidebar-muted-foreground: oklch(0.8 0.035 258);
   --sidebar-accent: oklch(1 0 0 / 8%);
   --sidebar-accent-foreground: oklch(1 0 0);
-  --sidebar-active: oklch(0.559 0.208 259.8 / 32%);
+  --sidebar-active: oklch(0.559 0.208 259.8); /* = --primary: el ítem activo y los botones comparten azul */
   --sidebar-primary: oklch(0.738 0.122 207.3);
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-field: oklch(1 0 0 / 8%);
