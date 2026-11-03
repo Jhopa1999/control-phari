@@ -87,8 +87,8 @@ describe('CoordinationScopeService', () => {
         authorUserId: 'ul',
       });
     });
-    it('jefe -> {} (puede en su area)', () => {
-      expect(scope.dailyLogWriteWhere(jefe())).toEqual({});
+    it('jefe -> solo el propio: revisa lo ajeno, no lo edita', () => {
+      expect(scope.dailyLogWriteWhere(jefe())).toEqual({ authorUserId: 'uj' });
     });
   });
 

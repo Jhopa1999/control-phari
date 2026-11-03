@@ -495,6 +495,18 @@
         "apps/mcp/README.md"
       ],
       "summary": "Planificación: PATCH /tasks/{id}/progress y GET /tasks/{id}/history (tools task.progress.update y task.history), un solo Exportar/Importar en Excel, avance editable en línea, detalle con estado e historial, kanban que abre el detalle, diálogo de tarea con fase destacada y tildes corregidas en la guía de envío."
+    },
+    {
+      "timestamp": "2026-11-03T10:00:00Z",
+      "trigger_file": "apps/api/src/modules/coordination/worklog/worklog.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "apps/mcp/README.md"
+      ],
+      "summary": "Bitácora y reporte semanal: listado paginado con filtros y resumen (GET /worklog/daily/summary, tool worklog.daily.summary), autor y proceso en cada registro, flujo de revisión (review, return con motivo, recall) con aviso al autor, escritura solo del autor, panel de detalle con actividades completas y filtros en la URL."
     }
   ]
 }

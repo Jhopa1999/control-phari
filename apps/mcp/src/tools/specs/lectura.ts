@@ -159,6 +159,11 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
     'Lista las bitácoras diarias (GET /worklog/daily), con filtros opcionales.',
   ),
   lectura(
+    'worklog.daily.summary',
+    'GET /worklog/daily/summary',
+    'Resume las bitácoras diarias en alcance que cumplen el filtro: totales por estado, horas, clasificación y persona (GET /worklog/daily/summary).',
+  ),
+  lectura(
     'worklog.daily.get',
     'GET /worklog/daily/{id}',
     'Obtiene una bitácora diaria por id (GET /worklog/daily/{id}).',

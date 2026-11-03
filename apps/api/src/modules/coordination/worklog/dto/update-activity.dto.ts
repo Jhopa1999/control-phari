@@ -9,6 +9,7 @@ import {
   Matches,
   MaxLength,
   Min,
+  Max,
 } from 'class-validator';
 import { DATE_PATTERN } from '../../date';
 import { ACTIVITY_CLASS_CODES } from '../../catalog-codes';
@@ -33,6 +34,7 @@ export class UpdateActivityDto {
   @IsOptional()
   @IsInt({ message: 'Las horas deben ser un numero entero.' })
   @Min(0, { message: 'Las horas no pueden ser negativas.' })
+  @Max(24, { message: 'Las horas de una actividad no pueden pasar de 24.' })
   hours?: number;
 
   @ApiPropertyOptional({ type: String, format: 'uuid', description: '"Proyecto" (Request) planificado.' })

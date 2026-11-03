@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
-import { Plus, Send } from 'lucide-react';
+import { CheckCircle2, Plus, Send, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DescriptionList } from '@/components/description-list';
@@ -13,20 +13,32 @@ import { InlineNotice } from '@/components/inline-notice';
 import { MasterDetail, SelectableList } from '@/components/master-detail';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
+import { ReasonDialog } from '@/components/reason-dialog';
 import { Section } from '@/components/section';
 import { StatStrip, StatTile } from '@/components/stat-tile';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import type { Process, WeeklyReport } from '@/lib/api-client';
-import { formatDateOnly, formatHours } from '@/lib/format';
+import { useActor } from '@/lib/actor-context';
+import type { CoordinationPerson, Process, WeeklyReport } from '@/lib/api-client';
+import { formatDateOnly, formatDateTime, formatHours } from '@/lib/format';
 import {
   WorklogError,
   createWeeklyReport,
   getWeeklyReport,
+  listCoordinationPeople,
   listWeeklyReports,
+  returnWeeklyReport,
+  reviewWeeklyReport,
   submitWeeklyReport,
   updateWeeklyReport,
 } from '@/lib/worklog';
@@ -78,11 +90,32 @@ const SECTION_FIELDS: { key: keyof Sections; id: string; label: string; help?: s
   { key: 'decisions', id: 'sem-decisions', label: 'Decisiones' },
 ];
 
+/** «Semana del 26 oct 2026 al 1 nov 2026»: lunes a domingo (UTC, como el resto de fechas). */
 function weekLabel(weekStart: string): string {
-  return `Semana del ${formatDateOnly(weekStart)}`;
+  const start = new Date(String(weekStart).slice(0, 10) + 'T00:00:00.000Z');
+  if (Number.isNaN(start.getTime())) return `Semana del ${formatDateOnly(weekStart)}`;
+  const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
+  return `Semana del ${formatDateOnly(weekStart)} al ${formatDateOnly(end.toISOString().slice(0, 10))}`;
 }
 
+const ALL = 'ALL';
+const STATUS_OPTIONS = [
+  { value: 'BORRADOR', label: 'Borrador' },
+  { value: 'ENVIADO', label: 'Enviado' },
+  { value: 'REVISADO', label: 'Revisado' },
+] as const;
+
 export function SemanalView(): React.ReactElement {
+  const { permissions } = useActor();
+  const canReview = Boolean(
+    permissions?.roleCodes.some((r) => r === 'JEFE_AREA' || r === 'LIDER_PROCESO'),
+  );
+  const [statusFilter, setStatusFilter] = React.useState<string>(ALL);
+  const [personFilter, setPersonFilter] = React.useState<string>(ALL);
+  const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
+  const [returnOpen, setReturnOpen] = React.useState(false);
+  const [returnError, setReturnError] = React.useState<string | null>(null);
+  const [reviewing, setReviewing] = React.useState(false);
   const [reports, setReports] = React.useState<WeeklyReport[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
@@ -114,7 +147,10 @@ export function SemanalView(): React.ReactElement {
 
   const loadData = React.useCallback(() => {
     return Promise.all([
-      listWeeklyReports(),
+      listWeeklyReports({
+        ...(statusFilter !== ALL ? { status: statusFilter as never } : {}),
+        ...(personFilter !== ALL ? { authorUserId: personFilter } : {}),
+      }),
       listProcesses().catch(() => [] as Process[]),
     ])
       .then(([reps, procs]) => {
@@ -132,11 +168,18 @@ export function SemanalView(): React.ReactElement {
         setLoadError(err instanceof WorklogError ? err.message : null);
         setState('error');
       });
-  }, []);
+  }, [statusFilter, personFilter]);
   const load = React.useCallback(async () => {
     setState('loading');
     await loadData();
   }, [loadData]);
+
+  useResetOnChange([statusFilter, personFilter], () => {
+    setState('loading');
+  });
+  React.useEffect(() => {
+    if (canReview) void listCoordinationPeople().then(setPeople, () => undefined);
+  }, [canReview]);
 
   React.useEffect(() => {
     void loadData();
@@ -192,7 +235,8 @@ export function SemanalView(): React.ReactElement {
   const selectedReport = reports.find((r) => r.id === selectedId) ?? null;
   const detailReady = detailState === 'success' && detail !== null && detail.id === selectedId;
   const current = detailReady ? detail : selectedReport;
-  const isDraft = detailReady && detail.status === 'BORRADOR';
+  const actions = detailReady ? detail.actions : null;
+  const isDraft = Boolean(actions?.edit);
 
   async function handleCreate(values: SemanalFormValues) {
     setCreateSubmitting(true);
@@ -255,6 +299,65 @@ export function SemanalView(): React.ReactElement {
     }
   }
 
+  async function handleReview() {
+    if (!detail) return;
+    setReviewing(true);
+    try {
+      await reviewWeeklyReport(detail.id);
+      toast.success('Reporte semanal marcado como revisado.');
+      await Promise.all([load(), loadDetail(detail.id, true)]);
+    } catch (err) {
+      toast.error(messageOf(err));
+    } finally {
+      setReviewing(false);
+    }
+  }
+
+  async function handleReturn(reason: string) {
+    if (!detail) return;
+    setReviewing(true);
+    setReturnError(null);
+    try {
+      await returnWeeklyReport(detail.id, reason);
+      toast.success('Reporte devuelto. Se avisó al autor.');
+      setReturnOpen(false);
+      await Promise.all([load(), loadDetail(detail.id, true)]);
+    } catch (err) {
+      setReturnError(messageOf(err));
+    } finally {
+      setReviewing(false);
+    }
+  }
+
+  function renderStatusNotice(report: WeeklyReport): React.ReactNode {
+    if (report.returned) {
+      return (
+        <InlineNotice tone="warning" title="Devuelto para corregir">
+          {report.returnedByName ? `${report.returnedByName} lo devolvió` : 'Lo devolvieron'}
+          {report.returnedAt ? ` el ${formatDateTime(report.returnedAt)}` : ''}
+          {report.returnReason ? `: «${report.returnReason}».` : '.'} Corrígelo y vuelve a enviarlo.
+        </InlineNotice>
+      );
+    }
+    if (report.status === 'ENVIADO') {
+      return (
+        <InlineNotice tone="info">
+          Enviado a revisión{report.submittedAt ? ` el ${formatDateTime(report.submittedAt)}` : ''}. Mientras
+          tanto no se puede editar.
+        </InlineNotice>
+      );
+    }
+    if (report.status === 'REVISADO') {
+      return (
+        <InlineNotice tone="success">
+          Revisado{report.reviewedByName ? ` por ${report.reviewedByName}` : ''}
+          {report.reviewedAt ? ` el ${formatDateTime(report.reviewedAt)}` : ''}. Ya no se puede modificar.
+        </InlineNotice>
+      );
+    }
+    return null;
+  }
+
   // Tras enviar, «Enviar reporte» desaparece: el foco va al encabezado (NIT 4).
   const returnFocusToHeading = React.useCallback(
     (): HTMLElement | null => detailHeadingRef.current,
@@ -307,11 +410,7 @@ export function SemanalView(): React.ReactElement {
         </Section>
 
         <Section title="Secciones del reporte" headingLevel={3}>
-          {!isDraft ? (
-            <InlineNotice tone="neutral">
-              El reporte se envió; sus secciones ya no se pueden editar.
-            </InlineNotice>
-          ) : null}
+          {renderStatusNotice(detail)}
           {isDraft ? (
             <form noValidate onSubmit={handleSaveSections} className="grid max-w-[720px] gap-4">
               {SECTION_FIELDS.map((field) => (
@@ -376,11 +475,35 @@ export function SemanalView(): React.ReactElement {
               >
                 {weekLabel(current.weekStart)}
               </h2>
-              <StatusBadge kind="log" value={current.status} />
+              <StatusBadge kind="log" value={detailReady && detail.returned ? 'DEVUELTO' : current.status} />
             </div>
-            <p className="text-meta text-muted-foreground">{processName(current.processId)}</p>
+            <p className="text-meta text-muted-foreground">
+              {current.authorName ? `${current.authorName} · ` : ''}
+              {processName(current.processId)}
+            </p>
           </div>
-          {isDraft ? (
+          {actions && (actions.review || actions.return) ? (
+            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setReturnError(null);
+                  setReturnOpen(true);
+                }}
+                disabled={reviewing}
+              >
+                <Undo2 aria-hidden="true" />
+                Devolver
+              </Button>
+              <Button type="button" size="sm" onClick={() => void handleReview()} disabled={reviewing}>
+                <CheckCircle2 aria-hidden="true" />
+                {reviewing ? 'Guardando…' : 'Marcar como revisado'}
+              </Button>
+            </div>
+          ) : null}
+          {actions?.submit ? (
             <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
               <Button
                 type="button"
@@ -412,6 +535,58 @@ export function SemanalView(): React.ReactElement {
         }
       />
 
+      <div role="group" aria-label="Filtros de reportes semanales" className="flex flex-wrap items-end gap-2">
+        {canReview ? (
+          <Field id="sem-filtro-persona" label="Persona" className="w-full sm:w-auto">
+            {(control) => (
+              <Select value={personFilter} onValueChange={setPersonFilter}>
+                <SelectTrigger {...control} className="w-full sm:w-52">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Todas</SelectItem>
+                  {people.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </Field>
+        ) : null}
+        <Field id="sem-filtro-estado" label="Estado" className="w-full sm:w-auto">
+          {(control) => (
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger {...control} className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Todos</SelectItem>
+                {STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </Field>
+        {statusFilter !== ALL || personFilter !== ALL ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setStatusFilter(ALL);
+              setPersonFilter(ALL);
+            }}
+          >
+            Limpiar filtros
+          </Button>
+        ) : null}
+      </div>
+
       {state === 'error' ? (
         <div className="rounded-lg border bg-card">
           <ErrorState
@@ -422,19 +597,19 @@ export function SemanalView(): React.ReactElement {
         </div>
       ) : (
         <MasterDetail
-          listTitle="Mis reportes"
+          listTitle={canReview ? 'Reportes' : 'Mis reportes'}
           detailHeadingRef={detailHeadingRef}
           list={
             <SelectableList
-              label="Mis reportes"
+              label={canReview ? 'Reportes' : 'Mis reportes'}
               loading={state === 'loading' && reports.length === 0}
               selectedId={selectedId}
               onSelect={setSelectedId}
               items={reports.map((rep) => ({
                 id: rep.id,
                 title: weekLabel(rep.weekStart),
-                meta: processName(rep.processId),
-                badge: <StatusBadge kind="log" value={rep.status} />,
+                meta: `${rep.authorName ? `${rep.authorName} · ` : ''}${processName(rep.processId)}`,
+                badge: <StatusBadge kind="log" value={rep.returned ? 'DEVUELTO' : rep.status} />,
               }))}
               empty={{
                 title: 'Aún no hay reportes semanales.',
@@ -467,6 +642,24 @@ export function SemanalView(): React.ReactElement {
         submitting={createSubmitting}
         errorMessage={createError}
         onSubmit={handleCreate}
+      />
+
+      <ReasonDialog
+        open={returnOpen}
+        onOpenChange={setReturnOpen}
+        title="Devolver el reporte semanal"
+        description="El autor recibirá un aviso con tu motivo y podrá corregir el reporte y volver a enviarlo."
+        fieldId="devolver-reason"
+        fieldLabel="Motivo de la devolución"
+        placeholder="Por ejemplo: faltan los bloqueos de la semana."
+        confirmLabel="Devolver"
+        busyLabel="Devolviendo…"
+        tone="default"
+        submitting={reviewing}
+        errorMessage={returnError}
+        requiredMessage="Escribe el motivo de la devolución (mínimo 10 caracteres)."
+        onConfirm={(reason) => void handleReturn(reason)}
+        returnFocusTo={returnFocusToHeading}
       />
 
       <ConfirmDialog

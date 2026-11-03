@@ -23,6 +23,10 @@ export enum NotificationType {
   AI_BUDGET_ALERT = 'AI_BUDGET_ALERT',
   /** Se agotó el presupuesto mensual de IA (solo administradores). */
   AI_BUDGET_EXCEEDED = 'AI_BUDGET_EXCEEDED',
+  /** Una bitácora o reporte semanal fue marcado como revisado (al autor). */
+  WORKLOG_REVIEWED = 'WORKLOG_REVIEWED',
+  /** Una bitácora o reporte semanal fue devuelto a borrador con un motivo (al autor). */
+  WORKLOG_RETURNED = 'WORKLOG_RETURNED',
 }
 
 export interface NotifyInput {

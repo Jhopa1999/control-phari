@@ -206,3 +206,9 @@ menú, pero el servidor sigue validando cada operación.
 4. El service aplica reglas finas por rol/estado → `400`/`409` cuando la operación no
    procede (p. ej. el integrante solo opera su propia tarea; registrar una validación
    no aprueba un gate).
+
+## Bitácora y reporte semanal: escritura y revisión
+
+- **Escribir** (crear, editar, enviar, retirar el envío, eliminar) un diario o un semanal es solo del **autor**; el jefe de área y el líder ya no editan registros ajenos.
+- **Leer**: el integrante ve lo suyo, el líder lo de sus procesos y el jefe todo.
+- **Revisar o devolver** (`/review`, `/return`): jefe de área o líder del proceso del registro, nunca el propio autor (403); solo desde `ENVIADO`. `REVISADO` es terminal. Devolver exige un motivo de 10 a 1000 caracteres y avisa al autor.

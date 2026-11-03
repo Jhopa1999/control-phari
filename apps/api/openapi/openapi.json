@@ -5087,27 +5087,120 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Desde este dia inclusive (YYYY-MM-DD).",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Hasta este dia inclusive (YYYY-MM-DD).",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BORRADOR",
+                "ENVIADO",
+                "REVISADO"
+              ]
+            }
+          },
+          {
+            "name": "classificationCode",
+            "required": false,
+            "in": "query",
+            "description": "Solo diarios con al menos una actividad de esta clasificacion.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PLANIFICADA",
+                "SOPORTE",
+                "INTERNA",
+                "EXTRAORDINARIA"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Texto a buscar en las notas del dia, el autor y la descripcion o el resultado de las actividades.",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Orden por fecha (por defecto, la mas reciente primero).",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "date_desc",
+                "date_asc"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Pagina (1-based). Por defecto 1.",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Tamano de pagina (maximo 100). Por defecto 25.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Diarios.",
+            "description": "Pagina de diarios.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DailyLogResponseDto"
-                  }
+                  "$ref": "#/components/schemas/PaginatedDailyLogsResponseDto"
                 }
               }
             }
+          },
+          "400": {
+            "description": "Filtros invalidos."
           },
           "403": {
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Lista diarios en alcance (filtros opcionales).",
+        "summary": "Lista paginada de diarios en alcance, con filtros (fechas, persona, proceso, estado, clasificacion, texto).",
         "tags": [
           "worklog"
         ]
@@ -5147,6 +5240,158 @@
           }
         },
         "summary": "Crea la cabecera de un diario (autor = actor).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/daily/summary": {
+      "get": {
+        "operationId": "WorklogController_summarizeDailyLogs",
+        "parameters": [
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por dia (YYYY-MM-DD).",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por proceso.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorUserId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por autor.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Desde este dia inclusive (YYYY-MM-DD).",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Hasta este dia inclusive (YYYY-MM-DD).",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BORRADOR",
+                "ENVIADO",
+                "REVISADO"
+              ]
+            }
+          },
+          {
+            "name": "classificationCode",
+            "required": false,
+            "in": "query",
+            "description": "Solo diarios con al menos una actividad de esta clasificacion.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PLANIFICADA",
+                "SOPORTE",
+                "INTERNA",
+                "EXTRAORDINARIA"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Texto a buscar en las notas del dia, el autor y la descripcion o el resultado de las actividades.",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Orden por fecha (por defecto, la mas reciente primero).",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "date_desc",
+                "date_asc"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Pagina (1-based). Por defecto 1.",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Tamano de pagina (maximo 100). Por defecto 25.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyLogSummaryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Resumen de los diarios en alcance que cumplen el filtro: totales por estado, horas, clasificacion y persona.",
         "tags": [
           "worklog"
         ]
@@ -5289,6 +5534,139 @@
           }
         },
         "summary": "Envia un diario a revision (BORRADOR -> ENVIADO).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/daily/{id}/recall": {
+      "post": {
+        "operationId": "WorklogController_recallDailyLog",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Diario de nuevo en borrador.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyLogResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Diario fuera de alcance."
+          },
+          "409": {
+            "description": "No está enviado, ya fue revisado o su semanal ya se envió."
+          }
+        },
+        "summary": "El autor retira el envío de un diario (ENVIADO -> BORRADOR).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/daily/{id}/review": {
+      "post": {
+        "operationId": "WorklogController_reviewDailyLog",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Diario revisado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyLogResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No puede revisar este diario."
+          },
+          "404": {
+            "description": "Diario fuera de alcance."
+          },
+          "409": {
+            "description": "El diario no está enviado."
+          }
+        },
+        "summary": "Marca un diario enviado como revisado (jefe o líder del proceso, nunca el autor).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/daily/{id}/return": {
+      "post": {
+        "operationId": "WorklogController_returnDailyLog",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnWorklogDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Diario devuelto.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyLogResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Motivo inválido."
+          },
+          "403": {
+            "description": "No puede devolver este diario."
+          },
+          "404": {
+            "description": "Diario fuera de alcance."
+          },
+          "409": {
+            "description": "No está enviado o su semanal ya se envió."
+          }
+        },
+        "summary": "Devuelve un diario enviado a borrador con un motivo; avisa al autor.",
         "tags": [
           "worklog"
         ]
@@ -5438,6 +5816,30 @@
             "schema": {
               "format": "uuid",
               "type": "string"
+            }
+          },
+          {
+            "name": "authorUserId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por autor.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BORRADOR",
+                "ENVIADO",
+                "REVISADO"
+              ]
             }
           }
         ],
@@ -5615,6 +6017,101 @@
           }
         },
         "summary": "Envia un semanal a revision (BORRADOR -> ENVIADO).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/weekly-reports/{id}/review": {
+      "post": {
+        "operationId": "WorklogController_reviewWeeklyReport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Semanal revisado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No puede revisar este semanal."
+          },
+          "404": {
+            "description": "Semanal fuera de alcance."
+          },
+          "409": {
+            "description": "El semanal no está enviado."
+          }
+        },
+        "summary": "Marca un semanal enviado como revisado (jefe o líder del proceso, nunca el autor).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/weekly-reports/{id}/return": {
+      "post": {
+        "operationId": "WorklogController_returnWeeklyReport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnWorklogDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Semanal devuelto.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Motivo inválido."
+          },
+          "403": {
+            "description": "No puede devolver este semanal."
+          },
+          "404": {
+            "description": "Semanal fuera de alcance."
+          },
+          "409": {
+            "description": "El semanal no está enviado."
+          }
+        },
+        "summary": "Devuelve un semanal enviado a borrador con un motivo; avisa al autor.",
         "tags": [
           "worklog"
         ]
@@ -13271,6 +13768,43 @@
           "identifier"
         ]
       },
+      "DailyLogActionsDto": {
+        "type": "object",
+        "properties": {
+          "edit": {
+            "type": "boolean",
+            "description": "Puede editar notas y actividades."
+          },
+          "delete": {
+            "type": "boolean",
+            "description": "Puede eliminar el diario."
+          },
+          "submit": {
+            "type": "boolean",
+            "description": "Puede enviarlo a revisión."
+          },
+          "recall": {
+            "type": "boolean",
+            "description": "Puede retirar el envío (autor, mientras siga enviado)."
+          },
+          "review": {
+            "type": "boolean",
+            "description": "Puede marcarlo como revisado."
+          },
+          "return": {
+            "type": "boolean",
+            "description": "Puede devolverlo con un motivo."
+          }
+        },
+        "required": [
+          "edit",
+          "delete",
+          "submit",
+          "recall",
+          "review",
+          "return"
+        ]
+      },
       "ActivityResponseDto": {
         "type": "object",
         "properties": {
@@ -13296,15 +13830,30 @@
             "format": "uuid",
             "nullable": true
           },
+          "projectRequestTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Titulo del proyecto (solicitud) referenciado."
+          },
           "taskId": {
             "type": "string",
             "format": "uuid",
             "nullable": true
           },
+          "taskTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Titulo de la tarea referenciada."
+          },
           "relatedIssueId": {
             "type": "string",
             "format": "uuid",
             "nullable": true
+          },
+          "relatedIssueTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Titulo de la novedad relacionada."
           },
           "assetRef": {
             "type": "string",
@@ -13358,8 +13907,11 @@
           "classificationCode",
           "hours",
           "projectRequestId",
+          "projectRequestTitle",
           "taskId",
+          "taskTitle",
           "relatedIssueId",
+          "relatedIssueTitle",
           "assetRef",
           "requesterRef",
           "justification",
@@ -13385,10 +13937,18 @@
             "format": "uuid",
             "description": "Autor del diario."
           },
+          "authorName": {
+            "type": "string",
+            "description": "Nombre del autor del diario."
+          },
           "processId": {
             "type": "string",
             "format": "uuid",
             "description": "Proceso del diario."
+          },
+          "processName": {
+            "type": "string",
+            "description": "Nombre del proceso del diario."
           },
           "date": {
             "type": "string",
@@ -13412,6 +13972,45 @@
             "type": "number",
             "description": "Suma de horas de las actividades (dedicacion del dia)."
           },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuando se marco como revisado."
+          },
+          "reviewedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quien lo reviso (nombre)."
+          },
+          "returnedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Ultima devolucion a borrador."
+          },
+          "returnedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quien lo devolvio (nombre)."
+          },
+          "returnReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo de la ultima devolucion."
+          },
+          "returned": {
+            "type": "boolean",
+            "description": "true si está en borrador por una devolución vigente."
+          },
+          "actions": {
+            "description": "Acciones permitidas a quien consulta.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DailyLogActionsDto"
+              }
+            ]
+          },
           "activities": {
             "description": "Actividades del dia.",
             "type": "array",
@@ -13431,15 +14030,173 @@
         "required": [
           "id",
           "authorUserId",
+          "authorName",
           "processId",
+          "processName",
           "date",
           "status",
           "submittedAt",
           "dayNotes",
           "totalHours",
+          "reviewedAt",
+          "reviewedByName",
+          "returnedAt",
+          "returnedByName",
+          "returnReason",
+          "returned",
+          "actions",
           "activities",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "PaginatedDailyLogsResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Diarios de la pagina.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyLogResponseDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "description": "Pagina actual (1-based).",
+            "example": 1
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Tamano de pagina aplicado (acotado a 100).",
+            "example": 25
+          },
+          "total": {
+            "type": "number",
+            "description": "Total de diarios para el filtro vigente."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Hay al menos una pagina mas despues de esta."
+          }
+        },
+        "required": [
+          "data",
+          "page",
+          "pageSize",
+          "total",
+          "hasMore"
+        ]
+      },
+      "DailyLogClassificationSummaryDto": {
+        "type": "object",
+        "properties": {
+          "classificationCode": {
+            "type": "string",
+            "description": "Clasificacion (INTERNA, PLANIFICADA, SOPORTE, EXTRAORDINARIA)."
+          },
+          "activityCount": {
+            "type": "number",
+            "description": "Numero de actividades."
+          },
+          "hours": {
+            "type": "number",
+            "description": "Horas de dedicacion."
+          }
+        },
+        "required": [
+          "classificationCode",
+          "activityCount",
+          "hours"
+        ]
+      },
+      "DailyLogPersonSummaryDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la persona."
+          },
+          "logCount": {
+            "type": "number",
+            "description": "Diarios de la persona."
+          },
+          "hours": {
+            "type": "number",
+            "description": "Horas de dedicacion."
+          },
+          "pendingReviewCount": {
+            "type": "number",
+            "description": "Diarios enviados que aun esperan revision."
+          }
+        },
+        "required": [
+          "userId",
+          "name",
+          "logCount",
+          "hours",
+          "pendingReviewCount"
+        ]
+      },
+      "DailyLogSummaryDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Diarios que cumplen el filtro."
+          },
+          "draftCount": {
+            "type": "number",
+            "description": "Diarios en borrador."
+          },
+          "returnedCount": {
+            "type": "number",
+            "description": "De los borradores, los devueltos por un revisor (requieren atención del autor)."
+          },
+          "sentCount": {
+            "type": "number",
+            "description": "Diarios enviados que aun esperan revision."
+          },
+          "reviewedCount": {
+            "type": "number",
+            "description": "Diarios ya revisados."
+          },
+          "activityCount": {
+            "type": "number",
+            "description": "Numero de actividades."
+          },
+          "totalHours": {
+            "type": "number",
+            "description": "Horas de dedicacion en total."
+          },
+          "byClassification": {
+            "description": "Distribucion por clasificacion.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyLogClassificationSummaryDto"
+            }
+          },
+          "byPerson": {
+            "description": "Resumen por persona, de mayor a menor dedicacion.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyLogPersonSummaryDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "draftCount",
+          "returnedCount",
+          "sentCount",
+          "reviewedCount",
+          "activityCount",
+          "totalHours",
+          "byClassification",
+          "byPerson"
         ]
       },
       "CreateDailyLogDto": {
@@ -13476,6 +14233,20 @@
             "maxLength": 2000
           }
         }
+      },
+      "ReturnWorklogDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Motivo de la devolucion (lo ve el autor).",
+            "minLength": 10,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
       },
       "CreateActivityDto": {
         "type": "object",
@@ -13698,6 +14469,10 @@
             "format": "uuid",
             "description": "Autor del semanal."
           },
+          "authorName": {
+            "type": "string",
+            "description": "Nombre del autor del semanal."
+          },
           "processId": {
             "type": "string",
             "format": "uuid",
@@ -13737,6 +14512,45 @@
             "type": "string",
             "nullable": true
           },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuando se marco como revisado."
+          },
+          "reviewedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quien lo reviso (nombre)."
+          },
+          "returnedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Ultima devolucion a borrador."
+          },
+          "returnedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quien lo devolvio (nombre)."
+          },
+          "returnReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo de la ultima devolucion."
+          },
+          "returned": {
+            "type": "boolean",
+            "description": "true si está en borrador por una devolución vigente."
+          },
+          "actions": {
+            "description": "Acciones permitidas a quien consulta (delete y recall no aplican a semanales).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DailyLogActionsDto"
+              }
+            ]
+          },
           "consolidation": {
             "nullable": true,
             "description": "Conteos de consolidacion (solo en el detalle; null en listados).",
@@ -13759,6 +14573,7 @@
         "required": [
           "id",
           "authorUserId",
+          "authorName",
           "processId",
           "weekStart",
           "status",
@@ -13768,6 +14583,13 @@
           "blockers",
           "commitmentsText",
           "decisions",
+          "reviewedAt",
+          "reviewedByName",
+          "returnedAt",
+          "returnedByName",
+          "returnReason",
+          "returned",
+          "actions",
           "consolidation",
           "createdAt",
           "updatedAt"

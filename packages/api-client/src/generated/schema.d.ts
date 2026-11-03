@@ -1422,11 +1422,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista diarios en alcance (filtros opcionales). */
+        /** Lista paginada de diarios en alcance, con filtros (fechas, persona, proceso, estado, clasificacion, texto). */
         get: operations["WorklogController_listDailyLogs"];
         put?: never;
         /** Crea la cabecera de un diario (autor = actor). */
         post: operations["WorklogController_createDailyLog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklog/daily/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resumen de los diarios en alcance que cumplen el filtro: totales por estado, horas, clasificacion y persona. */
+        get: operations["WorklogController_summarizeDailyLogs"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1463,6 +1480,57 @@ export interface paths {
         put?: never;
         /** Envia un diario a revision (BORRADOR -> ENVIADO). */
         post: operations["WorklogController_submitDailyLog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklog/daily/{id}/recall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** El autor retira el envío de un diario (ENVIADO -> BORRADOR). */
+        post: operations["WorklogController_recallDailyLog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklog/daily/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marca un diario enviado como revisado (jefe o líder del proceso, nunca el autor). */
+        post: operations["WorklogController_reviewDailyLog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklog/daily/{id}/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Devuelve un diario enviado a borrador con un motivo; avisa al autor. */
+        post: operations["WorklogController_returnDailyLog"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1551,6 +1619,40 @@ export interface paths {
         put?: never;
         /** Envia un semanal a revision (BORRADOR -> ENVIADO). */
         post: operations["WorklogController_submitWeeklyReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-reports/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marca un semanal enviado como revisado (jefe o líder del proceso, nunca el autor). */
+        post: operations["WorklogController_reviewWeeklyReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-reports/{id}/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Devuelve un semanal enviado a borrador con un motivo; avisa al autor. */
+        post: operations["WorklogController_returnWeeklyReport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4731,6 +4833,20 @@ export interface components {
             /** @description Identificador funcional (correo/usuario). */
             identifier: string;
         };
+        DailyLogActionsDto: {
+            /** @description Puede editar notas y actividades. */
+            edit: boolean;
+            /** @description Puede eliminar el diario. */
+            delete: boolean;
+            /** @description Puede enviarlo a revisión. */
+            submit: boolean;
+            /** @description Puede retirar el envío (autor, mientras siga enviado). */
+            recall: boolean;
+            /** @description Puede marcarlo como revisado. */
+            review: boolean;
+            /** @description Puede devolverlo con un motivo. */
+            return: boolean;
+        };
         ActivityResponseDto: {
             /** Format: uuid */
             id: string;
@@ -4745,10 +4861,16 @@ export interface components {
             hours: number;
             /** Format: uuid */
             projectRequestId: string | null;
+            /** @description Titulo del proyecto (solicitud) referenciado. */
+            projectRequestTitle: string | null;
             /** Format: uuid */
             taskId: string | null;
+            /** @description Titulo de la tarea referenciada. */
+            taskTitle: string | null;
             /** Format: uuid */
             relatedIssueId: string | null;
+            /** @description Titulo de la novedad relacionada. */
+            relatedIssueTitle: string | null;
             assetRef: string | null;
             requesterRef: string | null;
             justification: string | null;
@@ -4772,11 +4894,15 @@ export interface components {
              * @description Autor del diario.
              */
             authorUserId: string;
+            /** @description Nombre del autor del diario. */
+            authorName: string;
             /**
              * Format: uuid
              * @description Proceso del diario.
              */
             processId: string;
+            /** @description Nombre del proceso del diario. */
+            processName: string;
             /**
              * @description Dia del registro (YYYY-MM-DD).
              * @example 2025-03-10
@@ -4789,12 +4915,90 @@ export interface components {
             dayNotes: string | null;
             /** @description Suma de horas de las actividades (dedicacion del dia). */
             totalHours: number;
+            /**
+             * Format: date-time
+             * @description Cuando se marco como revisado.
+             */
+            reviewedAt: string | null;
+            /** @description Quien lo reviso (nombre). */
+            reviewedByName: string | null;
+            /**
+             * Format: date-time
+             * @description Ultima devolucion a borrador.
+             */
+            returnedAt: string | null;
+            /** @description Quien lo devolvio (nombre). */
+            returnedByName: string | null;
+            /** @description Motivo de la ultima devolucion. */
+            returnReason: string | null;
+            /** @description true si está en borrador por una devolución vigente. */
+            returned: boolean;
+            /** @description Acciones permitidas a quien consulta. */
+            actions: components["schemas"]["DailyLogActionsDto"];
             /** @description Actividades del dia. */
             activities: components["schemas"]["ActivityResponseDto"][];
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        PaginatedDailyLogsResponseDto: {
+            /** @description Diarios de la pagina. */
+            data: components["schemas"]["DailyLogResponseDto"][];
+            /**
+             * @description Pagina actual (1-based).
+             * @example 1
+             */
+            page: number;
+            /**
+             * @description Tamano de pagina aplicado (acotado a 100).
+             * @example 25
+             */
+            pageSize: number;
+            /** @description Total de diarios para el filtro vigente. */
+            total: number;
+            /** @description Hay al menos una pagina mas despues de esta. */
+            hasMore: boolean;
+        };
+        DailyLogClassificationSummaryDto: {
+            /** @description Clasificacion (INTERNA, PLANIFICADA, SOPORTE, EXTRAORDINARIA). */
+            classificationCode: string;
+            /** @description Numero de actividades. */
+            activityCount: number;
+            /** @description Horas de dedicacion. */
+            hours: number;
+        };
+        DailyLogPersonSummaryDto: {
+            /** Format: uuid */
+            userId: string;
+            /** @description Nombre de la persona. */
+            name: string;
+            /** @description Diarios de la persona. */
+            logCount: number;
+            /** @description Horas de dedicacion. */
+            hours: number;
+            /** @description Diarios enviados que aun esperan revision. */
+            pendingReviewCount: number;
+        };
+        DailyLogSummaryDto: {
+            /** @description Diarios que cumplen el filtro. */
+            total: number;
+            /** @description Diarios en borrador. */
+            draftCount: number;
+            /** @description De los borradores, los devueltos por un revisor (requieren atención del autor). */
+            returnedCount: number;
+            /** @description Diarios enviados que aun esperan revision. */
+            sentCount: number;
+            /** @description Diarios ya revisados. */
+            reviewedCount: number;
+            /** @description Numero de actividades. */
+            activityCount: number;
+            /** @description Horas de dedicacion en total. */
+            totalHours: number;
+            /** @description Distribucion por clasificacion. */
+            byClassification: components["schemas"]["DailyLogClassificationSummaryDto"][];
+            /** @description Resumen por persona, de mayor a menor dedicacion. */
+            byPerson: components["schemas"]["DailyLogPersonSummaryDto"][];
         };
         CreateDailyLogDto: {
             /**
@@ -4813,6 +5017,10 @@ export interface components {
         UpdateDailyLogDto: {
             /** @description Notas del dia (texto libre). */
             dayNotes?: string;
+        };
+        ReturnWorklogDto: {
+            /** @description Motivo de la devolucion (lo ve el autor). */
+            reason: string;
         };
         CreateActivityDto: {
             /**
@@ -4928,6 +5136,8 @@ export interface components {
              * @description Autor del semanal.
              */
             authorUserId: string;
+            /** @description Nombre del autor del semanal. */
+            authorName: string;
             /**
              * Format: uuid
              * @description Proceso del semanal.
@@ -4947,6 +5157,26 @@ export interface components {
             blockers: string | null;
             commitmentsText: string | null;
             decisions: string | null;
+            /**
+             * Format: date-time
+             * @description Cuando se marco como revisado.
+             */
+            reviewedAt: string | null;
+            /** @description Quien lo reviso (nombre). */
+            reviewedByName: string | null;
+            /**
+             * Format: date-time
+             * @description Ultima devolucion a borrador.
+             */
+            returnedAt: string | null;
+            /** @description Quien lo devolvio (nombre). */
+            returnedByName: string | null;
+            /** @description Motivo de la ultima devolucion. */
+            returnReason: string | null;
+            /** @description true si está en borrador por una devolución vigente. */
+            returned: boolean;
+            /** @description Acciones permitidas a quien consulta (delete y recall no aplican a semanales). */
+            actions: components["schemas"]["DailyLogActionsDto"];
             /** @description Conteos de consolidacion (solo en el detalle; null en listados). */
             consolidation: components["schemas"]["WeeklyConsolidationDto"] | null;
             /** Format: date-time */
@@ -11163,6 +11393,22 @@ export interface operations {
                 processId?: string;
                 /** @description Filtra por autor. */
                 authorUserId?: string;
+                /** @description Desde este dia inclusive (YYYY-MM-DD). */
+                from?: string;
+                /** @description Hasta este dia inclusive (YYYY-MM-DD). */
+                to?: string;
+                /** @description Filtra por estado. */
+                status?: "BORRADOR" | "ENVIADO" | "REVISADO";
+                /** @description Solo diarios con al menos una actividad de esta clasificacion. */
+                classificationCode?: "PLANIFICADA" | "SOPORTE" | "INTERNA" | "EXTRAORDINARIA";
+                /** @description Texto a buscar en las notas del dia, el autor y la descripcion o el resultado de las actividades. */
+                q?: string;
+                /** @description Orden por fecha (por defecto, la mas reciente primero). */
+                sort?: "date_desc" | "date_asc";
+                /** @description Pagina (1-based). Por defecto 1. */
+                page?: number;
+                /** @description Tamano de pagina (maximo 100). Por defecto 25. */
+                pageSize?: number;
             };
             header?: never;
             path?: never;
@@ -11170,14 +11416,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Diarios. */
+            /** @description Pagina de diarios. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DailyLogResponseDto"][];
+                    "application/json": components["schemas"]["PaginatedDailyLogsResponseDto"];
                 };
+            };
+            /** @description Filtros invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Rol insuficiente. */
             403: {
@@ -11226,6 +11479,63 @@ export interface operations {
             };
             /** @description Ya existe un diario para persona/proceso/fecha. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_summarizeDailyLogs: {
+        parameters: {
+            query?: {
+                /** @description Filtra por dia (YYYY-MM-DD). */
+                date?: string;
+                /** @description Filtra por proceso. */
+                processId?: string;
+                /** @description Filtra por autor. */
+                authorUserId?: string;
+                /** @description Desde este dia inclusive (YYYY-MM-DD). */
+                from?: string;
+                /** @description Hasta este dia inclusive (YYYY-MM-DD). */
+                to?: string;
+                /** @description Filtra por estado. */
+                status?: "BORRADOR" | "ENVIADO" | "REVISADO";
+                /** @description Solo diarios con al menos una actividad de esta clasificacion. */
+                classificationCode?: "PLANIFICADA" | "SOPORTE" | "INTERNA" | "EXTRAORDINARIA";
+                /** @description Texto a buscar en las notas del dia, el autor y la descripcion o el resultado de las actividades. */
+                q?: string;
+                /** @description Orden por fecha (por defecto, la mas reciente primero). */
+                sort?: "date_desc" | "date_asc";
+                /** @description Pagina (1-based). Por defecto 1. */
+                page?: number;
+                /** @description Tamano de pagina (maximo 100). Por defecto 25. */
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumen. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyLogSummaryDto"];
+                };
+            };
+            /** @description Filtros invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11358,6 +11668,139 @@ export interface operations {
             };
         };
     };
+    WorklogController_recallDailyLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Diario de nuevo en borrador. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyLogResponseDto"];
+                };
+            };
+            /** @description Diario fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No está enviado, ya fue revisado o su semanal ya se envió. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_reviewDailyLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Diario revisado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyLogResponseDto"];
+                };
+            };
+            /** @description No puede revisar este diario. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Diario fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El diario no está enviado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_returnDailyLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReturnWorklogDto"];
+            };
+        };
+        responses: {
+            /** @description Diario devuelto. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyLogResponseDto"];
+                };
+            };
+            /** @description Motivo inválido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No puede devolver este diario. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Diario fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No está enviado o su semanal ya se envió. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     WorklogController_addActivity: {
         parameters: {
             query?: never;
@@ -11472,6 +11915,10 @@ export interface operations {
                 weekStart?: string;
                 /** @description Filtra por proceso. */
                 processId?: string;
+                /** @description Filtra por autor. */
+                authorUserId?: string;
+                /** @description Filtra por estado. */
+                status?: "BORRADOR" | "ENVIADO" | "REVISADO";
             };
             header?: never;
             path?: never;
@@ -11632,6 +12079,103 @@ export interface operations {
                 content?: never;
             };
             /** @description El semanal ya fue enviado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_reviewWeeklyReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Semanal revisado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReportResponseDto"];
+                };
+            };
+            /** @description No puede revisar este semanal. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Semanal fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El semanal no está enviado. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_returnWeeklyReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReturnWorklogDto"];
+            };
+        };
+        responses: {
+            /** @description Semanal devuelto. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReportResponseDto"];
+                };
+            };
+            /** @description Motivo inválido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No puede devolver este semanal. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Semanal fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El semanal no está enviado. */
             409: {
                 headers: {
                     [name: string]: unknown;

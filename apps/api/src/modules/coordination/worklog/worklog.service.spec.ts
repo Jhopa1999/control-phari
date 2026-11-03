@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
@@ -8,6 +9,7 @@ import { Prisma } from '../../../generated/prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
+import { NotificationService } from '../../notification/notification.service';
 import { CoordinationScopeService } from '../coordination-scope.service';
 import { WorklogService } from './worklog.service';
 
@@ -16,6 +18,7 @@ function createMocks() {
     dailyLog: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -28,6 +31,7 @@ function createMocks() {
     },
     weeklyReport: {
       findFirst: jest.fn(),
+      findFirstOrThrow: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -39,6 +43,20 @@ function createMocks() {
     user: { findMany: jest.fn() },
     grant: { findMany: jest.fn() },
   };
+  // El servicio relee el semanal con autor y revisión tras mutarlo: el doble
+  // devuelve lo último que produjo create/update (o un semanal por defecto).
+  prismaObj.weeklyReport.findFirstOrThrow.mockImplementation(async () => {
+    const mocks = [prismaObj.weeklyReport.create, prismaObj.weeklyReport.update]
+      .map((fn) => fn.mock)
+      .filter((mk) => mk.results.length > 0);
+    if (mocks.length === 0) return weeklyRow();
+    const last = mocks.reduce((a, b) =>
+      Math.max(...a.invocationCallOrder) > Math.max(...b.invocationCallOrder)
+        ? a
+        : b,
+    );
+    return (await last.results[last.results.length - 1].value) ?? weeklyRow();
+  });
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
     cb(prismaObj),
   );
@@ -46,8 +64,10 @@ function createMocks() {
   const audit = { record: jest.fn() } as unknown as AuditService;
   const auditRecord = audit.record as unknown as jest.Mock;
   const scope = new CoordinationScopeService(prisma);
-  const service = new WorklogService(prisma, audit, scope);
-  return { prisma, prismaObj, audit, auditRecord, scope, service };
+  const notifications = { notify: jest.fn() } as unknown as NotificationService;
+  const notify = notifications.notify as unknown as jest.Mock;
+  const service = new WorklogService(prisma, audit, scope, notifications);
+  return { prisma, prismaObj, audit, auditRecord, scope, service, notify };
 }
 
 function grantFor(processId: string, roleCode: RoleCode) {
@@ -384,7 +404,13 @@ describe('WorklogService', () => {
 
       await m.service.submitDailyLog(integrante(['p1']), 'dl1');
       const data = (m.prismaObj.dailyLog as any).update.mock.calls[0][0].data;
-      expect(Object.keys(data).sort()).toEqual(['status', 'submittedAt']);
+      expect(Object.keys(data).sort()).toEqual([
+        'returnReason',
+        'returnedAt',
+        'returnedByUserId',
+        'status',
+        'submittedAt',
+      ]);
       expect(data.status).toBe('ENVIADO');
       expect((m.prismaObj.request as any).findFirst).not.toHaveBeenCalled();
     });
@@ -402,7 +428,13 @@ describe('WorklogService', () => {
       const data = (m.prismaObj.weeklyReport as any).update.mock.calls[0][0]
         .data;
       // Solo status/submittedAt; nunca escribe proposals ni crea nada mas.
-      expect(Object.keys(data).sort()).toEqual(['status', 'submittedAt']);
+      expect(Object.keys(data).sort()).toEqual([
+        'returnReason',
+        'returnedAt',
+        'returnedByUserId',
+        'status',
+        'submittedAt',
+      ]);
       expect((m.prismaObj.request as any).findFirst).not.toHaveBeenCalled();
     });
   });
@@ -493,6 +525,158 @@ describe('WorklogService', () => {
           processId: 'p1',
           weekStart: '2025-03-14',
         }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
+
+  // --- Listado paginado, filtros, resumen y bloqueo de edicion -------------
+  describe('listDailyLogs · filtros y paginacion', () => {
+    it('devuelve el sobre paginado con total y hasMore', async () => {
+      (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([
+        dailyLogRow({ author: { name: 'Ana' } }),
+      ]);
+      (m.prismaObj.dailyLog as any).count.mockResolvedValue(30);
+      const res = await m.service.listDailyLogs(jefe(), { page: 1, pageSize: 10 });
+      expect(res.total).toBe(30);
+      expect(res.pageSize).toBe(10);
+      expect(res.hasMore).toBe(true);
+      expect(res.data[0].authorName).toBe('Ana');
+      const args = (m.prismaObj.dailyLog as any).findMany.mock.calls[0][0];
+      expect(args.skip).toBe(0);
+      expect(args.take).toBe(10);
+    });
+
+    it('acota el tamano de pagina a 100', async () => {
+      (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.dailyLog as any).count.mockResolvedValue(0);
+      const res = await m.service.listDailyLogs(jefe(), { pageSize: 500 });
+      expect(res.pageSize).toBe(100);
+    });
+
+    it('aplica rango de fechas, estado, clasificacion y texto SIN ampliar el alcance', async () => {
+      (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.dailyLog as any).count.mockResolvedValue(0);
+      await m.service.listDailyLogs(integrante(['p1']), {
+        from: '2025-03-03',
+        to: '2025-03-09',
+        status: 'ENVIADO',
+        classificationCode: 'SOPORTE',
+        q: 'tablero',
+      });
+      const and = (m.prismaObj.dailyLog as any).findMany.mock.calls[0][0].where.AND;
+      expect(and).toContainEqual({ authorUserId: 'ui' }); // el alcance sigue
+      expect(and).toContainEqual({ status: 'ENVIADO' });
+      expect(and).toContainEqual({
+        date: {
+          gte: new Date(Date.UTC(2025, 2, 3)),
+          lte: new Date(Date.UTC(2025, 2, 9)),
+        },
+      });
+      expect(and).toContainEqual({
+        activities: { some: { classificationCode: 'SOPORTE' } },
+      });
+      expect(and.some((c: any) => Array.isArray(c.OR))).toBe(true);
+    });
+
+    it('ordena ascendente cuando se pide date_asc', async () => {
+      (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.dailyLog as any).count.mockResolvedValue(0);
+      await m.service.listDailyLogs(jefe(), { sort: 'date_asc' });
+      const args = (m.prismaObj.dailyLog as any).findMany.mock.calls[0][0];
+      expect(args.orderBy[0]).toEqual({ date: 'asc' });
+    });
+  });
+
+  describe('summarizeDailyLogs', () => {
+    it('totaliza estados, horas, clasificacion y persona', async () => {
+      (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([
+        {
+          authorUserId: 'u1',
+          status: 'ENVIADO',
+          author: { name: 'Ana' },
+          activities: [
+            { classificationCode: 'INTERNA', hours: 2 },
+            { classificationCode: 'SOPORTE', hours: 3 },
+          ],
+        },
+        {
+          authorUserId: 'u1',
+          status: 'BORRADOR',
+          author: { name: 'Ana' },
+          activities: [{ classificationCode: 'INTERNA', hours: 1 }],
+        },
+        {
+          authorUserId: 'u2',
+          status: 'REVISADO',
+          author: { name: 'Beto' },
+          activities: [],
+        },
+      ]);
+      const res = await m.service.summarizeDailyLogs(jefe(), {});
+      expect(res).toMatchObject({
+        total: 3,
+        draftCount: 1,
+        sentCount: 1,
+        reviewedCount: 1,
+        activityCount: 3,
+        totalHours: 6,
+      });
+      expect(res.byClassification).toEqual([
+        { classificationCode: 'INTERNA', activityCount: 2, hours: 3 },
+        { classificationCode: 'SOPORTE', activityCount: 1, hours: 3 },
+      ]);
+      expect(res.byPerson[0]).toEqual({
+        userId: 'u1',
+        name: 'Ana',
+        logCount: 2,
+        hours: 6,
+        pendingReviewCount: 1,
+      });
+    });
+  });
+
+  describe('un diario enviado queda de solo lectura (409)', () => {
+    beforeEach(() => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(
+        dailyLogRow({ status: 'ENVIADO' }),
+      );
+    });
+
+    it('no permite agregar actividades', async () => {
+      await expect(
+        m.service.addActivity(integrante(['p1']), 'dl1', {
+          classificationCode: 'INTERNA',
+        } as never),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('no permite editar las notas ni eliminar el diario', async () => {
+      await expect(
+        m.service.updateDailyLog(integrante(['p1']), 'dl1', { dayNotes: 'x' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        m.service.removeDailyLog(integrante(['p1']), 'dl1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect((m.prismaObj.dailyLog as any).update).not.toHaveBeenCalled();
+      expect((m.prismaObj.dailyLog as any).delete).not.toHaveBeenCalled();
+    });
+
+    it('no permite editar ni borrar actividades', async () => {
+      (m.prismaObj.dailyLogActivity as any).findFirst.mockResolvedValue(activityRow());
+      await expect(
+        m.service.updateActivity(integrante(['p1']), 'a1', { hours: 2 }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        m.service.removeActivity(integrante(['p1']), 'a1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('un semanal enviado tampoco se edita', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(
+        weeklyRow({ status: 'ENVIADO' }),
+      );
+      await expect(
+        m.service.updateWeeklyReport(integrante(['p1']), 'wr1', { results: 'x' }),
       ).rejects.toBeInstanceOf(ConflictException);
     });
   });
@@ -906,4 +1090,145 @@ describe('WorklogService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
+
+  // --- Revisión y devolución ----------------------------------------------
+
+  describe('revisión y devolución de diarios', () => {
+    const enviado = () =>
+      dailyLogRow({ status: 'ENVIADO', submittedAt: now, authorUserId: 'ui' });
+
+    it('el jefe marca como revisado un diario enviado', async () => {
+      (m.prismaObj.dailyLog as any).findFirst
+        .mockResolvedValueOnce(enviado())
+        .mockResolvedValueOnce(
+          dailyLogRow({ status: 'REVISADO', reviewedAt: now }),
+        );
+      (m.prismaObj.dailyLog as any).update.mockResolvedValue(
+        dailyLogRow({ status: 'REVISADO' }),
+      );
+      const res = await m.service.reviewDailyLog(jefe(), 'dl1');
+      expect(res.status).toBe('REVISADO');
+      const data = (m.prismaObj.dailyLog as any).update.mock.calls[0][0].data;
+      expect(data).toMatchObject({ status: 'REVISADO', reviewedByUserId: 'uj' });
+      expect(m.notify).not.toHaveBeenCalled();
+    });
+
+    it('el autor no se revisa a sí mismo -> 403', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(enviado());
+      await expect(
+        m.service.reviewDailyLog(integrante(['p1']), 'dl1'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('un integrante ajeno al diario no puede revisar -> 404 por alcance', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.reviewDailyLog(integrante(['p1']), 'dl1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('un líder de otro proceso no revisa -> 403', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(enviado());
+      await expect(
+        m.service.reviewDailyLog(lider(['p9']), 'dl1'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('revisar un borrador -> 409', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(dailyLogRow());
+      await expect(
+        m.service.reviewDailyLog(jefe(), 'dl1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('devolver guarda motivo, vuelve a borrador y avisa al autor', async () => {
+      (m.prismaObj.dailyLog as any).findFirst
+        .mockResolvedValueOnce(enviado())
+        .mockResolvedValueOnce(
+          dailyLogRow({
+            status: 'BORRADOR',
+            returnedAt: now,
+            returnReason: 'Faltan las horas de soporte',
+          }),
+        );
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(null);
+      (m.prismaObj.dailyLog as any).update.mockResolvedValue(dailyLogRow());
+      const res = await m.service.returnDailyLog(lider(['p1']), 'dl1', {
+        reason: 'Faltan las horas de soporte',
+      });
+      expect(res.returned).toBe(true);
+      const data = (m.prismaObj.dailyLog as any).update.mock.calls[0][0].data;
+      expect(data).toMatchObject({
+        status: 'BORRADOR',
+        returnedByUserId: 'ul',
+        returnReason: 'Faltan las horas de soporte',
+        reviewedAt: null,
+      });
+      expect(m.notify.mock.calls[0][0]).toMatchObject({
+        userIds: ['ui'],
+        type: 'WORKLOG_RETURNED',
+      });
+    });
+
+    it('no se devuelve un diario ya revisado -> 409', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(
+        dailyLogRow({ status: 'REVISADO' }),
+      );
+      await expect(
+        m.service.returnDailyLog(jefe(), 'dl1', { reason: 'x'.repeat(12) }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('no se devuelve si su semanal ya fue enviado -> 409', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(enviado());
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue({ id: 'w1' });
+      await expect(
+        m.service.returnDailyLog(jefe(), 'dl1', { reason: 'x'.repeat(12) }),
+      ).rejects.toThrow('Primero devuelve el reporte semanal');
+    });
+
+    it('el autor retira su envío', async () => {
+      (m.prismaObj.dailyLog as any).findFirst
+        .mockResolvedValueOnce(enviado())
+        .mockResolvedValueOnce(dailyLogRow());
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(null);
+      (m.prismaObj.dailyLog as any).update.mockResolvedValue(dailyLogRow());
+      const res = await m.service.recallDailyLog(integrante(['p1']), 'dl1');
+      expect(res.status).toBe('BORRADOR');
+    });
+
+    it('el jefe ya no escribe diarios ajenos: el alcance de escritura es el autor', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.submitDailyLog(jefe(), 'dl-de-otro'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      const where = (m.prismaObj.dailyLog as any).findFirst.mock.calls[0][0].where;
+      expect(where.AND).toContainEqual({ authorUserId: 'uj' });
+    });
+  });
+
+  describe('revisión de semanales', () => {
+    const weekly = (status: string) => ({
+      id: 'w1',
+      authorUserId: 'ui',
+      processId: 'p1',
+      weekStart: new Date(Date.UTC(2025, 2, 10)),
+      status,
+    });
+
+    it('devolver exige que esté enviado -> 409 si es borrador', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(weekly('BORRADOR'));
+      await expect(
+        m.service.returnWeeklyReport(jefe(), 'w1', { reason: 'x'.repeat(12) }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('el autor no revisa su propio semanal -> 403', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(weekly('ENVIADO'));
+      await expect(
+        m.service.reviewWeeklyReport(integrante(['p1']), 'w1'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
+
 });
