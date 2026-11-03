@@ -467,6 +467,18 @@
       "trigger_file": "apps/api/src/modules/assistant/assistant-memory.ts",
       "updated_docs": ["docs/aplicacion/modulos-backend.md", "docs/aplicacion/modelo-datos.md"],
       "summary": "Asistente: memoria entre turnos (ids consultados y estado de las propuestas), validación de identificadores y de propuestas duplicadas, plan.import como propuesta única y flujo de la solicitud en el prompt."
+    },
+    {
+      "timestamp": "2026-11-06T12:00:00Z",
+      "trigger_file": "apps/web/src/app/demanda/solicitudes/solicitud-form-dialog.tsx",
+      "updated_docs": ["docs/aplicacion/frontend-pantallas.md"],
+      "summary": "Nueva solicitud: enlace «Crear solicitante» que abre el alta en un diálogo sin perder lo digitado y deja el nuevo solicitante seleccionado; quien no tiene permiso ve a quién pedirlo."
+    },
+    {
+      "timestamp": "2026-11-06T13:00:00Z",
+      "trigger_file": "apps/web/src/app/globals.css",
+      "updated_docs": ["docs/aplicacion/frontend-pantallas.md"],
+      "summary": "Identidad visual: menú lateral marino con acento cian, lienzo con tinte azul, filete degradado en las barras superiores y acentos en indicadores, cabeceras y estados vacíos (tokens en globals.css)."
     }
   ]
 }

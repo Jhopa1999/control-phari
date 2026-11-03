@@ -23,7 +23,7 @@ Se expresan en `apps/web/src/app/globals.css` como variables semánticas.
 
 | Token | Claro | Oscuro |
 | --- | --- | --- |
-| `--background` | `#F4F6F8` (lienzo) | `#08152E` |
+| `--background` | `#EBF0F7` (lienzo de aplicación; el HEX maestro de marca es `#F4F6F8`) | `#08152E` |
 | `--card` | `#FFFFFF` | superficie derivada del marino `#0F2557` |
 | `--foreground` | marino `#0F2557` | blanco |
 | `--primary` | azul eléctrico `#176BEB` | `#176BEB` |
@@ -39,6 +39,12 @@ Se expresan en `apps/web/src/app/globals.css` como variables semánticas.
 - Un valor sugerido fuera del paquete de marca (por ejemplo `#00A8FF` como
   azul de acento) **no se adopta** si no cumple contraste: blanco sobre
   `#00A8FF` queda cerca de 2.6:1 y no llega a 4.5:1.
+
+# Menú y acentos de color
+
+- El menú lateral es **marino** (`--sidebar`) en ambos temas, con logo negativo (`tone="inverse"`), ítem activo con `--sidebar-active` y barra/icono cian (`--sidebar-primary`). Sobre él usar `variant="sidebar"` en botones y tokens `sidebar-*`.
+- Barras superiores claras (`bg-card/90`) con filete degradado de marca (`bg-brand-gradient`); `PageHeader` lleva una línea degradada; `StatTile` un filete superior por tono; `EmptyState` el icono en círculo `primary-subtle`.
+- Especificación completa y contrastes medidos: `docs/design/identidad-color-menu.md`.
 
 # Contraste (obligatorio)
 

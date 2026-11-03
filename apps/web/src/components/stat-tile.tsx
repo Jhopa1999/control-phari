@@ -29,7 +29,7 @@ export function StatStrip({ label, children }: StatStripProps): React.ReactEleme
     <section
       aria-label={label}
       className={cn(
-        'grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border',
+        'grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border shadow-card',
         'max-lg:[&>:last-child:nth-child(odd)]:col-span-2',
         LG_COLUMNS[Math.min(Math.max(count, 1), 4)],
       )}
@@ -46,6 +46,13 @@ const VALUE_TONES = {
   success: 'text-success',
 } as const;
 
+const ACCENT_TONES = {
+  default: 'border-t-primary',
+  danger: 'border-t-danger',
+  warning: 'border-t-warning',
+  success: 'border-t-success',
+} as const;
+
 export interface StatTileProps {
   label: string;
   value: React.ReactNode;
@@ -56,7 +63,12 @@ export interface StatTileProps {
 /** Un indicador: etiqueta, valor de 24 px en tabular-nums y pista opcional. */
 export function StatTile({ label, value, hint, tone = 'default' }: StatTileProps): React.ReactElement {
   return (
-    <div className="flex min-w-0 flex-col gap-1 bg-card p-4">
+    <div
+      className={cn(
+        'flex min-w-0 flex-col gap-1 border-t-2 bg-linear-to-b from-primary-subtle/60 to-card p-4',
+        ACCENT_TONES[tone],
+      )}
+    >
       <p className="text-meta text-muted-foreground">{label}</p>
       <p className={cn('text-2xl font-semibold tabular-nums', VALUE_TONES[tone])}>{value}</p>
       {hint ? <div className="text-xs text-muted-foreground">{hint}</div> : null}

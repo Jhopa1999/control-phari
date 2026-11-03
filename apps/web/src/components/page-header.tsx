@@ -58,11 +58,12 @@ export function PageHeader({
             </ol>
           </nav>
         ) : null}
-        <h1 className="text-xl font-semibold tracking-tight wrap-break-word">{title}</h1>
+        <h1 className="text-xl font-bold tracking-tight wrap-break-word">{title}</h1>
         {description ? (
           <div className="max-w-prose text-sm text-muted-foreground">{description}</div>
         ) : null}
         {meta ? <div className="flex flex-wrap items-center gap-2 pt-1">{meta}</div> : null}
+        <span aria-hidden="true" className="mt-1 h-0.5 w-10 rounded-full bg-brand-gradient forced-colors:hidden" />
       </div>
       {actions ? (
         <div className="flex flex-wrap items-center gap-2 md:shrink-0">{actions}</div>

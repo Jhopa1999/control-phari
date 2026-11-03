@@ -29,7 +29,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  'fixed inset-y-0 z-50 flex h-dvh w-72 max-w-[85vw] flex-col bg-sidebar p-0 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out',
+  'fixed inset-y-0 z-50 flex h-dvh w-72 max-w-[85vw] flex-col bg-popover text-popover-foreground p-0 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out',
   {
     variants: {
       side: {
@@ -49,6 +49,8 @@ interface SheetContentProps
     VariantProps<typeof sheetVariants> {
   /** Texto accesible del botón cerrar. */
   closeLabel?: string;
+  /** 'sidebar': cajón del menú (marino); el botón cerrar usa la variante del menú. */
+  tone?: 'default' | 'sidebar';
 }
 
 /**
@@ -58,13 +60,13 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ComponentRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = 'left', className, children, closeLabel = 'Cerrar menú', ...props }, ref) => (
+>(({ side = 'left', tone = 'default', className, children, closeLabel = 'Cerrar menú', ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
-    <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
+    <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), tone === 'sidebar' && 'bg-sidebar text-sidebar-foreground', className)} {...props}>
       {children}
       <SheetPrimitive.Close asChild>
-        <Button variant="ghost" size="icon-sm" className="absolute top-3 right-3">
+        <Button variant={tone === 'sidebar' ? 'sidebar' : 'ghost'} size="icon-sm" className="absolute top-3 right-3">
           <X aria-hidden="true" />
           <span className="sr-only">{closeLabel}</span>
         </Button>

@@ -13,8 +13,11 @@ const buttonVariants = cva(
         default: 'bg-primary text-primary-foreground not-aria-disabled:hover:bg-primary-hover',
         secondary:
           'bg-secondary text-secondary-foreground not-aria-disabled:hover:bg-secondary-hover',
-        outline: 'border border-border-strong bg-background not-aria-disabled:hover:bg-accent',
+        outline: 'border border-border-strong bg-card not-aria-disabled:hover:bg-accent',
         ghost: 'not-aria-disabled:hover:bg-accent',
+        // Sobre el menú marino: el hover claro de ghost no se vería.
+        sidebar:
+          'text-sidebar-foreground not-aria-disabled:hover:bg-sidebar-accent not-aria-disabled:hover:text-sidebar-accent-foreground focus-visible:outline-sidebar-ring',
         'ghost-destructive': 'text-danger not-aria-disabled:hover:bg-danger-subtle',
         destructive:
           'bg-destructive text-destructive-foreground not-aria-disabled:hover:bg-destructive-hover',

@@ -580,6 +580,7 @@ export function SolicitudesView(): React.ReactElement {
         editing={editing}
         processes={processes}
         requesters={requesters}
+        onRequesterCreated={(r) => setRequesters((prev) => [...prev, r])}
         submitting={submitting}
         errorMessage={formError}
         onSubmit={(values) => void handleSubmit(values)}
