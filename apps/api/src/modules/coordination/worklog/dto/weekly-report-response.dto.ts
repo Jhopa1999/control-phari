@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { DailyLogActionsDto } from './daily-log-response.dto';
 
 /**
  * Conteos de consolidacion del semanal (design §2.5, calculados por lectura).
@@ -34,6 +35,9 @@ export class WeeklyReportResponseDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Autor del semanal.' })
   authorUserId!: string;
 
+  @ApiProperty({ type: String, description: 'Nombre del autor del semanal.' })
+  authorName!: string;
+
   @ApiProperty({ type: String, format: 'uuid', description: 'Proceso del semanal.' })
   processId!: string;
 
@@ -60,6 +64,27 @@ export class WeeklyReportResponseDto {
 
   @ApiProperty({ type: String, nullable: true })
   decisions!: string | null;
+
+@ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Cuando se marco como revisado.' })
+  reviewedAt!: Date | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Quien lo reviso (nombre).' })
+  reviewedByName!: string | null;
+
+  @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Ultima devolucion a borrador.' })
+  returnedAt!: Date | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Quien lo devolvio (nombre).' })
+  returnedByName!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Motivo de la ultima devolucion.' })
+  returnReason!: string | null;
+
+  @ApiProperty({ type: Boolean, description: 'true si está en borrador por una devolución vigente.' })
+  returned!: boolean;
+
+  @ApiProperty({ type: DailyLogActionsDto, description: 'Acciones permitidas a quien consulta (delete y recall no aplican a semanales).' })
+  actions!: DailyLogActionsDto;
 
   @ApiProperty({
     type: WeeklyConsolidationDto,

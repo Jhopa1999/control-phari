@@ -6,9 +6,13 @@ import {
   type CreateWeeklyReport,
   type DailyLog,
   type DailyLogActivity,
+  type DailyLogsQuery,
+  type DailyLogSummary,
+  type PaginatedDailyLogs,
   type UpdateActivity,
   type UpdateDailyLog,
   type UpdateWeeklyReport,
+  type WeeklyReportsQuery,
   type WeeklyReport,
 } from './api-client';
 
@@ -41,8 +45,18 @@ function messageForStatus(status: number): string {
   }
 }
 
+/** Mensaje en español del servidor (400/403/409), si lo trae como texto. */
+function serverMessage(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  const message = (error as { message?: unknown }).message;
+  const text = Array.isArray(message) ? message[0] : message;
+  return typeof text === 'string' && /[áéíóúñ ]/i.test(text) ? text : undefined;
+}
+
 /** Normaliza cualquier fallo (HTTP o de red) a un WorklogError entendible. */
-function toWorklogError(status: number | undefined): WorklogError {
+function toWorklogError(status: number | undefined, error?: unknown): WorklogError {
+  const fromServer = status === 400 || status === 403 || status === 409 ? serverMessage(error) : undefined;
+  if (fromServer) return new WorklogError(fromServer, status);
   if (status === undefined) {
     return new WorklogError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
@@ -69,12 +83,85 @@ export async function listCoordinationPeople(): Promise<CoordinationPerson[]> {
 
 // --- Diarios (DailyLog) ---
 
-/** Diarios en alcance (GET /worklog/daily). El backend filtra por alcance. */
-export async function listDailyLogs(): Promise<DailyLog[]> {
+/**
+ * Diarios en alcance, paginados (GET /worklog/daily). El backend aplica el
+ * alcance por rol y los filtros antes de paginar.
+ */
+export async function listDailyLogs(
+  query: DailyLogsQuery = {},
+): Promise<PaginatedDailyLogs> {
   try {
-    const { data, error, response } = await api.GET('/worklog/daily');
+    const { data, error, response } = await api.GET('/worklog/daily', {
+      params: { query },
+    });
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof WorklogError) throw err;
+    throw toWorklogError(undefined);
+  }
+}
+
+/** Resumen de los diarios que cumplen el filtro (GET /worklog/daily/summary). */
+export async function summarizeDailyLogs(
+  query: DailyLogsQuery = {},
+): Promise<DailyLogSummary> {
+  try {
+    const { data, error, response } = await api.GET('/worklog/daily/summary', {
+      params: { query },
+    });
+    if (error || !data) {
+      throw toWorklogError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof WorklogError) throw err;
+    throw toWorklogError(undefined);
+  }
+}
+
+async function transition(
+  path: '/worklog/daily/{id}/recall' | '/worklog/daily/{id}/review',
+  id: string,
+): Promise<DailyLog> {
+  try {
+    const { data, error, response } = await api.POST(path, {
+      params: { path: { id } },
+    });
+    if (error || !data) {
+      throw toWorklogError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof WorklogError) throw err;
+    throw toWorklogError(undefined);
+  }
+}
+
+/** El autor retira su envío (ENVIADO a BORRADOR). */
+export function recallDailyLog(id: string): Promise<DailyLog> {
+  return transition('/worklog/daily/{id}/recall', id);
+}
+
+/** Jefe o líder marca el diario como revisado. */
+export function reviewDailyLog(id: string): Promise<DailyLog> {
+  return transition('/worklog/daily/{id}/review', id);
+}
+
+/** Devuelve el diario a borrador con un motivo (lo ve el autor). */
+export async function returnDailyLog(
+  id: string,
+  reason: string,
+): Promise<DailyLog> {
+  try {
+    const { data, error, response } = await api.POST(
+      '/worklog/daily/{id}/return',
+      { params: { path: { id } }, body: { reason } },
+    );
+    if (error || !data) {
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -108,7 +195,7 @@ export async function createDailyLog(
       body: input,
     });
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -235,9 +322,13 @@ export async function deleteActivity(id: string): Promise<void> {
 // --- Semanales (WeeklyReport) ---
 
 /** Semanales en alcance (GET /weekly-reports). consolidation=null en listados. */
-export async function listWeeklyReports(): Promise<WeeklyReport[]> {
+export async function listWeeklyReports(
+  query: WeeklyReportsQuery = {},
+): Promise<WeeklyReport[]> {
   try {
-    const { data, error, response } = await api.GET('/weekly-reports');
+    const { data, error, response } = await api.GET('/weekly-reports', {
+      params: { query },
+    });
     if (error || !data) {
       throw toWorklogError(response.status);
     }
@@ -311,6 +402,49 @@ export async function submitWeeklyReport(id: string): Promise<WeeklyReport> {
     );
     if (error || !data) {
       throw toWorklogError(response.status);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof WorklogError) throw err;
+    throw toWorklogError(undefined);
+  }
+}
+
+async function weeklyTransition(
+  path: '/weekly-reports/{id}/review',
+  id: string,
+): Promise<WeeklyReport> {
+  try {
+    const { data, error, response } = await api.POST(path, {
+      params: { path: { id } },
+    });
+    if (error || !data) {
+      throw toWorklogError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof WorklogError) throw err;
+    throw toWorklogError(undefined);
+  }
+}
+
+/** Jefe o líder marca el semanal como revisado. */
+export function reviewWeeklyReport(id: string): Promise<WeeklyReport> {
+  return weeklyTransition('/weekly-reports/{id}/review', id);
+}
+
+/** Devuelve el semanal a borrador con un motivo (lo ve el autor). */
+export async function returnWeeklyReport(
+  id: string,
+  reason: string,
+): Promise<WeeklyReport> {
+  try {
+    const { data, error, response } = await api.POST(
+      '/weekly-reports/{id}/return',
+      { params: { path: { id } }, body: { reason } },
+    );
+    if (error || !data) {
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {

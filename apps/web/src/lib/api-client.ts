@@ -110,6 +110,19 @@ export type CoordinationPerson =
   components['schemas']['CoordinationPersonDto'];
 export type DailyLog = components['schemas']['DailyLogResponseDto'];
 export type DailyLogActivity = components['schemas']['ActivityResponseDto'];
+/** Pagina de diarios { data, page, pageSize, total, hasMore } del contrato. */
+export type PaginatedDailyLogs =
+  components['schemas']['PaginatedDailyLogsResponseDto'];
+export type DailyLogSummary = components['schemas']['DailyLogSummaryDto'];
+/** Filtros de GET /worklog/daily (fechas, persona, proceso, estado, texto, pagina). */
+export type DailyLogsQuery = NonNullable<
+  paths['/worklog/daily']['get']['parameters']['query']
+>;
+export type ReturnWorklog = components['schemas']['ReturnWorklogDto'];
+/** Filtros de GET /weekly-reports (semana, proceso, autor, estado). */
+export type WeeklyReportsQuery = NonNullable<
+  paths['/weekly-reports']['get']['parameters']['query']
+>;
 export type CreateDailyLog = components['schemas']['CreateDailyLogDto'];
 export type UpdateDailyLog = components['schemas']['UpdateDailyLogDto'];
 export type CreateActivity = components['schemas']['CreateActivityDto'];

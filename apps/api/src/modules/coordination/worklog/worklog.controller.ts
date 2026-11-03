@@ -22,6 +22,7 @@ import { WorklogService } from './worklog.service';
 import { CoordinationScopeService } from '../coordination-scope.service';
 import { CreateDailyLogDto } from './dto/create-daily-log.dto';
 import { UpdateDailyLogDto } from './dto/update-daily-log.dto';
+import { ReturnWorklogDto } from './dto/return-worklog.dto';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 import { CreateWeeklyReportDto } from './dto/create-weekly-report.dto';
@@ -29,6 +30,10 @@ import { UpdateWeeklyReportDto } from './dto/update-weekly-report.dto';
 import { ListDailyLogsDto } from './dto/list-daily-logs.dto';
 import { ListWeeklyReportsDto } from './dto/list-weekly-reports.dto';
 import { DailyLogResponseDto } from './dto/daily-log-response.dto';
+import {
+  DailyLogSummaryDto,
+  PaginatedDailyLogsResponseDto,
+} from './dto/daily-log-summary.dto';
 import { ActivityResponseDto } from './dto/activity-response.dto';
 import { WeeklyReportResponseDto } from './dto/weekly-report-response.dto';
 import { CoordinationPersonDto } from '../dto/coordination-person.dto';
@@ -70,14 +75,34 @@ export class WorklogController {
   // --- Diarios -------------------------------------------------------------
 
   @Get('worklog/daily')
-  @ApiOperation({ summary: 'Lista diarios en alcance (filtros opcionales).' })
-  @ApiResponse({ status: 200, description: 'Diarios.', type: [DailyLogResponseDto] })
+  @ApiOperation({
+    summary:
+      'Lista paginada de diarios en alcance, con filtros (fechas, persona, proceso, estado, clasificacion, texto).',
+  })
+  @ApiResponse({ status: 200, description: 'Pagina de diarios.', type: PaginatedDailyLogsResponseDto })
+  @ApiResponse({ status: 400, description: 'Filtros invalidos.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   listDailyLogs(
     @CurrentActor() actor: CurrentActorType,
     @Query() filters: ListDailyLogsDto,
   ) {
     return this.worklogService.listDailyLogs(actor, filters);
+  }
+
+  // Ruta estatica ANTES de `worklog/daily/:id` para que no se confunda con un id.
+  @Get('worklog/daily/summary')
+  @ApiOperation({
+    summary:
+      'Resumen de los diarios en alcance que cumplen el filtro: totales por estado, horas, clasificacion y persona.',
+  })
+  @ApiResponse({ status: 200, description: 'Resumen.', type: DailyLogSummaryDto })
+  @ApiResponse({ status: 400, description: 'Filtros invalidos.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  summarizeDailyLogs(
+    @CurrentActor() actor: CurrentActorType,
+    @Query() filters: ListDailyLogsDto,
+  ) {
+    return this.worklogService.summarizeDailyLogs(actor, filters);
   }
 
   @Post('worklog/daily')
@@ -144,6 +169,52 @@ export class WorklogController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.worklogService.submitDailyLog(actor, id);
+  }
+
+  @Post('worklog/daily/:id/recall')
+  @ApiOperation({ summary: 'El autor retira el envío de un diario (ENVIADO -> BORRADOR).' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Diario de nuevo en borrador.', type: DailyLogResponseDto })
+  @ApiResponse({ status: 404, description: 'Diario fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'No está enviado, ya fue revisado o su semanal ya se envió.' })
+  recallDailyLog(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.worklogService.recallDailyLog(actor, id);
+  }
+
+  @Post('worklog/daily/:id/review')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Marca un diario enviado como revisado (jefe o líder del proceso, nunca el autor).' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Diario revisado.', type: DailyLogResponseDto })
+  @ApiResponse({ status: 403, description: 'No puede revisar este diario.' })
+  @ApiResponse({ status: 404, description: 'Diario fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El diario no está enviado.' })
+  reviewDailyLog(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.worklogService.reviewDailyLog(actor, id);
+  }
+
+  @Post('worklog/daily/:id/return')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Devuelve un diario enviado a borrador con un motivo; avisa al autor.' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ type: ReturnWorklogDto })
+  @ApiResponse({ status: 200, description: 'Diario devuelto.', type: DailyLogResponseDto })
+  @ApiResponse({ status: 400, description: 'Motivo inválido.' })
+  @ApiResponse({ status: 403, description: 'No puede devolver este diario.' })
+  @ApiResponse({ status: 404, description: 'Diario fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'No está enviado o su semanal ya se envió.' })
+  returnDailyLog(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReturnWorklogDto,
+  ) {
+    return this.worklogService.returnDailyLog(actor, id, dto);
   }
 
   @Post('worklog/daily/:id/activities')
@@ -253,5 +324,38 @@ export class WorklogController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.worklogService.submitWeeklyReport(actor, id);
+  }
+
+  @Post('weekly-reports/:id/review')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Marca un semanal enviado como revisado (jefe o líder del proceso, nunca el autor).' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Semanal revisado.', type: WeeklyReportResponseDto })
+  @ApiResponse({ status: 403, description: 'No puede revisar este semanal.' })
+  @ApiResponse({ status: 404, description: 'Semanal fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El semanal no está enviado.' })
+  reviewWeeklyReport(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.worklogService.reviewWeeklyReport(actor, id);
+  }
+
+  @Post('weekly-reports/:id/return')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Devuelve un semanal enviado a borrador con un motivo; avisa al autor.' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ type: ReturnWorklogDto })
+  @ApiResponse({ status: 200, description: 'Semanal devuelto.', type: WeeklyReportResponseDto })
+  @ApiResponse({ status: 400, description: 'Motivo inválido.' })
+  @ApiResponse({ status: 403, description: 'No puede devolver este semanal.' })
+  @ApiResponse({ status: 404, description: 'Semanal fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El semanal no está enviado.' })
+  returnWeeklyReport(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReturnWorklogDto,
+  ) {
+    return this.worklogService.returnWeeklyReport(actor, id, dto);
   }
 }

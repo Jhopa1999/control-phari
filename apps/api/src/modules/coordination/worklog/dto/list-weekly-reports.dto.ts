@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID, Matches } from 'class-validator';
+import { IsIn, IsOptional, IsUUID, Matches } from 'class-validator';
 import { DATE_PATTERN } from '../../date';
 
 /**
@@ -17,4 +17,14 @@ export class ListWeeklyReportsDto {
   @IsOptional()
   @IsUUID()
   processId?: string;
+
+  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Filtra por autor.' })
+  @IsOptional()
+  @IsUUID()
+  authorUserId?: string;
+
+  @ApiPropertyOptional({ type: String, enum: ['BORRADOR', 'ENVIADO', 'REVISADO'], description: 'Filtra por estado.' })
+  @IsOptional()
+  @IsIn(['BORRADOR', 'ENVIADO', 'REVISADO'])
+  status?: string;
 }

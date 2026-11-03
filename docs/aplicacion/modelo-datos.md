@@ -270,7 +270,9 @@ una Request). Se agregan por periodo/proceso (varias filas por persona/mes).
 ### DailyLog (`daily_logs`)
 Cabecera de registro diario por proceso + fecha + autor.
 - Campos clave: `authorUserId`, `processId`, `date` (`@db.Date`), `status`
-  (default `BORRADOR`), `submittedAt?`, `dayNotes?`.
+  (default `BORRADOR`), `submittedAt?`, `dayNotes?`, y los datos de revisión:
+  `reviewedAt?`/`reviewedByUserId?` y `returnedAt?`/`returnedByUserId?`/`returnReason?`
+  (la última devolución se conserva hasta el siguiente envío).
 - Restricciones: único `(authorUserId, processId, date)`; índices por `processId`,
   `date`, `status`.
 
@@ -286,7 +288,8 @@ Actividad de un registro diario (con clasificación de maestra `ACTIVITY_CLASS`)
 Registro semanal anclado al lunes; consolida por lectura los diarios del proceso.
 - Campos clave: `authorUserId`, `processId`, `weekStart` (`@db.Date`), `status`
   (default `BORRADOR`), `submittedAt?`, y secciones de texto (`results?`, `proposals?`,
-  `blockers?`, `commitmentsText?`, `decisions?`).
+  `blockers?`, `commitmentsText?`, `decisions?`) y los mismos campos de revisión y
+  devolución que `DailyLog`.
 - Restricciones: único `(authorUserId, processId, weekStart)`; índices por `processId`,
   `weekStart`.
 

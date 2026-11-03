@@ -66,9 +66,6 @@ export class CoordinationScopeService {
    * el diario de un integrante por defecto (reversible).
    */
   dailyLogWriteWhere(actor: CurrentActor): Prisma.DailyLogWhereInput {
-    if (actor.isJefeArea) {
-      return {};
-    }
     return { authorUserId: actor.userId };
   }
 
@@ -86,9 +83,6 @@ export class CoordinationScopeService {
   }
 
   weeklyReportWriteWhere(actor: CurrentActor): Prisma.WeeklyReportWhereInput {
-    if (actor.isJefeArea) {
-      return {};
-    }
     return { authorUserId: actor.userId };
   }
 

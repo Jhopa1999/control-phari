@@ -1,65 +1,98 @@
 'use client';
 
 import * as React from 'react';
-import { useResetOnChange } from '@/lib/use-reset-on-change';
-import { Plus, Send, Trash2 } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { ClipboardList, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { ConfirmDialog } from '@/components/confirm-dialog';
-import { EmptyState } from '@/components/empty-state';
-import { ErrorState } from '@/components/error-state';
-import { InlineNotice } from '@/components/inline-notice';
-import { MasterDetail, SelectableList } from '@/components/master-detail';
+import { DataCardList } from '@/components/data-card-list';
+import { DataTablePagination, ResultCount } from '@/components/data-table';
+import { DataView, type DataViewState } from '@/components/data-view';
+import { Field } from '@/components/field';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
-import { RowActions, RowActionsCell } from '@/components/row-actions';
-import { Section } from '@/components/section';
+import { StatTile, StatStrip } from '@/components/stat-tile';
 import { StatusBadge } from '@/components/status-badge';
-import { Badge } from '@/components/ui/badge';
+import { Toolbar, SearchInput } from '@/components/toolbar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useActor } from '@/lib/actor-context';
 import type {
+  CoordinationPerson,
   DailyLog,
-  DailyLogActivity,
+  DailyLogsQuery,
+  DailyLogSummary,
   Issue,
   MyWorkItem,
   Process,
   Request,
 } from '@/lib/api-client';
-import { formatDateOnly, formatHours, orDash } from '@/lib/format';
+import { formatDateOnlyWithWeekday, formatHours, orDash } from '@/lib/format';
+import { listIssues } from '@/lib/issues';
+import { listMyWork } from '@/lib/my-work';
+import { listRequests } from '@/lib/requests';
+import { listProcesses } from '@/lib/team';
+import type { ClientTablePageSize } from '@/lib/use-client-table';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import {
   WorklogError,
-  createActivity,
   createDailyLog,
-  deleteActivity,
-  deleteDailyLog,
-  getDailyLog,
+  listCoordinationPeople,
   listDailyLogs,
-  submitDailyLog,
-  updateActivity,
-  updateDailyLog,
+  summarizeDailyLogs,
 } from '@/lib/worklog';
-import { listIssues } from '@/lib/issues';
-import { listProcesses } from '@/lib/team';
-import { listRequests } from '@/lib/requests';
-import { listMyWork } from '@/lib/my-work';
+import { RANGE_PRESETS, isRangePreset, rangeForPreset, type RangePreset } from '@/lib/worklog-range';
+import { CLASSIFICATIONS } from './actividad-form-dialog';
+import { BitacoraDetalle } from './bitacora-detalle';
 import { DiarioFormDialog, type DiarioFormValues } from './diario-form-dialog';
-import {
-  ActividadFormDialog,
-  CLASSIFICATIONS,
-  type ActividadFormValues,
-} from './actividad-form-dialog';
 
 type LoadState = 'loading' | 'success' | 'error';
+type View = 'mis' | 'equipo';
+
+const ALL = 'ALL';
+const NOUN = { one: 'diario', other: 'diarios' };
+const DEFAULT_PAGE_SIZE: ClientTablePageSize = 25;
+const STATUS_OPTIONS = [
+  { value: 'BORRADOR', label: 'Borrador' },
+  { value: 'ENVIADO', label: 'Enviado' },
+  { value: 'REVISADO', label: 'Revisado' },
+] as const;
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const letters = (parts[0]?.[0] ?? '') + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '');
+  return letters.toUpperCase() || '?';
+}
+
+function PersonAvatar({ name }: { name: string }): React.ReactElement {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-meta font-semibold text-link"
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+function classLabel(code: string): string {
+  return CLASSIFICATIONS.find((c) => c.value === code)?.label ?? code;
+}
 
 function messageOf(err: unknown): string {
   return err instanceof WorklogError
@@ -67,203 +100,197 @@ function messageOf(err: unknown): string {
     : 'Ocurrió un error inesperado. Inténtalo de nuevo.';
 }
 
-function trimOrUndefined(value: string): string | undefined {
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
+/** Texto corto de la distribución por clasificación («Planificada 3 h · Soporte 2 h»). */
+function distribution(log: DailyLog): string {
+  const hours = new Map<string, number>();
+  for (const a of log.activities) {
+    hours.set(a.classificationCode, (hours.get(a.classificationCode) ?? 0) + a.hours);
+  }
+  return [...hours.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([code, h]) => `${classLabel(code)} ${formatHours(h)}`)
+    .join(' · ');
 }
 
-/** Convierte los valores del formulario de actividad al body del api-client. */
-function activityBody(values: ActividadFormValues) {
+/** Filtros y página que se guardan en la URL (nombres en español). */
+interface UrlState {
+  view: View;
+  preset: RangePreset;
+  desde: string;
+  hasta: string;
+  persona: string;
+  proceso: string;
+  estado: string;
+  clase: string;
+  q: string;
+  pagina: number;
+  tam: ClientTablePageSize;
+  diario: string | null;
+}
+
+function parseUrl(sp: URLSearchParams, canReview: boolean): UrlState {
+  const view: View = sp.get('vista') === 'equipo' && canReview ? 'equipo' : 'mis';
+  const rango = sp.get('rango');
+  const preset: RangePreset = isRangePreset(rango) ? rango : view === 'equipo' ? 'semana' : '30-dias';
+  const tamRaw = Number(sp.get('tam'));
+  const tam: ClientTablePageSize = tamRaw === 50 || tamRaw === 100 ? tamRaw : DEFAULT_PAGE_SIZE;
+  const paginaRaw = Number(sp.get('pagina'));
   return {
-    classificationCode: values.classificationCode,
-    hours: values.hours.trim() === '' ? undefined : Number(values.hours),
-    projectRequestId: trimOrUndefined(values.projectRequestId),
-    taskId: trimOrUndefined(values.taskId),
-    relatedIssueId: trimOrUndefined(values.relatedIssueId),
-    assetRef: trimOrUndefined(values.assetRef),
-    requesterRef: trimOrUndefined(values.requesterRef),
-    justification: trimOrUndefined(values.justification),
-    description: trimOrUndefined(values.description),
-    result: trimOrUndefined(values.result),
-    evidenceUrl: trimOrUndefined(values.evidenceUrl),
+    view,
+    preset,
+    desde: sp.get('desde') ?? '',
+    hasta: sp.get('hasta') ?? '',
+    persona: sp.get('persona') ?? '',
+    proceso: sp.get('proceso') ?? '',
+    estado: sp.get('estado') ?? '',
+    clase: sp.get('clase') ?? '',
+    q: sp.get('q') ?? '',
+    pagina: Number.isInteger(paginaRaw) && paginaRaw > 0 ? paginaRaw : 1,
+    tam,
+    diario: sp.get('diario'),
   };
 }
 
-function classLabel(code: string): string {
-  return CLASSIFICATIONS.find((c) => c.value === code)?.label ?? code;
-}
-
-/** Id DOM del botón «Editar» de una actividad: destino del foco tras eliminar otra. */
-function activityEditId(activityId: string): string {
-  return `act-edit-${activityId}`;
-}
-
 export function BitacoraView(): React.ReactElement {
+  const { permissions } = useActor();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const canReview = Boolean(
+    permissions?.roleCodes.some((r) => r === 'JEFE_AREA' || r === 'LIDER_PROCESO'),
+  );
+  const myUserId = permissions?.userId ?? '';
+  const url = parseUrl(new URLSearchParams(searchParams.toString()), canReview);
+
   const [logs, setLogs] = React.useState<DailyLog[]>([]);
-  const [processes, setProcesses] = React.useState<Process[]>([]);
-  const [requests, setRequests] = React.useState<Request[]>([]);
-  const [tasks, setTasks] = React.useState<MyWorkItem[]>([]);
+  const [total, setTotal] = React.useState(0);
+  const [summary, setSummary] = React.useState<DailyLogSummary | null>(null);
   const [state, setState] = React.useState<LoadState>('loading');
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [reloadTick, setReloadTick] = React.useState(0);
 
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  const [detail, setDetail] = React.useState<DailyLog | null>(null);
-  const [detailState, setDetailState] = React.useState<LoadState>('loading');
-  const [detailError, setDetailError] = React.useState<string | null>(null);
+  const [processes, setProcesses] = React.useState<Process[]>([]);
+  const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
+  const [requests, setRequests] = React.useState<Request[]>([]);
+  const [tasks, setTasks] = React.useState<MyWorkItem[]>([]);
   const [issues, setIssues] = React.useState<Issue[]>([]);
-  const latestDetailIdRef = React.useRef<string | null>(null);
 
-  // Diálogo de cabecera de diario (crear/editar notas).
   const [diarioOpen, setDiarioOpen] = React.useState(false);
-  const [diarioEditing, setDiarioEditing] = React.useState<DailyLog | null>(null);
   const [diarioSubmitting, setDiarioSubmitting] = React.useState(false);
   const [diarioError, setDiarioError] = React.useState<string | null>(null);
 
-  // Diálogo de actividad (crear/editar).
-  const [actOpen, setActOpen] = React.useState(false);
-  const [actEditing, setActEditing] = React.useState<DailyLogActivity | null>(null);
-  const [actSubmitting, setActSubmitting] = React.useState(false);
-  const [actError, setActError] = React.useState<string | null>(null);
-  const [deletingActId, setDeletingActId] = React.useState<string | null>(null);
-  const [submitting, setSubmitting] = React.useState(false);
+  const [qInput, setQInput] = React.useState(url.q);
+  const headingRef = React.useRef<HTMLHeadingElement>(null);
+  const firstRowButtonRef = React.useRef<HTMLButtonElement>(null);
 
-  // Confirmaciones (design §13.3).
-  const [sendOpen, setSendOpen] = React.useState(false);
-  const [deleteDiarioOpen, setDeleteDiarioOpen] = React.useState(false);
-  // Fecha del diario a eliminar, fijada al abrir: el título no cambia mientras
-  // el diálogo se cierra y la selección pasa a otro diario.
-  const [deleteDiarioDate, setDeleteDiarioDate] = React.useState('');
-  const [actToDelete, setActToDelete] = React.useState<DailyLogActivity | null>(null);
-  const [deleteActOpen, setDeleteActOpen] = React.useState(false);
+  /** Actualiza la URL (sin llenar el historial). `null` o '' quita el parámetro. */
+  const setParams = React.useCallback(
+    (patch: Record<string, string | null>, keepPage = false) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === null || value === '') next.delete(key);
+        else next.set(key, value);
+      }
+      if (!keepPage && !('pagina' in patch)) next.delete('pagina');
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams],
+  );
 
-  // Destinos del foco (NIT 4).
-  const listHeadingRef = React.useRef<HTMLHeadingElement>(null);
-  const detailHeadingRef = React.useRef<HTMLHeadingElement>(null);
-  const activitiesHeadingRef = React.useRef<HTMLHeadingElement>(null);
-  const focusAfterDeleteRef = React.useRef<string | null>(null);
+  // Búsqueda con retardo de 300 ms: no se pide al servidor en cada tecla.
+  React.useEffect(() => {
+    if (qInput === url.q) return;
+    const timer = window.setTimeout(() => setParams({ q: qInput.trim() || null }), 300);
+    return () => window.clearTimeout(timer);
+  }, [qInput, url.q, setParams]);
 
-  const loadData = React.useCallback(() => {
-    return Promise.all([
-      listDailyLogs(),
-      listProcesses().catch(() => [] as Process[]),
-      listRequests().catch(() => [] as Request[]),
-      listMyWork().catch(() => [] as MyWorkItem[]),
+  // Listas auxiliares: nombres de procesos y personas, y datos para el formulario de actividades.
+  React.useEffect(() => {
+    void listProcesses().then(setProcesses, () => undefined);
+    void listRequests().then(setRequests, () => undefined);
+    void listMyWork().then(setTasks, () => undefined);
+    void listIssues().then(setIssues, () => undefined);
+  }, []);
+  React.useEffect(() => {
+    if (canReview) void listCoordinationPeople().then(setPeople, () => undefined);
+  }, [canReview]);
+
+  // Consulta efectiva al servidor, derivada de la URL.
+  const range = url.preset === 'personalizado'
+    ? { from: url.desde || undefined, to: url.hasta || undefined }
+    : rangeForPreset(url.preset);
+  const filterQuery: DailyLogsQuery = {
+    ...(range.from ? { from: range.from } : {}),
+    ...(range.to ? { to: range.to } : {}),
+    ...(url.view === 'mis' && myUserId ? { authorUserId: myUserId } : {}),
+    ...(url.view === 'equipo' && url.persona ? { authorUserId: url.persona } : {}),
+    ...(url.proceso ? { processId: url.proceso } : {}),
+    ...(url.clase ? { classificationCode: url.clase as never } : {}),
+    ...(url.q ? { q: url.q } : {}),
+  };
+  const listQuery: DailyLogsQuery = {
+    ...filterQuery,
+    ...(url.estado ? { status: url.estado as never } : {}),
+    page: url.pagina,
+    pageSize: url.tam,
+  };
+  // Mientras no se conozca al usuario, la vista «mis» no puede filtrar por autor.
+  const ready = url.view === 'equipo' || myUserId !== '';
+  const queryKey = JSON.stringify({ list: listQuery, summary: filterQuery, ready, reloadTick });
+
+  useResetOnChange([queryKey], () => {
+    setState('loading');
+  });
+
+  React.useEffect(() => {
+    const parsed = JSON.parse(queryKey) as {
+      list: DailyLogsQuery;
+      summary: DailyLogsQuery;
+      ready: boolean;
+    };
+    if (!parsed.ready) return;
+    let cancelled = false;
+    Promise.all([
+      listDailyLogs(parsed.list),
+      summarizeDailyLogs(parsed.summary).catch(() => null),
     ])
-      .then(([lgs, procs, reqs, mw]) => {
-        setLogs(lgs);
-        setProcesses(procs);
-        setRequests(reqs);
-        setTasks(mw);
+      .then(([result, sum]) => {
+        if (cancelled) return;
+        setLogs(result.data);
+        setTotal(result.total);
+        setSummary(sum);
         setLoadError(null);
         setState('success');
-        // Mantiene la selección si sigue existiendo; si no, toma el primero.
-        setSelectedId((prev) => {
-          if (prev && lgs.some((l) => l.id === prev)) return prev;
-          return lgs[0]?.id ?? null;
-        });
       })
       .catch((err: unknown) => {
+        if (cancelled) return;
         setLoadError(err instanceof WorklogError ? err.message : null);
         setState('error');
       });
-  }, []);
-  const load = React.useCallback(async () => {
-    setState('loading');
-    await loadData();
-  }, [loadData]);
+    return () => {
+      cancelled = true;
+    };
+  }, [queryKey]);
 
-  React.useEffect(() => {
-    void loadData();
-  }, [loadData]);
+  const reload = React.useCallback(() => setReloadTick((n) => n + 1), [setReloadTick]);
 
-  /**
-   * Carga el detalle. `silent` (tras guardar o eliminar) no pasa por el estado
-   * de carga: las filas siguen montadas y el foco puede volver a ellas.
-   */
-  const fetchDetail = React.useCallback((id: string) => {
-    latestDetailIdRef.current = id;
-    return Promise.all([getDailyLog(id), listIssues().catch(() => [] as Issue[])])
-      .then(([d, iss]) => {
-        if (latestDetailIdRef.current !== id) return;
-        setDetail(d);
-        // Novedades del mismo proceso del diario (relación opcional).
-        setIssues(iss.filter((i) => i.processId === d.processId));
-        setDetailError(null);
-        setDetailState('success');
-      })
-      .catch((err: unknown) => {
-        if (latestDetailIdRef.current !== id) return;
-        setDetail(null);
-        setDetailError(err instanceof WorklogError ? err.message : null);
-        setDetailState('error');
-      });
-  }, []);
-  const loadDetail = React.useCallback((id: string, silent = false) => {
-    if (!silent) setDetailState('loading');
-    return fetchDetail(id);
-  }, [fetchDetail]);
-
-  // Al cambiar de diario: sin selección se vacía el detalle; con selección se
-  // vuelve a mostrar la carga.
-  useResetOnChange([selectedId], () => {
-    if (!selectedId) setDetail(null);
-    else setDetailState('loading');
-  });
-  React.useEffect(() => {
-    if (!selectedId) {
-      latestDetailIdRef.current = null;
-      return;
-    }
-    void fetchDetail(selectedId);
-  }, [selectedId, fetchDetail]);
-
-  const processName = React.useCallback(
-    (id: string) => processes.find((p) => p.id === id)?.name ?? id,
-    [processes],
-  );
-
-  // La cabecera del detalle sale del ítem de la lista mientras carga el detalle,
-  // para que el encabezado siga montado (y con el foco) al cambiar de diario.
-  const selectedLog = logs.find((l) => l.id === selectedId) ?? null;
-  const detailReady = detailState === 'success' && detail !== null && detail.id === selectedId;
-  const current = detailReady ? detail : selectedLog;
-  const isDraft = detailReady && detail.status === 'BORRADOR';
-
-  // --- Diario (cabecera) ---
-  function openCreateDiario() {
-    setDiarioEditing(null);
-    setDiarioError(null);
-    setDiarioOpen(true);
-  }
-  function openEditDiario() {
-    if (!detail) return;
-    setDiarioEditing(detail);
-    setDiarioError(null);
-    setDiarioOpen(true);
-  }
-
+  // --- Nuevo diario ---
   async function handleDiarioSubmit(values: DiarioFormValues) {
     setDiarioSubmitting(true);
     setDiarioError(null);
     try {
-      if (diarioEditing) {
-        await updateDailyLog(diarioEditing.id, {
-          dayNotes: trimOrUndefined(values.dayNotes),
-        });
-        toast.success('Notas del diario actualizadas.');
-        await loadDetail(diarioEditing.id, true);
-      } else {
-        const created = await createDailyLog({
-          processId: values.processId,
-          date: values.date,
-          dayNotes: trimOrUndefined(values.dayNotes),
-        });
-        toast.success('Diario creado.');
-        setSelectedId(created.id);
-      }
+      const notes = values.dayNotes.trim();
+      const created = await createDailyLog({
+        processId: values.processId,
+        date: values.date,
+        ...(notes ? { dayNotes: notes } : {}),
+      });
+      toast.success('Diario creado.');
       setDiarioOpen(false);
-      setDiarioEditing(null);
-      await load();
+      setParams({ diario: created.id }, true);
+      reload();
     } catch (err) {
       const message = messageOf(err);
       setDiarioError(message);
@@ -273,467 +300,458 @@ export function BitacoraView(): React.ReactElement {
     }
   }
 
-  async function handleDeleteDiario() {
-    if (!detail) return;
-    setSubmitting(true);
-    try {
-      await deleteDailyLog(detail.id);
-      toast.success('Diario eliminado.');
-      // load() selecciona el primero que quede (el eliminado ya no existe).
-      await load();
-    } catch (err) {
-      toast.error(messageOf(err));
-    } finally {
-      setSubmitting(false);
-    }
+  // --- Filtros ---
+  const defaultPreset: RangePreset = url.view === 'equipo' ? 'semana' : '30-dias';
+  const hasFilters =
+    url.preset !== defaultPreset ||
+    Boolean(url.persona || url.proceso || url.estado || url.clase || url.q);
+
+  function clearFilters() {
+    setQInput('');
+    setParams({
+      rango: null,
+      desde: null,
+      hasta: null,
+      persona: null,
+      proceso: null,
+      estado: null,
+      clase: null,
+      q: null,
+    });
+    headingRef.current?.focus();
   }
 
-  async function handleSubmitForReview() {
-    if (!detail) return;
-    setSubmitting(true);
-    try {
-      await submitDailyLog(detail.id);
-      toast.success('Diario enviado a revisión.');
-      await Promise.all([load(), loadDetail(detail.id, true)]);
-    } catch (err) {
-      toast.error(messageOf(err));
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const pageCount = Math.max(1, Math.ceil(total / url.tam));
+  const from = total === 0 ? 0 : (url.pagina - 1) * url.tam + 1;
+  const to = total === 0 ? 0 : from + logs.length - 1;
 
-  // Tras eliminar el diario o enviarlo, el botón pulsado ya no existe: el foco
-  // va al encabezado del detalle que quede seleccionado o, si no queda ninguno,
-  // al título de la lista (NIT 4).
-  const returnFocusToDetail = React.useCallback(
-    (): HTMLElement | null => detailHeadingRef.current ?? listHeadingRef.current,
-    [],
-  );
+  let viewState: DataViewState;
+  if (state === 'loading') viewState = 'loading';
+  else if (state === 'error') viewState = 'error';
+  else if (total === 0 && !hasFilters) viewState = 'empty';
+  else if (total === 0) viewState = 'no-results';
+  else viewState = 'ready';
 
-  // --- Actividades ---
-  function openCreateAct() {
-    setActEditing(null);
-    setActError(null);
-    setActOpen(true);
-  }
-  function openEditAct(row: DailyLogActivity) {
-    setActEditing(row);
-    setActError(null);
-    setActOpen(true);
-  }
+  const showPerson = url.view === 'equipo';
+  const personName = (log: DailyLog) => orDash(log.authorName);
 
-  async function handleActSubmit(values: ActividadFormValues) {
-    if (!detail) return;
-    setActSubmitting(true);
-    setActError(null);
-    try {
-      if (actEditing) {
-        await updateActivity(actEditing.id, activityBody(values));
-        toast.success('Actividad actualizada.');
-      } else {
-        await createActivity(detail.id, activityBody(values));
-        toast.success('Actividad agregada.');
-      }
-      setActOpen(false);
-      setActEditing(null);
-      await loadDetail(detail.id, true);
-    } catch (err) {
-      // Fallo: conserva el diálogo abierto y los valores (AC-031).
-      const message = messageOf(err);
-      setActError(message);
-      toast.error(message);
-    } finally {
-      setActSubmitting(false);
-    }
-  }
-
-  function requestDeleteAct(row: DailyLogActivity) {
-    const rows = detail?.activities ?? [];
-    const index = rows.findIndex((a) => a.id === row.id);
-    const neighbour = rows[index + 1] ?? rows[index - 1] ?? null;
-    focusAfterDeleteRef.current = neighbour ? activityEditId(neighbour.id) : null;
-    setActToDelete(row);
-    setDeleteActOpen(true);
-  }
-
-  async function handleDeleteAct(row: DailyLogActivity) {
-    setDeletingActId(row.id);
-    try {
-      await deleteActivity(row.id);
-      toast.success('Actividad eliminada.');
-      if (detail) await loadDetail(detail.id, true);
-    } catch (err) {
-      toast.error(messageOf(err));
-    } finally {
-      setDeletingActId(null);
-    }
-  }
-
-  // La fila eliminada desaparece: el foco pasa a la fila siguiente (o la
-  // anterior) o, si no queda ninguna, al encabezado de la sección (NIT 4).
-  const returnFocusToActivities = React.useCallback((): HTMLElement | null => {
-    const id = focusAfterDeleteRef.current;
-    return (id ? document.getElementById(id) : null) ?? activitiesHeadingRef.current;
-  }, []);
-
-  function renderDetailBody(): React.ReactNode {
-    if (detailState === 'error') {
-      return (
-        <ErrorState
-          size="compact"
-          title="No fue posible cargar el diario."
-          message={detailError}
-          onRetry={() => selectedId && void loadDetail(selectedId)}
+  // --- Indicadores ---
+  const mine = url.view === 'mis';
+  const tiles = summary ? (
+    <StatStrip label="Resumen de la bitácora">
+      <StatTile label="Diarios" value={summary.total} hint={`${summary.activityCount} actividades`} />
+      <StatTile label="Horas" value={formatHours(summary.totalHours)} hint="Dedicación registrada" />
+      {mine ? (
+        <StatTile
+          label="Pendientes de enviar"
+          value={summary.draftCount - summary.returnedCount}
+          hint="Borradores sin enviar"
+          tone={summary.draftCount - summary.returnedCount > 0 ? 'warning' : 'default'}
         />
-      );
-    }
-    if (!detailReady || !detail) {
-      return (
-        <div aria-hidden="true" className="flex flex-col gap-4">
-          <Skeleton className="h-4 w-2/3" />
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-      );
-    }
-    const activities = detail.activities;
-    return (
-      <>
-        {detail.dayNotes ? (
-          <div className="flex flex-col gap-1">
-            <h3 className="text-sm font-semibold">Notas del día</h3>
-            <p className="text-sm whitespace-pre-wrap wrap-break-word text-muted-foreground">
-              {detail.dayNotes}
-            </p>
-          </div>
-        ) : null}
-
-        <div className="flex flex-col gap-1 rounded-md border bg-muted/40 px-4 py-3">
-          <p aria-live="polite" className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-sm font-medium">Dedicación del día:</span>
-            <span className="text-2xl font-semibold tabular-nums">
-              {formatHours(detail.totalHours)}
-            </span>
-          </p>
-          <p className="text-meta text-muted-foreground">
-            La dedicación es la suma de las horas de las actividades y no cambia el avance de las
-            tareas.
-          </p>
-        </div>
-
-        <Section
-          title="Actividades"
-          headingLevel={3}
-          count={activities.length}
-          headingRef={activitiesHeadingRef}
-          actions={
-            isDraft ? (
-              <Button type="button" variant="secondary" size="sm" onClick={openCreateAct}>
-                <Plus aria-hidden="true" />
-                Agregar actividad
-              </Button>
-            ) : null
+      ) : (
+        <StatTile
+          label="Por revisar"
+          value={summary.sentCount}
+          hint={
+            summary.sentCount > 0 ? (
+              <button
+                type="button"
+                className="text-link underline underline-offset-2"
+                onClick={() => setParams({ estado: 'ENVIADO' })}
+              >
+                Ver pendientes
+              </button>
+            ) : (
+              'Nada por revisar'
+            )
           }
-        >
-          {!isDraft ? (
-            <InlineNotice tone="neutral">
-              El diario se envió a revisión; las actividades ya no se pueden editar.
-            </InlineNotice>
-          ) : null}
-
-          {activities.length === 0 ? (
-            <div className="rounded-md border border-dashed">
-              <EmptyState
-                size="compact"
-                title="Aún no hay actividades en este diario."
-                description={
-                  isDraft ? 'Agrega lo que hiciste en el día con sus horas de dedicación.' : undefined
-                }
-                action={
-                  isDraft ? (
-                    <Button type="button" variant="outline" size="sm" onClick={openCreateAct}>
-                      <Plus aria-hidden="true" />
-                      Agregar actividad
-                    </Button>
-                  ) : undefined
-                }
-              />
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table scrollLabel="Tabla de actividades del diario">
-                <TableCaption>
-                  {`Actividades del diario del ${formatDateOnly(detail.date)}.`}
-                </TableCaption>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead scope="col">Clasificación</TableHead>
-                    <TableHead scope="col">Descripción</TableHead>
-                    <TableHead scope="col" className="text-right">
-                      Horas
-                    </TableHead>
-                    {isDraft ? (
-                      <TableHead scope="col" className="text-right">
-                        Acciones
-                      </TableHead>
-                    ) : null}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activities.map((act) => {
-                    const label = classLabel(act.classificationCode);
-                    return (
-                      <TableRow key={act.id}>
-                        <TableCell className="whitespace-nowrap">
-                          <Badge variant="outline">{label}</Badge>
-                        </TableCell>
-                        <TableCell className="min-w-48">
-                          <span
-                            className="line-clamp-2 wrap-break-word text-muted-foreground"
-                            title={act.description ?? undefined}
-                          >
-                            {orDash(act.description)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right whitespace-nowrap tabular-nums">
-                          {formatHours(act.hours)}
-                        </TableCell>
-                        {isDraft ? (
-                          <RowActionsCell>
-                            <RowActions
-                              rowLabel={act.description ? act.description : label}
-                              actions={[
-                                {
-                                  key: 'edit',
-                                  id: activityEditId(act.id),
-                                  label: 'Editar',
-                                  onSelect: () => openEditAct(act),
-                                  disabled: deletingActId === act.id,
-                                },
-                                {
-                                  key: 'delete',
-                                  label: 'Eliminar',
-                                  tone: 'danger',
-                                  busy: deletingActId === act.id,
-                                  busyLabel: 'Eliminando…',
-                                  onSelect: () => requestDeleteAct(act),
-                                },
-                              ]}
-                            />
-                          </RowActionsCell>
-                        ) : null}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </Section>
-      </>
-    );
-  }
-
-  function renderDetail(): React.ReactNode {
-    if (state === 'loading' && !current) {
-      return (
-        <Card aria-hidden="true" className="flex flex-col gap-4 p-4">
-          <Skeleton className="h-6 w-1/2" />
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </Card>
-      );
-    }
-    if (!current) {
-      return (
-        <Card>
-          <EmptyState
-            title="Selecciona un diario para ver sus actividades."
-            description="O crea uno nuevo para empezar a registrar la jornada."
-          />
-        </Card>
-      );
-    }
-    return (
-      <Card>
-        <CardHeader className="gap-3 border-b sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2
-                ref={detailHeadingRef}
-                tabIndex={-1}
-                className="rounded-sm text-lg font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                {formatDateOnly(current.date)}
-              </h2>
-              <StatusBadge kind="log" value={current.status} />
-            </div>
-            <p className="text-meta text-muted-foreground">{processName(current.processId)}</p>
-          </div>
-          {isDraft ? (
-            <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
-              <Button
-                type="button"
-                variant="ghost-destructive"
-                size="sm"
-                onClick={() => {
-                  setDeleteDiarioDate(formatDateOnly(current.date));
-                  setDeleteDiarioOpen(true);
-                }}
-                disabled={submitting}
-              >
-                <Trash2 aria-hidden="true" />
-                Eliminar
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={openEditDiario}
-                disabled={submitting}
-              >
-                Editar notas
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setSendOpen(true)}
-                disabled={submitting}
-              >
-                <Send aria-hidden="true" />
-                Enviar a revisión
-              </Button>
-            </div>
-          ) : null}
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6 pt-4">{renderDetailBody()}</CardContent>
-      </Card>
-    );
-  }
+          tone={summary.sentCount > 0 ? 'warning' : 'default'}
+        />
+      )}
+      {mine ? (
+        <StatTile
+          label="Devueltos"
+          value={summary.returnedCount}
+          hint="Necesitan corrección"
+          tone={summary.returnedCount > 0 ? 'warning' : 'default'}
+        />
+      ) : (
+        <StatTile
+          label="Borradores"
+          value={summary.draftCount}
+          hint={summary.returnedCount > 0 ? `${summary.returnedCount} devueltos` : 'Sin enviar'}
+        />
+      )}
+    </StatStrip>
+  ) : null;
 
   return (
     <PageLayout>
       <PageHeader
         title="Bitácora"
-        description="Registro diario de actividades por proceso. Las horas son dedicación del día y no cambian el avance de las tareas."
+        description="Lo que hiciste cada día y cuánto tiempo le dedicaste. La ven tu líder y tu jefatura."
         actions={
-          <Button type="button" onClick={openCreateDiario} disabled={state === 'loading'}>
+          <Button type="button" onClick={() => setDiarioOpen(true)} disabled={state === 'loading' && logs.length === 0}>
             <Plus aria-hidden="true" />
             Nuevo diario
           </Button>
         }
       />
 
-      {state === 'error' ? (
-        <div className="rounded-lg border bg-card">
-          <ErrorState
-            title="No fue posible cargar la bitácora."
-            message={loadError}
-            onRetry={() => void load()}
-          />
-        </div>
-      ) : (
-        <MasterDetail
-          listTitle="Mis diarios"
-          listHeadingRef={listHeadingRef}
-          detailHeadingRef={detailHeadingRef}
-          list={
-            <SelectableList
-              label="Mis diarios"
-              loading={state === 'loading' && logs.length === 0}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              items={logs.map((log) => ({
-                id: log.id,
-                title: formatDateOnly(log.date),
-                meta: processName(log.processId),
-                badge: <StatusBadge kind="log" value={log.status} />,
-              }))}
-              empty={{
-                title: 'Aún no hay diarios.',
-                description: 'Crea un diario para registrar las actividades de tu jornada.',
-                action: (
-                  <Button type="button" variant="outline" size="sm" onClick={openCreateDiario}>
-                    <Plus aria-hidden="true" />
-                    Nuevo diario
-                  </Button>
-                ),
-              }}
-            />
+      {canReview ? (
+        <Tabs
+          value={url.view}
+          onValueChange={(value) =>
+            setParams({ vista: value === 'equipo' ? 'equipo' : null, rango: null, desde: null, hasta: null, persona: null, estado: null })
           }
-          detail={renderDetail()}
+        >
+          <TabsList aria-label="Vista de la bitácora" className="overflow-x-auto">
+            <TabsTrigger value="mis">Mis diarios</TabsTrigger>
+            <TabsTrigger value="equipo">
+              {summary && url.view === 'equipo' && summary.sentCount > 0
+                ? `Equipo · ${summary.sentCount} por revisar`
+                : 'Equipo'}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : null}
+
+      <h2 ref={headingRef} tabIndex={-1} className="sr-only focus-visible:outline-none">
+        {mine ? 'Mis diarios' : 'Diarios del equipo'}
+      </h2>
+
+      {state !== 'error' ? tiles : null}
+
+      <Toolbar
+        label="Filtros de la bitácora"
+        collapseOnMobile
+        end={
+          <>
+            {state !== 'error' ? (
+              <ResultCount loading={state === 'loading'} total={total} filtered={total} noun={NOUN} />
+            ) : null}
+            {hasFilters ? (
+              <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                Limpiar filtros
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        <SearchInput
+          id="bit-q"
+          placeholder="Notas, actividades, persona…"
+          value={qInput}
+          onChange={(e) => setQInput(e.target.value)}
         />
-      )}
+        <Field id="bit-rango" label="Fechas" className="w-full sm:w-auto">
+          {(control) => (
+            <Select value={url.preset} onValueChange={(v) => setParams({ rango: v, desde: null, hasta: null })}>
+              <SelectTrigger {...control} className="w-full sm:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RANGE_PRESETS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </Field>
+        {url.preset === 'personalizado' ? (
+          <>
+            <Field id="bit-desde" label="Desde" className="w-full sm:w-auto">
+              {(control) => (
+                <Input
+                  {...control}
+                  type="date"
+                  value={url.desde}
+                  max={url.hasta || undefined}
+                  onChange={(e) => setParams({ desde: e.target.value })}
+                  className="w-full sm:w-40"
+                />
+              )}
+            </Field>
+            <Field id="bit-hasta" label="Hasta" className="w-full sm:w-auto">
+              {(control) => (
+                <Input
+                  {...control}
+                  type="date"
+                  value={url.hasta}
+                  min={url.desde || undefined}
+                  onChange={(e) => setParams({ hasta: e.target.value })}
+                  className="w-full sm:w-40"
+                />
+              )}
+            </Field>
+          </>
+        ) : null}
+        {showPerson ? (
+          <Field id="bit-persona" label="Persona" className="w-full sm:w-auto">
+            {(control) => (
+              <Select
+                value={url.persona || ALL}
+                onValueChange={(v) => setParams({ persona: v === ALL ? null : v })}
+              >
+                <SelectTrigger {...control} className="w-full sm:w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Todas</SelectItem>
+                  {people.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </Field>
+        ) : null}
+        {processes.length > 1 ? (
+          <Field id="bit-proceso" label="Proceso" className="w-full sm:w-auto">
+            {(control) => (
+              <Select
+                value={url.proceso || ALL}
+                onValueChange={(v) => setParams({ proceso: v === ALL ? null : v })}
+              >
+                <SelectTrigger {...control} className="w-full sm:w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Todos</SelectItem>
+                  {processes.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </Field>
+        ) : null}
+        <Field id="bit-estado" label="Estado" className="w-full sm:w-auto">
+          {(control) => (
+            <Select
+              value={url.estado || ALL}
+              onValueChange={(v) => setParams({ estado: v === ALL ? null : v })}
+            >
+              <SelectTrigger {...control} className="w-full sm:w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Todos</SelectItem>
+                {STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </Field>
+        <Field id="bit-clase" label="Clasificación" className="w-full sm:w-auto">
+          {(control) => (
+            <Select
+              value={url.clase || ALL}
+              onValueChange={(v) => setParams({ clase: v === ALL ? null : v })}
+            >
+              <SelectTrigger {...control} className="w-full sm:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Todas</SelectItem>
+                {CLASSIFICATIONS.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </Field>
+      </Toolbar>
+
+      <DataView
+        state={viewState}
+        mobileCards
+        loading={{ rows: 8, columns: 6 }}
+        error={{
+          title: 'No fue posible cargar la bitácora.',
+          message: loadError,
+          onRetry: () => {
+            setState('loading');
+            reload();
+          },
+        }}
+        empty={{
+          icon: ClipboardList,
+          title: mine ? 'Aún no hay diarios.' : 'Aún no hay diarios del equipo.',
+          description: mine
+            ? 'Crea un diario para registrar las actividades de tu jornada.'
+            : 'Cuando tu equipo registre su jornada, los diarios aparecerán aquí.',
+          action: mine ? (
+            <Button type="button" variant="outline" size="sm" onClick={() => setDiarioOpen(true)}>
+              <Plus aria-hidden="true" />
+              Nuevo diario
+            </Button>
+          ) : undefined,
+        }}
+        noResults={{
+          title: 'Ningún diario coincide con los filtros.',
+          description: 'Prueba con otro rango de fechas o quita algún filtro.',
+        }}
+      >
+        <div className="hidden md:block">
+          <Table density="compact" scrollLabel="Tabla de diarios">
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">Fecha</TableHead>
+                {showPerson ? <TableHead scope="col">Persona</TableHead> : null}
+                <TableHead scope="col" className="hidden lg:table-cell">
+                  Proceso
+                </TableHead>
+                <TableHead scope="col" className="text-right">
+                  Actividades
+                </TableHead>
+                <TableHead scope="col" className="text-right">
+                  Horas
+                </TableHead>
+                <TableHead scope="col" className="hidden lg:table-cell">
+                  Distribución
+                </TableHead>
+                <TableHead scope="col">Estado</TableHead>
+                <TableHead scope="col" className="hidden xl:table-cell">
+                  Notas
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {logs.map((log, index) => (
+                <TableRow
+                  key={log.id}
+                  className="cursor-pointer"
+                  onClick={() => setParams({ diario: log.id }, true)}
+                >
+                  <TableCell className="whitespace-nowrap">
+                    <button
+                      ref={index === 0 ? firstRowButtonRef : undefined}
+                      type="button"
+                      className="rounded-sm text-left font-medium text-link underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setParams({ diario: log.id }, true);
+                      }}
+                    >
+                      {formatDateOnlyWithWeekday(log.date)}
+                    </button>
+                    {!showPerson ? (
+                      <span className="block text-meta text-muted-foreground lg:hidden">
+                        {orDash(log.processName)}
+                      </span>
+                    ) : null}
+                  </TableCell>
+                  {showPerson ? (
+                    <TableCell className="whitespace-nowrap">
+                      <span className="flex items-center gap-2">
+                        <PersonAvatar name={personName(log)} />
+                        <span className="flex flex-col">
+                          <span>{personName(log)}</span>
+                          <span className="text-meta text-muted-foreground lg:hidden">
+                            {orDash(log.processName)}
+                          </span>
+                        </span>
+                      </span>
+                    </TableCell>
+                  ) : null}
+                  <TableCell className="hidden whitespace-nowrap lg:table-cell">
+                    {orDash(log.processName)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{log.activities.length}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap tabular-nums">
+                    {formatHours(log.totalHours)}
+                  </TableCell>
+                  <TableCell className="hidden max-w-64 text-meta text-muted-foreground lg:table-cell">
+                    <span className="line-clamp-2">{distribution(log) || '—'}</span>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <StatusBadge kind="log" value={log.returned ? 'DEVUELTO' : log.status} />
+                  </TableCell>
+                  <TableCell className="hidden max-w-56 text-muted-foreground xl:table-cell">
+                    <span className="line-clamp-1" title={log.dayNotes ?? undefined}>
+                      {orDash(log.dayNotes)}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <DataCardList
+          label="Diarios"
+          rows={logs}
+          getKey={(log) => log.id}
+          card={(log) => ({
+            title: (
+              <button
+                type="button"
+                className="rounded-sm text-left font-medium text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                onClick={() => setParams({ diario: log.id }, true)}
+              >
+                {formatDateOnlyWithWeekday(log.date)}
+              </button>
+            ),
+            subtitle: showPerson ? `${personName(log)} · ${orDash(log.processName)}` : orDash(log.processName),
+            badges: [<StatusBadge key="s" kind="log" value={log.returned ? 'DEVUELTO' : log.status} />],
+            note: log.dayNotes,
+            meta: [
+              { label: 'Actividades', value: log.activities.length },
+              { label: 'Horas', value: formatHours(log.totalHours) },
+            ],
+          })}
+        />
+        <DataTablePagination
+          id="bit-paginacion"
+          page={url.pagina}
+          pageCount={pageCount}
+          from={from}
+          to={to}
+          filtered={total}
+          pageSize={url.tam}
+          onPageChange={(next) => setParams({ pagina: next > 1 ? String(next) : null }, true)}
+          onPageSizeChange={(size) => setParams({ tam: size === DEFAULT_PAGE_SIZE ? null : String(size), pagina: null })}
+          noun={NOUN}
+        />
+      </DataView>
 
       <DiarioFormDialog
         open={diarioOpen}
         onOpenChange={(open) => {
           setDiarioOpen(open);
-          if (!open) {
-            setDiarioEditing(null);
-            setDiarioError(null);
-          }
+          if (!open) setDiarioError(null);
         }}
-        editing={diarioEditing}
+        editing={null}
         processes={processes}
         submitting={diarioSubmitting}
         errorMessage={diarioError}
         onSubmit={handleDiarioSubmit}
       />
 
-      <ActividadFormDialog
-        open={actOpen}
-        onOpenChange={(open) => {
-          setActOpen(open);
-          if (!open) {
-            setActEditing(null);
-            setActError(null);
-          }
-        }}
-        editing={actEditing}
-        requests={requests}
-        tasks={tasks}
-        issues={issues}
-        submitting={actSubmitting}
-        errorMessage={actError}
-        onSubmit={handleActSubmit}
-      />
-
-      <ConfirmDialog
-        open={sendOpen}
-        onOpenChange={setSendOpen}
-        tone="default"
-        title="¿Enviar el diario a revisión?"
-        description="Después de enviarlo no podrás editar sus actividades."
-        confirmLabel="Enviar a revisión"
-        onConfirm={handleSubmitForReview}
-        returnFocusTo={returnFocusToDetail}
-      />
-
-      <ConfirmDialog
-        open={deleteDiarioOpen}
-        onOpenChange={setDeleteDiarioOpen}
-        title={`¿Eliminar el diario del ${deleteDiarioDate}?`}
-        description="Esta acción no se puede deshacer."
-        confirmLabel="Eliminar diario"
-        onConfirm={handleDeleteDiario}
-        returnFocusTo={returnFocusToDetail}
-      />
-
-      <ConfirmDialog
-        open={deleteActOpen}
-        onOpenChange={(open) => {
-          setDeleteActOpen(open);
-          if (!open) setActToDelete(null);
-        }}
-        title="¿Eliminar esta actividad?"
-        description="Sus horas dejarán de contar en la dedicación del día."
-        confirmLabel="Eliminar actividad"
-        onConfirm={async () => {
-          if (actToDelete) await handleDeleteAct(actToDelete);
-        }}
-        returnFocusTo={returnFocusToActivities}
-      />
+      {url.diario ? (
+        <BitacoraDetalle
+          key={url.diario}
+          logId={url.diario}
+          processes={processes}
+          requests={requests}
+          tasks={tasks}
+          issues={issues}
+          onChanged={reload}
+          onClose={() => setParams({ diario: null }, true)}
+          returnFocusTo={() => headingRef.current}
+        />
+      ) : null}
     </PageLayout>
   );
 }

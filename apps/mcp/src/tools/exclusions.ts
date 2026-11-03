@@ -120,6 +120,16 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
     ],
   ),
   ...permanente(
+    'Revisión de bitácoras y reportes semanales: revisar o devolver es una decisión del jefe de área o del líder (como una aprobación) y retirar un envío es del propio autor; no se delegan a un agente.',
+    [
+      'POST /worklog/daily/{id}/recall',
+      'POST /worklog/daily/{id}/review',
+      'POST /worklog/daily/{id}/return',
+      'POST /weekly-reports/{id}/review',
+      'POST /weekly-reports/{id}/return',
+    ],
+  ),
+  ...permanente(
     'La sugerencia de IA se orquesta desde el asistente del portal y consume el LLM configurado; el MCP no encadena agentes entre sí.',
     [
       'POST /requests/{id}/ai/triage-suggestion',

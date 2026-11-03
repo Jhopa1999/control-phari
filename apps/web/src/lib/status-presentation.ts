@@ -65,6 +65,8 @@ const LOG_LABELS: Record<string, string> = {
   BORRADOR: 'Borrador',
   ENVIADO: 'Enviado',
   REVISADO: 'Revisado',
+  /** Presentacional: borrador con una devolución vigente (no es un estado persistido). */
+  DEVUELTO: 'Devuelto',
 };
 /** Estados de una ocurrencia de actividad recurrente (OccurrenceStatus). */
 const OCCURRENCE_LABELS: Record<string, string> = {
@@ -214,6 +216,7 @@ const STATUS_TABLES: Record<
     BORRADOR: 'neutral',
     ENVIADO: 'info',
     REVISADO: 'success',
+    DEVUELTO: 'warning',
   }),
   asset: statusTable(ASSET_LABELS, {
     BORRADOR: 'neutral',

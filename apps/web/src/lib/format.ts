@@ -129,6 +129,18 @@ export function formatMonth(value: DateValue): string {
   return formatDateValue(value, (date) => MONTH_FORMAT.format(date));
 }
 
+/** Fecha de solo-fecha con día de la semana: «lun 2 nov 2026» (UTC, como formatDateOnly). */
+export function formatDateOnlyWithWeekday(value: DateValue): string {
+  const base = formatDateOnly(value);
+  if (base === '—') return base;
+  const date = new Date(String(value).slice(0, 10) + 'T00:00:00.000Z');
+  if (Number.isNaN(date.getTime())) return base;
+  const weekday = new Intl.DateTimeFormat('es-CO', { weekday: 'short', timeZone: 'UTC' })
+    .format(date)
+    .replace('.', '');
+  return `${weekday} ${base}`;
+}
+
 /**
  * Horas con un decimal como máximo: "40 h", "37,5 h", "−10 h". El signo es
  * U+2212 y la unidad va tras un espacio duro; -0 (o un negativo que redondea a

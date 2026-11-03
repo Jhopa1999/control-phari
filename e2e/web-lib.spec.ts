@@ -23,6 +23,7 @@ import {
   formatCount,
   formatDate,
   formatDateOnly,
+  formatDateOnlyWithWeekday,
   formatDateTime,
   formatHours,
   formatMonth,
@@ -38,6 +39,10 @@ import {
   allowedModulesFor,
 } from '../apps/api/src/modules/auth/module-matrix';
 import { RoleCode } from '../apps/api/src/modules/auth/role-code';
+import {
+  isRangePreset,
+  rangeForPreset,
+} from '../apps/web/src/lib/worklog-range';
 import {
   MODULE_LABELS,
   MODULE_ORDER,

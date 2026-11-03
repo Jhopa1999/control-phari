@@ -291,20 +291,28 @@ Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reun
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/coordination/people` | Personas en alcance para los selectores. |
-| GET | `/worklog/daily` | Lista diarios en alcance (filtros opcionales). |
+| GET | `/worklog/daily` | Lista **paginada** (`{ data, page, pageSize, total, hasMore }`, 25 por defecto, máx. 100) de diarios en alcance. Filtros: `from`, `to`, `date`, `processId`, `authorUserId`, `status`, `classificationCode` (contiene al menos una actividad), `q` (notas, descripción, resultado, activo, solicitante y nombre del autor), `sort` y `page`/`pageSize`. Cada diario trae `authorName`, `processName`, `returned` y `actions` (qué puede hacer quien consulta). |
+| GET | `/worklog/daily/summary` | Resumen con los mismos filtros: diarios, horas, totales por estado, por clasificación y por persona. |
 | POST | `/worklog/daily` | Crea la cabecera de un diario (autor = actor). |
 | GET | `/worklog/daily/:id` | Detalle de un diario con sus actividades. |
 | PATCH | `/worklog/daily/:id` | Edita la cabecera (notas) de un diario propio. |
 | DELETE | `/worklog/daily/:id` | Borra un diario propio (cascade de actividades). |
-| POST | `/worklog/daily/:id/submit` | Envía un diario a revisión (`BORRADOR → ENVIADO`). |
+| POST | `/worklog/daily/:id/submit` | Envía un diario a revisión (`BORRADOR → ENVIADO`); limpia una devolución anterior. |
+| POST | `/worklog/daily/:id/recall` | El autor retira el envío (`ENVIADO → BORRADOR`); 409 si ya fue revisado o su semanal ya se envió. |
+| POST | `/worklog/daily/:id/review` | Jefe de área o líder del proceso (nunca el autor): `ENVIADO → REVISADO`; 403 si no puede revisar. |
+| POST | `/worklog/daily/:id/return` | Igual que revisar, devuelve `ENVIADO → BORRADOR` con `{ reason }` (10 a 1000 caracteres) y avisa al autor (notificación `WORKLOG_RETURNED`). 409 si su semanal ya se envió. |
 | POST | `/worklog/daily/:id/activities` | Agrega una actividad al diario (valida clasificación). |
 | PATCH | `/worklog/activities/:id` | Edita una actividad del diario. |
 | DELETE | `/worklog/activities/:id` | Borra una actividad del diario. |
-| GET | `/weekly-reports` | Lista semanales en alcance (filtros opcionales). |
+| GET | `/weekly-reports` | Lista semanales en alcance (filtros: `weekStart`, `processId`, `authorUserId`, `status`); incluye `authorName` y datos de revisión. |
 | POST | `/weekly-reports` | Crea un semanal (se ancla al lunes ISO). |
 | GET | `/weekly-reports/:id` | Detalle de un semanal con conteos de consolidación. |
 | PATCH | `/weekly-reports/:id` | Edita las secciones de texto de un semanal propio. |
 | POST | `/weekly-reports/:id/submit` | Envía un semanal a revisión (`BORRADOR → ENVIADO`). |
+| POST | `/weekly-reports/:id/review` | Jefe o líder del proceso (nunca el autor): `ENVIADO → REVISADO`. |
+| POST | `/weekly-reports/:id/return` | Devuelve `ENVIADO → BORRADOR` con `{ reason }` y avisa al autor. |
+
+Reglas: la **escritura** de diarios y semanales es solo del autor (el jefe y el líder leen y revisan, no editan lo ajeno). Un diario o semanal que ya no está en borrador responde 409 a cualquier edición. `REVISADO` es terminal. Las horas de una actividad van de 0 a 24. El alta duplicada (persona, proceso, fecha) responde 409 con `existingId`.
 
 ### Issues — Novedades (`issue/issue.controller.ts`)
 

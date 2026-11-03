@@ -172,6 +172,10 @@ model User {
   // porque hay mas de una FK User por modelo (Prisma lo exige).
   dailyLogs              DailyLog[]           @relation("DailyLogAuthor")
   weeklyReports          WeeklyReport[]       @relation("WeeklyReportAuthor")
+  dailyLogsReviewed      DailyLog[]           @relation("DailyLogReviewer")
+  dailyLogsReturned      DailyLog[]           @relation("DailyLogReturner")
+  weeklyReportsReviewed  WeeklyReport[]       @relation("WeeklyReportReviewer")
+  weeklyReportsReturned  WeeklyReport[]       @relation("WeeklyReportReturner")
   issuesReported         Issue[]              @relation("IssueReportedBy")
   issuesResolved         Issue[]              @relation("IssueResolver")
   meetingsResponsible    Meeting[]            @relation("MeetingResponsible")
@@ -705,17 +709,28 @@ model Assignment {
 /// solo lo escribe el helper de estado del modulo coordination. `date` se
 /// persiste como fecha UTC (`@db.Date`, §11 D8); contrato externo `YYYY-MM-DD`.
 model DailyLog {
-  id           String    @id @default(uuid()) @db.Uuid
-  authorUserId String    @map("author_user_id") @db.Uuid
-  processId    String    @map("process_id") @db.Uuid
-  date         DateTime  @db.Date
-  status       String    @default("BORRADOR")
-  submittedAt  DateTime? @map("submitted_at")
-  dayNotes     String?   @map("day_notes")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id               String    @id @default(uuid()) @db.Uuid
+  authorUserId     String    @map("author_user_id") @db.Uuid
+  processId        String    @map("process_id") @db.Uuid
+  date             DateTime  @db.Date
+  status           String    @default("BORRADOR")
+  submittedAt      DateTime? @map("submitted_at")
+  dayNotes         String?   @map("day_notes")
+  /// Revision: quien (jefe o lider del proceso, nunca el autor) marco el diario como
+  /// REVISADO y cuando. Se limpian si el diario se devuelve.
+  reviewedAt       DateTime? @map("reviewed_at")
+  reviewedByUserId String?   @map("reviewed_by_user_id") @db.Uuid
+  /// Devolucion: la ultima vez que se devolvio a BORRADOR, quien, cuando y por que.
+  /// Se conserva hasta el siguiente envio para que el autor vea el motivo.
+  returnedAt       DateTime? @map("returned_at")
+  returnedByUserId String?   @map("returned_by_user_id") @db.Uuid
+  returnReason     String?   @map("return_reason")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   author     User               @relation("DailyLogAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  reviewer   User?              @relation("DailyLogReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+  returner   User?              @relation("DailyLogReturner", fields: [returnedByUserId], references: [id], onDelete: Restrict)
   process    Process            @relation(fields: [processId], references: [id], onDelete: Restrict)
   activities DailyLogActivity[]
 
@@ -772,22 +787,30 @@ model DailyLogActivity {
 /// Consolida por lectura (no copia) los diarios ENVIADO/REVISADO del proceso.
 /// Las secciones son texto: no mutan prioridad ni crean compromisos (AC-018).
 model WeeklyReport {
-  id              String    @id @default(uuid()) @db.Uuid
-  authorUserId    String    @map("author_user_id") @db.Uuid
-  processId       String    @map("process_id") @db.Uuid
-  weekStart       DateTime  @map("week_start") @db.Date
-  status          String    @default("BORRADOR")
-  submittedAt     DateTime? @map("submitted_at")
-  results         String?
-  proposals       String?
-  blockers        String?
-  commitmentsText String?   @map("commitments_text")
-  decisions       String?
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id               String    @id @default(uuid()) @db.Uuid
+  authorUserId     String    @map("author_user_id") @db.Uuid
+  processId        String    @map("process_id") @db.Uuid
+  weekStart        DateTime  @map("week_start") @db.Date
+  status           String    @default("BORRADOR")
+  submittedAt      DateTime? @map("submitted_at")
+  results          String?
+  proposals        String?
+  blockers         String?
+  commitmentsText  String?   @map("commitments_text")
+  decisions        String?
+  /// Revision y devolucion: igual que en DailyLog.
+  reviewedAt       DateTime? @map("reviewed_at")
+  reviewedByUserId String?   @map("reviewed_by_user_id") @db.Uuid
+  returnedAt       DateTime? @map("returned_at")
+  returnedByUserId String?   @map("returned_by_user_id") @db.Uuid
+  returnReason     String?   @map("return_reason")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  author  User    @relation("WeeklyReportAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
-  process Process @relation(fields: [processId], references: [id], onDelete: Restrict)
+  author   User    @relation("WeeklyReportAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  reviewer User?   @relation("WeeklyReportReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+  returner User?   @relation("WeeklyReportReturner", fields: [returnedByUserId], references: [id], onDelete: Restrict)
+  process  Process @relation(fields: [processId], references: [id], onDelete: Restrict)
 
   @@unique([authorUserId, processId, weekStart], name: "weekly_report_author_process_week_unique")
   @@index([processId])
