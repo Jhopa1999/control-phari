@@ -49,7 +49,7 @@ export function PlanGuidePanel({
       phase: (id) => phaseNameById.get(id) ?? null,
       task: (id) => taskTitleById.get(id) ?? null,
     });
-    // Ids ├║nicos aunque la API repita c├│digo y destino.
+    // Ids únicos aunque la API repita código y destino.
     const count = seen.get(item.id) ?? 0;
     seen.set(item.id, count + 1);
     return count === 0 ? item : { ...item, id: `${item.id}#${count}` };
@@ -98,10 +98,10 @@ export function PlanGuidePanel({
     <RequirementsPanel
       id="plan-guide"
       liveUpdates
-      title="A├║n no puedes enviar el plan a autorizaci├│n"
-      description="Resuelve cada pendiente desde su acci├│n; la lista se actualiza al guardar."
-      doneTitle="El plan est├í listo para enviar"
-      doneDescription="No hay pendientes en las categor├¡as evaluadas."
+      title="Aún no puedes enviar el plan a autorización"
+      description="Resuelve cada pendiente desde su acción; la lista se actualiza al guardar."
+      doneTitle="El plan está listo para enviar"
+      doneDescription="No hay pendientes en las categorías evaluadas."
       items={items}
       groups={groups}
       footer={
@@ -114,7 +114,7 @@ export function PlanGuidePanel({
               aria-describedby={canSubmit ? 'plan-guide-summary' : `plan-guide-summary ${SUBMIT_REASON_ID}`}
               onClick={onSubmit}
             >
-              Enviar a autorizaci├│n
+              Enviar a autorización
             </Button>
             {!canSubmit ? (
               <DisabledReason id={SUBMIT_REASON_ID}>
@@ -124,7 +124,7 @@ export function PlanGuidePanel({
           </div>
           {future.length > 0 ? (
             <p className="text-meta text-muted-foreground">
-              {`Se evaluar├ín m├ís adelante: ${LIST_FORMAT.format(future)}.`}
+              {`Se evaluarán más adelante: ${LIST_FORMAT.format(future)}.`}
             </p>
           ) : null}
         </div>

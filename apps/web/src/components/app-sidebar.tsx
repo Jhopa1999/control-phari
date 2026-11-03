@@ -601,7 +601,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
       <aside
         id="app-sidebar"
         aria-label="Menú lateral"
-        className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-150 lg:flex rail:w-14"
+        className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-150 lg:flex rail:w-14"
       >
         {content}
       </aside>

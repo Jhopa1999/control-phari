@@ -246,6 +246,8 @@ export function DataTablePagination({
 export interface CellTitleProps {
   /** Texto completo; también va en `title`. */
   children: string;
+  /** Id del botón (para devolverle el foco al cerrar el detalle). */
+  id?: string;
   /** Con onOpen → <button>. */
   onOpen?: () => void;
   /** Con href → <Link>. Sin ninguno → <span>. */
@@ -267,6 +269,7 @@ const CELL_TITLE_CONTROL =
  */
 export function CellTitle({
   children,
+  id,
   onOpen,
   href,
   meta,
@@ -277,7 +280,7 @@ export function CellTitle({
   let control: React.ReactElement;
   if (onOpen) {
     control = (
-      <button type="button" onClick={onOpen} title={children} className={controlClass}>
+      <button type="button" id={id} onClick={onOpen} title={children} className={controlClass}>
         {text}
       </button>
     );

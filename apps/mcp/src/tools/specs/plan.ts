@@ -94,6 +94,16 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
     description: 'Obtiene una tarea por id (GET /tasks/{id}).',
   },
   {
+    name: 'task.history',
+    operation: 'GET /tasks/{id}/history',
+    access: 'read',
+    description:
+      'Traza de cambios de una tarea (GET /tasks/{id}/history): del evento mas ' +
+      'reciente al mas antiguo, con quien lo hizo, la fecha y hora, y cada campo ' +
+      'que cambio (estado, avance, responsable, fase, fechas, aceptacion...) con ' +
+      'su valor anterior y nuevo.',
+  },
+  {
     name: 'task.update',
     operation: 'PATCH /tasks/{id}',
     access: 'write',
@@ -111,6 +121,16 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
     description:
       'Actualiza el estado de una tarea (PATCH /tasks/{id}/status). El cuerpo ' +
       'debe cumplir UpdateTaskStatusDto; el backend valida los datos.',
+  },
+  {
+    name: 'task.progress.update',
+    operation: 'PATCH /tasks/{id}/progress',
+    access: 'write',
+    description:
+      'Actualiza solo el avance (0 a 100) de una tarea sin cambiar su estado ' +
+      '(PATCH /tasks/{id}/progress). El cuerpo debe cumplir UpdateTaskProgressDto ' +
+      '{ progress }. El backend solo lo admite con la tarea En curso, Bloqueada o ' +
+      'En revision, y exige ser jefe, lider o el responsable de la tarea.',
   },
   {
     name: 'task.accept',

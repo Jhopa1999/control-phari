@@ -485,6 +485,16 @@
       "trigger_file": "apps/api/src/modules/catalog/catalog.service.ts",
       "updated_docs": ["docs/aplicacion/modulos-backend.md", "docs/aplicacion/modelo-datos.md", "docs/aplicacion/frontend-pantallas.md"],
       "summary": "Triage: descripción por opción de maestra (columna catalog_items.description, editable en Maestras y visible en los desplegables), activo base como primer bloque obligatorio para Continuar, panel de IA compacto con secciones plegables y filete degradado de las barras superiores restituido."
+    },
+    {
+      "timestamp": "2026-11-06T22:00:00Z",
+      "trigger_file": "apps/api/src/modules/plan/task/task.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "apps/mcp/README.md"
+      ],
+      "summary": "Planificación: PATCH /tasks/{id}/progress y GET /tasks/{id}/history (tools task.progress.update y task.history), un solo Exportar/Importar en Excel, avance editable en línea, detalle con estado e historial, kanban que abre el detalle, diálogo de tarea con fase destacada y tildes corregidas en la guía de envío."
     }
   ]
 }

@@ -122,3 +122,55 @@ test('cambia el estado de una tarea desde el listado del plan (sin abrir la fich
   // Toast de éxito (región aria-live de sonner).
   await expect(page.getByText('Estado de la tarea actualizado.')).toBeVisible();
 });
+
+test('actualiza el avance en línea, abre el detalle y ve el historial de cambios', async ({
+  page,
+}) => {
+  // La tarea necesita estar En curso para registrar avance: se prepara por API.
+  const planRes = await page.request.get(`${API_URL}/requests/${requestId}/plan`, {
+    headers: HEADERS,
+  });
+  expect(planRes.ok()).toBeTruthy();
+  const plan = (await planRes.json()) as { id: string };
+  const tasksRes = await page.request.get(`${API_URL}/plans/${plan.id}/tasks`, {
+    headers: HEADERS,
+  });
+  const tasks = (await tasksRes.json()) as Array<{ id: string; title: string; status: string }>;
+  const task = tasks.find((t) => t.title === taskTitle);
+  expect(task, 'la tarea del beforeAll debe existir').toBeTruthy();
+  if (task && task.status === 'POR_HACER') {
+    const res = await page.request.patch(`${API_URL}/tasks/${task.id}/status`, {
+      headers: HEADERS,
+      data: { status: 'EN_CURSO' },
+    });
+    expect(res.ok()).toBeTruthy();
+  }
+
+  await page.goto(`/seguimiento/plan?requestId=${encodeURIComponent(requestId)}`);
+  const row = page.getByRole('row', { name: new RegExp(taskTitle) });
+  await expect(row).toBeVisible();
+
+  // Avance: se abre el diálogo corto desde la fila, sin entrar al detalle.
+  await row
+    .getByRole('button', { name: new RegExp(`Actualizar avance de .*${taskTitle}`) })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Avance de la tarea' });
+  await dialog.getByRole('spinbutton', { name: 'Porcentaje' }).fill('40');
+  const [progressResponse] = await Promise.all([
+    page.waitForResponse(
+      (r) => /\/tasks\/[^/]+\/progress$/.test(r.url()) && r.request().method() === 'PATCH',
+    ),
+    dialog.getByRole('button', { name: 'Guardar avance' }).click(),
+  ]);
+  expect(progressResponse.status()).toBe(200);
+  await expect(row.getByText('40 %')).toBeVisible();
+
+  // Detalle desde el título: estado visible y traza con el cambio de avance.
+  await row.locator('button[id^="task-"][id$="-open"]').click();
+  const panel = page.getByRole('dialog').filter({ hasText: 'Vencimiento' });
+  await expect(panel.getByText('En curso').first()).toBeVisible();
+  await panel.getByRole('tab', { name: /Historial/ }).click();
+  await expect(panel.getByText('cambió el avance')).toBeVisible();
+  await expect(panel.getByText('cambió el estado')).toBeVisible();
+  await expect(panel.getByText('creó la tarea')).toBeVisible();
+});

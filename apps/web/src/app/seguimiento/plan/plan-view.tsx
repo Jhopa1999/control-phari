@@ -7,8 +7,10 @@ import {
   ArrowDown,
   ArrowUp,
   ClipboardList,
+  AlarmClock,
+  Clock,
   Download,
-  FileSpreadsheet,
+  Link2,
   ListChecks,
   Lock,
   Plus,
@@ -60,7 +62,9 @@ import type {
   TaskStatus,
 } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
-import { formatDateOnly, formatHours } from '@/lib/format';
+import { formatDateOnly, formatPercent, localDateInputValue } from '@/lib/format';
+import { dueLabel, taskDueInfo } from '@/lib/task-due';
+import { progressTone } from '@/components/task-progress';
 import {
   PlanError,
   createPlan,
@@ -78,10 +82,10 @@ import { matchesTaskFilters } from '@/lib/task-filters';
 import {
   TASK_STATUSES,
   deleteTask,
-  downloadTasksCsv,
   listPlanTasks,
   taskStatusLabel,
   updateTask,
+  updateTaskProgress,
   updateTaskStatus,
 } from '@/lib/tasks';
 import { useClientTable } from '@/lib/use-client-table';
@@ -96,6 +100,7 @@ import { PlanGuidePanel } from './plan-guide-panel';
 import { PlanSummary } from './plan-summary';
 import { PlanTasksKanban } from './plan-tasks-kanban';
 import { TaskDialog } from './task-dialog';
+import { TaskProgressControl } from './task-progress-control';
 import { TaskResponsibleControl } from './task-responsible-control';
 import { TaskStatusControl } from './task-status-control';
 
@@ -425,6 +430,24 @@ export function PlanView(): React.ReactElement {
     }
   }
 
+  // Avance en línea (PATCH /tasks/{id}/progress). A diferencia del estado, no es
+  // optimista: el diálogo del control espera el resultado y, si falla, se queda
+  // abierto con el mensaje (devuelto aquí). Devuelve null si salió bien.
+  async function handleInlineProgressChange(task: Task, progress: number): Promise<string | null> {
+    if (busy) return 'Hay otra acción en curso. Inténtalo de nuevo en un momento.';
+    setRowBusyId(task.id);
+    try {
+      const updated = await updateTaskProgress(task.id, progress);
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      toast.success(`Avance actualizado a ${formatPercent(updated.progress)}.`);
+      return null;
+    } catch (err) {
+      return messageOf(err);
+    } finally {
+      setRowBusyId(null);
+    }
+  }
+
   // Reasignación de responsable en línea (PATCH /tasks/{id}). Optimista con
   // reconciliación; no refresca la guía (reasignar no la cambia).
   async function handleInlineResponsibleChange(task: Task, userId: string) {
@@ -550,16 +573,6 @@ export function PlanView(): React.ReactElement {
     }
   }
 
-  function handleExportTasks() {
-    if (!selectedId) return;
-    // Foto de la vista: exporta las tareas actualmente filtradas (design §7.2).
-    downloadTasksCsv(selectedId, taskTable.pageRows, {
-      phaseName: (id) => phaseNameById.get(id),
-      personName: (id) => personNameById.get(id),
-      formatDate: formatDateOnly,
-    });
-  }
-
   // El import se dispara desde un <input type=file> oculto; el botón real lo abre.
   async function handleImportFileChange(
     event: React.ChangeEvent<HTMLInputElement>,
@@ -612,16 +625,16 @@ export function PlanView(): React.ReactElement {
     target?.focus();
   }, [busy, phases]);
 
+  // Fecha local de hoy (YYYY-MM-DD) para los avisos de vencimiento (solo presentación).
+  const todayLocal = localDateInputValue();
+
   const initialPhaseId = React.useMemo(() => {
     if (phases.length === 0) return null;
     return phases.reduce((min, p) => (p.order < min.order ? p : min), phases[0]).id;
   }, [phases]);
 
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- falso positivo del compilador: se conserva a propósito la memoización manual del mapa.
   const phaseNameById = React.useMemo(() => new Map(phases.map((p) => [p.id, p.name])), [phases]);
   const taskTitleById = React.useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- falso positivo del compilador: se conserva a propósito la memoización manual del mapa.
-  const personNameById = React.useMemo(() => new Map(people.map((p) => [p.id, p.name])), [people]);
   const taskCountByPhase = React.useMemo(() => {
     const counts = new Map<string, number>();
     for (const t of tasks) counts.set(t.phaseId, (counts.get(t.phaseId) ?? 0) + 1);
@@ -867,7 +880,18 @@ export function PlanView(): React.ReactElement {
         title="Tareas"
         headingRef={tasksHeadingRef}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {canEdit && tasksView === 'table' ? (
+              <Button
+                type="button"
+                size="sm"
+                disabled={busy || initialPhaseId === null}
+                onClick={() => initialPhaseId && openNewTask(phaseFilter !== ALL ? phaseFilter : initialPhaseId)}
+              >
+                <Plus aria-hidden="true" />
+                Nueva tarea
+              </Button>
+            ) : null}
             <span id="plan-tasks-view-label" className="text-meta text-muted-foreground">
               Vista
             </span>
@@ -959,6 +983,10 @@ export function PlanView(): React.ReactElement {
             responsibleDisabledReason={responsibleDisabledReason}
             onInlineStatusChange={handleInlineStatusChange}
             onInlineResponsibleChange={handleInlineResponsibleChange}
+            onInlineProgressChange={handleInlineProgressChange}
+            onOpenTask={setDetailTaskId}
+            todayLocal={todayLocal}
+            multiplePhases={phases.length > 1}
             onNewTask={openNewTask}
             onEditTask={openEditTask}
             onRequestDeleteTask={requestDeleteTask}
@@ -979,111 +1007,151 @@ export function PlanView(): React.ReactElement {
             <TableHeader>
               <TableRow>
                 <TableHead>Tarea</TableHead>
-                <TableHead>Fase</TableHead>
                 <TableHead>Responsable</TableHead>
-                <SortableTableHead label="Inicio" sortKey="start" sort={taskTable.sort} onSort={taskTable.toggleSort} />
-                <SortableTableHead label="Vence" sortKey="end" sort={taskTable.sort} onSort={taskTable.toggleSort} />
-                <TableHead className="text-right">Esfuerzo</TableHead>
-                <TableHead className="text-right">Predecesoras</TableHead>
+                <TableHead>Avance</TableHead>
+                <SortableTableHead label="Plazo" sortKey="end" sort={taskTable.sort} onSort={taskTable.toggleSort} />
                 <SortableTableHead label="Estado" sortKey="status" sort={taskTable.sort} onSort={taskTable.toggleSort} />
                 {canEdit ? <TableHead className="text-right">Acciones</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {taskTable.pageRows.map((task) => (
-                <TableRow key={task.id}>
-                  <TableCell className="min-w-56 max-w-[28rem]">
-                    <div className="flex items-center gap-2">
-                      <CellTitle onOpen={() => setDetailTaskId(task.id)}>
-                        {task.title}
-                      </CellTitle>
-                      {task.isMilestone ? (
-                        <Badge variant="outline" className="shrink-0">
-                          Hito
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="min-w-32 text-muted-foreground">
-                    {phaseNameById.get(task.phaseId) ?? '—'}
-                  </TableCell>
-                  <TableCell className="min-w-36">
-                    <TaskResponsibleControl
-                      value={task.responsibleUserId}
-                      people={people}
-                      loadError={peopleState === 'error'}
-                      busy={rowBusyId === task.id}
-                      disabled={!canEdit || permissions === null || inlineBusy(task.id)}
-                      disabledReason={
-                        !canEdit && plan
-                          ? `El plan está ${planStatePhrase(plan.status)}; las fases y tareas no se pueden editar.`
-                          : undefined
-                      }
-                      taskTitle={task.title}
-                      onChange={(userId) => handleInlineResponsibleChange(task, userId)}
-                    />
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap tabular-nums">{formatDateOnly(task.startDate)}</TableCell>
-                  <TableCell className="whitespace-nowrap tabular-nums">{formatDateOnly(task.endDate)}</TableCell>
-                  <TableCell className="whitespace-nowrap text-right tabular-nums">
-                    {task.isMilestone || task.estimateHours === null ? '—' : formatHours(task.estimateHours)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{task.predecessors.length}</TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {/*
-                      Cambiar estado NO depende de `canEdit` (plan editable): el
-                      backend (TaskService.changeStatus) solo exige ser el
-                      responsable —o jefe/líder— y una transición válida, nunca
-                      que el plan esté en borrador/devuelto. Así los miembros
-                      actualizan sus estados también en ejecución. Misma
-                      expresión en la tabla y en el kanban (fuente única).
-                    */}
-                    <TaskStatusControl
-                      status={task.status}
-                      progress={task.progress}
-                      busy={rowBusyId === task.id}
-                      disabled={
-                        permissions === null ||
-                        inlineBusy(task.id) ||
-                        (!isPlanManager && task.responsibleUserId !== permissions?.userId)
-                      }
-                      disabledReason={
-                        !isPlanManager && task.responsibleUserId !== permissions?.userId
-                          ? 'Solo puedes cambiar el estado de tus propias tareas.'
-                          : undefined
-                      }
-                      taskTitle={task.title}
-                      onChange={(next) => handleInlineStatusChange(task, next)}
-                    />
-                  </TableCell>
-                  {canEdit ? (
-                    <RowActionsCell>
-                      <RowActions
-                        rowLabel={task.title}
-                        actions={[
-                          {
-                            key: 'edit',
-                            id: taskActionId(task.id),
-                            label: 'Editar',
-                            disabled: busy,
-                            onSelect: () => openEditTask(task),
-                          },
-                          {
-                            key: 'delete',
-                            label: 'Eliminar tarea',
-                            placement: 'menu',
-                            tone: 'danger',
-                            busy: deletingId === task.id,
-                            busyLabel: 'Eliminando…',
-                            disabled: busy,
-                            onSelect: () => requestDeleteTask(task),
-                          },
-                        ]}
+              {taskTable.pageRows.map((task) => {
+                const due = taskDueInfo(task, todayLocal);
+                const dueText = dueLabel(due);
+                const pendingPredecessors = task.predecessors.filter((p) => p.status !== 'TERMINADA').length;
+                const cannotChangeStatus =
+                  !isPlanManager && task.responsibleUserId !== permissions?.userId;
+                return (
+                  <TableRow key={task.id}>
+                    <TableCell className="min-w-56 max-w-[26rem]">
+                      <div className="flex flex-col gap-1 py-0.5">
+                        <div className="flex items-center gap-2">
+                          <CellTitle id={`task-${task.id}-open`} onOpen={() => setDetailTaskId(task.id)}>
+                            {task.title}
+                          </CellTitle>
+                          {task.isMilestone ? (
+                            <Badge variant="outline" className="shrink-0">
+                              Hito
+                            </Badge>
+                          ) : null}
+                        </div>
+                        {phases.length > 1 || pendingPredecessors > 0 ? (
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-muted-foreground">
+                            {phases.length > 1 ? (
+                              <span>{phaseNameById.get(task.phaseId) ?? '—'}</span>
+                            ) : null}
+                            {pendingPredecessors > 0 ? (
+                              <Badge variant="warning">
+                                <Link2 aria-hidden="true" />
+                                {pendingPredecessors === 1
+                                  ? '1 predecesora pendiente'
+                                  : `${pendingPredecessors} predecesoras pendientes`}
+                              </Badge>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="min-w-36">
+                      <TaskResponsibleControl
+                        value={task.responsibleUserId}
+                        people={people}
+                        loadError={peopleState === 'error'}
+                        busy={rowBusyId === task.id}
+                        disabled={!canEdit || permissions === null || inlineBusy(task.id)}
+                        disabledReason={responsibleDisabledReason}
+                        taskTitle={task.title}
+                        onChange={(userId) => handleInlineResponsibleChange(task, userId)}
                       />
-                    </RowActionsCell>
-                  ) : null}
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell className="min-w-40">
+                      <TaskProgressControl
+                        value={task.progress}
+                        status={task.status}
+                        taskTitle={task.title}
+                        tone={progressTone(task.status, due.kind === 'overdue')}
+                        busy={rowBusyId === task.id}
+                        disabled={permissions === null || inlineBusy(task.id) || cannotChangeStatus}
+                        disabledReason={
+                          cannotChangeStatus
+                            ? 'Solo puedes cambiar el avance de tus propias tareas.'
+                            : undefined
+                        }
+                        onSave={(next) => handleInlineProgressChange(task, next)}
+                      />
+                    </TableCell>
+                    <TableCell className="min-w-40">
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="whitespace-nowrap tabular-nums">
+                          {task.startDate || task.endDate
+                            ? `${formatDateOnly(task.startDate)} → ${formatDateOnly(task.endDate)}`
+                            : 'Sin fechas'}
+                        </span>
+                        {dueText ? (
+                          <Badge variant={due.kind === 'overdue' ? 'danger' : 'warning'}>
+                            {due.kind === 'overdue' ? (
+                              <AlarmClock aria-hidden="true" />
+                            ) : (
+                              <Clock aria-hidden="true" />
+                            )}
+                            {dueText}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {/*
+                        Cambiar estado NO depende de `canEdit` (plan editable): el
+                        backend (TaskService.changeStatus) solo exige ser el
+                        responsable —o jefe/líder— y una transición válida, nunca
+                        que el plan esté en borrador/devuelto. Así los miembros
+                        actualizan sus estados también en ejecución. Misma
+                        expresión en la tabla y en el kanban (fuente única).
+                      */}
+                      <TaskStatusControl
+                        status={task.status}
+                        progress={task.progress}
+                        showProgress={false}
+                        busy={rowBusyId === task.id}
+                        disabled={permissions === null || inlineBusy(task.id) || cannotChangeStatus}
+                        disabledReason={
+                          cannotChangeStatus
+                            ? 'Solo puedes cambiar el estado de tus propias tareas.'
+                            : undefined
+                        }
+                        taskTitle={task.title}
+                        onChange={(next) => handleInlineStatusChange(task, next)}
+                      />
+                    </TableCell>
+                    {canEdit ? (
+                      <RowActionsCell>
+                        <RowActions
+                          rowLabel={task.title}
+                          actions={[
+                            {
+                              key: 'edit',
+                              id: taskActionId(task.id),
+                              label: 'Editar',
+                              disabled: busy,
+                              onSelect: () => openEditTask(task),
+                            },
+                            {
+                              key: 'delete',
+                              label: 'Eliminar tarea',
+                              placement: 'menu',
+                              tone: 'danger',
+                              busy: deletingId === task.id,
+                              busyLabel: 'Eliminando…',
+                              disabled: busy,
+                              onSelect: () => requestDeleteTask(task),
+                            },
+                          ]}
+                        />
+                      </RowActionsCell>
+                    ) : null}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </DataView>
@@ -1174,80 +1242,97 @@ export function PlanView(): React.ReactElement {
   }
 
   /**
-   * Barra de acciones del plan (design §7.3): exportar plan (JSON), exportar
-   * tareas (CSV) e importar plan (JSON). El gating es cosmético; el backend es
-   * el control real (p. ej. 409 si el plan no es editable).
+   * Excel del plan: UNA exportación y UNA importación (solo .xlsx). La plantilla
+   * vacía vive como ayuda dentro de «Importar», porque solo sirve para importar.
+   * El gating es cosmético; el backend es el control real (p. ej. 409 si el
+   * plan no es editable).
    */
   function renderPlanActions(): React.ReactElement {
-    const noTasks = taskTable.pageRows.length === 0;
     return (
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => void handleExportPlan()}
-        >
-          <Download aria-hidden="true" />
-          Exportar plan (Excel)
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => void handleDownloadTemplate()}
-        >
-          <FileSpreadsheet aria-hidden="true" />
-          Descargar plantilla
-        </Button>
-        <div className="flex flex-col items-start gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            unavailable={noTasks}
-            disabled={!noTasks && busy}
-            aria-describedby={noTasks ? 'plan-export-tasks-reason' : undefined}
-            onClick={handleExportTasks}
+      <>
+      <section
+        aria-label="Excel del plan"
+        className="grid gap-4 rounded-xl bg-card p-4 shadow-card md:grid-cols-2 md:gap-0 md:divide-x"
+      >
+        <div className="flex items-start gap-3 md:pr-6">
+          <span
+            aria-hidden="true"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-link"
           >
-            <FileSpreadsheet aria-hidden="true" />
-            Exportar tareas (CSV)
-          </Button>
-          {noTasks ? (
-            <DisabledReason id="plan-export-tasks-reason">
-              Agrega al menos una tarea para exportarlas.
-            </DisabledReason>
-          ) : null}
+            <Download className="size-5" />
+          </span>
+          <div className="flex min-w-0 flex-col items-start gap-2">
+            <div className="flex flex-col gap-0.5">
+              <h3 className="text-sm font-semibold">Exportar a Excel</h3>
+              <p className="text-meta text-muted-foreground">
+                Descarga las fases, tareas y dependencias del plan en un archivo .xlsx. Sirve para
+                revisarlo, compartirlo o editarlo fuera del portal.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => void handleExportPlan()}
+            >
+              <Download aria-hidden="true" />
+              Exportar plan
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-col items-start gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            unavailable={!canEdit}
-            disabled={canEdit && busy}
-            aria-describedby={!canEdit ? 'plan-import-reason' : undefined}
-            onClick={() => importInputRef.current?.click()}
+
+        <div className="flex items-start gap-3 md:pl-6">
+          <span
+            aria-hidden="true"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-link"
           >
-            <Upload aria-hidden="true" />
-            Importar plan (Excel)
-          </Button>
-          {!canEdit ? (
-            <DisabledReason id="plan-import-reason">
-              Solo puedes importar sobre un plan en borrador o devuelto.
-            </DisabledReason>
-          ) : null}
+            <Upload className="size-5" />
+          </span>
+          <div className="flex min-w-0 flex-col items-start gap-2">
+            <div className="flex flex-col gap-0.5">
+              <h3 className="text-sm font-semibold">Importar desde Excel</h3>
+              <p className="text-meta text-muted-foreground">
+                Carga un archivo .xlsx y reemplaza las fases, tareas y dependencias actuales. Antes
+                de reemplazar te pedimos confirmación.{' '}
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void handleDownloadTemplate()}
+                  className="rounded-sm font-medium text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
+                >
+                  Descargar plantilla vacía
+                </button>
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              unavailable={!canEdit}
+              disabled={canEdit && busy}
+              aria-describedby={!canEdit ? 'plan-import-reason' : undefined}
+              onClick={() => importInputRef.current?.click()}
+            >
+              <Upload aria-hidden="true" />
+              Importar plan
+            </Button>
+            {!canEdit ? (
+              <DisabledReason id="plan-import-reason">
+                Solo puedes importar sobre un plan en borrador o devuelto.
+              </DisabledReason>
+            ) : null}
+          </div>
         </div>
-        <input
-          ref={importInputRef}
-          type="file"
-          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          className="hidden"
-          onChange={(event) => void handleImportFileChange(event)}
-        />
-      </div>
+      </section>
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        className="hidden"
+        onChange={(event) => void handleImportFileChange(event)}
+      />
+      </>
     );
   }
 
@@ -1368,19 +1453,20 @@ export function PlanView(): React.ReactElement {
             <SheetContent
               side="right"
               closeLabel="Cerrar detalle"
-              className="w-[36rem] max-w-[95vw] gap-4 overflow-y-auto bg-background p-5"
+              className="w-[40rem] max-w-full gap-4 overflow-y-auto bg-background p-5"
             >
               <SheetTitle className="pr-10">
                 {tasks.find((t) => t.id === detailTaskId)?.title ?? 'Detalle de la tarea'}
               </SheetTitle>
               <SheetDescription className="sr-only">
-                Detalle de la tarea: estado, predecesoras y evidencia.
+                Detalle de la tarea: estado, avance, historial de cambios, predecesoras y evidencia.
               </SheetDescription>
               {detailTaskId ? (
                 <TaskDetail
                   key={detailTaskId}
                   taskId={detailTaskId}
                   embedded
+                  phaseName={phaseNameById.get(tasks.find((t) => t.id === detailTaskId)?.phaseId ?? '')}
                   onSelectTask={setDetailTaskId}
                   onChanged={() => void refreshPlanData()}
                 />

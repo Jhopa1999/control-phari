@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ListChecks, Plus } from 'lucide-react';
+import { AlarmClock, Clock, GripVertical, Link2, ListChecks, Plus } from 'lucide-react';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { DisabledReason } from '@/components/disabled-reason';
 import { RowActions } from '@/components/row-actions';
@@ -15,9 +15,13 @@ import type {
   Task,
   TaskStatus,
 } from '@/lib/api-client';
+import { progressTone } from '@/components/task-progress';
+import { formatDateOnly } from '@/lib/format';
+import { dueLabel, taskDueInfo } from '@/lib/task-due';
 import { TASK_STATUSES, taskStatusLabel } from '@/lib/tasks';
 import { nextTaskStatuses } from '@/lib/task-transitions';
 import { cn } from '@/lib/utils';
+import { TaskProgressControl } from './task-progress-control';
 import { TaskResponsibleControl } from './task-responsible-control';
 import { TaskStatusControl } from './task-status-control';
 
@@ -58,6 +62,14 @@ export interface PlanTasksKanbanProps {
   onInlineStatusChange: (task: Task, next: TaskStatus) => void;
   /** = handleInlineResponsibleChange de PlanView. */
   onInlineResponsibleChange: (task: Task, userId: string) => void;
+  /** = handleInlineProgressChange de PlanView (devuelve null o el mensaje de error). */
+  onInlineProgressChange: (task: Task, progress: number) => Promise<string | null>;
+  /** Abre el detalle de la tarea (panel lateral). */
+  onOpenTask: (taskId: string) => void;
+  /** Fecha local de hoy (YYYY-MM-DD) para los avisos de vencimiento. */
+  todayLocal: string;
+  /** El plan tiene más de una fase: solo entonces se muestra la fase en la tarjeta. */
+  multiplePhases: boolean;
   /** = openNewTask de PlanView. */
   onNewTask: (phaseId: string) => void;
   /** = openEditTask de PlanView. */
@@ -98,6 +110,10 @@ export function PlanTasksKanban({
   responsibleDisabledReason,
   onInlineStatusChange,
   onInlineResponsibleChange,
+  onInlineProgressChange,
+  onOpenTask,
+  todayLocal,
+  multiplePhases,
   onNewTask,
   onEditTask,
   onRequestDeleteTask,
@@ -239,12 +255,29 @@ export function PlanTasksKanban({
                           !isPlanManager && task.responsibleUserId !== permissions?.userId
                             ? 'Solo puedes cambiar el estado de tus propias tareas.'
                             : undefined;
+                        const due = taskDueInfo(task, todayLocal);
+                        const dueText = dueLabel(due);
+                        const pendingPredecessors = task.predecessors.filter(
+                          (p) => p.status !== 'TERMINADA',
+                        ).length;
                         return (
                           <li key={task.id}>
                             <article
-                              aria-label={`Tarea: ${task.title}`}
+                              aria-labelledby={`task-${task.id}-open`}
                               aria-busy={taskBusy || undefined}
                               draggable={draggable}
+                              onClick={(event) => {
+                                // Abrir el detalle al pulsar la tarjeta, salvo sus controles.
+                                const target = event.target as HTMLElement;
+                                if (
+                                  target.closest(
+                                    'button, a, input, select, textarea, [role="combobox"], [role="menuitem"], [role="dialog"]',
+                                  )
+                                ) {
+                                  return;
+                                }
+                                onOpenTask(task.id);
+                              }}
                               onDragStart={(event) => {
                                 setDraggingTaskId(task.id);
                                 event.dataTransfer.effectAllowed = 'move';
@@ -252,20 +285,33 @@ export function PlanTasksKanban({
                               }}
                               onDragEnd={() => setDraggingTaskId(null)}
                               className={cn(
-                                'flex flex-col gap-2 rounded-lg border bg-card p-3 text-card-foreground',
-                                draggable && 'cursor-grab active:cursor-grabbing',
+                                'group relative flex cursor-pointer flex-col gap-2.5 rounded-xl bg-card p-3 text-card-foreground shadow-card ring-1 ring-border transition-shadow hover:shadow-md',
+                                due.kind === 'overdue' && 'border-l-4 border-l-danger',
+                                task.status === 'BLOQUEADA' && 'border-l-4 border-l-warning',
+                                draggingTaskId === task.id && 'opacity-50 ring-2 ring-primary',
                                 taskBusy && 'opacity-70',
                               )}
                             >
-                              <div className="flex items-start justify-between gap-2">
-                                <span className="flex flex-wrap items-center gap-2">
-                                  <span className="font-medium wrap-break-word">{task.title}</span>
-                                  {task.isMilestone ? (
-                                    <Badge variant="outline" className="shrink-0">
-                                      Hito
-                                    </Badge>
-                                  ) : null}
-                                </span>
+                              <div className="flex items-start gap-1.5">
+                                {draggable ? (
+                                  <GripVertical
+                                    aria-hidden="true"
+                                    className="mt-0.5 hidden size-4 shrink-0 cursor-grab text-muted-foreground opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 md:block"
+                                  />
+                                ) : null}
+                                <button
+                                  type="button"
+                                  id={`task-${task.id}-open`}
+                                  onClick={() => onOpenTask(task.id)}
+                                  className="min-w-0 flex-1 cursor-pointer rounded-sm text-left text-sm leading-snug font-medium wrap-break-word underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                >
+                                  <span className="line-clamp-3">{task.title}</span>
+                                </button>
+                                {task.isMilestone ? (
+                                  <Badge variant="outline" className="shrink-0">
+                                    Hito
+                                  </Badge>
+                                ) : null}
                                 {canEdit ? (
                                   <RowActions
                                     rowLabel={task.title}
@@ -292,9 +338,50 @@ export function PlanTasksKanban({
                                 ) : null}
                               </div>
 
-                              <p className="text-meta text-muted-foreground wrap-break-word">
-                                {phaseNameById.get(task.phaseId) ?? '—'}
-                              </p>
+                              {multiplePhases ? (
+                                <p className="truncate text-meta text-muted-foreground">
+                                  {phaseNameById.get(task.phaseId) ?? '—'}
+                                </p>
+                              ) : null}
+
+                              {(dueText || pendingPredecessors > 0) ? (
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {dueText ? (
+                                    <Badge variant={due.kind === 'overdue' ? 'danger' : 'warning'}>
+                                      {due.kind === 'overdue' ? (
+                                        <AlarmClock aria-hidden="true" />
+                                      ) : (
+                                        <Clock aria-hidden="true" />
+                                      )}
+                                      {dueText}
+                                    </Badge>
+                                  ) : null}
+                                  {pendingPredecessors > 0 ? (
+                                    <Badge variant="warning">
+                                      <Link2 aria-hidden="true" />
+                                      {pendingPredecessors === 1
+                                        ? '1 predecesora pendiente'
+                                        : `${pendingPredecessors} predecesoras pendientes`}
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                              ) : null}
+
+                              <TaskProgressControl
+                                wide
+                                value={task.progress}
+                                status={task.status}
+                                taskTitle={task.title}
+                                tone={progressTone(task.status, due.kind === 'overdue')}
+                                busy={taskBusy}
+                                disabled={!canChangeStatus(task)}
+                                disabledReason={
+                                  !isPlanManager && task.responsibleUserId !== permissions?.userId
+                                    ? 'Solo puedes cambiar el avance de tus propias tareas.'
+                                    : undefined
+                                }
+                                onSave={(next) => onInlineProgressChange(task, next)}
+                              />
 
                               <TaskResponsibleControl
                                 value={task.responsibleUserId}
@@ -307,21 +394,26 @@ export function PlanTasksKanban({
                                 onChange={(userId) => onInlineResponsibleChange(task, userId)}
                               />
 
-                              {/*
-                                El menú «mover a…» es la alternativa accesible al
-                                drag (teclado y móvil/táctil) y muestra el avance
-                                junto al estado. Misma expresión de permiso que el
-                                drag y que la tabla (canChangeStatus).
-                              */}
-                              <TaskStatusControl
-                                status={task.status}
-                                progress={task.progress}
-                                busy={taskBusy}
-                                disabled={!canChangeStatus(task)}
-                                disabledReason={statusReason}
-                                taskTitle={task.title}
-                                onChange={(next) => onInlineStatusChange(task, next)}
-                              />
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-meta text-muted-foreground tabular-nums">
+                                  {task.endDate ? `Vence ${formatDateOnly(task.endDate)}` : 'Sin fecha de vencimiento'}
+                                </span>
+                                {/*
+                                  El menú «mover a…» es la alternativa accesible al
+                                  drag (teclado y móvil/táctil). Misma expresión de
+                                  permiso que el drag y que la tabla (canChangeStatus).
+                                */}
+                                <TaskStatusControl
+                                  status={task.status}
+                                  progress={task.progress}
+                                  showProgress={false}
+                                  busy={taskBusy}
+                                  disabled={!canChangeStatus(task)}
+                                  disabledReason={statusReason}
+                                  taskTitle={task.title}
+                                  onChange={(next) => onInlineStatusChange(task, next)}
+                                />
+                              </div>
                             </article>
                           </li>
                         );

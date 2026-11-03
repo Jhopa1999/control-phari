@@ -21,9 +21,12 @@ import { assertTaskWithinPhase, assertValidRange } from '../date-range';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
+import { UpdateTaskProgressDto } from './dto/update-task-progress.dto';
 import { AcceptTaskDto } from './dto/accept-task.dto';
 import { ListPlanTasksDto } from './dto/list-plan-tasks.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
+import { TaskHistoryEntryDto } from './dto/task-history-entry.dto';
+import { collectReferencedIds, diffTaskSnapshots } from './task-history';
 import { MyWorkItemDto } from './dto/my-work-item.dto';
 
 /**
@@ -97,6 +100,13 @@ export class TaskService {
       accepted: task.accepted,
       responsibleUserId: task.responsibleUserId,
       isMilestone: task.isMilestone,
+      startDate: task.startDate,
+      endDate: task.endDate,
+      estimateHours: task.estimateHours,
+      description: task.description,
+      acceptanceCriteria: task.acceptanceCriteria,
+      evidenceUrl: task.evidenceUrl,
+      frameworkPhaseRequired: task.frameworkPhaseRequired,
     };
   }
 
@@ -147,6 +157,51 @@ export class TaskService {
     return this.toResponse(task as TaskWithDeps);
   }
 
+
+  /**
+   * Traza de cambios de una tarea (de la más reciente a la más antigua), armada
+   * con los eventos de auditoría TASK de esa tarea: quién, cuándo y qué campos
+   * cambiaron (valor anterior y nuevo). Fase y responsable se devuelven con su
+   * nombre. Mismo alcance que el detalle de la tarea.
+   */
+  async history(actor: CurrentActor, taskId: string): Promise<TaskHistoryEntryDto[]> {
+    await this.planState.requireTaskInScope(actor, taskId);
+
+    const events = await this.prisma.auditEvent.findMany({
+      where: { objectType: 'TASK', objectId: taskId },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: { actor: { select: { id: true, name: true } } },
+    });
+
+    const { userIds, phaseIds } = collectReferencedIds(events);
+    const [users, phases] = await Promise.all([
+      userIds.length > 0
+        ? this.prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } })
+        : Promise.resolve([] as Array<{ id: string; name: string }>),
+      phaseIds.length > 0
+        ? this.prisma.planPhase.findMany({ where: { id: { in: phaseIds } }, select: { id: true, name: true } })
+        : Promise.resolve([] as Array<{ id: string; name: string }>),
+    ]);
+    const userName = new Map(users.map((u) => [u.id, u.name]));
+    const phaseName = new Map(phases.map((p) => [p.id, p.name]));
+    const resolve = (field: string, value: string | null): string | null => {
+      if (value === null) return null;
+      if (field === 'responsibleUserId') return userName.get(value) ?? 'Usuario desconocido';
+      if (field === 'phaseId') return phaseName.get(value) ?? 'Fase eliminada';
+      return value;
+    };
+
+    return events.map((event) => ({
+      id: event.id,
+      createdAt: event.createdAt,
+      action: event.action,
+      actorUserId: event.actorUserId,
+      actorName: event.actor?.name ?? null,
+      changes:
+        event.action === 'UPDATE' ? diffTaskSnapshots(event.before, event.after, resolve) : [],
+    }));
+  }
   async create(
     actor: CurrentActor,
     phaseId: string,
@@ -424,6 +479,59 @@ export class TaskService {
     if (nextStatus === TaskStatus.TERMINADA && task.status !== TaskStatus.TERMINADA) {
       await this.notifyIfPlanCompleted(actor, planId, requestId, mainProcessId);
     }
+    return this.findOne(actor, task.id);
+  }
+
+  /**
+   * Actualiza solo el avance (0-100) de una tarea, sin cambiar su estado. Mismo
+   * permiso que el cambio de estado: jefe/líder, o el integrante responsable.
+   * El avance solo se edita mientras la tarea está En curso, Bloqueada o En
+   * revisión: en «Por hacer» aún no empezó y en «Terminada» hay que reabrirla.
+   */
+  async changeProgress(
+    actor: CurrentActor,
+    taskId: string,
+    dto: UpdateTaskProgressDto,
+  ): Promise<TaskResponseDto> {
+    const { task, mainProcessId, requestState } =
+      await this.planState.requireTaskInScope(actor, taskId);
+    this.planState.assertProjectOpen(requestState);
+
+    if (!this.isPlanManager(actor) && task.responsibleUserId !== actor.userId) {
+      throw new ForbiddenException(
+        'Solo puedes cambiar el avance de tus propias tareas.',
+      );
+    }
+    if (
+      task.status === TaskStatus.POR_HACER ||
+      task.status === TaskStatus.TERMINADA
+    ) {
+      throw new ConflictException(
+        task.status === TaskStatus.POR_HACER
+          ? 'La tarea aún no empezó: pásala a «En curso» para registrar su avance.'
+          : 'La tarea está terminada: reábrela para cambiar su avance.',
+      );
+    }
+    if (task.progress === dto.progress) {
+      return this.findOne(actor, task.id);
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const next = await tx.task.update({
+        where: { id: task.id },
+        data: { progress: dto.progress },
+      });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'UPDATE',
+        objectType: 'TASK',
+        objectId: task.id,
+        scopeProcessId: mainProcessId,
+        before: { status: task.status, progress: task.progress, accepted: task.accepted },
+        after: { status: next.status, progress: next.progress, accepted: next.accepted },
+      });
+    });
+
     return this.findOne(actor, task.id);
   }
 
