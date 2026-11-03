@@ -42,7 +42,7 @@ export function MobileNav(): React.ReactElement {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background px-3 lg:hidden">
+    <header className="sticky top-0 z-30 flex h-14 print:hidden items-center gap-2 bg-card/90 px-3 backdrop-blur lg:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button type="button" variant="ghost" size="icon" aria-label="Abrir menú">
@@ -50,7 +50,7 @@ export function MobileNav(): React.ReactElement {
           </Button>
         </SheetTrigger>
         {/* Sin descripción: el título basta para nombrar el diálogo. */}
-        <SheetContent side="left" aria-describedby={undefined}>
+        <SheetContent side="left" tone="sidebar" aria-describedby={undefined}>
           <SheetTitle className="sr-only">Menú principal</SheetTitle>
           <AppSidebar variant="drawer" onNavigate={() => setOpen(false)} />
         </SheetContent>
@@ -62,6 +62,7 @@ export function MobileNav(): React.ReactElement {
       </div>
       <ThemeToggle />
       <UserMenu />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-brand-gradient forced-colors:hidden print:hidden" />
     </header>
   );
 }

@@ -33,7 +33,14 @@ const OPTIONS: ReadonlyArray<{ value: ThemeOption; label: string; icon: typeof S
  * preferencia; para no desajustar la hidratación se muestra un icono neutro
  * estable (monitor) mientras tanto.
  */
-export function ThemeToggle({ className }: { className?: string }): React.ReactElement {
+export function ThemeToggle({
+  className,
+  tone = 'default',
+}: {
+  className?: string;
+  /** 'sidebar': sobre el menú marino. */
+  tone?: 'default' | 'sidebar';
+}): React.ReactElement {
   const { theme, resolvedTheme, setTheme } = useTheme();
   // false en el servidor y durante la hidratación; true ya en el cliente.
   const mounted = React.useSyncExternalStore(subscribeNever, () => true, () => false);
@@ -53,7 +60,7 @@ export function ThemeToggle({ className }: { className?: string }): React.ReactE
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant="ghost"
+          variant={tone === 'sidebar' ? 'sidebar' : 'ghost'}
           size="icon-sm"
           aria-label="Cambiar tema"
           className={className}

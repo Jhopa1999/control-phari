@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface EmptyStateProps {
-  /** 20 px, text-muted-foreground, sin círculo de fondo. */
+  /** 20 px dentro de un círculo primary-subtle (text-link). */
   icon?: LucideIcon;
   /** Qué es o qué pasa: «Aún no hay solicitudes.». */
   title: string;
@@ -53,7 +53,14 @@ export function EmptyState({
         size === 'compact' ? 'py-6' : 'py-10',
       )}
     >
-      {Icon ? <Icon className="size-5 text-muted-foreground" aria-hidden="true" /> : null}
+      {Icon ? (
+        <span
+          aria-hidden="true"
+          className="flex size-10 items-center justify-center rounded-full bg-primary-subtle text-link"
+        >
+          <Icon className="size-5" />
+        </span>
+      ) : null}
       <p className="text-sm font-semibold">{title}</p>
       {description ? (
         <div className="max-w-sm text-sm text-muted-foreground">{description}</div>

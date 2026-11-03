@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronDown, Info, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
+import { ChevronDown, Info, PanelLeftClose, PanelLeftOpen, Search, X } from 'lucide-react';
 import { BrandMark, BrandName } from '@/components/brand';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -72,16 +72,18 @@ function NavLink({
           aria-current={active ? 'page' : undefined}
           onClick={onNavigate}
           className={cn(
-            'relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm pointer-coarse:min-h-10 hover:bg-sidebar-accent/70 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring rail:justify-center rail:px-0',
+            'group relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm text-sidebar-foreground transition-colors pointer-coarse:min-h-10 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sidebar-ring rail:justify-center rail:px-0',
             active &&
-              'bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-primary hover:bg-sidebar-accent',
+              'bg-sidebar-active font-medium text-sidebar-accent-foreground hover:bg-sidebar-active before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-sidebar-primary forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
           )}
         >
           <Icon
             aria-hidden="true"
             className={cn(
               'size-4 shrink-0',
-              active ? 'text-sidebar-accent-foreground' : 'text-sidebar-muted-foreground',
+              active
+                ? 'text-sidebar-primary'
+                : 'text-sidebar-muted-foreground group-hover:text-sidebar-accent-foreground',
             )}
           />
           <span className="min-w-0 truncate rail:sr-only">{item.label}</span>
@@ -269,7 +271,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
         <div
           ref={noticeRef}
           tabIndex={-1}
-          className="flex flex-col items-start gap-2 rounded-md px-2.5 py-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring rail:p-0"
+          className="flex flex-col items-start gap-2 rounded-md px-2.5 py-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sidebar-ring rail:p-0"
         >
           {/* rail:sr-only y no rail:hidden: en riel el aviso sigue en el árbol de accesibilidad. */}
           <p
@@ -279,7 +281,13 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
             {message}
           </p>
           {options?.retry ? (
-            <Button type="button" variant="outline" size="sm" className="rail:hidden" onClick={reload}>
+            <Button
+              type="button"
+              variant="sidebar"
+              size="sm"
+              className="border border-sidebar-field-border rail:hidden"
+              onClick={reload}
+            >
               Reintentar
             </Button>
           ) : null}
@@ -287,7 +295,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
         <LabelTooltip label={message} side="right">
           <Button
             type="button"
-            variant="ghost"
+            variant="sidebar"
             size="icon-sm"
             className="hidden rail:inline-flex"
             aria-label="Expandir el menú para ver el aviso"
@@ -309,7 +317,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
               Cargando menú…
             </p>
             {Array.from({ length: 6 }, (_, i) => (
-              <Skeleton key={i} className="h-8 w-full" />
+              <Skeleton key={i} className="h-8 w-full bg-sidebar-accent" />
             ))}
           </div>
         );
@@ -342,10 +350,22 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
                   value={query}
                   placeholder="Buscar pantalla…"
                   autoComplete="off"
-                  className="h-8 bg-background pl-8 text-sm"
+                  className="h-8 border-sidebar-field-border bg-sidebar-field pl-8 text-sm text-sidebar-foreground placeholder:text-sidebar-muted-foreground focus-visible:border-sidebar-ring focus-visible:outline-sidebar-ring [&::-webkit-search-cancel-button]:hidden"
                   onChange={(event) => setQuery(event.target.value)}
                   onKeyDown={handleSearchKeyDown}
                 />
+                {query !== '' ? (
+                  <Button
+                    type="button"
+                    variant="sidebar"
+                    size="icon-sm"
+                    className="absolute top-1/2 right-0.5 size-7 -translate-y-1/2"
+                    aria-label="Limpiar búsqueda"
+                    onClick={() => setQuery('')}
+                  >
+                    <X aria-hidden="true" />
+                  </Button>
+                ) : null}
               </div>
               {/* Región viva: anuncia cuántas pantallas coinciden. */}
               <p role="status" className="sr-only">
@@ -396,7 +416,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
                           aria-expanded={!isCollapsed}
                           aria-controls={listId}
                           onClick={() => toggle(group.id)}
-                          className="flex w-full items-center justify-between rounded-md px-2.5 py-0.5 text-left text-xs font-medium text-sidebar-muted-foreground hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring pointer-coarse:min-h-10"
+                          className="flex w-full items-center justify-between rounded-md px-2.5 py-1 text-left text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sidebar-ring pointer-coarse:min-h-10"
                         >
                           {group.label}
                           <ChevronDown
@@ -410,7 +430,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
                       ) : (
                         <span
                           id={groupLabelId(group.id)}
-                          className="block px-2.5 text-xs font-medium text-sidebar-muted-foreground rail:sr-only"
+                          className="block px-2.5 text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase rail:sr-only"
                         >
                           {group.label}
                         </span>
@@ -457,9 +477,9 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
             <Button
               ref={collapseRef}
               type="button"
-              variant="ghost"
+              variant="sidebar"
               size="icon-sm"
-              className="text-sidebar-foreground rail:hidden"
+              className="rail:hidden"
               aria-label="Contraer menú"
               onClick={handleToggle}
             >
@@ -470,7 +490,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
             <Button
               ref={expandRef}
               type="button"
-              variant="ghost"
+              variant="sidebar"
               size="icon-sm"
               className="hidden rail:inline-flex"
               aria-label="Expandir menú"
@@ -490,14 +510,14 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
         <Link
           href="/inicio"
           onClick={onNavigate}
-          className="flex min-w-0 items-center gap-2.5 rounded-md p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="flex min-w-0 items-center gap-2.5 rounded-md p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
         >
-          <BrandMark className="hidden rail:flex" />
-          <BrandName className="rail:sr-only" />
+          <BrandMark tone="inverse" className="hidden rail:flex" />
+          <BrandName tone="inverse" className="rail:sr-only" />
         </Link>
         {/* En riel (solo escritorio) se oculta para no estrechar la columna; el
             control sigue disponible en la barra móvil y en el menú expandido. */}
-        <ThemeToggle className="ml-auto rail:hidden" />
+        <ThemeToggle tone="sidebar" className="ml-auto rail:hidden" />
       </div>
 
       <nav
@@ -516,11 +536,11 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
         {isJwt ? null : (
           <>
             <div className="flex w-full flex-col gap-1.5 px-1 pb-1 pt-1.5 rail:hidden">
-              <Label htmlFor={actorSelectId} className="text-xs">
+              <Label htmlFor={actorSelectId} className="text-xs text-sidebar-foreground">
                 Usuario actual (dev)
               </Label>
               {actorsState === 'loading' ? (
-                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full bg-sidebar-accent" />
               ) : actorsState === 'error' ? (
                 <p role="alert" className="text-xs text-sidebar-muted-foreground">
                   No fue posible cargar los usuarios.
@@ -528,7 +548,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
               ) : (
                 <Select value={actorId ?? ''} onValueChange={(value) => setActorId(value)}>
                   {/* Sin aria-label: el nombre accesible es el de la etiqueta visible. */}
-                  <SelectTrigger ref={actorSelectRef} id={actorSelectId} className="h-8 bg-background">
+                  <SelectTrigger ref={actorSelectRef} id={actorSelectId} className="h-8 border-sidebar-field-border bg-sidebar-field text-sidebar-foreground data-[placeholder]:text-sidebar-muted-foreground focus-visible:outline-sidebar-ring [&>svg]:text-sidebar-muted-foreground">
                     <SelectValue placeholder="Elige un usuario" />
                   </SelectTrigger>
                   <SelectContent>
@@ -544,13 +564,13 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
             <LabelTooltip label={actorDisplay ?? 'Ningún usuario elegido'} side="right">
               <Button
                 type="button"
-                variant="ghost"
+                variant="sidebar"
                 size="icon-sm"
                 className="hidden rounded-full rail:inline-flex"
                 aria-label={`Usuario actual (dev): ${actorDisplay ?? 'ninguno'}. Expandir el menú para cambiarlo`}
                 onClick={handleAvatarClick}
               >
-                <span className="flex size-7 items-center justify-center rounded-full bg-primary-subtle text-xs font-semibold text-link">
+                <span className="flex size-7 items-center justify-center rounded-full bg-sidebar-active text-xs font-semibold text-sidebar-accent-foreground">
                   {selectedActor ? initialsOf(selectedActor.name) : '?'}
                 </span>
               </Button>
@@ -576,7 +596,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
   // en páginas más altas que el viewport el fondo del menú terminaba en la
   // primera pantalla (visible en capturas de página completa).
   return (
-    <div className="hidden shrink-0 border-r border-sidebar-border bg-sidebar lg:block">
+    <div className="hidden shrink-0 border-r border-sidebar-border bg-sidebar print:hidden lg:block">
       <aside
         id="app-sidebar"
         aria-label="Menú lateral"

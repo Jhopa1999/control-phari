@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
-import { Lock } from 'lucide-react';
+import { Lock, UserPlus } from 'lucide-react';
 import { Field, FieldSet, FormError, RequiredHint } from '@/components/field';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
@@ -28,12 +28,18 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import type {
   Approval,
+  Area,
   Process,
   Request,
   RequestParticipant,
   Requester,
 } from '@/lib/api-client';
+import { toast } from 'sonner';
+import { RequesterFormDialog, type RequesterFormValues } from '@/app/administracion/solicitantes/requester-form-dialog';
+import { useActor } from '@/lib/actor-context';
 import { listApprovals } from '@/lib/approval';
+import { listAreas } from '@/lib/areas';
+import { createRequester } from '@/lib/requesters';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -61,6 +67,8 @@ interface SolicitudFormDialogProps {
   /** Error del backend en línea; se conserva ante fallo (AC-031). */
   errorMessage: string | null;
   onSubmit: (values: SolicitudFormValues) => void;
+  /** Se invoca al crear un solicitante desde el formulario (para refrescar la lista). */
+  onRequesterCreated?: (requester: Requester) => void;
 }
 
 /** Id del formulario: el FormError lleva `sol-form-error`. */
@@ -178,8 +186,15 @@ export function SolicitudFormDialog({
   submitting,
   errorMessage,
   onSubmit,
+  onRequesterCreated,
 }: SolicitudFormDialogProps): React.ReactElement {
   const isEdit = Boolean(editing);
+  const { allowedModules } = useActor();
+  const canCreateRequester = allowedModules.has('requesters');
+  const [newReqOpen, setNewReqOpen] = React.useState(false);
+  const [newReqAreas, setNewReqAreas] = React.useState<Area[]>([]);
+  const [newReqSubmitting, setNewReqSubmitting] = React.useState(false);
+  const [newReqError, setNewReqError] = React.useState<string | null>(null);
   const [values, setValues] = React.useState<SolicitudFormValues>(emptyValues());
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   // Historial de decisiones de aprobación de la solicitud en edición (0 o más).
@@ -295,7 +310,33 @@ export function SolicitudFormDialog({
 
   const mainProcessName = (id: string) => processes.find((p) => p.id === id)?.name ?? id;
 
+  function openNewRequester(): void {
+    setNewReqError(null);
+    setNewReqOpen(true);
+    // Las áreas se cargan al abrir; si falla, el diálogo muestra el error al guardar.
+    void listAreas({ active: true })
+      .then(setNewReqAreas)
+      .catch(() => setNewReqError('No fue posible cargar las áreas. Intenta de nuevo.'));
+  }
+
+  async function handleCreateRequester(v: RequesterFormValues): Promise<void> {
+    setNewReqSubmitting(true);
+    setNewReqError(null);
+    try {
+      const created = await createRequester({ name: v.name, areaId: v.areaId });
+      onRequesterCreated?.(created);
+      update('requesterId', created.id);
+      setNewReqOpen(false);
+      toast.success(`Solicitante «${created.name}» creado y seleccionado.`);
+    } catch (err) {
+      setNewReqError(err instanceof Error ? err.message : 'Ocurrió un error inesperado.');
+    } finally {
+      setNewReqSubmitting(false);
+    }
+  }
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
@@ -442,6 +483,7 @@ export function SolicitudFormDialog({
             <div className="grid gap-4">
               <GroupHeading>Solicitante</GroupHeading>
               <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid content-start gap-2">
                 <Field id="sol-requester" label="Solicitante" help={requesterHelp}>
                   {(control) => (
                     <Select value={values.requesterId} onValueChange={(v) => update('requesterId', v)}>
@@ -458,6 +500,24 @@ export function SolicitudFormDialog({
                     </Select>
                   )}
                 </Field>
+                {canCreateRequester ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto justify-start p-0"
+                    onClick={openNewRequester}
+                  >
+                    <UserPlus aria-hidden="true" />
+                    ¿No está en la lista? Crear solicitante
+                  </Button>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    ¿No encuentras al solicitante? Pídele al administrador o a la jefatura de tu
+                    área que lo cree en Administración → Solicitantes.
+                  </p>
+                )}
+                </div>
                 <Field id="sol-owner" label="Dueño funcional">
                   <Input
                     value={values.functionalOwner}
@@ -533,5 +593,16 @@ export function SolicitudFormDialog({
         </form>
       </DialogContent>
     </Dialog>
+    {canCreateRequester ? (
+      <RequesterFormDialog
+        open={newReqOpen}
+        onOpenChange={setNewReqOpen}
+        areas={newReqAreas}
+        submitting={newReqSubmitting}
+        errorMessage={newReqError}
+        onSubmit={(v) => void handleCreateRequester(v)}
+      />
+    ) : null}
+    </>
   );
 }

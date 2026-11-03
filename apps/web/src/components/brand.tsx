@@ -23,7 +23,11 @@ const WORDMARK = {
   negativo: '/brand/svg/wordmark/gibo-wordmark-negativo.svg',
 } as const;
 
+/** 'inverse': siempre la variante negativa (sobre el menú marino, en ambos temas). */
+export type BrandTone = 'auto' | 'inverse';
+
 interface ThemedImageProps {
+  tone?: BrandTone;
   sources: { positivo: string; negativo: string };
   width: number;
   height: number;
@@ -31,7 +35,10 @@ interface ThemedImageProps {
 }
 
 /** Par de imágenes decorativas: una por tema, alternadas con `dark:`. */
-function ThemedImage({ sources, width, height, className }: ThemedImageProps): React.ReactElement {
+function ThemedImage({ sources, width, height, className, tone = 'auto' }: ThemedImageProps): React.ReactElement {
+  if (tone === 'inverse') {
+    return <Image src={sources.negativo} alt="" width={width} height={height} unoptimized className={className} />;
+  }
   return (
     <>
       <Image
@@ -58,10 +65,16 @@ function ThemedImage({ sources, width, height, className }: ThemedImageProps): R
  * Isotipo (tres nodos, una órbita) para espacios cuadrados: riel del menú,
  * pantallas de carga y error. Decorativo: el nombre lo aporta el texto vecino.
  */
-export function BrandMark({ className }: { className?: string }): React.ReactElement {
+export function BrandMark({
+  className,
+  tone = 'auto',
+}: {
+  className?: string;
+  tone?: BrandTone;
+}): React.ReactElement {
   return (
     <span aria-hidden="true" className={cn('flex size-9 shrink-0 items-center justify-center', className)}>
-      <ThemedImage sources={ISOTIPO} width={304} height={304} className="size-full" />
+      <ThemedImage sources={ISOTIPO} width={304} height={304} className="size-full" tone={tone} />
     </span>
   );
 }
@@ -72,6 +85,8 @@ export interface BrandNameProps {
   size?: 'md' | 'lg';
   /** Muestra «Governance & Data» bajo el wordmark. Por defecto true. */
   showTagline?: boolean;
+  /** 'inverse' sobre el menú marino; 'auto' en el resto. */
+  tone?: BrandTone;
 }
 
 /**
@@ -82,12 +97,14 @@ export function BrandName({
   className,
   size = 'md',
   showTagline = true,
+  tone = 'auto',
 }: BrandNameProps): React.ReactElement {
   return (
     <span className={cn('flex min-w-0 flex-col gap-0.5', className)}>
       <span aria-hidden="true" className="flex">
         <ThemedImage
           sources={WORDMARK}
+          tone={tone}
           width={844}
           height={304}
           className={cn('w-auto max-w-none', size === 'lg' ? 'h-14' : 'h-7')}
@@ -96,7 +113,12 @@ export function BrandName({
       <span className="sr-only">GIBO</span>
       {showTagline ? (
         // pl-[3px] compensa el margen transparente del viewBox del wordmark (36/304 de su alto).
-        <span className="truncate pl-[3px] text-xs text-sidebar-muted-foreground">Governance &amp; Data</span>
+        <span
+          className={cn(
+            'truncate pl-[3px] text-xs',
+            tone === 'inverse' ? 'text-sidebar-muted-foreground' : 'text-muted-foreground',
+          )}
+        >Governance &amp; Data</span>
       ) : null}
     </span>
   );

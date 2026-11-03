@@ -16,13 +16,17 @@
    solo cuando queda contenido por ese lado. Los degradados `local` se mueven
    con el contenido y tapan la sombra (`scroll`) al llegar al borde; sin
    desbordamiento no se ve ninguna. Sin JavaScript. */
+@utility bg-brand-gradient {
+  background-image: var(--brand-gradient);
+}
+
 @utility nav-scroll-shadow {
   background:
     linear-gradient(var(--sidebar) 30%, transparent) center top / 100% 1.5rem no-repeat local,
     linear-gradient(transparent, var(--sidebar) 70%) center bottom / 100% 1.5rem no-repeat local,
-    radial-gradient(farthest-side at 50% 0, oklch(0 0 0 / 14%), transparent) center top / 100% 0.625rem
+    radial-gradient(farthest-side at 50% 0, oklch(0 0 0 / 35%), transparent) center top / 100% 0.625rem
       no-repeat scroll,
-    radial-gradient(farthest-side at 50% 100%, oklch(0 0 0 / 14%), transparent) center bottom / 100%
+    radial-gradient(farthest-side at 50% 100%, oklch(0 0 0 / 35%), transparent) center bottom / 100%
       0.625rem no-repeat scroll;
   background-color: var(--sidebar);
 }
@@ -47,28 +51,32 @@
  * (más oscuro) porque el azul eléctrico sobre el lienzo da 4.47:1 (< 4.5:1).
  */
 :root {
+  --brand-navy: oklch(0.281 0.095 263.6); /* #0F2557 */
+  --brand-electric: oklch(0.559 0.208 259.8); /* #176BEB */
+  --brand-cyan: oklch(0.738 0.122 207.3); /* #20BFD1 */
+  --brand-gradient: linear-gradient(90deg, var(--brand-navy), var(--brand-electric) 55%, var(--brand-cyan));
   --primary: oklch(0.559 0.208 259.8);
   --primary-hover: oklch(0.502 0.186 259.8);
   --primary-foreground: oklch(1 0 0);
-  --primary-subtle: oklch(0.95 0.03 259.8);
+  --primary-subtle: oklch(0.93 0.04 259.8);
   --link: oklch(0.502 0.186 259.8);
   --link-hover: oklch(0.281 0.095 263.6);
 
   --radius: 0.75rem;
 
-  --background: oklch(0.972 0.003 247.9);
+  --background: oklch(0.953 0.011 256.7);
   --foreground: oklch(0.281 0.095 263.6);
-  --surface-subtle: oklch(0.985 0.002 248);
+  --surface-subtle: oklch(0.975 0.006 255.5);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.281 0.095 263.6);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.281 0.095 263.6);
-  --muted: oklch(0.945 0.006 250);
+  --muted: oklch(0.925 0.014 254.6);
   --muted-foreground: oklch(0.46 0.04 262);
-  --secondary: oklch(0.94 0.008 255);
-  --secondary-hover: oklch(0.91 0.012 255);
+  --secondary: oklch(0.925 0.014 254.6);
+  --secondary-hover: oklch(0.89 0.02 255);
   --secondary-foreground: oklch(0.281 0.095 263.6);
-  --accent: oklch(0.94 0.008 255);
+  --accent: oklch(0.925 0.014 254.6);
   --accent-foreground: oklch(0.281 0.095 263.6);
   --ring: var(--primary);
   /* Borde sutil (marino al 9 %): las tarjetas se separan con sombra, no con línea. */
@@ -100,17 +108,24 @@
   --destructive-hover: oklch(0.47 0.18 27);
   --destructive-foreground: oklch(0.985 0.003 264);
 
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.34 0.07 262);
-  --sidebar-muted-foreground: oklch(0.48 0.04 262);
-  --sidebar-accent: oklch(0.95 0.02 259.8);
-  --sidebar-accent-foreground: oklch(0.281 0.095 263.6);
-  --sidebar-border: oklch(0.281 0.095 263.6 / 9%);
+  --sidebar: oklch(0.281 0.095 263.6);
+  --sidebar-foreground: oklch(0.94 0.012 255);
+  --sidebar-muted-foreground: oklch(0.8 0.035 258);
+  --sidebar-accent: oklch(1 0 0 / 8%);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-active: oklch(0.559 0.208 259.8 / 32%);
+  --sidebar-primary: oklch(0.738 0.122 207.3);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-field: oklch(1 0 0 / 8%);
+  --sidebar-field-border: oklch(1 0 0 / 45%);
+  --sidebar-ring: oklch(0.738 0.122 207.3);
 }
 
 /* «Dark Tech»: fondo marino profundo y superficies más claras que el fondo.
    La tarjeta es un tono derivado entre #08152E y el marino #0F2557. */
 .dark {
+  /* El marino no se ve sobre el fondo oscuro: el filete parte del azul eléctrico. */
+  --brand-gradient: linear-gradient(90deg, var(--brand-electric), var(--brand-cyan));
   --primary: oklch(0.559 0.208 259.8);
   --primary-hover: oklch(0.502 0.186 259.8);
   --primary-foreground: oklch(1 0 0);
@@ -160,12 +175,8 @@
   --destructive-hover: oklch(0.49 0.18 25);
   --destructive-foreground: oklch(0.985 0.003 264);
 
+  /* El menú es marino en ambos temas; en oscuro solo se hunde un poco. */
   --sidebar: oklch(0.165 0.05 262);
-  --sidebar-foreground: oklch(0.86 0.02 255);
-  --sidebar-muted-foreground: oklch(0.72 0.03 258);
-  --sidebar-accent: oklch(0.285 0.07 263);
-  --sidebar-accent-foreground: oklch(0.98 0.003 250);
-  --sidebar-border: oklch(1 0 0 / 8%);
 }
 
 /* Tarjeta flotante: superficie con sombra suave y sin contorno duro. */
@@ -239,6 +250,14 @@
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-field: var(--sidebar-field);
+  --color-sidebar-field-border: var(--sidebar-field-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-electric: var(--brand-electric);
+  --color-brand-cyan: var(--brand-cyan);
 }
 
 @layer base {
