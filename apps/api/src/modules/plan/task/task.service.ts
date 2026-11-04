@@ -139,6 +139,19 @@ export class TaskService {
     return tasks.map((t) => this.toResponse(t as TaskWithDeps));
   }
 
+  /**
+   * Candidatos a responsable de las tareas de un plan: personas con grant activo
+   * en alguno de los procesos que intervienen en la Request del plan (decididos
+   * en el triage). El front los usa para poblar el desplegable de asignación; el
+   * backend impone la misma regla al asignar (fuente de verdad).
+   */
+  async responsibleCandidates(
+    actor: CurrentActor,
+    planId: string,
+  ): Promise<Array<{ id: string; name: string }>> {
+    return this.planState.responsibleCandidates(actor, planId);
+  }
+
   async findOne(actor: CurrentActor, taskId: string): Promise<TaskResponseDto> {
     await this.planState.requireTaskInScope(actor, taskId);
     const task = await this.prisma.task.findFirst({
@@ -217,6 +230,13 @@ export class TaskService {
     const { mainProcessId, requestState, requestId } =
       await this.planState.requirePlanByIdInScope(actor, phase.planId);
     this.planState.assertProjectOpen(requestState);
+
+    // Condición dura: el responsable debe pertenecer a un proceso interviniente
+    // de la solicitud (RequestParticipant). Fuente de verdad en el backend.
+    await this.planState.assertResponsibleInParticipants(
+      requestId,
+      dto.responsibleUserId,
+    );
 
     const isMilestone = dto.isMilestone ?? false;
     const normalized = applyMilestoneRule({
@@ -326,6 +346,15 @@ export class TaskService {
     const { task, mainProcessId, requestState, requestId } =
       await this.planState.requireTaskInScope(actor, taskId);
     this.planState.assertProjectOpen(requestState);
+
+    // Condición dura: si se reasigna responsable, debe pertenecer a un proceso
+    // interviniente de la solicitud (RequestParticipant). Fuente de verdad.
+    if (dto.responsibleUserId !== undefined) {
+      await this.planState.assertResponsibleInParticipants(
+        requestId,
+        dto.responsibleUserId,
+      );
+    }
 
     const isMilestone = dto.isMilestone ?? task.isMilestone;
     const normalized = applyMilestoneRule({

@@ -11,6 +11,7 @@ function actor(jefe: boolean): CurrentActor {
   return {
     userId: jefe ? 'jefe' : 'lider',
     isJefeArea: jefe,
+    isLiderProceso: false,
     isAdmin: false,
     scopedProcessIds: new Set(['p1']),
     roleCodes: new Set(),

@@ -26,16 +26,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Task, CoordinationPerson, PlanPhase } from '@/lib/api-client';
+import type { Task, ResponsibleCandidate, PlanPhase } from '@/lib/api-client';
 import { formatDateOnly } from '@/lib/format';
 import { PlanError } from '@/lib/plan';
-import { createTask, updateTask } from '@/lib/tasks';
+import { createTask, listResponsibleCandidates, updateTask } from '@/lib/tasks';
 import {
   addDependency,
   listDependencies,
   removeDependency,
 } from '@/lib/task-dependencies';
-import { listCoordinationPeople } from '@/lib/worklog';
 
 interface TaskDialogProps {
   open: boolean;
@@ -142,20 +141,23 @@ export function TaskDialog({
   const phaseRef = React.useRef<HTMLButtonElement>(null);
   const hoursRef = React.useRef<HTMLInputElement>(null);
 
-  const [users, setUsers] = React.useState<CoordinationPerson[]>([]);
+  const [users, setUsers] = React.useState<ResponsibleCandidate[]>([]);
   const [peopleFailed, setPeopleFailed] = React.useState(false);
   const [predecessorIds, setPredecessorIds] = React.useState<Set<string>>(
     new Set(),
   );
 
-  // Personas en alcance para el selector de responsable. Usa
-  // /coordination/people (disponible para los 3 roles, filtrado por alcance),
-  // NO /users (que es solo-jefe): quien gestiona el plan es el líder, y debe
-  // poder asignar responsables de su proceso. Si falla, se avisa en el campo.
+  // Plan al que pertenece el diálogo (todas las fases comparten plan).
+  const planId = phases[0]?.planId ?? null;
+
+  // Candidatos a responsable: personas con grant activo en los procesos que
+  // intervienen en la solicitud del plan (decididos en el triage), no todas las
+  // personas en alcance. Así el desplegable ofrece solo lo que el backend
+  // aceptará al asignar. Si falla, se avisa en el campo.
   React.useEffect(() => {
-    if (!open) return;
+    if (!open || !planId) return;
     let active = true;
-    void listCoordinationPeople()
+    void listResponsibleCandidates(planId)
       .then((data) => {
         if (!active) return;
         setUsers(data);
@@ -169,7 +171,7 @@ export function TaskDialog({
     return () => {
       active = false;
     };
-  }, [open]);
+  }, [open, planId]);
 
   useResetOnChange([open, task], () => {
     if (open) {

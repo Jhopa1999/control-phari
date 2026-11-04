@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { CoordinationPerson } from '@/lib/api-client';
+import type { ResponsibleCandidate } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 
 /** Texto cuando el responsable actual no está entre las personas en alcance. */
@@ -20,8 +20,8 @@ const UNASSIGNED = 'Sin asignar';
 export interface TaskResponsibleControlProps {
   /** Responsable actual (userId) o null si no hay. */
   value: string | null;
-  /** Personas en alcance ya cargadas en la vista. */
-  people: CoordinationPerson[];
+  /** Candidatos a responsable (procesos intervinientes) ya cargados en la vista. */
+  people: ResponsibleCandidate[];
   /** La carga de personas falló (distinto de lista vacía legítima). */
   loadError: boolean;
   /** Deshabilitado (plan no editable, fuera de permiso del actor, o fila ocupada). */

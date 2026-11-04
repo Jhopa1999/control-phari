@@ -289,7 +289,6 @@ export function SolicitudesView(): React.ReactElement {
       if (editing) {
         await updateRequest(editing.id, {
           title: values.title,
-          participantProcessIds: values.participantProcessIds,
           requesterId: values.requesterId || undefined,
           functionalOwner: trimOrUndefined(values.functionalOwner),
           expectedResult: trimOrUndefined(values.expectedResult),
@@ -301,7 +300,6 @@ export function SolicitudesView(): React.ReactElement {
         const created = await createRequest({
           title: values.title,
           mainProcessId: values.mainProcessId,
-          participantProcessIds: values.participantProcessIds,
           requesterId: values.requesterId || undefined,
           functionalOwner: trimOrUndefined(values.functionalOwner),
           expectedResult: trimOrUndefined(values.expectedResult),

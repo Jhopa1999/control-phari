@@ -35,6 +35,7 @@ function actorWith(roles: RoleCode[], scoped: string[]): CurrentActor {
     roleCodes: new Set(roles),
     scopedProcessIds: new Set(scoped),
     isJefeArea: roles.includes(RoleCode.JEFE_AREA),
+    isLiderProceso: false,
     isAdmin: false,
   };
 }

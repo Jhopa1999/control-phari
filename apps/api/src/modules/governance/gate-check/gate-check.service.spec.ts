@@ -24,6 +24,7 @@ const JEFE: CurrentActor = {
   roleCodes: new Set([RoleCode.JEFE_AREA]),
   scopedProcessIds: new Set(),
   isJefeArea: true,
+  isLiderProceso: false,
   isAdmin: false,
 };
 
@@ -385,6 +386,7 @@ describe('GateCheckService', () => {
         roleCodes: new Set([RoleCode.LIDER_PROCESO]),
         scopedProcessIds: new Set(['proc-1', 'proc-OTRO']),
         isJefeArea: false,
+        isLiderProceso: false,
         isAdmin: false,
       };
       m.request.findFirst.mockResolvedValue(makeRequest());

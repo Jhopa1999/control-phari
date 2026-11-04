@@ -40,6 +40,8 @@ function createMocks() {
       new PlanStateService(prisma).assertTaskTransition(from, to),
     ),
     assertPredecessorsSatisfied: jest.fn().mockResolvedValue(undefined),
+    assertResponsibleInParticipants: jest.fn().mockResolvedValue(undefined),
+    responsibleCandidates: jest.fn().mockResolvedValue([]),
   } as unknown as PlanStateService;
   return { prisma, prismaObj, audit, planState };
 }
@@ -53,6 +55,7 @@ function actorWith(role: RoleCode, userId = 'u1'): CurrentActor {
     roleCodes: new Set([role]),
     scopedProcessIds: new Set(['p1']),
     isJefeArea: role === RoleCode.JEFE_AREA,
+    isLiderProceso: false,
     isAdmin: false,
   };
 }
@@ -140,6 +143,27 @@ describe('TaskService', () => {
       expect(data.estimateHours).toBe(0);
       // Una sola fecha informada: se copia a ambas columnas.
       expect(data.startDate).toEqual(data.endDate);
+    });
+
+    it('responsable fuera de los procesos intervinientes -> 400 (condicion dura)', async () => {
+      (m.prismaObj.planPhase as any).findFirst.mockResolvedValue({ id: 'ph1', planId: 'plan1' });
+      (m.planState.assertResponsibleInParticipants as jest.Mock).mockRejectedValueOnce(
+        new BadRequestException(
+          'El responsable debe pertenecer a un proceso interviniente de la solicitud.',
+        ),
+      );
+
+      await expect(
+        service.create(actorWith(RoleCode.LIDER_PROCESO), 'ph1', {
+          title: 'Tarea',
+          responsibleUserId: 'ajeno',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(m.planState.assertResponsibleInParticipants).toHaveBeenCalledWith(
+        'r1',
+        'ajeno',
+      );
+      expect((m.prismaObj.task as any).create).not.toHaveBeenCalled();
     });
   });
 

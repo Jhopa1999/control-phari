@@ -61,12 +61,15 @@ export class RequestStateService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * `where` de alcance por proceso principal (design §2.5): jefe sin filtro;
-   * no-jefe filtra por scopedProcessIds. Compartido por los submodulos para no
-   * duplicar la resolucion de scope.
+   * `where` de alcance por proceso principal (design §2.5): jefe de área o líder
+   * de proceso sin filtro (ven TODAS las solicitudes); el resto (integrante
+   * puro) filtra por scopedProcessIds. Compartido por los submodulos
+   * triage/priority/approval para no duplicar la resolucion de scope; como
+   * `requireInScope` lo reutiliza, el líder también puede hacer triage y avanzar
+   * el flujo sobre cualquier solicitud que ahora ve.
    */
   private scopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
-    if (actor.isJefeArea) {
+    if (actor.isJefeArea || actor.isLiderProceso) {
       return { deletedAt: null };
     }
     return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };

@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
-  IsArray,
   IsDateString,
   IsNotEmpty,
   IsOptional,
@@ -38,17 +37,6 @@ export class CreateRequestDto {
   })
   @IsUUID()
   mainProcessId!: string;
-
-  @ApiPropertyOptional({
-    type: [String],
-    format: 'uuid',
-    description:
-      'Procesos participantes adicionales. El principal se materializa siempre.',
-  })
-  @IsOptional()
-  @IsArray()
-  @IsUUID('all', { each: true })
-  participantProcessIds?: string[];
 
   @ApiPropertyOptional({
     type: String,

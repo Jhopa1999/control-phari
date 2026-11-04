@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsArray,
   IsIn,
   IsInt,
   IsOptional,
@@ -72,6 +73,17 @@ export class CreateTriageDto {
   @IsOptional()
   @IsUUID()
   mainResponsibleUserId?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    format: 'uuid',
+    description:
+      'Procesos que intervienen además del principal (el principal participa siempre).',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  participantProcessIds?: string[];
 
   @ApiPropertyOptional({ type: String, description: 'Dependencias.', maxLength: 2000 })
   @IsOptional()

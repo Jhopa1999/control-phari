@@ -28,6 +28,7 @@ function actor(userId = USER_ID): CurrentActor {
     roleCodes: new Set([RoleCode.JEFE_AREA]),
     scopedProcessIds: new Set(),
     isJefeArea: true,
+    isLiderProceso: false,
     isAdmin: false,
   };
 }

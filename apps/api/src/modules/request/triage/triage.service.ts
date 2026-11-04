@@ -144,6 +144,35 @@ export class TriageService {
   }
 
   /**
+   * Resuelve el conjunto de procesos que intervienen en la Request a partir de
+   * los ids enviados en el triage (design §2.3). El proceso principal participa
+   * SIEMPRE (BR-001): se deduplica y se antepone. Cada proceso extra debe
+   * existir y estar activo (400 si no, sin exponer Prisma). NO filtra por
+   * alcance: intervenir no amplia el scope del actor.
+   */
+  private async resolveParticipantIds(
+    mainProcessId: string,
+    participantProcessIds: string[] | undefined,
+  ): Promise<string[]> {
+    const requested = new Set<string>(participantProcessIds ?? []);
+    // El principal se materializa siempre; se deduplica para no duplicarlo.
+    requested.delete(mainProcessId);
+
+    const extra = Array.from(requested);
+    if (extra.length > 0) {
+      const active = await this.prisma.process.findMany({
+        where: { id: { in: extra }, active: true },
+        select: { id: true },
+      });
+      if (active.length !== extra.length) {
+        throw new BadRequestException('Revisa los datos ingresados.');
+      }
+    }
+
+    return [mainProcessId, ...extra];
+  }
+
+  /**
    * Valida (negocio) que el responsable referenciado sea un candidato elegible
    * del proceso principal (design §2.3.2). 400 con mensaje accionable: el valor
    * es un UUID valido pero no cumple la regla del campo.
@@ -218,6 +247,17 @@ export class TriageService {
       );
     }
 
+    // Procesos que intervienen (design §2.3): se deciden en el triage. Se
+    // validan ANTES de abrir la transaccion (igual que los codes maestros); el
+    // principal se preserva siempre. Si el campo no llega, no se tocan.
+    const participantIds =
+      dto.participantProcessIds !== undefined
+        ? await this.resolveParticipantIds(
+            request.mainProcessId,
+            dto.participantProcessIds,
+          )
+        : null;
+
     // Registrar triage lleva REGISTRADA -> EN_TRIAGE (design §11 D5); luego la
     // decision ajusta el estado final. CONTINUAR deja EN_TRIAGE; DEVOLVER y
     // RECHAZAR aplican una segunda transicion desde EN_TRIAGE. Ambas se validan
@@ -262,6 +302,15 @@ export class TriageService {
         },
         include: RESPONSIBLE_INCLUDE,
       });
+
+      // Reconciliar los procesos que intervienen (borrar y recrear) preservando
+      // SIEMPRE el principal (BR-001). Solo si el triage trajo el campo.
+      if (participantIds !== null) {
+        await tx.requestParticipant.deleteMany({ where: { requestId } });
+        await tx.requestParticipant.createMany({
+          data: participantIds.map((processId) => ({ requestId, processId })),
+        });
+      }
 
       await this.audit.record(tx, {
         actorUserId: actor.userId,

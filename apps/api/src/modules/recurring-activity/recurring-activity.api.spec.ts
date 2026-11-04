@@ -92,6 +92,7 @@ function actor(overrides: Partial<CurrentActor> = {}): CurrentActor {
     roleCodes: new Set<RoleCode>([RoleCode.INTEGRANTE]),
     scopedProcessIds: new Set<string>(),
     isJefeArea: false,
+    isLiderProceso: false,
     isAdmin: false,
     ...overrides,
   };
@@ -155,6 +156,7 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
         roleCodes: new Set([RoleCode.JEFE_AREA]),
         scopedProcessIds: new Set(['proc-A']),
         isJefeArea: true,
+        isLiderProceso: false,
       });
 
     it('409 si el responsable es incoherente (USER sin userId)', async () => {

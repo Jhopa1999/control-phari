@@ -64,6 +64,8 @@ Resuelto por petición y adjuntado a `request.actor`, se inyecta en los controll
 - `roleCodes`: unión de roles sobre todos los grants activos.
 - `scopedProcessIds`: procesos con grant activo (el **alcance**).
 - `isJefeArea`: si tiene algún grant `JEFE_AREA`.
+- `isLiderProceso`: si tiene algún grant `LIDER_PROCESO`. Abre la **visibilidad de
+  lectura** de las solicitudes (ver «Visibilidad de solicitudes» abajo).
 
 Si no hay identidad, o el usuario no existe o está inactivo, el *resolver* devuelve
 `null` y el guard responde `401`. Un grant cuyo `role.code` no pertenezca al conjunto
@@ -206,6 +208,23 @@ menú, pero el servidor sigue validando cada operación.
 4. El service aplica reglas finas por rol/estado → `400`/`409` cuando la operación no
    procede (p. ej. el integrante solo opera su propia tarea; registrar una validación
    no aprueba un gate).
+
+## Visibilidad de solicitudes
+
+El alcance de **lectura** de las solicitudes (y del flujo que cuelga de ellas:
+triage, priorización, aprobación y plan) lo deciden los `scopeWhere`/`requestScopeWhere`
+de `request`/`plan`:
+
+- `JEFE_AREA` **o** `LIDER_PROCESO`: ven **todas** las solicitudes (sin filtro por
+  `mainProcessId`).
+- `INTEGRANTE` puro (sin ninguno de esos roles): solo las de sus `scopedProcessIds`.
+
+La apertura al líder es **solo de lectura/visibilidad**. Las escrituras siguen protegidas
+por los gates de cada etapa (`requireInScope`, que reutiliza el mismo `scopeWhere`): por
+diseño eso habilita al líder a hacer triage y avanzar el flujo sobre cualquier solicitud
+que ahora ve, pero las decisiones con `@Roles` más estrictos (p. ej. aprobar, exclusivo de
+`JEFE_AREA`) no cambian. `GET /my-work` («mis tareas») no se amplía: sigue mostrando solo
+las tareas del propio usuario.
 
 ## Bitácora y reporte semanal: escritura y revisión
 

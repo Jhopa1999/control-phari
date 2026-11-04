@@ -72,6 +72,8 @@ export type CreatePhase = components['schemas']['CreatePhaseDto'];
 export type UpdatePhase = components['schemas']['UpdatePhaseDto'];
 export type ReorderPhases = components['schemas']['ReorderPhasesDto'];
 export type Task = components['schemas']['TaskResponseDto'];
+export type ResponsibleCandidate =
+  components['schemas']['ResponsibleCandidateDto'];
 export type TaskPredecessor = components['schemas']['TaskPredecessorDto'];
 export type TaskEvidence = components['schemas']['EvidenceResponseDto'];
 export type TaskEvidenceDownload = components['schemas']['EvidenceDownloadDto'];

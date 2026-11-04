@@ -77,6 +77,17 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
     description: 'Lista las tareas de un plan (GET /plans/{planId}/tasks).',
   },
   {
+    name: 'plan.responsible-candidates',
+    operation: 'GET /plans/{planId}/responsible-candidates',
+    access: 'read',
+    description:
+      'Lista los candidatos a responsable de las tareas de un plan ' +
+      '(GET /plans/{planId}/responsible-candidates): las personas con grant ' +
+      'activo en alguno de los procesos que intervienen en la solicitud del ' +
+      'plan (decididos en el triage). Solo lectura; el backend impone la misma ' +
+      'regla al asignar un responsable.',
+  },
+  {
     name: 'task.create',
     operation: 'POST /phases/{phaseId}/tasks',
     access: 'write',

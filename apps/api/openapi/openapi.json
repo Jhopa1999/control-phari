@@ -3173,6 +3173,47 @@
         ]
       }
     },
+    "/plans/{planId}/responsible-candidates": {
+      "get": {
+        "operationId": "TaskController_responsibleCandidates",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Candidatos a responsable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResponsibleCandidateDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Plan fuera de alcance."
+          }
+        },
+        "summary": "Candidatos a responsable de tarea: personas con grant activo en los procesos que intervienen en la solicitud del plan.",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
     "/phases/{phaseId}/tasks": {
       "post": {
         "operationId": "TaskController_create",
@@ -10819,14 +10860,6 @@
             "format": "uuid",
             "description": "Proceso principal (requerido, participa siempre: BR-001)."
           },
-          "participantProcessIds": {
-            "description": "Procesos participantes adicionales. El principal se materializa siempre.",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
           "requesterId": {
             "type": "string",
             "format": "uuid",
@@ -10880,14 +10913,6 @@
             "type": "string",
             "description": "Titulo de la solicitud.",
             "maxLength": 255
-          },
-          "participantProcessIds": {
-            "description": "Procesos participantes adicionales (el principal se mantiene).",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
           },
           "requesterId": {
             "type": "string",
@@ -11115,6 +11140,14 @@
             "type": "string",
             "format": "uuid",
             "description": "Responsable principal: id de un lider del proceso principal de la solicitud."
+          },
+          "participantProcessIds": {
+            "description": "Procesos que intervienen además del principal (el principal participa siempre).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           "dependencies": {
             "type": "string",
@@ -12373,6 +12406,24 @@
           "predecessors",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "ResponsibleCandidateDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id del candidato."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del candidato."
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ]
       },
       "CreateTaskDto": {

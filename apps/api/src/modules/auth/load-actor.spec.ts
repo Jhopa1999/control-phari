@@ -58,6 +58,43 @@ describe('loadActorByIdentifier - rol ADMIN de sistema', () => {
     expect(actor?.roleCodes.has(RoleCode.INTEGRANTE)).toBe(true);
     expect(Array.from(actor?.scopedProcessIds ?? [])).toEqual(['p1']);
   });
+  it('grant LIDER_PROCESO => isLiderProceso true', async () => {
+    const prisma = makePrisma(
+      baseUser({
+        id: 'u-lider',
+        identifier: 'lider@demo.local',
+        isAdmin: false,
+        grants: [
+          {
+            processId: 'p1',
+            process: { code: 'FIIA', name: 'IA' },
+            role: { code: 'LIDER_PROCESO', name: 'Lider de proceso' },
+          },
+        ],
+      }),
+    );
+    const actor = await loadActorByIdentifier(prisma, 'lider@demo.local');
+    expect(actor?.isLiderProceso).toBe(true);
+    expect(actor?.isJefeArea).toBe(false);
+  });
+  it('solo grant INTEGRANTE => isLiderProceso false', async () => {
+    const prisma = makePrisma(
+      baseUser({
+        id: 'u-int',
+        identifier: 'integrante@demo.local',
+        isAdmin: false,
+        grants: [
+          {
+            processId: 'p1',
+            process: { code: 'FIBI', name: 'BI' },
+            role: { code: 'INTEGRANTE', name: 'Integrante' },
+          },
+        ],
+      }),
+    );
+    const actor = await loadActorByIdentifier(prisma, 'integrante@demo.local');
+    expect(actor?.isLiderProceso).toBe(false);
+  });
   it('ADMIN es ortogonal a los grants: admin con grant JEFE_AREA mantiene ambos', async () => {
     const prisma = makePrisma(
       baseUser({

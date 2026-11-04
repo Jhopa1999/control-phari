@@ -507,6 +507,16 @@
         "apps/mcp/README.md"
       ],
       "summary": "Bitácora y reporte semanal: listado paginado con filtros y resumen (GET /worklog/daily/summary, tool worklog.daily.summary), autor y proceso en cada registro, flujo de revisión (review, return con motivo, recall) con aviso al autor, escritura solo del autor, panel de detalle con actividades completas y filtros en la URL."
+    },
+    {
+      "timestamp": "2026-11-04T00:00:00Z",
+      "trigger_file": "apps/api/src/modules/request/triage/triage.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Rediseño de la demanda: los procesos participantes se retiran de la Solicitud y se deciden en el Triage (POST /requests/:id/triage acepta participantProcessIds, reconcilia RequestParticipant preservando el principal); el Plan ofrece como responsables de tarea a quienes tienen grant activo en los procesos intervinientes (GET /plans/:planId/responsible-candidates y condición dura al asignar); y JEFE_AREA y LIDER_PROCESO ven todas las solicitudes (visibilidad de lectura, escrituras por sus gates)."
     }
   ]
 }

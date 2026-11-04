@@ -55,6 +55,7 @@ function integrante(scoped: string[] = ['p1']): CurrentActor {
     roleCodes: new Set([RoleCode.INTEGRANTE]),
     scopedProcessIds: new Set(scoped),
     isJefeArea: false,
+    isLiderProceso: false,
     isAdmin: false,
   };
 }
@@ -74,6 +75,7 @@ function lider(scoped: string[] = ['p1']): CurrentActor {
     roleCodes: new Set([RoleCode.LIDER_PROCESO]),
     scopedProcessIds: new Set(scoped),
     isJefeArea: false,
+    isLiderProceso: false,
     isAdmin: false,
   };
 }
@@ -87,6 +89,7 @@ function admin(): CurrentActor {
     roleCodes: new Set([RoleCode.ADMIN]),
     scopedProcessIds: new Set<string>(),
     isJefeArea: false,
+    isLiderProceso: false,
     isAdmin: true,
   };
 }
@@ -100,6 +103,7 @@ function jefe(): CurrentActor {
     roleCodes: new Set([RoleCode.JEFE_AREA]),
     scopedProcessIds: new Set<string>(),
     isJefeArea: true,
+    isLiderProceso: false,
     isAdmin: false,
   };
 }
