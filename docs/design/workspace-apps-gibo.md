@@ -691,3 +691,61 @@ en 1440, 1024, 768 y 375 px con 1 app y con 3; estados vacío y error; barra sup
    real es del servidor).
 9. **Aprobaciones.** Vive en `/administracion/revision` pero pertenece a la app Demanda. El menú la
    muestra en Demanda; la miga lo refleja («Workspace › Demanda»), aunque la URL diga `administracion`.
+
+## Anexo: segunda app placeholder «Service Desk» (Próximamente)
+
+Reserva el apartado de una **segunda** aplicación, **Service Desk**, visible pero **no navegable**,
+marcada «Próximamente». Objetivo: enseñar que el workspace crecerá sin construir la app todavía y **sin
+cambiar ningún flujo actual de Demanda**. Sin cambios de API, contrato ni MCP: solo metadatos de
+navegación y presentación en `apps/web`. Todos los contrastes siguen las mediciones de las secciones 7-8
+(se reutilizan pares ya medidos; no se introduce ningún token nuevo).
+
+### A1. Decisiones
+
+| # | Tema | Decisión | Por qué |
+| --- | --- | --- | --- |
+| 1 | Modelo | Lista **separada** `NAV_UPCOMING_APPS` en `navigation.ts`, con el tipo `UpcomingApp` (`id`, `name`, `icon`, `description`, `shortDescription`). **No** entra en `NAV_APPS`, ni en `getVisibleNavApps`, ni en `resolveActiveApp`/`findAppForPath`. | Una app «próxima» no es una app real: no tiene grupos, menú ni ruta. Mantenerla fuera garantiza que **no** cuente como app activa ni active el modo «≥2 apps» (logo a `/aplicaciones`, launcher en rejilla). La única app real sigue siendo Demanda. |
+| 2 | Icono | `Headset` (lucide-react 1.52.0), coherente con «mesa de servicio». | Verificado en la versión instalada; distinto de `Workflow` (Demanda). |
+| 3 | Navegación | **No** es un `Link`. En el selector es un `DropdownMenuItem disabled`; en el launcher es un `<li>` sin enlace. | Un placeholder no debe navegar a ningún sitio; `disabled` lo saca del recorrido de teclado de Radix y del foco. |
+| 4 | Logo y app activa | **No cambian.** Con una sola app real, el logo sigue llevando a `/inicio` (Demanda) y Demanda sigue siendo la tarjeta grande del launcher. | El placeholder no altera la cuenta de apps visibles (`getVisibleNavApps` sigue devolviendo solo Demanda). |
+| 5 | Badge | Texto «Próximamente» en una píldora `bg-muted text-muted-foreground`. | Par ya medido (§8): legible en ambos temas, nunca cian sobre claro. |
+
+### A2. Selector (`app-switcher.tsx`)
+
+- Tras el ítem de Demanda y **antes** del separador + «Inicio del workspace», se listan las apps de
+  `NAV_UPCOMING_APPS` como `DropdownMenuItem disabled` (no `asChild`, no `Link`):
+  `items-start gap-3 py-2 opacity-100` con contenido atenuado por tokens (no por `opacity`, para no
+  degradar contraste). Radix marca el ítem `data-disabled`, lo excluye del typeahead y del foco por
+  flechas: no es alcanzable por teclado, es informativo.
+- **Baldosa**: igual geometría que la de Demanda (`size-8 rounded-md`) pero atenuada:
+  `bg-muted text-muted-foreground` con el icono `Headset` `size-5`.
+- **Texto**: nombre `text-sm font-medium text-muted-foreground`; descripción corta
+  `line-clamp-2 text-meta text-muted-foreground`.
+- **Badge**: a la derecha del nombre, `<span class="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px]
+  font-medium text-muted-foreground">Próximamente</span>`.
+- **Accesible**: el ítem lleva `aria-disabled` (lo pone Radix con `disabled`) y el nombre accesible
+  incluye el estado: un `<span class="sr-only"> (próximamente, no disponible)</span>` tras el nombre.
+- Contraste (medido, pares de §8): `muted-foreground` sobre `popover` = 7.0:1 claro / 7.4:1 oscuro
+  (texto ✔); badge `muted-foreground` sobre `muted` = 4.6:1 claro / 5.1:1 oscuro (texto ✔); icono sobre
+  baldosa `muted` ≥ 3:1 (icono ✔).
+
+### A3. Launcher (`/aplicaciones`)
+
+- Demanda **sigue featured** (tarjeta grande) aunque haya un placeholder: el modo featured depende de
+  `apps.length === 1` (apps reales), que no cambia. Bajo la tarjeta de Demanda, dentro del mismo
+  `<ul aria-label="Aplicaciones disponibles">`, se añaden las apps de `NAV_UPCOMING_APPS` como tarjetas
+  **normales atenuadas y no clicables**.
+- `AppCard` admite `comingSoon`: cuando lo es, el `<li>` **no** lleva enlace extendido (`after:absolute`)
+  ni `hover:border-border-strong`; el nombre es texto plano (no `Link`), la tarjeta usa
+  `bg-card text-muted-foreground border-dashed` y en lugar del pie «Abrir →» muestra el badge
+  «Próximamente» (misma píldora que el selector). `aria-describedby` enlaza la descripción; no hay
+  `has-focus-visible` porque no hay foco (no es interactiva).
+- Layout responsive sin cambios: la tarjeta featured de Demanda ocupa el ancho; el placeholder cae como
+  tarjeta normal en la rejilla `sm:grid-cols-2 xl:grid-cols-3`. Objetivos táctiles no aplican (no es
+  interactiva).
+
+### A4. Qué NO cambia
+
+- `getVisibleNavApps`, `getAppHomeHref`, `resolveActiveApp`, `findAppForPath`, el logo, las migas y la
+  sección «Workspace» del menú quedan intactos. El buscador de pantallas no indexa apps próximas (no
+  tienen ítems). Service Desk no aparece en el menú lateral (no tiene grupos).

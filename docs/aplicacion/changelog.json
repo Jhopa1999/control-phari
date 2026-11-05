@@ -527,15 +527,12 @@
       "summary": "Rediseño de la demanda: los procesos participantes se retiran de la Solicitud y se deciden en el Triage (POST /requests/:id/triage acepta participantProcessIds, reconcilia RequestParticipant preservando el principal); el Plan ofrece como responsables de tarea a quienes tienen grant activo en los procesos intervinientes (GET /plans/:planId/responsible-candidates y condición dura al asignar); y JEFE_AREA y LIDER_PROCESO ven todas las solicitudes (visibilidad de lectura, escrituras por sus gates)."
     },
     {
-      "timestamp": "2026-11-08T16:00:00Z",
-      "trigger_file": "apps/api/prisma/schema.prisma",
+      "timestamp": "2026-11-04T16:00:00Z",
+      "trigger_file": "apps/web/src/lib/navigation.ts",
       "updated_docs": [
-        "docs/aplicacion/modelo-datos.md",
-        "docs/aplicacion/modulos-backend.md",
-        "docs/aplicacion/frontend-pantallas.md",
-        "docs/aplicacion/autenticacion-autorizacion.md"
+        "docs/aplicacion/frontend-pantallas.md"
       ],
-      "summary": "El proceso principal se determina en el Triage: Request.mainProcessId pasa a nullable (migración 20261108160000_request_main_process_opcional); la Solicitud se registra sin proceso ni participantes (POST /requests ya no exige mainProcessId y el formulario retira «Proceso principal»); POST /requests/:id/triage acepta mainProcessId y lo exige para CONTINUAR, fija el proceso y reconcilia RequestParticipant preservando el principal; una solicitud sin proceso es visible para todos los JEFE_AREA y LIDER_PROCESO pero no para el integrante puro; listado y ficha muestran «Sin proceso aún»."
+      "summary": "Workspace GIBO: segunda aplicación placeholder «Service Desk» (NAV_UPCOMING_APPS) anunciada como «Próximamente» en el selector y en /aplicaciones; se muestra atenuada y no navegable, no cuenta como app activa y no cambia el logo ni el estado de Demanda. Sin cambios de API, contrato ni MCP."
     },
     {
       "timestamp": "2026-11-05T00:00:00Z",
@@ -545,6 +542,17 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "GET /requests/:id/triage acepta el parámetro opcional mainProcessId para previsualizar los responsables elegibles de un proceso aún no persistido; en el Triage, al elegir el proceso principal el desplegable «Responsable principal» se recarga con los elegibles de ese proceso (líderes activos; o su equipo si no hay líder) y descarta el responsable elegido si deja de ser elegible, con el campo deshabilitado mientras no haya proceso."
+    },
+    {
+      "timestamp": "2026-11-08T16:00:00Z",
+      "trigger_file": "apps/api/prisma/schema.prisma",
+      "updated_docs": [
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md"
+      ],
+      "summary": "El proceso principal se determina en el Triage: Request.mainProcessId pasa a nullable (migración 20261108160000_request_main_process_opcional); la Solicitud se registra sin proceso ni participantes (POST /requests ya no exige mainProcessId y el formulario retira «Proceso principal»); POST /requests/:id/triage acepta mainProcessId y lo exige para CONTINUAR, fija el proceso y reconcilia RequestParticipant preservando el principal; una solicitud sin proceso es visible para todos los JEFE_AREA y LIDER_PROCESO pero no para el integrante puro; listado y ficha muestran «Sin proceso aún»."
     }
   ]
 }

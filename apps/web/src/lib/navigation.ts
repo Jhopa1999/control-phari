@@ -11,6 +11,7 @@ import {
   FolderKanban,
   FolderTree,
   Gauge,
+  Headset,
   Inbox,
   KeyRound,
   LayoutDashboard,
@@ -127,6 +128,35 @@ export const NAV_APPS: readonly NavApp[] = [
     shortDescription: 'Solicitudes, planificación, portafolio e indicadores.',
     homeHref: '/inicio',
     moduleKey: 'dashboard',
+  },
+];
+
+/**
+ * Aplicación del workspace aún no construida (placeholder «Próximamente»). NO es
+ * una NavApp: no tiene grupos, menú, ruta ni módulo, no se puede abrir y no
+ * cuenta como app activa. Solo reserva el apartado en el selector y el launcher
+ * (spec: docs/design/workspace-apps-gibo.md, anexo A). Se mantiene separada de
+ * NAV_APPS a propósito para no alterar ningún flujo de las apps reales.
+ */
+export interface UpcomingApp {
+  id: string;
+  name: string;
+  icon: LucideIcon;
+  /** Texto largo, para el inicio del workspace (/aplicaciones). */
+  description: string;
+  /** Texto corto (≤ 70 caracteres), para el panel del selector. */
+  shortDescription: string;
+}
+
+/** Apps anunciadas pero no disponibles todavía, en el orden en que se muestran. */
+export const NAV_UPCOMING_APPS: readonly UpcomingApp[] = [
+  {
+    id: 'servicedesk',
+    name: 'Service Desk',
+    icon: Headset,
+    description:
+      'Mesa de servicio: incidencias, requerimientos y acuerdos de nivel de servicio. Próximamente.',
+    shortDescription: 'Incidencias, requerimientos y SLA. Próximamente.',
   },
 ];
 
