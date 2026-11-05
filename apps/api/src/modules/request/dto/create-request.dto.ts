@@ -13,9 +13,10 @@ const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
 
 /**
- * Entrada para crear una Request (design §3.4). Solo `title` y `mainProcessId`
- * son requeridos (confirmados); el resto de la ficha es opcional (campos P). El
- * estado operativo NO se acepta: lo fija el flujo (REGISTRADA).
+ * Entrada para crear una Request (design §3.4). Solo `title` es requerido; el
+ * resto de la ficha es opcional (campos P). El proceso principal se determina en
+ * el TRIAGE, no en el registro: la solicitud nace sin proceso. El estado
+ * operativo NO se acepta: lo fija el flujo (REGISTRADA).
  */
 export class CreateRequestDto {
   @ApiProperty({
@@ -30,13 +31,15 @@ export class CreateRequestDto {
   @MaxLength(255)
   title!: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     format: 'uuid',
-    description: 'Proceso principal (requerido, participa siempre: BR-001).',
+    description:
+      'Proceso principal. El proceso principal se determina en el triage; la solicitud se registra sin proceso. Se acepta por compatibilidad pero no es obligatorio.',
   })
+  @IsOptional()
   @IsUUID()
-  mainProcessId!: string;
+  mainProcessId?: string;
 
   @ApiPropertyOptional({
     type: String,

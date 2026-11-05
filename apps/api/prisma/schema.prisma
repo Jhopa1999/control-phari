@@ -343,7 +343,9 @@ model Request {
   targetDate              DateTime? @map("target_date")
   referenceUrl            String?   @map("reference_url")
   expectedResult          String?   @map("expected_result")
-  mainProcessId           String    @map("main_process_id") @db.Uuid
+  // El proceso principal se determina en el TRIAGE, no en el registro: la
+  // solicitud nace sin proceso (nullable) y lo adquiere al CONTINUAR el triage.
+  mainProcessId           String?   @map("main_process_id") @db.Uuid
   operationalState        String    @default("REGISTRADA") @map("operational_state")
   initialCommitmentDate   DateTime? @map("initial_commitment_date")
   changeJustification     String?   @map("change_justification")
@@ -364,7 +366,7 @@ model Request {
   createdAt               DateTime  @default(now()) @map("created_at")
   updatedAt               DateTime  @updatedAt @map("updated_at")
 
-  mainProcess         Process              @relation("RequestMainProcess", fields: [mainProcessId], references: [id], onDelete: Restrict)
+  mainProcess         Process?             @relation("RequestMainProcess", fields: [mainProcessId], references: [id], onDelete: Restrict)
   requester           Requester?           @relation(fields: [requesterId], references: [id], onDelete: Restrict)
   closures            ProjectClosure[]
   projectDocuments    Document[]           @relation("DocumentRequest")

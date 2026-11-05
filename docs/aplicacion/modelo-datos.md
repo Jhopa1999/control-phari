@@ -179,7 +179,9 @@ Ficha de la demanda; núcleo del flujo.
   `deletedAt = null`). `requesterId?` referencia al maestro de solicitantes.
 - Campos clave: `title`, `registeredAt`, datos del solicitante (`requesterArea?`,
   `requesterName?`, `functionalOwner?`), `targetDate?`, `referenceUrl?`,
-  `expectedResult?`, `mainProcessId`, `assetId?` (activo base sobre el que se
+  `expectedResult?`, `mainProcessId?` (proceso principal; **nullable**: la
+  solicitud se registra sin proceso y lo adquiere en el triage al `CONTINUAR`),
+  `assetId?` (activo base sobre el que se
   trabaja la solicitud, P1; nullable hasta que la mesa lo asocie),
   `operationalState` (default `REGISTRADA`),
   `initialCommitmentDate?`, `changeJustification?`.
@@ -188,7 +190,7 @@ Ficha de la demanda; núcleo del flujo.
   `blockedResolvedByUserId?`).
 - Restricciones/índices: por `mainProcessId`, `operationalState`, `registeredAt`,
   `governanceRoute`, `blockedAt`, `assetId`.
-- Relaciones: `mainProcess`, `asset?` (activo base, N:1 con `onDelete: Restrict`,
+- Relaciones: `mainProcess?` (opcional, N:1 con `onDelete: Restrict`), `asset?` (activo base, N:1 con `onDelete: Restrict`,
   relación `RequestAsset`), participantes, triages, evaluaciones de prioridad,
   aprobaciones, `plan?` (1:1 efectivo), asignaciones, actividades/novedades/reuniones/
   compromisos relacionados, activos de origen (`assets`, relación
@@ -196,7 +198,8 @@ Ficha de la demanda; núcleo del flujo.
 
 ### RequestParticipant (`request_participants`)
 Puente N:M `Request ↔ Process` (procesos participantes); el proceso principal siempre
-se materializa aquí.
+se materializa aquí (BR-001). Se puebla en el **triage**, cuando se fija el
+proceso principal: una solicitud recién registrada no tiene participantes.
 - Restricciones: único `(requestId, processId)`; índice por `processId`.
 
 ### Triage (`triages`)

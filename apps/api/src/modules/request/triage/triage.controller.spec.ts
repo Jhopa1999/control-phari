@@ -26,11 +26,18 @@ describe('TriageController (delegacion)', () => {
   const controller = new TriageController(svc);
   const a = actor();
 
-  it('findForRequest delega actor e id', async () => {
-    await expect(controller.findForRequest(a, 'r1')).resolves.toBe(
+  it('findForRequest delega actor, id y el proceso candidato del query', async () => {
+    await expect(
+      controller.findForRequest(a, 'r1', { mainProcessId: 'p9' }),
+    ).resolves.toBe('findForRequest');
+    expect(svc.findForRequest).toHaveBeenCalledWith(a, 'r1', 'p9');
+  });
+
+  it('findForRequest sin query delega mainProcessId undefined', async () => {
+    await expect(controller.findForRequest(a, 'r1', {})).resolves.toBe(
       'findForRequest',
     );
-    expect(svc.findForRequest).toHaveBeenCalledWith(a, 'r1');
+    expect(svc.findForRequest).toHaveBeenCalledWith(a, 'r1', undefined);
   });
 
   it('create delega actor, id y dto', async () => {

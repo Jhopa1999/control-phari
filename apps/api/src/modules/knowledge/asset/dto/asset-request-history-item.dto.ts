@@ -19,6 +19,11 @@ export class AssetRequestHistoryItemDto {
   @ApiProperty({ type: String, description: 'Estado operativo (read-only, derivado).' })
   operationalState!: string;
 
-  @ApiProperty({ type: String, format: 'uuid', description: 'Proceso principal.' })
-  mainProcessId!: string;
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Proceso principal o null (solicitud aún sin triar).',
+  })
+  mainProcessId!: string | null;
 }

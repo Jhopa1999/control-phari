@@ -67,12 +67,27 @@ function toTriageError(
 /**
  * Contexto de triage de una solicitud (GET /requests/:id/triage): el triage
  * (0 o 1 fila en Fase 2) y los candidatos elegibles como responsable principal.
+ *
+ * `candidateMainProcessId` previsualiza los elegibles de un proceso aún no
+ * persistido: cuando la solicitud no tiene proceso principal, el triage lo
+ * elige en el mismo formulario y el desplegable de responsable se recarga con
+ * los candidatos de ese proceso.
  */
-export async function listTriage(requestId: string): Promise<TriageContext> {
+export async function listTriage(
+  requestId: string,
+  candidateMainProcessId?: string,
+): Promise<TriageContext> {
   try {
     const { data, error, response } = await api.GET(
       '/requests/{id}/triage',
-      { params: { path: { id: requestId } } },
+      {
+        params: {
+          path: { id: requestId },
+          ...(candidateMainProcessId
+            ? { query: { mainProcessId: candidateMainProcessId } }
+            : {}),
+        },
+      },
     );
     if (error || !data) {
       throw toTriageError(response.status, error);

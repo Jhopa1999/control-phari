@@ -170,8 +170,17 @@ export function SolicitudesView(): React.ReactElement {
 
   const processName = React.useMemo(() => {
     const names = new Map(processes.map((p) => [p.id, p.name]));
-    return (id: string): string | null => names.get(id) ?? null;
+    // null = la solicitud aún no tiene proceso (se fija en el triage);
+    // un id fuera de alcance devuelve null (se pinta «—»).
+    return (id: string | null): string | null => (id ? names.get(id) ?? null : null);
   }, [processes]);
+
+  /** Texto de la celda de proceso: «Sin proceso aún» si la solicitud no lo tiene. */
+  const processCell = React.useCallback(
+    (r: Request): string =>
+      r.mainProcessId === null ? 'Sin proceso aún' : processName(r.mainProcessId) ?? '—',
+    [processName],
+  );
 
   const hasFilters =
     query.trim() !== '' || stateFilter !== ALL || processFilter !== ALL || bandFilter !== ALL;
@@ -298,8 +307,8 @@ export function SolicitudesView(): React.ReactElement {
         toast.success('Solicitud actualizada.');
       } else {
         const created = await createRequest({
+          // El proceso principal NO se envía al registrar: se fija en el triage.
           title: values.title,
-          mainProcessId: values.mainProcessId,
           requesterId: values.requesterId || undefined,
           functionalOwner: trimOrUndefined(values.functionalOwner),
           expectedResult: trimOrUndefined(values.expectedResult),
@@ -489,7 +498,7 @@ export function SolicitudesView(): React.ReactElement {
                   <CellTitle onOpen={() => openEdit(r)}>{r.title}</CellTitle>
                 </TableCell>
                 <TableCell className="min-w-32 text-muted-foreground">
-                  {processName(r.mainProcessId) ?? '—'}
+                  {processCell(r)}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   <StatusBadge kind="request" value={r.operationalState} />
@@ -535,7 +544,7 @@ export function SolicitudesView(): React.ReactElement {
                 {r.title}
               </CellTitle>
             ),
-            subtitle: processName(r.mainProcessId) ?? '—',
+            subtitle: processCell(r),
             badges: [
               <StatusBadge key="state" kind="request" value={r.operationalState} />,
               r.currentTriageDecision ? (
@@ -576,7 +585,6 @@ export function SolicitudesView(): React.ReactElement {
           }
         }}
         editing={editing}
-        processes={processes}
         requesters={requesters}
         onRequesterCreated={(r) => setRequesters((prev) => [...prev, r])}
         submitting={submitting}

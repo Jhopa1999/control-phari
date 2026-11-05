@@ -88,7 +88,10 @@ export function HistorialView({ assetId }: HistorialViewProps): React.ReactEleme
   }, [loadData]);
 
   const processName = React.useCallback(
-    (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS,
+    (id: string | null) =>
+      id === null
+        ? 'Sin proceso aún'
+        : processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS,
     [processes],
   );
 

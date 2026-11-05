@@ -24,7 +24,9 @@ import {
 export interface PlanInScope {
   plan: PlanModel;
   requestId: string;
-  mainProcessId: string;
+  // El proceso principal puede ser null hasta que el triage lo fije; cuando hay
+  // plan la solicitud ya avanzó y lo tiene, pero el tipo lo refleja.
+  mainProcessId: string | null;
   requestState: string;
 }
 
@@ -33,7 +35,7 @@ export interface TaskInScope {
   task: TaskModel;
   planId: string;
   requestId: string;
-  mainProcessId: string;
+  mainProcessId: string | null;
   requestState: string;
 }
 

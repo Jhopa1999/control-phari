@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
-import type { RequestModel } from '../../../generated/prisma/models/Request';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
@@ -119,13 +118,17 @@ export class TriageService {
    * principal de la solicitud, no del actor.
    */
   private async eligibleResponsibleIds(
-    request: RequestModel,
+    mainProcessId: string | null,
   ): Promise<string[]> {
+    // Sin proceso principal (la solicitud aún no lo tiene y el triage no lo
+    // está fijando) no hay candidatos: el responsable depende del proceso.
+    if (mainProcessId === null) return [];
+
     // Por defecto: lideres activos del proceso principal.
     const leaders = await this.prisma.grant.findMany({
       where: {
         active: true,
-        processId: request.mainProcessId,
+        processId: mainProcessId,
         role: { code: RoleCode.LIDER_PROCESO },
       },
       select: { userId: true },
@@ -136,7 +139,7 @@ export class TriageService {
     // Respaldo: el proceso principal no tiene lider -> no bloquear el triage.
     // Candidatos = todas las personas con grant activo en el proceso principal.
     const members = await this.prisma.grant.findMany({
-      where: { active: true, processId: request.mainProcessId },
+      where: { active: true, processId: mainProcessId },
       select: { userId: true },
       distinct: ['userId'],
     });
@@ -178,10 +181,10 @@ export class TriageService {
    * es un UUID valido pero no cumple la regla del campo.
    */
   private async assertMainResponsibleCandidate(
-    request: RequestModel,
+    mainProcessId: string | null,
     userId: string,
   ): Promise<void> {
-    const ids = new Set(await this.eligibleResponsibleIds(request));
+    const ids = new Set(await this.eligibleResponsibleIds(mainProcessId));
     if (!ids.has(userId)) {
       throw new BadRequestException(RESPONSIBLE_NOT_ELIGIBLE_MESSAGE);
     }
@@ -191,19 +194,32 @@ export class TriageService {
    * Devuelve el triage de la Request (0 o 1 fila en Fase 2) junto a los
    * candidatos elegibles como responsable principal (design §2.5), para poblar
    * el desplegable con el mismo conjunto que valida el POST.
+   *
+   * `candidateMainProcessId` permite previsualizar los elegibles de un proceso
+   * aún no persistido: cuando la solicitud todavía no tiene proceso principal,
+   * el triage lo elige en el mismo formulario y el desplegable de responsable
+   * debe recargarse con los candidatos de ESE proceso. Prevalece sobre el
+   * proceso persistido solo mientras la solicitud no tenga uno fijado (una vez
+   * fijado, el proceso no se cambia en el triage).
    */
   async findForRequest(
     actor: CurrentActor,
     requestId: string,
+    candidateMainProcessId?: string,
   ): Promise<TriageContextResponseDto> {
     const request = await this.state.requireInScope(actor, requestId);
+    // Proceso efectivo para derivar los elegibles: el persistido manda; si la
+    // solicitud aún no tiene proceso, se usa el candidato enviado (el que se
+    // está eligiendo en el formulario del triage).
+    const effectiveMainProcessId =
+      request.mainProcessId ?? candidateMainProcessId ?? null;
     const [triages, eligibleIds] = await Promise.all([
       this.prisma.triage.findMany({
         where: { requestId },
         orderBy: { decidedAt: 'desc' },
         include: RESPONSIBLE_INCLUDE,
       }),
-      this.eligibleResponsibleIds(request),
+      this.eligibleResponsibleIds(effectiveMainProcessId),
     ]);
     const eligibleResponsibles = await this.prisma.user.findMany({
       where: { id: { in: eligibleIds } },
@@ -238,22 +254,58 @@ export class TriageService {
     await this.state.assertCatalogCode('TRIAGE_SIZE', dto.sizeCode);
     await this.state.assertCatalogCode('DATA_AVAILABILITY', dto.dataAvailabilityCode);
 
+    // Proceso principal efectivo: el que se fija en este triage si llega, o el
+    // que ya tuviera la solicitud. El responsable elegible y los participantes
+    // se derivan de este valor (design: proceso se elige en el triage).
+    const effectiveMainProcessId =
+      dto.mainProcessId ?? request.mainProcessId ?? null;
+
+    // El proceso principal se determina en el triage. CONTINUAR exige proceso
+    // (base de priorizacion/planificacion/alcance); DEVOLVER/RECHAZAR no.
+    if (dto.decision === 'CONTINUAR' && effectiveMainProcessId === null) {
+      throw new BadRequestException(
+        'Para continuar debes elegir el proceso principal de la solicitud.',
+      );
+    }
+
+    // Si el triage fija un proceso nuevo, debe existir y estar activo (misma
+    // validacion que el registro original). Sin filtro de alcance: un
+    // lider/jefe que ve la solicitud sin proceso puede asignarle cualquier
+    // proceso activo (el gate de rol ya protege la escritura).
+    const fixesNewProcess =
+      dto.mainProcessId !== undefined &&
+      dto.mainProcessId !== request.mainProcessId;
+    if (fixesNewProcess) {
+      const process = await this.prisma.process.findFirst({
+        where: { id: dto.mainProcessId, active: true },
+        select: { id: true },
+      });
+      if (!process) {
+        throw new BadRequestException('Revisa los datos ingresados.');
+      }
+    }
+
     // Regla de negocio del responsable principal (design §2.3.2): solo si viene
-    // un id, debe ser un candidato elegible del proceso principal (400 si no).
+    // un id, debe ser un candidato elegible del proceso principal EFECTIVO (el
+    // que se está fijando en este triage), 400 si no.
     if (dto.mainResponsibleUserId !== undefined) {
       await this.assertMainResponsibleCandidate(
-        request,
+        effectiveMainProcessId,
         dto.mainResponsibleUserId,
       );
     }
 
-    // Procesos que intervienen (design §2.3): se deciden en el triage. Se
-    // validan ANTES de abrir la transaccion (igual que los codes maestros); el
-    // principal se preserva siempre. Si el campo no llega, no se tocan.
+    // Procesos que intervienen (design §2.3): se deciden en el triage, con el
+    // proceso principal efectivo como participante garantizado (BR-001). Se
+    // reconcilian si el triage trae `participantProcessIds` o si se está
+    // fijando un proceso nuevo (para materializar al menos el principal). Se
+    // validan ANTES de abrir la transaccion. Requiere proceso efectivo.
+    const mustReconcileParticipants =
+      dto.participantProcessIds !== undefined || fixesNewProcess;
     const participantIds =
-      dto.participantProcessIds !== undefined
+      mustReconcileParticipants && effectiveMainProcessId !== null
         ? await this.resolveParticipantIds(
-            request.mainProcessId,
+            effectiveMainProcessId,
             dto.participantProcessIds,
           )
         : null;
@@ -304,7 +356,8 @@ export class TriageService {
       });
 
       // Reconciliar los procesos que intervienen (borrar y recrear) preservando
-      // SIEMPRE el principal (BR-001). Solo si el triage trajo el campo.
+      // SIEMPRE el principal efectivo (BR-001). Solo si hay algo que reconciliar
+      // (el triage trajo participantes o se fijó un proceso nuevo).
       if (participantIds !== null) {
         await tx.requestParticipant.deleteMany({ where: { requestId } });
         await tx.requestParticipant.createMany({
@@ -317,14 +370,21 @@ export class TriageService {
         action: 'CREATE',
         objectType: 'TRIAGE',
         objectId: triage.id,
-        scopeProcessId: request.mainProcessId,
+        scopeProcessId: effectiveMainProcessId,
         before: null,
         after: this.snapshot(triage),
       });
 
+      // Fijar el proceso principal de la solicitud cuando el triage lo decide
+      // (dentro de la misma transacción, junto al cambio de estado).
       const updated = await tx.request.update({
         where: { id: requestId },
-        data: { operationalState: nextState },
+        data: {
+          operationalState: nextState,
+          ...(fixesNewProcess
+            ? { mainProcessId: effectiveMainProcessId }
+            : {}),
+        },
       });
 
       await this.audit.record(tx, {
@@ -332,9 +392,15 @@ export class TriageService {
         action: 'UPDATE',
         objectType: 'REQUEST',
         objectId: requestId,
-        scopeProcessId: request.mainProcessId,
-        before: { operationalState: request.operationalState },
-        after: { operationalState: updated.operationalState },
+        scopeProcessId: effectiveMainProcessId,
+        before: {
+          operationalState: request.operationalState,
+          mainProcessId: request.mainProcessId,
+        },
+        after: {
+          operationalState: updated.operationalState,
+          mainProcessId: updated.mainProcessId,
+        },
       });
 
       return triage;
@@ -373,10 +439,14 @@ export class TriageService {
     const asset = await this.assetService.get(actor, dto.assetId);
 
     // Refuerzo de visibilidad: el activo debe estar habilitado para el proceso
-    // principal de la solicitud (propietario O alguna fila de visibilidad).
+    // principal de la solicitud (propietario O alguna fila de visibilidad). Si
+    // la solicitud aún no tiene proceso principal (no se ha triado), no hay
+    // proceso contra el que validar: no se puede asociar activo.
+    const mainProcessId = request.mainProcessId;
     const visibleForMainProcess =
-      asset.processId === request.mainProcessId ||
-      asset.visibleProcessIds.includes(request.mainProcessId);
+      mainProcessId !== null &&
+      (asset.processId === mainProcessId ||
+        asset.visibleProcessIds.includes(mainProcessId));
     if (!visibleForMainProcess) {
       throw new ConflictException(
         'El activo no esta habilitado para el proceso de la solicitud.',

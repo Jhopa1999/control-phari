@@ -310,7 +310,7 @@ export class TaskService {
     actor: CurrentActor,
     planId: string,
     requestId: string,
-    mainProcessId: string,
+    mainProcessId: string | null,
   ): Promise<void> {
     const [total, pending] = await Promise.all([
       this.prisma.task.count({ where: { phase: { planId } } }),

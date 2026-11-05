@@ -140,16 +140,16 @@ devolver es exclusiva de `JEFE_AREA`.
 | --- | --- | --- |
 | GET | `/requests` | Lista solicitudes dentro del alcance del actor (filtros `state`, `mainProcessId`). |
 | GET | `/requests/:id` | Obtiene una solicitud por id (`404` fuera de alcance). |
-| POST | `/requests` | Crea una solicitud (estado `REGISTRADA`). La solicitud nace solo con su proceso principal como participante (BR-001); los procesos que intervienen se deciden en el triage. |
-| PATCH | `/requests/:id` | Edita la ficha (no el estado); conserva fechas iniciales. No toca los participantes. |
+| POST | `/requests` | Crea una solicitud (estado `REGISTRADA`). **Se registra SIN proceso principal** (`mainProcessId` opcional, nace `null`) y **sin participantes**: el proceso principal y los procesos que intervienen se deciden en el triage. Si por compatibilidad llega `mainProcessId`, se valida (existe, activo y en alcance) y se materializa como único participante (BR-001). |
+| PATCH | `/requests/:id` | Edita la ficha (no el estado ni el proceso); conserva fechas iniciales. No toca los participantes. |
 | DELETE | `/requests/:id` | Eliminación lógica (`deletedAt`/`deletedByUserId`, auditada como `DELETE`). Solo `JEFE_AREA`/`LIDER_PROCESO` dentro de su alcance; `409` si la solicitud está en ejecución o cerrada. Las solicitudes eliminadas dejan de aparecer en listados y consultas. |
 
 ### Triage (`triage/triage.controller.ts`)
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/requests/:id/triage` | Triage de la solicitud (0 o 1 fila) y candidatos a responsable. |
-| POST | `/requests/:id/triage` | Registra el triage (solo desde `REGISTRADA`; segundo POST → `409`). Acepta `participantProcessIds` (uuid[], opcional): los procesos que intervienen además del principal; reconcilia `RequestParticipant` (borrar y recrear) preservando siempre el principal (BR-001). Cada proceso extra debe existir y estar activo (`400` si no). |
+| GET | `/requests/:id/triage` | Triage de la solicitud (0 o 1 fila) y candidatos a responsable principal. Acepta `mainProcessId` (uuid, opcional) para **previsualizar** los candidatos de un proceso aún no persistido: cuando la solicitud no tiene proceso principal, el triage lo elige en el mismo formulario y el desplegable de responsable se recarga con los elegibles de ese proceso; si se omite, los candidatos se derivan del proceso ya persistido. |
+| POST | `/requests/:id/triage` | Registra el triage (solo desde `REGISTRADA`; segundo POST → `409`). **Fija el proceso principal de la solicitud**: acepta `mainProcessId` (uuid, opcional); si la solicitud aún no tiene proceso, es **obligatorio para `CONTINUAR`** (si falta → `400` «Para continuar debes elegir el proceso principal de la solicitud.»), mientras que `DEVOLVER`/`RECHAZAR` no lo exigen. El proceso elegido debe existir y estar activo (`400` si no); no se filtra por alcance. Acepta `participantProcessIds` (uuid[], opcional): los procesos que intervienen además del principal; cuando se fija proceso o llegan participantes reconcilia `RequestParticipant` (borrar y recrear) preservando siempre el principal efectivo (BR-001). El responsable principal elegible depende del proceso principal fijado en el triage. |
 | POST | `/requests/:id/asset` | Asocia un activo base **existente** (`assetId`, requerido); solo en estados tempranos (`409` fuera, o si el activo no está habilitado para el proceso de la solicitud). |
 
 El triage **no crea activos**: solo asocia uno existente que esté visible para el actor.

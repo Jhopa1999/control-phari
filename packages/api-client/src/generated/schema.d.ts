@@ -447,7 +447,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Triage de la solicitud (0 o 1 fila en Fase 2). */
+        /** Triage de la solicitud (0 o 1 fila en Fase 2) y responsables elegibles; admite previsualizar los de un proceso candidato. */
         get: operations["TriageController_findForRequest"];
         put?: never;
         /** Registra el triage (solo desde REGISTRADA; 2o POST -> 409). */
@@ -3212,9 +3212,9 @@ export interface components {
             expectedResult: string | null;
             /**
              * Format: uuid
-             * @description Proceso principal.
+             * @description Proceso principal o null. Se determina en el triage: la solicitud se registra sin proceso.
              */
-            mainProcessId: string;
+            mainProcessId: string | null;
             /**
              * Format: uuid
              * @description Activo al que pertenece la solicitud (P1) o null.
@@ -3302,9 +3302,9 @@ export interface components {
             title: string;
             /**
              * Format: uuid
-             * @description Proceso principal (requerido, participa siempre: BR-001).
+             * @description Proceso principal. El proceso principal se determina en el triage; la solicitud se registra sin proceso. Se acepta por compatibilidad pero no es obligatorio.
              */
-            mainProcessId: string;
+            mainProcessId?: string;
             /**
              * Format: uuid
              * @description Solicitante del maestro de solicitantes. El área y el nombre se toman de su registro.
@@ -3429,6 +3429,11 @@ export interface components {
              * @enum {string}
              */
             decision: "CONTINUAR" | "DEVOLVER" | "RECHAZAR";
+            /**
+             * Format: uuid
+             * @description Proceso principal de la solicitud. Se determina en el triage: es obligatorio para CONTINUAR si la solicitud aún no lo tiene. Debe existir y estar activo.
+             */
+            mainProcessId?: string;
             /** @description Ruta (maestra TRIAGE_ROUTE). */
             routeCode?: string;
             /** @description Tipo de demanda (maestra DEMAND_TYPE). */
@@ -3608,9 +3613,9 @@ export interface components {
             operationalState: string;
             /**
              * Format: uuid
-             * @description Proceso principal.
+             * @description Proceso principal o null (solicitud aún sin triar).
              */
-            mainProcessId: string;
+            mainProcessId: string | null;
         };
         UpdateAssetDto: {
             /** @description Nombre del activo. */
@@ -6046,13 +6051,13 @@ export interface components {
             title: string;
             /**
              * Format: uuid
-             * @description Proceso principal.
+             * @description Proceso principal o null (solicitud aún sin triar).
              */
-            mainProcessId: string;
-            /** @description Code del proceso principal. */
-            mainProcessCode: string;
-            /** @description Nombre del proceso principal. */
-            mainProcessName: string;
+            mainProcessId: string | null;
+            /** @description Code del proceso principal o null. */
+            mainProcessCode: string | null;
+            /** @description Nombre del proceso principal o null. */
+            mainProcessName: string | null;
             /** @description Estado operativo explicito (no inferido). */
             operationalState: string;
             /** @description 'P1'..'P4' si hay evaluacion vigente; null cuando SIN_PRIORIZAR. */
@@ -8115,7 +8120,10 @@ export interface operations {
     };
     TriageController_findForRequest: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Proceso principal candidato para previsualizar sus responsables elegibles (el que se elige en el triage). */
+                mainProcessId?: string;
+            };
             header?: never;
             path: {
                 id: string;
