@@ -516,7 +516,9 @@ describe('AssistantService · propuestas de acción', () => {
         body: {
           type: 'object',
           properties: { title: { type: 'string' }, mainProcessId: { type: 'string' } },
-          required: ['title', 'mainProcessId'],
+          // mainProcessId es OPCIONAL (se fija en el triage): solo title es
+          // obligatorio, igual que el contrato real de CreateRequestDto.
+          required: ['title'],
         },
       },
       required: ['body'],
@@ -604,8 +606,11 @@ describe('AssistantService · propuestas de acción', () => {
   it('faltan datos obligatorios: no hay propuesta y el modelo sabe cuáles', async () => {
     const deps = makeDeps({
       tools: [READ_TOOL, WRITE_TOOL],
+      // title es el único campo obligatorio real: omitirlo dispara la
+      // validación de "faltan datos" (mainProcessId es opcional, se fija en el
+      // triage).
       streams: proposeStreams({
-        body: { title: 'Solo título' },
+        body: { mainProcessId: 'proc-1' },
         resumen_para_la_persona: 'Crear algo',
       }),
     });
@@ -614,7 +619,7 @@ describe('AssistantService · propuestas de acción', () => {
     const second = deps.converseStream.mock.calls[1][0] as unknown as {
       messages: Array<{ content: Array<{ text?: string }> }>;
     };
-    expect(second.messages[2].content[0].text).toMatch(/body\.mainProcessId/);
+    expect(second.messages[2].content[0].text).toMatch(/body\.title/);
   });
 
   it('limita las propuestas por turno', async () => {
@@ -727,7 +732,10 @@ describe('AssistantService · memoria entre turnos y validación de identificado
         body: {
           type: 'object',
           properties: { title: { type: 'string' }, mainProcessId: { type: 'string' } },
-          required: ['title', 'mainProcessId'],
+          // mainProcessId es OPCIONAL (se fija en el triage); aquí solo se usa
+          // como vehículo para validar identificadores inventados, no depende
+          // de "required". title es el único obligatorio real.
+          required: ['title'],
         },
       },
       required: ['body'],

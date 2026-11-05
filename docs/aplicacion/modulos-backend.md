@@ -150,12 +150,14 @@ devolver es exclusiva de `JEFE_AREA`.
 | --- | --- | --- |
 | GET | `/requests/:id/triage` | Triage de la solicitud (0 o 1 fila) y candidatos a responsable principal. Acepta `mainProcessId` (uuid, opcional) para **previsualizar** los candidatos de un proceso aún no persistido: cuando la solicitud no tiene proceso principal, el triage lo elige en el mismo formulario y el desplegable de responsable se recarga con los elegibles de ese proceso; si se omite, los candidatos se derivan del proceso ya persistido. |
 | POST | `/requests/:id/triage` | Registra el triage (solo desde `REGISTRADA`; segundo POST → `409`). **Fija el proceso principal de la solicitud**: acepta `mainProcessId` (uuid, opcional); si la solicitud aún no tiene proceso, es **obligatorio para `CONTINUAR`** (si falta → `400` «Para continuar debes elegir el proceso principal de la solicitud.»), mientras que `DEVOLVER`/`RECHAZAR` no lo exigen. El proceso elegido debe existir y estar activo (`400` si no); no se filtra por alcance. Acepta `participantProcessIds` (uuid[], opcional): los procesos que intervienen además del principal; cuando se fija proceso o llegan participantes reconcilia `RequestParticipant` (borrar y recrear) preservando siempre el principal efectivo (BR-001). El responsable principal elegible depende del proceso principal fijado en el triage. |
-| POST | `/requests/:id/asset` | Asocia un activo base **existente** (`assetId`, requerido); solo en estados tempranos (`409` fuera, o si el activo no está habilitado para el proceso de la solicitud). |
+| POST | `/requests/:id/asset` | Asocia un activo base **existente** (`assetId`, requerido); solo en estados tempranos (`409` fuera). **Orden obligatorio triage → activo**: el activo se habilita contra el proceso principal, así que si la solicitud aún no tiene proceso principal fijado responde `409` «Fija el proceso principal en el triage antes de asociar el activo.» (sin llegar a consultar el activo); con proceso ya fijado, si el activo no está habilitado para él responde `409` «El activo no está habilitado para el proceso de la solicitud.». |
 
 El triage **no crea activos**: solo asocia uno existente que esté visible para el actor.
 La creación de activos vive en el módulo de Activos y la realiza el jefe de área. El
 service valida el alcance de lectura del activo (`404` si no accesible) y que esté
-habilitado para el proceso principal de la solicitud (`409` si no). `JEFE_AREA`/
+habilitado para el proceso principal de la solicitud (`409` si no). El orden es
+triage → activo: primero se fija el proceso principal en el triage y luego se asocia el
+activo; sin proceso fijado el `409` indica explícitamente ese paso previo. `JEFE_AREA`/
 `LIDER_PROCESO` (más `ADMIN`) pueden asociar.
 
 ### Priorización (`priority/priority.controller.ts`)

@@ -571,6 +571,14 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "A2+M2+M3 · visibilidad de las solicitudes sin proceso: GET /area-control/attention devuelve pendingNoProcess (cola de entrada REGISTRADA sin proceso, responsable operativo el Jefe de Área) separado de pendingTriage y el Panel lo enlaza a Solicitudes con ?proceso=SIN_PROCESO; GET /area-control/demand-summary añade noProcess (conteo de solicitudes sin proceso) y resuelve las bandas de prioridad con un findMany en lote en vez de una consulta por solicitud; Solicitudes y Portafolio ofrecen el filtro «Sin proceso aún» (en Portafolio llega al backend como mainProcessId=SIN_PROCESO, que el listado traduce a mainProcessId null); el contrato OpenAPI y el cliente tipado se regeneraron."
+    },
+    {
+      "timestamp": "2026-11-09T14:00:00Z",
+      "trigger_file": "apps/api/src/modules/request/triage/triage.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md"
+      ],
+      "summary": "FEAT-003 (M5) · orden obligatorio triage → activo en POST /requests/:id/asset: si la solicitud aún no tiene proceso principal fijado, associateAsset responde 409 «Fija el proceso principal en el triage antes de asociar el activo.» antes de consultar el activo, y el 409 «El activo no está habilitado para el proceso de la solicitud.» queda para el caso con proceso ya fijado; el @ApiOperation del endpoint y el contrato OpenAPI regenerado documentan ese orden."
     }
   ]
 }

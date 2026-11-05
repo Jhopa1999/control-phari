@@ -664,6 +664,23 @@ describe('TriageService', () => {
       expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
     });
 
+    it('estado asociable pero sin proceso principal -> 409 especifico triage->activo, sin consultar el activo', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.EN_TRIAGE, {
+          assetId: null,
+          mainProcessId: null,
+        }),
+      );
+      await expect(
+        service.associateAsset(lider(), 'r1', { assetId: 'a-existente' }),
+      ).rejects.toThrow(
+        'Fija el proceso principal en el triage antes de asociar el activo.',
+      );
+      // Corta antes de consultar el activo y sin mutar.
+      expect(m.assetGet).not.toHaveBeenCalled();
+      expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
+    });
+
     it('estado no asociable (COMPROMETIDA) -> 409 sin mutacion', async () => {
       (m.prismaObj.request as any).findFirst.mockResolvedValue(
         makeRequest(RequestState.COMPROMETIDA, { assetId: null }),

@@ -467,7 +467,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos. */
+        /**
+         * Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos.
+         * @description Orden obligatorio triage -> activo: el activo se habilita contra el proceso principal de la solicitud, por lo que primero hay que fijar el proceso principal en el triage y luego asociar el activo. Si la solicitud aun no tiene proceso principal, responde 409 con el mensaje "Fija el proceso principal en el triage antes de asociar el activo." (sin llegar a consultar el activo). El triage no crea activos: solo asocia uno ya existente y visible para el actor.
+         */
         post: operations["TriageController_associateAsset"];
         delete?: never;
         options?: never;
@@ -8265,7 +8268,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La solicitud no admite asociar activo en su estado, o el activo no esta habilitado para su proceso. */
+            /** @description La solicitud no admite asociar activo en su estado; o la solicitud aun no tiene proceso principal fijado en el triage (hay que fijarlo antes de asociar el activo); o el activo no esta habilitado para el proceso principal de la solicitud. */
             409: {
                 headers: {
                     [name: string]: unknown;

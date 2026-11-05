@@ -84,6 +84,8 @@ export class TriageController {
   @ApiOperation({
     summary:
       'Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos.',
+    description:
+      'Orden obligatorio triage -> activo: el activo se habilita contra el proceso principal de la solicitud, por lo que primero hay que fijar el proceso principal en el triage y luego asociar el activo. Si la solicitud aun no tiene proceso principal, responde 409 con el mensaje "Fija el proceso principal en el triage antes de asociar el activo." (sin llegar a consultar el activo). El triage no crea activos: solo asocia uno ya existente y visible para el actor.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: AssociateAssetDto })
@@ -94,7 +96,7 @@ export class TriageController {
   @ApiResponse({
     status: 409,
     description:
-      'La solicitud no admite asociar activo en su estado, o el activo no esta habilitado para su proceso.',
+      'La solicitud no admite asociar activo en su estado; o la solicitud aun no tiene proceso principal fijado en el triage (hay que fijarlo antes de asociar el activo); o el activo no esta habilitado para el proceso principal de la solicitud.',
   })
   associateAsset(
     @CurrentActor() actor: CurrentActorType,
