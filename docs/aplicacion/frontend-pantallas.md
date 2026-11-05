@@ -20,7 +20,10 @@ de la ruta; en una pantalla transversal o en `/aplicaciones` se conserva la últ
 (`localStorage`, clave `activeAppId`). El logo lleva al inicio de la única app visible, o a
 `/aplicaciones` si hay varias. En escritorio, la barra superior muestra migas
 *Workspace › {app | Gobierno | Administración}*. El buscador de pantallas busca en todo lo
-visible, también en otras apps.
+visible, también en otras apps. El selector y el inicio del workspace anuncian además las
+**apps próximas** (`NAV_UPCOMING_APPS`), hoy **Service Desk**, con la etiqueta *Próximamente*:
+se ven atenuadas y no son navegables, no cuentan como app activa y no cambian el logo ni el
+estado de la app real (Demanda sigue siendo la tarjeta destacada del launcher).
 
 El menú lateral se define en `apps/web/src/lib/navigation.ts`: 7 grupos y 27 ítems.
 Con el menú expandido (no en el riel de iconos), cada grupo con título se puede

@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LabelTooltip } from '@/components/ui/tooltip';
-import type { NavApp } from '@/lib/navigation';
+import { NAV_UPCOMING_APPS, type NavApp } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 
 export interface AppSwitcherProps {
@@ -126,6 +126,37 @@ export function AppSwitcher({
                   </span>
                   {active ? <Check aria-hidden="true" className="mt-1 text-link" /> : null}
                 </Link>
+              </DropdownMenuItem>
+            );
+          })}
+          {NAV_UPCOMING_APPS.map((app) => {
+            const Icon = app.icon;
+            const descId = `${idPrefix}-upcoming-${app.id}`;
+            return (
+              <DropdownMenuItem
+                key={app.id}
+                disabled
+                aria-describedby={descId}
+                className="items-start gap-3 py-2 text-muted-foreground"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"
+                >
+                  <Icon className="size-5" />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    {app.name}
+                    <span className="sr-only">(próximamente, no disponible)</span>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      Próximamente
+                    </span>
+                  </span>
+                  <span id={descId} className="line-clamp-2 text-meta text-muted-foreground">
+                    {app.shortDescription}
+                  </span>
+                </span>
               </DropdownMenuItem>
             );
           })}

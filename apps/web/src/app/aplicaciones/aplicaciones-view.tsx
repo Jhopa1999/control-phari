@@ -16,6 +16,7 @@ import {
   getVisibleNavGroups,
   getWorkspaceGroups,
   isNavItemActive,
+  NAV_UPCOMING_APPS,
   type NavApp,
   type NavGroup,
 } from '@/lib/navigation';
@@ -43,7 +44,7 @@ function AppCard({
     <li
       className={cn(
         'group relative flex flex-col gap-3 rounded-xl border bg-card p-5 text-card-foreground shadow-card transition-colors hover:border-border-strong has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring forced-colors:border-[ButtonText]',
-        featured && 'lg:flex-row lg:items-center lg:gap-5 lg:p-6',
+        featured && 'sm:col-span-full lg:flex-row lg:items-center lg:gap-5 lg:p-6',
       )}
     >
       <span
@@ -86,6 +87,42 @@ function AppCard({
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" />
         </span>
       )}
+    </li>
+  );
+}
+
+/**
+ * Tarjeta de una aplicación anunciada pero aún no disponible («Próximamente»).
+ * No es interactiva: sin enlace, sin foco y atenuada por tokens (spec anexo A3).
+ * Reserva el apartado sin alterar el estado featured de las apps reales.
+ */
+function UpcomingAppCard({
+  app,
+}: {
+  app: (typeof NAV_UPCOMING_APPS)[number];
+}): React.ReactElement {
+  const Icon = app.icon;
+  const descId = `upcoming-card-${app.id}`;
+  return (
+    <li className="flex flex-col gap-3 rounded-xl border border-dashed bg-card p-5 text-muted-foreground forced-colors:border-[GrayText]">
+      <span
+        aria-hidden="true"
+        className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+      >
+        <Icon className="size-6" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <h3 className="flex items-center gap-2 text-base font-semibold">
+          {app.name}
+          <span className="sr-only">(próximamente, no disponible)</span>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            Próximamente
+          </span>
+        </h3>
+        <p id={descId} className="text-sm text-muted-foreground">
+          {app.description}
+        </p>
+      </div>
     </li>
   );
 }
@@ -219,7 +256,10 @@ export function AppLauncherView(): React.ReactElement {
         ) : (
           <ul
             aria-label="Aplicaciones disponibles"
-            className={cn('grid gap-4', apps.length > 1 && 'sm:grid-cols-2 xl:grid-cols-3')}
+            className={cn(
+              'grid gap-4',
+              apps.length + NAV_UPCOMING_APPS.length > 1 && 'sm:grid-cols-2 xl:grid-cols-3',
+            )}
           >
             {apps.map((app) => (
               <AppCard
@@ -228,6 +268,9 @@ export function AppLauncherView(): React.ReactElement {
                 href={getAppHomeHref(app, allowedModules)}
                 featured={apps.length === 1}
               />
+            ))}
+            {NAV_UPCOMING_APPS.map((app) => (
+              <UpcomingAppCard key={app.id} app={app} />
             ))}
           </ul>
         )}
