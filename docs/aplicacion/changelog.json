@@ -507,6 +507,14 @@
         "apps/mcp/README.md"
       ],
       "summary": "Bitácora y reporte semanal: listado paginado con filtros y resumen (GET /worklog/daily/summary, tool worklog.daily.summary), autor y proceso en cada registro, flujo de revisión (review, return con motivo, recall) con aviso al autor, escritura solo del autor, panel de detalle con actividades completas y filtros en la URL."
+    },
+    {
+      "timestamp": "2026-11-03T18:00:00Z",
+      "trigger_file": "apps/web/src/lib/navigation.ts",
+      "updated_docs": [
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Workspace GIBO: registro de aplicaciones (Demanda es la primera), selector de apps bajo la marca del menú, sección plegable Workspace con Gobierno y Administración, migas en la barra superior y nueva pantalla /aplicaciones (inicio del workspace). Sin cambios de API, contrato ni MCP; las URLs no cambian."
     }
   ]
 }

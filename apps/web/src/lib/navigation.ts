@@ -25,6 +25,7 @@ import {
   UserCog,
   UserRound,
   Users,
+  Workflow,
   type LucideIcon,
 } from 'lucide-react';
 import { matchesSearch } from './table-sort';
@@ -84,12 +85,50 @@ export interface NavItem {
   badge?: string;
 }
 
+/** Aplicaciones del workspace GIBO. Ampliable: 'demanda' | 'servicedesk' | … */
+export type AppId = 'demanda';
+
+/**
+ * Aplicación del workspace. Las URLs no cambian: la pertenencia a una app se
+ * declara con `appId` en cada grupo del menú. Los grupos sin `appId` son
+ * transversales (sección «Workspace» del menú).
+ */
+export interface NavApp {
+  id: AppId;
+  name: string;
+  icon: LucideIcon;
+  /** Texto largo, para el inicio del workspace (/aplicaciones). */
+  description: string;
+  /** Texto corto (≤ 70 caracteres), para el panel del selector. */
+  shortDescription: string;
+  /** Pantalla de inicio de la app. */
+  homeHref: string;
+  /** Módulo que habilita la pantalla de inicio de la app. */
+  moduleKey: ModuleKey;
+}
+
 export interface NavGroup {
   id: string;
   /** El primer grupo (entrada personal) no lleva título. */
   label: string | null;
+  /** App a la que pertenece; ausente = transversal (workspace). */
+  appId?: AppId;
   items: NavItem[];
 }
+
+/** Aplicaciones del workspace, en el orden en que se ofrecen. */
+export const NAV_APPS: readonly NavApp[] = [
+  {
+    id: 'demanda',
+    name: 'Demanda',
+    icon: Workflow,
+    description:
+      'Solicitudes, triage, priorización, aprobaciones, planificación, capacidad, portafolio, indicadores, seguimiento, activos y documentos.',
+    shortDescription: 'Solicitudes, planificación, portafolio e indicadores.',
+    homeHref: '/inicio',
+    moduleKey: 'dashboard',
+  },
+];
 
 /**
  * Menú del portal: 7 grupos y 26 ítems. «Tareas» (/seguimiento/tareas) no es un
@@ -100,6 +139,7 @@ export interface NavGroup {
 export const NAV_GROUPS: NavGroup[] = [
   {
     id: 'inicio',
+    appId: 'demanda',
     label: null,
     items: [
       { href: '/inicio', label: 'Panel del área', moduleKey: 'dashboard', icon: LayoutDashboard },
@@ -120,6 +160,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: 'demanda',
+    appId: 'demanda',
     label: 'Demanda',
     items: [
       { href: '/demanda/solicitudes', label: 'Solicitudes', moduleKey: 'requests', icon: Inbox },
@@ -130,6 +171,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: 'ejecucion',
+    appId: 'demanda',
     label: 'Ejecución',
     items: [
       { href: '/seguimiento/plan', label: 'Planificación', moduleKey: 'plan', icon: ChartGantt },
@@ -143,6 +185,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: 'seguimiento',
+    appId: 'demanda',
     label: 'Seguimiento',
     items: [
       { href: '/seguimiento/bitacora', label: 'Bitácora', moduleKey: 'log', icon: NotebookPen },
@@ -159,6 +202,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: 'activos',
+    appId: 'demanda',
     label: 'Activos y conocimiento',
     items: [
       { href: '/activos/catalogo', label: 'Activos', moduleKey: 'asset', icon: Database },
@@ -266,10 +310,71 @@ export function getVisibleNavGroups(allowed: ReadonlySet<string>): NavGroup[] {
   })).filter((group) => group.items.length > 0);
 }
 
+/** Grupos de una app (los grupos recibidos ya vienen filtrados por permisos). */
+export function getAppGroups(groups: readonly NavGroup[], appId: AppId): NavGroup[] {
+  return groups.filter((group) => group.appId === appId);
+}
+
+/** Grupos transversales del workspace (Gobierno y Administración). */
+export function getWorkspaceGroups(groups: readonly NavGroup[]): NavGroup[] {
+  return groups.filter((group) => group.appId === undefined);
+}
+
+/** Apps con al menos un módulo permitido en alguno de sus grupos. */
+export function getVisibleNavApps(allowed: ReadonlySet<string>): NavApp[] {
+  const visible = getVisibleNavGroups(allowed);
+  return NAV_APPS.filter((app) => getAppGroups(visible, app.id).length > 0);
+}
+
+/**
+ * Pantalla de inicio efectiva de una app: la declarada si su módulo está
+ * permitido; si no, el primer ítem visible de la app (evita un 403 al entrar).
+ */
+export function getAppHomeHref(app: NavApp, allowed: ReadonlySet<string>): string {
+  if (allowed.has(app.moduleKey)) return app.homeHref;
+  const first = getAppGroups(getVisibleNavGroups(allowed), app.id)[0]?.items[0];
+  return first?.href ?? app.homeHref;
+}
+
+/** App dueña de la ruta (por el ítem activo de sus grupos); null si es transversal u otra. */
+export function findAppForPath(
+  pathname: string,
+  apps: readonly NavApp[],
+  groups: readonly NavGroup[],
+): NavApp | null {
+  for (const group of groups) {
+    if (!group.appId) continue;
+    if (!group.items.some((item) => isNavItemActive(item, pathname))) continue;
+    const app = apps.find((candidate) => candidate.id === group.appId);
+    if (app) return app;
+  }
+  return null;
+}
+
+/**
+ * App activa: (1) la dueña de la ruta; (2) si la ruta es transversal o es
+ * /aplicaciones, la última usada (si sigue visible); (3) la primera visible.
+ */
+export function resolveActiveApp(
+  pathname: string,
+  apps: readonly NavApp[],
+  groups: readonly NavGroup[],
+  lastAppId: string | null,
+): NavApp | null {
+  return (
+    findAppForPath(pathname, apps, groups) ??
+    apps.find((app) => app.id === lastAppId) ??
+    apps[0] ??
+    null
+  );
+}
+
 export interface NavSearchResult {
   item: NavItem;
   /** Título del grupo del ítem (null en el grupo de entrada, que no lo tiene). */
   groupLabel: string | null;
+  /** App del grupo; ausente en los grupos transversales. */
+  appId?: AppId;
 }
 
 /**
@@ -284,7 +389,7 @@ export function searchNavItems(groups: readonly NavGroup[], query: string): NavS
   return groups.flatMap((group) =>
     group.items
       .filter((item) => matchesSearch(`${group.label ?? ''} ${item.label}`, query))
-      .map((item) => ({ item, groupLabel: group.label })),
+      .map((item) => ({ item, groupLabel: group.label, appId: group.appId })),
   );
 }
 
