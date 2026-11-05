@@ -180,6 +180,13 @@ export class DemandSummaryResponseDto {
   @ApiProperty({ type: Number, description: 'Solicitudes con bloqueo activo.' })
   blockedActive!: number;
 
+  @ApiProperty({
+    type: Number,
+    description:
+      'Solicitudes sin proceso principal asignado (el proceso se fija en el triage).',
+  })
+  noProcess!: number;
+
   @ApiProperty({ type: [StateCountDto], description: 'Conteo por estado (todos los estados, incl. 0).' })
   byState!: StateCountDto[];
 
@@ -193,6 +200,13 @@ export class AttentionResponseDto {
     description: 'Solicitudes REGISTRADAS que esperan la decision de triage.',
   })
   pendingTriage!: number;
+
+  @ApiProperty({
+    type: Number,
+    description:
+      'Cola de entrada sin proceso por triar (solicitudes REGISTRADAS sin proceso principal). Su responsable operativo es el Jefe de Area, que vela por darles respuesta.',
+  })
+  pendingNoProcess!: number;
 
   @ApiProperty({
     type: Number,

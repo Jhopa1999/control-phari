@@ -6031,6 +6031,8 @@ export interface components {
             total: number;
             /** @description Solicitudes con bloqueo activo. */
             blockedActive: number;
+            /** @description Solicitudes sin proceso principal asignado (el proceso se fija en el triage). */
+            noProcess: number;
             /** @description Conteo por estado (todos los estados, incl. 0). */
             byState: components["schemas"]["StateCountDto"][];
             /** @description Conteo por banda (incl. SIN_PRIORIZAR). */
@@ -6039,6 +6041,8 @@ export interface components {
         AttentionResponseDto: {
             /** @description Solicitudes REGISTRADAS que esperan la decision de triage. */
             pendingTriage: number;
+            /** @description Cola de entrada sin proceso por triar (solicitudes REGISTRADAS sin proceso principal). Su responsable operativo es el Jefe de Area, que vela por darles respuesta. */
+            pendingNoProcess: number;
             /** @description Solicitudes en triage con decision CONTINUAR vigente, listas para priorizar. */
             readyToPrioritize: number;
             /** @description Solicitudes en backlog priorizado que esperan aprobacion del compromiso. */
@@ -13622,7 +13626,7 @@ export interface operations {
     PortfolioController_list: {
         parameters: {
             query?: {
-                /** @description Filtra por proceso principal. */
+                /** @description Filtra por proceso principal (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aun por triar). */
                 mainProcessId?: string;
                 /** @description Filtra por estado operativo. */
                 state?: "REGISTRADA" | "EN_TRIAGE" | "DEVUELTA" | "RECHAZADA" | "BACKLOG_PRIORIZADO" | "COMPROMETIDA" | "EN_PLANIFICACION" | "EN_EJECUCION" | "BLOQUEADA" | "EN_VALIDACION" | "LISTA_PARA_LIBERAR" | "EN_ESTABILIZACION" | "OPERATIVA" | "CERRADA" | "RETIRADA";

@@ -7852,7 +7852,7 @@
             "name": "mainProcessId",
             "required": false,
             "in": "query",
-            "description": "Filtra por proceso principal.",
+            "description": "Filtra por proceso principal (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aun por triar).",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -16428,6 +16428,10 @@
             "type": "number",
             "description": "Solicitudes con bloqueo activo."
           },
+          "noProcess": {
+            "type": "number",
+            "description": "Solicitudes sin proceso principal asignado (el proceso se fija en el triage)."
+          },
           "byState": {
             "description": "Conteo por estado (todos los estados, incl. 0).",
             "type": "array",
@@ -16446,6 +16450,7 @@
         "required": [
           "total",
           "blockedActive",
+          "noProcess",
           "byState",
           "byPriorityBand"
         ]
@@ -16456,6 +16461,10 @@
           "pendingTriage": {
             "type": "number",
             "description": "Solicitudes REGISTRADAS que esperan la decision de triage."
+          },
+          "pendingNoProcess": {
+            "type": "number",
+            "description": "Cola de entrada sin proceso por triar (solicitudes REGISTRADAS sin proceso principal). Su responsable operativo es el Jefe de Area, que vela por darles respuesta."
           },
           "readyToPrioritize": {
             "type": "number",
@@ -16472,6 +16481,7 @@
         },
         "required": [
           "pendingTriage",
+          "pendingNoProcess",
           "readyToPrioritize",
           "pendingApproval",
           "overdueTasks"

@@ -14,7 +14,12 @@ import { cn } from '@/lib/utils';
 type LoadState = 'loading' | 'success' | 'error';
 
 interface AttentionItem {
-  key: 'pendingTriage' | 'readyToPrioritize' | 'pendingApproval' | 'overdueTasks';
+  key:
+    | 'pendingTriage'
+    | 'pendingNoProcess'
+    | 'readyToPrioritize'
+    | 'pendingApproval'
+    | 'overdueTasks';
   moduleKey: ModuleKey;
   href: string;
   one: string;
@@ -31,6 +36,13 @@ const ITEMS: AttentionItem[] = [
     href: '/demanda/triage',
     one: 'solicitud pendiente de triage',
     other: 'solicitudes pendientes de triage',
+  },
+  {
+    key: 'pendingNoProcess',
+    moduleKey: 'triage',
+    href: '/demanda/solicitudes?proceso=SIN_PROCESO',
+    one: 'solicitud sin proceso por triar',
+    other: 'solicitudes sin proceso por triar',
   },
   {
     key: 'readyToPrioritize',

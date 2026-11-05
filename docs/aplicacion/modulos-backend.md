@@ -256,15 +256,15 @@ Vistas de solo lectura: el portafolio de iniciativas y el control del área
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/portfolio` | Listado del portafolio en alcance (filtros `mainProcessId`, `state`, `band`). Cada ítem incluye `progressPercent` (promedio del avance de las tareas del plan, `TERMINADA` = 100; `null` sin tareas) y la alerta de fecha objetivo `dueStatus` (`SIN_FECHA`, `EN_TIEMPO`, `PROXIMO_A_VENCER`, `VENCIDO`, `NO_APLICA` en cerradas/rechazadas/retiradas) con `daysToTarget`. El umbral de «próximo a vencer» es `PORTFOLIO_DUE_SOON_DAYS` (7 por defecto). |
+| GET | `/portfolio` | Listado del portafolio en alcance (filtros `mainProcessId`, `state`, `band`). `mainProcessId` admite un UUID o el literal `SIN_PROCESO` para las solicitudes sin proceso principal (aún por triar). Cada ítem incluye `progressPercent` (promedio del avance de las tareas del plan, `TERMINADA` = 100; `null` sin tareas) y la alerta de fecha objetivo `dueStatus` (`SIN_FECHA`, `EN_TIEMPO`, `PROXIMO_A_VENCER`, `VENCIDO`, `NO_APLICA` en cerradas/rechazadas/retiradas) con `daysToTarget`. El umbral de «próximo a vencer» es `PORTFOLIO_DUE_SOON_DAYS` (7 por defecto). |
 
 ### Control del área (`area-control.controller.ts`)
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/area-control/indicators` | Indicadores del área para el periodo (jefe/líder; integrante → `403`). |
-| GET | `/area-control/demand-summary` | Panorama de demanda en alcance (los 3 roles). |
-| GET | `/area-control/attention` | Conteos «Requiere tu atención» a hoy y en alcance (los 3 roles): solicitudes `REGISTRADA` (triage), `EN_TRIAGE` con triage `CONTINUAR` vigente (priorizar), `BACKLOG_PRIORIZADO` (aprobar) y tareas no terminadas con `endDate` anterior a hoy de solicitudes no cerradas, retiradas ni rechazadas. |
+| GET | `/area-control/demand-summary` | Panorama de demanda en alcance (los 3 roles). Incluye `noProcess` (solicitudes sin proceso principal asignado) junto a `total`, `blockedActive`, `byState` y `byPriorityBand`. |
+| GET | `/area-control/attention` | Conteos «Requiere tu atención» a hoy y en alcance (los 3 roles): solicitudes `REGISTRADA` (triage), `REGISTRADA` sin proceso principal (`pendingNoProcess`, cola de entrada por triar cuyo responsable operativo es el Jefe de Área), `EN_TRIAGE` con triage `CONTINUAR` vigente (priorizar), `BACKLOG_PRIORIZADO` (aprobar) y tareas no terminadas con `endDate` anterior a hoy de solicitudes no cerradas, retiradas ni rechazadas. |
 
 ## capacity — Capacidad (disponibilidad y asignaciones)
 

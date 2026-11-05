@@ -456,6 +456,7 @@ export class AreaControlService {
       select: {
         id: true,
         operationalState: true,
+        mainProcessId: true,
         blockedAt: true,
         blockedResolvedAt: true,
       },
@@ -467,6 +468,7 @@ export class AreaControlService {
       stateCounts.set(state, 0);
     }
     let blockedActive = 0;
+    let noProcess = 0;
     for (const req of requests) {
       stateCounts.set(
         req.operationalState,
@@ -474,6 +476,28 @@ export class AreaControlService {
       );
       if (req.blockedAt !== null && req.blockedResolvedAt === null) {
         blockedActive += 1;
+      }
+      if (req.mainProcessId === null) {
+        noProcess += 1;
+      }
+    }
+
+    // Evaluaciones de prioridad vigentes en UNA sola consulta en lote (antes
+    // 1+N: un currentPriorityEvaluation por request). Mismo criterio de vigencia
+    // que RequestStateService.currentPriorityEvaluation (design §11 D4: la ultima
+    // por `evaluatedAt`). Al venir ordenadas desc por `evaluatedAt`, la PRIMERA
+    // aparicion por `requestId` es la vigente; se conservan solo esas en el Map.
+    const requestIds = requests.map((req) => req.id);
+    const evaluations = await this.prisma.priorityEvaluation.findMany({
+      where: { requestId: { in: requestIds } },
+      orderBy: { evaluatedAt: 'desc' },
+    });
+    const currentEvaluationByRequest = new Map<string, { score: number }>();
+    for (const evaluation of evaluations) {
+      if (!currentEvaluationByRequest.has(evaluation.requestId)) {
+        currentEvaluationByRequest.set(evaluation.requestId, {
+          score: evaluation.score,
+        });
       }
     }
 
@@ -484,7 +508,7 @@ export class AreaControlService {
       bandCounts.set(band, 0);
     }
     for (const req of requests) {
-      const evaluation = await this.state.currentPriorityEvaluation(req.id);
+      const evaluation = currentEvaluationByRequest.get(req.id) ?? null;
       const band =
         evaluation === null
           ? 'SIN_PRIORIZAR'
@@ -504,6 +528,7 @@ export class AreaControlService {
     return {
       total: requests.length,
       blockedActive,
+      noProcess,
       byState,
       byPriorityBand,
     };
@@ -522,11 +547,20 @@ export class AreaControlService {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
-    const [pendingTriage, inTriage, pendingApproval, overdueTasks] =
+    const [pendingTriage, pendingNoProcess, inTriage, pendingApproval, overdueTasks] =
       await Promise.all([
         this.prisma.request.count({
           where: {
             AND: [requestScope, { operationalState: RequestState.REGISTRADA }],
+          },
+        }),
+        this.prisma.request.count({
+          where: {
+            AND: [
+              requestScope,
+              { operationalState: RequestState.REGISTRADA },
+              { mainProcessId: null },
+            ],
           },
         }),
         this.prisma.request.findMany({
@@ -577,6 +611,7 @@ export class AreaControlService {
 
     return {
       pendingTriage,
+      pendingNoProcess,
       readyToPrioritize: inTriage.filter(
         (req) => req.triages[0]?.decision === 'CONTINUAR',
       ).length,
