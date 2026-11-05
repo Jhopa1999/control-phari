@@ -52,6 +52,24 @@ function jefe(): CurrentActor {
   };
 }
 
+/**
+ * Integrante puro: ni jefe ni líder. Ve las solicitudes de sus procesos y
+ * SIEMPRE las que él creó (A1), aunque aún no tengan proceso principal.
+ */
+function integrante(scoped: string[] = ['p1']): CurrentActor {
+  return {
+    userId: 'ui',
+    name: 'Ivo',
+    identifier: 'integrante@demo.local',
+    grants: [],
+    roleCodes: new Set([RoleCode.LIDER_PROCESO]),
+    scopedProcessIds: new Set(scoped),
+    isJefeArea: false,
+    isLiderProceso: false,
+    isAdmin: false,
+  };
+}
+
 /** Líder de proceso: ve TODAS las solicitudes (visibilidad abierta, rediseño). */
 function liderProceso(scoped: string[] = ['p1']): CurrentActor {
   return {
@@ -80,6 +98,8 @@ function makeRequestRow(overrides: Record<string, unknown> = {}) {
     referenceUrl: null,
     expectedResult: null,
     mainProcessId: 'p1',
+    assetId: null,
+    createdByUserId: null,
     operationalState: 'REGISTRADA',
     initialCommitmentDate: null,
     changeJustification: null,
@@ -157,11 +177,14 @@ describe('RequestService', () => {
       expect(where).toEqual({ deletedAt: null });
     });
 
-    it('no-jefe: scopeWhere filtra por scopedProcessIds', async () => {
+    it('no-jefe: scopeWhere filtra por scopedProcessIds O createdByUserId (A1)', async () => {
       (m.prismaObj.request as any).findMany.mockResolvedValue([]);
       await service.findMany(lider(['p1', 'p2']), {});
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
-      expect(where.mainProcessId).toEqual({ in: ['p1', 'p2'] });
+      expect(where.OR).toEqual([
+        { mainProcessId: { in: ['p1', 'p2'] } },
+        { createdByUserId: 'ul' },
+      ]);
     });
 
     it('aplica filtros state y mainProcessId al where', async () => {
@@ -186,7 +209,13 @@ describe('RequestService', () => {
       const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0].where;
       expect(where.AND).toEqual([
         { id: 'r1' },
-        { deletedAt: null, mainProcessId: { in: ['p1'] } },
+        {
+          deletedAt: null,
+          OR: [
+            { mainProcessId: { in: ['p1'] } },
+            { createdByUserId: 'ul' },
+          ],
+        },
       ]);
     });
 
@@ -248,11 +277,70 @@ describe('RequestService', () => {
       expect(where.mainProcessId).toBeUndefined();
     });
 
-    it('integrante puro: conserva el filtro por scopedProcessIds', async () => {
+    it('integrante puro: conserva el filtro por scopedProcessIds (dentro del OR)', async () => {
       (m.prismaObj.request as any).findMany.mockResolvedValue([]);
       await service.findMany(lider(['p1', 'p2']), {});
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
-      expect(where.mainProcessId).toEqual({ in: ['p1', 'p2'] });
+      expect(where.OR).toEqual([
+        { mainProcessId: { in: ['p1', 'p2'] } },
+        { createdByUserId: 'ul' },
+      ]);
+    });
+  });
+
+  describe('A1 · el creador siempre ve su solicitud', () => {
+    it('create escribe createdByUserId = actor.userId (integrante puro, sin proceso)', async () => {
+      (m.prismaObj.request as any).create.mockResolvedValue(
+        makeRequestRow({
+          mainProcessId: null,
+          participants: [],
+          createdByUserId: 'ui',
+        }),
+      );
+
+      await service.create(integrante(['p2']), { title: 'Solicitud propia' });
+
+      const data = (m.prismaObj.request as any).create.mock.calls[0][0].data;
+      expect(data.createdByUserId).toBe('ui');
+      expect(data.mainProcessId).toBeUndefined();
+    });
+
+    it('findMany del integrante incluye el OR con createdByUserId (ve lo suyo)', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([]);
+      await service.findMany(integrante(['p2']), {});
+      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
+      expect(where.deletedAt).toBeNull();
+      expect(where.OR).toEqual([
+        { mainProcessId: { in: ['p2'] } },
+        { createdByUserId: 'ui' },
+      ]);
+    });
+
+    it('findOne del integrante consulta con el OR createdByUserId', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequestRow({ mainProcessId: null, createdByUserId: 'ui' }),
+      );
+      await service.findOne(integrante(['p2']), 'r1');
+      const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0].where;
+      expect(where.AND).toEqual([
+        { id: 'r1' },
+        {
+          deletedAt: null,
+          OR: [
+            { mainProcessId: { in: ['p2'] } },
+            { createdByUserId: 'ui' },
+          ],
+        },
+      ]);
+    });
+
+    it('una solicitud sin proceso creada por OTRO no aparece: findOne -> 404', async () => {
+      // El scopeWhere (mainProcessId fuera de alcance + createdByUserId ajeno)
+      // no la alcanza: Prisma no devuelve fila y el service lanza 404.
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(null);
+      await expect(
+        service.findOne(integrante(['p2']), 'rAjena'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });

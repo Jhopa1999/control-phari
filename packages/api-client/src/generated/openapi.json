@@ -10700,6 +10700,12 @@
             "nullable": true,
             "description": "Activo al que pertenece la solicitud (P1) o null."
           },
+          "createdByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario que registró la solicitud (para que el creador identifique lo suyo aunque aún no tenga proceso)."
+          },
           "operationalState": {
             "type": "string",
             "description": "Estado operativo (read-only, derivado)."
@@ -10761,6 +10767,7 @@
           "expectedResult",
           "mainProcessId",
           "assetId",
+          "createdByUserId",
           "operationalState",
           "initialCommitmentDate",
           "changeJustification",

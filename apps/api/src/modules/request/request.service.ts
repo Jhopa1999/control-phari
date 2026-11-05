@@ -42,7 +42,15 @@ export class RequestService {
     if (actor.isJefeArea || actor.isLiderProceso) {
       return { deletedAt: null };
     }
-    return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+    // Integrante puro: ve las solicitudes de sus procesos y SIEMPRE las que él
+    // creó (A1), aunque aún no tengan proceso principal.
+    return {
+      deletedAt: null,
+      OR: [
+        { mainProcessId: { in: Array.from(actor.scopedProcessIds) } },
+        { createdByUserId: actor.userId },
+      ],
+    };
   }
 
   /** Snapshot JSON de una Request para auditoria (before/after). */
@@ -210,6 +218,9 @@ export class RequestService {
       const request = await tx.request.create({
         data: {
           title: dto.title,
+          // A1: el creador queda registrado para que siempre vea su solicitud,
+          // aunque aún no tenga proceso principal (se determina en el triage).
+          createdByUserId: actor.userId,
           // El proceso principal se fija en el triage; solo se escribe si el
           // DTO lo trae (compatibilidad). Por defecto queda null.
           ...(dto.mainProcessId !== undefined

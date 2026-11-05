@@ -201,7 +201,13 @@ describe('TriageService', () => {
       service.create(lider(['p1']), 'r1', { decision: 'CONTINUAR' }),
     ).rejects.toBeInstanceOf(NotFoundException);
     const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0].where;
-    expect(where.AND).toEqual([{ id: 'r1' }, { deletedAt: null, mainProcessId: { in: ['p1'] } }]);
+    expect(where.AND).toEqual([
+      { id: 'r1' },
+      {
+        deletedAt: null,
+        OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }],
+      },
+    ]);
   });
 
   // --- Proceso principal se determina en el triage (rediseño demanda) ---

@@ -3220,6 +3220,11 @@ export interface components {
              * @description Activo al que pertenece la solicitud (P1) o null.
              */
             assetId: string | null;
+            /**
+             * Format: uuid
+             * @description Usuario que registró la solicitud (para que el creador identifique lo suyo aunque aún no tenga proceso).
+             */
+            createdByUserId: string | null;
             /** @description Estado operativo (read-only, derivado). */
             operationalState: string;
             /**

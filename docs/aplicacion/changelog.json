@@ -553,6 +553,15 @@
         "docs/aplicacion/autenticacion-autorizacion.md"
       ],
       "summary": "El proceso principal se determina en el Triage: Request.mainProcessId pasa a nullable (migración 20261108160000_request_main_process_opcional); la Solicitud se registra sin proceso ni participantes (POST /requests ya no exige mainProcessId y el formulario retira «Proceso principal»); POST /requests/:id/triage acepta mainProcessId y lo exige para CONTINUAR, fija el proceso y reconcilia RequestParticipant preservando el principal; una solicitud sin proceso es visible para todos los JEFE_AREA y LIDER_PROCESO pero no para el integrante puro; listado y ficha muestran «Sin proceso aún»."
+    },
+    {
+      "timestamp": "2026-11-09T12:00:00Z",
+      "trigger_file": "apps/api/prisma/schema.prisma",
+      "updated_docs": [
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/autenticacion-autorizacion.md"
+      ],
+      "summary": "A1 · el creador siempre ve su solicitud: nueva columna Request.createdByUserId (UUID sin relación, migración aditiva 20261109120000_request_created_by) que POST /requests rellena con el usuario actual; el scopeWhere del integrante puro añade un OR createdByUserId, de modo que ve sus propias solicitudes aunque aún no tengan proceso principal; RequestResponseDto expone createdByUserId y el contrato OpenAPI y el cliente tipado se regeneraron."
     }
   ]
 }
