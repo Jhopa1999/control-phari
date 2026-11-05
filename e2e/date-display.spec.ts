@@ -43,9 +43,12 @@ test('Mi trabajo muestra la fecha de vencimiento guardada, sin correrla un día'
     const response = await route.fetch();
     await route.fulfill({ response, json: [DATE_ITEM] });
   });
+  // «Mi día» pinta tabla desde 920 px de contenedor y tarjetas por debajo; con
+  // 1440 px la fila de la tabla es la visible (una por tarea: data-task-id).
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/mi-trabajo');
 
-  const row = page.getByRole('row').filter({ hasText: DATE_ITEM.title });
+  const row = page.locator(`tr[data-task-id="${DATE_ITEM.taskId}"]`);
   await expect(row).toContainText('15 jul 2027');
   await expect(row).not.toContainText('14 jul 2027');
 });

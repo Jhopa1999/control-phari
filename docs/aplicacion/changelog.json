@@ -602,8 +602,8 @@
     {
       "timestamp": "2026-11-11T12:00:00Z",
       "trigger_file": "apps/web/src/app/mi-trabajo/page.tsx",
-      "updated_docs": ["docs/aplicacion/frontend-pantallas.md"],
-      "summary": "Mi trabajo abre el detalle de la tarea en un panel lateral (?taskId= opcional) y el detalle se simplifica: un solo control de avance, evidencia en texto/URL separada de archivos, propuesta de 100 % al terminar y avisos no bloqueantes; se corrige Fase — en /seguimiento/tareas. Sin cambios de API, contrato ni MCP."
+      "updated_docs": ["docs/aplicacion/frontend-pantallas.md", "docs/BACKLOG.md"],
+      "summary": "BL-036 (Entrega 1) · Mi trabajo pasa a «Mi día»: contadores-filtro, tareas agrupadas por urgencia con terminadas plegadas y estado y avance editables en la fila. Mi trabajo abre el detalle de la tarea en un panel lateral (?taskId= opcional) y el detalle se simplifica: un solo control de avance, evidencia en texto/URL separada de archivos, propuesta de 100 % al terminar y avisos no bloqueantes; se corrige Fase — en /seguimiento/tareas. Sin cambios de API, contrato ni MCP."
     }
   ]
 }
