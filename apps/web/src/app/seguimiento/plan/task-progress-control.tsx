@@ -35,6 +35,8 @@ export interface TaskProgressControlProps {
   busy?: boolean;
   /** Barra a todo el ancho (kanban y detalle). */
   wide?: boolean;
+  /** Clases extra del botón (p. ej. objetivo táctil de 44 px). */
+  className?: string;
   /**
    * Guarda el avance. Devuelve null si salió bien o el mensaje de error (el
    * diálogo se queda abierto con lo escrito).
@@ -71,6 +73,7 @@ export function TaskProgressControl({
   disabledReason,
   busy = false,
   wide = false,
+  className,
   onSave,
 }: TaskProgressControlProps): React.ReactElement {
   const [open, setOpen] = React.useState(false);
@@ -117,6 +120,7 @@ export function TaskProgressControl({
         className={cn(
           '-mx-1.5 h-auto gap-2 px-1.5 py-1 pointer-coarse:min-h-10',
           wide ? 'w-full justify-start' : 'justify-start',
+          className,
         )}
         disabled={isDisabled}
         aria-busy={busy || undefined}

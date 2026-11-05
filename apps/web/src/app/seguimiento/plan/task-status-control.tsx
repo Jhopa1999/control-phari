@@ -8,12 +8,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { TaskStatus } from '@/lib/api-client';
 import { formatPercent } from '@/lib/format';
 import { taskStatusLabel } from '@/lib/tasks';
 import { nextTaskStatuses } from '@/lib/task-transitions';
+import { cn } from '@/lib/utils';
 
 export interface TaskStatusControlProps {
   /** Estado actual de la tarea (código de TaskStatus; puede venir como string del DTO). */
@@ -32,6 +34,15 @@ export interface TaskStatusControlProps {
   taskTitle: string;
   /** Muestra el % de avance junto al estado (por defecto sí; la tabla lo tiene en su columna). */
   showProgress?: boolean;
+  /**
+   * Verbo de acción de cada opción del menú («Enviar a revisión»…). Si falta, se
+   * muestra el nombre del estado como hasta ahora. Cuando se da, la primera
+   * opción (avance natural) se marca como «Siguiente paso» y las demás van
+   * tras un separador.
+   */
+  optionLabel?: (next: TaskStatus) => string;
+  /** Clases extra del disparador (p. ej. objetivo táctil de 44 px). */
+  triggerClassName?: string;
 }
 
 /**
@@ -51,6 +62,8 @@ export function TaskStatusControl({
   onChange,
   taskTitle,
   showProgress = true,
+  optionLabel,
+  triggerClassName,
 }: TaskStatusControlProps): React.ReactElement {
   const transitions = nextTaskStatuses(status as TaskStatus);
   const reasonId = React.useId();
@@ -69,7 +82,7 @@ export function TaskStatusControl({
           <Button
             variant="ghost"
             size="sm"
-            className="h-auto gap-1.5 px-1.5 py-1"
+            className={cn('h-auto gap-1.5 px-1.5 py-1', triggerClassName)}
             disabled={isDisabled}
             aria-busy={busy || undefined}
             aria-describedby={describedBy}
@@ -83,10 +96,22 @@ export function TaskStatusControl({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          {transitions.map((next) => (
-            <DropdownMenuItem key={next} onSelect={() => onChange(next)}>
-              {taskStatusLabel(next)}
-            </DropdownMenuItem>
+          {transitions.map((next, index) => (
+            <React.Fragment key={next}>
+              {optionLabel && index === 1 ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuItem onSelect={() => onChange(next)}>
+                {optionLabel ? (
+                  <span className="flex flex-col">
+                    <span>{optionLabel(next)}</span>
+                    {index === 0 ? (
+                      <span className="text-meta text-muted-foreground">Siguiente paso</span>
+                    ) : null}
+                  </span>
+                ) : (
+                  taskStatusLabel(next)
+                )}
+              </DropdownMenuItem>
+            </React.Fragment>
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
