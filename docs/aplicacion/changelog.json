@@ -536,6 +536,15 @@
         "docs/aplicacion/autenticacion-autorizacion.md"
       ],
       "summary": "El proceso principal se determina en el Triage: Request.mainProcessId pasa a nullable (migración 20261108160000_request_main_process_opcional); la Solicitud se registra sin proceso ni participantes (POST /requests ya no exige mainProcessId y el formulario retira «Proceso principal»); POST /requests/:id/triage acepta mainProcessId y lo exige para CONTINUAR, fija el proceso y reconcilia RequestParticipant preservando el principal; una solicitud sin proceso es visible para todos los JEFE_AREA y LIDER_PROCESO pero no para el integrante puro; listado y ficha muestran «Sin proceso aún»."
+    },
+    {
+      "timestamp": "2026-11-05T00:00:00Z",
+      "trigger_file": "apps/api/src/modules/request/triage/triage.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "GET /requests/:id/triage acepta el parámetro opcional mainProcessId para previsualizar los responsables elegibles de un proceso aún no persistido; en el Triage, al elegir el proceso principal el desplegable «Responsable principal» se recarga con los elegibles de ese proceso (líderes activos; o su equipo si no hay líder) y descarta el responsable elegido si deja de ser elegible, con el campo deshabilitado mientras no haya proceso."
     }
   ]
 }

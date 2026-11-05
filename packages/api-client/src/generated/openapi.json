@@ -1455,6 +1455,16 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "mainProcessId",
+            "required": false,
+            "in": "query",
+            "description": "Proceso principal candidato para previsualizar sus responsables elegibles (el que se elige en el triage).",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1475,7 +1485,7 @@
             "description": "Solicitud fuera de alcance."
           }
         },
-        "summary": "Triage de la solicitud (0 o 1 fila en Fase 2).",
+        "summary": "Triage de la solicitud (0 o 1 fila en Fase 2) y responsables elegibles; admite previsualizar los de un proceso candidato.",
         "tags": [
           "triage"
         ]

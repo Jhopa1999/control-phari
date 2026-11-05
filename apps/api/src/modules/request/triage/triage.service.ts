@@ -194,19 +194,32 @@ export class TriageService {
    * Devuelve el triage de la Request (0 o 1 fila en Fase 2) junto a los
    * candidatos elegibles como responsable principal (design §2.5), para poblar
    * el desplegable con el mismo conjunto que valida el POST.
+   *
+   * `candidateMainProcessId` permite previsualizar los elegibles de un proceso
+   * aún no persistido: cuando la solicitud todavía no tiene proceso principal,
+   * el triage lo elige en el mismo formulario y el desplegable de responsable
+   * debe recargarse con los candidatos de ESE proceso. Prevalece sobre el
+   * proceso persistido solo mientras la solicitud no tenga uno fijado (una vez
+   * fijado, el proceso no se cambia en el triage).
    */
   async findForRequest(
     actor: CurrentActor,
     requestId: string,
+    candidateMainProcessId?: string,
   ): Promise<TriageContextResponseDto> {
     const request = await this.state.requireInScope(actor, requestId);
+    // Proceso efectivo para derivar los elegibles: el persistido manda; si la
+    // solicitud aún no tiene proceso, se usa el candidato enviado (el que se
+    // está eligiendo en el formulario del triage).
+    const effectiveMainProcessId =
+      request.mainProcessId ?? candidateMainProcessId ?? null;
     const [triages, eligibleIds] = await Promise.all([
       this.prisma.triage.findMany({
         where: { requestId },
         orderBy: { decidedAt: 'desc' },
         include: RESPONSIBLE_INCLUDE,
       }),
-      this.eligibleResponsibleIds(request.mainProcessId),
+      this.eligibleResponsibleIds(effectiveMainProcessId),
     ]);
     const eligibleResponsibles = await this.prisma.user.findMany({
       where: { id: { in: eligibleIds } },

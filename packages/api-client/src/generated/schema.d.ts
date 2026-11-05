@@ -447,7 +447,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Triage de la solicitud (0 o 1 fila en Fase 2). */
+        /** Triage de la solicitud (0 o 1 fila en Fase 2) y responsables elegibles; admite previsualizar los de un proceso candidato. */
         get: operations["TriageController_findForRequest"];
         put?: never;
         /** Registra el triage (solo desde REGISTRADA; 2o POST -> 409). */
@@ -8120,7 +8120,10 @@ export interface operations {
     };
     TriageController_findForRequest: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Proceso principal candidato para previsualizar sus responsables elegibles (el que se elige en el triage). */
+                mainProcessId?: string;
+            };
             header?: never;
             path: {
                 id: string;

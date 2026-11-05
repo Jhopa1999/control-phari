@@ -202,6 +202,11 @@ export function TriageView(): React.ReactElement {
   const [eligibleResponsibles, setEligibleResponsibles] = React.useState<
     EligibleResponsible[]
   >([]);
+  // Verdadero mientras se recargan los elegibles tras elegir proceso en el
+  // formulario (la solicitud aún no tiene proceso principal). El token evita
+  // condiciones de carrera si el proceso cambia de nuevo antes de responder.
+  const [loadingEligibles, setLoadingEligibles] = React.useState(false);
+  const eligiblesTokenRef = React.useRef(0);
   // Triage ya registrado de la solicitud elegida (0 o 1 fila en Fase 2), para
   // mostrar el detalle de lo decidido cuando la etapa ya está completada.
   const [registeredTriage, setRegisteredTriage] = React.useState<Triage | null>(null);
@@ -229,6 +234,9 @@ export function TriageView(): React.ReactElement {
     setSuggestion(null);
     setSuggestionError(null);
     setSuggesting(false);
+    setLoadingEligibles(false);
+    // Invalida cualquier recarga de elegibles en vuelo de la selección anterior.
+    eligiblesTokenRef.current += 1;
     if (!id) {
       setEligibleResponsibles([]);
       return;
@@ -376,6 +384,52 @@ export function TriageView(): React.ReactElement {
   function update<K extends keyof TriageFormValues>(key: K, value: TriageFormValues[K]): void {
     setForm((f) => ({ ...f, [key]: value }));
     setFieldErrors((prev) => (key in prev ? { ...prev, [key]: undefined } : prev));
+  }
+
+  /**
+   * Al elegir el proceso principal en el triage (solicitud sin proceso aún), se
+   * recargan los candidatos a responsable principal de ESE proceso, que el
+   * backend deriva igual que para el POST (líderes activos del proceso; si no
+   * hay líderes, personas con grant activo). Se limpia el responsable elegido
+   * si ya no pertenece a la nueva lista. Si el proceso se deselecciona, el
+   * desplegable queda vacío y el campo se deshabilita.
+   */
+  function handleMainProcessChange(processId: string): void {
+    update('mainProcessId', processId);
+    const id = selectedRef.current;
+    const token = ++eligiblesTokenRef.current;
+    if (!id || !processId) {
+      setEligibleResponsibles([]);
+      setLoadingEligibles(false);
+      // Sin proceso no hay candidatos: el responsable elegido deja de ser válido.
+      setForm((f) => (f.mainResponsibleUserId ? { ...f, mainResponsibleUserId: '' } : f));
+      return;
+    }
+    setLoadingEligibles(true);
+    void listTriage(id, processId)
+      .then((ctx) => {
+        // Ignora respuestas obsoletas (el proceso o la solicitud cambiaron).
+        if (eligiblesTokenRef.current !== token || selectedRef.current !== id) return;
+        setEligibleResponsibles(ctx.eligibleResponsibles);
+        // Limpia el responsable si ya no es elegible en la nueva lista.
+        setForm((f) =>
+          f.mainResponsibleUserId &&
+          !ctx.eligibleResponsibles.some((p) => p.id === f.mainResponsibleUserId)
+            ? { ...f, mainResponsibleUserId: '' }
+            : f,
+        );
+      })
+      .catch(() => {
+        if (eligiblesTokenRef.current !== token || selectedRef.current !== id) return;
+        // Tolerante a fallo (como la carga inicial): lista vacía, campo opcional.
+        setEligibleResponsibles([]);
+        setForm((f) => (f.mainResponsibleUserId ? { ...f, mainResponsibleUserId: '' } : f));
+      })
+      .finally(() => {
+        if (eligiblesTokenRef.current === token && selectedRef.current === id) {
+          setLoadingEligibles(false);
+        }
+      });
   }
 
   // Procesos que intervienen seleccionables: los activos menos el principal, que
@@ -818,6 +872,17 @@ export function TriageView(): React.ReactElement {
   }
 
   function renderForm(): React.ReactElement {
+    // Textos del campo «Responsable principal» según el estado del proceso.
+    const responsibleHelp = !effectiveMainProcessId
+      ? 'Elige primero el proceso principal: el responsable se toma de sus líderes (o su equipo si no hay líder).'
+      : 'Líderes del proceso principal; o su equipo si el proceso no tiene líder.';
+    const responsiblePlaceholder = loadingEligibles
+      ? 'Cargando responsables…'
+      : !effectiveMainProcessId
+        ? 'Elige primero el proceso principal'
+        : eligibleResponsibles.length === 0
+          ? 'Sin responsables elegibles'
+          : 'Sin especificar';
     return (
       <form
         id={FORM_ID}
@@ -946,7 +1011,7 @@ export function TriageView(): React.ReactElement {
               {(control) => (
                 <Select
                   value={form.mainProcessId || NONE}
-                  onValueChange={(v) => update('mainProcessId', v === NONE ? '' : v)}
+                  onValueChange={(v) => handleMainProcessChange(v === NONE ? '' : v)}
                 >
                   <SelectTrigger {...control}>
                     <SelectValue placeholder="Elige el proceso principal" />
@@ -1016,16 +1081,21 @@ export function TriageView(): React.ReactElement {
 
         <div className="grid gap-4">
           <h3 className="text-sm font-semibold">Responsable y dependencias</h3>
-          <Field id="triage-responsible" label="Responsable principal">
+          <Field
+            id="triage-responsible"
+            label="Responsable principal"
+            help={responsibleHelp}
+          >
             {(control) => (
               <Select
                 value={form.mainResponsibleUserId || NONE}
                 onValueChange={(v) =>
                   update('mainResponsibleUserId', v === NONE ? '' : v)
                 }
+                disabled={!effectiveMainProcessId || loadingEligibles}
               >
                 <SelectTrigger {...control}>
-                  <SelectValue placeholder="Sin especificar" />
+                  <SelectValue placeholder={responsiblePlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE}>Sin especificar</SelectItem>

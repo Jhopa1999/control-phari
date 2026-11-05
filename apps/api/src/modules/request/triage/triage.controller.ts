@@ -6,6 +6,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,6 +19,7 @@ import {
 import { TriageService } from './triage.service';
 import { AssociateAssetDto } from './dto/associate-asset.dto';
 import { CreateTriageDto } from './dto/create-triage.dto';
+import { TriageContextQueryDto } from './dto/triage-context-query.dto';
 import { TriageContextResponseDto } from './dto/triage-context-response.dto';
 import { TriageResponseDto } from './dto/triage-response.dto';
 import { RequestResponseDto } from '../dto/request-response.dto';
@@ -40,7 +42,10 @@ export class TriageController {
   constructor(private readonly triageService: TriageService) {}
 
   @Get('triage')
-  @ApiOperation({ summary: 'Triage de la solicitud (0 o 1 fila en Fase 2).' })
+  @ApiOperation({
+    summary:
+      'Triage de la solicitud (0 o 1 fila en Fase 2) y responsables elegibles; admite previsualizar los de un proceso candidato.',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({
     status: 200,
@@ -52,8 +57,9 @@ export class TriageController {
   findForRequest(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: TriageContextQueryDto,
   ) {
-    return this.triageService.findForRequest(actor, id);
+    return this.triageService.findForRequest(actor, id, query.mainProcessId);
   }
 
   @Post('triage')

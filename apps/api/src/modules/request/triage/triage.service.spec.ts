@@ -541,6 +541,44 @@ describe('TriageService', () => {
     });
   });
 
+  it('findForRequest sin proceso persistido deriva los elegibles del proceso candidato del query', async () => {
+    // Solicitud aun sin proceso principal (se decide en el triage).
+    (m.prismaObj.request as any).findFirst.mockResolvedValue(
+      makeRequest(RequestState.REGISTRADA, { mainProcessId: null }),
+    );
+    (m.prismaObj.grant as any).findMany.mockResolvedValue([
+      { userId: 'u-lider-p9' },
+    ]);
+    (m.prismaObj.triage as any).findMany.mockResolvedValue([]);
+    (m.prismaObj.user as any).findMany.mockResolvedValue([
+      { id: 'u-lider-p9', name: 'Lider P9' },
+    ]);
+
+    const ctx = await service.findForRequest(lider(), 'r1', 'p9');
+
+    expect(ctx.eligibleResponsibles).toEqual([
+      { id: 'u-lider-p9', name: 'Lider P9' },
+    ]);
+    // Los lideres se buscan del proceso candidato, no del persistido (null).
+    expect((m.prismaObj.grant as any).findMany.mock.calls[0][0].where).toMatchObject({
+      processId: 'p9',
+      role: { code: RoleCode.LIDER_PROCESO },
+    });
+  });
+
+  it('findForRequest sin proceso persistido ni candidato no consulta grants (lista vacia)', async () => {
+    (m.prismaObj.request as any).findFirst.mockResolvedValue(
+      makeRequest(RequestState.REGISTRADA, { mainProcessId: null }),
+    );
+    (m.prismaObj.triage as any).findMany.mockResolvedValue([]);
+    (m.prismaObj.user as any).findMany.mockResolvedValue([]);
+
+    const ctx = await service.findForRequest(lider(), 'r1');
+
+    expect(ctx.eligibleResponsibles).toEqual([]);
+    expect((m.prismaObj.grant as any).findMany).not.toHaveBeenCalled();
+  });
+
   // --- Asociacion de activo base en el triage (FEAT-002) ---
 
   describe('associateAsset', () => {
