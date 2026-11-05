@@ -374,7 +374,12 @@ function Stepper({
         }
       >
         {triage ? (
-          <TriageDetalle triage={triage} catalogs={data.triageCatalogs} />
+          <TriageDetalle
+            triage={triage}
+            catalogs={data.triageCatalogs}
+            request={request}
+            processes={data.processes}
+          />
         ) : (
           <SinRegistro>Esta etapa aún no se ha registrado.</SinRegistro>
         )}

@@ -46,16 +46,23 @@ export class DuplicateCandidateDto {
 
 /**
  * Salida de la sugerencia de triage (design 5.1). Es una SUGERENCIA: no persiste
- * nada y el humano confirma. Los cinco `suggested*Code` son codes de maestra
- * (TRIAGE_ROUTE, DEMAND_TYPE, CRITICALITY, TRIAGE_SIZE, DATA_AVAILABILITY) o
- * null si la IA no propuso uno valido. `tentativePriorityBand` es una señal
+ * nada y el humano confirma. Los cuatro `suggested*Code` son codes de maestra
+ * (DEMAND_TYPE, CRITICALITY, TRIAGE_SIZE, DATA_AVAILABILITY) o null si la IA no
+ * propuso uno valido; `suggestedMainProcessId` propone el proceso principal
+ * (reemplaza a la antigua `suggestedRouteCode`, retirada del contrato). `tentativePriorityBand` es una señal
  * (P1..P4), no el score oficial.
  */
 export class TriageSuggestionResponseDto {
-  @ApiProperty({ type: String, nullable: true, description: 'Code sugerido de TRIAGE_ROUTE o null.' })
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description:
+      'ID del proceso principal sugerido (proceso activo de tipo PROCESS) o null. Solo se sugiere si la solicitud aun no tiene proceso principal; reemplaza a la antigua ruta.',
+  })
   @IsOptional()
-  @IsString()
-  suggestedRouteCode!: string | null;
+  @IsUUID()
+  suggestedMainProcessId!: string | null;
 
   @ApiProperty({ type: String, nullable: true, description: 'Code sugerido de DEMAND_TYPE o null.' })
   @IsOptional()

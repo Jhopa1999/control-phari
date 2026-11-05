@@ -25,6 +25,8 @@ import { AiUsageService } from './ai-usage.service';
 const REQUEST_ID = '11111111-1111-4111-8111-111111111111';
 const DUP_IN_SCOPE = '22222222-2222-4222-8222-222222222222';
 const DUP_OUT_SCOPE = '33333333-3333-4333-8333-333333333333';
+const PROCESS_BI = '44444444-4444-4444-8444-444444444444';
+const PROCESS_INVENTADO = '55555555-5555-4555-8555-555555555555';
 
 function jefeActor(): CurrentActor {
   return {
@@ -41,7 +43,6 @@ function jefeActor(): CurrentActor {
 }
 
 const CATALOG_ITEMS = [
-  { catalog: 'TRIAGE_ROUTE', code: 'RUTA_A', label: 'Ruta A' },
   { catalog: 'DEMAND_TYPE', code: 'NUEVO', label: 'Nuevo desarrollo' },
   { catalog: 'CRITICALITY', code: 'ALTA', label: 'Alta' },
   { catalog: 'TRIAGE_SIZE', code: 'M', label: 'Mediano' },
@@ -50,7 +51,7 @@ const CATALOG_ITEMS = [
 
 function validSuggestion(overrides: Record<string, unknown> = {}) {
   return {
-    suggestedRouteCode: 'RUTA_A',
+    suggestedMainProcessId: PROCESS_BI,
     suggestedDemandTypeCode: 'NUEVO',
     suggestedCriticalityCode: 'ALTA',
     suggestedSizeCode: 'M',
@@ -73,6 +74,8 @@ describe('TriageSuggestionService', () => {
     inScopeDuplicates?: Array<{ id: string; title: string }>;
     supportsTemperature?: boolean;
     budgetExceeded?: boolean;
+    /** Proceso principal que ya tiene la solicitud (por defecto, ninguno). */
+    requestMainProcessId?: string | null;
   }) {
     const requestWrite = jest.fn();
     const prisma = {
@@ -101,6 +104,11 @@ describe('TriageSuggestionService', () => {
       catalogItem: {
         findMany: jest.fn().mockResolvedValue(CATALOG_ITEMS),
       },
+      process: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: PROCESS_BI, code: 'FIBI', name: 'BI' }]),
+      },
       request: {
         findMany: jest
           .fn()
@@ -117,7 +125,11 @@ describe('TriageSuggestionService', () => {
     const state = {
       requireInScope: jest
         .fn()
-        .mockResolvedValue({ id: REQUEST_ID, title: 'Solicitud', mainProcessId: 'p-1' }),
+        .mockResolvedValue({
+          id: REQUEST_ID,
+          title: 'Solicitud',
+          mainProcessId: opts.requestMainProcessId ?? null,
+        }),
     } as unknown as RequestStateService;
 
     const invoke = opts.invoke ?? jest.fn().mockResolvedValue(JSON.stringify(validSuggestion()));
@@ -230,7 +242,7 @@ describe('TriageSuggestionService', () => {
       invoke: jest.fn().mockResolvedValue(fenced),
     });
     const res = await service.suggest(jefeActor(), REQUEST_ID);
-    expect(res.suggestedRouteCode).toBe(validSuggestion().suggestedRouteCode);
+    expect(res.suggestedMainProcessId).toBe(PROCESS_BI);
   });
 
   it('JSON precedido/seguido de texto => se interpreta', async () => {
@@ -240,7 +252,7 @@ describe('TriageSuggestionService', () => {
       invoke: jest.fn().mockResolvedValue(wrapped),
     });
     const res = await service.suggest(jefeActor(), REQUEST_ID);
-    expect(res.suggestedRouteCode).toBe(validSuggestion().suggestedRouteCode);
+    expect(res.suggestedMainProcessId).toBe(PROCESS_BI);
   });
 
   it('JSON que no valida el DTO => 422', async () => {
@@ -261,14 +273,68 @@ describe('TriageSuggestionService', () => {
       invoke: jest
         .fn()
         .mockResolvedValue(
-          JSON.stringify(validSuggestion({ suggestedRouteCode: 'CODE_INVENTADO' })),
+          JSON.stringify(validSuggestion({ suggestedSizeCode: 'CODE_INVENTADO' })),
         ),
     });
     const res = await service.suggest(jefeActor(), REQUEST_ID);
-    expect(res.suggestedRouteCode).toBeNull();
-    expect(res.missingInformation.some((n) => /TRIAGE_ROUTE/.test(n))).toBe(true);
+    expect(res.suggestedSizeCode).toBeNull();
+    expect(res.missingInformation.some((n) => /TRIAGE_SIZE/.test(n))).toBe(true);
     // Los demas codes validos se conservan.
     expect(res.suggestedDemandTypeCode).toBe('NUEVO');
+  });
+
+  it('suggestedMainProcessId elegible => se conserva y el contexto ofrece solo procesos PROCESS activos', async () => {
+    const { service, prisma, bedrock } = makeDeps({});
+    const res = await service.suggest(jefeActor(), REQUEST_ID);
+    expect(res.suggestedMainProcessId).toBe(PROCESS_BI);
+    expect((prisma.process.findMany as jest.Mock).mock.calls[0][0].where).toEqual({
+      active: true,
+      kind: 'PROCESS',
+    });
+    const sent = (bedrock.converse as jest.Mock).mock.calls[0][0].messages[0].content[0].text;
+    expect(sent).toContain(PROCESS_BI);
+  });
+
+  it('suggestedMainProcessId inventado o no elegible => null + nota', async () => {
+    const { service } = makeDeps({
+      invoke: jest
+        .fn()
+        .mockResolvedValue(
+          JSON.stringify(validSuggestion({ suggestedMainProcessId: PROCESS_INVENTADO })),
+        ),
+    });
+    const res = await service.suggest(jefeActor(), REQUEST_ID);
+    expect(res.suggestedMainProcessId).toBeNull();
+    expect(res.missingInformation.some((n) => /proceso principal/.test(n))).toBe(true);
+  });
+
+  it('suggestedMainProcessId que no es UUID => 422', async () => {
+    const { service } = makeDeps({
+      invoke: jest
+        .fn()
+        .mockResolvedValue(JSON.stringify(validSuggestion({ suggestedMainProcessId: 'BI' }))),
+    });
+    await expect(service.suggest(jefeActor(), REQUEST_ID)).rejects.toBeInstanceOf(
+      UnprocessableEntityException,
+    );
+  });
+
+  it('solicitud que ya tiene proceso principal => no se ofrecen procesos y la sugerencia se descarta', async () => {
+    const { service, prisma } = makeDeps({ requestMainProcessId: PROCESS_BI });
+    const res = await service.suggest(jefeActor(), REQUEST_ID);
+    expect(prisma.process.findMany).not.toHaveBeenCalled();
+    expect(res.suggestedMainProcessId).toBeNull();
+  });
+
+  it('respuesta de un prompt antiguo (sin suggestedMainProcessId, con suggestedRouteCode) => null sin error y sin ruta', async () => {
+    const legacy: Record<string, unknown> = { ...validSuggestion(), suggestedRouteCode: 'BI' };
+    delete legacy.suggestedMainProcessId;
+    const { service } = makeDeps({
+      invoke: jest.fn().mockResolvedValue(JSON.stringify(legacy)),
+    });
+    const res = await service.suggest(jefeActor(), REQUEST_ID);
+    expect(res.suggestedMainProcessId).toBeNull();
+    expect(res).not.toHaveProperty('suggestedRouteCode');
   });
 
   it('requestId de duplicado fuera del contexto => descartado', async () => {
@@ -293,7 +359,7 @@ describe('TriageSuggestionService', () => {
   it('caso feliz => DTO valido, model/agentCode del backend y CERO escrituras en BD', async () => {
     const { service, requestWrite } = makeDeps({});
     const res = await service.suggest(jefeActor(), REQUEST_ID);
-    expect(res.suggestedRouteCode).toBe('RUTA_A');
+    expect(res.suggestedMainProcessId).toBe(PROCESS_BI);
     expect(res.tentativePriorityBand).toBe('P2');
     expect(res.agentCode).toBe('TRIAGE');
     expect(res.model).toBe('us.anthropic.claude-haiku-4-5-20251001-v1:0');

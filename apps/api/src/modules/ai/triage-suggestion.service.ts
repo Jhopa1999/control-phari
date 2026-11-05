@@ -45,9 +45,12 @@ function extractJsonObject(raw: string): string {
   return start !== -1 && end > start ? unfenced.slice(start, end + 1) : unfenced;
 }
 
-/** Catalogos (maestras) de los cinco codes que la sugerencia puede proponer. */
+/**
+ * Catalogos (maestras) de los cuatro codes que la sugerencia puede proponer. La
+ * antigua ruta (TRIAGE_ROUTE) ya no se sugiere: la reemplaza el proceso
+ * principal (suggestedMainProcessId), que se valida aparte contra los procesos.
+ */
 const TRIAGE_CATALOGS = {
-  suggestedRouteCode: 'TRIAGE_ROUTE',
   suggestedDemandTypeCode: 'DEMAND_TYPE',
   suggestedCriticalityCode: 'CRITICALITY',
   suggestedSizeCode: 'TRIAGE_SIZE',
@@ -104,7 +107,7 @@ export class TriageSuggestionService {
     // 3) Contexto: maestras activas (code/label) + solicitudes en alcance como
     // candidatas a duplicado + ficha de la solicitud. El prompt se arma con el
     // basePrompt de BD.
-    const [catalogItems, inScopeRequests] = await Promise.all([
+    const [catalogItems, inScopeRequests, mainProcessOptions] = await Promise.all([
       this.prisma.catalogItem.findMany({
         where: {
           active: true,
@@ -114,6 +117,7 @@ export class TriageSuggestionService {
         orderBy: [{ catalog: 'asc' }, { sortOrder: 'asc' }],
       }),
       this.loadInScopeRequests(actor, request),
+      this.loadMainProcessOptions(request),
     ]);
 
     const inScopeIds = new Set(inScopeRequests.map((r) => r.id));
@@ -122,6 +126,7 @@ export class TriageSuggestionService {
       request,
       catalogItems,
       inScopeRequests,
+      mainProcessOptions,
     );
 
     // 4) Credenciales: en access-keys, descifrar justo antes de invocar; si
@@ -231,6 +236,20 @@ export class TriageSuggestionService {
         );
       }
     }
+
+    // El proceso principal sugerido debe ser uno de los elegibles del contexto
+    // (activo y de tipo PROCESS). Si la solicitud ya tiene proceso, o el id es
+    // inventado/no elegible, se descarta (null); el inventado deja nota.
+    if (dto.suggestedMainProcessId === undefined) dto.suggestedMainProcessId = null;
+    if (dto.suggestedMainProcessId !== null) {
+      const eligible = mainProcessOptions.some(
+        (p) => p.id === dto.suggestedMainProcessId,
+      );
+      if (!eligible && request.mainProcessId === null) {
+        notes.push('La IA sugirio un proceso principal no valido; se descarto.');
+      }
+      if (!eligible) dto.suggestedMainProcessId = null;
+    }
     dto.missingInformation = notes;
 
     // 9) Descartar duplicados cuyo requestId no estaba en el contexto (la IA no
@@ -263,6 +282,22 @@ export class TriageSuggestionService {
   }
 
   /**
+   * Procesos elegibles como PRINCIPAL: activos y de tipo PROCESS (la
+   * coordinacion multiproceso no lidera). Solo se ofrecen si la solicitud aun no
+   * tiene proceso principal; si ya lo tiene no hay nada que sugerir.
+   */
+  private async loadMainProcessOptions(
+    request: RequestModel,
+  ): Promise<Array<{ id: string; code: string; name: string }>> {
+    if (request.mainProcessId !== null) return [];
+    return this.prisma.process.findMany({
+      where: { active: true, kind: 'PROCESS' },
+      select: { id: true, code: true, name: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  /**
    * Arma el prompt enviado a Bedrock: el basePrompt configurable + la ficha de
    * la solicitud + las opciones (code/label) de las cinco maestras + las
    * solicitudes candidatas a duplicado. Todo como contexto estructurado para que
@@ -273,6 +308,7 @@ export class TriageSuggestionService {
     request: RequestModel,
     catalogItems: Array<{ catalog: string; code: string; label: string }>,
     inScopeRequests: Array<{ id: string; title: string }>,
+    mainProcessOptions: Array<{ id: string; code: string; name: string }>,
   ): string {
     const optionsByCatalog: Record<string, Array<{ code: string; label: string }>> = {};
     for (const item of catalogItems) {
@@ -293,6 +329,7 @@ export class TriageSuggestionService {
         referenceUrl: request.referenceUrl,
       },
       catalogOptions: optionsByCatalog,
+      mainProcessOptions,
       duplicateCandidates: inScopeRequests,
     };
 

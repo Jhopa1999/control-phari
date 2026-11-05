@@ -206,8 +206,9 @@ proceso principal: una solicitud recién registrada no tiene participantes.
 - Restricciones: único `(requestId, processId)`; índice por `processId`.
 
 ### Triage (`triages`)
-Clasificación y decisión de ruta.
-- Campos clave: `routeCode?`, `demandTypeCode?`, `criticalityCode?`, `sizeCode?`,
+Clasificación y decisión del triage.
+- `routeCode?` está **DEPRECADO** (dato histórico): la «Ruta» (maestra `TRIAGE_ROUTE`) era redundante con el proceso principal y ya no se captura; la columna y la maestra se conservan para triages antiguos y se muestran como «Ruta (histórica)». «Multiproceso» es una etiqueta derivada de tener más de un `RequestParticipant`.
+- Campos clave: `routeCode?` (deprecado), `demandTypeCode?`, `criticalityCode?`, `sizeCode?`,
   `dataAvailabilityCode?`, `totalEffortHours?`, `mainResponsibleUserId?`, `decision`,
   `decidedAt`, `decidedByUserId`, `dependencies?`, `notes?`.
 - Índices: por `requestId`, `decidedByUserId`, `mainResponsibleUserId`.

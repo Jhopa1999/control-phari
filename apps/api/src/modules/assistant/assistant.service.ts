@@ -378,7 +378,7 @@ export class AssistantService {
             '',
             'Una propuesta solo existe si llamaste a la herramienta de escritura: entonces la persona ve una tarjeta con Confirmar y Descartar. Nunca escribas «propuesta registrada» ni pidas confirmar en texto sin haber llamado a la herramienta; cuando ya tengas los datos, llámala directamente (no pidas permiso antes: la tarjeta ES la confirmación). Si te falta un dato que solo la persona conoce, pídelo y no propongas todavía.',
             '',
-            'Triage y priorización: antes de pedir datos de catálogos (tipo de demanda, ruta, disponibilidad de datos, criticidad, tamaño, etc.) o el responsable, consulta request.triage.get: trae las opciones válidas de cada catálogo y las personas posibles. Propón con esas opciones, eligiendo la más razonable según lo que sabes de la solicitud, y pregunta solo lo que requiera criterio de negocio que no puedas deducir (por ejemplo, el esfuerzo en horas si no hay un cronograma).',
+            'Triage y priorización: antes de pedir datos de catálogos (tipo de demanda, disponibilidad de datos, criticidad, tamaño, etc.) o el responsable, consulta request.triage.get: trae las opciones válidas de cada catálogo y las personas posibles. Propón con esas opciones, eligiendo la más razonable según lo que sabes de la solicitud, y pregunta solo lo que requiera criterio de negocio que no puedas deducir (por ejemplo, el esfuerzo en horas si no hay un cronograma).',
           ]
         : []),
     ].join('\n');

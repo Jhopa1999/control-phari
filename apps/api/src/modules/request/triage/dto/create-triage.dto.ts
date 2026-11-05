@@ -38,7 +38,12 @@ export class CreateTriageDto {
   @IsUUID()
   mainProcessId?: string;
 
-  @ApiPropertyOptional({ type: String, description: 'Ruta (maestra TRIAGE_ROUTE).' })
+  @ApiPropertyOptional({
+    type: String,
+    deprecated: true,
+    description:
+      'DEPRECADO: el proceso principal (mainProcessId) reemplaza a la ruta; la coordinacion entre procesos se expresa con participantProcessIds. Se conserva solo por compatibilidad con clientes antiguos: si llega, se valida contra la maestra TRIAGE_ROUTE y se guarda; si no llega, queda null. No es obligatorio.',
+  })
   @IsOptional()
   @Transform(trim)
   @IsString()
