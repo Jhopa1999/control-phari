@@ -24,7 +24,7 @@ lista. El detalle se simplifica (un solo control de avance, evidencia clara, avi
 
 | # | Punto abierto | Decisión | Por qué |
 | --- | --- | --- | --- |
-| 1 | **«Esta semana»** | **Semana calendario lunes–domingo en el calendario LOCAL del usuario**, contada **desde mañana hasta el domingo** (hoy tiene su propio grupo). Lo que vence después del domingo va a «Más adelante». El encabezado del grupo muestra el límite («hasta dom 09 nov 2026», con `formatDateOnlyWithWeekday`) para que no haya ambigüedad. | Es la misma semana (lunes inicial) que usan Reporte semanal y `localWeekMondayInputValue`; el usuario piensa en «esta semana» como la del calendario de pared. «Próximos 7 días» se descartó porque el rótulo cambiaría de significado cada día y chocaría con «Más adelante». Costo asumido: un sábado o domingo el grupo queda corto o vacío y lo del lunes aparece en «Más adelante»; el chip «Vence en N días» (≤ 3 días) lo sigue señalando. |
+| 1 | **«Esta semana»** | **Semana calendario lunes–domingo en el calendario LOCAL del usuario**, contada **desde mañana hasta el domingo** (hoy tiene su propio grupo). Lo que vence después del domingo va a «Más adelante». El encabezado del grupo muestra el límite («hasta dom 8 nov 2026», con `formatDateOnlyWithWeekday`) para que no haya ambigüedad. | Es la misma semana (lunes inicial) que usan Reporte semanal y `localWeekMondayInputValue`; el usuario piensa en «esta semana» como la del calendario de pared. «Próximos 7 días» se descartó porque el rótulo cambiaría de significado cada día y chocaría con «Más adelante». Costo asumido: un sábado o domingo el grupo queda corto o vacío y lo del lunes aparece en «Más adelante»; el chip «Vence en N días» (≤ 3 días) lo sigue señalando. |
 | 2 | **Hitos (`isMilestone`)** | No forman un grupo propio. Se mezclan por fecha con una insignia **«Hito»** (`Badge outline` + icono `Flag`). Desempate: en la misma fecha y estado, **el hito va antes** que las tareas ordinarias. | Un hito es un entregable fechado; agruparlo aparte lo separaría de su fecha real. Antes en el desempate porque marca el cierre del día. |
 | 3 | **Contadores: filtro o indicador** | **Filtros tipo interruptor** (`aria-pressed`), de **selección única**: pulsar uno lo activa, pulsar otro lo reemplaza, pulsar el activo lo apaga. Se combinan con búsqueda y filtro de estado (Y). Los números **no cambian con la búsqueda ni con el filtro de estado** (son el estado de tu trabajo, no del filtro). Un contador en 0 queda inactivo (`disabled`) salvo que sea el filtro activo. | Un indicador que no se puede pulsar obliga a recorrer la lista; con solo 4 contadores y solapes posibles (una tarea vencida puede estar «En curso»), la selección única evita la ambigüedad O/Y. |
 | 4 | **Proyectos cerrados** | **Sin tratamiento especial en la Entrega 1.** `GET /my-work` no trae el estado operativo de la solicitud, y el front no debe inventarlo. Si el proyecto está cerrado, el backend responde 409 (`assertProjectOpen`) y la UI muestra **el mensaje del servidor** (toast) y revierte. La tarea sigue visible en su grupo. | Cumple «el backend manda». Hallazgo para la Entrega 2: enriquecer `/my-work` con `requestOperationalState` para mostrar «Proyecto cerrado» y volver la fila de solo lectura. |
@@ -65,10 +65,10 @@ PageLayout
 ├─ Contadores  4 tarjetas-interruptor  (Vencidas · Para hoy · En curso · Bloqueadas)
 ├─ Toolbar     [Buscar por título] [Estado ▾]   «Limpiar filtros» · «12 de 16 tareas»
 ├─ Estado vivo (role=status, sr-only)
-├─ Grupos (cada uno una <section aria-labelledby>, tarjeta bg-card shadow-card rounded-xl)
+├─ Grupos (cada uno una <section aria-labelledby>; tarjeta bg-card shadow-card rounded-xl solo en ≥ lg, ver 5.3)
 │   ├─ Vencidas        (n)                    ← icono AlarmClock + título text-danger
 │   ├─ Hoy             (n)
-│   ├─ Esta semana     (n)  · hasta dom 09 nov 2026
+│   ├─ Esta semana     (n)  · hasta dom 8 nov 2026
 │   ├─ Más adelante    (n)
 │   ├─ Sin fecha       (n)
 │   └─ Terminadas      (n)  [▸ plegada por defecto]
@@ -84,8 +84,10 @@ Terminadas el tope es 10 (más recientes primero).
 el botón desaparece; el despliegue **no se recuerda** (se pierde al recargar o al cambiar un filtro; solo el pliegue de
 Terminadas se persiste). (2) El **foco pasa al título de la primera fila revelada** y la región viva anuncia «Se muestran
 {N} tareas más en {grupo}». (3) Si una acción en línea **reubica** una fila hacia un grupo con corte y esta cae tras el
-límite, ese grupo se **expande automáticamente** para que la fila movida siga visible y reciba el foco (12.6); nunca se
-oculta tras el corte la fila sobre la que el usuario acaba de actuar.
+límite, ese grupo se **expande automáticamente** para que la fila movida siga visible (el foco sigue la regla única de
+12.6); nunca se oculta tras el corte la fila sobre la que el usuario acaba de actuar. Excepción: si el destino es
+**Terminadas plegada** (o el filtro activo oculta la fila) no se expande nada: la fila sale de la vista y el foco va
+según 12.6.
 
 `PageHeader`: título «Mi trabajo»; descripción de una línea: «Tus tareas ordenadas por urgencia: lo vencido y lo
 de hoy primero.» Acción: `Actualizar` (`outline`, `RefreshCw`), como hoy.
@@ -182,6 +184,13 @@ Firma: `groupMyWork(items, todayLocal: string): MyWorkGroups`, módulo **sin imp
 - «Hoy» entra por parámetro; la vista lo recalcula con un hook `useTodayLocal()` que **vuelve a evaluar al llegar la
   medianoche local** (un `setTimeout` al siguiente 00:00) y al volver a la pestaña (`visibilitychange`), para que una
   pestaña abierta de un día para otro no deje las «de hoy» como vigentes.
+- **Patrón de implementación de `useTodayLocal()` (SSR y lint).** Se fija **`useSyncExternalStore`** (el mismo patrón que
+  `createLocalPrefStore`, ya aceptado por la regla `react-hooks/set-state-in-effect`): `subscribe` registra el temporizador
+  de medianoche, `visibilitychange` y `focus` y devuelve su limpieza; `getSnapshot` devuelve `localDateInputValue()` (una
+  **cadena**, por lo que dos lecturas del mismo día son iguales y no hay bucle de renders); `getServerSnapshot` devuelve
+  una cadena **estable** (`''`). Mientras «hoy» es `''` (servidor e hidratación) la vista **no agrupa**: pinta el esqueleto
+  de 12.1; tras la hidratación el snapshot del cliente pasa a la fecha real. Así no hay desajuste de hidratación ni
+  `setState` dentro de un efecto. `groupMyWork` solo se llama con «hoy» ya válido.
 - **Detalle de `useTodayLocal()` (hallazgo N6).** (a) La siguiente medianoche se calcula con
   `new Date(y, m, d + 1)` (hora local, año/mes/día de «ahora»), **no** sumando 24 h: así respeta los cambios de horario
   (días de 23 o 25 h) y los fines de mes. El `setTimeout` se calcula con `siguienteMedianoche − ahora` y, al dispararse,
@@ -192,7 +201,12 @@ Firma: `groupMyWork(items, todayLocal: string): MyWorkGroups`, módulo **sin imp
   cubre con una prueba. Una `endDate` inválida de una tarea, en cambio, **no** lanza: esa tarea cae en «Sin fecha» (regla 2).
   (c) El límite de «Esta semana» se imprime con `formatDateOnlyWithWeekday(domingo)` tal como lo devuelve el módulo
   `lib/format.ts` (día de la semana abreviado en minúscula y sin punto + fecha en el formato del portal), precedido de
-  «hasta»: p. ej. «hasta dom 09 nov 2026» (el orden y relleno exactos son los de `formatDateOnly`, no se reimplementan).
+  «hasta»: p. ej. «hasta dom 8 nov 2026» (el orden y relleno exactos son los de `formatDateOnly`, que **no rellena con
+  cero**: «8 nov», no «08 nov»; no se reimplementan). **Ejemplo numérico fijo:** `hoy = 2026-11-04` (miércoles,
+  `getUTCDay() = 3`) → `díaISO = 3` → límite `2026-11-04 + (7 − 3)` = **`2026-11-08`** (domingo, `getUTCDay() = 0`) →
+  encabezado «hasta dom 8 nov 2026». Con `hoy = 2026-11-08` el límite es el propio día y «Esta semana» queda vacía; con
+  `hoy = 2026-11-09` (lunes) el límite es `2026-11-15`. La prueba de §18 **deriva** el texto esperado llamando a
+  `formatDateOnlyWithWeekday('2026-11-08')` y no lo compara con un literal.
 - Las tareas con `endDate` pero sin `startDate`, o con `isMilestone`, se tratan igual (solo cuenta el vencimiento).
 
 ### 5.2 Orden dentro de cada grupo
@@ -222,6 +236,13 @@ con `border-b`.
 | Terminadas | `CircleCheck` | `text-muted-foreground` (cabecera de botón, ver 5.4) |
 
 El color no es el único portador: cada grupo lleva icono y nombre. Los iconos van `aria-hidden="true"`.
+
+**Superficie según el ancho.** En **`≥ lg`** (tabla) la `section` es la tarjeta (`bg-card shadow-card rounded-xl`) y la
+cabecera va **dentro** de ella sobre `bg-card` (pares de 16.1 sobre `card`), sin `sticky`. En **`< lg`** (móvil y tablet) la
+`section` **no es tarjeta** (sin fondo ni sombra): solo lo son los `li` de tarea (`MyWorkCard`, sección 7), y la cabecera
+`sticky` pinta `bg-background` para tapar las tarjetas que pasan por debajo. Los pares sobre `background` están medidos
+en 16.1: título normal `foreground`/`background` 12.86 · 16.66, «Terminadas» `muted-foreground`/`background` 6.22 · 8.47,
+título «Vencidas» `text-danger`/`background` **5.74 · 8.01**, y el chip de conteo (`muted-foreground`/`muted`) 5.72 · 6.95.
 
 ### 5.4 Terminadas (plegada)
 
@@ -266,8 +287,8 @@ bastan, y evitan repetirla seis veces.
 | **Avance** | `w-44` | `TaskProgressControl` (barra + % + lápiz). Tono: `progressTone(status, vencida)`. |
 | **Estado y siguiente paso** | `w-72` | `TaskStatusControl` (badge + chevron) seguido del botón **Siguiente paso**, en una línea (`flex items-center gap-2`). |
 
-- **Banda de vencida:** `shadow-[inset_3px_0_0_0_var(--color-danger)]` en la primera celda de las filas vencidas,
-  **además** del chip (nunca solo color; 6.59 claro · 7.20 oscuro sobre `card`).
+- **Banda de vencida (solo tabla):** `shadow-[inset_3px_0_0_0_var(--color-danger)]` en la primera **celda** de las filas
+  vencidas (la celda no lleva `shadow-card`; en la tarjeta móvil se usa otra técnica, sección 7), **además** del chip (nunca solo color; 6.59 claro · 7.20 oscuro sobre `card`).
 - Alto de fila: 64–72 px (dos líneas). Padding de celda `py-3`.
 - **Por debajo de 1024 px no hay tabla:** se usan las tarjetas (sección 7); no existe variante intermedia de columnas.
 - Fila TERMINADA: ver 5.4. Fila BLOQUEADA: el badge rojo del estado es el único indicio (no hay motivo de bloqueo en la
@@ -282,8 +303,8 @@ bastan, y evitan repetirla seis veces.
 | Foco | Cada control tiene su propio contorno `focus-visible:outline-2 outline-offset-2 outline-ring`. La fila no recibe foco. |
 | **Ocupada** (acción en curso) | `aria-busy="true"` en la fila; los tres controles de **esa** fila `disabled` con spinner (`LoaderCircle`) en el pulsado; el resto de filas siguen activas. **Sin `opacity`** para no bajar el contraste. |
 | Error | Toast con el mensaje del servidor y la fila vuelve a su valor (sección 8.4). |
-| **Por hacer / Terminada** (avance no editable) | `changeProgress` responde 409 en `POR_HACER` y en `TERMINADA`. El componente compartido ya lo refleja: `progressLockedReason` (`task-progress-control.tsx`) devuelve «Pasa la tarea a «En curso» para registrar su avance.» en `POR_HACER` y «La tarea está terminada. Reábrela para cambiar su avance.» en `TERMINADA`, y `TaskProgressControl` deshabilita el botón, no pinta el lápiz y expone el motivo por `aria-describedby`. Mi trabajo **no pasa nada extra**: usa ese comportamiento tal cual (sin tocar el componente ni Planificación) y lo comprueba en la prueba e2e. La barra y el % se siguen viendo (en `POR_HACER`, `0 %`). Al pulsar «Empezar» la fila pasa a `EN_CURSO` y el avance se vuelve editable sin recargar. El mismo criterio aplica al resumen del detalle (sección 10), que ya usa el mismo componente. |
-| Sin permiso | **Chip de estado y avance deshabilitados** con motivo accesible (`aria-describedby`): «Solo puedes cambiar el estado de tus propias tareas.»; el botón «Siguiente paso» **no se pinta** (ver 8.1). Para el integrante en `/my-work` esto casi no ocurre: la API solo devuelve sus propias tareas. |
+| **Por hacer / Terminada** (avance no editable) | `changeProgress` responde 409 en `POR_HACER` y en `TERMINADA`. El componente compartido ya lo refleja: `progressLockedReason` (`task-progress-control.tsx`) devuelve «Pasa la tarea a «En curso» para registrar su avance.» en `POR_HACER` y «La tarea está terminada. Reábrela para cambiar su avance.» en `TERMINADA`, y `TaskProgressControl` deshabilita el botón, no pinta el lápiz y expone el motivo por `aria-describedby`. **Alcance del motivo (hallazgo H9):** un `button disabled` no recibe foco, así que el `aria-describedby` solo lo leen los lectores en modo exploración y el usuario de teclado no llega a él. Por eso, **en la tarjeta móvil/tablet** (donde hay espacio) el motivo se pinta además como texto visible `text-meta text-muted-foreground` bajo la barra de avance (≥ 4.5:1: 7.13 · 7.62 sobre `card`), y en la **tabla** va en el `title` de la celda de avance. En la tabla, el teclado no lo alcanza: queda como **límite conocido** (§19). Mi trabajo **no pasa nada extra**: usa ese comportamiento tal cual (sin tocar el componente ni Planificación) y lo comprueba en la prueba e2e. La barra y el % se siguen viendo (en `POR_HACER`, `0 %`). Al pulsar «Empezar» la fila pasa a `EN_CURSO` y el avance se vuelve editable sin recargar. El mismo criterio aplica al resumen del detalle (sección 10), que ya usa el mismo componente. |
+| Sin permiso | **En `/mi-trabajo` este estado no se calcula.** `MyWorkItem` no trae `responsibleUserId` (ni rol por tarea) y `/my-work` solo devuelve tareas del propio actor, así que **todo elemento es editable** y no existe un dato de entrada para decidir `disabled` por permiso. La única fuente de verdad es el servidor: si responde **403** (o 409 por proyecto cerrado), se muestra su mensaje con `toast.error` y se revierte el cambio (8.4). No se inventa una regla de permisos en el cliente. (El motivo «Solo puedes cambiar el estado de tus propias tareas.» y el deshabilitado por permiso solo aplican donde la lista trae el responsable, p. ej. Planificación, que ya lo hace.) |
 | Estado fuera del enum | `MyWorkItemDto.status` es `string` en el contrato. Si llega un valor que no es uno de los 5 estados: el chip se pinta con `StatusBadge` en su variante neutra y el texto crudo, `nextTaskStatuses` devuelve `[]` (menú deshabilitado), `nextStepFor` devuelve `null` (sin botón) y el avance queda deshabilitado; la tarea se agrupa por fecha como cualquier otra. Nada se inventa ni se rompe. |
 
 ### 6.3 Qué es interactivo y cómo
@@ -296,8 +317,8 @@ bastan, y evitan repetirla seis veces.
 | Siguiente paso | Aplica la transición de avance natural de un clic (8.1). | Enter/Espacio |
 
 Orden de tabulación en la fila: título → avance → estado → siguiente paso. Cada fila aporta **hasta 4 paradas**: **4**
-en `EN_CURSO`, `EN_REVISION` y `BLOQUEADA`; **3** en `POR_HACER` (el avance deshabilitado no es enfocable) y **3** en
-`TERMINADA` (avance deshabilitado y sin botón de siguiente paso). Con las 16 tareas de prueba son como máximo 64 paradas. Para no castigar al usuario de teclado, el botón de «Terminadas» y cada título tienen
+en `EN_CURSO`, `EN_REVISION` y `BLOQUEADA`; **3** en `POR_HACER` (título, estado y «Empezar»; el avance deshabilitado no es enfocable) y **2** en
+`TERMINADA` (título y estado; avance deshabilitado y sin botón de siguiente paso). Con las 16 tareas de prueba son como máximo 64 paradas. Para no castigar al usuario de teclado, el botón de «Terminadas» y cada título tienen
 nombre accesible propio y los grupos son regiones con `aria-labelledby` (navegación por regiones/encabezados).
 
 ---
@@ -319,12 +340,18 @@ en línea ni agrupamiento); se crea `MyWorkCard`, con el mismo ritmo visual (`ro
 └───────────────────────────────────────────┘
 ```
 
-- Banda izquierda `danger` (3 px inset) en vencidas; mismo chip.
+- Banda izquierda `danger` de 3 px en vencidas, más el mismo chip. **No se usa `shadow-[inset…]` en la tarjeta**:
+  `shadow-card` es un `@utility` que asigna `box-shadow` y una clase `shadow-[…]` asigna la misma propiedad, de modo que una
+  pisaría a la otra. La tarjeta vencida lleva `relative overflow-hidden` y un pseudoelemento
+  `before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-danger before:content-['']` (alternativa
+  equivalente: `border-l-[3px] border-l-danger`); `shadow-card` queda intacto. El `shadow-[inset_3px_0_0_0_var(--color-danger)]`
+  se reserva **solo para la celda de la tabla** (6.1), que no lleva `shadow-card`. Contraste de la banda: 6.59 · 7.20 (16.3).
 - **Objetivos táctiles de 44 px:** título, avance, estado y siguiente paso con `min-h-11 min-w-11` aplicados con
   `max-lg:` **y** `pointer-coarse:` (una ventana estrecha de escritorio y una tablet táctil también cuentan). Esto exige que
   `TaskProgressControl` y `TaskStatusControl` acepten `className`/`size` (hoy fijan `pointer-coarse:min-h-10`/ninguno);
   separación mínima entre controles de 8 px (`gap-2`).
-- Las cabeceras de grupo son `sticky top-14 z-10 bg-background lg:static`. `top-14` (56 px) las deja bajo la barra
+- En `< lg` la `section` del grupo **no es tarjeta**; solo lo son los `li` (5.3). Las cabeceras de grupo son
+  `sticky top-14 z-10 bg-background lg:static lg:bg-card`. `top-14` (56 px) las deja bajo la barra
   móvil del shell (`sticky top-0 z-30 h-14 lg:hidden`, `app-shell.tsx`), y `z-10` es menor que su `z-30`. **No existen
   clases `z-sticky`/`z-overlay` en el código** (solo están propuestas en `planeacion-ux.md`); se usan las numéricas
   reales ya presentes. Terminadas, plegada, ocupa una línea.
@@ -351,9 +378,9 @@ Función pura nueva `lib/task-next-step.ts` (sin imports de la app; espejo de la
 Presentación: `Button variant="outline" size="sm"` con el verbo; `aria-label="{verbo}: {título}"`. «Terminar» usa
 `variant="default"` (la acción de cierre es la única «primaria» de la fila; blanco/`primary` 4.84:1 en ambos temas).
 Con la fila ocupada: `loading`. **EN_CURSO → TERMINADA = 2 acciones** (Enviar a revisión, Terminar), medibles en
-Playwright frente a las 7 de hoy. Si el actor no puede cambiar el estado, el botón **no se pinta** (no se deja
-deshabilitado: ocuparía espacio sin explicar nada que el chip no diga); el chip y el avance sí se pintan deshabilitados
-con su motivo (6.2). Tampoco se pinta si el estado llega fuera del enum (6.2: `nextStepFor` → `null`).
+Playwright frente a las 7 de hoy. En `/mi-trabajo` el permiso **no se calcula** (6.2, «Sin permiso»): el botón se pinta siempre que `nextStepFor` devuelva
+un paso, y un 403 del servidor se muestra y se revierte (8.4). Si en otra vista el componente recibiera `disabled` por
+permiso, el botón **no se pinta** (ocuparía espacio sin explicar nada que el chip no diga). Tampoco se pinta si el estado llega fuera del enum (6.2: `nextStepFor` → `null`).
 
 ### 8.2 Menú de estado (`TaskStatusControl`)
 
@@ -404,11 +431,32 @@ El texto de los toasts no usa comillas rectas (el título de la tarea va entre c
 ### 8.4 Actualización optimista y errores
 
 Se reutiliza el patrón de `handleInlineStatusChange`/`handleInlineProgressChange` de `plan-view.tsx` extraído a un
-**hook pequeño compartido** (`usePlanTaskActions`/similar) que usan Planificación y Mi trabajo, para no tener dos
-fuentes de verdad:
+**hook compartido con nombre fijo `useInlineTaskActions`** (`app/seguimiento/plan/use-inline-task-actions.ts`), que
+**adoptan Planificación y Mi trabajo** (obligatorio: es lo que cumple «sin dos fuentes de verdad» del brief; `plan-view.tsx`
+deja de tener su copia de `handleInline*`, sin cambio visual). Firma:
 
-1. Fila ocupada (`rowBusyId`, una a la vez); pinta el nuevo estado.
-2. Éxito: se reemplaza por la tarea que devuelve el backend (`progress`, `status`, `evidenceUrl`).
+```ts
+useInlineTaskActions<T extends { status: string; progress: number }>({
+  items: T[];                       // lista que el hook lee para guardar el valor previo (rollback)
+  setItems: (updater: (prev: T[]) => T[]) => void;
+  getId: (item: T) => string;       // taskId en MyWorkItem, id en Task
+  onError: (message: string) => void; // toast.error con el mensaje del servidor
+}): {
+  rowBusyId: string | null;
+  changeStatus(id: string, status: TaskStatus, extra?: { progress?: number }): Promise<Task | null>;
+  changeProgress(id: string, progress: number): Promise<Task | null>;
+}
+```
+
+Pasos:
+
+1. Fila ocupada (`rowBusyId`, una a la vez); pinta el nuevo estado (optimista, solo `status`).
+2. Éxito: **se fusionan únicamente `status` y `progress`** de la `Task` devuelta en el elemento existente
+   (`{ ...item, status, progress }`); el resto de campos **no cambia**. No se reemplaza el elemento: `PATCH /tasks/:id/status`
+   devuelve `Task`/`TaskResponseDto`, que **no trae `phaseName`, `requestId` ni `requestTitle`** (ni `evidenceUrl` existe en
+   `MyWorkItem`), y reemplazarlo borraría la sublínea «solicitud · fase», el agrupamiento y el panel. La `Task` completa se
+   devuelve al llamador (el aviso de evidencia de 8.3 lee de ahí `evidenceUrl`); en Planificación, donde el elemento **es** una
+   `Task`, la fusión equivale a reemplazar.
 3. **Error (403/409/otro):** se revierte el estado anterior y se muestra con `toast.error` **el mensaje accionable del
    servidor** tal cual (p. ej. la predecesora que bloquea, «el proyecto está cerrado»). Sin mensaje: «No se pudo
    actualizar la tarea. Revisa tu conexión e inténtalo de nuevo.»
@@ -442,8 +490,12 @@ Clic en el título abre `Sheet` (`side="right"`, `closeLabel="Cerrar detalle"`,
 - `onChanged` refleja el estado/avance en la lista **sin recargar** (misma tarea actualizada).
 - Predecesoras: `onSelectTask` cambia la tarea dentro del panel (comportamiento actual).
 - **Foco:** al abrir, el foco entra en el panel (título/cierre); al cerrar vuelve al botón-título que lo abrió. Si la
-  fila se movió o desmontó (cambió de grupo), el foco pasa al `h2` del grupo donde quedó o, en su defecto, al `h1`
-  (`tabIndex={-1}`).
+  fila se movió de grupo mientras el panel estaba abierto, el foco va al botón-título de la fila en su grupo nuevo si es
+  visible; si dejó de serlo (Terminadas plegada, filtro) o se desmontó, se aplica el punto 4 de 12.6 (fila siguiente del
+  grupo de origen → `h2` → `h1`, `tabIndex={-1}`).
+- **Cierre táctil:** el botón de cierre mide **44 px** (`min-h-11 min-w-11`) a `< 768 px` **y** con
+  `pointer-coarse:min-h-11 pointer-coarse:min-w-11` en cualquier ancho (tablet táctil 768–1023 px y escritorio con
+  pantalla táctil); en ratón fino conserva el tamaño del `Sheet`.
 - Paridad con Planificación: el contenido es el mismo componente; los cambios de la sección 10 benefician a ambos.
 
 ---
@@ -582,9 +634,19 @@ quita un filtro.» y botón **Limpiar filtros**. Los contadores se mantienen vis
 - `<p role="status" aria-live="polite" class="sr-only">` única; cada acción escribe ahí (además del toast):
   «“{título}” pasó a En revisión. Ahora está en el grupo Hoy.» / «Avance de «…» actualizado a 60 %.» /
   «El filtro Vencidas se desactivó porque ya no hay tareas vencidas.»
-- Si una fila **desaparece o cambia de grupo** (p. ej. Terminar), el foco pasa al **título de la fila siguiente** del
-  mismo grupo; si no hay, al `h2` del grupo (`tabIndex={-1}`); si el grupo desaparece, al `h1`. Nunca se pierde en
-  `body`.
+- **Regla única de foco tras una acción en línea** (la misma en 2, 9, 14 y en el e2e):
+  1. Si la fila **sigue en el DOM sin cambiar de grupo** (p. ej. «Empezar» dentro de Hoy, avance), el foco **se queda en el
+     control pulsado** (el botón «Siguiente paso» puede cambiar de verbo o desaparecer: ver el punto 3).
+  2. Si la fila **cambia de grupo** y el destino es **visible** (grupo desplegado, filtros que la admiten), el foco
+     **sigue a la fila**: pasa al **botón-título de la fila en su grupo nuevo** (el grupo de destino se expande si la fila
+     caería tras el corte de «Ver las N restantes», sección 2).
+  3. Si el control pulsado **ya no existe** (p. ej. «Siguiente paso» en `TERMINADA`) pero la fila sigue visible en el mismo
+     grupo, el foco va al **botón-título** de esa fila.
+  4. Si la fila **deja de ser visible** (destino **Terminadas plegada**, o un filtro/contador activo ya no la admite), el foco
+     va al **título de la fila siguiente del grupo de origen**; si no hay, al `h2` del grupo de origen (`tabIndex={-1}`);
+     si el grupo desaparece, al `h1`. Nunca se pierde en `body`.
+  Caso típico: «Terminar» envía la fila a Terminadas, plegada por defecto → regla 4. Con Terminadas desplegada → regla 2.
+  La región viva anuncia siempre dónde quedó la tarea («Ahora está en Terminadas»). El e2e cubre las reglas 1, 2 y 4.
 
 ---
 
@@ -606,7 +668,7 @@ quita un filtro.» y botón **Limpiar filtros**. Los contadores se mantienen vis
 | --- | --- |
 | Contadores | Tab llega a cada uno; Enter/Espacio alterna `aria-pressed`. Al activar, el foco **se queda** en el contador. |
 | Grupos | `section[aria-labelledby]`; los lectores navegan por encabezados `h2`. Terminadas: Enter/Espacio pliega; el foco no se mueve. |
-| Fila | Tab: título → avance → estado → siguiente paso (hasta 4 paradas: 3 en `POR_HACER` y en `TERMINADA`, ver 6.3). El resto de la fila no es enfocable. |
+| Fila | Tab: título → avance → estado → siguiente paso (hasta 4 paradas: 3 en `POR_HACER` y 2 en `TERMINADA`, ver 6.3). El resto de la fila no es enfocable. |
 | Menú de estado | Enter/Espacio/↓ abre; ↑↓ recorre; Enter elige; Esc cierra y devuelve el foco al disparador. |
 | Avance | Abre el diálogo de `TaskProgressControl`: foco en el deslizador; ←/→ ±5; Enter en el número guarda; Esc cancela y devuelve el foco. |
 | Panel | Foco atrapado (Radix); Esc cierra; al cerrar vuelve al título que lo abrió (o al `h2`/`h1`, sección 9). |
@@ -624,7 +686,8 @@ crudo.
 
 | Uso | Token |
 | --- | --- |
-| Tarjetas de grupo, contadores, tarjetas móviles | `bg-card` + `shadow-card` + `rounded-xl` |
+| Tarjetas de grupo (solo `≥ lg`), contadores, tarjetas móviles (`li`) | `bg-card` + `shadow-card` + `rounded-xl` |
+| Cabecera de grupo `sticky` (`< lg`) | `bg-background` |
 | Panel lateral | `bg-background` |
 | Texto principal / de apoyo | `text-foreground` / `text-muted-foreground`, `text-meta` |
 | Enlaces | `text-link` |
@@ -670,6 +733,7 @@ una verificación independiente de la revisión.
 | `text-link` / `card` | 6.14 ✔ | 7.35 ✔ | 4.5 |
 | `text-link` / `background` | 5.36 ✔ | 8.17 ✔ | 4.5 |
 | `text-danger` / `card` (valor «Vencidas», título del grupo Vencidas) | 6.59 ✔ | 7.20 ✔ | 4.5 |
+| `text-danger` / `background` (título «Vencidas» en la cabecera sticky móvil, `< lg`) | 5.74 ✔ | 8.01 ✔ | 4.5 |
 | `text-danger` / fila en hover | 5.91 ✔ | 6.89 ✔ | 4.5 |
 | `text-warning` / `card` (valor «Para hoy», avisos) | 6.76 ✔ | 9.57 ✔ | 4.5 |
 | `text-success` / `card` | 6.74 ✔ | 9.19 ✔ | 4.5 |
@@ -757,7 +821,8 @@ ya existente); la lista de «no verificado» de la sección 19 lo repite.
 | `app/seguimiento/tareas/task-detail.tsx` | Sección 10 (un control de avance, tarjeta «Actualizar estado», evidencia separada, avisos, `phaseName`/`requestId`/`requestTitle`, `initialTab`). |
 | `app/seguimiento/tareas/task-evidence-files.tsx` | `onCountChange(n)`. |
 | `app/seguimiento/tareas/tareas-view.tsx` | Resolver `phaseName`/solicitud vía `listMyWork()`; no romper `?taskId=`. |
-| `app/seguimiento/plan/plan-view.tsx` | Solo si se extrae el hook de acciones en línea compartido; sin cambio visual. |
+| `app/seguimiento/plan/use-inline-task-actions.ts` (nuevo) | Hook `useInlineTaskActions` (firma en 8.4): actualización optimista, rollback y mensaje del servidor; lo usan Mi trabajo **y** Planificación. |
+| `app/seguimiento/plan/plan-view.tsx` | **Obligatorio:** reemplaza sus `handleInlineStatusChange`/`handleInlineProgressChange` por el hook (una sola fuente de verdad); sin cambio visual ni de comportamiento. |
 
 Prohibido: Prisma, API, contrato, MCP, esquema, permisos, nuevas dependencias (todo se hace con Radix/`sonner`/`lucide`
 ya instalados).
@@ -768,11 +833,12 @@ ya instalados).
 
 - **Unitarias (`e2e/web-lib.spec.ts`, módulos puros):** `groupMyWork` con hoy, ayer, mañana, viernes/sábado/domingo
   (límite de «Esta semana»), lunes, sin fecha, fecha inválida, terminadas con fecha vencida, medianoche (23:59 y 00:00),
-  cambio de mes, de año y 29 de febrero; `todayLocal` inválido (`RangeError`); `endDate` inválida (cae en «Sin fecha»); estado fuera del enum (`nextStepFor` → `null`); orden interno (iniciado primero, hito primero, desempate estable);
+  cambio de mes, de año y 29 de febrero; el límite de «Esta semana» con `hoy = 2026-11-04` → `2026-11-08` (domingo) y su texto **derivado** con
+  `formatDateOnlyWithWeekday` (sin literal «09 nov»); `todayLocal` inválido (`RangeError`); `endDate` inválida (cae en «Sin fecha»); estado fuera del enum (`nextStepFor` → `null`); orden interno (iniciado primero, hito primero, desempate estable);
   `nextStepFor`/`transitionActionLabel` para los 5 estados (coherentes con `TASK_TRANSITIONS`: ningún siguiente paso fuera
   de la máquina).
 - **Playwright (en CI):** contadores y agrupación con el seed; filtro por contador (activo/aria-pressed, combinación con
-  búsqueda); Terminadas plegada y despliegue; una acción en línea (Empezar/Enviar a revisión) con y sin error del servidor;
+  búsqueda); Terminadas plegada y despliegue; una acción en línea (Empezar/Enviar a revisión) con y sin error del servidor; foco tras la acción según la regla única de 12.6 (se queda en el control; sigue a la fila a su grupo nuevo; va a la fila siguiente/`h2` si la fila entra en Terminadas plegada);
   EN_CURSO→TERMINADA en 2 acciones; apertura del panel y `?taskId=`; `/seguimiento/tareas?taskId=` intacto; enlace a la
   solicitud solo con módulo `requests`. Ajustar `e2e/date-display.spec.ts` y los specs con `getByRole('row')` en `/mi-trabajo`.
 - **Manual:** teclado completo, lector de pantalla (NVDA/VoiceOver), tablet 768–1023, zoom 200 %, `forced-colors`.
@@ -785,6 +851,11 @@ ya instalados).
 avance, pasar a confirmación (Entrega 3). (2) Reordenar al vuelo puede desorientar: se mitiga con región viva y foco
 (12.6). (3) hasta 4 paradas de teclado por fila son muchas con listas grandes: el atajo es la búsqueda y los contadores.
 (4) Regresión de e2e que dependen de la tabla actual.
+
+**Límite conocido (H9).** En la tabla, el motivo del avance deshabilitado (`POR_HACER`, `TERMINADA`) se expone por
+`aria-describedby` y `title`, pero el botón deshabilitado no es enfocable: un usuario solo de teclado no lo alcanza (la
+tarjeta móvil/tablet sí lo muestra como texto). Se acepta porque el estado de la fila ya lo explica (chip «Por hacer»/«Terminada»
+y el siguiente paso «Empezar»/«Reabrir»); revisar con lector de pantalla.
 
 **No verificado.** Lectores de pantalla, tablet real (el ancho de 280 px de Tarea a 1024 px sale de cuentas con las clases
 reales del shell, no de una medición en el navegador), `forced-colors`, que `sonner` pause el temporizador con hover/foco
@@ -801,6 +872,25 @@ estado). **Entrega 3:** motivo de bloqueo (migración), regla de cierre (evidenc
 
 ## 20. Respuestas a la revisión de la especificación
 
+### 20.1 Segunda pasada (CHANGES_REQUESTED: 4 MEDIO, 6 NIT)
+
+Todos atendidos; ninguno exige API. Los contrastes nuevos se midieron con el mismo método (script temporal, borrado; control: `foreground`/`card` 14.75 · 14.98 y `danger`/`card` 6.59 · 7.20 coinciden).
+
+| Hallazgo | Resolución | Sección |
+| --- | --- | --- |
+| 1 ejemplo «dom 09 nov» falso | «dom 8 nov 2026» (8 nov 2026 es domingo; sin cero); ejemplo numérico `hoy 2026-11-04 → 2026-11-08`; la prueba deriva el texto con `formatDateOnlyWithWeekday`. | 0.1, 2, 5.1, 18 |
+| 2 foco tras mover una fila | Regla única (se queda en el control; sigue a la fila si el destino es visible; fila siguiente → `h2` → `h1` si deja de ser visible, p. ej. Terminadas plegada); §2 y §9 alineados. | 2, 9, 12.6 |
+| 3 reemplazo destruye el contexto | Se **fusionan solo `status` y `progress`** en el `MyWorkItem`; hook `useInlineTaskActions` con firma fija, adoptado por Planificación (obligatorio). | 8.4, 17 |
+| 4 banda inset vs `shadow-card` | Tarjeta móvil: `before:` absoluto (o `border-l-[3px]`); el inset queda solo para la celda de la tabla. | 6.1, 7 |
+| 5 paradas de TERMINADA | 2 (título y estado). | 6.3, 14 |
+| 6 cabecera sticky móvil | En `< lg` la `section` no es tarjeta; se añade la fila `text-danger`/`background` medida **5.74 · 8.01**. | 5.3, 7, 15, 16.1 |
+| 7 `useTodayLocal` | `useSyncExternalStore` con `getServerSnapshot` estable (`''`); sin agrupar hasta hidratar. | 5.1 |
+| 8 «Sin permiso» sin dato | No se calcula en `/mi-trabajo`; solo se refleja el 403 del servidor. | 6.2, 8.1 |
+| 9 motivo inalcanzable por teclado | Texto visible en tarjeta, `title` en tabla; límite conocido declarado. | 6.2, 19 |
+| 10 cierre táctil del panel | `pointer-coarse:min-h-11 pointer-coarse:min-w-11` en cualquier ancho. | 9 |
+
+### 20.2 Primera pasada
+
 Revisión: `spec-review.json` (CHANGES_REQUESTED: 7 MEDIO, 9 NIT). Todos se atendieron en este documento; ninguno exige API.
 
 | Hallazgo | Resolución | Sección |
@@ -814,7 +904,7 @@ Revisión: `spec-review.json` (CHANGES_REQUESTED: 7 MEDIO, 9 NIT). Todos se aten
 | M7 auto-apagado ambiguo | Regla única: solo cuando el propio conteo (sobre todas las tareas) llega a 0; búsqueda/estado vacíos → «Sin resultados». | 3, 12.5 |
 | N1 estado fuera del enum | Documentado: neutro, sin menú ni botón, avance deshabilitado. | 6.2, 8.1 |
 | N2 «Sin permiso» | Chip y avance deshabilitados con motivo; botón omitido. | 6.2, 8.1 |
-| N3 paradas de teclado | «Hasta 4»: 3 en `POR_HACER` y `TERMINADA`. | 6.3, 14, 19 |
+| N3 paradas de teclado | «Hasta 4»: 3 en `POR_HACER`, 2 en `TERMINADA` (corregido en la 2.ª pasada, H5). | 6.3, 14, 19 |
 | N4 casilla 100 % solo en el detalle | Justificado como diferencia deliberada. | 10.1 |
 | N5 toast de 8 s | `sonner` pausa en hover/foco (sin verificar); salida permanente en el menú. | 8.3, 14 |
 | N6 `useTodayLocal` | Medianoche con `new Date(y, m, d + 1)`; `todayLocal` inválido lanza `RangeError`; formato del límite con `formatDateOnlyWithWeekday`. | 5.1 |
