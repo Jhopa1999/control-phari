@@ -297,7 +297,7 @@ function StatusCell({
           variant={step.to === 'TERMINADA' ? 'default' : 'outline'}
           data-control="next"
           loading={busy}
-          className={cn(touch && cn(TOUCH, 'flex-1 whitespace-normal'))}
+          className={cn(touch ? cn(TOUCH, 'flex-1 whitespace-normal') : 'min-w-36')}
           aria-label={`${step.label}: ${item.title}`}
           onClick={() => actions.onStatus(item, step.to)}
         >
@@ -372,11 +372,9 @@ function MyWorkCard(props: RowCommon): React.ReactElement {
         <DueCell item={item} today={today} groupKey={groupKey} />
       )}
       <ProgressCell item={item} today={today} actions={actions} wide />
-      {item.status === 'POR_HACER' || item.status === 'TERMINADA' ? (
+      {item.status === 'TERMINADA' ? (
         <p className="text-meta text-muted-foreground">
-          {item.status === 'POR_HACER'
-            ? 'Pasa la tarea a «En curso» para registrar su avance.'
-            : 'La tarea está terminada. Reábrela para cambiar su avance.'}
+          La tarea está terminada. Reábrela para cambiar su avance.
         </p>
       ) : null}
       <div className="flex items-center gap-2">
