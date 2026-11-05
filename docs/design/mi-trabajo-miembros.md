@@ -80,7 +80,7 @@ paginación en la Entrega 1 (el agrupamiento es el orden). Los grupos con más d
 un botón **«Ver las N restantes»** (`Button variant="ghost" size="sm"`, patrón del kanban de Planificación); en
 Terminadas el tope es 10 (más recientes primero).
 
-**Comportamiento de «Ver las N restantes» (hallazgo N7).** (1) Pulsarlo revela **todas** las filas ocultas de ese grupo y
+**Comportamiento de «Ver las N restantes».** (1) Pulsarlo revela **todas** las filas ocultas de ese grupo y
 el botón desaparece; el despliegue **no se recuerda** (se pierde al recargar o al cambiar un filtro; solo el pliegue de
 Terminadas se persiste). (2) El **foco pasa al título de la primera fila revelada** y la región viva anuncia «Se muestran
 {N} tareas más en {grupo}». (3) Si una acción en línea **reubica** una fila hacia un grupo con corte y esta cae tras el
@@ -104,7 +104,7 @@ Cuatro tarjetas-botón en `section[aria-label="Resumen de tu trabajo"]`:
 │ ▔▔▔▔▔▔▔▔▔▔▔▔▔▔ (filete 2px superior por tono)
 │ [icono] Vencidas      │   text-meta text-muted-foreground
 │ 5                     │   text-2xl font-semibold tabular-nums (color del valor según la tabla)
-│ tareas sin terminar   │   text-xs text-muted-foreground  (pista corta)
+│ tareas sin terminar   │   text-meta text-muted-foreground  (pista corta)
 └──────────────────────┘
 ```
 
@@ -119,8 +119,8 @@ El valor de «En curso» **no** se pinta con `text-primary`: `primary`/`card` mi
 de los 4.5:1 de texto (el valor es de 24 px semibold; se descarta acogerse a la excepción de «texto grande» y se mide como texto
 normal). El azul solo se usa en el filete y el anillo (no texto, umbral 3:1: 4.84 · 3.37 ✔; tabla 16.3).
 
-Los contadores **se solapan** (una vencida puede estar en curso); la suma no es el total. Se dice en el `title`
-accesible de la sección: «Los conteos pueden solaparse.» (`sr-only` junto al encabezado de la sección). En 0, el valor
+Los contadores **se solapan** (una vencida puede estar en curso); la suma no es el total. Se dice con un único
+mecanismo: un texto `sr-only` dentro de la sección, «Los conteos pueden solaparse.» (sin `title`). En 0, el valor
 se pinta `text-muted-foreground` (no rojo), el filete queda `bg-border` y el botón `disabled`.
 
 Estilo: `rounded-xl bg-card p-4 text-left shadow-card border-t-2` (mismo filete superior por tono que `StatTile`, vía
@@ -138,7 +138,7 @@ Estados del contador:
 | Deshabilitado (0) | `disabled`; el valor pasa a `text-muted-foreground` y la etiqueta y la pista conservan su color, **sin `opacity`**. Aunque un control inactivo está exento de contraste (WCAG 1.4.3), se mide igual: `muted-foreground`/`card` 7.13 · 7.62 ✔ (tabla 16.1). |
 
 Al activar un contador, el filtro actúa sobre la lista; la sección «Terminadas» desaparece (ninguna terminada coincide)
-y la fila de resultado dice «5 de 16 tareas». «Limpiar filtros» también apaga el contador. **Auto-apagado (regla única, hallazgo M7).** El contador activo se apaga solo **únicamente cuando su propio conteo**
+y la fila de resultado dice «5 de 16 tareas». «Limpiar filtros» también apaga el contador. **Auto-apagado (regla única).** El contador activo se apaga solo **únicamente cuando su propio conteo**
 (calculado sobre **todas** las tareas, sin búsqueda ni filtro de estado) **llega a 0** (p. ej. el usuario resolvió la última
 vencida): entonces el filtro se quita, el foco pasa a la búsqueda (patrón NIT 4 existente) y se anuncia en la región viva.
 Si la lista queda vacía por **la búsqueda o el filtro de estado** mientras el contador sigue teniendo tareas, **no** se
@@ -191,7 +191,7 @@ Firma: `groupMyWork(items, todayLocal: string): MyWorkGroups`, módulo **sin imp
   una cadena **estable** (`''`). Mientras «hoy» es `''` (servidor e hidratación) la vista **no agrupa**: pinta el esqueleto
   de 12.1; tras la hidratación el snapshot del cliente pasa a la fecha real. Así no hay desajuste de hidratación ni
   `setState` dentro de un efecto. `groupMyWork` solo se llama con «hoy» ya válido.
-- **Detalle de `useTodayLocal()` (hallazgo N6).** (a) La siguiente medianoche se calcula con
+- **Detalle de `useTodayLocal()`.** (a) La siguiente medianoche se calcula con
   `new Date(y, m, d + 1)` (hora local, año/mes/día de «ahora»), **no** sumando 24 h: así respeta los cambios de horario
   (días de 23 o 25 h) y los fines de mes. El `setTimeout` se calcula con `siguienteMedianoche − ahora` y, al dispararse,
   recalcula «hoy» y programa el siguiente; si el temporizador se retrasa (equipo suspendido), `visibilitychange` y
@@ -257,7 +257,7 @@ título «Vencidas» `text-danger`/`background` **5.74 · 8.01**, y el chip de c
 
 ## 6. Fila de tarea (escritorio ≥ 1024 px)
 
-> **Decisión de ancho (hallazgo M3).** La tabla solo aparece desde `lg` (1024 px). Por debajo (incluida la tablet
+> **Decisión de ancho.** La tabla solo aparece desde `lg` (1024 px). Por debajo (incluida la tablet
 > 768–1023 px) se usan las tarjetas de la sección 7, que ya cumplen los 44 px táctiles. Cuentas con las medidas reales
 > del shell: el sidebar mide `w-60` (240 px) y pasa a riel `w-14` (56 px) automáticamente entre 1024 y 1279 px
 > (`@custom-variant rail` en `globals.css`); el `<main>` lleva `md:px-6` (48 px) y `xl:px-8` (64 px). Columnas fijas
@@ -303,7 +303,7 @@ bastan, y evitan repetirla seis veces.
 | Foco | Cada control tiene su propio contorno `focus-visible:outline-2 outline-offset-2 outline-ring`. La fila no recibe foco. |
 | **Ocupada** (acción en curso) | `aria-busy="true"` en la fila; los tres controles de **esa** fila `disabled` con spinner (`LoaderCircle`) en el pulsado; el resto de filas siguen activas. **Sin `opacity`** para no bajar el contraste. |
 | Error | Toast con el mensaje del servidor y la fila vuelve a su valor (sección 8.4). |
-| **Por hacer / Terminada** (avance no editable) | `changeProgress` responde 409 en `POR_HACER` y en `TERMINADA`. El componente compartido ya lo refleja: `progressLockedReason` (`task-progress-control.tsx`) devuelve «Pasa la tarea a «En curso» para registrar su avance.» en `POR_HACER` y «La tarea está terminada. Reábrela para cambiar su avance.» en `TERMINADA`, y `TaskProgressControl` deshabilita el botón, no pinta el lápiz y expone el motivo por `aria-describedby`. **Alcance del motivo (hallazgo H9):** un `button disabled` no recibe foco, así que el `aria-describedby` solo lo leen los lectores en modo exploración y el usuario de teclado no llega a él. Por eso, **en la tarjeta móvil/tablet** (donde hay espacio) el motivo se pinta además como texto visible `text-meta text-muted-foreground` bajo la barra de avance (≥ 4.5:1: 7.13 · 7.62 sobre `card`), y en la **tabla** va en el `title` de la celda de avance. En la tabla, el teclado no lo alcanza: queda como **límite conocido** (§19). Mi trabajo **no pasa nada extra**: usa ese comportamiento tal cual (sin tocar el componente ni Planificación) y lo comprueba en la prueba e2e. La barra y el % se siguen viendo (en `POR_HACER`, `0 %`). Al pulsar «Empezar» la fila pasa a `EN_CURSO` y el avance se vuelve editable sin recargar. El mismo criterio aplica al resumen del detalle (sección 10), que ya usa el mismo componente. |
+| **Por hacer / Terminada** (avance no editable) | `changeProgress` responde 409 en `POR_HACER` y en `TERMINADA`. El componente compartido ya lo refleja: `progressLockedReason` (`task-progress-control.tsx`) devuelve «Pasa la tarea a «En curso» para registrar su avance.» en `POR_HACER` y «La tarea está terminada. Reábrela para cambiar su avance.» en `TERMINADA`, y `TaskProgressControl` deshabilita el botón, no pinta el lápiz y expone el motivo por `aria-describedby`. **Alcance del motivo:** un `button disabled` no recibe foco, así que el `aria-describedby` solo lo leen los lectores en modo exploración y el usuario de teclado no llega a él. Por eso, **en la tarjeta móvil/tablet** (donde hay espacio) el motivo se pinta además como texto visible `text-meta text-muted-foreground` bajo la barra de avance (≥ 4.5:1: 7.13 · 7.62 sobre `card`), y en la **tabla** va en el `title` de la celda de avance. En la tabla, el teclado no lo alcanza: queda como **límite conocido** (§19). Mi trabajo **no pasa nada extra**: usa ese comportamiento tal cual (sin tocar el componente ni Planificación) y lo comprueba en la prueba e2e. La barra y el % se siguen viendo (en `POR_HACER`, `0 %`). Al pulsar «Empezar» la fila pasa a `EN_CURSO` y el avance se vuelve editable sin recargar. El mismo criterio aplica al resumen del detalle (sección 10), que ya usa el mismo componente. |
 | Sin permiso | **En `/mi-trabajo` este estado no se calcula.** `MyWorkItem` no trae `responsibleUserId` (ni rol por tarea) y `/my-work` solo devuelve tareas del propio actor, así que **todo elemento es editable** y no existe un dato de entrada para decidir `disabled` por permiso. La única fuente de verdad es el servidor: si responde **403** (o 409 por proyecto cerrado), se muestra su mensaje con `toast.error` y se revierte el cambio (8.4). No se inventa una regla de permisos en el cliente. (El motivo «Solo puedes cambiar el estado de tus propias tareas.» y el deshabilitado por permiso solo aplican donde la lista trae el responsable, p. ej. Planificación, que ya lo hace.) |
 | Estado fuera del enum | `MyWorkItemDto.status` es `string` en el contrato. Si llega un valor que no es uno de los 5 estados: el chip se pinta con `StatusBadge` en su variante neutra y el texto crudo, `nextTaskStatuses` devuelve `[]` (menú deshabilitado), `nextStepFor` devuelve `null` (sin botón) y el avance queda deshabilitado; la tarea se agrupa por fecha como cualquier otra. Nada se inventa ni se rompe. |
 
@@ -325,7 +325,7 @@ nombre accesible propio y los grupos son regiones con `aria-labelledby` (navegac
 
 ## 7. Tarjeta móvil y tablet (< 1024 px)
 
-Las tarjetas se usan en todo ancho menor que `lg` (1024 px): móviles y tablets (decisión M3, sección 6). El cambio
+Las tarjetas se usan en todo ancho menor que `lg` (1024 px): móviles y tablets (sección 6). El cambio
 se hace con `lg:hidden` (tarjetas) y `hidden lg:block` (tablas), de modo que solo uno de los dos árboles está en el DOM
 visible. La lista de cada grupo es `<ul class="flex flex-col gap-3">` de `<li>`. No se usa `DataCardList` (no admite controles
 en línea ni agrupamiento); se crea `MyWorkCard`, con el mismo ritmo visual (`rounded-xl bg-card p-4 shadow-card`).
@@ -411,14 +411,20 @@ Todos los avisos son informativos: **nunca impiden** la acción, que se envía a
 | **Enviar a revisión** con avance < 100 % | El toast de éxito añade «Avance al {n} %.» (informativo). No se cambia el avance. |
 | Cualquier otra | Toast corto «Estado actualizado: {estado}.» |
 
+**Textos de toast: diferencia deliberada con Planificación.** Planificación dice «Estado de la tarea actualizado.» y
+«Avance actualizado a N %.» sin nombrar la tarea, porque el líder ve la fila junto a su cursor. En Mi trabajo el toast nombra
+la tarea y el estado destino («“{título}” terminada.», «Estado actualizado: {estado}.») porque la fila puede **cambiar de
+grupo** y desaparecer de la vista (12.6): el mensaje debe decir dónde quedó. Cada llamador pone sus textos (8.4).
+
 El texto de los toasts no usa comillas rectas (el título de la tarea va entre comillas tipográficas “ ”).
 
-**«Reabrir» (antes «Deshacer»; hallazgo M4).** La acción del toast de Terminar **no restaura el estado previo**: parte de
+**«Reabrir» (no «Deshacer»).** La acción del toast de Terminar **no restaura el estado previo**: parte de
 `EN_REVISION` y `TASK_TRANSITIONS.TERMINADA` solo admite `EN_CURSO` (`lib/task-transitions.ts`, igual en
 `task.service.ts`). Por eso se llama **Reabrir** y no «Deshacer», para no prometer lo que no hace:
 
-- Envía `PATCH /tasks/{id}/status` con `status: EN_CURSO` y, en el **mismo PATCH**, `progress` con el avance que tenía antes de
-  Terminar (si se había propuesto 100 %; `progress` ya existe en `UpdateTaskStatusDto`).
+- Envía `PATCH /tasks/{id}/status` con `status: EN_CURSO`. Solo si «Terminar» **modificó** el
+  avance (de `n` < 100 a 100) añade en el **mismo PATCH** `progress: n` (el avance previo; `progress` ya existe en
+  `UpdateTaskStatusDto`). Si el avance ya era 100 % o «Terminar» no lo cambió, envía solo `status`.
 - Al éxito, toast «“{título}” vuelve a En curso.» La tarea queda en **En curso**, no en En revisión; el estado
   `EN_REVISION` anterior **no se recupera** (hay que volver a «Enviar a revisión» si procede).
 - Al entrar en `EN_CURSO` el backend ejecuta `assertPredecessorsSatisfied` y puede responder **409** (o 403 si el actor perdió
@@ -433,20 +439,40 @@ El texto de los toasts no usa comillas rectas (el título de la tarea va entre c
 Se reutiliza el patrón de `handleInlineStatusChange`/`handleInlineProgressChange` de `plan-view.tsx` extraído a un
 **hook compartido con nombre fijo `useInlineTaskActions`** (`app/seguimiento/plan/use-inline-task-actions.ts`), que
 **adoptan Planificación y Mi trabajo** (obligatorio: es lo que cumple «sin dos fuentes de verdad» del brief; `plan-view.tsx`
-deja de tener su copia de `handleInline*`, sin cambio visual). Firma:
+deja de tener su copia de `handleInlineStatusChange`/`handleInlineProgressChange`, sin cambio visual ni de comportamiento).
+El hook cubre **solo** estado y avance; el cambio de responsable (`handleInlineResponsibleChange`) **se queda en
+`plan-view.tsx`** y comparte con el hook el indicador de fila ocupada. Firma (fijada contra las líneas 427–480 de
+`plan-view.tsx`):
 
 ```ts
 useInlineTaskActions<T extends { status: string; progress: number }>({
-  items: T[];                       // lista que el hook lee para guardar el valor previo (rollback)
   setItems: (updater: (prev: T[]) => T[]) => void;
-  getId: (item: T) => string;       // taskId en MyWorkItem, id en Task
-  onError: (message: string) => void; // toast.error con el mensaje del servidor
+  getId: (item: T) => string;          // taskId en MyWorkItem, id en Task
+  busyExternal?: boolean;              // guard `busy` de Planificación: si es true, no hace nada (estado) o
+                                       // devuelve { error: 'Hay otra acción en curso. Inténtalo de nuevo en un momento.' } (avance)
+  onStatusSuccess?: (updated: Task, prev: T) => void | Promise<void>; // el LLAMADOR pone el toast de éxito y,
+                                       // en Planificación, llama a refreshGuideOnly()
+  onStatusError: (message: string) => void;                           // toast.error con el mensaje del servidor
 }): {
   rowBusyId: string | null;
-  changeStatus(id: string, status: TaskStatus, extra?: { progress?: number }): Promise<Task | null>;
-  changeProgress(id: string, progress: number): Promise<Task | null>;
+  setRowBusyId: (id: string | null) => void;  // lo usa también handleInlineResponsibleChange (misma marca de fila ocupada)
+  changeStatus(item: T, status: TaskStatus, extra?: { progress?: number }): Promise<Task | null>;
+  changeProgress(item: T, progress: number): Promise<{ task: Task } | { error: string }>;
 }
 ```
+
+Contrato de cada llamada:
+
+- `changeStatus` es **optimista**: guarda `item` como valor previo, pinta el estado, llama a `updateTaskStatus`, y en éxito
+  invoca `onStatusSuccess(updated, prev)`; en error revierte a `item` y llama a `onStatusError(mensaje)`. Devuelve la `Task`
+  o `null` si falló. Los **toasts de éxito no viven en el hook**: Planificación conserva los suyos («Estado de la tarea
+  actualizado.» y `refreshGuideOnly()` dentro de `onStatusSuccess`) y Mi trabajo pone los suyos (8.3).
+- `changeProgress` **no es optimista** y **no usa toast de error**: devuelve `{ task }` o `{ error }` con el texto del
+  servidor. Los llamadores lo adaptan a `TaskProgressControl.onSave: (value) => Promise<string | null>` con
+  `async (v) => { const r = await changeProgress(item, v); return 'error' in r ? r.error : null; }`, de modo que el diálogo se
+  queda abierto mostrando el mensaje. El toast «Avance actualizado a N %.» lo pone el llamador tras `{ task }`.
+- `rowBusyId` es **un estado compartido**: el hook lo expone con `setRowBusyId` para que `handleInlineResponsibleChange` siga
+  marcando la fila ocupada sin pasar por el hook.
 
 Pasos:
 
@@ -457,11 +483,11 @@ Pasos:
    `MyWorkItem`), y reemplazarlo borraría la sublínea «solicitud · fase», el agrupamiento y el panel. La `Task` completa se
    devuelve al llamador (el aviso de evidencia de 8.3 lee de ahí `evidenceUrl`); en Planificación, donde el elemento **es** una
    `Task`, la fusión equivale a reemplazar.
-3. **Error (403/409/otro):** se revierte el estado anterior y se muestra con `toast.error` **el mensaje accionable del
+3. **Error (403/409/otro):** se revierte el estado anterior y `onStatusError` muestra con `toast.error` **el mensaje accionable del
    servidor** tal cual (p. ej. la predecesora que bloquea, «el proyecto está cerrado»). Sin mensaje: «No se pudo
    actualizar la tarea. Revisa tu conexión e inténtalo de nuevo.»
 4. El avance en línea **no** es optimista: el diálogo de `TaskProgressControl` espera el resultado y, si falla, se queda
-   abierto con el mensaje (comportamiento ya existente).
+   abierto con el mensaje (`{ error }` de `changeProgress`; comportamiento ya existente).
 5. Sin conexión: mismo camino que el error (revierte y avisa).
 
 ---
@@ -477,7 +503,7 @@ Clic en el título abre `Sheet` (`side="right"`, `closeLabel="Cerrar detalle"`,
 - **URL:** abrir hace `router.push('?taskId=<id>')` (el botón Atrás cierra el panel); cerrar quita el parámetro con
   `router.replace`. Cargar `/mi-trabajo?taskId=<id>` abre el panel directamente. El `page.tsx` se envuelve en
   `<Suspense>` porque usa `useSearchParams`.
-- **`?taskId=` inexistente, borrado o ajeno (hallazgo N8).** La lista no lo valida: abre el panel y `TaskDetail` pide
+- **`?taskId=` inexistente, borrado o ajeno.** La lista no lo valida: abre el panel y `TaskDetail` pide
   `GET /tasks/{id}`; si el servidor responde 404/403, el **panel muestra dentro el `ErrorState` con el mensaje del
   servidor** («No fue posible cargar la tarea.») y el botón **Cerrar detalle** (que quita el parámetro con `router.replace`)
   sigue funcionando. No se redirige ni se muestra un toast aparte. Un valor que no es un identificador válido (vacío o con
@@ -486,7 +512,9 @@ Clic en el título abre `Sheet` (`side="right"`, `closeLabel="Cerrar detalle"`,
 - Se pasan `phaseName`, `requestId` y `requestTitle` desde la fila (la lista ya los conoce). En
   `/seguimiento/tareas` (que no los trae) `TaskDetail` los resuelve buscando la tarea en `listMyWork()` cuando el
   actor tiene `assigned`; si no la encuentra, **oculta** el campo «Fase» en lugar de mostrar «—» (arregla el bug de las
-  capturas `04`/`07`).
+  capturas `04`/`07` **para las tareas del propio actor**). **Límite declarado:** `listMyWork()` solo devuelve tareas del
+  actor; quien llega por una notificación a una tarea **ajena** (p. ej. un líder) ve el campo «Fase» oculto y la solicitud
+  sin enlace hasta la Entrega 2, cuando `TaskResponseDto` incorpore `phaseName`, `requestId` y `requestTitle` (§19).
 - `onChanged` refleja el estado/avance en la lista **sin recargar** (misma tarea actualizada).
 - Predecesoras: `onSelectTask` cambia la tarea dentro del panel (comportamiento actual).
 - **Foco:** al abrir, el foco entra en el panel (título/cierre); al cerrar vuelve al botón-título que lo abrió. Si la
@@ -495,7 +523,16 @@ Clic en el título abre `Sheet` (`side="right"`, `closeLabel="Cerrar detalle"`,
   grupo de origen → `h2` → `h1`, `tabIndex={-1}`).
 - **Cierre táctil:** el botón de cierre mide **44 px** (`min-h-11 min-w-11`) a `< 768 px` **y** con
   `pointer-coarse:min-h-11 pointer-coarse:min-w-11` en cualquier ancho (tablet táctil 768–1023 px y escritorio con
-  pantalla táctil); en ratón fino conserva el tamaño del `Sheet`.
+  pantalla táctil); en ratón fino conserva el tamaño del `Sheet`. **Cómo se logra:** el botón vive dentro de
+  `components/ui/sheet.tsx` con `size="icon-sm"` y `absolute top-3 right-3` fijos (hoy 40 px en táctil), y `SheetContent`
+  solo acepta `className` para el contenedor. Por eso se añade a `SheetContent` una prop opcional **`closeClassName`**
+  (se fusiona con `cn` sobre las clases del botón; **por defecto vacía**, así el menú lateral del shell no cambia). El panel
+  de tareas pasa `closeClassName="max-md:min-h-11 max-md:min-w-11 pointer-coarse:min-h-11 pointer-coarse:min-w-11"`.
+- **Devolución del foco al cerrar (panel con `open` controlado, sin `Trigger` de Radix).** Radix solo devuelve el foco al
+  `Trigger`; aquí no existe, así que `SheetContent` recibe
+  `onCloseAutoFocus={(e) => { e.preventDefault(); focusControl(taskId, 'title'); }}`, donde `focusControl` es el mismo
+  mecanismo de restauración de 12.6 (busca `[data-task-id="…"] [data-control="title"]` y, si no existe, aplica el punto 4 de
+  12.6). `taskId` es el de la tarea que estaba abierta (se conserva en un ref hasta que el panel termina de cerrarse).
 - Paridad con Planificación: el contenido es el mismo componente; los cambios de la sección 10 benefician a ambos.
 
 ---
@@ -519,7 +556,7 @@ Estructura nueva, de arriba abajo (misma en página y en panel):
   **«Registrar avance en 100 %»** marcada por defecto (la *propuesta* del 100 %); el usuario puede desmarcarla.
   Si está marcada, `PATCH /tasks/{id}/status` lleva `progress: 100`. Es la misma petición de hoy (el campo ya existe en el
   contrato), así que no cambia el comportamiento del servidor ni el rol de los líderes.
-- **Por qué la casilla existe en el detalle y no en la fila (N4).** Es una diferencia deliberada, no una omisión que haya
+- **Por qué la casilla existe en el detalle y no en la fila .** Es una diferencia deliberada, no una omisión que haya
   que «unificar»: en la **fila** el clic en «Terminar» es una acción rápida de un solo gesto, así que aplica la propuesta de
   100 % sin preguntar, lo informa en el toast y deja «Reabrir» (8.3). En el **detalle** el usuario ya está en un
   formulario con campos, tiene espacio para decidir y puede querer cerrar con un avance distinto, así que la propuesta es
@@ -647,6 +684,19 @@ quita un filtro.» y botón **Limpiar filtros**. Los contadores se mantienen vis
      si el grupo desaparece, al `h1`. Nunca se pierde en `body`.
   Caso típico: «Terminar» envía la fila a Terminadas, plegada por defecto → regla 4. Con Terminadas desplegada → regla 2.
   La región viva anuncia siempre dónde quedó la tarea («Ahora está en Terminadas»). El e2e cubre las reglas 1, 2 y 4.
+- **Mecanismo de restauración (aplica a las reglas 1 a 3).** Reordenar filas con clave dentro de un grupo (§5.2 ordena por
+  estado: «Empezar» sube la fila por encima de las `POR_HACER`) mueve el nodo en el DOM, y el navegador puede soltar el foco
+  a `body`; además el botón «Siguiente paso» cambia de verbo. Por eso el foco no se deja a la suerte:
+  1. Cada control de la fila lleva atributos `data-task-id="{taskId}"` (en la fila/`li`) y `data-control="title | progress |
+     status | next"` (en el control). Son estables: no dependen del verbo ni del texto.
+  2. Tras cada acción, la vista guarda en un `ref` el destino `{ taskId, control }` (el control pulsado para la regla 1; `title`
+     para las reglas 2 y 3). El `ref` solo se lee en efectos, nunca en el render.
+  3. En un efecto posterior al commit (se ejecuta cuando cambian los datos agrupados), si hay destino pendiente y
+     `document.activeElement` es `document.body` (o `null`), hace
+     `document.querySelector('[data-task-id="…"] [data-control="…"]')?.focus()` y limpia el `ref`. Si el elemento no existe o
+     está deshabilitado (p. ej. «Siguiente paso» ya sin botón), cae al `title` de la misma fila; si tampoco existe, aplica la
+     regla 4. Si el foco **no** se perdió (el navegador lo conservó), no se toca.
+  4. El mismo mecanismo atiende `onCloseAutoFocus` del panel (§9) con `control = 'title'`.
 
 ---
 
@@ -709,16 +759,14 @@ denso.
 
 ## 16. Contrastes medidos (WCAG 2.2 AA)
 
-**Método.** Script Node temporal (ya eliminado) que lee `apps/web/src/app/globals.css`, quita los comentarios, resuelve
+**Método.** Cálculo con un script Node que lee `apps/web/src/app/globals.css`, quita los comentarios, resuelve
 `var(--x)` y convierte cada token OKLCH de `:root` y `.dark` a sRGB (Oklab → sRGB lineal → gamma; recorte de gamut), compone
 los translúcidos sobre su fondo real (`bg-muted/50` sobre `card`, `Badge` = token al 10–14 % sobre `card` o sobre la fila en
 hover), calcula la luminancia relativa y la razón `(L1+0.05)/(L2+0.05)`. Control cruzado: los pares comunes coinciden
 con los ya publicados en `planeacion-ux.md` §6 (p. ej. `foreground`/`card` 14.75 · 14.98; `text-link`/`card` 6.14 · 7.35;
 barra `primary`/pista 3.88 · 3.08). Umbrales: texto normal ≥ **4.5:1**; iconos informativos, bordes de control, foco y
 rellenos ≥ **3:1**. Todo lo de abajo cumple, salvo las filas marcadas ✘: las **prohibidas** (el diseño no las usa: `primary` como texto,
-`primary-subtle` como fondo del foco) y los tres límites de hover de botones existentes de la nota (5). Cifras de esta
-revisión recalculadas con un script propio nuevo (también borrado) y coincidentes con las de la primera versión y con
-una verificación independiente de la revisión.
+`primary-subtle` como fondo del foco) y los tres límites de hover de botones existentes de la nota (5).
 
 ### 16.1 Texto
 
@@ -747,7 +795,7 @@ una verificación independiente de la revisión.
 | `primary-foreground` / `primary-hover` (botón «Terminar» al pasar el puntero) | 6.14 ✔ | 6.14 ✔ | 4.5 |
 | `accent-foreground` / `accent` (botones `outline`/`ghost` al pasar el puntero: «Siguiente paso», «Actualizar») | 11.83 ✔ | 12.80 ✔ | 4.5 |
 | `muted-foreground` / `card` (valor del contador **deshabilitado**; exento por inactivo, medido igual) | 7.13 ✔ | 7.62 ✔ | 4.5 |
-| **`primary` / `card` como COLOR DE TEXTO — no se usa** (valor de «En curso» pasó a `text-foreground`, M2) | 4.84 ✔ | **3.37 ✘** | 4.5 |
+| **`primary` / `card` como COLOR DE TEXTO — no se usa** (valor de «En curso» pasó a `text-foreground`) | 4.84 ✔ | **3.37 ✘** | 4.5 |
 
 ### 16.2 Insignias y chips (token sobre su propio fondo translúcido)
 
@@ -796,7 +844,7 @@ una verificación independiente de la revisión.
 Consecuencias de diseño tomadas de la medición: (1) el contador activo usa **anillo + icono** sobre `card`, no un fondo
 `primary-subtle`, porque el foco sobre él cae a 2.75:1 en oscuro; (2) el foco de los contadores se dibuja con
 `outline-offset-4` sobre el lienzo (4.22 · 3.75); (3) la barra `primary` en oscuro (3.08) queda al límite, aceptado porque el
-valor numérico siempre acompaña a la barra; (4) ningún par de texto depende de `opacity`; (5) **estados de hover de botones existentes (N9):** se midieron y tres
+valor numérico siempre acompaña a la barra; (4) ningún par de texto depende de `opacity`; (5) **estados de hover de botones existentes:** se midieron y tres
 pares de *límite visual* no llegan a 3:1 solo en el instante del hover (`border-strong`/`accent` 2.92 en claro;
 `primary-hover`/`card` 2.66 en oscuro; `ring`/`accent` 2.88 en oscuro, que además no ocurre por el `outline-offset-2`).
 Son los tokens de `button.tsx`, comunes a todo el portal, y no se cambian aquí: el botón se identifica por su **texto**
@@ -816,13 +864,14 @@ ya existente); la lista de «no verificado» de la sección 19 lo repite.
 | `lib/use-today-local.ts` (nuevo) | Hook que devuelve «hoy» local y se renueva a medianoche y al volver a la pestaña. |
 | `app/mi-trabajo/mi-trabajo-view.tsx` | Reescritura: contadores, grupos, filas, tarjetas, panel. Se parte en `my-work-counters.tsx`, `my-work-group.tsx`, `my-work-row.tsx`, `my-work-card.tsx` si supera ~300 líneas. |
 | `app/mi-trabajo/page.tsx` | Envolver en `<Suspense>` (usa `useSearchParams`). |
-| `app/seguimiento/plan/task-status-control.tsx` | Prop opcional `actionLabels`/`nextStep`; `className`/`size` para el objetivo táctil de 44 px. |
-| `app/seguimiento/plan/task-progress-control.tsx` | `className` para `min-h-11` en móvil. |
+| `app/seguimiento/plan/task-status-control.tsx` | Prop opcional `actionLabels`/`nextStep`; `className`/`size` para el objetivo táctil de 44 px; pasa `data-control="status"` al disparador. |
+| `app/seguimiento/plan/task-progress-control.tsx` | `className` para `min-h-11` en móvil; pasa `data-control` si se le da. |
+| `components/ui/sheet.tsx` | Prop opcional `closeClassName` en `SheetContent` (por defecto sin cambios: el menú lateral del shell no varía) para el cierre de 44 px del panel (§9). |
 | `app/seguimiento/tareas/task-detail.tsx` | Sección 10 (un control de avance, tarjeta «Actualizar estado», evidencia separada, avisos, `phaseName`/`requestId`/`requestTitle`, `initialTab`). |
 | `app/seguimiento/tareas/task-evidence-files.tsx` | `onCountChange(n)`. |
 | `app/seguimiento/tareas/tareas-view.tsx` | Resolver `phaseName`/solicitud vía `listMyWork()`; no romper `?taskId=`. |
-| `app/seguimiento/plan/use-inline-task-actions.ts` (nuevo) | Hook `useInlineTaskActions` (firma en 8.4): actualización optimista, rollback y mensaje del servidor; lo usan Mi trabajo **y** Planificación. |
-| `app/seguimiento/plan/plan-view.tsx` | **Obligatorio:** reemplaza sus `handleInlineStatusChange`/`handleInlineProgressChange` por el hook (una sola fuente de verdad); sin cambio visual ni de comportamiento. |
+| `app/seguimiento/plan/use-inline-task-actions.ts` (nuevo) | Hook `useInlineTaskActions` (firma y contrato en 8.4): actualización optimista, rollback y mensaje del servidor; lo usan Mi trabajo **y** Planificación. |
+| `app/seguimiento/plan/plan-view.tsx` | **Obligatorio:** reemplaza sus `handleInlineStatusChange`/`handleInlineProgressChange` por el hook (una sola fuente de verdad), pasando `busyExternal={busy}`, `onStatusSuccess` (con su toast y `refreshGuideOnly()`) y `onStatusError`; `handleInlineResponsibleChange` se queda y usa `setRowBusyId`. Sin cambio visual ni de comportamiento. |
 
 Prohibido: Prisma, API, contrato, MCP, esquema, permisos, nuevas dependencias (todo se hace con Radix/`sonner`/`lucide`
 ya instalados).
@@ -852,7 +901,7 @@ avance, pasar a confirmación (Entrega 3). (2) Reordenar al vuelo puede desorien
 (12.6). (3) hasta 4 paradas de teclado por fila son muchas con listas grandes: el atajo es la búsqueda y los contadores.
 (4) Regresión de e2e que dependen de la tabla actual.
 
-**Límite conocido (H9).** En la tabla, el motivo del avance deshabilitado (`POR_HACER`, `TERMINADA`) se expone por
+**Límite conocido.** En la tabla, el motivo del avance deshabilitado (`POR_HACER`, `TERMINADA`) se expone por
 `aria-describedby` y `title`, pero el botón deshabilitado no es enfocable: un usuario solo de teclado no lo alcanza (la
 tarjeta móvil/tablet sí lo muestra como texto). Se acepta porque el estado de la fila ya lo explica (chip «Por hacer»/«Terminada»
 y el siguiente paso «Empezar»/«Reabrir»); revisar con lector de pantalla.
@@ -864,50 +913,9 @@ rendimiento con cientos de tareas (el volumen de
 la BD de prueba es 16), Playwright local (BL-018, se valida en CI).
 
 **Hallazgos para la Entrega 2 (API/contrato/MCP, no se hacen ahora).** `TaskResponseDto` sin `phaseName`, `requestId` ni
-`requestTitle`; `/my-work` sin predecesoras pendientes, estado operativo de la solicitud (proyecto cerrado), responsable y
+`requestTitle` (por eso, en `/seguimiento/tareas`, «Fase» y el enlace a la solicitud solo se resuelven para tareas del propio
+actor vía `listMyWork()`; en tareas ajenas el campo se oculta, §9); `/my-work` sin predecesoras pendientes, estado operativo de la solicitud (proyecto cerrado), responsable y
 fecha de compromiso, y sin conteo de evidencia; ausencia de un endpoint de «solo evidencia» (hoy va atada a un cambio de
 estado). **Entrega 3:** motivo de bloqueo (migración), regla de cierre (evidencia/avance mínimo, quién revisa).
 
 ---
-
-## 20. Respuestas a la revisión de la especificación
-
-### 20.1 Segunda pasada (CHANGES_REQUESTED: 4 MEDIO, 6 NIT)
-
-Todos atendidos; ninguno exige API. Los contrastes nuevos se midieron con el mismo método (script temporal, borrado; control: `foreground`/`card` 14.75 · 14.98 y `danger`/`card` 6.59 · 7.20 coinciden).
-
-| Hallazgo | Resolución | Sección |
-| --- | --- | --- |
-| 1 ejemplo «dom 09 nov» falso | «dom 8 nov 2026» (8 nov 2026 es domingo; sin cero); ejemplo numérico `hoy 2026-11-04 → 2026-11-08`; la prueba deriva el texto con `formatDateOnlyWithWeekday`. | 0.1, 2, 5.1, 18 |
-| 2 foco tras mover una fila | Regla única (se queda en el control; sigue a la fila si el destino es visible; fila siguiente → `h2` → `h1` si deja de ser visible, p. ej. Terminadas plegada); §2 y §9 alineados. | 2, 9, 12.6 |
-| 3 reemplazo destruye el contexto | Se **fusionan solo `status` y `progress`** en el `MyWorkItem`; hook `useInlineTaskActions` con firma fija, adoptado por Planificación (obligatorio). | 8.4, 17 |
-| 4 banda inset vs `shadow-card` | Tarjeta móvil: `before:` absoluto (o `border-l-[3px]`); el inset queda solo para la celda de la tabla. | 6.1, 7 |
-| 5 paradas de TERMINADA | 2 (título y estado). | 6.3, 14 |
-| 6 cabecera sticky móvil | En `< lg` la `section` no es tarjeta; se añade la fila `text-danger`/`background` medida **5.74 · 8.01**. | 5.3, 7, 15, 16.1 |
-| 7 `useTodayLocal` | `useSyncExternalStore` con `getServerSnapshot` estable (`''`); sin agrupar hasta hidratar. | 5.1 |
-| 8 «Sin permiso» sin dato | No se calcula en `/mi-trabajo`; solo se refleja el 403 del servidor. | 6.2, 8.1 |
-| 9 motivo inalcanzable por teclado | Texto visible en tarjeta, `title` en tabla; límite conocido declarado. | 6.2, 19 |
-| 10 cierre táctil del panel | `pointer-coarse:min-h-11 pointer-coarse:min-w-11` en cualquier ancho. | 9 |
-
-### 20.2 Primera pasada
-
-Revisión: `spec-review.json` (CHANGES_REQUESTED: 7 MEDIO, 9 NIT). Todos se atendieron en este documento; ninguno exige API.
-
-| Hallazgo | Resolución | Sección |
-| --- | --- | --- |
-| M1 clases `z-sticky`/`z-overlay` inexistentes | Corregido: cabeceras `z-10` (bajo `z-30`); menú, diálogo y panel heredan `z-50`; aclarado que las otras clases solo están propuestas. | 7, 8.2, 15 |
-| M2 valor «En curso» en `text-primary` | Corregido: `text-foreground` (14.75 · 14.98); `primary` solo en filete y anillo; se añadió la fila prohibida a la tabla medida. | 3, 15, 16.1 |
-| M3 layout 768–1023 contradictorio | Elegida la opción (a): tarjetas hasta `< lg`, tabla desde 1024 px sin `min-w`; anchos de Tarea calculados con las medidas reales del shell (280 / 336 / 496 px). | 6, 7, 13 |
-| M4 «Deshacer» de Terminar | Renombrado a «Reabrir»; lleva a `EN_CURSO` con el avance previo en el mismo PATCH; 409/403 muestran el mensaje del servidor y la fila no cambia; el estado `EN_REVISION` no se recupera. | 8.3 |
-| M5 `POR_HACER` sin estado definido | **Matiz:** el componente compartido ya bloquea `POR_HACER` y `TERMINADA` (`progressLockedReason`), contra lo supuesto en la revisión; la spec ahora lo documenta y exige que Mi trabajo no pase nada extra. | 6.2 |
-| M6 fallo de refresco con datos | Nueva 12.4b: lista intacta, toast, aviso con Reintentar, foco quieto. | 12.1, 12.4b |
-| M7 auto-apagado ambiguo | Regla única: solo cuando el propio conteo (sobre todas las tareas) llega a 0; búsqueda/estado vacíos → «Sin resultados». | 3, 12.5 |
-| N1 estado fuera del enum | Documentado: neutro, sin menú ni botón, avance deshabilitado. | 6.2, 8.1 |
-| N2 «Sin permiso» | Chip y avance deshabilitados con motivo; botón omitido. | 6.2, 8.1 |
-| N3 paradas de teclado | «Hasta 4»: 3 en `POR_HACER`, 2 en `TERMINADA` (corregido en la 2.ª pasada, H5). | 6.3, 14, 19 |
-| N4 casilla 100 % solo en el detalle | Justificado como diferencia deliberada. | 10.1 |
-| N5 toast de 8 s | `sonner` pausa en hover/foco (sin verificar); salida permanente en el menú. | 8.3, 14 |
-| N6 `useTodayLocal` | Medianoche con `new Date(y, m, d + 1)`; `todayLocal` inválido lanza `RangeError`; formato del límite con `formatDateOnlyWithWeekday`. | 5.1 |
-| N7 «Ver las N restantes» | Revela todo, no se recuerda, foco a la primera fila revelada, expansión automática al reubicar. | 2 |
-| N8 `?taskId=` inexistente/ajeno | Error del servidor dentro del panel y «Cerrar detalle» funcional. | 9 |
-| N9 contrastes faltantes | Medidos: botones en hover, `Badge outline` en hover, contador deshabilitado, `ring` sobre `accent`; tres límites de hover de componentes existentes quedan declarados como límite conocido. | 16 |
