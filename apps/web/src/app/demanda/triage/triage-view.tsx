@@ -598,6 +598,13 @@ export function TriageView(): React.ReactElement {
     else update(field, code as TriageFormValues[typeof field]);
   }
 
+  /** «Aplicar todo»: prefija cada campo sugerido (bucle explícito, no callback de array). */
+  function applyAllSuggestions(rows: { field: keyof TriageFormValues; code: string | null }[]): void {
+    for (const row of rows) {
+      if (row.code) applySuggestion(row.field, row.code);
+    }
+  }
+
   /**
    * Panel «Sugerencia de IA» de la columna lateral: botón para pedir la
    * sugerencia, estado de carga, mensaje de degradación (409/422/503/error) y, en
@@ -700,9 +707,12 @@ export function TriageView(): React.ReactElement {
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold">Clasificación sugerida</h3>
                 {applicable.length > 0 ? (
-                  <Button type="button" variant="secondary" size="sm" onClick={() =>
-                      applicable.forEach((row) => applySuggestion(row.field, row.code as string))
-                    }
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    // eslint-disable-next-line react-hooks/refs -- falso positivo: el proceso sugerido pasa por handleMainProcessChange, que lee selectedRef solo al hacer clic (manejador), no durante el render.
+                    onClick={() => applyAllSuggestions(applicable)}
                   >
                     Aplicar todo
                   </Button>
@@ -726,6 +736,7 @@ export function TriageView(): React.ReactElement {
                         variant="ghost"
                         size="sm"
                         className="shrink-0"
+                        // eslint-disable-next-line react-hooks/refs -- falso positivo: handleMainProcessChange lee selectedRef solo al hacer clic (manejador), no durante el render.
                         onClick={() => applySuggestion(row.field, row.code as string)}
                       >
                         Usar
