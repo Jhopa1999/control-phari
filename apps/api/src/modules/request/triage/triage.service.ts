@@ -278,10 +278,19 @@ export class TriageService {
     if (fixesNewProcess) {
       const process = await this.prisma.process.findFirst({
         where: { id: dto.mainProcessId, active: true },
-        select: { id: true },
+        select: { id: true, kind: true },
       });
       if (!process) {
         throw new BadRequestException('Revisa los datos ingresados.');
+      }
+      // La coordinacion multiproceso (kind COORDINATION, p. ej. FMAA) no lidera
+      // una solicitud: la coordinacion entre procesos se expresa marcando
+      // participantes. Solo aplica al FIJAR el proceso; una solicitud que ya lo
+      // tiene (datos existentes) no se toca.
+      if (process.kind === 'COORDINATION') {
+        throw new BadRequestException(
+          'La coordinación multiproceso no puede ser el proceso principal. Elige el proceso que lidera la solicitud y marca los demás en «Procesos que intervienen».',
+        );
       }
     }
 

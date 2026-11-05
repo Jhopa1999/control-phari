@@ -7,9 +7,11 @@ import type {
   CatalogItem,
   Plan,
   PriorityEvaluation,
+  Process,
   Request,
   Triage,
 } from '@/lib/api-client';
+import { multiprocessSummary } from '@/lib/multiprocess';
 import { formatDateOnly, formatDateTime, formatHours, orDash } from '@/lib/format';
 import type {
   GateCheck,
@@ -54,13 +56,23 @@ export interface TriageCatalogs {
 export function TriageDetalle({
   triage,
   catalogs,
+  request,
+  processes,
 }: {
   triage: Triage;
   catalogs: TriageCatalogs;
+  request: Pick<Request, 'mainProcessId' | 'participants'>;
+  processes: readonly Pick<Process, 'id' | 'name'>[];
 }): React.ReactElement {
+  // «Multiproceso» se deriva de los participantes; la ruta solo se muestra, como
+  // dato histórico, si el triage antiguo la tiene guardada.
+  const multiprocess = multiprocessSummary(request, processes);
   const items: DescriptionItem[] = [
     { term: 'Decisión', value: triageDecisionLabel(triage.decision) },
-    { term: 'Ruta', value: label(catalogs.route, triage.routeCode) },
+    ...(multiprocess ? [{ term: 'Procesos que intervienen', value: multiprocess }] : []),
+    ...(triage.routeCode
+      ? [{ term: 'Ruta (histórica)', value: label(catalogs.route, triage.routeCode) }]
+      : []),
     { term: 'Tipo de demanda', value: label(catalogs.demandType, triage.demandTypeCode) },
     { term: 'Criticidad', value: label(catalogs.criticality, triage.criticalityCode) },
     { term: 'Tamaño', value: label(catalogs.size, triage.sizeCode) },

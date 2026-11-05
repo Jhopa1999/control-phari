@@ -48,7 +48,7 @@ function suggestionBody() {
     title: requestTitle,
     confidence: 0.82,
     reason: 'Basado en la ficha de la solicitud.',
-    suggestedRouteCode: null,
+    suggestedMainProcessId: null,
     suggestedDemandTypeCode: null,
     suggestedCriticalityCode: 'ALTA',
     suggestedSizeCode: null,
@@ -97,7 +97,9 @@ test('la sugerencia se muestra como señal y «Usar» solo prefija el formulario
   const panel = page.getByRole('region', { name: 'Sugerencia de IA' });
   await expect(panel.getByRole('heading', { name: 'Clasificación sugerida' })).toBeVisible();
   await expect(panel.getByRole('listitem').filter({ hasText: 'Criticidad:' })).toContainText('Alta');
-  await expect(panel.getByRole('listitem').filter({ hasText: 'Ruta:' })).toContainText('Sin sugerencia');
+  // La «Ruta» ya no existe en el triage: la sugerencia no la ofrece ni el formulario la pide.
+  await expect(panel.getByRole('listitem').filter({ hasText: 'Ruta:' })).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Ruta' })).toHaveCount(0);
   await expect(panel.getByRole('heading', { name: 'Prioridad orientativa' })).toBeVisible();
   await expect(panel.getByText('Impacta un reporte de cierre mensual.')).toBeVisible();
   await expect(panel.getByText('Es una señal, no el score oficial de priorización.')).toBeVisible();

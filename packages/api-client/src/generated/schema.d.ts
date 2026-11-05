@@ -3378,7 +3378,10 @@ export interface components {
             requestId: string;
             /** @description Decision (CONTINUAR/DEVOLVER/RECHAZAR). */
             decision: string;
-            /** @description Ruta (code maestro). */
+            /**
+             * @deprecated
+             * @description DEPRECADO (dato historico): ruta de triage (code de TRIAGE_ROUTE). Ya no se captura; solo viene informada en triages antiguos. El proceso principal de la solicitud lo reemplaza.
+             */
             routeCode: string | null;
             /** @description Tipo de demanda (code maestro). */
             demandTypeCode: string | null;
@@ -3442,7 +3445,10 @@ export interface components {
              * @description Proceso principal de la solicitud. Se determina en el triage: es obligatorio para CONTINUAR si la solicitud aún no lo tiene. Debe existir y estar activo.
              */
             mainProcessId?: string;
-            /** @description Ruta (maestra TRIAGE_ROUTE). */
+            /**
+             * @deprecated
+             * @description DEPRECADO: el proceso principal (mainProcessId) reemplaza a la ruta; la coordinacion entre procesos se expresa con participantProcessIds. Se conserva solo por compatibilidad con clientes antiguos: si llega, se valida contra la maestra TRIAGE_ROUTE y se guarda; si no llega, queda null. No es obligatorio.
+             */
             routeCode?: string;
             /** @description Tipo de demanda (maestra DEMAND_TYPE). */
             demandTypeCode?: string;
@@ -6413,8 +6419,11 @@ export interface components {
             reason: string;
         };
         TriageSuggestionResponseDto: {
-            /** @description Code sugerido de TRIAGE_ROUTE o null. */
-            suggestedRouteCode: string | null;
+            /**
+             * Format: uuid
+             * @description ID del proceso principal sugerido (proceso activo de tipo PROCESS) o null. Solo se sugiere si la solicitud aun no tiene proceso principal; reemplaza a la antigua ruta.
+             */
+            suggestedMainProcessId: string | null;
             /** @description Code sugerido de DEMAND_TYPE o null. */
             suggestedDemandTypeCode: string | null;
             /** @description Code sugerido de CRITICALITY o null. */

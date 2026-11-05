@@ -10994,7 +10994,8 @@
           "routeCode": {
             "type": "string",
             "nullable": true,
-            "description": "Ruta (code maestro)."
+            "deprecated": true,
+            "description": "DEPRECADO (dato historico): ruta de triage (code de TRIAGE_ROUTE). Ya no se captura; solo viene informada en triages antiguos. El proceso principal de la solicitud lo reemplaza."
           },
           "demandTypeCode": {
             "type": "string",
@@ -11136,7 +11137,8 @@
           },
           "routeCode": {
             "type": "string",
-            "description": "Ruta (maestra TRIAGE_ROUTE)."
+            "deprecated": true,
+            "description": "DEPRECADO: el proceso principal (mainProcessId) reemplaza a la ruta; la coordinacion entre procesos se expresa con participantProcessIds. Se conserva solo por compatibilidad con clientes antiguos: si llega, se valida contra la maestra TRIAGE_ROUTE y se guarda; si no llega, queda null. No es obligatorio."
           },
           "demandTypeCode": {
             "type": "string",
@@ -17420,10 +17422,11 @@
       "TriageSuggestionResponseDto": {
         "type": "object",
         "properties": {
-          "suggestedRouteCode": {
+          "suggestedMainProcessId": {
             "type": "string",
+            "format": "uuid",
             "nullable": true,
-            "description": "Code sugerido de TRIAGE_ROUTE o null."
+            "description": "ID del proceso principal sugerido (proceso activo de tipo PROCESS) o null. Solo se sugiere si la solicitud aun no tiene proceso principal; reemplaza a la antigua ruta."
           },
           "suggestedDemandTypeCode": {
             "type": "string",
@@ -17485,7 +17488,7 @@
           }
         },
         "required": [
-          "suggestedRouteCode",
+          "suggestedMainProcessId",
           "suggestedDemandTypeCode",
           "suggestedCriticalityCode",
           "suggestedSizeCode",

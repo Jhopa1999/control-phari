@@ -587,6 +587,17 @@
         "docs/aplicacion/modulos-backend.md"
       ],
       "summary": "BL-033 · cierre de coherencia proceso-en-triage (FEAT-004): se documenta en modulos-backend.md la ampliación del alcance de lectura del módulo request (el integrante puro ve además las solicitudes que él mismo registró vía createdByUserId, aunque aún no tengan proceso principal) para alinearlo con autenticacion-autorizacion.md; se confirma la sincronía del contrato OpenAPI y el cliente tipado (regenerados en FEAT-001..003, sin diffs pendientes) y el build total. El catálogo y la identidad del MCP no cambiaron (M4 fue solo fixtures de prueba), así que apps/mcp/README.md no se tocó."
+    },
+    {
+      "timestamp": "2026-11-10T12:00:00Z",
+      "trigger_file": "apps/api/src/modules/request/triage/triage.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/README.md"
+      ],
+      "summary": "BL-035 · se quita la «Ruta» redundante del triage: routeCode queda deprecado (opcional, solo histórico), la sugerencia de IA propone el proceso principal (suggestedMainProcessId) en lugar de suggestedRouteCode, la coordinación multiproceso (COORDINATION/FMAA) no puede fijarse como proceso principal (400) y «Multiproceso» pasa a ser una etiqueta derivada de los participantes. Migración de datos condicionada del prompt del agente TRIAGE. Contrato y cliente regenerados; el catálogo del MCP no cambia."
     }
   ]
 }

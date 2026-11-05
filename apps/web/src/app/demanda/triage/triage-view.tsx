@@ -47,6 +47,7 @@ import { AiTriageError, requestTriageSuggestion } from '@/lib/ai-triage';
 import { listAssets } from '@/lib/assets';
 import { listCatalogItems } from '@/lib/catalog';
 import { formatCount, formatDateTime } from '@/lib/format';
+import { multiprocessSummary } from '@/lib/multiprocess';
 import { listRequests } from '@/lib/requests';
 import { isPrioritizable, isTriageable } from '@/lib/request-state';
 import { listProcesses } from '@/lib/team';
@@ -64,6 +65,8 @@ const TRIAGE_DESCRIPTION =
 const NOT_AVAILABLE = 'La solicitud indicada no está disponible aquí.';
 const FORM_ID = 'triage-form';
 
+// TRIAGE_ROUTE ya no se pide en el formulario; se carga solo para mostrar la
+// «Ruta (histórica)» de triages antiguos que la tengan guardada.
 const CATALOG_FAMILIES = [
   'TRIAGE_ROUTE',
   'DEMAND_TYPE',
@@ -77,7 +80,6 @@ type CatalogsByFamily = Record<string, CatalogItem[]>;
 interface TriageFormValues {
   /** Proceso principal elegido en el triage (si la solicitud aún no lo tiene). */
   mainProcessId: string;
-  routeCode: string;
   demandTypeCode: string;
   criticalityCode: string;
   sizeCode: string;
@@ -98,7 +100,6 @@ type FieldErrors = Partial<Record<FieldKey, string>>;
 
 const EMPTY_FORM: TriageFormValues = {
   mainProcessId: '',
-  routeCode: '',
   demandTypeCode: '',
   criticalityCode: '',
   sizeCode: '',
@@ -330,8 +331,15 @@ export function TriageView(): React.ReactElement {
   const processName = effectiveMainProcessId
     ? (processes.find((p) => p.id === effectiveMainProcessId)?.name ?? null)
     : null;
-  /** Procesos activos para elegir el principal cuando la solicitud no lo tiene. */
-  const activeProcesses = React.useMemo(() => processes.filter((p) => p.active), [processes]);
+  /**
+   * Procesos elegibles como PRINCIPAL cuando la solicitud no lo tiene: activos y
+   * de tipo PROCESS. La coordinación (FMAA, kind COORDINATION) no lidera: la
+   * coordinación entre procesos se expresa marcando participantes.
+   */
+  const mainProcessOptions = React.useMemo(
+    () => processes.filter((p) => p.active && p.kind !== 'COORDINATION'),
+    [processes],
+  );
   const assetName = selected?.assetId
     ? (assets.find((a) => a.id === selected.assetId)?.name ?? 'Activo fuera de tu alcance')
     : null;
@@ -474,7 +482,6 @@ export function TriageView(): React.ReactElement {
         decision,
         // El proceso principal se fija en el triage si la solicitud no lo tiene.
         mainProcessId: selected.mainProcessId === null ? selectedOrUndefined(form.mainProcessId) : undefined,
-        routeCode: selectedOrUndefined(form.routeCode),
         demandTypeCode: selectedOrUndefined(form.demandTypeCode),
         criticalityCode: selectedOrUndefined(form.criticalityCode),
         sizeCode: selectedOrUndefined(form.sizeCode),
@@ -582,6 +589,23 @@ export function TriageView(): React.ReactElement {
   }
 
   /**
+   * Aplica un valor sugerido al formulario. El proceso principal pasa por su
+   * manejador (recarga los responsables elegibles); el resto son selects de
+   * catálogo.
+   */
+  function applySuggestion(field: keyof TriageFormValues, code: string): void {
+    if (field === 'mainProcessId') handleMainProcessChange(code);
+    else update(field, code as TriageFormValues[typeof field]);
+  }
+
+  /** «Aplicar todo»: prefija cada campo sugerido (bucle explícito, no callback de array). */
+  function applyAllSuggestions(rows: { field: keyof TriageFormValues; code: string | null }[]): void {
+    for (const row of rows) {
+      if (row.code) applySuggestion(row.field, row.code);
+    }
+  }
+
+  /**
    * Panel «Sugerencia de IA» de la columna lateral: botón para pedir la
    * sugerencia, estado de carga, mensaje de degradación (409/422/503/error) y, en
    * éxito, los cinco codes traducidos a etiqueta, la banda P1-P4 orientativa +
@@ -590,6 +614,12 @@ export function TriageView(): React.ReactElement {
    * sugerencia nunca envía nada por sí sola.
    */
   function renderSuggestionPanel(): React.ReactElement {
+    // El proceso principal solo se sugiere si la solicitud aún no lo tiene y el
+    // proceso propuesto está entre los elegibles del selector.
+    const suggestedProcess =
+      suggestion && selected?.mainProcessId === null && suggestion.suggestedMainProcessId
+        ? (mainProcessOptions.find((p) => p.id === suggestion.suggestedMainProcessId) ?? null)
+        : null;
     const rows: {
       field: keyof TriageFormValues;
       family: string;
@@ -597,7 +627,16 @@ export function TriageView(): React.ReactElement {
       code: string | null;
     }[] = suggestion
       ? [
-          { field: 'routeCode', family: 'TRIAGE_ROUTE', label: 'Ruta', code: suggestion.suggestedRouteCode },
+          ...(suggestedProcess
+            ? [
+                {
+                  field: 'mainProcessId' as const,
+                  family: '',
+                  label: 'Proceso principal',
+                  code: suggestedProcess.id,
+                },
+              ]
+            : []),
           {
             field: 'demandTypeCode',
             family: 'DEMAND_TYPE',
@@ -621,15 +660,13 @@ export function TriageView(): React.ReactElement {
       : [];
     const applicable = rows.filter((row) => row.code);
 
-    function applyAll(): void {
-      setForm((f) => {
-        const next = { ...f } as Record<string, unknown>;
-        for (const row of applicable) {
-          next[row.field] = row.code as string;
-        }
-        return next as unknown as TriageFormValues;
-      });
+    /** Valor visible de una fila: el nombre del proceso o la etiqueta del catálogo. */
+    function rowValue(row: (typeof rows)[number]): string {
+      if (!row.code) return 'Sin sugerencia';
+      if (row.field === 'mainProcessId') return suggestedProcess?.name ?? row.code;
+      return catalogLabel(row.family, row.code) ?? row.code;
     }
+
 
     return (
       <section
@@ -670,7 +707,13 @@ export function TriageView(): React.ReactElement {
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold">Clasificación sugerida</h3>
                 {applicable.length > 0 ? (
-                  <Button type="button" variant="secondary" size="sm" onClick={applyAll}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    // eslint-disable-next-line react-hooks/refs -- falso positivo: el proceso sugerido pasa por handleMainProcessChange, que lee selectedRef solo al hacer clic (manejador), no durante el render.
+                    onClick={() => applyAllSuggestions(applicable)}
+                  >
                     Aplicar todo
                   </Button>
                 ) : null}
@@ -684,7 +727,7 @@ export function TriageView(): React.ReactElement {
                     <span className="min-w-0">
                       <span className="text-muted-foreground">{row.label}:</span>{' '}
                       <span className="font-medium">
-                        {row.code ? (catalogLabel(row.family, row.code) ?? row.code) : 'Sin sugerencia'}
+                        {rowValue(row)}
                       </span>
                     </span>
                     {row.code ? (
@@ -693,7 +736,8 @@ export function TriageView(): React.ReactElement {
                         variant="ghost"
                         size="sm"
                         className="shrink-0"
-                        onClick={() => update(row.field, row.code as TriageFormValues[typeof row.field])}
+                        // eslint-disable-next-line react-hooks/refs -- falso positivo: handleMainProcessChange lee selectedRef solo al hacer clic (manejador), no durante el render.
+                        onClick={() => applySuggestion(row.field, row.code as string)}
                       >
                         Usar
                       </Button>
@@ -776,9 +820,15 @@ export function TriageView(): React.ReactElement {
    * ya está completada. Se muestra junto al ítem «Triage registrado». Los codes
    * de catálogo se traducen a su etiqueta visible; los valores vacíos caen a «—».
    */
-  function renderTriageDetail(triage: Triage): React.ReactElement {
+  function renderTriageDetail(triage: Triage, request: Request): React.ReactElement {
+    // «Multiproceso» se deriva de los procesos que intervienen; la ruta solo se
+    // muestra, como dato histórico, en triages antiguos que la tengan guardada.
+    const multiprocess = multiprocessSummary(request, processes);
     const items: DescriptionItem[] = [
-      { term: 'Ruta', value: catalogLabel('TRIAGE_ROUTE', triage.routeCode) },
+      ...(multiprocess ? [{ term: 'Procesos que intervienen', value: multiprocess }] : []),
+      ...(triage.routeCode
+        ? [{ term: 'Ruta (histórica)', value: catalogLabel('TRIAGE_ROUTE', triage.routeCode) }]
+        : []),
       { term: 'Tipo de demanda', value: catalogLabel('DEMAND_TYPE', triage.demandTypeCode) },
       { term: 'Criticidad', value: catalogLabel('CRITICALITY', triage.criticalityCode) },
       { term: 'Tamaño', value: catalogLabel('TRIAGE_SIZE', triage.sizeCode) },
@@ -844,7 +894,7 @@ export function TriageView(): React.ReactElement {
               solicitud; mientras llega, el ítem de arriba ya confirma que está
               registrado. */}
           {registeredTriage && registeredTriage.requestId === request.id
-            ? renderTriageDetail(registeredTriage)
+            ? renderTriageDetail(registeredTriage, request)
             : null}
         </div>
       );
@@ -965,9 +1015,6 @@ export function TriageView(): React.ReactElement {
         <div className="grid gap-4">
           <h3 className="text-sm font-semibold">Clasificación</h3>
           <div className="grid gap-4 sm:grid-cols-2">
-            {renderCatalogSelect('triage-route', 'Ruta', 'TRIAGE_ROUTE', form.routeCode, (v) =>
-              update('routeCode', v),
-            )}
             {renderCatalogSelect('triage-type', 'Tipo de demanda', 'DEMAND_TYPE', form.demandTypeCode, (v) =>
               update('demandTypeCode', v),
             )}
@@ -984,17 +1031,21 @@ export function TriageView(): React.ReactElement {
               form.dataAvailabilityCode,
               (v) => update('dataAvailabilityCode', v),
             )}
-            <Field id="triage-effort" label="Esfuerzo (horas)" error={fieldErrors.totalEffortHours}>
-              <Input
-                ref={effortRef}
-                type="number"
-                min={0}
-                step={1}
-                inputMode="numeric"
-                value={form.totalEffortHours}
-                onChange={(e) => update('totalEffortHours', e.target.value)}
-              />
-            </Field>
+            {/* Con cinco campos, el esfuerzo ocupa la fila completa para que la
+                cuadrícula quede simétrica (2 + 2 + 1 a todo el ancho). */}
+            <div className="sm:col-span-2">
+              <Field id="triage-effort" label="Esfuerzo (horas)" error={fieldErrors.totalEffortHours}>
+                <Input
+                  ref={effortRef}
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={form.totalEffortHours}
+                  onChange={(e) => update('totalEffortHours', e.target.value)}
+                />
+              </Field>
+            </div>
           </div>
         </div>
 
@@ -1018,7 +1069,7 @@ export function TriageView(): React.ReactElement {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NONE}>Sin elegir</SelectItem>
-                    {activeProcesses.map((p) => (
+                    {mainProcessOptions.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
                       </SelectItem>

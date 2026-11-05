@@ -29,7 +29,7 @@ solicitud.
 El portal acompaña el ciclo de vida de una **solicitud** (`Request`) de principio a fin:
 
 1. **Demanda.** Se registra la solicitud (estado `REGISTRADA`).
-2. **Triage.** Se clasifica y se decide la ruta (continuar o descartar).
+2. **Triage.** Se clasifica, se fija el proceso principal y los procesos que intervienen, y se decide (continuar, devolver o rechazar).
 3. **Priorización.** Se evalúa con 8 criterios ponderados y se obtiene un puntaje.
 4. **Aprobación del compromiso.** Se aprueba (la solicitud queda *Comprometida*) o se
    devuelve a triage con motivo.

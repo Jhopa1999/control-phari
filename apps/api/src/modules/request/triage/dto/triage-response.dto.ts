@@ -11,7 +11,13 @@ export class TriageResponseDto {
   @ApiProperty({ type: String, description: 'Decision (CONTINUAR/DEVOLVER/RECHAZAR).' })
   decision!: string;
 
-  @ApiProperty({ type: String, nullable: true, description: 'Ruta (code maestro).' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    deprecated: true,
+    description:
+      'DEPRECADO (dato historico): ruta de triage (code de TRIAGE_ROUTE). Ya no se captura; solo viene informada en triages antiguos. El proceso principal de la solicitud lo reemplaza.',
+  })
   routeCode!: string | null;
 
   @ApiProperty({ type: String, nullable: true, description: 'Tipo de demanda (code maestro).' })
