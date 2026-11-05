@@ -102,46 +102,46 @@ describe('RequestService', () => {
   });
 
   describe('create', () => {
-    it('crea REGISTRADA, materializa el proceso principal como participante (BR-001) y audita CREATE', async () => {
-      (m.prismaObj.process as any).findFirst.mockResolvedValue({ id: 'p1' });
-      (m.prismaObj.request as any).create.mockResolvedValue(makeRequestRow());
+    it('registra SIN proceso ni participantes (el proceso se fija en el triage) y audita CREATE', async () => {
+      (m.prismaObj.request as any).create.mockResolvedValue(
+        makeRequestRow({ mainProcessId: null, participants: [] }),
+      );
 
-      const res = await service.create(lider(), {
-        title: 'Solicitud',
-        mainProcessId: 'p1',
-      });
+      const res = await service.create(lider(), { title: 'Solicitud' });
 
       const data = (m.prismaObj.request as any).create.mock.calls[0][0].data;
       // El service NO fija operationalState (default del schema).
       expect(data.operationalState).toBeUndefined();
-      expect(data.participants.create).toEqual([{ processId: 'p1' }]);
-      expect(res.participants).toEqual([{ id: 'rp1', processId: 'p1' }]);
+      // Sin proceso: ni se escribe mainProcessId ni se crean participantes.
+      expect(data.mainProcessId).toBeUndefined();
+      expect(data.participants).toBeUndefined();
+      // No se valida ningún proceso al registrar.
+      expect((m.prismaObj.process as any).findFirst).not.toHaveBeenCalled();
+      expect(res.participants).toEqual([]);
       expect(m.auditRecord).toHaveBeenCalledTimes(1);
       expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
         action: 'CREATE',
         objectType: 'REQUEST',
         objectId: 'r1',
-        scopeProcessId: 'p1',
+        scopeProcessId: null,
         before: null,
       });
     });
 
-    it('la creacion materializa SOLO el proceso principal (participantes se deciden en el triage)', async () => {
+    it('por compatibilidad: si llega mainProcessId lo valida y lo materializa como único participante (BR-001)', async () => {
       (m.prismaObj.process as any).findFirst.mockResolvedValue({ id: 'p1' });
       (m.prismaObj.request as any).create.mockResolvedValue(makeRequestRow());
 
-      await service.create(lider(['p1']), {
-        title: 'S',
-        mainProcessId: 'p1',
-      });
+      await service.create(lider(['p1']), { title: 'S', mainProcessId: 'p1' });
 
       const data = (m.prismaObj.request as any).create.mock.calls[0][0].data;
+      expect(data.mainProcessId).toBe('p1');
       expect(data.participants.create).toEqual([{ processId: 'p1' }]);
-      // La Solicitud ya no valida procesos extra: process.findMany no se usa.
+      // La Solicitud no valida procesos extra: process.findMany no se usa.
       expect((m.prismaObj.process as any).findMany).not.toHaveBeenCalled();
     });
 
-    it('proceso principal fuera de alcance -> 404', async () => {
+    it('si llega un proceso principal fuera de alcance -> 404', async () => {
       (m.prismaObj.process as any).findFirst.mockResolvedValue(null);
       await expect(
         service.create(lider(['p1']), { title: 'S', mainProcessId: 'pX' }),

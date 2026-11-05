@@ -175,32 +175,34 @@ export class RequestService {
     actor: CurrentActor,
     dto: CreateRequestDto,
   ): Promise<RequestResponseDto> {
-    // El proceso principal debe existir, estar activo y estar en alcance (404 si
-    // fuera de alcance, igual que la lectura; design §3.4).
-    const mainProcess = await this.prisma.process.findFirst({
-      where: {
-        AND: [
-          { id: dto.mainProcessId, active: true },
-          actor.isJefeArea
-            ? {}
-            : { id: { in: Array.from(actor.scopedProcessIds) } },
-        ],
-      },
-      select: { id: true },
-    });
-    if (!mainProcess) {
-      throw new NotFoundException(
-        `Proceso principal "${dto.mainProcessId}" no encontrado.`,
+    // El proceso principal se determina en el TRIAGE: la solicitud se registra
+    // SIN proceso y SIN participantes. Solo por compatibilidad se acepta un
+    // `mainProcessId` en el DTO; si llega, debe existir, estar activo y estar en
+    // alcance (404 si fuera de alcance, igual que la lectura; design §3.4) y la
+    // Request nace con ese proceso como único participante (BR-001).
+    let participantIds: string[] | null = null;
+    if (dto.mainProcessId !== undefined) {
+      const mainProcess = await this.prisma.process.findFirst({
+        where: {
+          AND: [
+            { id: dto.mainProcessId, active: true },
+            actor.isJefeArea
+              ? {}
+              : { id: { in: Array.from(actor.scopedProcessIds) } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (!mainProcess) {
+        throw new NotFoundException(
+          `Proceso principal "${dto.mainProcessId}" no encontrado.`,
+        );
+      }
+      participantIds = await this.resolveParticipantIds(
+        dto.mainProcessId,
+        undefined,
       );
     }
-
-    // En la creación, la Request nace solo con su proceso principal como
-    // participante (BR-001). Los procesos que intervienen se deciden en el
-    // Triage, no en la Solicitud.
-    const participantIds = await this.resolveParticipantIds(
-      dto.mainProcessId,
-      undefined,
-    );
 
     const requesterData = await this.resolveRequesterData(dto.requesterId);
 
@@ -208,7 +210,11 @@ export class RequestService {
       const request = await tx.request.create({
         data: {
           title: dto.title,
-          mainProcessId: dto.mainProcessId,
+          // El proceso principal se fija en el triage; solo se escribe si el
+          // DTO lo trae (compatibilidad). Por defecto queda null.
+          ...(dto.mainProcessId !== undefined
+            ? { mainProcessId: dto.mainProcessId }
+            : {}),
           // operationalState usa el default del schema (REGISTRADA): el service
           // no lo repite (design §1.2, MEDIUM-3).
           ...requesterData,
@@ -227,9 +233,15 @@ export class RequestService {
           ...(dto.initialCommitmentDate !== undefined
             ? { initialCommitmentDate: new Date(dto.initialCommitmentDate) }
             : {}),
-          participants: {
-            create: participantIds.map((processId) => ({ processId })),
-          },
+          // La solicitud nace sin participantes salvo que el DTO traiga proceso
+          // (compatibilidad); los participantes se pueblan en el triage.
+          ...(participantIds !== null
+            ? {
+                participants: {
+                  create: participantIds.map((processId) => ({ processId })),
+                },
+              }
+            : {}),
         },
         include: { participants: true },
       });

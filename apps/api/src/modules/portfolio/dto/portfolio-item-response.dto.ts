@@ -13,14 +13,19 @@ export class PortfolioItemResponseDto {
   @ApiProperty({ type: String, description: 'Titulo de la iniciativa.' })
   title!: string;
 
-  @ApiProperty({ type: String, format: 'uuid', description: 'Proceso principal.' })
-  mainProcessId!: string;
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Proceso principal o null (solicitud aún sin triar).',
+  })
+  mainProcessId!: string | null;
 
-  @ApiProperty({ type: String, description: 'Code del proceso principal.' })
-  mainProcessCode!: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Code del proceso principal o null.' })
+  mainProcessCode!: string | null;
 
-  @ApiProperty({ type: String, description: 'Nombre del proceso principal.' })
-  mainProcessName!: string;
+  @ApiProperty({ type: String, nullable: true, description: 'Nombre del proceso principal o null.' })
+  mainProcessName!: string | null;
 
   @ApiProperty({ type: String, description: 'Estado operativo explicito (no inferido).' })
   operationalState!: string;

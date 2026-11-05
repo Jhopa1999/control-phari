@@ -28,6 +28,16 @@ export class CreateTriageDto {
   @IsIn(TRIAGE_DECISIONS)
   decision!: (typeof TRIAGE_DECISIONS)[number];
 
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description:
+      'Proceso principal de la solicitud. Se determina en el triage: es obligatorio para CONTINUAR si la solicitud aún no lo tiene. Debe existir y estar activo.',
+  })
+  @IsOptional()
+  @IsUUID()
+  mainProcessId?: string;
+
   @ApiPropertyOptional({ type: String, description: 'Ruta (maestra TRIAGE_ROUTE).' })
   @IsOptional()
   @Transform(trim)

@@ -44,7 +44,7 @@ const CLOSABLE_STATES = new Set<string>([
 ]);
 
 interface Evaluation {
-  request: { id: string; title: string; mainProcessId: string; operationalState: string; closedAt: Date | null; closedByUserId: string | null };
+  request: { id: string; title: string; mainProcessId: string | null; operationalState: string; closedAt: Date | null; closedByUserId: string | null };
   tasksTotal: number;
   tasksCompleted: number;
   documents: Array<{ id: string; title: string; status: string; reviewReason: string | null }>;

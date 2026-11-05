@@ -93,7 +93,9 @@ export class NotificationService {
    * algún proceso de esa área). Si el área no tiene jefe asignado, se notifica
    * a todos los jefes con grant activo para que la aprobación no quede huérfana.
    */
-  async areaHeadsForProcess(processId: string): Promise<string[]> {
+  async areaHeadsForProcess(processId: string | null): Promise<string[]> {
+    // Sin proceso (solicitud aún sin triar) no hay destinatarios por proceso.
+    if (processId === null) return [];
     try {
       const process = await this.prisma.process.findFirst({
         where: { id: processId },
@@ -121,7 +123,9 @@ export class NotificationService {
   }
 
   /** Líderes del proceso (grant LIDER_PROCESO activo en el proceso). */
-  async processLeaders(processId: string): Promise<string[]> {
+  async processLeaders(processId: string | null): Promise<string[]> {
+    // Sin proceso (solicitud aún sin triar) no hay líderes que notificar.
+    if (processId === null) return [];
     try {
       const rows = await this.prisma.grant.findMany({
         where: {

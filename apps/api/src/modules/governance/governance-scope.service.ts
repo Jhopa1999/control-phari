@@ -66,7 +66,10 @@ export class GovernanceScopeService {
     if (actor.isJefeArea) {
       return;
     }
-    if (this.leaderProcessIds(actor).includes(request.mainProcessId)) {
+    if (
+      request.mainProcessId !== null &&
+      this.leaderProcessIds(actor).includes(request.mainProcessId)
+    ) {
       return;
     }
     throw new ForbiddenException(

@@ -50,8 +50,14 @@ export class RequestResponseDto {
   @ApiProperty({ type: String, nullable: true, description: 'Resultado esperado.' })
   expectedResult!: string | null;
 
-  @ApiProperty({ type: String, format: 'uuid', description: 'Proceso principal.' })
-  mainProcessId!: string;
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description:
+      'Proceso principal o null. Se determina en el triage: la solicitud se registra sin proceso.',
+  })
+  mainProcessId!: string | null;
 
   @ApiProperty({
     type: String,

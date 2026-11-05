@@ -75,6 +75,8 @@ const CATALOG_FAMILIES = [
 type CatalogsByFamily = Record<string, CatalogItem[]>;
 
 interface TriageFormValues {
+  /** Proceso principal elegido en el triage (si la solicitud aún no lo tiene). */
+  mainProcessId: string;
   routeCode: string;
   demandTypeCode: string;
   criticalityCode: string;
@@ -91,10 +93,11 @@ interface TriageFormValues {
   decision: Decision | '';
 }
 
-type FieldKey = 'totalEffortHours' | 'decision' | 'assetId';
+type FieldKey = 'totalEffortHours' | 'decision' | 'assetId' | 'mainProcessId';
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 const EMPTY_FORM: TriageFormValues = {
+  mainProcessId: '',
   routeCode: '',
   demandTypeCode: '',
   criticalityCode: '',
@@ -148,7 +151,11 @@ function selectedOrUndefined(value: string): string | undefined {
  * obligatoria y el esfuerzo, si se indica, es un entero mayor o igual a 0 (el
  * mismo min=0 del campo numérico, ahora con su mensaje junto al campo).
  */
-function validate(form: TriageFormValues, hasAsset: boolean): FieldErrors {
+function validate(
+  form: TriageFormValues,
+  hasAsset: boolean,
+  effectiveMainProcessId: string | null,
+): FieldErrors {
   const errors: FieldErrors = {};
   const effort = form.totalEffortHours.trim();
   if (effort !== '') {
@@ -158,6 +165,10 @@ function validate(form: TriageFormValues, hasAsset: boolean): FieldErrors {
     }
   }
   if (!form.decision) errors.decision = 'La decisión es obligatoria.';
+  // Continuar exige proceso principal: es la base para priorizar y planificar.
+  if (form.decision === 'CONTINUAR' && !effectiveMainProcessId) {
+    errors.mainProcessId = 'Para continuar debes elegir el proceso principal de la solicitud.';
+  }
   if (form.decision === 'CONTINUAR' && !hasAsset && !form.assetId) {
     errors.assetId = 'Elige el activo base para continuar: sin él la solicitud no se puede priorizar.';
   }
@@ -304,9 +315,15 @@ export function TriageView(): React.ReactElement {
     [requests, selectedId],
   );
   const pendingCount = React.useMemo(() => requests.filter(isTriageable).length, [requests]);
-  const processName = selected
-    ? (processes.find((p) => p.id === selected.mainProcessId)?.name ?? null)
+  // Proceso principal efectivo: el que la solicitud ya tiene o el elegido en el
+  // formulario. Mientras no haya proceso, se fija aquí (en el triage).
+  const effectiveMainProcessId: string | null =
+    (selected?.mainProcessId ?? null) || (form.mainProcessId || null);
+  const processName = effectiveMainProcessId
+    ? (processes.find((p) => p.id === effectiveMainProcessId)?.name ?? null)
     : null;
+  /** Procesos activos para elegir el principal cuando la solicitud no lo tiene. */
+  const activeProcesses = React.useMemo(() => processes.filter((p) => p.active), [processes]);
   const assetName = selected?.assetId
     ? (assets.find((a) => a.id === selected.assetId)?.name ?? 'Activo fuera de tu alcance')
     : null;
@@ -364,8 +381,8 @@ export function TriageView(): React.ReactElement {
   // Procesos que intervienen seleccionables: los activos menos el principal, que
   // participa siempre y no se puede quitar (BR-001).
   const participantOptions = React.useMemo(
-    () => processes.filter((p) => p.active && p.id !== selected?.mainProcessId),
-    [processes, selected?.mainProcessId],
+    () => processes.filter((p) => p.active && p.id !== effectiveMainProcessId),
+    [processes, effectiveMainProcessId],
   );
 
   function toggleParticipant(processId: string): void {
@@ -383,11 +400,12 @@ export function TriageView(): React.ReactElement {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (!selected || submitting) return;
-    const errors = validate(form, selected.assetId !== null);
+    const errors = validate(form, selected.assetId !== null, effectiveMainProcessId);
     setFieldErrors(errors);
-    if (errors.totalEffortHours || errors.decision || errors.assetId) {
+    if (errors.totalEffortHours || errors.decision || errors.assetId || errors.mainProcessId) {
       // Foco al primer campo con error, en orden del DOM.
-      if (errors.assetId) document.getElementById('triage-asset')?.focus();
+      if (errors.mainProcessId) document.getElementById('triage-main-process')?.focus();
+      else if (errors.assetId) document.getElementById('triage-asset')?.focus();
       else if (errors.totalEffortHours) effortRef.current?.focus();
       else document.getElementById('triage-decision-CONTINUAR')?.focus();
       return;
@@ -400,6 +418,8 @@ export function TriageView(): React.ReactElement {
         form.totalEffortHours.trim() === '' ? undefined : Number.parseInt(form.totalEffortHours, 10);
       await createTriage(selected.id, {
         decision,
+        // El proceso principal se fija en el triage si la solicitud no lo tiene.
+        mainProcessId: selected.mainProcessId === null ? selectedOrUndefined(form.mainProcessId) : undefined,
         routeCode: selectedOrUndefined(form.routeCode),
         demandTypeCode: selectedOrUndefined(form.demandTypeCode),
         criticalityCode: selectedOrUndefined(form.criticalityCode),
@@ -410,7 +430,7 @@ export function TriageView(): React.ReactElement {
         // El principal participa siempre: se decide en el triage qué otros
         // procesos intervienen. Nunca se envía el principal entre los extras.
         participantProcessIds: form.participantProcessIds.filter(
-          (id) => id !== selected.mainProcessId,
+          (id) => id !== effectiveMainProcessId,
         ),
         dependencies: trimOrUndefined(form.dependencies),
         notes: trimOrUndefined(form.notes),
@@ -914,6 +934,43 @@ export function TriageView(): React.ReactElement {
         </div>
 
         <div className="grid gap-4">
+          <h3 className="text-sm font-semibold">Proceso principal</h3>
+          {selected?.mainProcessId === null ? (
+            <Field
+              id="triage-main-process"
+              label="Proceso principal"
+              required
+              error={fieldErrors.mainProcessId}
+              help="Se determina en el triage. Es el proceso líder y participa siempre. Obligatorio para Continuar."
+            >
+              {(control) => (
+                <Select
+                  value={form.mainProcessId || NONE}
+                  onValueChange={(v) => update('mainProcessId', v === NONE ? '' : v)}
+                >
+                  <SelectTrigger {...control}>
+                    <SelectValue placeholder="Elige el proceso principal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Sin elegir</SelectItem>
+                    {activeProcesses.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Proceso principal:{' '}
+              <span className="font-medium text-foreground">
+                {processName ?? selected?.mainProcessId}
+              </span>
+            </p>
+          )}
+
           <h3 className="text-sm font-semibold">Procesos que intervienen</h3>
           <FieldSet
             id="triage-participants"
@@ -922,17 +979,17 @@ export function TriageView(): React.ReactElement {
             help="El proceso principal es el líder y participa siempre. Marca los demás procesos que intervienen; sus responsables podrán asumir tareas en el plan."
           >
             <div className="grid gap-x-4 gap-y-1 rounded-md border p-3 sm:grid-cols-2">
-              {selected?.mainProcessId ? (
+              {effectiveMainProcessId ? (
                 <label className="flex min-h-8 items-center gap-2 text-sm">
                   <input
                     type="checkbox"
-                    id={`triage-participant-${selected.mainProcessId}`}
+                    id={`triage-participant-${effectiveMainProcessId}`}
                     checked
                     disabled
                     readOnly
                     className="size-4 accent-primary"
                   />
-                  <span className="font-medium">{processName ?? selected.mainProcessId}</span>
+                  <span className="font-medium">{processName ?? effectiveMainProcessId}</span>
                   <span className="rounded border px-1.5 py-0.5 text-meta text-muted-foreground">
                     Principal · Líder
                   </span>

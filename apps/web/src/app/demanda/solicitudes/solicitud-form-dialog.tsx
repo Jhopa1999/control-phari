@@ -28,7 +28,6 @@ import { Textarea } from '@/components/ui/textarea';
 import type {
   Approval,
   Area,
-  Process,
   Request,
   Requester,
 } from '@/lib/api-client';
@@ -43,7 +42,6 @@ import { cn } from '@/lib/utils';
 
 export interface SolicitudFormValues {
   title: string;
-  mainProcessId: string;
   /** Solicitante del maestro (el área se asocia automáticamente). */
   requesterId: string;
   functionalOwner: string;
@@ -57,7 +55,6 @@ interface SolicitudFormDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Si se pasa, el diálogo está en modo edición. */
   editing?: Request | null;
-  processes: Process[];
   /** Maestro de solicitantes (SOL-03). */
   requesters: Requester[];
   submitting: boolean;
@@ -71,7 +68,7 @@ interface SolicitudFormDialogProps {
 /** Id del formulario: el FormError lleva `sol-form-error`. */
 const FORM_ID = 'sol-form';
 
-type FieldKey = 'title' | 'mainProcessId';
+type FieldKey = 'title';
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 /** Fases del flujo, para explicar las precondiciones (UI-04). */
@@ -85,7 +82,6 @@ const PHASES = [
 function emptyValues(): SolicitudFormValues {
   return {
     title: '',
-    mainProcessId: '',
     requesterId: '',
     functionalOwner: '',
     expectedResult: '',
@@ -105,7 +101,6 @@ function toDateInput(iso: string | null | undefined): string {
 function validate(values: SolicitudFormValues): FieldErrors {
   const errors: FieldErrors = {};
   if (!values.title.trim()) errors.title = 'El título es obligatorio.';
-  if (!values.mainProcessId) errors.mainProcessId = 'El proceso principal es obligatorio.';
   return errors;
 }
 
@@ -170,14 +165,14 @@ function ApprovalHistory({ approvals }: { approvals: Approval[] }): React.ReactE
 
 /**
  * Ficha de una solicitud (design §11.5), en un diálogo lg con los campos por
- * grupos. Crear envía mainProcessId; editar envía changeJustification y no
- * mainProcessId. Ante un fallo el diálogo queda abierto con los valores.
+ * grupos. El proceso principal NO se elige aquí: se determina en el triage.
+ * Editar envía changeJustification. Ante un fallo el diálogo queda abierto con
+ * los valores.
  */
 export function SolicitudFormDialog({
   open,
   onOpenChange,
   editing,
-  processes,
   requesters,
   submitting,
   errorMessage,
@@ -197,7 +192,6 @@ export function SolicitudFormDialog({
   // Solo lectura: deja ver lo registrado en la etapa de aprobación.
   const [approvals, setApprovals] = React.useState<Approval[]>([]);
   const titleRef = React.useRef<HTMLInputElement>(null);
-  const processRef = React.useRef<HTMLButtonElement>(null);
 
   // Inicializa el formulario al abrir (crear o editar). El reset solo ocurre
   // aquí; ante fallo del POST/PATCH el padre mantiene el diálogo abierto con los
@@ -219,7 +213,6 @@ export function SolicitudFormDialog({
     if (editing) {
       setValues({
         title: editing.title,
-        mainProcessId: editing.mainProcessId,
         requesterId: editing.requesterId ?? '',
         functionalOwner: editing.functionalOwner ?? '',
         expectedResult: editing.expectedResult ?? '',
@@ -231,26 +224,17 @@ export function SolicitudFormDialog({
     }
   });
 
-  const activeProcesses = React.useMemo(() => processes.filter((p) => p.active), [processes]);
-
   function update<K extends keyof SolicitudFormValues>(key: K, value: SolicitudFormValues[K]): void {
     setValues((v) => ({ ...v, [key]: value }));
     setFieldErrors((prev) => (key in prev ? { ...prev, [key]: undefined } : prev));
-  }
-
-  function changeMainProcess(processId: string): void {
-    setValues((v) => ({ ...v, mainProcessId: processId }));
-    setFieldErrors((prev) => ({ ...prev, mainProcessId: undefined }));
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const errors = validate(values);
     setFieldErrors(errors);
-    if (errors.title || errors.mainProcessId) {
-      // Foco al primer campo con error, en orden del DOM.
-      if (errors.title) titleRef.current?.focus();
-      else processRef.current?.focus();
+    if (errors.title) {
+      titleRef.current?.focus();
       return;
     }
     onSubmit({
@@ -272,8 +256,6 @@ export function SolicitudFormDialog({
     const area = editing.requesterArea ? ` (${editing.requesterArea})` : '';
     requesterHelp = `Solicitante histórico: ${editing.requesterName}${area}. Selecciona uno del maestro para actualizarlo.`;
   }
-
-  const mainProcessName = (id: string) => processes.find((p) => p.id === id)?.name ?? id;
 
   function openNewRequester(): void {
     setNewReqError(null);
@@ -383,32 +365,10 @@ export function SolicitudFormDialog({
 
               <div className="grid items-start gap-4 sm:grid-cols-2">
                 <Field
-                  id="sol-main-process"
-                  label="Proceso principal"
-                  required={!isEdit}
-                  error={fieldErrors.mainProcessId}
-                  help={isEdit ? 'El proceso principal no se cambia al editar.' : undefined}
+                  id="sol-target"
+                  label="Fecha objetivo"
+                  help="El proceso principal se determina en el triage."
                 >
-                  {(control) =>
-                    isEdit ? (
-                      <Input {...control} readOnly disabled value={mainProcessName(values.mainProcessId)} />
-                    ) : (
-                      <Select value={values.mainProcessId} onValueChange={changeMainProcess}>
-                        <SelectTrigger ref={processRef} {...control}>
-                          <SelectValue placeholder="Selecciona un proceso" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {activeProcesses.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )
-                  }
-                </Field>
-                <Field id="sol-target" label="Fecha objetivo">
                   <Input
                     type="date"
                     value={values.targetDate}

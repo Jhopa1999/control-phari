@@ -234,7 +234,9 @@ export function FichaView({ id }: { id: string }): React.ReactElement {
   }
 
   const processName =
-    data.processes.find((p) => p.id === request.mainProcessId)?.name ?? null;
+    request.mainProcessId === null
+      ? 'Sin proceso aún'
+      : data.processes.find((p) => p.id === request.mainProcessId)?.name ?? null;
 
   return (
     <PageLayout>
