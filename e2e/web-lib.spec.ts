@@ -105,6 +105,7 @@ import {
   weekEndOf,
   type MyWorkGroupable,
 } from '../apps/web/src/lib/my-work-groups';
+import { nextStepFor, orderTransitions } from '../apps/web/src/lib/task-next-step';
 
 /**
  * Pruebas de funciones puras de apps/web/src/lib (design §7.9.2 y §20) con el
@@ -1270,5 +1271,45 @@ test.describe('my-work-groups', () => {
       inProgress: 0,
       blocked: 0,
     });
+  });
+});
+
+test.describe('task-next-step', () => {
+  test('el siguiente paso natural va primero y es una transición válida en cada estado', () => {
+    // Regresión: el menú rotulaba «Siguiente paso» a la primera transición de la
+    // lista (p. ej. «Volver a Por hacer» desde En curso), no al avance natural.
+    const esperado: Record<string, string> = {
+      POR_HACER: 'EN_CURSO',
+      EN_CURSO: 'EN_REVISION',
+      BLOQUEADA: 'EN_CURSO',
+      EN_REVISION: 'TERMINADA',
+    };
+    for (const [from, to] of Object.entries(esperado)) {
+      const { ordered, naturalFirst } = orderTransitions(from, nextTaskStatuses(from as never));
+      expect(naturalFirst, from).toBe(true);
+      expect(ordered[0], from).toBe(to);
+      expect(nextStepFor(from)?.to, from).toBe(to);
+    }
+  });
+
+  test('conserva todas las transiciones, sin duplicar ni inventar', () => {
+    for (const from of ['POR_HACER', 'EN_CURSO', 'BLOQUEADA', 'EN_REVISION', 'TERMINADA']) {
+      const base = nextTaskStatuses(from as never);
+      const { ordered } = orderTransitions(from, base);
+      expect([...ordered].sort()).toEqual([...base].sort());
+    }
+  });
+
+  test('desde TERMINADA solo se reabre: no hay siguiente paso', () => {
+    const { ordered, naturalFirst } = orderTransitions('TERMINADA', nextTaskStatuses('TERMINADA'));
+    expect(naturalFirst).toBe(false);
+    expect(ordered).toEqual(['EN_CURSO']);
+    expect(nextStepFor('TERMINADA')).toBeNull();
+  });
+
+  test('un estado fuera del enum no ofrece opciones ni lanza', () => {
+    const { ordered, naturalFirst } = orderTransitions('RARO', nextTaskStatuses('RARO' as never));
+    expect(ordered).toEqual([]);
+    expect(naturalFirst).toBe(false);
   });
 });

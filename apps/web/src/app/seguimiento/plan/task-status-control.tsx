@@ -14,6 +14,7 @@ import {
 import type { TaskStatus } from '@/lib/api-client';
 import { formatPercent } from '@/lib/format';
 import { taskStatusLabel } from '@/lib/tasks';
+import { orderTransitions } from '@/lib/task-next-step';
 import { nextTaskStatuses } from '@/lib/task-transitions';
 import { cn } from '@/lib/utils';
 
@@ -66,6 +67,12 @@ export function TaskStatusControl({
   triggerClassName,
 }: TaskStatusControlProps): React.ReactElement {
   const transitions = nextTaskStatuses(status as TaskStatus);
+  // Con verbos de acción (Mi trabajo) el siguiente paso natural va primero y es
+  // el único rotulado «Siguiente paso»; sin ellos (Planificación) el menú queda
+  // como siempre.
+  const { ordered, naturalFirst } = optionLabel
+    ? orderTransitions(status, transitions)
+    : { ordered: [...transitions], naturalFirst: false };
   const reasonId = React.useId();
   // Sin transiciones ofrecidas no hay nada que elegir: solo lectura.
   const isDisabled = disabled || busy || transitions.length === 0;
@@ -96,14 +103,14 @@ export function TaskStatusControl({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          {transitions.map((next, index) => (
+          {ordered.map((next, index) => (
             <React.Fragment key={next}>
-              {optionLabel && index === 1 ? <DropdownMenuSeparator /> : null}
+              {optionLabel && naturalFirst && index === 1 ? <DropdownMenuSeparator /> : null}
               <DropdownMenuItem onSelect={() => onChange(next)}>
                 {optionLabel ? (
                   <span className="flex flex-col">
                     <span>{optionLabel(next)}</span>
-                    {index === 0 ? (
+                    {naturalFirst && index === 0 ? (
                       <span className="text-meta text-muted-foreground">Siguiente paso</span>
                     ) : null}
                   </span>

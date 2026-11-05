@@ -26,6 +26,23 @@ export function nextStepFor(status: string): NextStep | null {
 }
 
 /**
+ * Transiciones válidas con el siguiente paso natural PRIMERO (si es una de
+ * ellas). `naturalFirst` indica si la primera opción es de verdad el siguiente
+ * paso: el menú solo la rotula «Siguiente paso» en ese caso (desde TERMINADA
+ * solo se puede reabrir, que no es un avance). Conserva el orden del resto.
+ */
+export function orderTransitions<T extends string>(
+  from: string,
+  transitions: readonly T[],
+): { ordered: T[]; naturalFirst: boolean } {
+  const natural = nextStepFor(from)?.to as T | undefined;
+  if (natural !== undefined && transitions.includes(natural)) {
+    return { ordered: [natural, ...transitions.filter((t) => t !== natural)], naturalFirst: true };
+  }
+  return { ordered: [...transitions], naturalFirst: false };
+}
+
+/**
  * Verbo de cada transición según el estado de origen (el destino solo no basta:
  * EN_CURSO se llega «Empezando», «Retomando», «Devolviendo» o «Reabriendo»).
  */
