@@ -2,6 +2,7 @@ import {
   api,
   type AcceptTask,
   type CreateTask,
+  type ResponsibleCandidate,
   type Task,
   type TaskHistoryEntry,
   type UpdateTask,
@@ -43,6 +44,30 @@ export async function listPlanTasks(planId: string): Promise<Task[]> {
     const { data, error, response } = await api.GET('/plans/{planId}/tasks', {
       params: { path: { planId } },
     });
+    if (error || !data) {
+      throw toTaskError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof PlanError) throw err;
+    throw toTaskError(undefined);
+  }
+}
+
+/**
+ * Candidatos a responsable de las tareas de un plan
+ * (GET /plans/:planId/responsible-candidates): personas con grant activo en los
+ * procesos que intervienen en la solicitud (decididos en el triage). Puebla el
+ * selector de responsable; el backend impone la misma regla al asignar.
+ */
+export async function listResponsibleCandidates(
+  planId: string,
+): Promise<ResponsibleCandidate[]> {
+  try {
+    const { data, error, response } = await api.GET(
+      '/plans/{planId}/responsible-candidates',
+      { params: { path: { planId } } },
+    );
     if (error || !data) {
       throw toTaskError(response.status, error);
     }

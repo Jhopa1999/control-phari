@@ -9,9 +9,9 @@ import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type {
-  CoordinationPerson,
   MyPermissions,
   Plan,
+  ResponsibleCandidate,
   Task,
   TaskStatus,
 } from '@/lib/api-client';
@@ -32,8 +32,8 @@ export interface PlanTasksKanbanProps {
   tasks: Task[];
   /** Plan seleccionado (no null: el kanban solo se renderiza con plan). */
   plan: Plan;
-  /** Personas en alcance, para reasignar responsable. */
-  people: CoordinationPerson[];
+  /** Candidatos a responsable (procesos intervinientes), para reasignar. */
+  people: ResponsibleCandidate[];
   /** Distingue fallo de carga de lista vacía legítima. */
   peopleState: LoadState;
   /** Permisos del actor (de useActor()); null mientras cargan. */

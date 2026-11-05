@@ -16,6 +16,7 @@ const JEFE: CurrentActor = {
   roleCodes: new Set([RoleCode.JEFE_AREA]),
   scopedProcessIds: new Set(),
   isJefeArea: true,
+  isLiderProceso: false,
   isAdmin: false,
 };
 
@@ -41,6 +42,7 @@ const LIDER: CurrentActor = {
   roleCodes: new Set([RoleCode.LIDER_PROCESO]),
   scopedProcessIds: new Set(['proc-1']),
   isJefeArea: false,
+  isLiderProceso: false,
   isAdmin: false,
 };
 

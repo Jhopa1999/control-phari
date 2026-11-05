@@ -82,6 +82,8 @@ interface TriageFormValues {
   dataAvailabilityCode: string;
   totalEffortHours: string;
   mainResponsibleUserId: string;
+  /** Procesos que intervienen además del principal (el principal va siempre). */
+  participantProcessIds: string[];
   dependencies: string;
   notes: string;
   /** Activo base elegido en el formulario (obligatorio para Continuar). */
@@ -100,11 +102,16 @@ const EMPTY_FORM: TriageFormValues = {
   dataAvailabilityCode: '',
   totalEffortHours: '',
   mainResponsibleUserId: '',
+  participantProcessIds: [],
   dependencies: '',
   notes: '',
   assetId: '',
   decision: '',
 };
+
+/** Glosa fija de ayuda bajo el campo «Dependencias» del triage. */
+const DEPENDENCIES_HELP =
+  'Indica de qué depende esta solicitud para avanzar: otras áreas o procesos, datos, accesos, decisiones o entregables previos.';
 
 const DECISIONS: { value: Decision; label: string }[] = [
   { value: 'CONTINUAR', label: 'Continuar' },
@@ -354,6 +361,25 @@ export function TriageView(): React.ReactElement {
     setFieldErrors((prev) => (key in prev ? { ...prev, [key]: undefined } : prev));
   }
 
+  // Procesos que intervienen seleccionables: los activos menos el principal, que
+  // participa siempre y no se puede quitar (BR-001).
+  const participantOptions = React.useMemo(
+    () => processes.filter((p) => p.active && p.id !== selected?.mainProcessId),
+    [processes, selected?.mainProcessId],
+  );
+
+  function toggleParticipant(processId: string): void {
+    setForm((f) => {
+      const has = f.participantProcessIds.includes(processId);
+      return {
+        ...f,
+        participantProcessIds: has
+          ? f.participantProcessIds.filter((id) => id !== processId)
+          : [...f.participantProcessIds, processId],
+      };
+    });
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (!selected || submitting) return;
@@ -381,6 +407,11 @@ export function TriageView(): React.ReactElement {
         dataAvailabilityCode: selectedOrUndefined(form.dataAvailabilityCode),
         totalEffortHours: effort !== undefined && Number.isFinite(effort) ? effort : undefined,
         mainResponsibleUserId: selectedOrUndefined(form.mainResponsibleUserId),
+        // El principal participa siempre: se decide en el triage qué otros
+        // procesos intervienen. Nunca se envía el principal entre los extras.
+        participantProcessIds: form.participantProcessIds.filter(
+          (id) => id !== selected.mainProcessId,
+        ),
         dependencies: trimOrUndefined(form.dependencies),
         notes: trimOrUndefined(form.notes),
       });
@@ -518,11 +549,11 @@ export function TriageView(): React.ReactElement {
 
     function applyAll(): void {
       setForm((f) => {
-        const next = { ...f };
+        const next = { ...f } as Record<string, unknown>;
         for (const row of applicable) {
-          (next as Record<string, string>)[row.field] = row.code as string;
+          next[row.field] = row.code as string;
         }
-        return next;
+        return next as unknown as TriageFormValues;
       });
     }
 
@@ -883,6 +914,50 @@ export function TriageView(): React.ReactElement {
         </div>
 
         <div className="grid gap-4">
+          <h3 className="text-sm font-semibold">Procesos que intervienen</h3>
+          <FieldSet
+            id="triage-participants"
+            kind="checkbox"
+            legend="Procesos que intervienen"
+            help="El proceso principal es el líder y participa siempre. Marca los demás procesos que intervienen; sus responsables podrán asumir tareas en el plan."
+          >
+            <div className="grid gap-x-4 gap-y-1 rounded-md border p-3 sm:grid-cols-2">
+              {selected?.mainProcessId ? (
+                <label className="flex min-h-8 items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    id={`triage-participant-${selected.mainProcessId}`}
+                    checked
+                    disabled
+                    readOnly
+                    className="size-4 accent-primary"
+                  />
+                  <span className="font-medium">{processName ?? selected.mainProcessId}</span>
+                  <span className="rounded border px-1.5 py-0.5 text-meta text-muted-foreground">
+                    Principal · Líder
+                  </span>
+                </label>
+              ) : null}
+              {participantOptions.map((p) => (
+                <label
+                  key={p.id}
+                  className="flex min-h-8 cursor-pointer items-center gap-2 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    id={`triage-participant-${p.id}`}
+                    checked={form.participantProcessIds.includes(p.id)}
+                    onChange={() => toggleParticipant(p.id)}
+                    className="size-4 accent-primary"
+                  />
+                  {p.name}
+                </label>
+              ))}
+            </div>
+          </FieldSet>
+        </div>
+
+        <div className="grid gap-4">
           <h3 className="text-sm font-semibold">Responsable y dependencias</h3>
           <Field id="triage-responsible" label="Responsable principal">
             {(control) => (
@@ -906,7 +981,7 @@ export function TriageView(): React.ReactElement {
               </Select>
             )}
           </Field>
-          <Field id="triage-dependencies" label="Dependencias">
+          <Field id="triage-dependencies" label="Dependencias" help={DEPENDENCIES_HELP}>
             <Textarea value={form.dependencies} onChange={(e) => update('dependencies', e.target.value)} />
           </Field>
           <Field id="triage-notes" label="Observaciones">

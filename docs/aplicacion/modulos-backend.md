@@ -125,8 +125,12 @@ sus flujos. Lectura con actor; escritura solo `JEFE_AREA`.
 ## request — Solicitud y flujo de demanda
 
 Núcleo del flujo de demanda. Reúne la ficha de la solicitud y los subflujos de triage,
-priorización y aprobación. Accesible a los 3 roles con alcance por proceso principal;
-triage/priorización exigen `JEFE_AREA` o `LIDER_PROCESO`. En aprobación, la cola y el
+priorización y aprobación. **Visibilidad:** `JEFE_AREA` y `LIDER_PROCESO` ven **todas**
+las solicitudes (sin filtro de proceso); un `INTEGRANTE` puro las ve filtradas por sus
+procesos con grant activo. La apertura al líder es solo de lectura; las escrituras siguen
+protegidas por los gates de cada etapa (que usan el mismo alcance), de modo que el líder
+puede hacer triage y avanzar el flujo sobre cualquier solicitud que ahora ve.
+Triage/priorización exigen `JEFE_AREA` o `LIDER_PROCESO`. En aprobación, la cola y el
 histórico los ven `JEFE_AREA` y `LIDER_PROCESO`, pero la **decisión** de aprobar o
 devolver es exclusiva de `JEFE_AREA`.
 
@@ -136,8 +140,8 @@ devolver es exclusiva de `JEFE_AREA`.
 | --- | --- | --- |
 | GET | `/requests` | Lista solicitudes dentro del alcance del actor (filtros `state`, `mainProcessId`). |
 | GET | `/requests/:id` | Obtiene una solicitud por id (`404` fuera de alcance). |
-| POST | `/requests` | Crea una solicitud (estado `REGISTRADA`). |
-| PATCH | `/requests/:id` | Edita la ficha (no el estado); conserva fechas iniciales. |
+| POST | `/requests` | Crea una solicitud (estado `REGISTRADA`). La solicitud nace solo con su proceso principal como participante (BR-001); los procesos que intervienen se deciden en el triage. |
+| PATCH | `/requests/:id` | Edita la ficha (no el estado); conserva fechas iniciales. No toca los participantes. |
 | DELETE | `/requests/:id` | Eliminación lógica (`deletedAt`/`deletedByUserId`, auditada como `DELETE`). Solo `JEFE_AREA`/`LIDER_PROCESO` dentro de su alcance; `409` si la solicitud está en ejecución o cerrada. Las solicitudes eliminadas dejan de aparecer en listados y consultas. |
 
 ### Triage (`triage/triage.controller.ts`)
@@ -145,7 +149,7 @@ devolver es exclusiva de `JEFE_AREA`.
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/requests/:id/triage` | Triage de la solicitud (0 o 1 fila) y candidatos a responsable. |
-| POST | `/requests/:id/triage` | Registra el triage (solo desde `REGISTRADA`; segundo POST → `409`). |
+| POST | `/requests/:id/triage` | Registra el triage (solo desde `REGISTRADA`; segundo POST → `409`). Acepta `participantProcessIds` (uuid[], opcional): los procesos que intervienen además del principal; reconcilia `RequestParticipant` (borrar y recrear) preservando siempre el principal (BR-001). Cada proceso extra debe existir y estar activo (`400` si no). |
 | POST | `/requests/:id/asset` | Asocia un activo base **existente** (`assetId`, requerido); solo en estados tempranos (`409` fuera, o si el activo no está habilitado para el proceso de la solicitud). |
 
 El triage **no crea activos**: solo asocia uno existente que esté visible para el actor.
@@ -216,9 +220,10 @@ Validaciones de fechas (backend y formularios): la fecha de fin de una fase o ta
 | --- | --- | --- |
 | GET | `/my-work` | Tareas asignadas al usuario actual (dentro de alcance). |
 | GET | `/plans/:planId/tasks` | Lista las tareas de un plan (filtros opcionales). |
-| POST | `/phases/:phaseId/tasks` | Crea una tarea en una fase (regla de hito). |
+| GET | `/plans/:planId/responsible-candidates` | Candidatos a responsable de las tareas del plan: personas con grant activo en alguno de los procesos que intervienen en la solicitud (los `RequestParticipant`, decididos en el triage). Los 3 roles, dentro del alcance del plan (`404` fuera). |
+| POST | `/phases/:phaseId/tasks` | Crea una tarea en una fase (regla de hito). Si se asigna `responsibleUserId`, debe pertenecer a un proceso interviniente de la solicitud (grant activo en algún `RequestParticipant`); `400` si no. |
 | GET | `/tasks/:id` | Detalle de una tarea con sus predecesoras. |
-| PATCH | `/tasks/:id` | Edita una tarea (no estado/aceptación; regla de hito). |
+| PATCH | `/tasks/:id` | Edita una tarea (no estado/aceptación; regla de hito). Al reasignar `responsibleUserId`, aplica la misma condición dura: debe pertenecer a un proceso interviniente (`400` si no). |
 | DELETE | `/tasks/:id` | Borra una tarea (`409` si es predecesora de otra). |
 | PATCH | `/tasks/:id/status` | Cambia el estado (gate de predecesoras). |
 | PATCH | `/tasks/:id/progress` | Actualiza solo el avance (entero 0-100) sin cambiar el estado. Solo con la tarea En curso, Bloqueada o En revisión (`409` en Por hacer o Terminada); jefe, líder o el responsable (`403` si no). Audita el cambio. |

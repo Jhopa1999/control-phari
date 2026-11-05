@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
@@ -33,6 +33,7 @@ function lider(scoped: string[] = ['p1']): CurrentActor {
     roleCodes: new Set([RoleCode.LIDER_PROCESO]),
     scopedProcessIds: new Set(scoped),
     isJefeArea: false,
+    isLiderProceso: false,
     isAdmin: false,
   };
 }
@@ -46,6 +47,22 @@ function jefe(): CurrentActor {
     roleCodes: new Set([RoleCode.JEFE_AREA]),
     scopedProcessIds: new Set<string>(),
     isJefeArea: true,
+    isLiderProceso: false,
+    isAdmin: false,
+  };
+}
+
+/** Líder de proceso: ve TODAS las solicitudes (visibilidad abierta, rediseño). */
+function liderProceso(scoped: string[] = ['p1']): CurrentActor {
+  return {
+    userId: 'ulp',
+    name: 'Lidia',
+    identifier: 'liderproc@demo.local',
+    grants: [],
+    roleCodes: new Set([RoleCode.LIDER_PROCESO]),
+    scopedProcessIds: new Set(scoped),
+    isJefeArea: false,
+    isLiderProceso: true,
     isAdmin: false,
   };
 }
@@ -109,35 +126,19 @@ describe('RequestService', () => {
       });
     });
 
-    it('deduplica el proceso principal si viene en participantProcessIds (BR-001/D9)', async () => {
+    it('la creacion materializa SOLO el proceso principal (participantes se deciden en el triage)', async () => {
       (m.prismaObj.process as any).findFirst.mockResolvedValue({ id: 'p1' });
-      (m.prismaObj.process as any).findMany.mockResolvedValue([{ id: 'p2' }]);
       (m.prismaObj.request as any).create.mockResolvedValue(makeRequestRow());
 
       await service.create(lider(['p1']), {
         title: 'S',
         mainProcessId: 'p1',
-        participantProcessIds: ['p1', 'p2'],
       });
 
       const data = (m.prismaObj.request as any).create.mock.calls[0][0].data;
-      expect(data.participants.create).toEqual([
-        { processId: 'p1' },
-        { processId: 'p2' },
-      ]);
-    });
-
-    it('participante inexistente/inactivo -> 400 sin crear', async () => {
-      (m.prismaObj.process as any).findFirst.mockResolvedValue({ id: 'p1' });
-      (m.prismaObj.process as any).findMany.mockResolvedValue([]); // p2 no activo
-      await expect(
-        service.create(lider(['p1']), {
-          title: 'S',
-          mainProcessId: 'p1',
-          participantProcessIds: ['p2'],
-        }),
-      ).rejects.toBeInstanceOf(BadRequestException);
-      expect((m.prismaObj.request as any).create).not.toHaveBeenCalled();
+      expect(data.participants.create).toEqual([{ processId: 'p1' }]);
+      // La Solicitud ya no valida procesos extra: process.findMany no se usa.
+      expect((m.prismaObj.process as any).findMany).not.toHaveBeenCalled();
     });
 
     it('proceso principal fuera de alcance -> 404', async () => {
@@ -227,21 +228,31 @@ describe('RequestService', () => {
       });
     });
 
-    it('al reconciliar participantes mantiene el principal (BR-001)', async () => {
+    it('la edicion de la ficha NO toca participantes (se reconcilian en el triage)', async () => {
       (m.prismaObj.request as any).findFirst.mockResolvedValue(makeRequestRow());
-      (m.prismaObj.process as any).findMany.mockResolvedValue([{ id: 'p2' }]);
       (m.prismaObj.request as any).update.mockResolvedValue(makeRequestRow());
 
-      await service.update(lider(), 'r1', { participantProcessIds: ['p2'] });
+      await service.update(lider(), 'r1', { title: 'Nuevo' });
 
-      expect((m.prismaObj.requestParticipant as any).deleteMany).toHaveBeenCalledWith({
-        where: { requestId: 'r1' },
-      });
-      const createData = (m.prismaObj.requestParticipant as any).createMany.mock.calls[0][0].data;
-      expect(createData).toEqual([
-        { requestId: 'r1', processId: 'p1' },
-        { requestId: 'r1', processId: 'p2' },
-      ]);
+      expect((m.prismaObj.requestParticipant as any).deleteMany).not.toHaveBeenCalled();
+      expect((m.prismaObj.requestParticipant as any).createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('visibilidad por rol (scopeWhere)', () => {
+    it('lider de proceso: ve TODAS las solicitudes (sin filtro de mainProcessId)', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([]);
+      await service.findMany(liderProceso(['p1']), {});
+      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
+      expect(where).toEqual({ deletedAt: null });
+      expect(where.mainProcessId).toBeUndefined();
+    });
+
+    it('integrante puro: conserva el filtro por scopedProcessIds', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([]);
+      await service.findMany(lider(['p1', 'p2']), {});
+      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
+      expect(where.mainProcessId).toEqual({ in: ['p1', 'p2'] });
     });
   });
 });

@@ -53,11 +53,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type {
-  CoordinationPerson,
   Plan,
   PlanGuide,
   PlanPhase,
   Request,
+  ResponsibleCandidate,
   Task,
   TaskStatus,
 } from '@/lib/api-client';
@@ -83,6 +83,7 @@ import {
   TASK_STATUSES,
   deleteTask,
   listPlanTasks,
+  listResponsibleCandidates,
   taskStatusLabel,
   updateTask,
   updateTaskProgress,
@@ -91,7 +92,6 @@ import {
 import { useClientTable } from '@/lib/use-client-table';
 import { usePlanTasksView } from '@/lib/use-plan-tasks-view';
 import { useRequestIdParam } from '@/lib/use-request-param';
-import { listCoordinationPeople } from '@/lib/worklog';
 import { SegmentedRadio } from '@/components/ui/segmented-radio';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { TaskDetail } from '../tareas/task-detail';
@@ -193,7 +193,7 @@ export function PlanView(): React.ReactElement {
   const [guide, setGuide] = React.useState<PlanGuide | null>(null);
   const [planState, setPlanState] = React.useState<PlanLoadState>('idle');
   const [busy, setBusy] = React.useState(false);
-  const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
+  const [people, setPeople] = React.useState<ResponsibleCandidate[]>([]);
   // Distingue el fallo de carga de una lista legitimamente vacia (design 3.6.1).
   const [peopleState, setPeopleState] = React.useState<LoadState>('loading');
   // Fila con una accion de edicion en linea en curso (una a la vez).
@@ -276,14 +276,25 @@ export function PlanView(): React.ReactElement {
     void fetchRequests();
   }, [fetchRequests, actorId, permissionsLoaded, planAllowed]);
 
-  // Personas para el selector de Responsable. peopleState distingue el fallo de
-  // carga (motivo "No se pudieron cargar las personas") de una lista
-  // legítimamente vacía (design §3.6.1): listCoordinationPeople LANZA ante un
-  // fallo HTTP/red, no devuelve [].
+  // Candidatos a responsable para el selector: personas con grant activo en los
+  // procesos que intervienen en la solicitud del plan (decididos en el triage),
+  // no todas las personas en alcance. Depende del plan elegido. peopleState
+  // distingue el fallo de carga de una lista legítimamente vacía (design §3.6.1):
+  // listResponsibleCandidates LANZA ante un fallo HTTP/red, no devuelve [].
+  const planId = plan?.id ?? null;
   React.useEffect(() => {
     if (!permissionsLoaded || !planAllowed) return;
+    if (!planId) {
+      // Sin plan seleccionado no hay candidatos que cargar; se limpia el estado
+      // (sincroniza con la ausencia de plan, sistema externo vía el selector).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPeople([]);
+      setPeopleState('success');
+      return;
+    }
     let active = true;
-    void listCoordinationPeople()
+    setPeopleState('loading');
+    void listResponsibleCandidates(planId)
       .then((data) => {
         if (!active) return;
         setPeople(data);
@@ -297,7 +308,7 @@ export function PlanView(): React.ReactElement {
     return () => {
       active = false;
     };
-  }, [actorId, permissionsLoaded, planAllowed]);
+  }, [planId, permissionsLoaded, planAllowed]);
 
   // Regla 1 de §7.9.1: adoptar ?requestId= al terminar la carga y cuando cambia.
   React.useEffect(() => {

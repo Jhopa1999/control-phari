@@ -12,8 +12,26 @@ function createPrismaMock() {
     plan: { findFirst: jest.fn() },
     task: { findFirst: jest.fn() },
     taskDependency: { findMany: jest.fn() },
+    requestParticipant: { findMany: jest.fn() },
+    grant: { findMany: jest.fn(), findFirst: jest.fn() },
+    user: { findMany: jest.fn() },
   };
   return prisma as unknown as PrismaService & typeof prisma;
+}
+
+/** Líder de proceso: ve TODAS las solicitudes (visibilidad abierta, rediseño). */
+function liderProceso(scoped: string[] = ['p1']): CurrentActor {
+  return {
+    userId: 'ulp',
+    name: 'Lidia',
+    identifier: 'liderproc@demo.local',
+    grants: [],
+    roleCodes: new Set([RoleCode.LIDER_PROCESO]),
+    scopedProcessIds: new Set(scoped),
+    isJefeArea: false,
+    isLiderProceso: true,
+    isAdmin: false,
+  };
 }
 
 function lider(scoped: string[] = ['p1']): CurrentActor {
@@ -25,6 +43,7 @@ function lider(scoped: string[] = ['p1']): CurrentActor {
     roleCodes: new Set([RoleCode.LIDER_PROCESO]),
     scopedProcessIds: new Set(scoped),
     isJefeArea: false,
+    isLiderProceso: false,
     isAdmin: false,
   };
 }
@@ -109,6 +128,7 @@ describe('PlanStateService', () => {
         roleCodes: new Set([RoleCode.JEFE_AREA]),
         scopedProcessIds: new Set<string>(),
         isJefeArea: true,
+        isLiderProceso: false,
         isAdmin: false,
       };
       prisma.request.findFirst.mockResolvedValue({
@@ -226,6 +246,103 @@ describe('PlanStateService', () => {
       await expect(
         service.assertPredecessorsSatisfied('t2'),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('visibilidad por rol (requestScopeWhere via requirePlanByIdInScope)', () => {
+    it('lider de proceso: resuelve plan de proceso ajeno (sin filtro)', async () => {
+      prisma.plan.findFirst.mockResolvedValue({ id: 'plan1', requestId: 'r1' });
+      prisma.request.findFirst.mockResolvedValue({
+        id: 'r1',
+        mainProcessId: 'p9',
+        operationalState: 'EN_PLANIFICACION',
+      });
+      const res = await service.requirePlanByIdInScope(liderProceso(['p1']), 'plan1');
+      expect(res.mainProcessId).toBe('p9');
+      const where = prisma.request.findFirst.mock.calls[0][0].where;
+      // Sin filtro de mainProcessId: solo deletedAt null.
+      expect(where.AND).toContainEqual({ deletedAt: null });
+    });
+  });
+
+  describe('responsibleCandidates (rediseño demanda)', () => {
+    it('devuelve personas con grant activo en los procesos intervinientes', async () => {
+      prisma.plan.findFirst.mockResolvedValue({ id: 'plan1', requestId: 'r1' });
+      prisma.request.findFirst.mockResolvedValue({
+        id: 'r1',
+        mainProcessId: 'p1',
+        operationalState: 'EN_PLANIFICACION',
+      });
+      prisma.requestParticipant.findMany.mockResolvedValue([
+        { processId: 'p1' },
+        { processId: 'p2' },
+      ]);
+      prisma.grant.findMany.mockResolvedValue([{ userId: 'u1' }, { userId: 'u2' }]);
+      prisma.user.findMany.mockResolvedValue([
+        { id: 'u1', name: 'Ana' },
+        { id: 'u2', name: 'Beto' },
+      ]);
+
+      const res = await service.responsibleCandidates(lider(), 'plan1');
+
+      expect(prisma.grant.findMany.mock.calls[0][0].where).toMatchObject({
+        active: true,
+        processId: { in: ['p1', 'p2'] },
+      });
+      expect(res).toEqual([
+        { id: 'u1', name: 'Ana' },
+        { id: 'u2', name: 'Beto' },
+      ]);
+    });
+
+    it('sin procesos intervinientes -> lista vacia', async () => {
+      prisma.plan.findFirst.mockResolvedValue({ id: 'plan1', requestId: 'r1' });
+      prisma.request.findFirst.mockResolvedValue({
+        id: 'r1',
+        mainProcessId: 'p1',
+        operationalState: 'EN_PLANIFICACION',
+      });
+      prisma.requestParticipant.findMany.mockResolvedValue([]);
+
+      const res = await service.responsibleCandidates(lider(), 'plan1');
+      expect(res).toEqual([]);
+      expect(prisma.grant.findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('assertResponsibleInParticipants (condicion dura)', () => {
+    it('usuario con grant en un proceso interviniente -> no lanza', async () => {
+      prisma.requestParticipant.findMany.mockResolvedValue([
+        { processId: 'p1' },
+        { processId: 'p2' },
+      ]);
+      prisma.grant.findFirst.mockResolvedValue({ id: 'g1' });
+      await expect(
+        service.assertResponsibleInParticipants('r1', 'u1'),
+      ).resolves.toBeUndefined();
+      expect(prisma.grant.findFirst.mock.calls[0][0].where).toMatchObject({
+        active: true,
+        userId: 'u1',
+        processId: { in: ['p1', 'p2'] },
+      });
+    });
+
+    it('usuario sin grant en ningun proceso interviniente -> 400', async () => {
+      prisma.requestParticipant.findMany.mockResolvedValue([{ processId: 'p1' }]);
+      prisma.grant.findFirst.mockResolvedValue(null);
+      await expect(
+        service.assertResponsibleInParticipants('r1', 'ajeno'),
+      ).rejects.toMatchObject({ status: 400 });
+    });
+
+    it('responsible null/undefined -> no valida', async () => {
+      await expect(
+        service.assertResponsibleInParticipants('r1', null),
+      ).resolves.toBeUndefined();
+      await expect(
+        service.assertResponsibleInParticipants('r1', undefined),
+      ).resolves.toBeUndefined();
+      expect(prisma.requestParticipant.findMany).not.toHaveBeenCalled();
     });
   });
 });

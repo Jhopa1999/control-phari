@@ -13,6 +13,7 @@ function actor(role: RoleCode): CurrentActor {
   return {
     userId: role === RoleCode.JEFE_AREA ? 'jefe' : 'lider',
     isJefeArea: role === RoleCode.JEFE_AREA,
+    isLiderProceso: false,
     isAdmin: false,
     roleCodes: new Set([role]),
     scopedProcessIds: new Set(['p1']),

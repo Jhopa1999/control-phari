@@ -3,11 +3,10 @@
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Lock, UserPlus } from 'lucide-react';
-import { Field, FieldSet, FormError, RequiredHint } from '@/components/field';
+import { Field, FormError, RequiredHint } from '@/components/field';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogBody,
@@ -31,7 +30,6 @@ import type {
   Area,
   Process,
   Request,
-  RequestParticipant,
   Requester,
 } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -46,7 +44,6 @@ import { cn } from '@/lib/utils';
 export interface SolicitudFormValues {
   title: string;
   mainProcessId: string;
-  participantProcessIds: string[];
   /** Solicitante del maestro (el área se asocia automáticamente). */
   requesterId: string;
   functionalOwner: string;
@@ -89,7 +86,6 @@ function emptyValues(): SolicitudFormValues {
   return {
     title: '',
     mainProcessId: '',
-    participantProcessIds: [],
     requesterId: '',
     functionalOwner: '',
     expectedResult: '',
@@ -224,9 +220,6 @@ export function SolicitudFormDialog({
       setValues({
         title: editing.title,
         mainProcessId: editing.mainProcessId,
-        participantProcessIds: editing.participants
-          .map((p: RequestParticipant) => p.processId)
-          .filter((id: string) => id !== editing.mainProcessId),
         requesterId: editing.requesterId ?? '',
         functionalOwner: editing.functionalOwner ?? '',
         expectedResult: editing.expectedResult ?? '',
@@ -240,38 +233,14 @@ export function SolicitudFormDialog({
 
   const activeProcesses = React.useMemo(() => processes.filter((p) => p.active), [processes]);
 
-  // Participantes seleccionables: los procesos activos menos el principal, que
-  // participa siempre y no se puede quitar.
-  const participantOptions = React.useMemo(
-    () => activeProcesses.filter((p) => p.id !== values.mainProcessId),
-    [activeProcesses, values.mainProcessId],
-  );
-
   function update<K extends keyof SolicitudFormValues>(key: K, value: SolicitudFormValues[K]): void {
     setValues((v) => ({ ...v, [key]: value }));
     setFieldErrors((prev) => (key in prev ? { ...prev, [key]: undefined } : prev));
   }
 
   function changeMainProcess(processId: string): void {
-    // Al cambiar el principal se quita de los participantes adicionales.
-    setValues((v) => ({
-      ...v,
-      mainProcessId: processId,
-      participantProcessIds: v.participantProcessIds.filter((id) => id !== processId),
-    }));
+    setValues((v) => ({ ...v, mainProcessId: processId }));
     setFieldErrors((prev) => ({ ...prev, mainProcessId: undefined }));
-  }
-
-  function toggleParticipant(processId: string): void {
-    setValues((v) => {
-      const has = v.participantProcessIds.includes(processId);
-      return {
-        ...v,
-        participantProcessIds: has
-          ? v.participantProcessIds.filter((id) => id !== processId)
-          : [...v.participantProcessIds, processId],
-      };
-    });
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
@@ -287,10 +256,6 @@ export function SolicitudFormDialog({
     onSubmit({
       ...values,
       title: values.title.trim(),
-      // Nunca incluir el principal entre los participantes adicionales.
-      participantProcessIds: values.participantProcessIds.filter(
-        (id) => id !== values.mainProcessId,
-      ),
     });
   }
 
@@ -451,42 +416,6 @@ export function SolicitudFormDialog({
                   />
                 </Field>
               </div>
-
-              <FieldSet
-                id="sol-participants"
-                kind="checkbox"
-                legend="Participantes"
-                help="El proceso principal participa siempre y no se puede quitar."
-              >
-                <div className="grid gap-x-4 gap-y-1 rounded-md border p-3 sm:grid-cols-2">
-                  {values.mainProcessId ? (
-                    <label className="flex min-h-8 items-center gap-2 text-sm">
-                      <Checkbox
-                        id={`sol-participant-${values.mainProcessId}`}
-                        checked
-                        disabled
-                        readOnly
-                      />
-                      <span className="font-medium">{mainProcessName(values.mainProcessId)}</span>
-                      <Badge variant="outline">Principal</Badge>
-                    </label>
-                  ) : (
-                    <p className="text-meta text-muted-foreground sm:col-span-2">
-                      Selecciona primero el proceso principal.
-                    </p>
-                  )}
-                  {participantOptions.map((p) => (
-                    <label key={p.id} className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
-                      <Checkbox
-                        id={`sol-participant-${p.id}`}
-                        checked={values.participantProcessIds.includes(p.id)}
-                        onChange={() => toggleParticipant(p.id)}
-                      />
-                      {p.name}
-                    </label>
-                  ))}
-                </div>
-              </FieldSet>
             </div>
 
             <div className="grid gap-4 border-t pt-5">

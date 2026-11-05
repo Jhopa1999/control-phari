@@ -28,6 +28,7 @@ import { ListPlanTasksDto } from './dto/list-plan-tasks.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
 import { MyWorkItemDto } from './dto/my-work-item.dto';
 import { TaskHistoryEntryDto } from './dto/task-history-entry.dto';
+import { ResponsibleCandidateDto } from './dto/responsible-candidate.dto';
 import { CurrentActor } from '../../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../../auth/current-actor';
 import { CurrentUserGuard } from '../../auth/current-user.guard';
@@ -70,6 +71,23 @@ export class TaskController {
     @Query() filters: ListPlanTasksDto,
   ) {
     return this.taskService.findForPlan(actor, planId, filters);
+  }
+
+  @Get('plans/:planId/responsible-candidates')
+  @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE)
+  @ApiOperation({
+    summary:
+      'Candidatos a responsable de tarea: personas con grant activo en los procesos que intervienen en la solicitud del plan.',
+  })
+  @ApiParam({ name: 'planId', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Candidatos a responsable.', type: [ResponsibleCandidateDto] })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 404, description: 'Plan fuera de alcance.' })
+  responsibleCandidates(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('planId', ParseUUIDPipe) planId: string,
+  ) {
+    return this.taskService.responsibleCandidates(actor, planId);
   }
 
   @Post('phases/:phaseId/tasks')

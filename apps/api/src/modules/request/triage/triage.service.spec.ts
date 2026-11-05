@@ -16,6 +16,8 @@ function createMocks() {
     catalogItem: { findFirst: jest.fn() },
     grant: { findMany: jest.fn() },
     user: { findMany: jest.fn() },
+    process: { findMany: jest.fn() },
+    requestParticipant: { deleteMany: jest.fn(), createMany: jest.fn() },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
     cb(prismaObj),
@@ -49,6 +51,7 @@ function lider(scoped: string[] = ['p1']): CurrentActor {
     roleCodes: new Set([RoleCode.LIDER_PROCESO]),
     scopedProcessIds: new Set(scoped),
     isJefeArea: false,
+    isLiderProceso: false,
     isAdmin: false,
   };
 }
@@ -329,6 +332,65 @@ describe('TriageService', () => {
     expect((m.prismaObj.grant as any).findMany).not.toHaveBeenCalled();
     expect(result.mainResponsibleUserId).toBeNull();
     expect(result.mainResponsibleName).toBeNull();
+  });
+
+  // --- Procesos que intervienen (rediseño demanda) ---
+
+  it('participantProcessIds validos -> borra y recrea con principal + extras', async () => {
+    (m.prismaObj.request as any).findFirst.mockResolvedValue(
+      makeRequest(RequestState.REGISTRADA),
+    );
+    (m.prismaObj.process as any).findMany.mockResolvedValue([{ id: 'p2' }]);
+    (m.prismaObj.triage as any).create.mockResolvedValue(triageRow());
+    (m.prismaObj.request as any).update.mockResolvedValue(
+      makeRequest(RequestState.EN_TRIAGE),
+    );
+
+    await service.create(lider(), 'r1', {
+      decision: 'CONTINUAR',
+      participantProcessIds: ['p1', 'p2'],
+    });
+
+    expect((m.prismaObj.requestParticipant as any).deleteMany).toHaveBeenCalledWith({
+      where: { requestId: 'r1' },
+    });
+    const createData = (m.prismaObj.requestParticipant as any).createMany.mock.calls[0][0].data;
+    // El principal (p1) se materializa siempre y se deduplica.
+    expect(createData).toEqual([
+      { requestId: 'r1', processId: 'p1' },
+      { requestId: 'r1', processId: 'p2' },
+    ]);
+  });
+
+  it('proceso interviniente inexistente/inactivo -> 400 sin mutacion', async () => {
+    (m.prismaObj.request as any).findFirst.mockResolvedValue(
+      makeRequest(RequestState.REGISTRADA),
+    );
+    (m.prismaObj.process as any).findMany.mockResolvedValue([]); // p2 no activo
+
+    await expect(
+      service.create(lider(), 'r1', {
+        decision: 'CONTINUAR',
+        participantProcessIds: ['p2'],
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect((m.prismaObj.triage as any).create).not.toHaveBeenCalled();
+    expect((m.prismaObj.requestParticipant as any).deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('sin participantProcessIds -> no toca los participantes', async () => {
+    (m.prismaObj.request as any).findFirst.mockResolvedValue(
+      makeRequest(RequestState.REGISTRADA),
+    );
+    (m.prismaObj.triage as any).create.mockResolvedValue(triageRow());
+    (m.prismaObj.request as any).update.mockResolvedValue(
+      makeRequest(RequestState.EN_TRIAGE),
+    );
+
+    await service.create(lider(), 'r1', { decision: 'CONTINUAR' });
+
+    expect((m.prismaObj.requestParticipant as any).deleteMany).not.toHaveBeenCalled();
+    expect((m.prismaObj.requestParticipant as any).createMany).not.toHaveBeenCalled();
   });
 
   it('findForRequest publica los mismos candidatos que valida create', async () => {

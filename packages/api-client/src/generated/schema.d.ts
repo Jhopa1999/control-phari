@@ -877,6 +877,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/plans/{planId}/responsible-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Candidatos a responsable de tarea: personas con grant activo en los procesos que intervienen en la solicitud del plan. */
+        get: operations["TaskController_responsibleCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/phases/{phaseId}/tasks": {
         parameters: {
             query?: never;
@@ -3288,8 +3305,6 @@ export interface components {
              * @description Proceso principal (requerido, participa siempre: BR-001).
              */
             mainProcessId: string;
-            /** @description Procesos participantes adicionales. El principal se materializa siempre. */
-            participantProcessIds?: string[];
             /**
              * Format: uuid
              * @description Solicitante del maestro de solicitantes. El área y el nombre se toman de su registro.
@@ -3319,8 +3334,6 @@ export interface components {
         UpdateRequestDto: {
             /** @description Titulo de la solicitud. */
             title?: string;
-            /** @description Procesos participantes adicionales (el principal se mantiene). */
-            participantProcessIds?: string[];
             /**
              * Format: uuid
              * @description Solicitante del maestro de solicitantes. El área y el nombre se toman de su registro.
@@ -3433,6 +3446,8 @@ export interface components {
              * @description Responsable principal: id de un lider del proceso principal de la solicitud.
              */
             mainResponsibleUserId?: string;
+            /** @description Procesos que intervienen además del principal (el principal participa siempre). */
+            participantProcessIds?: string[];
             /** @description Dependencias. */
             dependencies?: string;
             /** @description Observaciones. */
@@ -4094,6 +4109,15 @@ export interface components {
              * @description Fecha de actualizacion.
              */
             updatedAt: string;
+        };
+        ResponsibleCandidateDto: {
+            /**
+             * Format: uuid
+             * @description Id del candidato.
+             */
+            id: string;
+            /** @description Nombre del candidato. */
+            name: string;
         };
         CreateTaskDto: {
             /** @description Titulo de la tarea. */
@@ -9606,6 +9630,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskResponseDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskController_responsibleCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Candidatos a responsable. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponsibleCandidateDto"][];
                 };
             };
             /** @description Rol insuficiente. */

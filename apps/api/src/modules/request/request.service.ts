@@ -35,10 +35,11 @@ export class RequestService {
 
   /**
    * `where` de lectura por alcance (design §2.5): la Request pertenece a su
-   * proceso principal. Jefe: sin filtro; no-jefe: filtra por scopedProcessIds.
+   * proceso principal. Jefe de área o líder de proceso: sin filtro (ven TODAS
+   * las solicitudes). Resto (integrante puro): filtra por scopedProcessIds.
    */
   private scopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
-    if (actor.isJefeArea) {
+    if (actor.isJefeArea || actor.isLiderProceso) {
       return { deletedAt: null };
     }
     return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
@@ -193,9 +194,12 @@ export class RequestService {
       );
     }
 
+    // En la creación, la Request nace solo con su proceso principal como
+    // participante (BR-001). Los procesos que intervienen se deciden en el
+    // Triage, no en la Solicitud.
     const participantIds = await this.resolveParticipantIds(
       dto.mainProcessId,
-      dto.participantProcessIds,
+      undefined,
     );
 
     const requesterData = await this.resolveRequesterData(dto.requesterId);
@@ -258,32 +262,15 @@ export class RequestService {
       );
     }
 
-    // Reconciliar participantes si llegan: el principal se mantiene siempre
-    // (BR-001). Se recomputan desde cero preservando el invariante.
-    const participantIds =
-      dto.participantProcessIds !== undefined
-        ? await this.resolveParticipantIds(
-            existing.mainProcessId,
-            dto.participantProcessIds,
-          )
-        : null;
-
+    // Los participantes ya no se editan desde la Solicitud: los procesos que
+    // intervienen se reconcilian en el Triage. La edición de la ficha no toca
+    // RequestParticipant (el principal se conserva intacto).
     const requesterData = await this.resolveRequesterData(
       dto.requesterId,
       existing.requesterId,
     );
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      if (participantIds !== null) {
-        await tx.requestParticipant.deleteMany({ where: { requestId: id } });
-        await tx.requestParticipant.createMany({
-          data: participantIds.map((processId) => ({
-            requestId: id,
-            processId,
-          })),
-        });
-      }
-
       const request = await tx.request.update({
         where: { id },
         data: {

@@ -75,6 +75,7 @@ export async function loadActorByIdentifier(
     roleCodes,
     scopedProcessIds,
     isJefeArea: roleCodes.has(RoleCode.JEFE_AREA),
+    isLiderProceso: roleCodes.has(RoleCode.LIDER_PROCESO),
     isAdmin: user.isAdmin,
   };
 }

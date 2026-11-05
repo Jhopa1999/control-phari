@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -47,14 +48,90 @@ export class PlanStateService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * `where` de alcance por proceso principal (design §2.8): jefe sin filtro;
-   * no-jefe filtra por los procesos con grant activo.
+   * `where` de alcance por proceso principal (design §2.8): jefe de área o líder
+   * de proceso sin filtro (ven TODAS las solicitudes); el resto (integrante
+   * puro) filtra por los procesos con grant activo.
    */
   private requestScopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
-    if (actor.isJefeArea) {
+    if (actor.isJefeArea || actor.isLiderProceso) {
       return { deletedAt: null };
     }
     return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+  }
+
+  /**
+   * Ids de los procesos que intervienen en la Request de un plan
+   * (RequestParticipant): el principal más los procesos elegidos en el triage.
+   * Fuente de verdad del conjunto de procesos cuyos responsables pueden tomar
+   * tareas del plan.
+   */
+  private async participantProcessIds(requestId: string): Promise<string[]> {
+    const participants = await this.prisma.requestParticipant.findMany({
+      where: { requestId },
+      select: { processId: true },
+    });
+    return participants.map((p) => p.processId);
+  }
+
+  /**
+   * Candidatos a responsable de tarea del plan (rediseño demanda): personas con
+   * grant activo en alguno de los procesos que intervienen en la Request del
+   * plan. El alcance del plan ya se resolvió con `requirePlanByIdInScope`.
+   * Devuelve id+name ordenado por nombre; conjunto que el front usa para poblar
+   * el desplegable y que el backend impone al asignar.
+   */
+  async responsibleCandidates(
+    actor: CurrentActor,
+    planId: string,
+  ): Promise<Array<{ id: string; name: string }>> {
+    const { requestId } = await this.requirePlanByIdInScope(actor, planId);
+    const processIds = await this.participantProcessIds(requestId);
+    if (processIds.length === 0) {
+      return [];
+    }
+    const grants = await this.prisma.grant.findMany({
+      where: { active: true, processId: { in: processIds } },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    const userIds = grants.map((g) => g.userId);
+    if (userIds.length === 0) {
+      return [];
+    }
+    return this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  /**
+   * Condición dura (rediseño demanda): un usuario solo puede ser responsable de
+   * una tarea si tiene grant activo en alguno de los procesos que intervienen en
+   * la Request del plan de esa tarea. Fuente de verdad en el backend: el front
+   * solo acota el desplegable. 400 con mensaje accionable si no cumple. No valida
+   * si `userId` es null/undefined (no se está asignando responsable).
+   */
+  async assertResponsibleInParticipants(
+    requestId: string,
+    userId: string | null | undefined,
+  ): Promise<void> {
+    if (userId === null || userId === undefined) {
+      return;
+    }
+    const processIds = await this.participantProcessIds(requestId);
+    const grant =
+      processIds.length === 0
+        ? null
+        : await this.prisma.grant.findFirst({
+            where: { active: true, userId, processId: { in: processIds } },
+            select: { id: true },
+          });
+    if (!grant) {
+      throw new BadRequestException(
+        'El responsable debe pertenecer a un proceso interviniente de la solicitud.',
+      );
+    }
   }
 
   /**

@@ -12,6 +12,7 @@ function actor(): CurrentActor {
     roleCodes: new Set([RoleCode.ADMIN]),
     scopedProcessIds: new Set(),
     isJefeArea: false,
+    isLiderProceso: false,
     isAdmin: true,
   };
 }
