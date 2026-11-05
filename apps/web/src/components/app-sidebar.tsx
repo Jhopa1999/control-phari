@@ -3,7 +3,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronDown, Info, PanelLeftClose, PanelLeftOpen, Search, X } from 'lucide-react';
+import { ChevronDown, Info, LayoutGrid, PanelLeftClose, PanelLeftOpen, Search, X } from 'lucide-react';
+import { AppSwitcher } from '@/components/app-switcher';
 import { BrandMark, BrandName } from '@/components/brand';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -21,11 +22,18 @@ import { LabelTooltip } from '@/components/ui/tooltip';
 import { useActor } from '@/lib/actor-context';
 import { listDevActors } from '@/lib/dev-actors';
 import {
+  findAppForPath,
+  getAppGroups,
+  getAppHomeHref,
+  getVisibleNavApps,
   getVisibleNavGroups,
+  getWorkspaceGroups,
   isNavItemActive,
+  resolveActiveApp,
   searchNavItems,
   type NavItem,
 } from '@/lib/navigation';
+import { useLastAppId } from '@/lib/use-active-app';
 import { useCollapsedNavGroups } from '@/lib/use-collapsed-nav-groups';
 import { initialsOf } from '@/lib/user-initials';
 import { useSidebarMode } from '@/lib/use-sidebar-mode';
@@ -88,14 +96,26 @@ function NavLink({
           />
           <span className="min-w-0 truncate rail:sr-only">{item.label}</span>
           {hint ? (
-            <span className="ml-auto shrink-0 truncate pl-2 text-xs text-sidebar-muted-foreground rail:sr-only">
+            <span
+              className={cn(
+                'ml-auto shrink-0 truncate pl-2 text-xs rail:sr-only',
+                active ? 'text-sidebar-accent-foreground' : 'text-sidebar-muted-foreground',
+              )}
+            >
               {hint}
             </span>
           ) : null}
           {item.badge ? (
             <>
               {' '}
-              <span className="ml-auto shrink-0 rounded-sm border border-sidebar-border px-1.5 text-xs text-sidebar-muted-foreground rail:sr-only">
+              <span
+                className={cn(
+                  'ml-auto shrink-0 rounded-sm border px-1.5 text-xs rail:sr-only',
+                  active
+                    ? 'border-sidebar-accent-foreground/60 text-sidebar-accent-foreground'
+                    : 'border-sidebar-border text-sidebar-muted-foreground',
+                )}
+              >
                 {item.badge}
               </span>
             </>
@@ -196,6 +216,41 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
     [permState, allowedModules],
   );
 
+  // Workspace: apps visibles, app activa (la dueña de la ruta o la última usada)
+  // y grupos transversales (Gobierno y Administración).
+  const [lastAppId, setLastAppId] = useLastAppId();
+  const visibleApps = React.useMemo(
+    () => (permState === 'success' ? getVisibleNavApps(allowedModules) : []),
+    [permState, allowedModules],
+  );
+  const activeApp = React.useMemo(
+    () => resolveActiveApp(pathname, visibleApps, visibleGroups, lastAppId),
+    [pathname, visibleApps, visibleGroups, lastAppId],
+  );
+  const appGroups = React.useMemo(
+    () => (activeApp ? getAppGroups(visibleGroups, activeApp.id) : []),
+    [activeApp, visibleGroups],
+  );
+  const workspaceGroups = React.useMemo(() => getWorkspaceGroups(visibleGroups), [visibleGroups]);
+  const homeHrefFor = React.useCallback(
+    (app: (typeof visibleApps)[number]) => getAppHomeHref(app, allowedModules),
+    [allowedModules],
+  );
+  // Con una sola app, la marca lleva a su inicio; con varias (o ninguna), al
+  // inicio del workspace. Mientras cargan los permisos se conserva /inicio.
+  const brandHref =
+    permState !== 'success'
+      ? '/inicio'
+      : visibleApps.length === 1
+        ? homeHrefFor(visibleApps[0])
+        : '/aplicaciones';
+
+  // Recuerda la última app usada al entrar a una pantalla que le pertenece.
+  React.useEffect(() => {
+    const owner = findAppForPath(pathname, visibleApps, visibleGroups);
+    if (owner && owner.id !== lastAppId) setLastAppId(owner.id);
+  }, [pathname, visibleApps, visibleGroups, lastAppId, setLastAppId]);
+
   // Con texto en el buscador el menú pasa a una lista plana de coincidencias.
   // En riel no hay buscador, así que tampoco se filtra.
   const searching = !isRail && query.trim() !== '';
@@ -213,7 +268,8 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
     const active = visibleGroups.find((group) =>
       group.items.some((item) => isNavItemActive(item, pathname)),
     );
-    if (active) expand(active.id);
+    // Los grupos transversales viven dentro de la sección «workspace».
+    if (active) expand(active.appId ? active.id : 'workspace');
   }, [pathname, visibleGroups, expand]);
 
   function handleNavigate(): void {
@@ -384,20 +440,25 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
                 </p>
               ) : (
                 <ul aria-label="Resultados de la búsqueda" className="flex flex-col gap-0.5">
-                  {results.map(({ item, groupLabel }) => (
+                  {results.map(({ item, groupLabel, appId }) => (
                     <NavLink
                       key={item.href}
                       item={item}
                       active={isNavItemActive(item, pathname)}
                       isRail={isRail}
-                      hint={groupLabel}
+                      hint={
+                        appId && activeApp && appId !== activeApp.id
+                          ? `${visibleApps.find((app) => app.id === appId)?.name ?? appId} · ${groupLabel ?? ''}`
+                          : groupLabel
+                      }
                       onNavigate={handleNavigate}
                     />
                   ))}
                 </ul>
               )
             ) : (
-              visibleGroups.map((group, index) => {
+              <>
+              {appGroups.map((group, index) => {
                 // El grupo de entrada no tiene título y no se pliega. En riel
                 // todos los grupos se ven (solo iconos): el plegado no aplica.
                 const foldable = group.label !== null && !isRail;
@@ -457,11 +518,89 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
                     </ul>
                   </div>
                 );
-              })
+              })}
+              {renderWorkspace()}
+              </>
             )}
           </div>
         );
     }
+  }
+
+  /**
+   * Sección «Workspace» (spec §5.2): grupos transversales (Gobierno y
+   * Administración). Plegada por defecto; en riel se ven siempre solo los
+   * iconos; sin ninguna app visible se muestra abierta y sin pliegue.
+   */
+  function renderWorkspace(): React.ReactNode {
+    if (workspaceGroups.length === 0) return null;
+    const foldable = visibleApps.length > 0 && !isRail;
+    const isCollapsed = foldable && collapsed.has('workspace');
+    const headerId = groupLabelId('workspace');
+    const listId = `${headerId}-list`;
+    const title = (
+      <span className="flex items-center gap-1.5">
+        <LayoutGrid aria-hidden="true" className="size-3.5 shrink-0" />
+        Workspace
+      </span>
+    );
+    return (
+      <div
+        role={isRail ? 'group' : undefined}
+        aria-label={isRail ? 'Workspace' : undefined}
+        className="mt-1 border-t border-sidebar-border pt-3 rail:mt-0 rail:pt-2"
+      >
+        {foldable ? (
+          <button
+            type="button"
+            id={headerId}
+            aria-expanded={!isCollapsed}
+            aria-controls={listId}
+            onClick={() => toggle('workspace')}
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1 text-left text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sidebar-ring pointer-coarse:min-h-10"
+          >
+            {title}
+            <ChevronDown
+              aria-hidden="true"
+              className={cn(
+                'size-3.5 shrink-0 transition-transform motion-reduce:transition-none',
+                isCollapsed && '-rotate-90',
+              )}
+            />
+          </button>
+        ) : (
+          <span
+            id={headerId}
+            className="block px-2.5 text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase rail:sr-only"
+          >
+            {title}
+          </span>
+        )}
+        <div id={listId} className={cn('flex flex-col gap-1', isCollapsed && 'hidden')}>
+          {workspaceGroups.map((group) => (
+            <div key={group.id} className="rail:border-t rail:border-sidebar-border rail:pt-2 rail:first:border-t-0 rail:first:pt-0">
+              <span
+                id={groupLabelId(group.id)}
+                className="block px-2.5 pt-2 pb-1 text-xs font-medium text-sidebar-muted-foreground rail:sr-only"
+              >
+                {group.label}
+              </span>
+              <ul aria-labelledby={groupLabelId(group.id)} className="flex flex-col gap-0.5">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    item={item}
+                    active={isNavItemActive(item, pathname)}
+                    isRail={isRail}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   const selectedActor = actors.find((actor) => actor.identifier === actorId);
@@ -508,7 +647,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
     <>
       <div className={cn('flex h-14 shrink-0 items-center px-3 rail:justify-center rail:px-0', isDrawer && 'pr-12')}>
         <Link
-          href="/inicio"
+          href={brandHref}
           onClick={onNavigate}
           className="flex min-w-0 items-center gap-2.5 rounded-md p-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
         >
@@ -519,6 +658,17 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
             control sigue disponible en la barra móvil y en el menú expandido. */}
         <ThemeToggle tone="sidebar" className="ml-auto rail:hidden" />
       </div>
+
+      {menuState === 'ready' && activeApp ? (
+        <AppSwitcher
+          apps={visibleApps}
+          activeApp={activeApp}
+          homeHrefFor={homeHrefFor}
+          isRail={isRail}
+          variant={variant}
+          onNavigate={onNavigate}
+        />
+      ) : null}
 
       <nav
         aria-label="Navegación principal"

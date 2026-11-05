@@ -23,15 +23,10 @@ const WEB_ORIGIN =
 // indicadores, equipo ni maestras (MODULE_MATRIX).
 const INTEGRANTE_IDENTIFIER = 'integrante@demo.local';
 
-/** Títulos de los grupos del menú, en orden (el primero no tiene título). */
-const GROUP_LABELS = [
-  'Demanda',
-  'Ejecución',
-  'Seguimiento',
-  'Activos y conocimiento',
-  'Gobierno',
-  'Administración',
-];
+/** Títulos de los grupos de la app Demanda, en orden (el primero no tiene título). */
+const APP_GROUP_LABELS = ['Demanda', 'Ejecución', 'Seguimiento', 'Activos y conocimiento'];
+/** Grupos transversales, dentro de la sección «Workspace» (plegada por defecto). */
+const WORKSPACE_GROUP_LABELS = ['Gobierno', 'Administración'];
 
 /** Escribe claves de localStorage antes de cada carga, solo en el origen de la web. */
 async function seedLocalStorage(
@@ -62,16 +57,25 @@ test.describe('escritorio 1440×900', () => {
     await page.goto('/inicio');
     const menu = mainNav(page);
 
-    // Un grupo de entrada sin título y los 6 grupos de §8.5, en orden.
+    // Un grupo de entrada sin título y los 4 grupos de la app Demanda, en orden.
+    // La sección «Workspace» (Gobierno y Administración) llega plegada.
     const lists = menu.getByRole('list');
-    await expect(lists).toHaveCount(GROUP_LABELS.length + 1);
+    await expect(lists).toHaveCount(APP_GROUP_LABELS.length + 1);
     await expect(lists.first().getByRole('link')).toHaveText([
       'Panel del área',
       'Mi trabajo',
       'Actividades recurrentes',
     ]);
-    for (const [index, label] of GROUP_LABELS.entries()) {
+    for (const [index, label] of APP_GROUP_LABELS.entries()) {
       await expect(lists.nth(index + 1)).toHaveAccessibleName(label);
+    }
+    const workspace = menu.getByRole('button', { name: 'Workspace', exact: true });
+    await expect(workspace).toHaveAttribute('aria-expanded', 'false');
+    await workspace.click();
+    await expect(workspace).toHaveAttribute('aria-expanded', 'true');
+    await expect(lists).toHaveCount(APP_GROUP_LABELS.length + WORKSPACE_GROUP_LABELS.length + 1);
+    for (const [index, label] of WORKSPACE_GROUP_LABELS.entries()) {
+      await expect(lists.nth(APP_GROUP_LABELS.length + 1 + index)).toHaveAccessibleName(label);
     }
     // El menú no usa encabezados.
     await expect(menu.getByRole('heading')).toHaveCount(0);
@@ -188,6 +192,62 @@ test.describe('escritorio 1440×900', () => {
       menu.getByRole('link', { name: 'Maestras', exact: true }),
     ).toHaveAttribute('aria-current', 'page');
     await expect(menu.locator('[aria-current="page"]')).toHaveCount(1);
+  });
+});
+
+test.describe('workspace y aplicaciones 1440×900', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('el selector de aplicaciones se maneja con teclado y lleva al inicio del workspace', async ({
+    page,
+  }) => {
+    await page.goto('/inicio');
+    const aside = page.getByRole('complementary', { name: 'Menú lateral' });
+    const trigger = aside.getByRole('button', { name: /Aplicación\s+Demanda/ });
+    await expect(trigger).toBeVisible();
+
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const menu = page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    // Con una sola app el selector sigue activo: app actual y acceso al launcher.
+    await expect(menu.getByRole('menuitem', { name: /^Demanda\s*, aplicación actual$/ })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+
+    await trigger.click();
+    await page.getByRole('menuitem', { name: 'Inicio del workspace' }).click();
+    await expect(page).toHaveURL('/aplicaciones');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    // Una sola app: tarjeta con un único enlace a su inicio.
+    const apps = page.getByRole('list', { name: 'Aplicaciones disponibles' });
+    await expect(apps.getByRole('link')).toHaveCount(1);
+    await apps.getByRole('link', { name: 'Demanda' }).click();
+    await expect(page).toHaveURL('/inicio');
+  });
+
+  test('la sección Workspace se despliega sola en una pantalla transversal y las migas lo reflejan', async ({
+    page,
+  }) => {
+    await page.goto('/gobierno/auditoria');
+    const menu = mainNav(page);
+    await expect(menu.getByRole('button', { name: 'Workspace', exact: true })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    await expect(menu.getByRole('link', { name: 'Auditoría', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    const crumbs = page.getByRole('navigation', { name: 'Ubicación en el workspace' });
+    await expect(crumbs).toContainText('Workspace');
+    await expect(crumbs).toContainText('Gobierno');
+
+    await page.goto('/demanda/solicitudes');
+    await expect(
+      page.getByRole('navigation', { name: 'Ubicación en el workspace' }),
+    ).toContainText('Demanda');
   });
 });
 

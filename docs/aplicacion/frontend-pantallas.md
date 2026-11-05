@@ -6,6 +6,22 @@ El frontend (Next.js, App Router) vive en `apps/web/src/app/`. Cada `page.tsx` e
 envoltura delgada que delega en su componente de vista (`*-view.tsx`) y consume la API
 del backend. El frontend no accede a la base de datos ni usa Prisma.
 
+El portal es un **workspace GIBO** con aplicaciones. Hoy existe una sola, **Demanda**, que
+reúne los grupos *Entrada* (sin título), *Demanda*, *Ejecución*, *Seguimiento* y
+*Activos y conocimiento*; los grupos *Gobierno* y *Administración* son **transversales**
+(no pertenecen a ninguna app) y se muestran en la sección plegable **Workspace** al final
+del menú (plegada por defecto; se abre sola al llegar a una de sus pantallas, y en el riel
+se ven siempre como iconos). La pertenencia a una app se declara en `navigation.ts`
+(`NAV_APPS` y `appId` en cada grupo); **las URLs no cambian**. Bajo la marca del menú hay un
+**selector de aplicaciones** (`app-switcher.tsx`, un menú desplegable con enlaces): muestra
+la app activa, las apps visibles para el usuario (las que tienen al menos un módulo
+permitido) y el acceso a *Inicio del workspace* (`/aplicaciones`). La app activa es la dueña
+de la ruta; en una pantalla transversal o en `/aplicaciones` se conserva la última usada
+(`localStorage`, clave `activeAppId`). El logo lleva al inicio de la única app visible, o a
+`/aplicaciones` si hay varias. En escritorio, la barra superior muestra migas
+*Workspace › {app | Gobierno | Administración}*. El buscador de pantallas busca en todo lo
+visible, también en otras apps.
+
 El menú lateral se define en `apps/web/src/lib/navigation.ts`: 7 grupos y 27 ítems.
 Con el menú expandido (no en el riel de iconos), cada grupo con título se puede
 plegar con su encabezado; el navegador recuerda los grupos plegados y un grupo se
@@ -37,6 +53,7 @@ abrir, cada minuto y al volver a la pestaña.
 | `/olvide-contrasena` | Recuperar contraseña | Solicita el reestablecimiento (`POST /auth/forgot-password`); muestra siempre un mensaje genérico que no revela si la cuenta existe. Pública. |
 | `/restablecer-contrasena` | Restablecer contraseña | Define una nueva contraseña con el token del correo (`?token=`, `POST /auth/reset-password`). Al confirmar inicia sesión automáticamente y redirige al módulo (`/inicio` o `next` seguro), sin volver a `/login`. Pública. |
 | `/activar-cuenta` | Activar cuenta | Establece la contraseña inicial de una cuenta invitada con el token del correo (`?token=`, mismo `POST /auth/reset-password`). Al confirmar la cuenta queda activa, inicia sesión automáticamente y redirige a `/inicio`. Pública. |
+| `/aplicaciones` | Inicio del workspace | Aplicaciones a las que el usuario tiene acceso (tarjeta grande con una sola app, rejilla con varias) y *Accesos del workspace* (Gobierno y Administración según permisos). Estados: cargando, sin usuario (dev-header), error con *Reintentar* y sin aplicaciones habilitadas. Solo requiere sesión; no tiene `moduleKey`. Especificación: `docs/design/workspace-apps-gibo.md`. |
 | `/inicio` | Panel del área | Tablero de inicio del actor (menú: *Panel del área*, `dashboard`). Abre con el bloque *Requiere tu atención* (`GET /area-control/attention`, a hoy, sin depender del periodo): tarjetas con solicitudes pendientes de triage, listas para priorizar, por aprobar y tareas vencidas, cada una enlazada a su mesa y solo si el rol tiene el módulo; sin pendientes muestra *Todo al día*. Las distribuciones por estado y por banda de prioridad listan solo los valores con solicitudes; los valores en cero se pliegan bajo *Sin solicitudes (N)*. El pie del menú lateral reúne en una fila al usuario autenticado y los botones de icono *Contraer menú* y *Cerrar sesión*. |
 | `/mi-trabajo` | Mi trabajo | Tareas asignadas al usuario actual; enlaza al detalle de tarea (menú: *Mi trabajo*, `assigned`). |
 | `/actividades-recurrentes` | Actividades recurrentes | Actividades que se repiten (reportes, validaciones, revisiones). Vista *Qué me toca* por defecto (ocurrencias del actor, `scope=mine`, agrupadas por periodo) con acciones *Tomar* y *Completar* (comentario opcional) y detalle de solo lectura de las completadas. Para JEFE_AREA/ADMIN, una pestaña *Gestión* con el alta/edición/pausa de definiciones y una pestaña *Cumplimiento* (panel con totales y desgloses a tiempo/destiempo/vencidas por actividad y responsable, filtrable por rango de fechas). Menú: *Actividades recurrentes*, `recurring`. |
