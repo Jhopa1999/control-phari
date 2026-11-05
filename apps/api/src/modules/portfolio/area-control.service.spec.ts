@@ -11,6 +11,7 @@ function createMocks() {
     task: { findMany: jest.fn(), count: jest.fn() },
     issue: { findMany: jest.fn() },
     auditEvent: { findFirst: jest.fn(), findMany: jest.fn() },
+    priorityEvaluation: { findMany: jest.fn() },
   };
   const prisma = prismaObj as unknown as PrismaService;
   const state = {
@@ -94,6 +95,7 @@ describe('AreaControlService', () => {
     (m.prismaObj.issue as any).findMany.mockResolvedValue([]);
     (m.prismaObj.auditEvent as any).findFirst.mockResolvedValue(null);
     (m.prismaObj.auditEvent as any).findMany.mockResolvedValue([]);
+    (m.prismaObj.priorityEvaluation as any).findMany.mockResolvedValue([]);
   });
 
   // --- 2.1 Tiempo de evaluacion -------------------------------------------
@@ -496,22 +498,32 @@ describe('AreaControlService', () => {
           operationalState: 'REGISTRADA',
           blockedAt: null,
           blockedResolvedAt: null,
+          mainProcessId: null, // sin proceso aun
         },
         {
           id: 'r2',
           operationalState: 'CERRADA',
           blockedAt: new Date(),
           blockedResolvedAt: null,
+          mainProcessId: 'p1',
         },
       ]);
-      (m.state.currentPriorityEvaluation as jest.Mock)
-        .mockResolvedValueOnce(null) // r1 -> SIN_PRIORIZAR
-        .mockResolvedValueOnce({ score: 85 }); // r2 -> P1
+      // Evaluaciones vigentes en lote (antes 1+N): r1 sin evaluacion -> SIN_PRIORIZAR;
+      // r2 con score 85 -> P1. La findMany llega ordenada desc por evaluatedAt.
+      (m.prismaObj.priorityEvaluation as any).findMany.mockResolvedValueOnce([
+        { requestId: 'r2', score: 85, evaluatedAt: new Date('2025-03-10') },
+      ]);
       (m.state.priorityBand as jest.Mock).mockReturnValue('P1');
 
       const res = await service.demandSummary(jefe(), PERIOD);
       expect(res.total).toBe(2);
       expect(res.blockedActive).toBe(1);
+      // M2: conteo de solicitudes sin proceso principal.
+      expect(res.noProcess).toBe(1);
+      // M3: una sola consulta de PriorityEvaluation en lote (no 1+N).
+      expect(
+        (m.prismaObj.priorityEvaluation as any).findMany,
+      ).toHaveBeenCalledTimes(1);
       // Todos los estados presentes.
       const registrada = res.byState.find((s) => s.state === 'REGISTRADA');
       const enTriage = res.byState.find((s) => s.state === 'EN_TRIAGE');
@@ -538,9 +550,11 @@ describe('AreaControlService', () => {
 
   describe('attention', () => {
     it('cuenta listas para priorizar solo con triage CONTINUAR vigente en EN_TRIAGE', async () => {
-      // count: pendientes de triage (3) y por aprobar (2), en ese orden.
+      // count: pendientes de triage (3), sin proceso por triar (1) y por
+      // aprobar (2), en ese orden (el orden del Promise.all).
       (m.prismaObj.request as any).count
         .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(1)
         .mockResolvedValueOnce(2);
       (m.prismaObj.request as any).findMany.mockResolvedValueOnce([
         { triages: [{ decision: 'CONTINUAR' }] },
@@ -554,6 +568,7 @@ describe('AreaControlService', () => {
 
       expect(res).toEqual({
         pendingTriage: 3,
+        pendingNoProcess: 1,
         readyToPrioritize: 2,
         pendingApproval: 2,
         overdueTasks: 5,
@@ -567,6 +582,14 @@ describe('AreaControlService', () => {
       expect(requestWhere.AND[0]).toEqual({
         deletedAt: null,
         mainProcessId: { in: ['p1'] },
+      });
+
+      // pendingNoProcess: REGISTRADA + sin proceso principal, dentro del alcance.
+      const noProcessWhere = (m.prismaObj.request as any).count.mock.calls[1][0]
+        .where;
+      expect(noProcessWhere.AND).toContainEqual({ mainProcessId: null });
+      expect(noProcessWhere.AND).toContainEqual({
+        operationalState: 'REGISTRADA',
       });
 
       const taskWhere = (m.prismaObj.task as any).count.mock.calls[0][0].where;

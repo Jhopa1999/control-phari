@@ -72,7 +72,16 @@ export class RequestStateService {
     if (actor.isJefeArea || actor.isLiderProceso) {
       return { deletedAt: null };
     }
-    return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+    // Integrante puro: ve las solicitudes de sus procesos y SIEMPRE las que él
+    // creó (A1). Duplicación deliberada con request.service.ts (centralizar es
+    // B2, fuera de alcance).
+    return {
+      deletedAt: null,
+      OR: [
+        { mainProcessId: { in: Array.from(actor.scopedProcessIds) } },
+        { createdByUserId: actor.userId },
+      ],
+    };
   }
 
   /**
@@ -117,6 +126,7 @@ export class RequestStateService {
       expectedResult: request.expectedResult,
       mainProcessId: request.mainProcessId,
       assetId: request.assetId,
+      createdByUserId: request.createdByUserId,
       operationalState: request.operationalState,
       initialCommitmentDate: request.initialCommitmentDate,
       changeJustification: request.changeJustification,

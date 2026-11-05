@@ -160,6 +160,25 @@ describe('PortfolioService', () => {
     expect(items[0].id).toBe('r1');
   });
 
+  it('filtro mainProcessId SIN_PROCESO produce where con mainProcessId null', async () => {
+    (m.prismaObj.request as any).findMany.mockResolvedValue([]);
+    await service.list(jefe(), { mainProcessId: 'SIN_PROCESO' });
+    const and = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND;
+    expect(and).toContainEqual({ mainProcessId: null });
+    expect(and).not.toContainEqual({ mainProcessId: 'SIN_PROCESO' });
+  });
+
+  it('filtro mainProcessId con UUID produce where con igualdad por UUID', async () => {
+    (m.prismaObj.request as any).findMany.mockResolvedValue([]);
+    await service.list(jefe(), {
+      mainProcessId: '11111111-1111-1111-1111-111111111111',
+    });
+    const and = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND;
+    expect(and).toContainEqual({
+      mainProcessId: '11111111-1111-1111-1111-111111111111',
+    });
+  });
+
   it('"comprometida" se refleja por operationalState explicito (no se infiere)', async () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([
       requestRow({ operationalState: 'COMPROMETIDA' }),

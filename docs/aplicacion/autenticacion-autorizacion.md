@@ -218,11 +218,14 @@ de `request`/`plan`:
 - `JEFE_AREA` **o** `LIDER_PROCESO`: ven **todas** las solicitudes (sin filtro por
   `mainProcessId`), incluidas las que **aún no tienen proceso principal** (recién
   registradas, antes del triage). Así cualquiera de ellos puede tomarlas y triarlas.
-- `INTEGRANTE` puro (sin ninguno de esos roles): solo las de sus `scopedProcessIds`.
-  Una solicitud **sin proceso principal** (`mainProcessId = null`) **no** la ve el
-  integrante puro: el filtro por `mainProcessId in scopedProcessIds` no casa con
-  `null`. Al fijarse el proceso en el triage, su alcance pasa a comportarse como el
-  del resto de solicitudes.
+- `INTEGRANTE` puro (sin ninguno de esos roles): las de sus `scopedProcessIds`
+  **y siempre las que él mismo registró** (`createdByUserId = su usuario`). El
+  `scopeWhere` aplica un `OR` entre `mainProcessId in scopedProcessIds` y
+  `createdByUserId`, de modo que el creador ve su solicitud aunque **aún no tenga
+  proceso principal** (`mainProcessId = null`, antes del triage). Una solicitud
+  sin proceso creada por **otro** sigue sin ser visible para él. Al fijarse el
+  proceso en el triage, el alcance pasa a comportarse como el del resto de
+  solicitudes.
 
 La apertura al líder es **solo de lectura/visibilidad**. Las escrituras siguen protegidas
 por los gates de cada etapa (`requireInScope`, que reutiliza el mismo `scopeWhere`): por

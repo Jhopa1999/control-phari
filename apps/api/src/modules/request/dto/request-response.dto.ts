@@ -67,6 +67,15 @@ export class RequestResponseDto {
   })
   assetId!: string | null;
 
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description:
+      'Usuario que registró la solicitud (para que el creador identifique lo suyo aunque aún no tenga proceso).',
+  })
+  createdByUserId!: string | null;
+
   @ApiProperty({ type: String, description: 'Estado operativo (read-only, derivado).' })
   operationalState!: string;
 

@@ -10,7 +10,7 @@ import {
   dueSoonDaysFromEnv,
   type TaskProgressInput,
 } from './progress';
-import { ListPortfolioDto } from './dto/list-portfolio.dto';
+import { ListPortfolioDto, NO_PROCESS_SENTINEL } from './dto/list-portfolio.dto';
 import { PortfolioItemResponseDto } from './dto/portfolio-item-response.dto';
 
 /** Eco de una fecha como `YYYY-MM-DD` en UTC o null. */
@@ -48,9 +48,15 @@ export class PortfolioService {
     };
     const and = where.AND as Prisma.RequestWhereInput[];
 
-    // Filtros que INTERSECTAN el alcance (se suman al AND, no lo amplian).
+    // Filtros que INTERSECTAN el alcance (se suman al AND, no lo amplian). El
+    // centinela SIN_PROCESO filtra las solicitudes sin proceso principal (aun
+    // sin triar); el resto es igualdad por UUID.
     if (filters.mainProcessId !== undefined) {
-      and.push({ mainProcessId: filters.mainProcessId });
+      and.push(
+        filters.mainProcessId === NO_PROCESS_SENTINEL
+          ? { mainProcessId: null }
+          : { mainProcessId: filters.mainProcessId },
+      );
     }
     if (filters.state !== undefined) {
       and.push({ operationalState: filters.state });

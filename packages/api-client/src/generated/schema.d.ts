@@ -467,7 +467,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos. */
+        /**
+         * Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos.
+         * @description Orden obligatorio triage -> activo: el activo se habilita contra el proceso principal de la solicitud, por lo que primero hay que fijar el proceso principal en el triage y luego asociar el activo. Si la solicitud aun no tiene proceso principal, responde 409 con el mensaje "Fija el proceso principal en el triage antes de asociar el activo." (sin llegar a consultar el activo). El triage no crea activos: solo asocia uno ya existente y visible para el actor.
+         */
         post: operations["TriageController_associateAsset"];
         delete?: never;
         options?: never;
@@ -3220,6 +3223,11 @@ export interface components {
              * @description Activo al que pertenece la solicitud (P1) o null.
              */
             assetId: string | null;
+            /**
+             * Format: uuid
+             * @description Usuario que registró la solicitud (para que el creador identifique lo suyo aunque aún no tenga proceso).
+             */
+            createdByUserId: string | null;
             /** @description Estado operativo (read-only, derivado). */
             operationalState: string;
             /**
@@ -6026,6 +6034,8 @@ export interface components {
             total: number;
             /** @description Solicitudes con bloqueo activo. */
             blockedActive: number;
+            /** @description Solicitudes sin proceso principal asignado (el proceso se fija en el triage). */
+            noProcess: number;
             /** @description Conteo por estado (todos los estados, incl. 0). */
             byState: components["schemas"]["StateCountDto"][];
             /** @description Conteo por banda (incl. SIN_PRIORIZAR). */
@@ -6034,6 +6044,8 @@ export interface components {
         AttentionResponseDto: {
             /** @description Solicitudes REGISTRADAS que esperan la decision de triage. */
             pendingTriage: number;
+            /** @description Cola de entrada sin proceso por triar (solicitudes REGISTRADAS sin proceso principal). Su responsable operativo es el Jefe de Area, que vela por darles respuesta. */
+            pendingNoProcess: number;
             /** @description Solicitudes en triage con decision CONTINUAR vigente, listas para priorizar. */
             readyToPrioritize: number;
             /** @description Solicitudes en backlog priorizado que esperan aprobacion del compromiso. */
@@ -8256,7 +8268,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La solicitud no admite asociar activo en su estado, o el activo no esta habilitado para su proceso. */
+            /** @description La solicitud no admite asociar activo en su estado; o la solicitud aun no tiene proceso principal fijado en el triage (hay que fijarlo antes de asociar el activo); o el activo no esta habilitado para el proceso principal de la solicitud. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -13617,7 +13629,7 @@ export interface operations {
     PortfolioController_list: {
         parameters: {
             query?: {
-                /** @description Filtra por proceso principal. */
+                /** @description Filtra por proceso principal (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aun por triar). */
                 mainProcessId?: string;
                 /** @description Filtra por estado operativo. */
                 state?: "REGISTRADA" | "EN_TRIAGE" | "DEVUELTA" | "RECHAZADA" | "BACKLOG_PRIORIZADO" | "COMPROMETIDA" | "EN_PLANIFICACION" | "EN_EJECUCION" | "BLOQUEADA" | "EN_VALIDACION" | "LISTA_PARA_LIBERAR" | "EN_ESTABILIZACION" | "OPERATIVA" | "CERRADA" | "RETIRADA";

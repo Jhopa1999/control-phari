@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Inbox, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -74,6 +74,8 @@ type SortKey = 'title' | 'state' | 'priority' | 'registered';
 
 /** Centinela de «Todos» / «Todas» en los filtros. */
 const ALL = 'ALL';
+/** Centinela del filtro de proceso para las solicitudes sin proceso aún. */
+const NO_PROCESS = 'SIN_PROCESO';
 /** Valor del filtro de prioridad para las solicitudes sin banda. */
 const NO_BAND = 'SIN_PRIORIZAR';
 const BAND_OPTIONS = ['P1', 'P2', 'P3', 'P4'] as const;
@@ -123,6 +125,7 @@ function bandOf(request: Request): string {
  */
 export function SolicitudesView(): React.ReactElement {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { allowedModules } = useActor();
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
@@ -133,7 +136,10 @@ export function SolicitudesView(): React.ReactElement {
 
   const [query, setQuery] = React.useState('');
   const [stateFilter, setStateFilter] = React.useState(ALL);
-  const [processFilter, setProcessFilter] = React.useState(ALL);
+  // El Panel enlaza a ?proceso=SIN_PROCESO para abrir la bandeja «Sin proceso aún».
+  const [processFilter, setProcessFilter] = React.useState(
+    searchParams.get('proceso') === NO_PROCESS ? NO_PROCESS : ALL,
+  );
   const [bandFilter, setBandFilter] = React.useState(ALL);
   const searchRef = React.useRef<HTMLInputElement>(null);
 
@@ -188,7 +194,10 @@ export function SolicitudesView(): React.ReactElement {
     (r: Request) =>
       matchesSearch(r.title, query) &&
       (stateFilter === ALL || r.operationalState === stateFilter) &&
-      (processFilter === ALL || r.mainProcessId === processFilter) &&
+      (processFilter === ALL ||
+        (processFilter === NO_PROCESS
+          ? r.mainProcessId === null
+          : r.mainProcessId === processFilter)) &&
       (bandFilter === ALL || bandOf(r) === bandFilter),
     [query, stateFilter, processFilter, bandFilter],
   );
@@ -408,6 +417,7 @@ export function SolicitudesView(): React.ReactElement {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todos</SelectItem>
+              <SelectItem value={NO_PROCESS}>Sin proceso aún</SelectItem>
               {processes.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name}

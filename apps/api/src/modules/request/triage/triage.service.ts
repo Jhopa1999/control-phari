@@ -433,20 +433,28 @@ export class TriageService {
       );
     }
 
+    // Orden obligatorio triage -> activo: el activo se habilita contra el
+    // proceso principal de la solicitud, así que sin proceso principal fijado
+    // no hay nada contra lo que validar. Se corta ANTES de consultar el activo
+    // con un 409 accionable que dice QUE hacer primero (fijar el proceso en el
+    // triage), en vez del genérico "no habilitado para el proceso".
+    const mainProcessId = request.mainProcessId;
+    if (mainProcessId === null) {
+      throw new ConflictException(
+        'Fija el proceso principal en el triage antes de asociar el activo.',
+      );
+    }
+
     // Activo existente: AssetService.get aplica el alcance (404 si no
     // accesible). El DTO devuelto trae el propietario en `processId` y el resto
     // de la visibilidad en `visibleProcessIds` (sin releer la tabla puente).
     const asset = await this.assetService.get(actor, dto.assetId);
 
     // Refuerzo de visibilidad: el activo debe estar habilitado para el proceso
-    // principal de la solicitud (propietario O alguna fila de visibilidad). Si
-    // la solicitud aún no tiene proceso principal (no se ha triado), no hay
-    // proceso contra el que validar: no se puede asociar activo.
-    const mainProcessId = request.mainProcessId;
+    // principal de la solicitud (propietario O alguna fila de visibilidad).
     const visibleForMainProcess =
-      mainProcessId !== null &&
-      (asset.processId === mainProcessId ||
-        asset.visibleProcessIds.includes(mainProcessId));
+      asset.processId === mainProcessId ||
+      asset.visibleProcessIds.includes(mainProcessId);
     if (!visibleForMainProcess) {
       throw new ConflictException(
         'El activo no esta habilitado para el proceso de la solicitud.',

@@ -201,7 +201,13 @@ describe('TriageService', () => {
       service.create(lider(['p1']), 'r1', { decision: 'CONTINUAR' }),
     ).rejects.toBeInstanceOf(NotFoundException);
     const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0].where;
-    expect(where.AND).toEqual([{ id: 'r1' }, { deletedAt: null, mainProcessId: { in: ['p1'] } }]);
+    expect(where.AND).toEqual([
+      { id: 'r1' },
+      {
+        deletedAt: null,
+        OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }],
+      },
+    ]);
   });
 
   // --- Proceso principal se determina en el triage (rediseño demanda) ---
@@ -655,6 +661,23 @@ describe('TriageService', () => {
       await expect(
         service.associateAsset(lider(), 'r1', { assetId: 'a-otro' }),
       ).rejects.toBeInstanceOf(ConflictException);
+      expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
+    });
+
+    it('estado asociable pero sin proceso principal -> 409 especifico triage->activo, sin consultar el activo', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.EN_TRIAGE, {
+          assetId: null,
+          mainProcessId: null,
+        }),
+      );
+      await expect(
+        service.associateAsset(lider(), 'r1', { assetId: 'a-existente' }),
+      ).rejects.toThrow(
+        'Fija el proceso principal en el triage antes de asociar el activo.',
+      );
+      // Corta antes de consultar el activo y sin mutar.
+      expect(m.assetGet).not.toHaveBeenCalled();
       expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
     });
 

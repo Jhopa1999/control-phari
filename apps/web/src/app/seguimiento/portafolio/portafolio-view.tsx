@@ -59,6 +59,8 @@ type SortKey = 'title' | 'state' | 'band' | 'registered' | 'target';
 
 /** Valor centinela del Select para "sin filtro" (Radix no admite value vacío). */
 const ANY = '__any';
+/** Centinela del filtro de proceso: solicitudes sin proceso asignado (por triar). */
+const NO_PROCESS = 'SIN_PROCESO';
 
 /** Bandas de prioridad del marco §4 + SIN_PRIORIZAR. */
 const BANDS = ['P1', 'P2', 'P3', 'P4', 'SIN_PRIORIZAR'] as const;
@@ -300,6 +302,7 @@ export function PortafolioView(): React.ReactElement {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ANY}>Todos</SelectItem>
+              <SelectItem value={NO_PROCESS}>Sin proceso aún</SelectItem>
               {processes.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name}

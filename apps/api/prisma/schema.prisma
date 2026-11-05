@@ -339,6 +339,10 @@ model Request {
   // Cierre formal del proyecto (CIE-01): quien y cuando cerro la solicitud.
   closedAt                DateTime? @map("closed_at")
   closedByUserId          String?   @map("closed_by_user_id") @db.Uuid
+  // Creador de la solicitud (A1): columna UUID sin relacion (patron de
+  // deletedByUserId/closedByUserId) para que el creador identifique lo suyo
+  // aunque la solicitud aun no tenga proceso principal.
+  createdByUserId         String?   @map("created_by_user_id") @db.Uuid
   functionalOwner         String?   @map("functional_owner")
   targetDate              DateTime? @map("target_date")
   referenceUrl            String?   @map("reference_url")

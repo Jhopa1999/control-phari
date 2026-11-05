@@ -177,6 +177,9 @@ persona revisa y puede corregir antes de enviarlo y que es lo único que recibe 
 Ficha de la demanda; núcleo del flujo.
 - Eliminación lógica: `deletedAt?` y `deletedByUserId?` (las consultas filtran
   `deletedAt = null`). `requesterId?` referencia al maestro de solicitantes.
+- `createdByUserId?`: usuario que registró la solicitud (UUID sin relación, como
+  `deletedByUserId`/`closedByUserId`). Permite que el creador siempre vea su
+  solicitud en el alcance de lectura aunque aún no tenga proceso principal.
 - Campos clave: `title`, `registeredAt`, datos del solicitante (`requesterArea?`,
   `requesterName?`, `functionalOwner?`), `targetDate?`, `referenceUrl?`,
   `expectedResult?`, `mainProcessId?` (proceso principal; **nullable**: la

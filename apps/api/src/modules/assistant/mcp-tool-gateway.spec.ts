@@ -36,6 +36,9 @@ describe('herramientas del asistente', () => {
   });
 
   it('missingRequired revisa los campos obligatorios de primer nivel y de body', () => {
+    // Esquema HIPOTÉTICO solo para ejercitar `missingRequired` con un body que
+    // tenga varios campos obligatorios. NO modela request.create (cuyo contrato
+    // real solo exige `title`: mainProcessId se fija en el triage).
     const schema = {
       type: 'object',
       properties: { body: { type: 'object', required: ['title', 'mainProcessId'] } },

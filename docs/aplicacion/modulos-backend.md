@@ -127,7 +127,9 @@ sus flujos. Lectura con actor; escritura solo `JEFE_AREA`.
 Núcleo del flujo de demanda. Reúne la ficha de la solicitud y los subflujos de triage,
 priorización y aprobación. **Visibilidad:** `JEFE_AREA` y `LIDER_PROCESO` ven **todas**
 las solicitudes (sin filtro de proceso); un `INTEGRANTE` puro las ve filtradas por sus
-procesos con grant activo. La apertura al líder es solo de lectura; las escrituras siguen
+procesos con grant activo **y siempre las que él mismo registró** (`createdByUserId`),
+de modo que el creador conserva la visibilidad de su solicitud aunque aún no tenga
+proceso principal. La apertura al líder es solo de lectura; las escrituras siguen
 protegidas por los gates de cada etapa (que usan el mismo alcance), de modo que el líder
 puede hacer triage y avanzar el flujo sobre cualquier solicitud que ahora ve.
 Triage/priorización exigen `JEFE_AREA` o `LIDER_PROCESO`. En aprobación, la cola y el
@@ -150,12 +152,14 @@ devolver es exclusiva de `JEFE_AREA`.
 | --- | --- | --- |
 | GET | `/requests/:id/triage` | Triage de la solicitud (0 o 1 fila) y candidatos a responsable principal. Acepta `mainProcessId` (uuid, opcional) para **previsualizar** los candidatos de un proceso aún no persistido: cuando la solicitud no tiene proceso principal, el triage lo elige en el mismo formulario y el desplegable de responsable se recarga con los elegibles de ese proceso; si se omite, los candidatos se derivan del proceso ya persistido. |
 | POST | `/requests/:id/triage` | Registra el triage (solo desde `REGISTRADA`; segundo POST → `409`). **Fija el proceso principal de la solicitud**: acepta `mainProcessId` (uuid, opcional); si la solicitud aún no tiene proceso, es **obligatorio para `CONTINUAR`** (si falta → `400` «Para continuar debes elegir el proceso principal de la solicitud.»), mientras que `DEVOLVER`/`RECHAZAR` no lo exigen. El proceso elegido debe existir y estar activo (`400` si no); no se filtra por alcance. Acepta `participantProcessIds` (uuid[], opcional): los procesos que intervienen además del principal; cuando se fija proceso o llegan participantes reconcilia `RequestParticipant` (borrar y recrear) preservando siempre el principal efectivo (BR-001). El responsable principal elegible depende del proceso principal fijado en el triage. |
-| POST | `/requests/:id/asset` | Asocia un activo base **existente** (`assetId`, requerido); solo en estados tempranos (`409` fuera, o si el activo no está habilitado para el proceso de la solicitud). |
+| POST | `/requests/:id/asset` | Asocia un activo base **existente** (`assetId`, requerido); solo en estados tempranos (`409` fuera). **Orden obligatorio triage → activo**: el activo se habilita contra el proceso principal, así que si la solicitud aún no tiene proceso principal fijado responde `409` «Fija el proceso principal en el triage antes de asociar el activo.» (sin llegar a consultar el activo); con proceso ya fijado, si el activo no está habilitado para él responde `409` «El activo no está habilitado para el proceso de la solicitud.». |
 
 El triage **no crea activos**: solo asocia uno existente que esté visible para el actor.
 La creación de activos vive en el módulo de Activos y la realiza el jefe de área. El
 service valida el alcance de lectura del activo (`404` si no accesible) y que esté
-habilitado para el proceso principal de la solicitud (`409` si no). `JEFE_AREA`/
+habilitado para el proceso principal de la solicitud (`409` si no). El orden es
+triage → activo: primero se fija el proceso principal en el triage y luego se asocia el
+activo; sin proceso fijado el `409` indica explícitamente ese paso previo. `JEFE_AREA`/
 `LIDER_PROCESO` (más `ADMIN`) pueden asociar.
 
 ### Priorización (`priority/priority.controller.ts`)
@@ -256,15 +260,15 @@ Vistas de solo lectura: el portafolio de iniciativas y el control del área
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/portfolio` | Listado del portafolio en alcance (filtros `mainProcessId`, `state`, `band`). Cada ítem incluye `progressPercent` (promedio del avance de las tareas del plan, `TERMINADA` = 100; `null` sin tareas) y la alerta de fecha objetivo `dueStatus` (`SIN_FECHA`, `EN_TIEMPO`, `PROXIMO_A_VENCER`, `VENCIDO`, `NO_APLICA` en cerradas/rechazadas/retiradas) con `daysToTarget`. El umbral de «próximo a vencer» es `PORTFOLIO_DUE_SOON_DAYS` (7 por defecto). |
+| GET | `/portfolio` | Listado del portafolio en alcance (filtros `mainProcessId`, `state`, `band`). `mainProcessId` admite un UUID o el literal `SIN_PROCESO` para las solicitudes sin proceso principal (aún por triar). Cada ítem incluye `progressPercent` (promedio del avance de las tareas del plan, `TERMINADA` = 100; `null` sin tareas) y la alerta de fecha objetivo `dueStatus` (`SIN_FECHA`, `EN_TIEMPO`, `PROXIMO_A_VENCER`, `VENCIDO`, `NO_APLICA` en cerradas/rechazadas/retiradas) con `daysToTarget`. El umbral de «próximo a vencer» es `PORTFOLIO_DUE_SOON_DAYS` (7 por defecto). |
 
 ### Control del área (`area-control.controller.ts`)
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/area-control/indicators` | Indicadores del área para el periodo (jefe/líder; integrante → `403`). |
-| GET | `/area-control/demand-summary` | Panorama de demanda en alcance (los 3 roles). |
-| GET | `/area-control/attention` | Conteos «Requiere tu atención» a hoy y en alcance (los 3 roles): solicitudes `REGISTRADA` (triage), `EN_TRIAGE` con triage `CONTINUAR` vigente (priorizar), `BACKLOG_PRIORIZADO` (aprobar) y tareas no terminadas con `endDate` anterior a hoy de solicitudes no cerradas, retiradas ni rechazadas. |
+| GET | `/area-control/demand-summary` | Panorama de demanda en alcance (los 3 roles). Incluye `noProcess` (solicitudes sin proceso principal asignado) junto a `total`, `blockedActive`, `byState` y `byPriorityBand`. |
+| GET | `/area-control/attention` | Conteos «Requiere tu atención» a hoy y en alcance (los 3 roles): solicitudes `REGISTRADA` (triage), `REGISTRADA` sin proceso principal (`pendingNoProcess`, cola de entrada por triar cuyo responsable operativo es el Jefe de Área), `EN_TRIAGE` con triage `CONTINUAR` vigente (priorizar), `BACKLOG_PRIORIZADO` (aprobar) y tareas no terminadas con `endDate` anterior a hoy de solicitudes no cerradas, retiradas ni rechazadas. |
 
 ## capacity — Capacidad (disponibilidad y asignaciones)
 

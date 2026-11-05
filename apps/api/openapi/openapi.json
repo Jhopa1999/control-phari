@@ -1545,6 +1545,7 @@
     },
     "/requests/{id}/asset": {
       "post": {
+        "description": "Orden obligatorio triage -> activo: el activo se habilita contra el proceso principal de la solicitud, por lo que primero hay que fijar el proceso principal en el triage y luego asociar el activo. Si la solicitud aun no tiene proceso principal, responde 409 con el mensaje \"Fija el proceso principal en el triage antes de asociar el activo.\" (sin llegar a consultar el activo). El triage no crea activos: solo asocia uno ya existente y visible para el actor.",
         "operationId": "TriageController_associateAsset",
         "parameters": [
           {
@@ -1588,7 +1589,7 @@
             "description": "Solicitud o activo fuera de alcance."
           },
           "409": {
-            "description": "La solicitud no admite asociar activo en su estado, o el activo no esta habilitado para su proceso."
+            "description": "La solicitud no admite asociar activo en su estado; o la solicitud aun no tiene proceso principal fijado en el triage (hay que fijarlo antes de asociar el activo); o el activo no esta habilitado para el proceso principal de la solicitud."
           }
         },
         "summary": "Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos.",
@@ -7852,7 +7853,7 @@
             "name": "mainProcessId",
             "required": false,
             "in": "query",
-            "description": "Filtra por proceso principal.",
+            "description": "Filtra por proceso principal (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aun por triar).",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -10700,6 +10701,12 @@
             "nullable": true,
             "description": "Activo al que pertenece la solicitud (P1) o null."
           },
+          "createdByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Usuario que registró la solicitud (para que el creador identifique lo suyo aunque aún no tenga proceso)."
+          },
           "operationalState": {
             "type": "string",
             "description": "Estado operativo (read-only, derivado)."
@@ -10761,6 +10768,7 @@
           "expectedResult",
           "mainProcessId",
           "assetId",
+          "createdByUserId",
           "operationalState",
           "initialCommitmentDate",
           "changeJustification",
@@ -16421,6 +16429,10 @@
             "type": "number",
             "description": "Solicitudes con bloqueo activo."
           },
+          "noProcess": {
+            "type": "number",
+            "description": "Solicitudes sin proceso principal asignado (el proceso se fija en el triage)."
+          },
           "byState": {
             "description": "Conteo por estado (todos los estados, incl. 0).",
             "type": "array",
@@ -16439,6 +16451,7 @@
         "required": [
           "total",
           "blockedActive",
+          "noProcess",
           "byState",
           "byPriorityBand"
         ]
@@ -16449,6 +16462,10 @@
           "pendingTriage": {
             "type": "number",
             "description": "Solicitudes REGISTRADAS que esperan la decision de triage."
+          },
+          "pendingNoProcess": {
+            "type": "number",
+            "description": "Cola de entrada sin proceso por triar (solicitudes REGISTRADAS sin proceso principal). Su responsable operativo es el Jefe de Area, que vela por darles respuesta."
           },
           "readyToPrioritize": {
             "type": "number",
@@ -16465,6 +16482,7 @@
         },
         "required": [
           "pendingTriage",
+          "pendingNoProcess",
           "readyToPrioritize",
           "pendingApproval",
           "overdueTasks"
