@@ -7,6 +7,7 @@ import { MobileNav } from '@/components/mobile-nav';
 import { NotificationBell } from '@/components/notification-bell';
 import { SkipLink } from '@/components/skip-link';
 import { UserMenu } from '@/components/user-menu';
+import { WorkspaceCrumbs } from '@/components/workspace-crumbs';
 
 /**
  * Shell del portal (design §8.1): «Saltar al contenido», menú lateral (≥1024 px),
@@ -24,10 +25,13 @@ export function AppShell({ children }: { children: React.ReactNode }): React.Rea
         <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
           <MobileNav />
           {/* Barra superior de escritorio: centro de notificaciones (NOT-01). */}
-          <div className="sticky top-0 z-30 hidden h-12 items-center justify-end gap-2 bg-card/90 px-4 backdrop-blur lg:flex md:px-6 xl:px-8 print:hidden">
-            <AssistantTrigger />
-            <NotificationBell />
-            <UserMenu />
+          <div className="sticky top-0 z-30 hidden h-12 items-center justify-between gap-4 bg-card/90 px-4 backdrop-blur lg:flex md:px-6 xl:px-8 print:hidden">
+            <WorkspaceCrumbs />
+            <div className="flex items-center gap-2">
+              <AssistantTrigger />
+              <NotificationBell />
+              <UserMenu />
+            </div>
             <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-brand-gradient forced-colors:hidden" />
           </div>
           <main

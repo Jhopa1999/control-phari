@@ -46,8 +46,15 @@ import {
 import {
   MODULE_LABELS,
   MODULE_ORDER,
+  NAV_APPS,
   NAV_GROUPS,
+  findAppForPath,
+  getAppGroups,
+  getAppHomeHref,
+  getVisibleNavApps,
   getVisibleNavGroups,
+  getWorkspaceGroups,
+  resolveActiveApp,
   isNavItemActive,
   searchNavItems,
   type NavItem,
@@ -350,6 +357,66 @@ test.describe('navigation', () => {
     expect(labels('zzz inexistente')).toEqual([]);
     // Respeta los grupos recibidos (permisos ya aplicados).
     expect(searchNavItems(getVisibleNavGroups(new Set(['dashboard'])), 'solicitudes')).toEqual([]);
+  });
+
+  test('workspace: cada grupo con appId apunta a una app; Gobierno y Administración son transversales', () => {
+    const appIds = new Set<string>(NAV_APPS.map((app) => app.id));
+    for (const group of NAV_GROUPS) {
+      if (group.appId) expect(appIds, group.id).toContain(group.appId);
+    }
+    expect(NAV_GROUPS.filter((g) => !g.appId).map((g) => g.id)).toEqual(['gobierno', 'administracion']);
+    // El módulo de inicio de cada app existe en el menú de esa app.
+    for (const app of NAV_APPS) {
+      const keys = NAV_GROUPS.filter((g) => g.appId === app.id).flatMap((g) => g.items.map((i) => i.moduleKey));
+      expect(keys, app.id).toContain(app.moduleKey);
+    }
+  });
+
+  test('getVisibleNavApps muestra una app solo si hay algún módulo suyo permitido', () => {
+    expect(getVisibleNavApps(new Set())).toEqual([]);
+    // Solo módulos transversales: ninguna app.
+    expect(getVisibleNavApps(new Set(['audit', 'team']))).toEqual([]);
+    expect(getVisibleNavApps(new Set(['requests'])).map((app) => app.id)).toEqual(['demanda']);
+  });
+
+  test('getAppHomeHref usa el inicio de la app o el primer ítem visible si no hay permiso', () => {
+    const demanda = NAV_APPS[0];
+    expect(getAppHomeHref(demanda, new Set(['dashboard', 'requests']))).toBe('/inicio');
+    expect(getAppHomeHref(demanda, new Set(['requests']))).toBe('/demanda/solicitudes');
+  });
+
+  test('getAppGroups y getWorkspaceGroups reparten los grupos visibles', () => {
+    const visible = getVisibleNavGroups(new Set(NAV_GROUPS.flatMap((g) => g.items.map((i) => i.moduleKey))));
+    expect(getAppGroups(visible, 'demanda').map((g) => g.id)).toEqual([
+      'inicio',
+      'demanda',
+      'ejecucion',
+      'seguimiento',
+      'activos',
+    ]);
+    expect(getWorkspaceGroups(visible).map((g) => g.id)).toEqual(['gobierno', 'administracion']);
+  });
+
+  test('resolveActiveApp: dueña de la ruta, si no la última usada y si no la primera visible', () => {
+    const allKeys = new Set(NAV_GROUPS.flatMap((g) => g.items.map((i) => i.moduleKey)));
+    const groups = getVisibleNavGroups(allKeys);
+    const apps = getVisibleNavApps(allKeys);
+    expect(findAppForPath('/demanda/solicitudes/abc', apps, groups)?.id).toBe('demanda');
+    // Ruta de una app aunque su URL diga «administracion» (Aprobaciones).
+    expect(findAppForPath('/administracion/revision', apps, groups)?.id).toBe('demanda');
+    // Transversal o launcher: sin dueña.
+    expect(findAppForPath('/gobierno/auditoria', apps, groups)).toBeNull();
+    expect(findAppForPath('/aplicaciones', apps, groups)).toBeNull();
+    // Última usada guardada que ya no es visible: se descarta.
+    expect(resolveActiveApp('/gobierno/auditoria', apps, groups, 'demanda')?.id).toBe('demanda');
+    expect(resolveActiveApp('/gobierno/auditoria', apps, groups, 'inexistente')?.id).toBe('demanda');
+    expect(resolveActiveApp('/aplicaciones', [], [], null)).toBeNull();
+  });
+
+  test('searchNavItems informa la app de cada resultado (los transversales no tienen)', () => {
+    const groups = getVisibleNavGroups(new Set(NAV_GROUPS.flatMap((g) => g.items.map((i) => i.moduleKey))));
+    expect(searchNavItems(groups, 'solicitudes')[0].appId).toBe('demanda');
+    expect(searchNavItems(groups, 'auditoria')[0].appId).toBeUndefined();
   });
 
   test('isNavItemActive usa igualdad o prefijo de ruta, también en activeFor', () => {
