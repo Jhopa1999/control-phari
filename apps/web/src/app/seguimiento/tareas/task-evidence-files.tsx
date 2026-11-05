@@ -29,7 +29,14 @@ function messageOf(err: unknown): string {
  * Archivos de evidencia de una tarea: lista, subida, descarga y borrado. Los
  * archivos viven en el bucket maestro del app; el backend autoriza cada acción.
  */
-export function TaskEvidenceFiles({ taskId }: { taskId: string }): React.ReactElement {
+export function TaskEvidenceFiles({
+  taskId,
+  onCountChange,
+}: {
+  taskId: string;
+  /** Avisa del nuevo número de archivos tras subir o quitar uno. */
+  onCountChange?: (count: number) => void;
+}): React.ReactElement {
   const [files, setFiles] = React.useState<TaskEvidence[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
   const [uploading, setUploading] = React.useState(false);
@@ -71,6 +78,7 @@ export function TaskEvidenceFiles({ taskId }: { taskId: string }): React.ReactEl
     try {
       const created = await uploadTaskEvidence(taskId, file);
       setFiles((prev) => [created, ...prev]);
+      onCountChange?.(files.length + 1);
       toast.success('Evidencia adjuntada.');
     } catch (err) {
       setError(messageOf(err));
@@ -92,6 +100,7 @@ export function TaskEvidenceFiles({ taskId }: { taskId: string }): React.ReactEl
     try {
       await deleteTaskEvidence(taskId, toDelete.id);
       setFiles((prev) => prev.filter((f) => f.id !== toDelete.id));
+      onCountChange?.(Math.max(0, files.length - 1));
       toast.success('Evidencia eliminada.');
     } catch (err) {
       toast.error(messageOf(err));
@@ -116,7 +125,7 @@ export function TaskEvidenceFiles({ taskId }: { taskId: string }): React.ReactEl
           </Button>
         </div>
       ) : files.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Aún no hay archivos adjuntos.</p>
+        <p className="text-sm text-muted-foreground">Sin archivos adjuntos.</p>
       ) : (
         <ul aria-label="Archivos de evidencia" className="divide-y rounded-md border">
           {files.map((file) => (

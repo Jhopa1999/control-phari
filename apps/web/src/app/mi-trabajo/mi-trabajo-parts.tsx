@@ -126,6 +126,8 @@ export interface RowActions {
   busyId: string | null;
   onStatus: (item: MyWorkItem, next: TaskStatus) => void;
   onProgress: (item: MyWorkItem, value: number) => Promise<string | null>;
+  /** Abre el panel lateral con el detalle de la tarea. */
+  onOpen: (item: MyWorkItem) => void;
 }
 
 interface RowCommon {
@@ -139,23 +141,29 @@ interface RowCommon {
 
 const TOUCH = 'max-lg:min-h-11 max-lg:min-w-11 pointer-coarse:min-h-11 pointer-coarse:min-w-11';
 
-function taskHref(taskId: string): string {
-  return `/seguimiento/tareas?taskId=${encodeURIComponent(taskId)}`;
-}
-
-function TitleLink({ item, touch }: { item: MyWorkItem; touch?: boolean }): React.ReactElement {
+/** Título de la tarea: abre el panel lateral sin salir de la lista. */
+function TitleLink({
+  item,
+  touch,
+  onOpen,
+}: {
+  item: MyWorkItem;
+  touch?: boolean;
+  onOpen: (item: MyWorkItem) => void;
+}): React.ReactElement {
   return (
-    <Link
-      href={taskHref(item.taskId)}
+    <button
+      type="button"
       data-control="title"
       title={item.title}
+      onClick={() => onOpen(item)}
       className={cn(
         'min-w-0 rounded-sm text-left text-sm font-medium wrap-break-word text-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
         touch && 'inline-flex min-h-11 items-center',
       )}
     >
       <span className="line-clamp-2">{item.title}</span>
-    </Link>
+    </button>
   );
 }
 
@@ -312,7 +320,7 @@ function MyWorkTableRow(props: RowCommon): React.ReactElement {
     <TableRow data-task-id={item.taskId} aria-busy={actions.busyId === item.taskId || undefined}>
       <TableCell className={cn('py-3 align-top', overdue && 'shadow-[inset_3px_0_0_0_var(--color-danger)]')}>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <TitleLink item={item} />
+          <TitleLink item={item} onOpen={actions.onOpen} />
           {item.isMilestone ? <MilestoneBadge /> : null}
         </div>
         <Subline item={item} canOpenRequest={canOpenRequest} />
@@ -352,7 +360,7 @@ function MyWorkCard(props: RowCommon): React.ReactElement {
       )}
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <TitleLink item={item} touch />
+        <TitleLink item={item} touch onOpen={actions.onOpen} />
         {item.isMilestone ? <MilestoneBadge /> : null}
       </div>
       <Subline item={item} canOpenRequest={canOpenRequest} lines={2} />

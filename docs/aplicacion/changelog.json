@@ -598,6 +598,12 @@
         "docs/aplicacion/README.md"
       ],
       "summary": "BL-035 · se quita la «Ruta» redundante del triage: routeCode queda deprecado (opcional, solo histórico), la sugerencia de IA propone el proceso principal (suggestedMainProcessId) en lugar de suggestedRouteCode, la coordinación multiproceso (COORDINATION/FMAA) no puede fijarse como proceso principal (400) y «Multiproceso» pasa a ser una etiqueta derivada de los participantes. Migración de datos condicionada del prompt del agente TRIAGE. Contrato y cliente regenerados; el catálogo del MCP no cambia."
+    },
+    {
+      "timestamp": "2026-11-11T12:00:00Z",
+      "trigger_file": "apps/web/src/app/mi-trabajo/page.tsx",
+      "updated_docs": ["docs/aplicacion/frontend-pantallas.md"],
+      "summary": "Mi trabajo abre el detalle de la tarea en un panel lateral (?taskId= opcional) y el detalle se simplifica: un solo control de avance, evidencia en texto/URL separada de archivos, propuesta de 100 % al terminar y avisos no bloqueantes; se corrige Fase — en /seguimiento/tareas. Sin cambios de API, contrato ni MCP."
     }
   ]
 }

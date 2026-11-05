@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CircleCheck, ListChecks, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
@@ -20,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { MyWorkItem, TaskStatus } from '@/lib/api-client';
+import type { MyWorkItem, Task, TaskStatus } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
 import { formatPercent } from '@/lib/format';
 import { createLocalPrefStore } from '@/lib/local-pref-store';
@@ -38,6 +39,7 @@ import { TASK_STATUSES, taskStatusLabel } from '@/lib/tasks';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useTodayLocal } from '@/lib/use-today-local';
 import { useInlineTaskActions } from '../seguimiento/plan/use-inline-task-actions';
+import { TaskDetail } from '../seguimiento/tareas/task-detail';
 import {
   COUNTERS,
   CounterCard,
@@ -52,6 +54,8 @@ type LoadState = 'loading' | 'success' | 'error';
 /** Centinela de «Todos» en el filtro de estado. */
 const ALL = 'ALL';
 const NOUN = { one: 'tarea', other: 'tareas' };
+/** Identificador de tarea admitido en ?taskId= (cualquier otra cosa se ignora). */
+const VALID_TASK_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const PENDING_GROUPS = MY_WORK_GROUP_ORDER.filter((key) => key !== 'done');
 
 // Pliegue de «Terminadas»: colapsada por defecto, se recuerda en localStorage.
@@ -117,6 +121,8 @@ function hasEvidenceNote(evidenceUrl: string | null | undefined): boolean {
 export function MiTrabajoView(): React.ReactElement {
   const { actorId, allowedModules } = useActor();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const today = useTodayLocal();
   const canOpenRequest = allowedModules.has('requests');
 
@@ -131,6 +137,9 @@ export function MiTrabajoView(): React.ReactElement {
   const [expandedGroups, setExpandedGroups] = React.useState<ReadonlySet<MyWorkGroupKey>>(new Set());
   const [keepVisibleId, setKeepVisibleId] = React.useState<string | null>(null);
   const [announcement, setAnnouncement] = React.useState('');
+  // Panel lateral: la URL (?taskId=) manda; estos estados solo recuerdan cómo se abrió.
+  const [openedFromList, setOpenedFromList] = React.useState(false);
+  const [returnFocusId, setReturnFocusId] = React.useState<string | null>(null);
   const searchRef = React.useRef<HTMLInputElement>(null);
   const pendingFocus = React.useRef<PendingFocus | null>(null);
   const donePref = React.useSyncExternalStore(
@@ -293,7 +302,7 @@ export function MiTrabajoView(): React.ReactElement {
             toast.warning('Sin evidencia registrada.', {
               action: {
                 label: 'Añadir evidencia',
-                onClick: () => router.push(`/seguimiento/tareas?taskId=${encodeURIComponent(item.taskId)}`),
+                onClick: () => openPanel(item.taskId),
               },
             });
           }
@@ -314,8 +323,49 @@ export function MiTrabajoView(): React.ReactElement {
     return null;
   }
 
+  // --- Panel lateral (la URL manda: ?taskId=) ---
+  const rawTaskId = searchParams.get('taskId');
+  const panelTaskId = rawTaskId !== null && VALID_TASK_ID.test(rawTaskId) ? rawTaskId : null;
+  const panelItem = panelTaskId ? items.find((i) => i.taskId === panelTaskId) : undefined;
+
+  function openPanel(taskId: string): void {
+    setOpenedFromList(true);
+    setReturnFocusId(taskId);
+    router.push(`${pathname}?taskId=${encodeURIComponent(taskId)}`, { scroll: false });
+  }
+
+  function closePanel(): void {
+    if (openedFromList) {
+      setOpenedFromList(false);
+      router.back();
+    } else {
+      router.replace(pathname, { scroll: false });
+    }
+  }
+
+  /** Refleja en la lista, sin recargar, el estado y avance cambiados desde el panel. */
+  function handleDetailChanged(task: Task): void {
+    setItems((prev) =>
+      prev.map((i) =>
+        i.taskId === task.id ? { ...i, status: task.status, progress: task.progress } : i,
+      ),
+    );
+    setKeepVisibleId(task.id);
+  }
+
+  function restoreFocusAfterPanel(event: Event): void {
+    event.preventDefault();
+    if (returnFocusId && focusControl(returnFocusId, 'title')) return;
+    const heading = document.querySelector('h1');
+    if (heading instanceof HTMLElement) {
+      heading.tabIndex = -1;
+      heading.focus();
+    }
+  }
+
   const actions: RowActions = {
     busyId: inline.rowBusyId,
+    onOpen: (item) => openPanel(item.taskId),
     onStatus: (item, next) => {
       const control = next === 'EN_CURSO' || next === 'EN_REVISION' || next === 'TERMINADA' ? 'title' : 'status';
       void runStatus(item, next, control);
@@ -527,6 +577,34 @@ export function MiTrabajoView(): React.ReactElement {
       <div className="@container flex flex-col gap-4" aria-busy={state === 'loading' || undefined}>
         {body}
       </div>
+      <Sheet open={panelTaskId !== null} onOpenChange={(open) => !open && closePanel()}>
+        <SheetContent
+          side="right"
+          closeLabel="Cerrar detalle"
+          closeClassName="max-md:min-h-11 max-md:min-w-11 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+          className="w-[40rem] max-w-full gap-4 overflow-y-auto bg-background p-5"
+          onCloseAutoFocus={restoreFocusAfterPanel}
+        >
+          <SheetTitle className="pr-10">{panelItem?.title ?? 'Detalle de la tarea'}</SheetTitle>
+          <SheetDescription className="sr-only">
+            Detalle de la tarea: estado, avance, historial de cambios, predecesoras y evidencia.
+          </SheetDescription>
+          {panelTaskId ? (
+            <TaskDetail
+              key={panelTaskId}
+              taskId={panelTaskId}
+              embedded
+              phaseName={panelItem?.phaseName ?? undefined}
+              requestId={panelItem?.requestId}
+              requestTitle={panelItem?.requestTitle}
+              onSelectTask={(id) =>
+                router.replace(`${pathname}?taskId=${encodeURIComponent(id)}`, { scroll: false })
+              }
+              onChanged={handleDetailChanged}
+            />
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </PageLayout>
   );
 }
