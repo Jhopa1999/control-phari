@@ -579,6 +579,14 @@
         "docs/aplicacion/modulos-backend.md"
       ],
       "summary": "FEAT-003 (M5) · orden obligatorio triage → activo en POST /requests/:id/asset: si la solicitud aún no tiene proceso principal fijado, associateAsset responde 409 «Fija el proceso principal en el triage antes de asociar el activo.» antes de consultar el activo, y el 409 «El activo no está habilitado para el proceso de la solicitud.» queda para el caso con proceso ya fijado; el @ApiOperation del endpoint y el contrato OpenAPI regenerado documentan ese orden."
+    },
+    {
+      "timestamp": "2026-11-09T15:00:00Z",
+      "trigger_file": "apps/api/prisma/schema.prisma",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md"
+      ],
+      "summary": "BL-033 · cierre de coherencia proceso-en-triage (FEAT-004): se documenta en modulos-backend.md la ampliación del alcance de lectura del módulo request (el integrante puro ve además las solicitudes que él mismo registró vía createdByUserId, aunque aún no tengan proceso principal) para alinearlo con autenticacion-autorizacion.md; se confirma la sincronía del contrato OpenAPI y el cliente tipado (regenerados en FEAT-001..003, sin diffs pendientes) y el build total. El catálogo y la identidad del MCP no cambiaron (M4 fue solo fixtures de prueba), así que apps/mcp/README.md no se tocó."
     }
   ]
 }

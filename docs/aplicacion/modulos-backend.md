@@ -127,7 +127,9 @@ sus flujos. Lectura con actor; escritura solo `JEFE_AREA`.
 Núcleo del flujo de demanda. Reúne la ficha de la solicitud y los subflujos de triage,
 priorización y aprobación. **Visibilidad:** `JEFE_AREA` y `LIDER_PROCESO` ven **todas**
 las solicitudes (sin filtro de proceso); un `INTEGRANTE` puro las ve filtradas por sus
-procesos con grant activo. La apertura al líder es solo de lectura; las escrituras siguen
+procesos con grant activo **y siempre las que él mismo registró** (`createdByUserId`),
+de modo que el creador conserva la visibilidad de su solicitud aunque aún no tenga
+proceso principal. La apertura al líder es solo de lectura; las escrituras siguen
 protegidas por los gates de cada etapa (que usan el mismo alcance), de modo que el líder
 puede hacer triage y avanzar el flujo sobre cualquier solicitud que ahora ve.
 Triage/priorización exigen `JEFE_AREA` o `LIDER_PROCESO`. En aprobación, la cola y el
