@@ -140,7 +140,9 @@ Estados del contador:
 Al activar un contador, el filtro actúa sobre la lista; la sección «Terminadas» desaparece (ninguna terminada coincide)
 y la fila de resultado dice «5 de 16 tareas». «Limpiar filtros» también apaga el contador. **Auto-apagado (regla única).** El contador activo se apaga solo **únicamente cuando su propio conteo**
 (calculado sobre **todas** las tareas, sin búsqueda ni filtro de estado) **llega a 0** (p. ej. el usuario resolvió la última
-vencida): entonces el filtro se quita, el foco pasa a la búsqueda (patrón NIT 4 existente) y se anuncia en la región viva.
+vencida): entonces el filtro se quita y se anuncia en la región viva. El foco sigue la regla 0 de 12.6: si el apagado lo
+provocó una acción sobre una fila, el foco va a esa fila y la búsqueda no lo recibe; solo cuando ocurre sin acción del usuario
+sobre una fila (p. ej. tras una recarga) pasa a la búsqueda (patrón NIT 4 existente).
 Si la lista queda vacía por **la búsqueda o el filtro de estado** mientras el contador sigue teniendo tareas, **no** se
 apaga: se muestra el estado «Sin resultados» de 12.5.
 
@@ -257,16 +259,19 @@ título «Vencidas» `text-danger`/`background` **5.74 · 8.01**, y el chip de c
 
 ## 6. Fila de tarea (escritorio ≥ 1024 px)
 
-> **Decisión de ancho.** La tabla solo aparece desde `lg` (1024 px). Por debajo (incluida la tablet
-> 768–1023 px) se usan las tarjetas de la sección 7, que ya cumplen los 44 px táctiles. Cuentas con las medidas reales
-> del shell: el sidebar mide `w-60` (240 px) y pasa a riel `w-14` (56 px) automáticamente entre 1024 y 1279 px
-> (`@custom-variant rail` en `globals.css`); el `<main>` lleva `md:px-6` (48 px) y `xl:px-8` (64 px). Columnas fijas
-> Vencimiento 176 + Avance 176 + Estado y siguiente paso 288 = **640 px**. Ancho que queda a **Tarea**: a 1024 px
-> (riel) 1024 − 56 − 48 − 640 = **280 px**; a 1280 px (sidebar de 240) 1280 − 240 − 64 − 640 = **336 px**; a 1440 px
-> (sidebar de 240) **496 px**. En ningún punto de la tabla baja de 280 px, suficiente para título + insignia «Hito»
-> en la primera línea y la sublínea truncada en la segunda, sin scroll horizontal (la columna no lleva `min-w`:
-> `table-fixed` reparte el resto a Tarea). (Si el usuario fijara el sidebar expandido a 1024–1279 px la columna se
-> estrecharía; hoy ese modo no existe: solo `auto`/`rail`.)
+> **Decisión de ancho.** El criterio no es el breakpoint del viewport ni el estado del menú lateral, sino el **ancho del
+> contenedor de la lista** (container query): la tabla aparece cuando el contenedor mide **≥ 920 px** y las tarjetas de la
+> sección 7 (que ya cumplen los 44 px táctiles) cuando mide menos. Se declara `@container` en el `<main>` (o en el
+> contenedor de la lista) y se usan `@[920px]:block` para la tabla y `@[920px]:hidden` para las tarjetas. Los 920 px son
+> las columnas fijas Vencimiento 176 + Avance 176 + Estado y siguiente paso 288 = **640 px** más **280 px** mínimos para
+> **Tarea** (título + insignia «Hito» en la primera línea y la sublínea truncada en la segunda, sin scroll horizontal; la
+> columna no lleva `min-w`: `table-fixed` reparte el resto a Tarea). Así el resultado no depende de que el sidebar esté
+> en `auto`, `rail` o `expanded` (`SidebarPref` en `lib/use-sidebar-mode.ts`). Cuentas con las medidas reales del shell
+> (sidebar `w-60` = 240 px, riel `w-14` = 56 px; `<main>` con `md:px-6` = 48 px y `xl:px-8` = 64 px): a 1024 px con
+> sidebar `expanded` el contenedor mide 1024 − 240 − 48 = 736 px → **tarjetas**; a 1024 px en riel, 1024 − 56 − 48 = 920 px →
+> **tabla** con Tarea = 280 px; a 1180 px con `expanded`, 1180 − 240 − 48 = 892 px → **tarjetas**; a 1280 px con `expanded`,
+> 1280 − 240 − 64 = 976 px → **tabla** con Tarea = 336 px; a 1440 px con sidebar de 240, **496 px**. En ningún punto de la
+> tabla baja de 280 px.
 
 Cada grupo es una `<table>` con `<caption class="sr-only">` («Tareas vencidas», …) y `<thead class="sr-only">` (Tarea,
 Vencimiento, Avance, Estado y siguiente paso). Las columnas se alinean entre grupos con las **mismas anchuras**
@@ -325,9 +330,9 @@ nombre accesible propio y los grupos son regiones con `aria-labelledby` (navegac
 
 ## 7. Tarjeta móvil y tablet (< 1024 px)
 
-Las tarjetas se usan en todo ancho menor que `lg` (1024 px): móviles y tablets (sección 6). El cambio
-se hace con `lg:hidden` (tarjetas) y `hidden lg:block` (tablas), de modo que solo uno de los dos árboles está en el DOM
-visible. La lista de cada grupo es `<ul class="flex flex-col gap-3">` de `<li>`. No se usa `DataCardList` (no admite controles
+Las tarjetas se usan cuando el contenedor de la lista mide menos de 920 px: móviles, tablets y escritorio con el menú
+lateral expandido a anchos medios (sección 6). El cambio se hace con `@[920px]:hidden` (tarjetas) y `hidden @[920px]:block`
+(tablas), de modo que solo uno de los dos árboles está visible. La lista de cada grupo es `<ul class="flex flex-col gap-3">` de `<li>`. No se usa `DataCardList` (no admite controles
 en línea ni agrupamiento); se crea `MyWorkCard`, con el mismo ritmo visual (`rounded-xl bg-card p-4 shadow-card`).
 
 ```
@@ -500,8 +505,11 @@ Clic en el título abre `Sheet` (`side="right"`, `closeLabel="Cerrar detalle"`,
 
 - **Móvil < 768 px:** el panel ocupa todo el ancho y alto (`w-full`), botón de cierre de 44 px, cabecera de contexto
   con el título; el contenido hace scroll dentro del panel.
-- **URL:** abrir hace `router.push('?taskId=<id>')` (el botón Atrás cierra el panel); cerrar quita el parámetro con
-  `router.replace`. Cargar `/mi-trabajo?taskId=<id>` abre el panel directamente. El `page.tsx` se envuelve en
+- **URL e historial:** el panel se abre con `router.push('?taskId=<id>')`. Cerrarlo con la X, Esc u overlay hace
+  `router.back()` si se abrió desde la lista (se marca con un `ref` en el manejador del botón-título) y
+  `router.replace(pathname)` si se cargó directamente con `?taskId=` (sin entrada previa de la lista). `onSelectTask`
+  (cambiar a una predecesora) usa `router.replace` para no apilar una entrada por predecesora. El botón Atrás tras abrir
+  desde la lista cierra el panel. Cargar `/mi-trabajo?taskId=<id>` abre el panel directamente. El `page.tsx` se envuelve en
   `<Suspense>` porque usa `useSearchParams`.
 - **`?taskId=` inexistente, borrado o ajeno.** La lista no lo valida: abre el panel y `TaskDetail` pide
   `GET /tasks/{id}`; si el servidor responde 404/403, el **panel muestra dentro el `ErrorState` con el mensaje del
@@ -545,7 +553,7 @@ Estructura nueva, de arriba abajo (misma en página y en panel):
    predecesoras pendientes, aceptada), **un solo control de avance** (`TaskProgressControl wide`) y la lista de datos
    (Responsable, Fase, Solicitud, Inicio, Vencimiento, Esfuerzo).
 2. **«Actualizar estado»** (tarjeta compacta **encima de las pestañas**, no dentro de «Resumen»): así la acción principal
-   queda en la primera pantalla, también en móvil (en 844 px de alto: cabecera ≈ 330 + acción ≈ 230).
+   queda en la primera pantalla, también en móvil (altura a medir en la captura 390×844 de la implementación).
 3. **Pestañas** Resumen · Historial (n) · Evidencia (n).
 
 ### 10.1 Un solo control de avance
@@ -651,7 +659,7 @@ Si todas están terminadas: un bloque `EmptyState` compacto en lugar de los grup
 
 ### 12.4b Fallo al actualizar con datos presentes
 
-Si «Actualizar» (o la recarga al volver a la pestaña) falla **habiendo ya datos**, la lista **no se reemplaza** por el
+No hay recarga automática; solo el botón «Actualizar». Si «Actualizar» falla **habiendo ya datos**, la lista **no se reemplaza** por el
 `ErrorState`: se conserva lo último cargado y no se reordena nada. Se muestra: (1) `toast.error` con el mensaje del servicio
 (`PlanError.message`; sin mensaje, «No se pudo actualizar. Revisa tu conexión e inténtalo de nuevo.»), y (2) sobre los
 contadores un `InlineNotice tone="warning"` con `role="status"`: «No se pudo actualizar. Mostrando los datos de la última
@@ -672,6 +680,9 @@ quita un filtro.» y botón **Limpiar filtros**. Los contadores se mantienen vis
   «“{título}” pasó a En revisión. Ahora está en el grupo Hoy.» / «Avance de «…» actualizado a 60 %.» /
   «El filtro Vencidas se desactivó porque ya no hay tareas vencidas.»
 - **Regla única de foco tras una acción en línea** (la misma en 2, 9, 14 y en el e2e):
+  0. **Precedencia.** Si la acción provoca el auto-apagado de un contador (sección 3), el foco sigue la regla 2 sobre la fila
+     actuada (que sin el filtro vuelve a ser visible) y la búsqueda **no** recibe el foco. El foco va a la búsqueda solo
+     cuando el auto-apagado ocurre sin acción del usuario sobre una fila (p. ej. una recarga).
   1. Si la fila **sigue en el DOM sin cambiar de grupo** (p. ej. «Empezar» dentro de Hoy, avance), el foco **se queda en el
      control pulsado** (el botón «Siguiente paso» puede cambiar de verbo o desaparecer: ver el punto 3).
   2. Si la fila **cambia de grupo** y el destino es **visible** (grupo desplegado, filtros que la admiten), el foco
@@ -683,7 +694,7 @@ quita un filtro.» y botón **Limpiar filtros**. Los contadores se mantienen vis
      va al **título de la fila siguiente del grupo de origen**; si no hay, al `h2` del grupo de origen (`tabIndex={-1}`);
      si el grupo desaparece, al `h1`. Nunca se pierde en `body`.
   Caso típico: «Terminar» envía la fila a Terminadas, plegada por defecto → regla 4. Con Terminadas desplegada → regla 2.
-  La región viva anuncia siempre dónde quedó la tarea («Ahora está en Terminadas»). El e2e cubre las reglas 1, 2 y 4.
+  La región viva anuncia siempre dónde quedó la tarea («Ahora está en Terminadas»). El e2e cubre las reglas 0, 1, 2 y 4.
 - **Mecanismo de restauración (aplica a las reglas 1 a 3).** Reordenar filas con clave dentro de un grupo (§5.2 ordena por
   estado: «Empezar» sube la fila por encima de las `POR_HACER`) mueve el nodo en el DOM, y el navegador puede soltar el foco
   a `body`; además el botón «Siguiente paso» cambia de verbo. Por eso el foco no se deja a la suerte:
@@ -704,9 +715,8 @@ quita un filtro.» y botón **Limpiar filtros**. Los contadores se mantienen vis
 
 | Ancho | Layout |
 | --- | --- |
-| ≥ 1280 | Tabla de 4 columnas (Tarea 336 px a 1280 con sidebar de 240; 496 a 1440). Contadores 4 en fila. |
-| 1024–1279 | Misma tabla con el sidebar en riel de 56 px: Tarea ≈ 280 px a 1024 (cuenta en la sección 6). Contadores 4 en fila. |
-| 768–1023 (tablet) | **Tarjetas** por grupo (como móvil); contadores 2×2; cabeceras `sticky`; objetivos de 44 px; panel lateral de `w-[40rem] max-w-full`. **No verificado en tablet real.** |
+| Contenedor de la lista ≥ 920 px | **Tabla** de 4 columnas (Tarea 336 px a 1280 con sidebar de 240; 496 a 1440; 280 a 1024 con riel). Contadores 4 en fila. |
+| Contenedor < 920 px (p. ej. 1024 o 1180 con sidebar `expanded`; tablet 768–1023) | **Tarjetas** por grupo (como móvil); contadores 4 en fila si caben, si no 2×2; cabeceras `sticky`; objetivos de 44 px; panel lateral de `w-[40rem] max-w-full`. **No verificado en tablet real.** |
 | < 768 | Tarjetas por grupo; contadores 2×2; cabeceras de grupo `sticky`; panel a pantalla completa; objetivos de 44 px. |
 | 320 | Sin scroll horizontal; textos largos con `wrap-break-word`. |
 
