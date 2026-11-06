@@ -604,6 +604,12 @@
       "trigger_file": "apps/web/src/app/mi-trabajo/page.tsx",
       "updated_docs": ["docs/aplicacion/frontend-pantallas.md", "docs/BACKLOG.md"],
       "summary": "BL-036 (Entrega 1) · Mi trabajo pasa a «Mi día»: contadores-filtro, tareas agrupadas por urgencia con terminadas plegadas y estado y avance editables en la fila. Mi trabajo abre el detalle de la tarea en un panel lateral (?taskId= opcional) y el detalle se simplifica: un solo control de avance, evidencia en texto/URL separada de archivos, propuesta de 100 % al terminar y avisos no bloqueantes; se corrige Fase — en /seguimiento/tareas. Sin cambios de API, contrato ni MCP."
+    },
+    {
+      "timestamp": "2026-11-11T18:00:00Z",
+      "trigger_file": "apps/api/src/modules/plan/task/task.service.ts",
+      "updated_docs": ["docs/aplicacion/modulos-backend.md", "docs/aplicacion/modelo-datos.md"],
+      "summary": "BL-036 (Entrega 2, API) · Motivo de bloqueo opcional en PATCH /tasks/:id/status (columna tasks.blocked_reason, se limpia al salir de BLOQUEADA, 400 fuera de BLOQUEADA); GET /my-work gana pendingPredecessors, blockedReason, requestOperationalState y requestCommitmentDate; las respuestas de tarea ganan blockedReason, phaseName, requestId y requestTitle. Contrato, cliente y descripciones del MCP actualizados; sin tools nuevas."
     }
   ]
 }

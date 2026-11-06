@@ -222,14 +222,14 @@ Validaciones de fechas (backend y formularios): la fecha de fin de una fase o ta
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/my-work` | Tareas asignadas al usuario actual (dentro de alcance). |
+| GET | `/my-work` | Tareas asignadas al usuario actual (dentro de alcance). Cada ítem trae, además del contexto de fase/solicitud, `pendingPredecessors` (`{ taskId, title }[]`, predecesoras directas no terminadas, orden por título; `[]` si no hay), `blockedReason` (`string \| null`), `requestOperationalState` y `requestCommitmentDate` (compromiso vigente: `Plan.commitmentDate` si existe; si no, `Request.initialCommitmentDate`; `null` si ninguno). Se calculan en el servidor con consultas por lote (sin N+1); los campos son aditivos y siempre están presentes. |
 | GET | `/plans/:planId/tasks` | Lista las tareas de un plan (filtros opcionales). |
 | GET | `/plans/:planId/responsible-candidates` | Candidatos a responsable de las tareas del plan: personas con grant activo en alguno de los procesos que intervienen en la solicitud (los `RequestParticipant`, decididos en el triage). Los 3 roles, dentro del alcance del plan (`404` fuera). |
 | POST | `/phases/:phaseId/tasks` | Crea una tarea en una fase (regla de hito). Si se asigna `responsibleUserId`, debe pertenecer a un proceso interviniente de la solicitud (grant activo en algún `RequestParticipant`); `400` si no. |
-| GET | `/tasks/:id` | Detalle de una tarea con sus predecesoras. |
+| GET | `/tasks/:id` | Detalle de una tarea con sus predecesoras. Toda respuesta de tarea (detalle, listas del plan y resultados de PATCH) incluye `blockedReason`, `phaseName`, `requestId` y `requestTitle`, leídos en la misma consulta (sin N+1) y con el mismo alcance de visibilidad. |
 | PATCH | `/tasks/:id` | Edita una tarea (no estado/aceptación; regla de hito). Al reasignar `responsibleUserId`, aplica la misma condición dura: debe pertenecer a un proceso interviniente (`400` si no). |
 | DELETE | `/tasks/:id` | Borra una tarea (`409` si es predecesora de otra). |
-| PATCH | `/tasks/:id/status` | Cambia el estado (gate de predecesoras). |
+| PATCH | `/tasks/:id/status` | Cambia el estado (gate de predecesoras). Acepta `blockedReason` opcional (1 a 500 caracteres tras recortar; vacío o solo espacios = ausente): se guarda al pasar a `BLOQUEADA` y se limpia (`null`) al salir de ese estado; con cualquier otro `status` la API responde `400` («El motivo de bloqueo solo aplica al marcar la tarea como bloqueada.») y más de 500 caracteres también `400`. El motivo anterior queda en el historial (`blockedReason` se audita). No cambia la máquina de estados ni la regla de cierre. |
 | PATCH | `/tasks/:id/progress` | Actualiza solo el avance (entero 0-100) sin cambiar el estado. Solo con la tarea En curso, Bloqueada o En revisión (`409` en Por hacer o Terminada); jefe, líder o el responsable (`403` si no). Audita el cambio. |
 | GET | `/tasks/:id/history` | Traza de cambios de la tarea (de la más reciente a la más antigua, máx. 200): quién, cuándo y cada campo con su valor anterior y nuevo; fase y responsable llegan con su nombre. Se arma con la auditoría de la tarea. |
 | PATCH | `/tasks/:id/accept` | Acepta/retira la aceptación (precondición TERMINADA). Ya no es requisito del gate de predecesoras ni se muestra en la UI; se conserva por compatibilidad. |

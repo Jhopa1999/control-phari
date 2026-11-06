@@ -12195,6 +12195,24 @@
           "processId"
         ]
       },
+      "MyWorkPendingPredecessorDto": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id de la predecesora."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la predecesora."
+          }
+        },
+        "required": [
+          "taskId",
+          "title"
+        ]
+      },
       "MyWorkItemDto": {
         "type": "object",
         "properties": {
@@ -12253,6 +12271,28 @@
           "requestTitle": {
             "type": "string",
             "description": "Titulo de la solicitud."
+          },
+          "pendingPredecessors": {
+            "description": "Predecesoras directas aun no terminadas (orden por titulo); [] si no hay.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyWorkPendingPredecessorDto"
+            }
+          },
+          "blockedReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo vigente del bloqueo; null si la tarea no esta BLOQUEADA o se bloqueo sin motivo."
+          },
+          "requestOperationalState": {
+            "type": "string",
+            "description": "Estado operativo de la solicitud (p. ej. CERRADA)."
+          },
+          "requestCommitmentDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de compromiso vigente: la del plan si la tiene; si no, el compromiso inicial de la solicitud."
           }
         },
         "required": [
@@ -12267,7 +12307,11 @@
           "phaseName",
           "planId",
           "requestId",
-          "requestTitle"
+          "requestTitle",
+          "pendingPredecessors",
+          "blockedReason",
+          "requestOperationalState",
+          "requestCommitmentDate"
         ]
       },
       "TaskPredecessorDto": {
@@ -12392,6 +12436,24 @@
             "nullable": true,
             "description": "Evidencia como URL/texto."
           },
+          "blockedReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo vigente del bloqueo; null si la tarea no esta BLOQUEADA o se bloqueo sin motivo."
+          },
+          "phaseName": {
+            "type": "string",
+            "description": "Nombre de la fase a la que pertenece."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud a la que pertenece el plan de la tarea."
+          },
+          "requestTitle": {
+            "type": "string",
+            "description": "Titulo de la solicitud."
+          },
           "predecessors": {
             "description": "Predecesoras directas de la tarea.",
             "type": "array",
@@ -12429,6 +12491,10 @@
           "acceptedAt",
           "acceptedByUserId",
           "evidenceUrl",
+          "blockedReason",
+          "phaseName",
+          "requestId",
+          "requestTitle",
           "predecessors",
           "createdAt",
           "updatedAt"
@@ -12670,6 +12736,11 @@
             "type": "string",
             "description": "Evidencia como URL/texto.",
             "maxLength": 2048
+          },
+          "blockedReason": {
+            "type": "string",
+            "description": "Motivo del bloqueo (1 a 500 caracteres tras recortar). Opcional y solo valido con status BLOQUEADA; con otro estado se responde 400. Un texto vacio o solo espacios se trata como ausente. Se limpia al salir de BLOQUEADA.",
+            "maxLength": 500
           }
         },
         "required": [
