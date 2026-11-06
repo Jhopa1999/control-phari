@@ -302,8 +302,10 @@ test('un proyecto cerrado deshabilita sus acciones y no cuenta en los resúmenes
 
   // Lista: fuera de los contadores y en el grupo plegado «De proyectos cerrados».
   const summary = page.getByRole('region', { name: 'Resumen de tu trabajo' });
-  await expect(summary.getByRole('button', { name: /Vencidas/ })).toContainText(/\b1\b/);
-  await expect(summary.getByRole('button', { name: /En curso/ })).toContainText(/\b1\b/);
+  // El texto accesible del contador va concatenado («Vencidas1pasaron su fecha»),
+  // así que no hay límite de palabra entre la etiqueta y el número.
+  await expect(summary.getByRole('button', { name: /Vencidas/ })).toContainText(/^Vencidas1(?!\d)/);
+  await expect(summary.getByRole('button', { name: /En curso/ })).toContainText(/^En curso1(?!\d)/);
   await expect(card(page, BOARD_CLOSED)).toHaveCount(0);
   await page.getByRole('button', { name: /De proyectos cerrados/ }).click();
   const closedRow = page.locator(`tr[data-task-id="${BOARD_CLOSED.taskId}"]`);
@@ -316,7 +318,11 @@ test('un proyecto cerrado deshabilita sus acciones y no cuenta en los resúmenes
   await chooseView(page, 'Tablero');
   const closedCard = boardList(page, 'En curso').locator(`li[data-task-id="${BOARD_CLOSED.taskId}"]`);
   await expect(closedCard).toBeVisible();
-  await expect(closedCard.getByText('Proyecto cerrado: no se puede cambiar el estado ni el avance.')).toBeVisible();
+  // El mismo texto está también en un <span hidden> (aria-describedby de los
+  // controles deshabilitados): se afirma sobre el párrafo visible.
+  await expect(
+    closedCard.locator('p', { hasText: 'Proyecto cerrado: no se puede cambiar el estado ni el avance.' }),
+  ).toBeVisible();
   await expect(closedCard.getByRole('button', { name: /Actualizar avance de/ })).toBeDisabled();
   await expect(closedCard.getByRole('button', { name: /Mover «/ })).toHaveCount(0);
 });
