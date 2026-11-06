@@ -29,6 +29,10 @@ function item(n: number, patch: Partial<MyWorkItem>): MyWorkItem {
     planId: '00000000-0000-4000-8000-00000000f101',
     requestId: '00000000-0000-4000-8000-00000000f102',
     requestTitle: 'Solicitud e2e',
+    pendingPredecessors: [],
+    blockedReason: null,
+    requestOperationalState: 'ABIERTA',
+    requestCommitmentDate: null,
     ...patch,
   };
 }

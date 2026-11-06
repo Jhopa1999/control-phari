@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { cn } from '@/lib/utils';
 
 export interface SegmentedRadioProps {
   id: string;
@@ -13,6 +14,8 @@ export interface SegmentedRadioProps {
   labelledBy: string;
   describedBy?: string;
   disabled?: boolean;
+  /** Clases extra de cada opción (p. ej. objetivo táctil de 44 px). */
+  optionClassName?: string;
 }
 
 /**
@@ -30,6 +33,7 @@ function SegmentedRadio({
   labelledBy,
   describedBy,
   disabled = false,
+  optionClassName,
 }: SegmentedRadioProps): React.ReactElement {
   return (
     <div
@@ -44,7 +48,10 @@ function SegmentedRadio({
         return (
           <label
             key={option.value}
-            className="relative inline-flex h-8 min-w-9 cursor-pointer items-center justify-center rounded-sm px-2 text-sm tabular-nums transition-colors hover:bg-accent has-[:checked]:bg-primary has-[:checked]:font-semibold has-[:checked]:text-primary-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring has-[:disabled]:opacity-50"
+            className={cn(
+              'relative inline-flex h-8 min-w-9 cursor-pointer items-center justify-center rounded-sm px-2 text-sm tabular-nums transition-colors hover:bg-accent has-[:checked]:bg-primary has-[:checked]:font-semibold has-[:checked]:text-primary-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring has-[:disabled]:opacity-50',
+              optionClassName,
+            )}
           >
             <input
               type="radio"
