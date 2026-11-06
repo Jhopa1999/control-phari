@@ -9,6 +9,13 @@ function messageOf(err: unknown): string {
   return err instanceof PlanError ? err.message : 'Ocurrió un error inesperado.';
 }
 
+/** Datos opcionales que viajan con el cambio de estado. */
+export interface StatusExtra {
+  progress?: number;
+  /** Solo con BLOQUEADA: lo pide el diálogo de motivo. */
+  blockedReason?: string;
+}
+
 export interface UseInlineTaskActionsOptions<T extends { status: string; progress: number }> {
   /** Actualiza la lista de elementos que pinta la vista. */
   setItems: (updater: (prev: T[]) => T[]) => void;
@@ -38,7 +45,25 @@ export interface InlineTaskActions<T> {
   /** También lo usa el cambio de responsable, que comparte la marca de fila ocupada. */
   setRowBusyId: (id: string | null) => void;
   /** Cambio de estado optimista. Devuelve la tarea o null si falló (ya revertido). */
-  changeStatus: (item: T, status: TaskStatus, extra?: { progress?: number }) => Promise<Task | null>;
+  changeStatus: (item: T, status: TaskStatus, extra?: StatusExtra) => Promise<Task | null>;
+  /**
+   * Igual que `changeStatus`, pero devuelve el error en lugar de avisarlo por
+   * `onStatusError` (lo muestra el diálogo de motivo, sin toast duplicado).
+   */
+  tryChangeStatus: (
+    item: T,
+    status: TaskStatus,
+    extra?: StatusExtra,
+  ) => Promise<{ task: Task } | { error: string }>;
+  /**
+   * Punto de entrada de los menús de estado: si el destino es BLOQUEADA abre el
+   * diálogo de motivo (`blockPrompt`); si no, ejecuta `run` (por defecto `changeStatus`).
+   */
+  requestStatus: (item: T, next: TaskStatus, run?: (item: T, next: TaskStatus) => void) => void;
+  /** Elemento pendiente de motivo (el diálogo está abierto) o null. */
+  blockPrompt: T | null;
+  /** Cierra el diálogo de motivo sin cambiar nada. */
+  closeBlockPrompt: () => void;
   /** Cambio de avance (no optimista). Devuelve la tarea o el mensaje del servidor. */
   changeProgress: (item: T, progress: number) => Promise<{ task: Task } | { error: string }>;
 }
@@ -47,7 +72,8 @@ export interface InlineTaskActions<T> {
  * Cambio de estado y de avance en línea (PATCH /tasks/{id}/status y /progress),
  * compartido por Planificación y Mi trabajo para no duplicar la fuente de
  * verdad. El estado es optimista con reversión; el backend manda: en 403/409 se
- * revierte y se entrega su mensaje accionable a `onStatusError`.
+ * revierte y se entrega su mensaje accionable a `onStatusError`. Marcar como
+ * bloqueada pasa antes por el diálogo de motivo (`requestStatus`).
  */
 export function useInlineTaskActions<T extends { status: string; progress: number }>({
   setItems,
@@ -58,6 +84,7 @@ export function useInlineTaskActions<T extends { status: string; progress: numbe
   onStatusError,
 }: UseInlineTaskActionsOptions<T>): InlineTaskActions<T> {
   const [rowBusyId, setRowBusyId] = React.useState<string | null>(null);
+  const [blockPrompt, setBlockPrompt] = React.useState<T | null>(null);
 
   const apply = React.useCallback(
     (id: string, updated: Task) => {
@@ -74,9 +101,13 @@ export function useInlineTaskActions<T extends { status: string; progress: numbe
     [setItems, getId, merge],
   );
 
-  const changeStatus = React.useCallback(
-    async (item: T, next: TaskStatus, extra?: { progress?: number }): Promise<Task | null> => {
-      if (busyExternal) return null;
+  const tryChangeStatus = React.useCallback(
+    async (
+      item: T,
+      next: TaskStatus,
+      extra?: StatusExtra,
+    ): Promise<{ task: Task } | { error: string }> => {
+      if (busyExternal) return { error: 'Hay otra acción en curso. Inténtalo de nuevo en un momento.' };
       const id = getId(item);
       setRowBusyId(id);
       setItems((prev) => prev.map((it) => (getId(it) === id ? { ...it, status: next } : it)));
@@ -84,17 +115,43 @@ export function useInlineTaskActions<T extends { status: string; progress: numbe
         const updated = await updateTaskStatus(id, { status: next, ...extra });
         apply(id, updated);
         await onStatusSuccess?.(updated, item);
-        return updated;
+        return { task: updated };
       } catch (err) {
         setItems((prev) => prev.map((it) => (getId(it) === id ? item : it)));
-        onStatusError(messageOf(err));
-        return null;
+        return { error: messageOf(err) };
       } finally {
         setRowBusyId(null);
       }
     },
-    [busyExternal, getId, setItems, apply, onStatusSuccess, onStatusError],
+    [busyExternal, getId, setItems, apply, onStatusSuccess],
   );
+
+  const changeStatus = React.useCallback(
+    async (item: T, next: TaskStatus, extra?: StatusExtra): Promise<Task | null> => {
+      if (busyExternal) return null;
+      const result = await tryChangeStatus(item, next, extra);
+      if ('error' in result) {
+        onStatusError(result.error);
+        return null;
+      }
+      return result.task;
+    },
+    [busyExternal, tryChangeStatus, onStatusError],
+  );
+
+  const requestStatus = React.useCallback(
+    (item: T, next: TaskStatus, run?: (item: T, next: TaskStatus) => void) => {
+      if (next === 'BLOQUEADA') {
+        setBlockPrompt(item);
+        return;
+      }
+      if (run) run(item, next);
+      else void changeStatus(item, next);
+    },
+    [changeStatus],
+  );
+
+  const closeBlockPrompt = React.useCallback(() => setBlockPrompt(null), []);
 
   const changeProgress = React.useCallback(
     async (item: T, progress: number): Promise<{ task: Task } | { error: string }> => {
@@ -114,5 +171,14 @@ export function useInlineTaskActions<T extends { status: string; progress: numbe
     [busyExternal, getId, apply],
   );
 
-  return { rowBusyId, setRowBusyId, changeStatus, changeProgress };
+  return {
+    rowBusyId,
+    setRowBusyId,
+    changeStatus,
+    tryChangeStatus,
+    requestStatus,
+    blockPrompt,
+    closeBlockPrompt,
+    changeProgress,
+  };
 }

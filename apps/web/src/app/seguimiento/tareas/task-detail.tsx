@@ -5,6 +5,7 @@ import { useResetOnChange } from '@/lib/use-reset-on-change';
 import Link from 'next/link';
 import { AlarmClock, CircleCheck, Clock, ExternalLink, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { BlockedReasonBox } from '@/components/blocked-reason';
 import { DisabledReason } from '@/components/disabled-reason';
 import { ErrorState } from '@/components/error-state';
 import { Field, FormError } from '@/components/field';
@@ -34,7 +35,6 @@ import { formatDateOnly, formatHours, formatPercent, localDateInputValue } from 
 import { dueLabel, taskDueInfo } from '@/lib/task-due';
 import { cn } from '@/lib/utils';
 import { listCoordinationPeople } from '@/lib/worklog';
-import { listMyWork } from '@/lib/my-work';
 import { PlanError } from '@/lib/plan';
 import { listTaskEvidence } from '@/lib/task-evidence';
 import { nextStepFor, transitionVerb } from '@/lib/task-next-step';
@@ -45,6 +45,7 @@ import {
   updateTaskProgress,
   updateTaskStatus,
 } from '@/lib/tasks';
+import { BlockReasonDialog } from '../plan/block-reason-dialog';
 import { TaskProgressControl } from '../plan/task-progress-control';
 import { TaskHistory } from './task-history';
 import { TaskEvidenceFiles } from './task-evidence-files';
@@ -53,14 +54,6 @@ import { nextTaskStatuses } from '@/lib/task-transitions';
 type LoadState = 'loading' | 'success' | 'error';
 type FieldKey = 'nextStatus';
 type FieldErrors = Partial<Record<FieldKey, string>>;
-
-/** Contexto de la tarea que no trae `GET /tasks/:id` (fase y solicitud). */
-interface TaskContext {
-  taskId: string;
-  phaseName?: string;
-  requestId?: string | null;
-  requestTitle?: string | null;
-}
 
 const NO_TRANSITIONS_REASON_ID = 'task-status-reason';
 
@@ -100,11 +93,11 @@ export interface TaskDetailProps {
   onSelectTask?: (id: string) => void;
   /** Se invoca con la tarea actualizada tras cambiar su estado. */
   onChanged?: (task: Task) => void;
-  /** Nombre de la fase de la tarea (lo conoce quien abre el detalle). */
-  phaseName?: string;
-  /** Solicitud de la tarea (la conoce quien abre el detalle, p. ej. Mi trabajo). */
-  requestId?: string | null;
-  requestTitle?: string | null;
+  /**
+   * Motivo por el que no se puede cambiar el estado ni el avance (p. ej. proyecto
+   * cerrado). Lo conoce quien abre el detalle; si falta, manda el servidor (409).
+   */
+  readOnlyReason?: string;
 }
 
 /**
@@ -118,17 +111,14 @@ export function TaskDetail({
   breadcrumbs,
   onSelectTask,
   onChanged,
-  phaseName: phaseNameProp,
-  requestId: requestIdProp,
-  requestTitle: requestTitleProp,
+  readOnlyReason,
 }: TaskDetailProps): React.ReactElement {
   const [task, setTask] = React.useState<Task | null>(null);
   const [state, setState] = React.useState<LoadState>('loading');
   const [savingStatus, setSavingStatus] = React.useState(false);
   const { permissions, allowedModules } = useActor();
   const canOpenRequest = allowedModules.has('requests');
-  const canResolveContext = allowedModules.has('assigned');
-  const [resolved, setResolved] = React.useState<TaskContext | null>(null);
+  const [blockOpen, setBlockOpen] = React.useState(false);
   // Número de archivos de evidencia (null = aún no se sabe: no se acusa de lo que no se sabe).
   const [fileCount, setFileCount] = React.useState<{ taskId: string; count: number } | null>(null);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
@@ -201,31 +191,6 @@ export function TaskDetail({
     void loadHistory(taskId);
   }, [taskId, fetchTask, loadHistory]);
 
-  // Fase y solicitud: las trae quien abre el detalle; si no (p. ej. /seguimiento/tareas),
-  // se buscan entre las tareas del propio actor. Si no aparecen, los campos se ocultan.
-  React.useEffect(() => {
-    if (phaseNameProp !== undefined || requestTitleProp !== undefined || !canResolveContext) return;
-    let active = true;
-    void listMyWork()
-      .then((items) => {
-        const found = items.find((i) => i.taskId === taskId);
-        if (active && found) {
-          setResolved({
-            taskId,
-            phaseName: found.phaseName ?? undefined,
-            requestId: found.requestId,
-            requestTitle: found.requestTitle,
-          });
-        }
-      })
-      .catch(() => {
-        // Sin contexto: los campos se ocultan.
-      });
-    return () => {
-      active = false;
-    };
-  }, [taskId, phaseNameProp, requestTitleProp, canResolveContext]);
-
   // Cuántos archivos de evidencia hay, para el aviso de «sin evidencia».
   React.useEffect(() => {
     let active = true;
@@ -245,6 +210,32 @@ export function TaskDetail({
     setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
   }
 
+  function afterStatusUpdate(updated: Task): void {
+    setTask(updated);
+    setEvidenceUrl(updated.evidenceUrl ?? '');
+    setNextStatus('');
+    setRegisterFull(true);
+    toast.success('Estado de la tarea actualizado.');
+    onChanged?.(updated);
+    void loadHistory(updated.id);
+  }
+
+  /** Confirma el diálogo de motivo: devuelve el error del servidor o null si salió bien. */
+  async function confirmBlock(reason: string): Promise<string | null> {
+    if (!task) return 'La tarea no está disponible.';
+    try {
+      const updated = await updateTaskStatus(task.id, {
+        status: 'BLOQUEADA',
+        blockedReason: reason,
+        evidenceUrl: evidenceUrl.trim() || undefined,
+      });
+      afterStatusUpdate(updated);
+      return null;
+    } catch (err) {
+      return messageOf(err);
+    }
+  }
+
   async function handleStatusChange(event: React.FormEvent) {
     event.preventDefault();
     if (!task || savingStatus) return;
@@ -257,6 +248,11 @@ export function TaskDetail({
       return;
     }
     setFormError(null);
+    // Bloquear pide antes el motivo (obligatorio en la interfaz).
+    if (chosen === 'BLOQUEADA') {
+      setBlockOpen(true);
+      return;
+    }
     setSavingStatus(true);
     try {
       const updated = await updateTaskStatus(task.id, {
@@ -265,13 +261,7 @@ export function TaskDetail({
         progress: chosen === 'TERMINADA' && task.progress < 100 && registerFull ? 100 : undefined,
         evidenceUrl: evidenceUrl.trim() || undefined,
       });
-      setTask(updated);
-      setEvidenceUrl(updated.evidenceUrl ?? '');
-      setNextStatus('');
-      setRegisterFull(true);
-      toast.success('Estado de la tarea actualizado.');
-      onChanged?.(updated);
-      void loadHistory(updated.id);
+      afterStatusUpdate(updated);
     } catch (err) {
       // 409 al pasar a En curso: una predecesora bloquea (AC-010). Se conservan
       // los valores del formulario.
@@ -315,10 +305,8 @@ export function TaskDetail({
     );
   }
 
-  const ctx = resolved && resolved.taskId === taskId ? resolved : null;
-  const phaseName = phaseNameProp ?? ctx?.phaseName;
-  const requestId = requestIdProp ?? ctx?.requestId ?? null;
-  const requestTitle = requestTitleProp ?? ctx?.requestTitle ?? null;
+  // Fase y solicitud vienen en la propia tarea (GET /tasks/:id).
+  const { phaseName, requestId, requestTitle } = task;
   const chosenStatus = nextStatus || defaultNextStatus(task.status);
   const knownFileCount = fileCount && fileCount.taskId === task.id ? fileCount.count : null;
   const evidenceCount =
@@ -327,6 +315,8 @@ export function TaskDetail({
   const pendingPredecessors = task.predecessors.filter((p) => p.status !== 'TERMINADA').length;
   const transitions = nextTaskStatuses(task.status as TaskStatus);
   const noTransitions = transitions.length === 0;
+  const statusLocked = noTransitions || readOnlyReason !== undefined;
+  const lockedReasonText = readOnlyReason ?? `No hay transiciones disponibles desde «${taskStatusLabel(task.status)}».`;
   const statusLabel = taskStatusLabel(task.status);
   const due = taskDueInfo(task, localDateInputValue());
   const dueText = dueLabel(due);
@@ -380,6 +370,10 @@ export function TaskDetail({
         ) : null}
       </div>
 
+      {task.status === 'BLOQUEADA' ? (
+        <BlockedReasonBox reason={task.blockedReason} label="Motivo del bloqueo" clamp={false} />
+      ) : null}
+
       <div className="grid gap-1.5">
         <span className="text-meta text-muted-foreground">Avance</span>
         <TaskProgressControl
@@ -388,9 +382,10 @@ export function TaskDetail({
           status={task.status}
           taskTitle={task.title}
           tone={progressTone(task.status, due.kind === 'overdue')}
-          disabled={!canChangeProgress || permissions === null}
+          disabled={!canChangeProgress || permissions === null || readOnlyReason !== undefined}
           disabledReason={
-            !canChangeProgress ? 'Solo puedes cambiar el avance de tus propias tareas.' : undefined
+            readOnlyReason ??
+            (!canChangeProgress ? 'Solo puedes cambiar el avance de tus propias tareas.' : undefined)
           }
           onSave={handleProgressSave}
         />
@@ -529,6 +524,10 @@ export function TaskDetail({
       : chosenStatus === 'EN_REVISION' && task.progress < 100
         ? `El avance es ${formatPercent(task.progress)}.`
         : null;
+  const waitingNote =
+    chosenStatus === 'EN_CURSO' && (task.status === 'POR_HACER' || task.status === 'BLOQUEADA')
+      ? task.predecessors.find((p) => p.status !== 'TERMINADA')
+      : undefined;
   const submitLabel = chosenStatus ? transitionVerb(task.status, chosenStatus) : 'Guardar';
 
   /** Acción principal: va encima de las pestañas para quedar en la primera pantalla. */
@@ -590,8 +589,13 @@ export function TaskDetail({
         <Input value={evidenceUrl} onChange={(e) => setEvidenceUrl(e.target.value)} />
       </Field>
 
-      {evidenceWarning || progressWarning ? (
+      {evidenceWarning || progressWarning || waitingNote ? (
         <div className="flex flex-col gap-2">
+          {waitingNote ? (
+            <InlineNotice tone="warning" role="status">
+              {`Aún espera a «${waitingNote.title}». Si no está terminada, el servidor no te dejará empezar.`}
+            </InlineNotice>
+          ) : null}
           {evidenceWarning ? (
             <InlineNotice tone="warning" role="status">
               {evidenceWarning}
@@ -611,17 +615,15 @@ export function TaskDetail({
         <Button
           type="submit"
           className="max-sm:w-full max-lg:min-h-11"
-          unavailable={noTransitions}
-          loading={!noTransitions && savingStatus}
-          disabled={!noTransitions && savingStatus}
-          aria-describedby={noTransitions ? NO_TRANSITIONS_REASON_ID : undefined}
+          unavailable={statusLocked}
+          loading={!statusLocked && savingStatus}
+          disabled={!statusLocked && savingStatus}
+          aria-describedby={statusLocked ? NO_TRANSITIONS_REASON_ID : undefined}
         >
           {savingStatus ? 'Guardando…' : submitLabel}
         </Button>
-        {noTransitions ? (
-          <DisabledReason id={NO_TRANSITIONS_REASON_ID}>
-            {`No hay transiciones disponibles desde «${statusLabel}».`}
-          </DisabledReason>
+        {statusLocked ? (
+          <DisabledReason id={NO_TRANSITIONS_REASON_ID}>{lockedReasonText}</DisabledReason>
         ) : null}
       </div>
     </form>
@@ -696,6 +698,12 @@ export function TaskDetail({
       {summary}
       {statusCard}
       {tabs}
+      <BlockReasonDialog
+        open={blockOpen}
+        taskTitle={task.title}
+        onOpenChange={setBlockOpen}
+        onConfirm={confirmBlock}
+      />
     </div>,
   );
 }

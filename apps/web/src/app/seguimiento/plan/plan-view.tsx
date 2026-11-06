@@ -32,6 +32,7 @@ import { RowActions, RowActionsCell, type RowAction } from '@/components/row-act
 import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
 import { SearchInput, Toolbar } from '@/components/toolbar';
+import { BlockedReasonLine } from '@/components/blocked-reason';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -96,6 +97,7 @@ import { TaskDetail } from '../tareas/task-detail';
 import { PhaseDialog } from './phase-dialog';
 import { PlanGuidePanel } from './plan-guide-panel';
 import { PlanSummary } from './plan-summary';
+import { BlockReasonDialog } from './block-reason-dialog';
 import { PlanTasksKanban } from './plan-tasks-kanban';
 import { TaskDialog } from './task-dialog';
 import { TaskProgressControl } from './task-progress-control';
@@ -421,7 +423,15 @@ export function PlanView(): React.ReactElement {
   // lógica compartida con Mi trabajo (useInlineTaskActions). El estado es
   // optimista con reconciliación y revierte y avisa en error (design §3.7); usa
   // solo rowBusyId (no bloquea toda la tabla) y `busy` como defensa en profundidad.
-  const { rowBusyId, setRowBusyId, changeStatus, changeProgress } = useInlineTaskActions<Task>({
+  const {
+    rowBusyId,
+    setRowBusyId,
+    tryChangeStatus,
+    requestStatus,
+    blockPrompt,
+    closeBlockPrompt,
+    changeProgress,
+  } = useInlineTaskActions<Task>({
     setItems: setTasks,
     getId: (t) => t.id,
     busyExternal: busy,
@@ -433,8 +443,16 @@ export function PlanView(): React.ReactElement {
     onStatusError: (message) => toast.error(message),
   });
 
-  async function handleInlineStatusChange(task: Task, next: TaskStatus) {
-    await changeStatus(task, next);
+  // Marcar como bloqueada pasa antes por el diálogo de motivo (hook compartido).
+  function handleInlineStatusChange(task: Task, next: TaskStatus) {
+    requestStatus(task, next);
+  }
+
+  /** Confirma el diálogo de motivo: devuelve el error del servidor o null si salió bien. */
+  async function confirmBlock(reason: string): Promise<string | null> {
+    if (!blockPrompt) return 'La tarea ya no está disponible.';
+    const result = await tryChangeStatus(blockPrompt, 'BLOQUEADA', { blockedReason: reason });
+    return 'error' in result ? result.error : null;
   }
 
   // El avance no es optimista: el diálogo del control espera el resultado y, si
@@ -1097,7 +1115,7 @@ export function PlanView(): React.ReactElement {
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell className="max-w-64">
                       {/*
                         Cambiar estado NO depende de `canEdit` (plan editable): el
                         backend (TaskService.changeStatus) solo exige ser el
@@ -1120,6 +1138,7 @@ export function PlanView(): React.ReactElement {
                         taskTitle={task.title}
                         onChange={(next) => handleInlineStatusChange(task, next)}
                       />
+                      {task.status === 'BLOQUEADA' ? <BlockedReasonLine reason={task.blockedReason} /> : null}
                     </TableCell>
                     {canEdit ? (
                       <RowActionsCell>
@@ -1464,7 +1483,6 @@ export function PlanView(): React.ReactElement {
                   key={detailTaskId}
                   taskId={detailTaskId}
                   embedded
-                  phaseName={phaseNameById.get(tasks.find((t) => t.id === detailTaskId)?.phaseId ?? '')}
                   onSelectTask={setDetailTaskId}
                   onChanged={() => void refreshPlanData()}
                 />
@@ -1522,6 +1540,14 @@ export function PlanView(): React.ReactElement {
               if (taskToDelete) await handleDeleteTask(taskToDelete);
             }}
             returnFocusTo={returnFocusToTasks}
+          />
+          <BlockReasonDialog
+            open={blockPrompt !== null}
+            taskTitle={blockPrompt?.title ?? ''}
+            onOpenChange={(open) => {
+              if (!open) closeBlockPrompt();
+            }}
+            onConfirm={confirmBlock}
           />
         </>
       ) : null}

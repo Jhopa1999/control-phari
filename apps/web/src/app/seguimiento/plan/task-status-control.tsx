@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronDown, LoaderCircle } from 'lucide-react';
+import { ArrowRightLeft, ChevronDown, LoaderCircle } from 'lucide-react';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,6 +44,15 @@ export interface TaskStatusControlProps {
   optionLabel?: (next: TaskStatus) => string;
   /** Clases extra del disparador (p. ej. objetivo táctil de 44 px). */
   triggerClassName?: string;
+  /**
+   * 'badge' (por defecto): el chip de estado abre el menú. 'move': botón de icono
+   * «Mover a…» (tarjeta del tablero), donde el estado ya lo dice la columna.
+   */
+  triggerVariant?: 'badge' | 'move';
+  /** Aviso no bloqueante bajo una opción (p. ej. que aún espera una predecesora); el servidor manda. */
+  optionHint?: (next: TaskStatus) => string | undefined;
+  /** Id de un texto visible que explica el estado deshabilitado (aria-describedby). */
+  describedById?: string;
 }
 
 /**
@@ -65,6 +74,9 @@ export function TaskStatusControl({
   showProgress = true,
   optionLabel,
   triggerClassName,
+  triggerVariant = 'badge',
+  optionHint,
+  describedById,
 }: TaskStatusControlProps): React.ReactElement {
   const transitions = nextTaskStatuses(status as TaskStatus);
   // Con verbos de acción (Mi trabajo) el siguiente paso natural va primero y es
@@ -79,28 +91,47 @@ export function TaskStatusControl({
   const reason =
     disabledReason ??
     (transitions.length === 0 ? 'No hay transiciones disponibles desde este estado.' : undefined);
-  const describedBy = isDisabled && reason ? reasonId : undefined;
+  const describedBy = describedById ?? (isDisabled && reason ? reasonId : undefined);
+  const isMove = triggerVariant === 'move';
   const statusLabel = taskStatusLabel(status);
 
   return (
     <span className="inline-flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn('h-auto gap-1.5 px-1.5 py-1', triggerClassName)}
-            disabled={isDisabled}
-            aria-busy={busy || undefined}
-            aria-describedby={describedBy}
-            aria-label={`Cambiar estado de «${taskTitle}» (actual: ${statusLabel})`}
-          >
-            {busy ? (
-              <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-            ) : null}
-            <StatusBadge kind="task" value={status} />
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-          </Button>
+          {isMove ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn('size-8 shrink-0 px-0', triggerClassName)}
+              disabled={isDisabled}
+              aria-busy={busy || undefined}
+              aria-describedby={describedBy}
+              aria-label={`Mover «${taskTitle}» a…`}
+            >
+              {busy ? (
+                <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+              ) : (
+                <ArrowRightLeft className="size-4" aria-hidden="true" />
+              )}
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn('h-auto gap-1.5 px-1.5 py-1', triggerClassName)}
+              disabled={isDisabled}
+              aria-busy={busy || undefined}
+              aria-describedby={describedBy}
+              aria-label={`Cambiar estado de «${taskTitle}» (actual: ${statusLabel})`}
+            >
+              {busy ? (
+                <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+              ) : null}
+              <StatusBadge kind="task" value={status} />
+              <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            </Button>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
           {ordered.map((next, index) => (
@@ -112,6 +143,9 @@ export function TaskStatusControl({
                     <span>{optionLabel(next)}</span>
                     {naturalFirst && index === 0 ? (
                       <span className="text-meta text-muted-foreground">Siguiente paso</span>
+                    ) : null}
+                    {optionHint?.(next) ? (
+                      <span className="max-w-64 text-meta text-warning">{optionHint(next)}</span>
                     ) : null}
                   </span>
                 ) : (
