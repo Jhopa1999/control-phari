@@ -37,4 +37,20 @@ export class UpdateTaskStatusDto {
   @IsString()
   @MaxLength(2048)
   evidenceUrl?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      'Motivo del bloqueo (1 a 500 caracteres tras recortar). Opcional y solo valido con status BLOQUEADA; con otro estado se responde 400. Un texto vacio o solo espacios se trata como ausente. Se limpia al salir de BLOQUEADA.',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }): unknown => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed === '' ? undefined : trimmed;
+  })
+  @IsString()
+  @MaxLength(500)
+  blockedReason?: string;
 }

@@ -21,6 +21,26 @@ describe('task-history', () => {
     ]);
   });
 
+  it('registra el motivo de bloqueo al bloquear y al limpiarlo', () => {
+    expect(
+      diffTaskSnapshots(
+        { status: 'EN_CURSO', blockedReason: null },
+        { status: 'BLOQUEADA', blockedReason: 'Falta acceso' },
+        resolve,
+      ),
+    ).toEqual([
+      { field: 'status', from: 'EN_CURSO', to: 'BLOQUEADA' },
+      { field: 'blockedReason', from: null, to: 'Falta acceso' },
+    ]);
+    expect(
+      diffTaskSnapshots(
+        { blockedReason: 'Falta acceso' },
+        { blockedReason: null },
+        resolve,
+      ),
+    ).toEqual([{ field: 'blockedReason', from: 'Falta acceso', to: null }]);
+  });
+
   it('no inventa cambios cuando un snapshot antiguo no trae el campo', () => {
     const changes = diffTaskSnapshots(
       { status: 'POR_HACER' },

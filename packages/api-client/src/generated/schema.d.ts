@@ -3998,6 +3998,15 @@ export interface components {
              */
             processId: string;
         };
+        MyWorkPendingPredecessorDto: {
+            /**
+             * Format: uuid
+             * @description Id de la predecesora.
+             */
+            taskId: string;
+            /** @description Titulo de la predecesora. */
+            title: string;
+        };
         MyWorkItemDto: {
             /**
              * Format: uuid
@@ -4041,6 +4050,17 @@ export interface components {
             requestId: string;
             /** @description Titulo de la solicitud. */
             requestTitle: string;
+            /** @description Predecesoras directas aun no terminadas (orden por titulo); [] si no hay. */
+            pendingPredecessors: components["schemas"]["MyWorkPendingPredecessorDto"][];
+            /** @description Motivo vigente del bloqueo; null si la tarea no esta BLOQUEADA o se bloqueo sin motivo. */
+            blockedReason: string | null;
+            /** @description Estado operativo de la solicitud (p. ej. CERRADA). */
+            requestOperationalState: string;
+            /**
+             * Format: date-time
+             * @description Fecha de compromiso vigente: la del plan si la tiene; si no, el compromiso inicial de la solicitud.
+             */
+            requestCommitmentDate: string | null;
         };
         TaskPredecessorDto: {
             /**
@@ -4116,6 +4136,17 @@ export interface components {
             acceptedByUserId: string | null;
             /** @description Evidencia como URL/texto. */
             evidenceUrl: string | null;
+            /** @description Motivo vigente del bloqueo; null si la tarea no esta BLOQUEADA o se bloqueo sin motivo. */
+            blockedReason: string | null;
+            /** @description Nombre de la fase a la que pertenece. */
+            phaseName: string;
+            /**
+             * Format: uuid
+             * @description Solicitud a la que pertenece el plan de la tarea.
+             */
+            requestId: string;
+            /** @description Titulo de la solicitud. */
+            requestTitle: string;
             /** @description Predecesoras directas de la tarea. */
             predecessors: components["schemas"]["TaskPredecessorDto"][];
             /**
@@ -4263,6 +4294,8 @@ export interface components {
             progress?: number;
             /** @description Evidencia como URL/texto. */
             evidenceUrl?: string;
+            /** @description Motivo del bloqueo (1 a 500 caracteres tras recortar). Opcional y solo valido con status BLOQUEADA; con otro estado se responde 400. Un texto vacio o solo espacios se trata como ausente. Se limpia al salir de BLOQUEADA. */
+            blockedReason?: string;
         };
         UpdateTaskProgressDto: {
             /**

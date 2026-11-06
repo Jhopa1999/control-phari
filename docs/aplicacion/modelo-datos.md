@@ -243,7 +243,7 @@ Fase del plan (ordenada por `order` 0-based; la inicial es la de `order` mínimo
 Tarea del plan.
 - Campos clave: `phaseId`, `processId?`, `title`, `responsibleUserId?`, `startDate?`,
   `endDate?`, `estimateHours?`, `isMilestone`, `description?`, `acceptanceCriteria?`,
-  `status` (default `POR_HACER`), `progress`, `frameworkPhaseRequired?`, `accepted`,
+  `status` (default `POR_HACER`), `progress`, `frameworkPhaseRequired?`, `blockedReason?` (columna `blocked_reason`, motivo vigente del bloqueo; solo tiene valor con `status = BLOQUEADA`), `accepted`,
   `acceptedAt?`, `acceptedByUserId?`, `evidenceUrl?`.
 - Restricciones/índices: por `phaseId`, `responsibleUserId`, `status`.
 

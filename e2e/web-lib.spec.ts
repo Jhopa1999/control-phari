@@ -106,6 +106,8 @@ import {
   type MyWorkGroupable,
 } from '../apps/web/src/lib/my-work-groups';
 import { nextStepFor, orderTransitions } from '../apps/web/src/lib/task-next-step';
+import { BOARD_OTHER_KEY, boardColumns } from '../apps/web/src/lib/my-work-board';
+import { BLOCK_REASON_MAX, validateBlockReason } from '../apps/web/src/lib/block-reason';
 
 /**
  * Pruebas de funciones puras de apps/web/src/lib (design §7.9.2 y §20) con el
@@ -1311,5 +1313,68 @@ test.describe('task-next-step', () => {
     const { ordered, naturalFirst } = orderTransitions('RARO', nextTaskStatuses('RARO' as never));
     expect(ordered).toEqual([]);
     expect(naturalFirst).toBe(false);
+  });
+});
+
+test.describe('Mi trabajo: proyectos cerrados, tablero y motivo de bloqueo', () => {
+  const t = (
+    taskId: string,
+    status: string,
+    endDate: string | null,
+    extra: Partial<MyWorkGroupable> = {},
+  ): MyWorkGroupable => ({ taskId, title: taskId, status, isMilestone: false, endDate, ...extra });
+
+  test('una tarea pendiente de un proyecto cerrado va al grupo «closed», nunca a Vencidas', () => {
+    const closed = t('a', 'EN_CURSO', '2026-01-01', { requestOperationalState: 'CERRADA' });
+    const open = t('b', 'EN_CURSO', '2026-01-01', { requestOperationalState: 'EN_EJECUCION' });
+    const groups = groupMyWork([closed, open], '2026-11-04');
+    expect(groups.closed).toEqual([closed]);
+    expect(groups.overdue).toEqual([open]);
+  });
+
+  test('una terminada de proyecto cerrado sigue en Terminadas', () => {
+    const done = t('a', 'TERMINADA', '2026-01-01', { requestOperationalState: 'CERRADA' });
+    expect(groupMyWork([done], '2026-11-04').done).toEqual([done]);
+  });
+
+  test('countMyWork no cuenta las tareas de proyectos cerrados', () => {
+    const items = [
+      t('a', 'EN_CURSO', '2026-11-01', { requestOperationalState: 'CERRADA' }),
+      t('b', 'BLOQUEADA', '2026-11-04', { requestOperationalState: 'CERRADA' }),
+      t('c', 'EN_CURSO', '2026-11-01'),
+    ];
+    expect(countMyWork(items, '2026-11-04')).toEqual({ overdue: 1, today: 0, inProgress: 1, blocked: 0 });
+  });
+
+  test('boardColumns: cinco columnas en orden fijo, abiertas antes que cerradas y fecha ascendente', () => {
+    const items = [
+      t('c1', 'POR_HACER', '2026-11-01', { requestOperationalState: 'CERRADA' }),
+      t('o2', 'POR_HACER', '2026-12-01'),
+      t('o1', 'POR_HACER', '2026-11-10'),
+      t('sin', 'POR_HACER', null),
+    ];
+    const columns = boardColumns(items);
+    expect(columns.map((c) => c.key)).toEqual(['POR_HACER', 'EN_CURSO', 'EN_REVISION', 'BLOQUEADA', 'TERMINADA']);
+    expect(columns[0].items.map((i) => i.taskId)).toEqual(['o1', 'o2', 'sin', 'c1']);
+  });
+
+  test('boardColumns: topes 20 y 10, terminadas recientes primero y estado desconocido en «Otros»', () => {
+    const many = Array.from({ length: 25 }, (_, i) =>
+      t(`d${i}`, 'TERMINADA', `2026-10-${String((i % 28) + 1).padStart(2, '0')}`),
+    );
+    const columns = boardColumns([...many, t('x', 'RARO', null)]);
+    const done = columns.find((c) => c.key === 'TERMINADA');
+    expect(done?.limit).toBe(10);
+    expect(done?.items[0].taskId).toBe('d24');
+    expect(columns.find((c) => c.key === 'POR_HACER')?.limit).toBe(20);
+    expect(columns.at(-1)?.key).toBe(BOARD_OTHER_KEY);
+  });
+
+  test('validateBlockReason: vacío y espacios fallan; 500 pasa; 501 falla; recorta', () => {
+    expect(validateBlockReason('').ok).toBe(false);
+    expect(validateBlockReason('   ').ok).toBe(false);
+    expect(validateBlockReason('a'.repeat(BLOCK_REASON_MAX)).ok).toBe(true);
+    expect(validateBlockReason('a'.repeat(BLOCK_REASON_MAX + 1)).ok).toBe(false);
+    expect(validateBlockReason('  falta acceso  ')).toEqual({ ok: true, reason: 'falta acceso' });
   });
 });

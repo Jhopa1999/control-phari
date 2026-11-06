@@ -20,6 +20,7 @@ export const TRACKED_FIELDS = [
   'acceptanceCriteria',
   'evidenceUrl',
   'frameworkPhaseRequired',
+  'blockedReason',
 ] as const;
 
 /** Nombre del campo en la API de la traza (phaseId -> phase, responsibleUserId -> responsible). */

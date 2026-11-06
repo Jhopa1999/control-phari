@@ -14,21 +14,30 @@ import {
   CirclePlay,
   Clock,
   Flag,
+  Lock,
   OctagonAlert,
   type LucideIcon,
 } from 'lucide-react';
+import { BlockedReasonBox, BlockedReasonLine } from '@/components/blocked-reason';
 import { progressTone } from '@/components/task-progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import type { MyWorkItem, TaskStatus } from '@/lib/api-client';
 import { formatDateOnly, formatDateOnlyWithWeekday } from '@/lib/format';
-import { weekEndOf, type MyWorkGroupKey } from '@/lib/my-work-groups';
+import { isProjectClosed, weekEndOf, type MyWorkGroupKey } from '@/lib/my-work-groups';
 import { nextStepFor, transitionVerb } from '@/lib/task-next-step';
 import { dueLabel, taskDueInfo } from '@/lib/task-due';
 import { cn } from '@/lib/utils';
 import { TaskProgressControl } from '../seguimiento/plan/task-progress-control';
 import { TaskStatusControl } from '../seguimiento/plan/task-status-control';
+import {
+  CLOSED_PROJECT_REASON,
+  ClosedChip,
+  ClosedNotice,
+  PredecessorChip,
+  startWarning,
+} from './mi-trabajo-chips';
 
 /** Máximo de filas visibles por grupo antes de «Ver las N restantes». */
 export const GROUP_LIMIT = 20;
@@ -50,6 +59,7 @@ export const GROUP_META: Record<MyWorkGroupKey, GroupMeta> = {
   later: { title: 'Más adelante', icon: CalendarRange, titleClass: 'text-foreground', caption: 'Tareas para más adelante' },
   noDate: { title: 'Sin fecha', icon: CalendarOff, titleClass: 'text-foreground', caption: 'Tareas sin fecha' },
   done: { title: 'Terminadas', icon: CircleCheck, titleClass: 'text-muted-foreground', caption: 'Tareas terminadas' },
+  closed: { title: 'De proyectos cerrados', icon: Lock, titleClass: 'text-muted-foreground', caption: 'Tareas de proyectos cerrados' },
 };
 
 // ---------------------------------------------------------------------------
@@ -139,10 +149,10 @@ interface RowCommon {
   actions: RowActions;
 }
 
-const TOUCH = 'max-lg:min-h-11 max-lg:min-w-11 pointer-coarse:min-h-11 pointer-coarse:min-w-11';
+export const TOUCH = 'max-lg:min-h-11 max-lg:min-w-11 pointer-coarse:min-h-11 pointer-coarse:min-w-11';
 
 /** Título de la tarea: abre el panel lateral sin salir de la lista. */
-function TitleLink({
+export function TitleLink({
   item,
   touch,
   onOpen,
@@ -167,7 +177,7 @@ function TitleLink({
   );
 }
 
-function MilestoneBadge(): React.ReactElement {
+export function MilestoneBadge(): React.ReactElement {
   return (
     <Badge variant="outline" className="shrink-0 gap-1">
       <Flag className="size-3" aria-hidden="true" />
@@ -176,7 +186,7 @@ function MilestoneBadge(): React.ReactElement {
   );
 }
 
-function Subline({
+export function Subline({
   item,
   canOpenRequest,
   lines = 1,
@@ -185,7 +195,11 @@ function Subline({
   canOpenRequest: boolean;
   lines?: 1 | 2;
 }): React.ReactElement {
-  const full = [item.requestTitle, item.phaseName].filter(Boolean).join(' · ');
+  const commitment =
+    item.status !== 'TERMINADA' && item.requestCommitmentDate
+      ? `Compromiso ${formatDateOnly(item.requestCommitmentDate)}`
+      : null;
+  const full = [item.requestTitle, item.phaseName, commitment].filter(Boolean).join(' · ');
   const request =
     canOpenRequest && item.requestId ? (
       <Link
@@ -208,6 +222,7 @@ function Subline({
       {request}
       {item.requestTitle && item.phaseName ? ' · ' : null}
       {item.phaseName}
+      {commitment ? <span className="whitespace-nowrap">{(item.requestTitle || item.phaseName) ? ' · ' : null}{commitment}</span> : null}
     </p>
   );
 }
@@ -217,13 +232,17 @@ function DueCell({
   item,
   today,
   groupKey,
+  idPrefix,
 }: {
   item: MyWorkItem;
   today: string;
   groupKey: MyWorkGroupKey;
+  idPrefix: string;
 }): React.ReactElement {
+  const closed = isProjectClosed(item);
+  // Un proyecto cerrado nunca pide urgencia: sin chip de vencimiento.
   const due = taskDueInfo(item, today);
-  const label = groupKey === 'today' ? null : dueLabel(due);
+  const label = groupKey === 'today' || closed ? null : dueLabel(due);
   return (
     <div className="flex flex-col items-start gap-1">
       {item.endDate ? (
@@ -241,6 +260,8 @@ function DueCell({
           {label}
         </Badge>
       ) : null}
+      <PredecessorChip item={item} id={`${idPrefix}-pred-${item.taskId}`} />
+      {closed ? <ClosedChip /> : null}
     </div>
   );
 }
@@ -251,7 +272,8 @@ function ProgressCell({
   actions,
   wide,
 }: Pick<RowCommon, 'item' | 'today' | 'actions'> & { wide?: boolean }): React.ReactElement {
-  const overdue = taskDueInfo(item, today).kind === 'overdue';
+  const closed = isProjectClosed(item);
+  const overdue = !closed && taskDueInfo(item, today).kind === 'overdue';
   return (
     <span data-control="progress" className="block">
       <TaskProgressControl
@@ -259,6 +281,8 @@ function ProgressCell({
         status={item.status}
         taskTitle={item.title}
         tone={progressTone(item.status, overdue)}
+        disabled={closed}
+        disabledReason={closed ? CLOSED_PROJECT_REASON : undefined}
         busy={actions.busyId === item.taskId}
         wide={wide}
         className={wide ? TOUCH : undefined}
@@ -272,9 +296,13 @@ function StatusCell({
   item,
   actions,
   touch,
-}: Pick<RowCommon, 'item' | 'actions'> & { touch?: boolean }): React.ReactElement {
-  const step = nextStepFor(item.status);
+  idPrefix,
+}: Pick<RowCommon, 'item' | 'actions'> & { touch?: boolean; idPrefix: string }): React.ReactElement {
+  const closed = isProjectClosed(item);
+  // En un proyecto cerrado no hay «Siguiente paso»: el servidor respondería 409.
+  const step = closed ? null : nextStepFor(item.status);
   const busy = actions.busyId === item.taskId;
+  const waiting = step?.to === 'EN_CURSO' && startWarning(item, 'EN_CURSO') !== undefined;
   return (
     <>
       <span data-control="status">
@@ -282,10 +310,13 @@ function StatusCell({
           status={item.status}
           progress={item.progress}
           showProgress={false}
-          disabled={false}
+          disabled={closed}
+          disabledReason={closed ? CLOSED_PROJECT_REASON : undefined}
+          describedById={closed ? `${idPrefix}-closed-${item.taskId}` : undefined}
           busy={busy}
           taskTitle={item.title}
           optionLabel={(next) => transitionVerb(item.status, next)}
+          optionHint={(next) => startWarning(item, next)}
           triggerClassName={touch ? TOUCH : undefined}
           onChange={(next) => actions.onStatus(item, next)}
         />
@@ -297,6 +328,7 @@ function StatusCell({
           variant={step.to === 'TERMINADA' ? 'default' : 'outline'}
           data-control="next"
           loading={busy}
+          aria-describedby={waiting ? `${idPrefix}-pred-${item.taskId}` : undefined}
           className={cn(touch ? cn(TOUCH, 'flex-1 whitespace-normal') : 'min-w-36')}
           aria-label={`${step.label}: ${item.title}`}
           onClick={() => actions.onStatus(item, step.to)}
@@ -316,6 +348,7 @@ function MyWorkTableRow(props: RowCommon): React.ReactElement {
   const { item, today, groupKey, canOpenRequest, actions } = props;
   const overdue = groupKey === 'overdue';
   const done = groupKey === 'done';
+  const closed = isProjectClosed(item);
   return (
     <TableRow data-task-id={item.taskId} aria-busy={actions.busyId === item.taskId || undefined}>
       <TableCell className={cn('py-3 align-top', overdue && 'shadow-[inset_3px_0_0_0_var(--color-danger)]')}>
@@ -327,19 +360,29 @@ function MyWorkTableRow(props: RowCommon): React.ReactElement {
       </TableCell>
       <TableCell className="py-3 align-top">
         {done ? (
-          <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
-            {item.endDate ? formatDateOnly(item.endDate) : 'Sin fecha'}
-          </span>
+          <div className="flex flex-col items-start gap-1">
+            <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
+              {item.endDate ? formatDateOnly(item.endDate) : 'Sin fecha'}
+            </span>
+            {closed ? <ClosedChip /> : null}
+          </div>
         ) : (
-          <DueCell item={item} today={today} groupKey={groupKey} />
+          <DueCell item={item} today={today} groupKey={groupKey} idPrefix="row" />
         )}
       </TableCell>
       <TableCell className="py-3 align-top">
         <ProgressCell item={item} today={today} actions={actions} />
       </TableCell>
       <TableCell className="py-3 align-top">
-        <div className="flex items-center gap-2">
-          <StatusCell item={item} actions={actions} />
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <StatusCell item={item} actions={actions} idPrefix="row" />
+          </div>
+          {closed ? (
+            <ClosedNotice id={`row-closed-${item.taskId}`} />
+          ) : item.status === 'BLOQUEADA' ? (
+            <BlockedReasonLine reason={item.blockedReason} />
+          ) : null}
         </div>
       </TableCell>
     </TableRow>
@@ -350,6 +393,7 @@ function MyWorkCard(props: RowCommon): React.ReactElement {
   const { item, today, groupKey, canOpenRequest, actions } = props;
   const overdue = groupKey === 'overdue';
   const done = groupKey === 'done';
+  const closed = isProjectClosed(item);
   return (
     <li
       data-task-id={item.taskId}
@@ -365,12 +409,16 @@ function MyWorkCard(props: RowCommon): React.ReactElement {
       </div>
       <Subline item={item} canOpenRequest={canOpenRequest} lines={2} />
       {done ? (
-        <span className="text-sm tabular-nums text-muted-foreground">
-          {item.endDate ? formatDateOnly(item.endDate) : 'Sin fecha'}
-        </span>
+        <div className="flex flex-col items-start gap-1">
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {item.endDate ? formatDateOnly(item.endDate) : 'Sin fecha'}
+          </span>
+          {closed ? <ClosedChip /> : null}
+        </div>
       ) : (
-        <DueCell item={item} today={today} groupKey={groupKey} />
+        <DueCell item={item} today={today} groupKey={groupKey} idPrefix="card" />
       )}
+      {!closed && item.status === 'BLOQUEADA' ? <BlockedReasonBox reason={item.blockedReason} /> : null}
       <ProgressCell item={item} today={today} actions={actions} wide />
       {item.status === 'TERMINADA' ? (
         <p className="text-meta text-muted-foreground">
@@ -378,8 +426,9 @@ function MyWorkCard(props: RowCommon): React.ReactElement {
         </p>
       ) : null}
       <div className="flex items-center gap-2">
-        <StatusCell item={item} actions={actions} touch />
+        <StatusCell item={item} actions={actions} touch idPrefix="card" />
       </div>
+      {closed ? <ClosedNotice id={`card-closed-${item.taskId}`} /> : null}
     </li>
   );
 }
@@ -442,6 +491,9 @@ export function GroupSection({
       <span className="rounded-md bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">
         {items.length}
       </span>
+      {groupKey === 'closed' ? (
+        <span className="text-meta text-muted-foreground">No cuentan en tus resúmenes.</span>
+      ) : null}
       {groupKey === 'week' ? (
         <span className="text-meta text-muted-foreground">
           hasta {formatDateOnlyWithWeekday(weekEndOf(today))}

@@ -32,9 +32,10 @@ const LABELS: Record<string, string> = {
   acceptanceCriteria: 'Criterios de aceptación',
   evidenceUrl: 'Evidencia',
   frameworkPhaseRequired: 'Requiere fase marco',
+  blockedReason: 'Motivo del bloqueo',
 };
 
-const LONG_FIELDS = new Set(['description', 'acceptanceCriteria', 'evidenceUrl']);
+const LONG_FIELDS = new Set(['description', 'acceptanceCriteria', 'evidenceUrl', 'blockedReason']);
 
 function yesNo(value: string): string {
   return value === 'true' ? 'Sí' : value === 'false' ? 'No' : value;
@@ -92,6 +93,7 @@ const SUMMARIES: Record<string, string> = {
   evidenceUrl: 'cambió la evidencia',
   isMilestone: 'cambió el hito',
   frameworkPhaseRequired: 'cambió la fase marco',
+  blockedReason: 'cambió el motivo del bloqueo',
 };
 
 /** Resumen de una línea del evento: «creó la tarea», «cambió el estado», «hizo 3 cambios». */

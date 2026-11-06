@@ -71,6 +71,22 @@ export class TaskResponseDto {
   @ApiProperty({ type: String, nullable: true, description: 'Evidencia como URL/texto.' })
   evidenceUrl!: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Motivo vigente del bloqueo; null si la tarea no esta BLOQUEADA o se bloqueo sin motivo.',
+  })
+  blockedReason!: string | null;
+
+  @ApiProperty({ type: String, description: 'Nombre de la fase a la que pertenece.' })
+  phaseName!: string;
+
+  @ApiProperty({ type: String, format: 'uuid', description: 'Solicitud a la que pertenece el plan de la tarea.' })
+  requestId!: string;
+
+  @ApiProperty({ type: String, description: 'Titulo de la solicitud.' })
+  requestTitle!: string;
+
   @ApiProperty({ type: [TaskPredecessorDto], description: 'Predecesoras directas de la tarea.' })
   predecessors!: TaskPredecessorDto[];
 

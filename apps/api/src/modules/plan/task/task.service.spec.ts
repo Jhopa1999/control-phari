@@ -22,7 +22,7 @@ function createMocks() {
       delete: jest.fn(),
     },
     planPhase: { findFirst: jest.fn() },
-    taskDependency: { count: jest.fn() },
+    taskDependency: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaObj));
   const prisma = prismaObj as unknown as PrismaService;
@@ -80,6 +80,7 @@ function makeTask(overrides: Record<string, unknown> = {}) {
     acceptedAt: null,
     acceptedByUserId: null,
     evidenceUrl: null,
+    blockedReason: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -87,7 +88,14 @@ function makeTask(overrides: Record<string, unknown> = {}) {
 }
 
 function makeTaskWithDeps(overrides: Record<string, unknown> = {}) {
-  return { ...makeTask(overrides), dependenciesAsDependent: [] };
+  return {
+    ...makeTask(overrides),
+    dependenciesAsDependent: [],
+    phase: {
+      name: 'Fase 1',
+      plan: { requestId: 'r1', request: { title: 'Solicitud 1' } },
+    },
+  };
 }
 
 describe('TaskService', () => {
@@ -339,6 +347,7 @@ describe('TaskService', () => {
       (m.prismaObj.task as any).findMany.mockResolvedValue([
         {
           ...makeTask({ id: 'tA' }),
+          phase: { name: 'Fase 1', plan: { requestId: 'r1', request: { title: 'Solicitud 1' } } },
           dependenciesAsDependent: [
             {
               predecessor: { id: 'tB', title: 'Previa', status: 'TERMINADA', accepted: true },
@@ -355,6 +364,20 @@ describe('TaskService', () => {
       expect(res[0].predecessors).toEqual([
         { id: 'tB', title: 'Previa', status: 'TERMINADA', accepted: true },
       ]);
+    });
+
+    it('incluye phaseName, requestId y requestTitle en una sola consulta (sin N+1)', async () => {
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        makeTaskWithDeps({ id: 'tA' }),
+        makeTaskWithDeps({ id: 'tB' }),
+      ]);
+      const res = await service.findForPlan(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 'plan1', {});
+      expect(res.map((r) => [r.phaseName, r.requestId, r.requestTitle])).toEqual([
+        ['Fase 1', 'r1', 'Solicitud 1'],
+        ['Fase 1', 'r1', 'Solicitud 1'],
+      ]);
+      expect((m.prismaObj.task as any).findMany).toHaveBeenCalledTimes(1);
+      expect(m.planState.requirePlanByIdInScope).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -387,6 +410,12 @@ describe('TaskService', () => {
       const res = await service.findOne(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1');
       expect(res.id).toBe('t1');
       expect(res.predecessors).toEqual([]);
+      expect(res).toMatchObject({
+        phaseName: 'Fase 1',
+        requestId: 'r1',
+        requestTitle: 'Solicitud 1',
+        blockedReason: null,
+      });
     });
   });
 
@@ -511,7 +540,15 @@ describe('TaskService', () => {
             id: 'ph1',
             name: 'Fase 1',
             planId: 'plan1',
-            plan: { requestId: 'r1', request: { title: 'Sol' } },
+            plan: {
+              requestId: 'r1',
+              commitmentDate: null,
+              request: {
+                title: 'Sol',
+                operationalState: 'EN_EJECUCION',
+                initialCommitmentDate: null,
+              },
+            },
           },
         },
       ]);
@@ -524,7 +561,133 @@ describe('TaskService', () => {
         phaseName: 'Fase 1',
         requestId: 'r1',
         requestTitle: 'Sol',
+        pendingPredecessors: [],
+        blockedReason: null,
+        requestOperationalState: 'EN_EJECUCION',
+        requestCommitmentDate: null,
       });
+    });
+
+    it('enriquece con predecesoras pendientes, motivo, estado y compromiso en consultas por lote', async () => {
+      const initial = new Date('2026-03-01T00:00:00Z');
+      const planDate = new Date('2026-04-01T00:00:00Z');
+      const phase = (commitmentDate: Date | null) => ({
+        id: 'ph1',
+        name: 'Fase 1',
+        planId: 'plan1',
+        plan: {
+          requestId: 'r1',
+          commitmentDate,
+          request: { title: 'Sol', operationalState: 'CERRADA', initialCommitmentDate: initial },
+        },
+      });
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        { ...makeTask({ id: 'tA', status: TaskStatus.BLOQUEADA, blockedReason: 'Falta acceso' }), phase: phase(null) },
+        { ...makeTask({ id: 'tB' }), phase: phase(planDate) },
+        { ...makeTask({ id: 'tC' }), phase: phase(null) },
+      ]);
+      (m.prismaObj.taskDependency as any).findMany.mockResolvedValue([
+        { dependentTaskId: 'tA', predecessor: { id: 'p2', title: 'Zeta' } },
+        { dependentTaskId: 'tA', predecessor: { id: 'p1', title: 'Alfa' } },
+      ]);
+
+      const res = await service.myWork(actorWith(RoleCode.JEFE_AREA, 'uj'));
+
+      expect(res[0]).toMatchObject({
+        blockedReason: 'Falta acceso',
+        requestOperationalState: 'CERRADA',
+        requestCommitmentDate: initial,
+        pendingPredecessors: [
+          { taskId: 'p1', title: 'Alfa' },
+          { taskId: 'p2', title: 'Zeta' },
+        ],
+      });
+      expect(res[1].requestCommitmentDate).toBe(planDate);
+      expect(res[2].pendingPredecessors).toEqual([]);
+      // Una sola consulta de dependencias para todas las tareas, solo pendientes.
+      const depCalls = (m.prismaObj.taskDependency as any).findMany.mock.calls;
+      expect(depCalls).toHaveLength(1);
+      expect(depCalls[0][0].where.dependentTaskId).toEqual({ in: ['tA', 'tB', 'tC'] });
+      expect(depCalls[0][0].where.predecessor).toEqual({ status: { not: TaskStatus.TERMINADA } });
+    });
+
+    it('sin tareas no consulta dependencias', async () => {
+      (m.prismaObj.task as any).findMany.mockResolvedValue([]);
+      await service.myWork(actorWith(RoleCode.INTEGRANTE, 'u1'));
+      expect((m.prismaObj.taskDependency as any).findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('changeStatus (motivo de bloqueo)', () => {
+    function scope(status: string, extra: Record<string, unknown> = {}) {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task: makeTask({ responsibleUserId: 'u1', status, ...extra }),
+        planId: 'plan1',
+        requestId: 'r1',
+        mainProcessId: 'p1',
+      });
+      (m.prismaObj.task as any).update.mockResolvedValue(makeTask({ status }));
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(makeTaskWithDeps({ status }));
+    }
+
+    it('al pasar a BLOQUEADA guarda el motivo y lo deja en el historial', async () => {
+      scope(TaskStatus.EN_CURSO);
+      (m.prismaObj.task as any).update.mockResolvedValue(
+        makeTask({ status: TaskStatus.BLOQUEADA, blockedReason: 'Falta acceso' }),
+      );
+      await service.changeStatus(actorWith(RoleCode.INTEGRANTE, 'u1'), 't1', {
+        status: TaskStatus.BLOQUEADA,
+        blockedReason: 'Falta acceso',
+      });
+      const data = (m.prismaObj.task as any).update.mock.calls[0][0].data;
+      expect(data.blockedReason).toBe('Falta acceso');
+      const audit = (m.audit.record as jest.Mock).mock.calls[0][1];
+      expect(audit.before.blockedReason).toBeNull();
+      expect(audit.after.blockedReason).toBe('Falta acceso');
+    });
+
+    it('bloquear sin motivo es válido (opcional en la API): guarda null', async () => {
+      scope(TaskStatus.EN_CURSO);
+      await service.changeStatus(actorWith(RoleCode.INTEGRANTE, 'u1'), 't1', {
+        status: TaskStatus.BLOQUEADA,
+      });
+      expect((m.prismaObj.task as any).update.mock.calls[0][0].data.blockedReason).toBeNull();
+    });
+
+    it('al salir de BLOQUEADA limpia el motivo (null)', async () => {
+      scope(TaskStatus.BLOQUEADA, { blockedReason: 'Falta acceso' });
+      await service.changeStatus(actorWith(RoleCode.INTEGRANTE, 'u1'), 't1', {
+        status: TaskStatus.EN_CURSO,
+      });
+      expect((m.prismaObj.task as any).update.mock.calls[0][0].data.blockedReason).toBeNull();
+      const audit = (m.audit.record as jest.Mock).mock.calls[0][1];
+      expect(audit.before.blockedReason).toBe('Falta acceso');
+    });
+
+    it('motivo con un estado distinto de BLOQUEADA -> 400 sin escribir', async () => {
+      scope(TaskStatus.POR_HACER);
+      await expect(
+        service.changeStatus(actorWith(RoleCode.INTEGRANTE, 'u1'), 't1', {
+          status: TaskStatus.EN_CURSO,
+          blockedReason: 'x',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect((m.prismaObj.task as any).update).not.toHaveBeenCalled();
+    });
+
+    it('integrante sobre tarea ajena sigue recibiendo 403 aunque envíe motivo', async () => {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task: makeTask({ responsibleUserId: 'otro', status: TaskStatus.EN_CURSO }),
+        planId: 'plan1',
+        requestId: 'r1',
+        mainProcessId: 'p1',
+      });
+      await expect(
+        service.changeStatus(actorWith(RoleCode.INTEGRANTE, 'u1'), 't1', {
+          status: TaskStatus.BLOQUEADA,
+          blockedReason: 'x',
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 

@@ -8,7 +8,7 @@
  * así que ninguna comparación pasa por la zona horaria del proceso.
  */
 
-export type MyWorkGroupKey = 'overdue' | 'today' | 'week' | 'later' | 'noDate' | 'done';
+export type MyWorkGroupKey = 'overdue' | 'today' | 'week' | 'later' | 'noDate' | 'done' | 'closed';
 
 /** Orden fijo de presentación de los grupos. */
 export const MY_WORK_GROUP_ORDER: readonly MyWorkGroupKey[] = [
@@ -18,6 +18,7 @@ export const MY_WORK_GROUP_ORDER: readonly MyWorkGroupKey[] = [
   'later',
   'noDate',
   'done',
+  'closed',
 ];
 
 /** Campos mínimos de una tarea de «Mi trabajo» que necesita el agrupamiento. */
@@ -27,6 +28,8 @@ export interface MyWorkGroupable {
   status: string;
   isMilestone: boolean;
   endDate?: string | null;
+  /** Estado operativo de la solicitud; solo se distingue 'CERRADA' (si falta, abierta). */
+  requestOperationalState?: string | null;
 }
 
 export type MyWorkGroups<T extends MyWorkGroupable = MyWorkGroupable> = Record<MyWorkGroupKey, T[]>;
@@ -90,6 +93,11 @@ export function weekEndOf(todayLocal: string): string {
   return dayToString(today + (7 - isoWeekday(today)));
 }
 
+/** La solicitud de la tarea está cerrada: no admite cambios de estado ni de avance. */
+export function isProjectClosed(item: { requestOperationalState?: string | null }): boolean {
+  return item.requestOperationalState === 'CERRADA';
+}
+
 /** Clasifica una tarea (primera regla que se cumple). `weekEnd` es un número de día. */
 function groupKeyOf(
   item: MyWorkGroupable,
@@ -97,6 +105,7 @@ function groupKeyOf(
   weekEnd: number,
 ): MyWorkGroupKey {
   if (item.status === 'TERMINADA') return 'done';
+  if (isProjectClosed(item)) return 'closed';
   const end = dayNumber(item.endDate);
   if (end === null) return 'noDate';
   if (end < today) return 'overdue';
@@ -134,7 +143,7 @@ export function compareWithinGroup(
   a: MyWorkGroupable,
   b: MyWorkGroupable,
 ): number {
-  if (key === 'done') {
+  if (key === 'done' || key === 'closed') {
     const ea = dayNumber(a.endDate);
     const eb = dayNumber(b.endDate);
     if (ea !== eb) {
@@ -172,6 +181,7 @@ export function groupMyWork<T extends MyWorkGroupable>(
     later: [],
     noDate: [],
     done: [],
+    closed: [],
   };
   for (const item of items) {
     groups[groupKeyOf(item, today, weekEnd)].push(item);
@@ -190,6 +200,8 @@ export function countMyWork(items: readonly MyWorkGroupable[], todayLocal: strin
   const today = todayNumber(todayLocal);
   const counts: MyWorkCounts = { overdue: 0, today: 0, inProgress: 0, blocked: 0 };
   for (const item of items) {
+    // Un proyecto cerrado no pide atención: no cuenta en ningún contador.
+    if (isProjectClosed(item)) continue;
     if (item.status === 'EN_CURSO') counts.inProgress += 1;
     if (item.status === 'BLOQUEADA') counts.blocked += 1;
     if (item.status === 'TERMINADA') continue;

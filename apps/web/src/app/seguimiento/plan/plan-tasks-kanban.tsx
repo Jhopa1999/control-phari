@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { AlarmClock, Clock, GripVertical, Link2, ListChecks, Plus } from 'lucide-react';
+import { BlockedReasonBox } from '@/components/blocked-reason';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { DisabledReason } from '@/components/disabled-reason';
 import { RowActions } from '@/components/row-actions';
@@ -366,6 +367,8 @@ export function PlanTasksKanban({
                                   ) : null}
                                 </div>
                               ) : null}
+
+                              {task.status === 'BLOQUEADA' ? <BlockedReasonBox reason={task.blockedReason} /> : null}
 
                               <TaskProgressControl
                                 wide

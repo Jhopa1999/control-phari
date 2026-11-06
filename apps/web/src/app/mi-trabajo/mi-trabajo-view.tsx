@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SegmentedRadio } from '@/components/ui/segmented-radio';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { MyWorkItem, Task, TaskStatus } from '@/lib/api-client';
@@ -29,17 +30,22 @@ import { createLocalPrefStore } from '@/lib/local-pref-store';
 import {
   countMyWork,
   groupMyWork,
+  isProjectClosed,
   MY_WORK_GROUP_ORDER,
   type MyWorkGroupKey,
 } from '@/lib/my-work-groups';
+import { boardColumns } from '@/lib/my-work-board';
 import { listMyWork } from '@/lib/my-work';
 import { matchesSearch } from '@/lib/table-sort';
 import { listTaskEvidence } from '@/lib/task-evidence';
 import { TASK_STATUSES, taskStatusLabel } from '@/lib/tasks';
+import { useMyWorkView, type MyWorkView } from '@/lib/use-my-work-view';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useTodayLocal } from '@/lib/use-today-local';
+import { BlockReasonDialog } from '../seguimiento/plan/block-reason-dialog';
 import { useInlineTaskActions } from '../seguimiento/plan/use-inline-task-actions';
 import { TaskDetail } from '../seguimiento/tareas/task-detail';
+import { CLOSED_PROJECT_REASON } from './mi-trabajo-chips';
 import {
   COUNTERS,
   CounterCard,
@@ -48,6 +54,8 @@ import {
   type CounterKey,
   type RowActions,
 } from './mi-trabajo-parts';
+import { findControl, focusControl, restoreFocus, type FocusTarget } from './mi-trabajo-focus';
+import { boardHeadingId, boardTabId, columnLabel, MyWorkBoard } from './my-work-board';
 
 type LoadState = 'loading' | 'success' | 'error';
 
@@ -56,7 +64,12 @@ const ALL = 'ALL';
 const NOUN = { one: 'tarea', other: 'tareas' };
 /** Identificador de tarea admitido en ?taskId= (cualquier otra cosa se ignora). */
 const VALID_TASK_ID = /^[A-Za-z0-9_-]{1,64}$/;
-const PENDING_GROUPS = MY_WORK_GROUP_ORDER.filter((key) => key !== 'done');
+const PENDING_GROUPS = MY_WORK_GROUP_ORDER.filter((key) => key !== 'done' && key !== 'closed');
+/** Vistas del conmutador. */
+const VIEW_OPTIONS: { value: MyWorkView; label: string }[] = [
+  { value: 'lista', label: 'Lista' },
+  { value: 'tablero', label: 'Tablero' },
+];
 
 // Pliegue de «Terminadas»: colapsada por defecto, se recuerda en localStorage.
 const DONE_PREF_KEY = 'miTrabajoTerminadasAbierto';
@@ -79,33 +92,34 @@ const donePrefStore = createLocalPrefStore<DonePref>(
   'cerrado',
 );
 
-/** Destino del foco tras una acción en línea (se lee solo en efectos). */
-interface PendingFocus {
-  taskId: string;
-  control: string;
-  /** Títulos de las filas siguientes del grupo de origen, por si la fila desaparece. */
-  fallbackIds: string[];
-  groupKey: MyWorkGroupKey;
-}
-
-function focusableIn(root: Element | null): HTMLElement | null {
-  if (!root) return null;
-  const el = root.matches('button, a') ? root : root.querySelector('button, a');
-  return el instanceof HTMLElement && !el.hasAttribute('disabled') ? el : null;
-}
-
-/** Enfoca `[data-task-id] [data-control]` en la copia visible de la fila (tabla o tarjeta). */
-function focusControl(taskId: string, control: string): boolean {
-  const rows = document.querySelectorAll(`[data-task-id="${CSS.escape(taskId)}"]`);
-  for (const row of rows) {
-    if (row.getClientRects().length === 0) continue;
-    const el = focusableIn(row.querySelector(`[data-control="${control}"]`));
-    if (el) {
-      el.focus();
-      return true;
+// Pliegue de «De proyectos cerrados»: plegado por defecto, se recuerda en localStorage.
+const CLOSED_PREF_KEY = 'miTrabajoCerradosAbierto';
+const closedPrefStore = createLocalPrefStore<DonePref>(
+  () => {
+    try {
+      return window.localStorage.getItem(CLOSED_PREF_KEY) === 'abierto' ? 'abierto' : 'cerrado';
+    } catch {
+      return 'cerrado';
     }
-  }
-  return false;
+  },
+  (value) => {
+    try {
+      window.localStorage.setItem(CLOSED_PREF_KEY, value);
+    } catch {
+      // Sin almacenamiento: la elección vive en memoria hasta recargar.
+    }
+  },
+  'cerrado',
+);
+
+/** Cómo queda un elemento de Mi trabajo tras cambiar estado o avance (incluye el motivo). */
+function mergeMyWork(item: MyWorkItem, updated: Task): MyWorkItem {
+  return {
+    ...item,
+    status: updated.status,
+    progress: updated.progress,
+    blockedReason: updated.blockedReason,
+  };
 }
 
 function hasEvidenceNote(evidenceUrl: string | null | undefined): boolean {
@@ -141,11 +155,22 @@ export function MiTrabajoView(): React.ReactElement {
   const [openedFromList, setOpenedFromList] = React.useState(false);
   const [returnFocusId, setReturnFocusId] = React.useState<string | null>(null);
   const searchRef = React.useRef<HTMLInputElement>(null);
-  const pendingFocus = React.useRef<PendingFocus | null>(null);
+  const pendingFocus = React.useRef<FocusTarget | null>(null);
+  // Destino del foco tras confirmar el diálogo de motivo (se aplica al cerrarse).
+  const blockFocus = React.useRef<FocusTarget | null>(null);
+  const [boardExpanded, setBoardExpanded] = React.useState<ReadonlySet<string>>(new Set());
+  const [blockAnchorId, setBlockAnchorId] = React.useState<string | null>(null);
+  const { view, setView } = useMyWorkView();
+  const boardMode = view === 'tablero';
   const donePref = React.useSyncExternalStore(
     donePrefStore.subscribe,
     donePrefStore.getSnapshot,
     donePrefStore.getServerSnapshot,
+  );
+  const closedPref = React.useSyncExternalStore(
+    closedPrefStore.subscribe,
+    closedPrefStore.getSnapshot,
+    closedPrefStore.getServerSnapshot,
   );
 
   const fetchItems = React.useCallback(() => {
@@ -212,6 +237,8 @@ export function MiTrabajoView(): React.ReactElement {
     });
   }, [allGroups, items, query, status, counter]);
 
+  const boardItems = React.useMemo(() => boardColumns(filteredItems), [filteredItems]);
+
   const groups = React.useMemo(
     () => (ready ? groupMyWork(filteredItems, today) : null),
     [ready, filteredItems, today],
@@ -220,6 +247,8 @@ export function MiTrabajoView(): React.ReactElement {
   const hasFilters = query.trim() !== '' || status !== ALL || counter !== null;
   const doneForcedOpen = query.trim() !== '' || status === 'TERMINADA';
   const doneOpen = doneForcedOpen || donePref === 'abierto';
+  const closedForcedOpen = query.trim() !== '';
+  const closedOpen = closedForcedOpen || closedPref === 'abierto';
 
   // --- Acciones en línea ---
   const announce = React.useCallback((message: string) => setAnnouncement(message), []);
@@ -227,6 +256,7 @@ export function MiTrabajoView(): React.ReactElement {
   const inline = useInlineTaskActions<MyWorkItem>({
     setItems,
     getId: (item) => item.taskId,
+    merge: mergeMyWork,
     onStatusError: (message) => {
       toast.error(message);
       announce(message);
@@ -235,24 +265,41 @@ export function MiTrabajoView(): React.ReactElement {
 
   /** Grupo de una tarea ya actualizada, para decir dónde quedó. */
   function groupLabelOf(item: MyWorkItem): string {
+    if (boardMode) return `la columna ${columnLabel(item.status)}`
     const g = groupMyWork([item], today);
     const key = MY_WORK_GROUP_ORDER.find((k) => g[k].length > 0) ?? 'noDate';
     return GROUP_META[key].title;
   }
 
-  /** Marca dónde debe quedar el foco al terminar la acción (regla única de foco). */
-  function planFocus(item: MyWorkItem, control: string): void {
-    if (!groups) return;
+  function focusTargetFor(item: MyWorkItem, control: string): FocusTarget | null {
+    if (boardMode) {
+      // Tablero: la columna de origen manda (en móvil, su pestaña).
+      const list = boardItems.find((c) => c.key === item.status)?.items ?? [];
+      const index = list.findIndex((i) => i.taskId === item.taskId);
+      if (index < 0) return null;
+      return {
+        taskId: item.taskId,
+        control,
+        fallbackIds: list.slice(index + 1).map((i) => i.taskId),
+        headingIds: [boardHeadingId(item.status), boardTabId(item.status)],
+      };
+    }
+    if (!groups) return null;
     const originKey = MY_WORK_GROUP_ORDER.find((k) => groups[k].some((i) => i.taskId === item.taskId));
-    if (!originKey) return;
+    if (!originKey) return null;
     const list = groups[originKey];
     const index = list.findIndex((i) => i.taskId === item.taskId);
-    pendingFocus.current = {
+    return {
       taskId: item.taskId,
       control,
       fallbackIds: list.slice(index + 1).map((i) => i.taskId),
-      groupKey: originKey,
+      headingIds: [`mt-h-${originKey}`],
     };
+  }
+
+  /** Marca dónde debe quedar el foco al terminar la acción (regla única de foco). */
+  function planFocus(item: MyWorkItem, control: string): void {
+    pendingFocus.current = focusTargetFor(item, control);
   }
 
   async function runStatus(
@@ -347,7 +394,7 @@ export function MiTrabajoView(): React.ReactElement {
   function handleDetailChanged(task: Task): void {
     setItems((prev) =>
       prev.map((i) =>
-        i.taskId === task.id ? { ...i, status: task.status, progress: task.progress } : i,
+        i.taskId === task.id ? mergeMyWork(i, task) : i,
       ),
     );
     setKeepVisibleId(task.id);
@@ -367,11 +414,42 @@ export function MiTrabajoView(): React.ReactElement {
     busyId: inline.rowBusyId,
     onOpen: (item) => openPanel(item.taskId),
     onStatus: (item, next) => {
-      const control = next === 'EN_CURSO' || next === 'EN_REVISION' || next === 'TERMINADA' ? 'title' : 'status';
-      void runStatus(item, next, control);
+      // «Marcar como bloqueada» abre antes el diálogo de motivo (hook compartido).
+      if (next === 'BLOQUEADA') setBlockAnchorId(item.taskId);
+      inline.requestStatus(item, next, (target, to) => {
+        const control = to === 'EN_CURSO' || to === 'EN_REVISION' || to === 'TERMINADA' ? 'title' : 'status';
+        void runStatus(target, to, control);
+      });
     },
     onProgress: runProgress,
   };
+
+  /** Confirma el diálogo de motivo: devuelve el error del servidor o null si salió bien. */
+  async function confirmBlock(reason: string): Promise<string | null> {
+    const item = inline.blockPrompt;
+    if (!item) return 'La tarea ya no está disponible.';
+    blockFocus.current = focusTargetFor(item, 'title');
+    const result = await inline.tryChangeStatus(item, 'BLOQUEADA', { blockedReason: reason });
+    if ('error' in result) return result.error;
+    const merged = mergeMyWork(item, result.task);
+    toast.success(`“${item.title}” marcada como bloqueada.`);
+    announce(`“${item.title}” pasó a Bloqueada. Ahora está en ${groupLabelOf(merged)}.`);
+    setKeepVisibleId(item.taskId);
+    return null;
+  }
+
+  /** Foco de regreso del diálogo si se cancela: el control que lo abrió, aún en pantalla. */
+  function blockReturnFocus(): HTMLElement | null {
+    if (!blockAnchorId) return null;
+    return findControl(blockAnchorId, 'status') ?? findControl(blockAnchorId, 'title');
+  }
+
+  /** Tras cerrarse por éxito, el foco sigue a la tarea a su nuevo lugar. */
+  function handleBlockClosed(): void {
+    const target = blockFocus.current;
+    blockFocus.current = null;
+    if (target) restoreFocus(target);
+  }
 
   // Restaura el foco si el navegador lo soltó al reordenar filas (regla única de foco).
   React.useEffect(() => {
@@ -380,17 +458,23 @@ export function MiTrabajoView(): React.ReactElement {
     pendingFocus.current = null;
     const active = document.activeElement;
     if (active && active !== document.body) return;
-    if (focusControl(target.taskId, target.control)) return;
-    if (focusControl(target.taskId, 'title')) return;
-    for (const id of target.fallbackIds) {
-      if (focusControl(id, 'title')) return;
-    }
-    const heading = document.getElementById(`mt-h-${target.groupKey}`) ?? document.querySelector('h1');
-    if (heading instanceof HTMLElement) {
-      heading.tabIndex = -1;
-      heading.focus();
-    }
+    restoreFocus(target);
   }, [groups, inline.rowBusyId]);
+
+  /** Cambia entre Lista y Tablero: solo la presentación; en Tablero el filtro de estado no aplica. */
+  function changeView(next: MyWorkView): void {
+    if (next === view) return;
+    const hadStatus = next === 'tablero' && status !== ALL;
+    if (hadStatus) setStatus(ALL);
+    setView(next);
+    announce(
+      next === 'lista'
+        ? 'Vista Lista.'
+        : hadStatus
+          ? 'Vista Tablero. Se quitó el filtro de estado.'
+          : `Vista Tablero: ${filteredItems.length} tareas en 5 columnas.`
+    );
+  }
 
   function clearFilters(): void {
     setQuery('');
@@ -404,7 +488,23 @@ export function MiTrabajoView(): React.ReactElement {
   function expandGroup(key: MyWorkGroupKey, firstHiddenId: string, hidden: number): void {
     setExpandedGroups((prev) => new Set(prev).add(key));
     announce(`Se muestran ${hidden} tareas más en ${GROUP_META[key].title}.`);
-    pendingFocus.current = { taskId: firstHiddenId, control: 'title', fallbackIds: [], groupKey: key };
+    pendingFocus.current = {
+      taskId: firstHiddenId,
+      control: 'title',
+      fallbackIds: [],
+      headingIds: [`mt-h-${key}`],
+    };
+  }
+
+  function expandColumn(key: string, firstHiddenId: string, hidden: number): void {
+    setBoardExpanded((prev) => new Set(prev).add(key));
+    announce(`Se muestran ${hidden} tareas más en ${columnLabel(key)}.`);
+    pendingFocus.current = {
+      taskId: firstHiddenId,
+      control: 'title',
+      fallbackIds: [],
+      headingIds: [boardHeadingId(key)],
+    };
   }
 
   const allDone = ready && items.length > 0 && items.every((i) => i.status === 'TERMINADA');
@@ -446,6 +546,21 @@ export function MiTrabajoView(): React.ReactElement {
           <p className="sr-only">Los conteos pueden solaparse.</p>
         </section>
 
+        <div className="flex items-center gap-2 sm:justify-end">
+          <span id="mt-vista-label" className="text-meta text-muted-foreground">
+            Vista
+          </span>
+          <SegmentedRadio
+            id="mt-vista"
+            name="mt-vista"
+            labelledBy="mt-vista-label"
+            options={VIEW_OPTIONS}
+            value={view}
+            onValueChange={(value) => changeView(value as MyWorkView)}
+            optionClassName="max-md:h-11 max-md:min-w-20 pointer-coarse:h-11 pointer-coarse:min-w-20"
+          />
+        </div>
+
         {refreshFailed ? (
           <InlineNotice
             tone="warning"
@@ -481,6 +596,7 @@ export function MiTrabajoView(): React.ReactElement {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
+          {boardMode ? null : (
           <div className="grid w-full gap-1.5 sm:w-auto">
             <Label htmlFor="mt-filtro-estado">Estado</Label>
             <Select value={status} onValueChange={setStatus}>
@@ -497,6 +613,7 @@ export function MiTrabajoView(): React.ReactElement {
               </SelectContent>
             </Select>
           </div>
+          )}
         </Toolbar>
 
         {noResults ? (
@@ -523,7 +640,18 @@ export function MiTrabajoView(): React.ReactElement {
                 />
               </div>
             ) : null}
-            {PENDING_GROUPS.map((key) =>
+            {boardMode ? (
+              <MyWorkBoard
+                items={filteredItems}
+                today={today}
+                actions={actions}
+                filtered={hasFilters}
+                keepVisibleId={keepVisibleId}
+                expanded={boardExpanded}
+                onExpand={expandColumn}
+              />
+            ) : null}
+            {boardMode ? null : PENDING_GROUPS.map((key) =>
               groups[key].length > 0 ? (
                 <GroupSection
                   key={key}
@@ -538,7 +666,7 @@ export function MiTrabajoView(): React.ReactElement {
                 />
               ) : null,
             )}
-            {groups.done.length > 0 ? (
+            {!boardMode && groups.done.length > 0 ? (
               <GroupSection
                 groupKey="done"
                 items={groups.done}
@@ -551,6 +679,21 @@ export function MiTrabajoView(): React.ReactElement {
                 open={doneOpen}
                 foldable={!doneForcedOpen}
                 onToggleOpen={() => donePrefStore.set(donePref === 'abierto' ? 'cerrado' : 'abierto')}
+              />
+            ) : null}
+            {!boardMode && groups.closed.length > 0 ? (
+              <GroupSection
+                groupKey="closed"
+                items={groups.closed}
+                today={today}
+                canOpenRequest={canOpenRequest}
+                actions={actions}
+                expanded={expandedGroups.has('closed')}
+                keepVisibleId={keepVisibleId}
+                onExpand={expandGroup}
+                open={closedOpen}
+                foldable={!closedForcedOpen}
+                onToggleOpen={() => closedPrefStore.set(closedPref === 'abierto' ? 'cerrado' : 'abierto')}
               />
             ) : null}
           </div>
@@ -594,9 +737,7 @@ export function MiTrabajoView(): React.ReactElement {
               key={panelTaskId}
               taskId={panelTaskId}
               embedded
-              phaseName={panelItem?.phaseName ?? undefined}
-              requestId={panelItem?.requestId}
-              requestTitle={panelItem?.requestTitle}
+              readOnlyReason={panelItem && isProjectClosed(panelItem) ? CLOSED_PROJECT_REASON : undefined}
               onSelectTask={(id) =>
                 router.replace(`${pathname}?taskId=${encodeURIComponent(id)}`, { scroll: false })
               }
@@ -605,6 +746,16 @@ export function MiTrabajoView(): React.ReactElement {
           ) : null}
         </SheetContent>
       </Sheet>
+      <BlockReasonDialog
+        open={inline.blockPrompt !== null}
+        taskTitle={inline.blockPrompt?.title ?? ''}
+        onOpenChange={(open) => {
+          if (!open) inline.closeBlockPrompt();
+        }}
+        onConfirm={confirmBlock}
+        onClosedAfterSuccess={handleBlockClosed}
+        returnFocusTo={blockReturnFocus}
+      />
     </PageLayout>
   );
 }

@@ -102,7 +102,10 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
     name: 'task.get',
     operation: 'GET /tasks/{id}',
     access: 'read',
-    description: 'Obtiene una tarea por id (GET /tasks/{id}).',
+    description:
+      'Obtiene una tarea por id (GET /tasks/{id}), con sus predecesoras, el ' +
+      'motivo de bloqueo vigente (blockedReason) y el nombre de la fase y la ' +
+      'solicitud (phaseName, requestId, requestTitle).',
   },
   {
     name: 'task.history',
@@ -131,7 +134,10 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
     access: 'write',
     description:
       'Actualiza el estado de una tarea (PATCH /tasks/{id}/status). El cuerpo ' +
-      'debe cumplir UpdateTaskStatusDto; el backend valida los datos.',
+      'debe cumplir UpdateTaskStatusDto { status, progress?, evidenceUrl?, ' +
+      'blockedReason? }; blockedReason (max 500, opcional) solo es valido con ' +
+      'status BLOQUEADA (con otro estado el backend responde 400) y se limpia ' +
+      'al salir de ese estado. El backend valida los datos.',
   },
   {
     name: 'task.progress.update',

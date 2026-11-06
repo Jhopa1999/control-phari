@@ -47,7 +47,9 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   lectura(
     'my-work.get',
     'GET /my-work',
-    'Obtiene el trabajo asignado al usuario autenticado: tareas y pendientes (GET /my-work).',
+    'Obtiene el trabajo asignado al usuario autenticado: tareas con su contexto (GET /my-work). ' +
+      'Cada tarea trae las predecesoras pendientes (pendingPredecessors), el motivo de bloqueo ' +
+      '(blockedReason), el estado operativo de la solicitud y su fecha de compromiso vigente.',
   ),
 
   // Cierre, aprobación y prioridad
