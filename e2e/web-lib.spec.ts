@@ -98,6 +98,14 @@ import {
   type Comparator,
   type SortState,
 } from '../apps/web/src/lib/table-sort';
+import {
+  compareWithinGroup,
+  countMyWork,
+  groupMyWork,
+  weekEndOf,
+  type MyWorkGroupable,
+} from '../apps/web/src/lib/my-work-groups';
+import { nextStepFor, orderTransitions } from '../apps/web/src/lib/task-next-step';
 
 /**
  * Pruebas de funciones puras de apps/web/src/lib (design §7.9.2 y §20) con el
@@ -1094,5 +1102,214 @@ test.describe('record-state', () => {
       expect(stateLabel(code)).toBe(label);
     }
     expect(stateLabel('XYZ')).toBe('XYZ');
+  });
+});
+
+test.describe('my-work-groups', () => {
+  let seq = 0;
+  function task(
+    endDate: string | null,
+    status = 'POR_HACER',
+    extra: Partial<MyWorkGroupable> = {},
+  ): MyWorkGroupable {
+    seq += 1;
+    return {
+      taskId: `t${String(seq).padStart(3, '0')}`,
+      title: `Tarea ${seq}`,
+      status,
+      isMilestone: false,
+      endDate,
+      ...extra,
+    };
+  }
+  const keyOf = (endDate: string | null, today: string, status = 'POR_HACER') => {
+    const item = task(endDate, status);
+    const groups = groupMyWork([item], today);
+    return Object.entries(groups).find(([, list]) => list.includes(item))?.[0];
+  };
+
+  test('hoy, ayer y mañana caen en Hoy, Vencidas y Esta semana', () => {
+    // 2026-11-04 es miércoles
+    expect(keyOf('2026-11-04', '2026-11-04')).toBe('today');
+    expect(keyOf('2026-11-03', '2026-11-04')).toBe('overdue');
+    expect(keyOf('2026-11-05', '2026-11-04')).toBe('week');
+  });
+
+  test('Esta semana llega hasta el domingo (lunes–domingo) y lo siguiente es Más adelante', () => {
+    expect(weekEndOf('2026-11-04')).toBe('2026-11-08');
+    expect(keyOf('2026-11-08', '2026-11-04')).toBe('week');
+    expect(keyOf('2026-11-09', '2026-11-04')).toBe('later');
+    // el texto del encabezado se deriva del formateador, sin literal
+    expect(formatDateOnlyWithWeekday(weekEndOf('2026-11-04'))).toBe(
+      formatDateOnlyWithWeekday('2026-11-08'),
+    );
+  });
+
+  test('viernes, sábado y domingo: el límite se acorta y el domingo deja Esta semana vacía', () => {
+    expect(weekEndOf('2026-11-06')).toBe('2026-11-08'); // viernes
+    expect(weekEndOf('2026-11-07')).toBe('2026-11-08'); // sábado
+    expect(weekEndOf('2026-11-08')).toBe('2026-11-08'); // domingo
+    expect(keyOf('2026-11-09', '2026-11-07')).toBe('later'); // el lunes ya es Más adelante
+    expect(keyOf('2026-11-08', '2026-11-07')).toBe('week');
+    expect(keyOf('2026-11-08', '2026-11-08')).toBe('today');
+    expect(keyOf('2026-11-09', '2026-11-08')).toBe('later');
+    // lunes: la semana vuelve a tener seis días por delante
+    expect(weekEndOf('2026-11-09')).toBe('2026-11-15');
+    expect(keyOf('2026-11-15', '2026-11-09')).toBe('week');
+    expect(keyOf('2026-11-16', '2026-11-09')).toBe('later');
+  });
+
+  test('sin fecha, fecha inválida y terminadas', () => {
+    expect(keyOf(null, '2026-11-04')).toBe('noDate');
+    expect(keyOf('', '2026-11-04')).toBe('noDate');
+    expect(keyOf('no-es-fecha', '2026-11-04')).toBe('noDate');
+    // terminada gana a cualquier fecha (vencida, de hoy, futura o ausente)
+    expect(keyOf('2026-01-01', '2026-11-04', 'TERMINADA')).toBe('done');
+    expect(keyOf('2026-11-04', '2026-11-04', 'TERMINADA')).toBe('done');
+    expect(keyOf('2027-01-01', '2026-11-04', 'TERMINADA')).toBe('done');
+    expect(keyOf(null, '2026-11-04', 'TERMINADA')).toBe('done');
+  });
+
+  test('medianoche: 23:59 y 00:00 del día siguiente cambian el grupo sin desfase UTC', () => {
+    // el vencimiento es una fecha solo-fecha; «hoy» es la cadena local ya calculada
+    expect(keyOf('2026-11-04T00:00:00.000Z', '2026-11-04')).toBe('today'); // 23:59 del 4
+    expect(keyOf('2026-11-04T00:00:00.000Z', '2026-11-05')).toBe('overdue'); // 00:00 del 5
+    expect(keyOf('2026-11-04T23:59:59.999Z', '2026-11-04')).toBe('today');
+  });
+
+  test('cambio de mes, de año y 29 de febrero', () => {
+    expect(keyOf('2026-12-01', '2026-11-30')).toBe('week'); // lunes 30 nov → hasta dom 6 dic
+    expect(keyOf('2026-11-30', '2026-12-01')).toBe('overdue');
+    expect(weekEndOf('2026-12-31')).toBe('2027-01-03');
+    expect(keyOf('2027-01-01', '2026-12-31')).toBe('week');
+    expect(keyOf('2026-12-31', '2027-01-01')).toBe('overdue');
+    // 2028 es bisiesto
+    expect(keyOf('2028-02-29', '2028-02-28')).toBe('week');
+    expect(keyOf('2028-02-29', '2028-03-01')).toBe('overdue');
+    expect(weekEndOf('2028-02-28')).toBe('2028-03-05');
+    expect(weekEndOf('2027-02-28')).toBe('2027-02-28'); // domingo, no bisiesto
+  });
+
+  test('todayLocal inválido lanza RangeError', () => {
+    for (const bad of ['', '2026-2-3', '2026-02-30', '2026-13-01', 'hoy', '2026-11-04T10:00']) {
+      expect(() => groupMyWork([], bad)).toThrow(RangeError);
+      expect(() => weekEndOf(bad)).toThrow('todayLocal inválido');
+    }
+    expect(() => countMyWork([], '2026-02-30')).toThrow(RangeError);
+  });
+
+  test('orden: fecha ascendente, iniciado primero, hito primero y desempate estable', () => {
+    const today = '2026-11-10';
+    const porHacer = task('2026-11-01', 'POR_HACER', { title: 'B' });
+    const enCurso = task('2026-11-01', 'EN_CURSO', { title: 'Z' });
+    const revision = task('2026-11-01', 'EN_REVISION', { title: 'A' });
+    const bloqueada = task('2026-11-01', 'BLOQUEADA', { title: 'A' });
+    const masAntigua = task('2026-10-01', 'POR_HACER', { title: 'Z' });
+    const groups = groupMyWork([porHacer, enCurso, revision, bloqueada, masAntigua], today);
+    expect(groups.overdue).toEqual([masAntigua, enCurso, revision, bloqueada, porHacer]);
+
+    const hito = task('2026-11-01', 'POR_HACER', { title: 'Z', isMilestone: true });
+    const ordinaria = task('2026-11-01', 'POR_HACER', { title: 'A' });
+    expect(groupMyWork([ordinaria, hito], today).overdue).toEqual([hito, ordinaria]);
+
+    const x = task('2026-11-01', 'POR_HACER', { title: 'Igual', taskId: 'b' });
+    const y = task('2026-11-01', 'POR_HACER', { title: 'Igual', taskId: 'a' });
+    expect(groupMyWork([x, y], today).overdue).toEqual([y, x]);
+    expect(groupMyWork([y, x], today).overdue).toEqual([y, x]);
+  });
+
+  test('Sin fecha omite la fecha; Terminadas va de la más reciente a la más antigua y sin fecha al final', () => {
+    const today = '2026-11-10';
+    const sinFechaCurso = task(null, 'EN_CURSO', { title: 'Z' });
+    const sinFechaHacer = task(null, 'POR_HACER', { title: 'A' });
+    expect(groupMyWork([sinFechaHacer, sinFechaCurso], today).noDate).toEqual([
+      sinFechaCurso,
+      sinFechaHacer,
+    ]);
+
+    const vieja = task('2026-01-01', 'TERMINADA');
+    const nueva = task('2026-10-01', 'TERMINADA');
+    const sinFecha = task(null, 'TERMINADA');
+    expect(groupMyWork([sinFecha, vieja, nueva], today).done).toEqual([nueva, vieja, sinFecha]);
+    expect(compareWithinGroup('done', nueva, vieja)).toBeLessThan(0);
+  });
+
+  test('hitos y estados fuera del enum se agrupan solo por fecha', () => {
+    const hitoVencido = task('2026-11-01', 'POR_HACER', { isMilestone: true });
+    const raro = task('2026-11-10', 'INEXISTENTE');
+    const groups = groupMyWork([hitoVencido, raro], '2026-11-10');
+    expect(groups.overdue).toEqual([hitoVencido]);
+    expect(groups.today).toEqual([raro]);
+  });
+
+  test('un proyecto cerrado no cambia el agrupamiento (no hay dato en /my-work)', () => {
+    // El front no inventa el estado de la solicitud: campos extra se conservan y se ignoran.
+    const conExtra = { ...task('2026-11-01'), requestOperationalState: 'CERRADO' };
+    const groups = groupMyWork([conExtra], '2026-11-10');
+    expect(groups.overdue).toEqual([conExtra]);
+  });
+
+  test('countMyWork cuenta sobre todas las tareas y los contadores se solapan', () => {
+    const items = [
+      task('2026-11-01', 'EN_CURSO'), // vencida y en curso
+      task('2026-11-01', 'BLOQUEADA'), // vencida y bloqueada
+      task('2026-11-01', 'TERMINADA'), // terminada: no vence
+      task('2026-11-10', 'EN_REVISION'), // hoy
+      task('2026-11-10', 'TERMINADA'), // hoy pero terminada
+      task(null, 'EN_CURSO'), // sin fecha pero en curso
+      task('2026-11-20', 'POR_HACER'),
+    ];
+    expect(countMyWork(items, '2026-11-10')).toEqual({
+      overdue: 2,
+      today: 1,
+      inProgress: 2,
+      blocked: 1,
+    });
+    expect(countMyWork([], '2026-11-10')).toEqual({
+      overdue: 0,
+      today: 0,
+      inProgress: 0,
+      blocked: 0,
+    });
+  });
+});
+
+test.describe('task-next-step', () => {
+  test('el siguiente paso natural va primero y es una transición válida en cada estado', () => {
+    // Regresión: el menú rotulaba «Siguiente paso» a la primera transición de la
+    // lista (p. ej. «Volver a Por hacer» desde En curso), no al avance natural.
+    const esperado: Record<string, string> = {
+      POR_HACER: 'EN_CURSO',
+      EN_CURSO: 'EN_REVISION',
+      BLOQUEADA: 'EN_CURSO',
+      EN_REVISION: 'TERMINADA',
+    };
+    for (const [from, to] of Object.entries(esperado)) {
+      const { ordered, naturalFirst } = orderTransitions(from, nextTaskStatuses(from as never));
+      expect(naturalFirst, from).toBe(true);
+      expect(ordered[0], from).toBe(to);
+      expect(nextStepFor(from)?.to, from).toBe(to);
+    }
+  });
+
+  test('conserva todas las transiciones, sin duplicar ni inventar', () => {
+    for (const from of ['POR_HACER', 'EN_CURSO', 'BLOQUEADA', 'EN_REVISION', 'TERMINADA']) {
+      const base = nextTaskStatuses(from as never);
+      const { ordered } = orderTransitions(from, base);
+      expect([...ordered].sort()).toEqual([...base].sort());
+    }
+  });
+
+  test('desde TERMINADA solo se reabre: no hay siguiente paso', () => {
+    const { ordered, naturalFirst } = orderTransitions('TERMINADA', nextTaskStatuses('TERMINADA'));
+    expect(naturalFirst).toBe(false);
+    expect(ordered).toEqual(['EN_CURSO']);
+    expect(nextStepFor('TERMINADA')).toBeNull();
+  });
+
+  test('un estado fuera del enum no ofrece opciones ni lanza', () => {
+    const { ordered, naturalFirst } = orderTransitions('RARO', nextTaskStatuses('RARO' as never));
+    expect(ordered).toEqual([]);
+    expect(naturalFirst).toBe(false);
   });
 });

@@ -25,13 +25,28 @@ function messageForStatus(status: number): string {
   }
 }
 
+/**
+ * Mensaje de negocio de un 409 de tarea. El backend lo redacta en español y es
+ * accionable («No se puede iniciar: la predecesora "X" debe estar terminada…»,
+ * «La tarea aún no empezó: pásala a «En curso»…»), así que se muestra tal cual
+ * en lugar del genérico. Solo si llega como texto simple.
+ */
+function conflictMessage(status: number, body: unknown): string | undefined {
+  if (status !== 409 || typeof body !== 'object' || body === null) return undefined;
+  const message = (body as { message?: unknown }).message;
+  return typeof message === 'string' && message.trim() !== '' ? message : undefined;
+}
+
 function toTaskError(status: number | undefined, body?: unknown): PlanError {
   if (status === undefined) {
     return new PlanError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new PlanError(serverMessage(status, body) ?? messageForStatus(status), status);
+  return new PlanError(
+    serverMessage(status, body) ?? conflictMessage(status, body) ?? messageForStatus(status),
+    status,
+  );
 }
 
 /**

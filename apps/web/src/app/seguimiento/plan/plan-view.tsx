@@ -86,8 +86,6 @@ import {
   listResponsibleCandidates,
   taskStatusLabel,
   updateTask,
-  updateTaskProgress,
-  updateTaskStatus,
 } from '@/lib/tasks';
 import { useClientTable } from '@/lib/use-client-table';
 import { usePlanTasksView } from '@/lib/use-plan-tasks-view';
@@ -103,6 +101,7 @@ import { TaskDialog } from './task-dialog';
 import { TaskProgressControl } from './task-progress-control';
 import { TaskResponsibleControl } from './task-responsible-control';
 import { TaskStatusControl } from './task-status-control';
+import { useInlineTaskActions } from './use-inline-task-actions';
 
 type LoadState = 'loading' | 'success' | 'error';
 /** idle: sin solicitud elegida; missing: la solicitud aún no tiene plan (404). */
@@ -196,8 +195,6 @@ export function PlanView(): React.ReactElement {
   const [people, setPeople] = React.useState<ResponsibleCandidate[]>([]);
   // Distingue el fallo de carga de una lista legitimamente vacia (design 3.6.1).
   const [peopleState, setPeopleState] = React.useState<LoadState>('loading');
-  // Fila con una accion de edicion en linea en curso (una a la vez).
-  const [rowBusyId, setRowBusyId] = React.useState<string | null>(null);
 
   // --- Filtros de la lista de tareas ---
   const [q, setQ] = React.useState('');
@@ -420,43 +417,33 @@ export function PlanView(): React.ReactElement {
     }
   }, [selectedId]);
 
-  // Cambio de estado en línea (PATCH /tasks/{id}/status). Optimista con
-  // reconciliación: pinta el nuevo estado, lo reemplaza por la tarea del backend
-  // al tener éxito, revierte y avisa en error (design §3.7). Usa solo rowBusyId
-  // (no bloquea toda la tabla); guarda `if (busy)` como defensa en profundidad.
-  async function handleInlineStatusChange(task: Task, next: TaskStatus) {
-    if (busy) return;
-    setRowBusyId(task.id);
-    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: next } : t)));
-    try {
-      const updated = await updateTaskStatus(task.id, { status: next });
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  // Cambio de estado y de avance en línea (PATCH /tasks/{id}/status y /progress):
+  // lógica compartida con Mi trabajo (useInlineTaskActions). El estado es
+  // optimista con reconciliación y revierte y avisa en error (design §3.7); usa
+  // solo rowBusyId (no bloquea toda la tabla) y `busy` como defensa en profundidad.
+  const { rowBusyId, setRowBusyId, changeStatus, changeProgress } = useInlineTaskActions<Task>({
+    setItems: setTasks,
+    getId: (t) => t.id,
+    busyExternal: busy,
+    merge: (_item, updated) => updated,
+    onStatusSuccess: async () => {
       toast.success('Estado de la tarea actualizado.');
       await refreshGuideOnly();
-    } catch (err) {
-      setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
-      toast.error(messageOf(err));
-    } finally {
-      setRowBusyId(null);
-    }
+    },
+    onStatusError: (message) => toast.error(message),
+  });
+
+  async function handleInlineStatusChange(task: Task, next: TaskStatus) {
+    await changeStatus(task, next);
   }
 
-  // Avance en línea (PATCH /tasks/{id}/progress). A diferencia del estado, no es
-  // optimista: el diálogo del control espera el resultado y, si falla, se queda
-  // abierto con el mensaje (devuelto aquí). Devuelve null si salió bien.
+  // El avance no es optimista: el diálogo del control espera el resultado y, si
+  // falla, se queda abierto con el mensaje (devuelto aquí). Null si salió bien.
   async function handleInlineProgressChange(task: Task, progress: number): Promise<string | null> {
-    if (busy) return 'Hay otra acción en curso. Inténtalo de nuevo en un momento.';
-    setRowBusyId(task.id);
-    try {
-      const updated = await updateTaskProgress(task.id, progress);
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-      toast.success(`Avance actualizado a ${formatPercent(updated.progress)}.`);
-      return null;
-    } catch (err) {
-      return messageOf(err);
-    } finally {
-      setRowBusyId(null);
-    }
+    const result = await changeProgress(task, progress);
+    if ('error' in result) return result.error;
+    toast.success(`Avance actualizado a ${formatPercent(result.task.progress)}.`);
+    return null;
   }
 
   // Reasignación de responsable en línea (PATCH /tasks/{id}). Optimista con

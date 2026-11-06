@@ -51,6 +51,8 @@ interface SheetContentProps
   closeLabel?: string;
   /** 'sidebar': cajón del menú (marino); el botón cerrar usa la variante del menú. */
   tone?: 'default' | 'sidebar';
+  /** Clases extra del botón cerrar (p. ej. objetivo táctil de 44 px). Vacío por defecto. */
+  closeClassName?: string;
 }
 
 /**
@@ -60,13 +62,13 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ComponentRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = 'left', tone = 'default', className, children, closeLabel = 'Cerrar menú', ...props }, ref) => (
+>(({ side = 'left', tone = 'default', className, closeClassName, children, closeLabel = 'Cerrar menú', ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), tone === 'sidebar' && 'bg-sidebar text-sidebar-foreground', className)} {...props}>
       {children}
       <SheetPrimitive.Close asChild>
-        <Button variant={tone === 'sidebar' ? 'sidebar' : 'ghost'} size="icon-sm" className="absolute top-3 right-3">
+        <Button variant={tone === 'sidebar' ? 'sidebar' : 'ghost'} size="icon-sm" className={cn('absolute top-3 right-3', closeClassName)}>
           <X aria-hidden="true" />
           <span className="sr-only">{closeLabel}</span>
         </Button>

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { DisabledReason } from '@/components/disabled-reason';
 import { ErrorState } from '@/components/error-state';
 import { Field, FormError } from '@/components/field';
+import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader, type Crumb } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RequirementsPanel } from '@/components/requirements-panel';
@@ -15,6 +16,7 @@ import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -32,7 +34,10 @@ import { formatDateOnly, formatHours, formatPercent, localDateInputValue } from 
 import { dueLabel, taskDueInfo } from '@/lib/task-due';
 import { cn } from '@/lib/utils';
 import { listCoordinationPeople } from '@/lib/worklog';
+import { listMyWork } from '@/lib/my-work';
 import { PlanError } from '@/lib/plan';
+import { listTaskEvidence } from '@/lib/task-evidence';
+import { nextStepFor, transitionVerb } from '@/lib/task-next-step';
 import {
   getTask,
   getTaskHistory,
@@ -46,13 +51,28 @@ import { TaskEvidenceFiles } from './task-evidence-files';
 import { nextTaskStatuses } from '@/lib/task-transitions';
 
 type LoadState = 'loading' | 'success' | 'error';
-type FieldKey = 'nextStatus' | 'progress';
+type FieldKey = 'nextStatus';
 type FieldErrors = Partial<Record<FieldKey, string>>;
+
+/** Contexto de la tarea que no trae `GET /tasks/:id` (fase y solicitud). */
+interface TaskContext {
+  taskId: string;
+  phaseName?: string;
+  requestId?: string | null;
+  requestTitle?: string | null;
+}
 
 const NO_TRANSITIONS_REASON_ID = 'task-status-reason';
 
 function messageOf(err: unknown): string {
   return err instanceof PlanError ? err.message : 'Ocurrió un error inesperado.';
+}
+
+/** Estado preseleccionado: el siguiente paso natural; en TERMINADA, reabrir. */
+function defaultNextStatus(status: string): string {
+  const step = nextStepFor(status);
+  if (step) return step.to;
+  return nextTaskStatuses(status as TaskStatus)[0] ?? '';
 }
 
 function isWebUrl(value: string): boolean {
@@ -82,6 +102,9 @@ export interface TaskDetailProps {
   onChanged?: (task: Task) => void;
   /** Nombre de la fase de la tarea (lo conoce quien abre el detalle). */
   phaseName?: string;
+  /** Solicitud de la tarea (la conoce quien abre el detalle, p. ej. Mi trabajo). */
+  requestId?: string | null;
+  requestTitle?: string | null;
 }
 
 /**
@@ -95,24 +118,30 @@ export function TaskDetail({
   breadcrumbs,
   onSelectTask,
   onChanged,
-  phaseName,
+  phaseName: phaseNameProp,
+  requestId: requestIdProp,
+  requestTitle: requestTitleProp,
 }: TaskDetailProps): React.ReactElement {
   const [task, setTask] = React.useState<Task | null>(null);
   const [state, setState] = React.useState<LoadState>('loading');
   const [savingStatus, setSavingStatus] = React.useState(false);
-  const { permissions } = useActor();
+  const { permissions, allowedModules } = useActor();
+  const canOpenRequest = allowedModules.has('requests');
+  const canResolveContext = allowedModules.has('assigned');
+  const [resolved, setResolved] = React.useState<TaskContext | null>(null);
+  // Número de archivos de evidencia (null = aún no se sabe: no se acusa de lo que no se sabe).
+  const [fileCount, setFileCount] = React.useState<{ taskId: string; count: number } | null>(null);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
   const [history, setHistory] = React.useState<TaskHistoryEntry[] | null>(null);
   const [historyError, setHistoryError] = React.useState<string | null>(null);
 
   // Formulario de cambio de estado (reset solo en éxito, AC-031).
   const [nextStatus, setNextStatus] = React.useState<string>('');
-  const [progress, setProgress] = React.useState<string>('');
+  const [registerFull, setRegisterFull] = React.useState(true);
   const [evidenceUrl, setEvidenceUrl] = React.useState<string>('');
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [formError, setFormError] = React.useState<string | null>(null);
   const statusRef = React.useRef<HTMLButtonElement>(null);
-  const progressRef = React.useRef<HTMLInputElement>(null);
   const formId = embedded ? 'task-status-form-panel' : 'task-status-form';
 
   const loadHistory = React.useCallback((id: string) => {
@@ -145,9 +174,9 @@ export function TaskDetail({
     return getTask(id)
       .then((data) => {
         setTask(data);
-        setProgress(String(data.progress));
         setEvidenceUrl(data.evidenceUrl ?? '');
         setNextStatus('');
+        setRegisterFull(true);
         setFieldErrors({});
         setFormError(null);
         setState('success');
@@ -172,6 +201,46 @@ export function TaskDetail({
     void loadHistory(taskId);
   }, [taskId, fetchTask, loadHistory]);
 
+  // Fase y solicitud: las trae quien abre el detalle; si no (p. ej. /seguimiento/tareas),
+  // se buscan entre las tareas del propio actor. Si no aparecen, los campos se ocultan.
+  React.useEffect(() => {
+    if (phaseNameProp !== undefined || requestTitleProp !== undefined || !canResolveContext) return;
+    let active = true;
+    void listMyWork()
+      .then((items) => {
+        const found = items.find((i) => i.taskId === taskId);
+        if (active && found) {
+          setResolved({
+            taskId,
+            phaseName: found.phaseName ?? undefined,
+            requestId: found.requestId,
+            requestTitle: found.requestTitle,
+          });
+        }
+      })
+      .catch(() => {
+        // Sin contexto: los campos se ocultan.
+      });
+    return () => {
+      active = false;
+    };
+  }, [taskId, phaseNameProp, requestTitleProp, canResolveContext]);
+
+  // Cuántos archivos de evidencia hay, para el aviso de «sin evidencia».
+  React.useEffect(() => {
+    let active = true;
+    void listTaskEvidence(taskId)
+      .then((list) => {
+        if (active) setFileCount({ taskId, count: list.length });
+      })
+      .catch(() => {
+        // Si la consulta falla no se avisa: no se inventa.
+      });
+    return () => {
+      active = false;
+    };
+  }, [taskId]);
+
   function clearFieldError(key: FieldKey): void {
     setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
   }
@@ -179,33 +248,27 @@ export function TaskDetail({
   async function handleStatusChange(event: React.FormEvent) {
     event.preventDefault();
     if (!task || savingStatus) return;
+    const chosen = nextStatus || defaultNextStatus(task.status);
     const errors: FieldErrors = {};
-    if (!nextStatus) errors.nextStatus = 'Elige el nuevo estado.';
-    const progressNum = progress.trim() === '' ? undefined : Number(progress);
-    if (
-      progressNum !== undefined &&
-      (Number.isNaN(progressNum) || progressNum < 0 || progressNum > 100)
-    ) {
-      errors.progress = 'El progreso debe estar entre 0 y 100.';
-    }
+    if (!chosen) errors.nextStatus = 'Elige el nuevo estado.';
     setFieldErrors(errors);
-    if (errors.nextStatus || errors.progress) {
-      if (errors.nextStatus) statusRef.current?.focus();
-      else progressRef.current?.focus();
+    if (errors.nextStatus) {
+      statusRef.current?.focus();
       return;
     }
     setFormError(null);
     setSavingStatus(true);
     try {
       const updated = await updateTaskStatus(task.id, {
-        status: nextStatus as TaskStatus,
-        progress: progressNum,
+        status: chosen as TaskStatus,
+        // Propuesta de 100 % al terminar (desmarcable); el avance no se edita aquí.
+        progress: chosen === 'TERMINADA' && task.progress < 100 && registerFull ? 100 : undefined,
         evidenceUrl: evidenceUrl.trim() || undefined,
       });
       setTask(updated);
-      setProgress(String(updated.progress));
       setEvidenceUrl(updated.evidenceUrl ?? '');
       setNextStatus('');
+      setRegisterFull(true);
       toast.success('Estado de la tarea actualizado.');
       onChanged?.(updated);
       void loadHistory(updated.id);
@@ -252,6 +315,14 @@ export function TaskDetail({
     );
   }
 
+  const ctx = resolved && resolved.taskId === taskId ? resolved : null;
+  const phaseName = phaseNameProp ?? ctx?.phaseName;
+  const requestId = requestIdProp ?? ctx?.requestId ?? null;
+  const requestTitle = requestTitleProp ?? ctx?.requestTitle ?? null;
+  const chosenStatus = nextStatus || defaultNextStatus(task.status);
+  const knownFileCount = fileCount && fileCount.taskId === task.id ? fileCount.count : null;
+  const evidenceCount =
+    knownFileCount === null ? null : knownFileCount + (task.evidenceUrl?.trim() ? 1 : 0);
   const blocking = task.predecessors.some((p) => p.status !== 'TERMINADA');
   const pendingPredecessors = task.predecessors.filter((p) => p.status !== 'TERMINADA').length;
   const transitions = nextTaskStatuses(task.status as TaskStatus);
@@ -272,7 +343,6 @@ export function TaskDetail({
     try {
       const updated = await updateTaskProgress(task.id, next);
       setTask(updated);
-      setProgress(String(updated.progress));
       toast.success(`Avance actualizado a ${formatPercent(updated.progress)}.`);
       onChanged?.(updated);
       void loadHistory(task.id);
@@ -333,10 +403,29 @@ export function TaskDetail({
             {responsibleName ?? 'Sin asignar'}
           </dd>
         </div>
-        <div className="min-w-0">
-          <dt className="text-meta text-muted-foreground">Fase</dt>
-          <dd className="text-sm font-medium wrap-break-word">{phaseName ?? '—'}</dd>
-        </div>
+        {phaseName ? (
+          <div className="min-w-0">
+            <dt className="text-meta text-muted-foreground">Fase</dt>
+            <dd className="text-sm font-medium wrap-break-word">{phaseName}</dd>
+          </div>
+        ) : null}
+        {requestTitle ? (
+          <div className="min-w-0">
+            <dt className="text-meta text-muted-foreground">Solicitud</dt>
+            <dd className="text-sm font-medium wrap-break-word">
+              {canOpenRequest && requestId ? (
+                <Link
+                  href={`/demanda/solicitudes/${encodeURIComponent(requestId)}`}
+                  className="rounded-sm text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  {requestTitle}
+                </Link>
+              ) : (
+                requestTitle
+              )}
+            </dd>
+          </div>
+        ) : null}
         <div className="min-w-0">
           <dt className="text-meta text-muted-foreground">Inicio</dt>
           <dd className="text-sm font-medium tabular-nums">
@@ -425,111 +514,153 @@ export function TaskDetail({
           )}
         </Section>
       ) : null}
-
-      <Section title="Cambiar estado o registrar evidencia">
-        <form
-          id={formId}
-          noValidate
-          onSubmit={(event) => void handleStatusChange(event)}
-          className="flex max-w-[45rem] flex-col gap-4 rounded-lg border bg-card p-4"
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              id={`${formId}-next`}
-              label="Nuevo estado"
-              error={fieldErrors.nextStatus}
-              help={`Ahora: ${statusLabel}.`}
-            >
-              {(control) => (
-                <Select
-                  value={nextStatus}
-                  onValueChange={(value) => {
-                    setNextStatus(value);
-                    clearFieldError('nextStatus');
-                  }}
-                >
-                  <SelectTrigger ref={statusRef} {...control}>
-                    <SelectValue placeholder="Elige el estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {noTransitions ? (
-                      <SelectItem value="__none" disabled>
-                        Sin transiciones disponibles
-                      </SelectItem>
-                    ) : (
-                      transitions.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {taskStatusLabel(s)}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              )}
-            </Field>
-            <Field id={`${formId}-progress`} label="Progreso (0–100)" error={fieldErrors.progress}>
-              <Input
-                ref={progressRef}
-                type="number"
-                min={0}
-                max={100}
-                inputMode="numeric"
-                value={progress}
-                onChange={(e) => {
-                  setProgress(e.target.value);
-                  clearFieldError('progress');
-                }}
-              />
-            </Field>
-          </div>
-          <Field id={`${formId}-evidence`} label="Evidencia (URL o texto)">
-            <Input value={evidenceUrl} onChange={(e) => setEvidenceUrl(e.target.value)} />
-          </Field>
-
-          <FormError id={formId} message={formError} />
-
-          <div className="flex flex-col items-start gap-1 border-t pt-4">
-            <Button
-              type="submit"
-              unavailable={noTransitions}
-              loading={!noTransitions && savingStatus}
-              disabled={!noTransitions && savingStatus}
-              aria-describedby={noTransitions ? NO_TRANSITIONS_REASON_ID : undefined}
-            >
-              {savingStatus ? 'Guardando…' : 'Guardar cambios'}
-            </Button>
-            {noTransitions ? (
-              <DisabledReason id={NO_TRANSITIONS_REASON_ID}>
-                {`No hay transiciones disponibles desde «${statusLabel}».`}
-              </DisabledReason>
-            ) : null}
-          </div>
-        </form>
-      </Section>
     </div>
   );
 
-  const evidence = (
-    <div className="flex flex-col gap-4 rounded-lg border bg-card p-4 text-sm">
-      <TaskEvidenceFiles taskId={task.id} />
-      {task.evidenceUrl ? (
-        isWebUrl(task.evidenceUrl) ? (
-          <a
-            href={task.evidenceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex max-w-full items-start gap-1 rounded-sm text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+  const evidenceWarning =
+    (chosenStatus === 'EN_REVISION' || chosenStatus === 'TERMINADA') &&
+    knownFileCount === 0 &&
+    evidenceUrl.trim() === ''
+      ? 'Esta tarea no tiene evidencia (ni nota ni archivos). Puedes añadirla ahora o después.'
+      : null;
+  const progressWarning =
+    chosenStatus === 'TERMINADA' && task.progress < 100
+      ? `El avance es ${formatPercent(task.progress)}. Se propone registrar 100 % al terminarla.`
+      : chosenStatus === 'EN_REVISION' && task.progress < 100
+        ? `El avance es ${formatPercent(task.progress)}.`
+        : null;
+  const submitLabel = chosenStatus ? transitionVerb(task.status, chosenStatus) : 'Guardar';
+
+  /** Acción principal: va encima de las pestañas para quedar en la primera pantalla. */
+  const statusCard = (
+    <form
+      id={formId}
+      noValidate
+      aria-label="Actualizar estado"
+      onSubmit={(event) => void handleStatusChange(event)}
+      className="flex flex-col gap-4 rounded-xl bg-card p-4 shadow-card"
+    >
+      <h3 className="font-heading text-base font-semibold">Actualizar estado</h3>
+      <Field
+        id={`${formId}-next`}
+        label="Siguiente paso"
+        error={fieldErrors.nextStatus}
+        help={`Ahora: ${statusLabel}.`}
+      >
+        {(control) => (
+          <Select
+            value={chosenStatus}
+            onValueChange={(value) => {
+              setNextStatus(value);
+              clearFieldError('nextStatus');
+            }}
           >
-            <span className="break-all">{task.evidenceUrl}</span>
-            <ExternalLink className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-            <span className="sr-only"> (se abre en una pestaña nueva)</span>
-          </a>
+            <SelectTrigger ref={statusRef} {...control} className="w-full max-lg:min-h-11">
+              <SelectValue placeholder="Elige el estado" />
+            </SelectTrigger>
+            <SelectContent>
+              {noTransitions ? (
+                <SelectItem value="__none" disabled>
+                  Sin transiciones disponibles
+                </SelectItem>
+              ) : (
+                transitions.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {transitionVerb(task.status, s)}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        )}
+      </Field>
+
+      {chosenStatus === 'TERMINADA' && task.progress < 100 ? (
+        <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm max-lg:min-h-11">
+          <Checkbox checked={registerFull} onChange={(e) => setRegisterFull(e.target.checked)} />
+          Registrar avance en 100 %
+        </label>
+      ) : null}
+
+      <Field
+        id={`${formId}-evidence`}
+        label="Nota o enlace de evidencia (opcional)"
+        help="Se guarda junto con el cambio de estado."
+      >
+        <Input value={evidenceUrl} onChange={(e) => setEvidenceUrl(e.target.value)} />
+      </Field>
+
+      {evidenceWarning || progressWarning ? (
+        <div className="flex flex-col gap-2">
+          {evidenceWarning ? (
+            <InlineNotice tone="warning" role="status">
+              {evidenceWarning}
+            </InlineNotice>
+          ) : null}
+          {progressWarning ? (
+            <InlineNotice tone="warning" role="status">
+              {progressWarning}
+            </InlineNotice>
+          ) : null}
+        </div>
+      ) : null}
+
+      <FormError id={formId} message={formError} />
+
+      <div className="flex flex-col items-stretch gap-1 sm:items-start">
+        <Button
+          type="submit"
+          className="max-sm:w-full max-lg:min-h-11"
+          unavailable={noTransitions}
+          loading={!noTransitions && savingStatus}
+          disabled={!noTransitions && savingStatus}
+          aria-describedby={noTransitions ? NO_TRANSITIONS_REASON_ID : undefined}
+        >
+          {savingStatus ? 'Guardando…' : submitLabel}
+        </Button>
+        {noTransitions ? (
+          <DisabledReason id={NO_TRANSITIONS_REASON_ID}>
+            {`No hay transiciones disponibles desde «${statusLabel}».`}
+          </DisabledReason>
+        ) : null}
+      </div>
+    </form>
+  );
+
+  const evidence = (
+    <div className="flex flex-col gap-6 rounded-lg border bg-card p-4 text-sm">
+      <section aria-labelledby={`${formId}-ev-note`} className="flex flex-col gap-2">
+        <h3 id={`${formId}-ev-note`} className="font-heading text-base font-semibold">
+          Nota o enlace
+        </h3>
+        {task.evidenceUrl ? (
+          isWebUrl(task.evidenceUrl) ? (
+            <a
+              href={task.evidenceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex max-w-full items-start gap-1 rounded-sm text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <span className="break-all">{task.evidenceUrl}</span>
+              <ExternalLink className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span className="sr-only"> (se abre en una pestaña nueva)</span>
+            </a>
+          ) : (
+            <p className="break-all text-muted-foreground">{task.evidenceUrl}</p>
+          )
         ) : (
-          <p className="break-all text-muted-foreground">{task.evidenceUrl}</p>
-        )
-      ) : (
-        <p className="text-muted-foreground">Sin evidencia registrada.</p>
-      )}
+          <p className="text-muted-foreground">Sin nota ni enlace.</p>
+        )}
+      </section>
+      <section aria-labelledby={`${formId}-ev-files`} className="flex flex-col gap-2">
+        <h3 id={`${formId}-ev-files`} className="font-heading text-base font-semibold">
+          Archivos adjuntos
+        </h3>
+        <TaskEvidenceFiles
+          taskId={task.id}
+          onCountChange={(count) => setFileCount({ taskId: task.id, count })}
+        />
+      </section>
     </div>
   );
 
@@ -543,7 +674,9 @@ export function TaskDetail({
         <TabsTrigger value="historial">
           {historyCount === null ? 'Historial' : `Historial (${historyCount})`}
         </TabsTrigger>
-        <TabsTrigger value="evidencia">Evidencia</TabsTrigger>
+        <TabsTrigger value="evidencia">
+          {evidenceCount === null ? 'Evidencia' : `Evidencia (${evidenceCount})`}
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="resumen">{resumen}</TabsContent>
       <TabsContent value="historial">
@@ -561,6 +694,7 @@ export function TaskDetail({
     header,
     <div className="flex min-w-0 flex-col gap-4">
       {summary}
+      {statusCard}
       {tabs}
     </div>,
   );
