@@ -9,6 +9,12 @@ y `docs/design/workspace-apps-gibo.md`. Solo tokens semánticos (prohibido color
 Los contrastes de la sección 16 están **medidos** (WCAG 2.2; ver el método allí). Las capturas «antes» están en
 `.agents/tasks/mi-trabajo-ux/screenshots/` (carpeta ignorada por git; se citan por nombre).
 
+> **Entrega 2 (BL-036).** Las secciones 0 a 19 describen la Entrega 1 (ya en `main`, PR #73). El **Anexo E2** (al final) la
+> amplía: tablero Lista/Tablero, motivo de bloqueo, predecesoras pendientes y proyectos cerrados. **A diferencia de la
+> Entrega 1, la Entrega 2 sí toca API, contrato, MCP y esquema** (campos nuevos de `/my-work`, motivo de bloqueo). Donde el
+> anexo contradice una frase de las secciones 0 a 19 (p. ej. «sin tratamiento especial» para proyectos cerrados, 0.1 #4, o
+> «no hay motivo de bloqueo», 6.1), **manda el anexo**.
+
 ---
 
 ## 0. Resumen ejecutivo y decisiones
@@ -926,6 +932,569 @@ la BD de prueba es 16), Playwright local (BL-018, se valida en CI).
 `requestTitle` (por eso, en `/seguimiento/tareas`, «Fase» y el enlace a la solicitud solo se resuelven para tareas del propio
 actor vía `listMyWork()`; en tareas ajenas el campo se oculta, §9); `/my-work` sin predecesoras pendientes, estado operativo de la solicitud (proyecto cerrado), responsable y
 fecha de compromiso, y sin conteo de evidencia; ausencia de un endpoint de «solo evidencia» (hoy va atada a un cambio de
-estado). **Entrega 3:** motivo de bloqueo (migración), regla de cierre (evidencia/avance mínimo, quién revisa).
+estado). **Entrega 2:** predecesoras pendientes, estado operativo y fecha de compromiso en `/my-work` y motivo de bloqueo (ver
+Anexo E2). **Entrega 3:** regla de cierre (evidencia/avance mínimo, quién revisa).
+
+---
+
+# Anexo E2. Entrega 2: Tablero, motivo de bloqueo, predecesoras y proyectos cerrados
+
+Especificación visual y de interacción de la Entrega 2 (BL-036). Parte de la Entrega 1 en `main`; reutiliza sus piezas
+(`groupMyWork`, `TaskStatusControl`, `TaskProgressControl`, `useInlineTaskActions`, panel lateral, región viva y regla de foco
+12.6) y **no las rediseña**. Fuentes: `plan/plan-tasks-kanban.tsx` (tablero de Planificación), `lib/task-due.ts`,
+`lib/use-plan-tasks-view.ts` y `lib/local-pref-store.ts`, y el informe `mi-trabajo-ux/informe.md`.
+
+Decisiones ya tomadas por el usuario y **no reabiertas**: el motivo de bloqueo es **opcional en la API y obligatorio en la
+interfaz**; la vista por defecto sigue siendo la lista agrupada «Mi día» y el tablero es una opción; la regla de cierre
+(evidencia/avance mínimo) **no cambia** (Entrega 3); Planificación de líderes no cambia salvo **mostrar** el motivo y
+**pedirlo** al bloquear.
+
+---
+
+## E2.0 Resumen y decisiones de los puntos abiertos
+
+| # | Punto abierto | Decisión | Por qué |
+| --- | --- | --- | --- |
+| 1 | **Forma de los campos nuevos de `GET /my-work`** | Cuatro campos **siempre presentes** (nunca ausentes) en `MyWorkItemDto`: `pendingPredecessors: { taskId: string; title: string }[]` (solo las **no terminadas**; `[]` si ninguna), `blockedReason: string \| null`, `requestOperationalState: string` y `requestCommitmentDate: string \| null` (date-time, de `Request.initialCommitmentDate`). Detalle en E2.1. | Un arreglo de `{ taskId, title }` basta para «Espera a “X”» (N = 1) y «N predecesoras pendientes» sin segunda petición ni contar en el cliente. El estado operativo va como `string` porque el contrato ya lo trata así en el resto de DTOs; el front solo reconoce `'CERRADA'`. |
+| 2 | **`blockedReason` fuera de `BLOQUEADA`** | La API responde **400** si llega `blockedReason` con un `status` distinto de `BLOQUEADA` («El motivo de bloqueo solo aplica al marcar la tarea como bloqueada.»). Un texto vacío o solo espacios se trata como **ausente**. Al **salir** de `BLOQUEADA` la API pone `blockedReason = null` (el motivo queda en el historial). | Ignorarlo en silencio ocultaría un error del cliente (MCP, otra UI) y dejaría datos que el usuario cree guardados. Estricto es más fácil de probar y de documentar en el contrato. |
+| 3 | **Arrastrar y soltar** | **No** en Mi trabajo. La alternativa accesible (botón «Siguiente paso» y menú «Mover a…») es el **único** camino. Planificación conserva su arrastre sin cambios. Razones y criterio de revisión en E2.8. | El arrastre nativo no funciona en táctil, 4 de 5 destinos son inválidos desde cada columna, y dos destinos (Bloqueada, Terminada) exigen pasos extra (motivo; avance 100 % y aviso de evidencia). WCAG 2.5.7 exige igualmente la alternativa. |
+| 4 | **Comportamiento < 768 px** | **Una columna a la vez con pestañas de estado** (`Tabs`, cinco pestañas con conteo, tira desplazable). **No** hay scroll horizontal de columnas en móvil. Objetivos de 44 px. De 768 px a la anchura de cinco columnas: tablero con **scroll horizontal y ajuste suave (`snap-x snap-proximity`)**. E2.3 y E2.4. | En 360 px una columna ocupa todo el ancho y las otras quedarían ocultas; las pestañas muestran los cinco conteos a la vez (incluida Bloqueada en rojo), no chocan con el gesto «atrás» del sistema y se anuncian bien con lector de pantalla. |
+| 5 | **Proyectos cerrados en contadores y agrupación** | Una tarea de un proyecto `CERRADA` **no cuenta** en Vencidas, Para hoy, En curso ni Bloqueadas, **nunca** se pinta como vencida urgente (sin chip ni banda roja) y, si no está terminada, va a un grupo propio **«De proyectos cerrados»** (plegado por defecto, al final). Las terminadas siguen en «Terminadas». En el tablero se ven en su columna, al final de ella y con el chip «Proyecto cerrado». E2.6. | Un contador que nunca puede bajar a 0 porque el servidor responde 409 engaña y satura. La tarea no se esconde (el usuario debe poder ver qué pasó con ella), solo deja de pedir atención. |
+| 6 | **¿El motivo es editable sin cambiar de estado?** | **No en la Entrega 2.** Para corregirlo hay que retomar y volver a bloquear. Las tareas ya bloqueadas antes de esta entrega muestran «Sin motivo registrado.». Se anota en el backlog como candidato (endpoint propio + tool MCP + permiso) si las pruebas de uso muestran la necesidad. | Editarlo sin transición exige un endpoint nuevo, su tool MCP, regla de permiso e historial; el costo no se justifica con un portal aún en pruebas y casi sin datos. |
+| 7 | **Dónde vive el conmutador Lista/Tablero** | Fila propia **entre los contadores y la barra de filtros** (fuera de `Toolbar`, que se pliega en móvil), preferencia `miTrabajoVista` en `localStorage`. En Tablero el filtro de **Estado** no aplica (E2.2). | La barra de filtros se colapsa en móvil; el conmutador no debe quedar oculto. |
+| 8 | **Terminadas en el tablero** | Columna visible siempre; **las 10 más recientes** (por vencimiento descendente, la misma regla que 5.2) y «Ver las N restantes». Los demás estados topan en 20. | `/my-work` no trae fecha de cierre; el vencimiento es el único orden estable disponible (limitación declarada en E2.16). |
+
+---
+
+## E2.1 Datos que la interfaz espera (contrato)
+
+La interfaz **no deduce** nada de esto: lo calcula la API y el cliente tipado lo expone.
+
+| Objeto | Campo | Tipo | Regla |
+| --- | --- | --- | --- |
+| `MyWorkItemDto` | `pendingPredecessors` | `{ taskId: string; title: string }[]` | Predecesoras con estado distinto de `TERMINADA`. Mismo criterio que `assertPredecessorsSatisfied` (una sola definición en el servicio). Orden por título. |
+| `MyWorkItemDto` | `blockedReason` | `string \| null` | Motivo vigente; `null` si la tarea no está `BLOQUEADA` o se bloqueó sin motivo. |
+| `MyWorkItemDto` | `requestOperationalState` | `string` | Estado operativo de la solicitud. El front solo distingue `'CERRADA'`; cualquier otro valor, o ausencia, se trata como abierto. |
+| `MyWorkItemDto` | `requestCommitmentDate` | `string (date-time) \| null` | `Request.initialCommitmentDate`. El implementador **verifica** si existe una fecha de compromiso vigente distinta (p. ej. tras un cambio con `changeJustification`) y, de haberla, usa esa. |
+| `TaskResponseDto` | `blockedReason` | `string \| null` | Para Planificación y el detalle. |
+| `UpdateTaskStatusDto` | `blockedReason?` | `string`, 1 a 500 tras `trim` | Solo con `status = BLOQUEADA`; si no, 400 (decisión 2). Más de 500: 400. |
+| Historial de tarea | evento de estado | texto | El evento de paso a `BLOQUEADA` conserva el motivo; el detalle lo muestra en la pestaña Historial. |
+
+Sincronía (regla 55): se actualizan en el mismo PR el contrato OpenAPI, el cliente, el MCP (`task.status.update` acepta
+`blockedReason`; `my-work` y las tools de tarea devuelven los campos nuevos), `modulos-backend.md`, `modelo-datos.md`
+(columna nueva de tarea), `frontend-pantallas.md` y `changelog.json`. **El motivo no cambia la máquina de estados ni la regla
+de cierre.**
+
+---
+
+## E2.2 Conmutador Lista / Tablero
+
+- `SegmentedRadio` (`id="mt-vista"`, `name="mt-vista"`) con las opciones **Lista** y **Tablero**, precedido de la etiqueta
+  visible «Vista» (`id="mt-vista-label"`, `text-meta text-muted-foreground`, enlazada con `labelledBy`). Fila propia entre los
+  contadores y la barra de filtros: `flex items-center justify-end gap-2` a partir de `sm`, y alineada a la izquierda en móvil.
+- **Preferencia por navegador.** `lib/use-my-work-view.ts` calcado de `use-plan-tasks-view.ts`: `createLocalPrefStore` +
+  `useSyncExternalStore`, clave `miTrabajoVista`, valores `lista | tablero`, **valor de servidor y por defecto `lista`**,
+  lectura y escritura con `try/catch`. Cualquier otro valor guardado se lee como `lista`.
+- **Sin parpadeo.** El esqueleto de carga (E2.10) es el mismo para las dos vistas, así que el cambio entre el valor de servidor
+  y el guardado ocurre mientras se muestra el esqueleto.
+- **Qué cambia al alternar:** solo la presentación. Búsqueda y contador activo se conservan. El filtro de **Estado** se oculta
+  en Tablero (las columnas ya son los estados): al pasar a Tablero se restablece a «Todos» y la región viva anuncia «Vista
+  Tablero. Se quitó el filtro de estado.»; al volver a Lista no se restaura. «Limpiar filtros» en Tablero considera búsqueda y
+  contador.
+- **Objetivos táctiles.** La opción mide `h-8` con ratón; a `< 768 px` y con `pointer-coarse` mide **44 px** (`h-11 min-w-20`).
+  Se logra con una prop opcional `optionClassName` en `SegmentedRadio` (por defecto vacía, sin cambio para quien ya lo usa).
+- Estados: reposo, activa (`bg-primary` + `text-primary-foreground` 4.84 · 4.84; peso 600), hover (`bg-accent`), foco
+  (`outline-ring`, `offset-2`; 4.22 · 3.75 sobre `background`). El conmutador **no se muestra** en vacío, error de carga ni
+  mientras carga.
+- Foco: al alternar, el foco **se queda en el conmutador**. El contenido nuevo se anuncia por la región viva
+  («Vista Tablero: 16 tareas en 5 columnas.» / «Vista Lista.»).
+
+---
+
+## E2.3 Tablero en escritorio y tablet (≥ 768 px)
+
+### E2.3.1 Estructura
+
+```
+PageLayout
+├─ PageHeader  «Mi trabajo» · [Actualizar]
+├─ Contadores  (sin cambios)                      ← filtros que también actúan sobre el tablero
+├─ Fila Vista  Vista [ Lista | Tablero ]
+├─ Toolbar     [Buscar por título]   «Limpiar filtros» · «12 de 16 tareas»   (sin Estado en Tablero)
+├─ Región viva (sr-only)
+└─ Tablero     <div role="region" aria-label="Tablero de tus tareas por estado" tabIndex=0>
+     ├─ Por hacer  (n)   ├─ En curso (n)   ├─ En revisión (n)   ├─ Bloqueada (n)   ├─ Terminada (n)
+```
+
+Cada columna es una `<section aria-labelledby>` con `h2` (`StatusBadge kind="task"` + conteo en chip
+`bg-muted text-muted-foreground`) y una `<ul>` de `<li><article>`. Orden fijo: **Por hacer, En curso, En revisión, Bloqueada,
+Terminada** (el orden de `TASK_STATUSES` de Planificación). Un valor de estado fuera del enum, si llegara, va a una sexta
+columna «Otros estados» que solo existe cuando hay al menos una tarea así (nunca se pierde una tarea).
+
+### E2.3.2 Ancho: tres modos por el ancho del contenedor (misma técnica que la sección 6)
+
+Se declara `@container` en el `<main>` (ya existe por la Entrega 1) y el tablero decide por el ancho **del contenedor**, no del
+viewport, salvo el corte móvil, que es del viewport (`md` = 768 px, como pidió el diseño).
+
+| Modo | Condición | Presentación |
+| --- | --- | --- |
+| **Pestañas** | viewport `< 768 px` | Una columna a la vez (E2.4). |
+| **Desplazable** | viewport `≥ 768 px` y contenedor `< 1240 px` | Las cinco columnas en una fila de `w-64` (256 px) con `gap-3`, `overflow-x-auto`, `snap-x snap-proximity` y `scroll-px-3`; cada columna `snap-start`. |
+| **Fluido** | contenedor `≥ 1240 px` | `grid grid-cols-5 gap-3`; cada columna ocupa su quinto. Sin scroll. |
+
+Cuentas (con las medidas del shell: sidebar `w-60` = 240, riel `w-14` = 56, `<main>` con `md:px-6` = 48 y `xl:px-8` = 64):
+
+- 768 px (menú lateral oculto): contenedor 720 → desplazable; se ven 2 columnas completas y unos dos tercios de la tercera (2 × 256 + 2 × 12 = 536; quedan 184 px).
+- 1024 px con sidebar expandido: 736 → desplazable (2 columnas y unos tres cuartos de la tercera).
+- 1280 px con sidebar expandido: 976 → desplazable (3 columnas y unos dos tercios de la cuarta).
+- 1440 px con sidebar expandido: 1136 → desplazable (**4 columnas = 1 060 px**; se asoma un 5.º de unos 64 px: Terminada, la menos urgente).
+- 1360 px con riel: 1360 − 56 − 64 = 1240 → **fluido** (cada columna 238 px).
+- 1544 px con sidebar expandido: 1544 − 240 − 64 = 1240 → **fluido**.
+
+El umbral de 1240 px sale de que una tarjeta necesita **≥ 190 px útiles** para que «Siguiente paso» y «Mover a…» convivan en una
+línea (E2.5): (1240 − 4 × 12) / 5 = 238 de columna, − 16 de relleno del carril = 222 de tarjeta, − 24 del relleno de la tarjeta = **198**. Un
+umbral menor obligaría a apilar los botones y a recortar los chips.
+
+La región desplazable lleva `tabIndex={0}`, `role="region"` y nombre accesible para que el teclado pueda desplazarla con las
+flechas; en modo fluido es una parada de Tab sin efecto (se acepta: una sola parada). Su foco usa `outline-ring` con
+`offset-2` (4.22 · 3.75 sobre `background`).
+
+### E2.3.3 Carril (columna)
+
+`rounded-xl bg-muted/40 p-2`, sin borde ni sombra; alineado arriba (`items-start`), alto libre (el scroll es el de la página,
+no hay scroll interno por columna). Las tarjetas usan `bg-card shadow-card ring-1 ring-border rounded-xl`, igual que el tablero de
+Planificación. Cabecera del carril (`px-1 pb-2`): badge de estado + conteo.
+
+- **Orden dentro de la columna.** Tareas de proyecto abierto primero, luego las de proyecto cerrado; dentro de cada bloque, el
+  orden de 5.2 (fecha ascendente, iniciado primero, hito primero, título, `taskId`). **Terminada**: fecha descendente.
+- **Topes.** 20 tarjetas por columna y 10 en Terminada; el resto tras «Ver las N restantes» (comportamiento de la sección 2:
+  revela todas, el foco pasa a la primera revelada, se anuncia en la región viva, se expande solo si una acción deja la
+  tarjeta tras el corte). El despliegue no se recuerda.
+- **Columna vacía.** `Sin tareas` (`text-meta text-muted-foreground`, centrado, `py-6`). Con filtros activos: «Sin tareas con estos filtros.».
+- **Sin arrastre ni zona de soltar** (E2.8): el carril no cambia de aspecto al pasar el puntero.
+
+---
+
+## E2.4 Móvil (< 768 px): una columna a la vez con pestañas
+
+Se usa `Tabs` de `components/ui/tabs.tsx` (Radix, activación automática) para que el patrón de teclado y los roles
+(`tablist`, `tab`, `tabpanel`) sean los estándar.
+
+```
+ Vista [ Lista | Tablero ]
+ ┌────────────────────────────────────────────────────────────┐
+ │ Por hacer 3 │ En curso 2 │ En revisión 1 │ Bloqueada 1 │ Terminada 8 │  ← tira desplazable
+ │            ▔▔▔▔▔▔▔▔▔▔ (borde inferior primary 2 px en la activa)
+ ├────────────────────────────────────────────────────────────┤
+ │ ┌ tarjeta ──────────────┐   ← lista vertical, una por fila, ancho completo
+ │ └───────────────────────┘
+```
+
+- **Tira de pestañas:** `TabsList` con `overflow-x-auto no-scrollbar`, `snap-x` y `scroll-px-3`; cada `TabsTrigger` con
+  `max-md:h-11 min-w-11 px-3` (**44 px**). Etiqueta + conteo en `Badge`: `neutral` en general y `danger` en **Bloqueada
+  cuando n > 0**; el nombre accesible completo es «En curso, 2 tareas» (texto `sr-only`). La pestaña activa se desplaza a la vista
+  (`scrollIntoView({ inline: 'center', block: 'nearest' })` al cambiar). Con 5 pestañas la tira excede 360 px: el desplazamiento
+  horizontal es **solo** de la tira, nunca del contenido.
+- **Pestaña inicial:** la primera con tareas en el orden **En curso, Por hacer, En revisión, Bloqueada, Terminada**; se calcula
+  una vez al cargar y después manda el usuario (`useState`, no se persiste). Cuando un filtro deja vacía la pestaña activa **no se cambia
+  sola**: el panel dice «Ninguna tarea aquí con los filtros actuales.» y, si hay tareas en otras pestañas, añade «Hay N en otras
+  pestañas.».
+- **Panel:** `TabsContent` con la lista vertical de tarjetas (`gap-3`), con los mismos topes y «Ver las N restantes» (botón de
+  44 px).
+- **Objetivos táctiles:** todos los controles de la tarjeta miden 44 px (`max-md:h-11`): título (`min-h-11`), avance, «Siguiente
+  paso», «Mover a…» y el pliegue. En tablet y escritorio táctil, `pointer-coarse:h-11` aplica el mismo tamaño.
+- **Por qué no scroll horizontal con snap:** (1) oculta cuatro de cinco estados y sus conteos; (2) compite con el gesto «atrás» de
+  iOS y Android; (3) obliga a un usuario de lector de pantalla a recorrer columnas que no ve; (4) mover una tarjeta cambiaría de
+  columna fuera de la vista. Las pestañas resuelven los cuatro y reutilizan un patrón ya presente en el portal.
+- **Tras mover una tarjeta** a otra pestaña, la tarjeta sale del panel visible: aplica la regla 4 de 12.6 (el foco va al título de la tarjeta
+  siguiente de la misma pestaña; si no hay, a la propia pestaña activa). La región viva dice «“X” pasó a Bloqueada. Está en la
+  pestaña Bloqueada (3).» y el conteo de las pestañas se actualiza al instante.
+
+---
+
+## E2.5 Tarjeta del tablero (`MyWorkBoardCard`)
+
+Ancho útil de 198 px (modo fluido en el umbral de 1240 px) a 216 px (modo desplazable: 256 − 16 − 24). Orden fijo, de arriba abajo; cada bloque solo existe si tiene contenido:
+
+```
+┌────────────────────────────────────┐
+│▌ Levantar requerimientos con  [Hito]│ 1 título (botón, hasta 3 líneas) + «Hito»
+│  Tablero ejecutivo · Levantamiento  │ 2 solicitud · fase (1 línea, truncada)
+│  [⏰ Vencida hace 8 días]           │ 3 fila de chips (envuelve): vencimiento · predecesora · cerrado
+│  [🔗 Espera a “Validar modelo…”]    │
+│ ┌────────────────────────────────┐ │
+│ │ ⛔ Motivo: Falta acceso al…    │ │ 4 motivo de bloqueo (solo Bloqueada), hasta 2 líneas
+│ └────────────────────────────────┘ │
+│  ▓▓▓▓▓▓░░░░ 60 %  ✎                │ 5 avance (TaskProgressControl wide)
+│  Vence 28 oct 2026                 │ 6 vence (solo si no es chip de hoy/vencida; ver abajo)
+│  Compromiso 15 nov 2026            │   fecha de compromiso de la solicitud (una línea, gris)
+│  [ Enviar a revisión ][ ⋯ ]        │ 7 acciones: Siguiente paso + Mover a…
+└────────────────────────────────────┘
+```
+
+| # | Bloque | Contenido y reglas |
+| --- | --- | --- |
+| 1 | **Título** | `<button data-control="title">` `text-sm font-medium leading-snug wrap-break-word`, `line-clamp-3`; abre el panel lateral (E2.11). Junto a él, `Badge outline` «Hito» si `isMilestone`. |
+| 2 | **Solicitud · fase** | `text-meta text-muted-foreground line-clamp-1`; nombre completo en `title`. Texto plano, sin enlace (igual que la lista). La fase se muestra siempre (en Mi trabajo ya viene en el elemento). |
+| 3 | **Chips** | Hasta tres, en este orden: **vencimiento** (`taskDueInfo`/`dueLabel` de `lib/task-due.ts`: `overdue` → `Badge danger` + `AlarmClock`; `today` y `soon` → `Badge warning` + `Clock`; `ok`/`none` nada), **predecesoras** (E2.6.1) y **Proyecto cerrado** (E2.6.2). Terminada no lleva chip de vencimiento. En el tablero el chip «Vence hoy» **sí** se pinta (no hay grupo «Hoy» que lo diga). |
+| 4 | **Motivo de bloqueo** | Solo si `status === 'BLOQUEADA'`. Recuadro `rounded-md bg-danger-subtle px-2 py-1.5 text-meta text-foreground` con icono `OctagonAlert` (`text-danger`, `aria-hidden`) y rótulo «Motivo:» (`font-medium text-danger`) seguido del texto en `line-clamp-2 wrap-break-word`. **Truncado, no oculto:** el texto completo está en el DOM (el recorte es solo CSS), así que un lector lo lee entero; además `title` con el texto completo para ratón y el panel lateral lo muestra íntegro. Sin motivo: «Sin motivo registrado.» en `text-muted-foreground` dentro del mismo recuadro. No es interactivo. |
+| 5 | **Avance** | `TaskProgressControl wide` con `progressTone(status, vencida)`, igual que la lista. En `POR_HACER`/`TERMINADA` el motivo del avance bloqueado va como texto visible bajo la barra (6.2). |
+| 6 | **Fechas** | `Vence {formatDateOnly(endDate)}` (o «Sin fecha de vencimiento») en `text-meta text-muted-foreground tabular-nums`. **Fecha de compromiso** (`requestCommitmentDate`): una sola línea `Compromiso {fecha}` en el mismo estilo, justo debajo; si es `null`, no se pinta. **Sin chip, sin color, sin icono**: es contexto, no una alarma, y por eso no compite con el chip de vencimiento. No se pinta en Terminada. |
+| 7 | **Acciones** | Fila `flex items-center gap-2`: **Siguiente paso** (`Button outline sm`, `flex-1 min-w-0`, `data-control="next"`; «Terminar» es `default`; igual que 8.1) y **Mover a…** (`data-control="status"`), un `Button ghost sm` solo icono (`ArrowRightLeft`) de 32 px (44 px en táctil), `aria-label="Mover «{título}» a…"`, que abre el menú de `TaskStatusControl` con **solo** `nextTaskStatuses` y los verbos de 8.2. En Terminada solo existe «Mover a…» (con la opción Reabrir). Nunca se ofrece una transición inválida. |
+
+- **Banda de riesgo:** `border-l-4 border-l-danger` si el chip de vencimiento es `overdue` (y el proyecto está abierto);
+  `border-l-4 border-l-warning` si está `BLOQUEADA`. Si ambas, gana `danger`. Nunca es el único indicio (siempre hay chip o recuadro).
+- **Sin saturar:** máximo tres chips, un recuadro de motivo, y como mucho dos líneas de texto gris. Si la tarjeta junta vencida +
+  predecesora + proyecto cerrado, el chip de vencimiento **no se pinta** en proyecto cerrado (E2.6.2), así que el máximo real es dos.
+- **Estados de la tarjeta:** reposo; hover (`hover:shadow-md`, sin cambio de fondo); foco (cada control con `outline-2 outline-offset-2 outline-ring`; la
+  tarjeta no recibe foco); **ocupada** (`aria-busy`, controles `disabled` con spinner en el pulsado, **sin `opacity`**); error (toast con el
+  mensaje del servidor y la tarjeta vuelve a su columna, 8.4).
+- **Clic en el cuerpo** de la tarjeta (fuera de un control) **no** abre el panel (a diferencia de Planificación): solo el botón-título, para evitar aperturas
+  involuntarias al desplazar con el dedo.
+- Atributos de foco/restauración de 12.6: `li[data-task-id]` y `data-control = title | progress | next | status`.
+
+---
+
+## E2.6 Chips de predecesora y de proyecto cerrado
+
+### E2.6.1 Predecesoras pendientes
+
+- Fuente: `pendingPredecessors` (E2.1). **No se muestra** en tareas `TERMINADA` ni de proyecto cerrado.
+- **N = 1:** `Badge warning` + `Link2` con «Espera a “{título}”». El título se trunca con `truncate` (el chip admite `max-w-full`) y el texto
+  completo va en `title`; el DOM conserva el título entero.
+- **N ≥ 2:** «{N} predecesoras pendientes». El detalle (panel) lista los títulos.
+- El chip **no es interactivo** (la lista de predecesoras y su navegación ya viven en el panel).
+- **No deshabilita «Empezar»/«Retomar».** El servidor manda (409 con el nombre de la predecesora); el botón lleva
+  `aria-describedby` al chip para que el lector anuncie por qué puede fallar. Contraste: `warning` sobre su fondo translúcido
+  5.47 · 7.19 sobre `card` (tabla E2.13).
+- Se muestra también en la lista (tabla y tarjeta), en la celda Vencimiento junto al chip de vencimiento, con el mismo texto.
+
+### E2.6.2 Proyecto cerrado (`requestOperationalState === 'CERRADA'`)
+
+- **Chip:** `Badge neutral` + `Lock` con «Proyecto cerrado» (`neutral` sobre `neutral/10`: 7.24 · 7.60 sobre `card`).
+- **Acciones en línea deshabilitadas con motivo visible.** Estado y avance se muestran **deshabilitados** (el avance sin lápiz, el
+  menú de estado `disabled`) y «Siguiente paso» **no se pinta** (8.1). El motivo no depende de un control no enfocable: se pinta
+  siempre como texto `text-meta text-muted-foreground` (7.13 · 7.62 sobre `card`): «Proyecto cerrado: no se puede cambiar el
+  estado ni el avance.» (en la tarjeta y el tablero, en lugar de la fila de acciones; en la tabla, bajo el estado). Los controles
+  deshabilitados llevan `aria-describedby` a ese texto.
+- **Sin urgencia falsa.** Para estas tareas no se calcula `taskDueInfo`: sin chip de vencimiento, sin banda roja, sin barra «de riesgo»
+  (tono normal). La fecha de vencimiento sigue visible como texto.
+- **Contadores.** Se excluyen de Vencidas, Para hoy, En curso y Bloqueadas (decisión 5). Función pura nueva
+  `countMyWork(items, todayLocal)` en `lib/my-work-groups.ts`, que usa la **misma** exclusión para los números y para el filtro
+  del contador (lo que dice el número es lo que lista el filtro). La regla de auto-apagado (sección 3) usa estos conteos.
+- **Agrupación.** `groupMyWork` añade la regla **2b** tras «Terminadas» y antes de «Sin fecha»: `requestOperationalState ===
+  'CERRADA'` → grupo `closed`, **«De proyectos cerrados»** (icono `Lock`, título `text-muted-foreground`, cabecera de botón plegable
+  como Terminadas, clave `miTrabajoCerradosAbierto`, **plegado por defecto**, siempre el último grupo). Orden interno: fecha descendente.
+  Subtítulo del grupo: «No cuentan en tus resúmenes.». Con búsqueda activa se despliega, igual que Terminadas (sección 4).
+- **Terminadas de un proyecto cerrado** siguen en «Terminadas» (es un hecho cumplido) con el chip «Proyecto cerrado».
+- **Panel lateral.** `TaskDetail` recibe `readOnlyReason?: string` (desde la fila); si llega, la tarjeta «Actualizar estado» se
+  muestra `unavailable` con ese motivo. Si se llega por `/seguimiento/tareas?taskId=` sin esa información, vale el 409 del servidor,
+  como en la Entrega 1.
+- **Tablero.** La tarjeta aparece en su columna, tras las de proyectos abiertos, con el chip y el motivo; sin banda.
+- Si el campo no llega (API antigua, fixtures), la tarea se trata como abierta.
+
+---
+
+## E2.7 Motivo de bloqueo
+
+### E2.7.1 Diálogo `BlockReasonDialog`
+
+Un único componente (`app/seguimiento/plan/block-reason-dialog.tsx`), **montado una vez por vista** (Mi trabajo, Planificación y
+detalle), no uno por fila. Se abre desde **cualquier** camino que lleve una tarea a `BLOQUEADA`: la fila de la tabla, la tarjeta de
+la lista, la tarjeta del tablero (menú «Mover a…»), el menú de estado del detalle (el botón principal «Marcar como bloqueada»
+abre el diálogo) y las tablas, tarjetas y tablero de Planificación (incluido el arrastre a la columna Bloqueada, que **abre el
+diálogo** en lugar de cambiar el estado directamente).
+
+```
+┌ Marcar como bloqueada ─────────────────────[x]┐
+│ “Levantar requerimientos con Comercial”        │  ← DialogDescription
+│ Cuéntale al equipo qué la detiene.             │
+│                                                │
+│ Motivo del bloqueo (obligatorio)               │  ← Label
+│ ┌────────────────────────────────────────────┐ │
+│ │ Falta el acceso al servidor de pruebas…    │ │  ← Textarea, maxLength 500
+│ └────────────────────────────────────────────┘ │
+│ ⓘ Escribe el motivo del bloqueo.        12/500 │  ← error (si aplica) a la izquierda · contador a la derecha
+│                                                │
+│            [ Cancelar ]  [ Marcar como bloqueada ] │
+└────────────────────────────────────────────────┘
+```
+
+| Aspecto | Especificación |
+| --- | --- |
+| Contenedor | `Dialog` de `ui/dialog` (no `ConfirmDialog`: no es destructivo y lleva un campo). Hereda `bg-popover` y `z-50`; si se abre desde el panel lateral, se apila encima (ambos `z-50`; el diálogo se monta después, Radix gestiona la trampa de foco). |
+| Campo | `Textarea` con `id` propio, etiqueta visible «Motivo del bloqueo (obligatorio)», `rows={4}`, `maxLength={500}`, `aria-required="true"`, `aria-describedby` = error + contador. Sin `placeholder` que sustituya a la etiqueta; ejemplo opcional como `placeholder` «Ej.: falta el acceso al servidor de pruebas» (6.22 · 8.47 sobre `background`). |
+| Obligatorio en UI | `trim()` vacío al enviar → error. **No** se valida mientras se escribe ni al abrir. El botón principal **no** se deshabilita por estar vacío (un botón deshabilitado sin motivo no se enfoca ni explica); se valida al pulsar. |
+| Contador | «{n}/500» en `text-meta text-muted-foreground tabular-nums` (7.13 · 7.19 sobre `popover`), alineado a la derecha. **Desde 450** pasa a `text-warning` y **en 500** a `text-danger` acompañado de la palabra «Límite alcanzado» (no solo color). El contador visible **no** es región viva; una región `role="status"` `sr-only` anuncia solo dos momentos: «Quedan 50 caracteres.» al llegar a 450 y «Límite de 500 caracteres alcanzado.» al llegar a 500. |
+| Error | Texto `text-danger` con icono `CircleAlert` **junto al campo**, debajo, a la izquierda del contador: «Escribe el motivo del bloqueo.» (`id` enlazado en `aria-describedby`; el campo lleva `aria-invalid="true"` y borde `danger`). Al fallar la validación, el **foco vuelve al campo**. El error desaparece al escribir un carácter válido. Un error del servidor (403, 409, red) se muestra con `FormError` encima de los botones, y el texto escrito **se conserva**. |
+| Botones | «Cancelar» (`outline`) y «Marcar como bloqueada» (`default`); en guardado `loading` con «Guardando…» y ambos bloqueados. A `< 640 px` apilados, a ancho completo y de 44 px. |
+| Foco al abrir | En el **campo** (`onOpenAutoFocus` lo fuerza, ya que el botón de cierre precede al contenido). Se registra el disparador con `useDialogReturnFocus().captureTrigger`. |
+| Esc | **Cancela** siempre, sin confirmación; no cambia nada. |
+| Clic fuera | Cierra solo si el campo está vacío; con texto escrito se ignora (`onInteractOutside` con `preventDefault`) para no perder un párrafo por un clic accidental. |
+| Cancelar / cerrar | La tarea **queda como estaba**: la actualización optimista solo ocurre tras confirmar. El foco vuelve al disparador (`handleCloseAutoFocus`). |
+| Éxito | Se cierra; el foco va al **título de la tarjeta/fila en su nuevo lugar** (12.6, regla 2 o 4). Toast «“{título}” marcada como bloqueada.», región viva «“{título}” pasó a Bloqueada. Ahora está en {destino}.». |
+| Envío | `PATCH /tasks/{id}/status` con `{ status: 'BLOQUEADA', blockedReason }` (texto con `trim`). |
+| Fallo del servidor | El diálogo **no se cierra**, muestra el mensaje en `FormError` y revierte el pintado optimista. El hook gana una variante `tryChangeStatus(item, status, extra) → { task } \| { error }` que **no** llama a `onStatusError` (así no hay toast duplicado); el diálogo la usa. |
+| Móvil | Cabe en 320 px (`w-[calc(100%-1rem)]`); `DialogBody` desplaza si el teclado virtual reduce el alto. |
+
+Para no duplicar el enrutado, `useInlineTaskActions` expone `requestStatus(item, next, anchor?)`: si `next === 'BLOQUEADA'` abre el
+diálogo (estado `blockPrompt` del hook, consumido por un único `<BlockReasonDialog>`); en cualquier otro caso llama a `changeStatus`.
+Las vistas dejan de llamar a `changeStatus` directamente desde los menús.
+
+Al salir de `BLOQUEADA` («Retomar», «Volver a Por hacer») no se pide nada; el toast no menciona el motivo (queda en el historial).
+
+### E2.7.2 Dónde se muestra el motivo
+
+| Lugar | Presentación |
+| --- | --- |
+| Tarjeta del tablero y tarjeta de lista | Recuadro de E2.5 #4 (2 líneas, texto completo en DOM y `title`). |
+| Fila de tabla de Mi trabajo | Bajo el estado, `text-meta text-muted-foreground line-clamp-1` con el prefijo «Motivo:» (la tabla no tiene sitio para el recuadro). Texto completo en `title`. Tareas bloqueadas sin motivo: «Sin motivo registrado.». |
+| Panel lateral / detalle de tarea (compartido con Planificación) | Bloque **«Motivo del bloqueo»** en el resumen: mismo recuadro `bg-danger-subtle`, **texto completo** sin recorte, bajo los chips. Y en Historial, el motivo en el evento de paso a Bloqueada. |
+| Planificación (tabla) | Bajo el control de estado de las filas `BLOQUEADA`, una línea `text-meta text-muted-foreground line-clamp-1` «Motivo: …» (solo en esas filas). Es el **único** cambio visual de Planificación junto con el diálogo. |
+| Planificación (tablero) | El mismo recuadro de E2.5 #4 en la tarjeta. |
+
+Contraste del recuadro: `foreground` / `danger-subtle` 13.05 · 13.64; `danger` / `danger-subtle` 5.83 · 6.56 (E2.13).
+
+---
+
+## E2.8 Arrastrar y soltar: no en Mi trabajo
+
+**Decisión: no se implementa arrastre en el tablero de Mi trabajo.** Se conserva el de Planificación, sin cambios salvo que soltar
+sobre Bloqueada abre el diálogo de motivo (E2.7.1).
+
+Razones:
+
+1. **Táctil.** El arrastre HTML5 nativo no funciona en móviles y tablets (el propio comentario de `plan-tasks-kanban.tsx` lo reconoce);
+   el miembro trabaja justo ahí. Implementar uno táctil exige una dependencia o gestos propios, sin necesidad demostrada.
+2. **Destinos inválidos.** Desde cualquier columna, 2 a 3 de los 4 destinos son válidos (`TASK_TRANSITIONS`); el resto habría que
+   atenuarlo o rechazarlo, y la regla del servidor puede además negar una transición válida (predecesoras, proyecto cerrado, permisos).
+3. **Destinos con pasos extra.** Soltar en Bloqueada necesita el motivo (diálogo) y soltar en Terminada propone avance 100 %, avisa de
+   la evidencia y ofrece «Reabrir». Son flujos de varios pasos que el botón explícito comunica mejor.
+4. **Un clic basta.** «Siguiente paso» cubre el avance natural en un clic (EN_CURSO → TERMINADA en 2 acciones) y «Mover a…» las
+   salidas laterales.
+5. **Accesibilidad.** WCAG 2.5.7 (Movimientos de arrastre, AA) exige una alternativa de un solo puntero; la alternativa ya es el
+   camino principal. Mantener dos caminos duplicaría la prueba de foco y anuncios (12.6) sin ganar capacidades.
+
+Consecuencias de diseño: las tarjetas no son `draggable`, no hay `GripVertical`, `cursor-grab`, resaltado de carril ni
+`opacity` de arrastre. **Criterio de revisión:** si en las pruebas de uso los miembros piden arrastrar, se reabre con la solución
+táctil y las pruebas de teclado definidas antes de codificar (candidato de backlog, no pendiente de esta entrega).
+
+---
+
+## E2.9 Contadores, búsqueda y filtros en el tablero
+
+- Los **contadores-filtro** (sección 3) y la **búsqueda** (sección 4) filtran las tarjetas **antes** de repartirlas en columnas. Los números
+  de los contadores siguen siendo los del conjunto completo (excluyendo proyectos cerrados, E2.6.2) y no cambian con la búsqueda.
+- Contador activo + Tablero: p. ej. «Vencidas» deja solo las vencidas en sus columnas (varias columnas pueden quedar con tarjetas); las
+  columnas sin coincidencias dicen «Sin tareas con estos filtros.».
+- El filtro de **Estado** no existe en Tablero (E2.2).
+- `ResultCount` («12 de 16 tareas») y «Limpiar filtros» son los mismos que en Lista. Las pestañas móviles y los conteos de columna
+  reflejan el filtrado.
+- El auto-apagado del contador (sección 3) y la regla 0 de foco (12.6) valen igual.
+- Si el filtrado deja **cero** tarjetas en total: `EmptyState` «Ninguna tarea coincide con los filtros.» (12.5), no cinco columnas vacías.
+
+---
+
+## E2.10 Carga, vacío y error
+
+| Estado | Tablero |
+| --- | --- |
+| **Carga** | Mismo `aria-busy` y `role="status"` «Cargando tus tareas…» que 12.1. Esqueleto: contadores, fila de la vista **reservada** (sin conmutador) y, en `≥ 768 px`, cinco carriles `bg-muted/40` con dos `Skeleton` `h-40 rounded-xl`; en móvil, la tira de pestañas (`h-11`) y tres tarjetas `h-40`. Es el mismo esqueleto en Lista y Tablero para evitar parpadeo. |
+| **Actualizando** (con datos) | Se conserva el tablero; «Actualizar» muestra `loading` (12.1). |
+| **Vacío total** (sin tareas asignadas) | `EmptyState` de 12.2. Sin conmutador ni columnas. |
+| **Al día** | Aviso compacto de 12.3 sobre el tablero (todas las columnas vacías salvo Terminada). |
+| **Sin resultados** | `EmptyState` de 12.5 con «Limpiar filtros» en lugar del tablero (E2.9). |
+| **Error de carga** | `ErrorState` de 12.4 con Reintentar. Sin conmutador. |
+| **Fallo al actualizar** | `InlineNotice` de 12.4b; el tablero no se reemplaza. |
+| **Fallo de una acción** | Toast con el mensaje del servidor y la tarjeta vuelve a su columna (8.4). El diálogo de motivo muestra el error dentro (E2.7.1). |
+| **Columna vacía** | «Sin tareas» (E2.3.3). |
+
+---
+
+## E2.11 Teclado, foco y anuncios
+
+| Contexto | Interacción |
+| --- | --- |
+| Conmutador | Flechas cambian de opción (radios nativos); el foco se queda. Anuncia la vista nueva (E2.2). |
+| Tablero | Tab recorre columna por columna (orden del DOM): título → avance → siguiente paso → mover a… de cada tarjeta. Hasta 4 paradas por tarjeta (3 en `POR_HACER`, 2 en `TERMINADA`, igual que 6.3). Los `h2` de columna permiten saltar por encabezados con lector. |
+| Región desplazable | Con foco, ←/→ desplazan horizontalmente; el foco de una tarjeta fuera de pantalla la desplaza a la vista (comportamiento nativo de `focus()`). |
+| Pestañas móviles | ←/→ cambian de pestaña y activan su panel; Inicio/Fin saltan a la primera/última; Tab pasa al panel. |
+| Menú «Mover a…» | Enter/Espacio/↓ abre; ↑↓ recorre; Enter elige; Esc cierra y devuelve el foco al disparador (8.2). |
+| Diálogo de motivo | Foco en el campo; Tab: campo → Cancelar → Marcar como bloqueada → cierre; Esc cancela; error → foco al campo (E2.7.1). |
+| Panel lateral | Igual que la sección 9. Abierto desde una tarjeta, al cerrar el foco vuelve a su botón-título. |
+
+**Regla de foco tras una acción en el tablero.** Es la de 12.6 con una lectura por columna: (1) la tarjeta se queda en su
+columna (avance, p. ej.) → el foco se queda en el control pulsado; (2) cambia de columna y la columna destino es visible → el
+foco va al **título de la tarjeta en la columna nueva** (en el modo desplazable la columna se desplaza a la vista); (3) el control
+desaparece pero la tarjeta sigue → su título; (4) la tarjeta deja de ser visible (filtro que no la admite, o pestaña móvil distinta, o
+tope «Ver las N restantes» no expandido) → título de la tarjeta siguiente de la misma columna; si no hay, `h2` de la columna origen
+(`tabIndex={-1}`); en móvil, la pestaña activa. Se reutiliza el mecanismo de `data-task-id`/`data-control` y el `ref` de destino.
+Con el diálogo de motivo, el destino se fija **al confirmar**; al cancelar, el foco vuelve al disparador.
+
+**Región viva.** Una sola (la de la sección 12.6). Mensajes nuevos: «Vista Tablero: {n} tareas en 5 columnas.», «“X” pasó a {Estado}.
+Ahora está en la columna {Estado} ({n}).», «Vista Tablero. Se quitó el filtro de estado.», «Se muestran {N} tareas más en {columna}.»
+
+---
+
+## E2.12 Claro, oscuro y tokens
+
+Layout idéntico en los dos temas; solo tokens semánticos **existentes** (no se crea ninguno, no hay color crudo ni `z-[n]`, no se usa
+`opacity` para texto).
+
+| Uso | Token |
+| --- | --- |
+| Carril del tablero | `bg-muted/40` |
+| Tarjeta del tablero | `bg-card shadow-card ring-1 ring-border rounded-xl` |
+| Recuadro del motivo | `bg-danger-subtle`, texto `text-foreground`, rótulo e icono `text-danger` |
+| Chip de predecesora | `Badge warning` + `Link2` |
+| Chip de proyecto cerrado | `Badge neutral` + `Lock` |
+| Chip de vencimiento | `Badge danger` / `Badge warning` (como la Entrega 1) |
+| Banda de riesgo de tarjeta | `border-l-danger` / `border-l-warning` |
+| Conteo de pestañas | `Badge neutral`; `Badge danger` en Bloqueada con n > 0 |
+| Pestaña activa | borde inferior `border-primary` + `text-foreground` (nunca `primary` como texto) |
+| Conmutador | `SegmentedRadio` (`bg-primary`/`text-primary-foreground` activa) |
+| Diálogo | `bg-popover`, campo `bg-background`, borde `border-input`, error `text-danger` |
+| Capas | Ninguna nueva: menú, diálogo y panel heredan `z-50`; no hay cabeceras `sticky` en el tablero. |
+
+---
+
+## E2.13 Contrastes medidos (WCAG 2.2 AA)
+
+**Método.** Script Node **temporal** (ya eliminado; no está en el repo) que lee `apps/web/src/app/globals.css`, quita comentarios, resuelve
+`var(--x)`, convierte cada token OKLCH de `:root` y `.dark` a sRGB (Oklab → sRGB lineal → gamma, con recorte de gamut), compone los
+translúcidos sobre su fondo real (el carril es `bg-muted/40` sobre `background`; los `Badge`, su token al 10–14 % sobre `card`, el carril o
+`background`), calcula la luminancia relativa y `(L1+0.05)/(L2+0.05)`. **Control cruzado:** reproduce los pares ya publicados en la sección 16
+(p. ej. `foreground`/`card` 14.75 · 14.98; `warning`/`warning/14` sobre `card` 5.47 · 7.19; `ring`/`card` 4.84 · 3.37). Umbrales: texto
+normal ≥ **4.5:1**; iconos informativos, bordes de controles y foco ≥ **3:1**. Se midieron los dos temas. Todo cumple.
+
+### E2.13.1 Tablero, carril y tarjeta
+
+| Par | Claro | Oscuro | Umbral |
+| --- | --- | --- | --- |
+| `foreground` / carril (título de columna) | 12.44 ✔ | 15.52 ✔ | 4.5 |
+| `muted-foreground` / carril (conteo, «Sin tareas») | 6.02 ✔ | 7.90 ✔ | 4.5 |
+| `text-link` / carril | 5.18 ✔ | 7.62 ✔ | 4.5 |
+| `info` / `info/12` sobre carril («En curso», «En revisión») | 4.92 ✔ | 6.69 ✔ | 4.5 |
+| `neutral` / `neutral/10` sobre carril («Por hacer») | 6.16 ✔ | 7.90 ✔ | 4.5 |
+| `danger` / `danger/12` sobre carril («Bloqueada») | 4.59 ✔ | 6.16 ✔ | 4.5 |
+| `success` / `success/12` sobre carril («Terminada») | 4.79 ✔ | 7.44 ✔ | 4.5 |
+| `warning` / `warning/14` sobre carril | 4.67 ✔ | 7.44 ✔ | 4.5 |
+| `foreground` / `card` (título de tarjeta) | 14.75 ✔ | 14.98 ✔ | 4.5 |
+| `muted-foreground` / `card` (solicitud · fase, vence, compromiso, motivo del avance, «Proyecto cerrado: …») | 7.13 ✔ | 7.62 ✔ | 4.5 |
+| `text-danger` / `card` (chip y texto «Vencida») | 6.59 ✔ | 7.20 ✔ | 4.5 |
+| `text-warning` / `card` | 6.76 ✔ | 9.57 ✔ | 4.5 |
+| `text-link` / `card` | 6.14 ✔ | 7.35 ✔ | 4.5 |
+| `warning` / `warning/14` sobre `card` («Espera a “X”», «N predecesoras pendientes», «Vence hoy») | 5.47 ✔ | 7.19 ✔ | 4.5 |
+| `danger` / `danger/12` sobre `card` («Vencida hace N días») | 5.40 ✔ | 5.95 ✔ | 4.5 |
+| `neutral` / `neutral/10` sobre `card` («Proyecto cerrado») | 7.24 ✔ | 7.60 ✔ | 4.5 |
+| `foreground` / `card` («Hito», `Badge outline`) | 14.75 ✔ | 14.98 ✔ | 4.5 |
+| Banda `danger` / carril (no texto) | 5.56 ✔ | 7.46 ✔ | 3 |
+| Banda `warning` / carril (no texto) | 5.70 ✔ | 9.92 ✔ | 3 |
+| Barra `success` / `card` (no texto) | 6.74 ✔ | 9.19 ✔ | 3 |
+| Barra `primary` / pista `muted` (no texto) | 3.88 ✔ | 3.08 ✔ | 3 |
+| `border-strong` / carril (borde de lectura del carril, informativo) | 3.07 ✔ | 3.63 ✔ | 3 |
+
+### E2.13.2 Motivo de bloqueo
+
+| Par | Claro | Oscuro | Umbral |
+| --- | --- | --- | --- |
+| `foreground` / `danger-subtle` (texto del motivo) | 13.05 ✔ | 13.64 ✔ | 4.5 |
+| `danger` / `danger-subtle` (rótulo «Motivo:» e icono) | 5.83 ✔ | 6.56 ✔ | 4.5 |
+| `muted-foreground` / `danger-subtle` («Sin motivo registrado.») | 6.31 ✔ | 6.94 ✔ | 4.5 |
+| `danger` / `card` (icono de bloqueo, no texto) | 6.59 ✔ | 7.20 ✔ | 3 |
+
+### E2.13.3 Diálogo de motivo
+
+| Par | Claro | Oscuro | Umbral |
+| --- | --- | --- | --- |
+| `foreground` / `popover` (título, descripción, etiqueta) | 14.75 ✔ | 14.13 ✔ | 4.5 |
+| `muted-foreground` / `popover` (contador «n/500») | 7.13 ✔ | 7.19 ✔ | 4.5 |
+| `text-warning` / `popover` (contador desde 450) | 6.76 ✔ | 9.03 ✔ | 4.5 |
+| `text-danger` / `popover` (error y contador en 500) | 6.59 ✔ | 6.79 ✔ | 4.5 |
+| `foreground` / `background` (texto escrito en el campo) | 12.86 ✔ | 16.66 ✔ | 4.5 |
+| `muted-foreground` / `background` (placeholder) | 6.22 ✔ | 8.47 ✔ | 4.5 |
+| `input` / `popover` (borde del campo, no texto) | 3.95 ✔ | 3.59 ✔ | 3 |
+| `input` / `background` (borde del campo contra su relleno) | 3.44 ✔ | 4.24 ✔ | 3 |
+| `danger` / `popover` (borde `aria-invalid`, no texto) | 6.59 ✔ | 6.79 ✔ | 3 |
+| `ring` / `popover` (foco en el diálogo) | 4.84 ✔ | 3.18 ✔ | 3 |
+
+### E2.13.4 Conmutador, pestañas y foco
+
+| Par | Claro | Oscuro | Umbral |
+| --- | --- | --- | --- |
+| `primary-foreground` / `primary` (opción activa del conmutador) | 4.84 ✔ | 4.84 ✔ | 4.5 |
+| `foreground` / `background` (opción inactiva y pestaña activa) | 12.86 ✔ | 16.66 ✔ | 4.5 |
+| `foreground` / `accent` (opción inactiva en hover) | 11.83 ✔ | 12.80 ✔ | 4.5 |
+| `border-strong` / `background` (borde del conmutador) | 3.18 ✔ | 3.90 ✔ | 3 |
+| `muted-foreground` / `background` (pestaña inactiva) | 6.22 ✔ | 8.47 ✔ | 4.5 |
+| `danger` / `danger/12` sobre `background` (conteo de la pestaña Bloqueada) | 4.74 ✔ | 6.69 ✔ | 4.5 |
+| `neutral` / `neutral/10` sobre `background` (conteo de pestaña) | 6.36 ✔ | 8.61 ✔ | 4.5 |
+| `primary` (borde de la pestaña activa) / `background` | 4.22 ✔ | 3.75 ✔ | 3 |
+| `ring` / `background` (foco del conmutador, de las pestañas y de la región desplazable) | 4.22 ✔ | 3.75 ✔ | 3 |
+| `ring` / carril (foco fuera de la tarjeta) | 4.08 ✔ | 3.50 ✔ | 3 |
+| `ring` / `card` (foco dentro de la tarjeta) | 4.84 ✔ | 3.37 ✔ | 3 |
+
+Consecuencias de la medición: (1) el **margen más ajustado** son los chips sobre el carril en claro (`danger` 4.59, `warning` 4.67, `success`
+4.79 sobre 4.5): por eso el **encabezado de columna** es el único `Badge` sobre el carril y **todos los chips van sobre `card`**
+(5.4 o más); no se añaden otros tonos sobre el carril sin volver a medir; (2) el recuadro del motivo usa `text-foreground` y no
+`text-danger` para el cuerpo (13.05 frente a 5.83); (3) la barra `primary` en oscuro (3.08) sigue al límite, como en la sección 16, y el % siempre acompaña a la
+barra; (4) ningún texto depende de `opacity`. **No medido:** `forced-colors`, los toasts de `sonner` y los estados de hover de botones
+existentes (límites ya registrados en 16.3, nota 5).
+
+---
+
+## E2.14 Componentes y archivos
+
+| Archivo | Cambio |
+| --- | --- |
+| `lib/my-work-groups.ts` | Regla 2b y grupo `closed`; `countMyWork`; comparador con «proyecto abierto primero» (tablero). Sigue puro y sin imports de la app. |
+| `lib/my-work-board.ts` (nuevo) | `boardColumns(items, caps)`: reparto por estado, orden, topes (20 / 10) y columna «Otros estados». Puro. |
+| `lib/use-my-work-view.ts` (nuevo) | Preferencia `miTrabajoVista` (calcado de `use-plan-tasks-view.ts`). |
+| `app/mi-trabajo/my-work-board.tsx` (nuevo) | Tablero: modos pestañas / desplazable / fluido, carriles y topes. |
+| `app/mi-trabajo/my-work-board-card.tsx` (nuevo) | Tarjeta de E2.5 (propia; no se reutiliza `PlanTasksKanban`, que exige `plan`, `people` y permisos). |
+| `app/mi-trabajo/mi-trabajo-view.tsx` y filas/tarjetas de la lista | Conmutador, chips de predecesora y de proyecto cerrado, motivo, grupo «De proyectos cerrados», contadores sin cerradas. |
+| `app/seguimiento/plan/block-reason-dialog.tsx` (nuevo) | Diálogo de E2.7.1. |
+| `app/seguimiento/plan/use-inline-task-actions.ts` | `requestStatus`, `blockPrompt`, `tryChangeStatus`; `changeStatus` acepta `extra.blockedReason`. |
+| `app/seguimiento/plan/plan-view.tsx` y `plan-tasks-kanban.tsx` | Usan `requestStatus` y montan `<BlockReasonDialog>`; el arrastre a Bloqueada abre el diálogo; muestran el motivo (E2.7.2). Sin otro cambio visual. |
+| `app/seguimiento/plan/task-status-control.tsx` | Prop opcional `triggerVariant: 'badge' \| 'move'` (el icono «Mover a…»); sin cambio por defecto. |
+| `app/seguimiento/tareas/task-detail.tsx` | Bloque «Motivo del bloqueo», chips de predecesora y proyecto cerrado, `readOnlyReason`, el botón «Marcar como bloqueada» abre el diálogo. |
+| `components/ui/segmented-radio.tsx` | Prop opcional `optionClassName`. |
+| `components/ui/tabs.tsx` | Sin cambio; las clases táctiles se pasan por `className`. |
+| API / contrato / MCP / docs | E2.1: DTOs, servicio, migración de `blockedReason`, `openapi.json`, `schema.d.ts`, tools del MCP y documentación de `docs/aplicacion/`. |
+
+Prohibido: color crudo, `z-[n]`, dependencias nuevas (el tablero usa Radix, `lucide` y `sonner` ya instalados), tocar la regla de cierre.
+
+---
+
+## E2.15 Pruebas sugeridas
+
+- **Unitarias (`e2e/web-lib.spec.ts`, módulos puros):** `groupMyWork` con proyecto cerrado (no terminada → `closed`; terminada → `done`; nunca
+  `overdue`); `countMyWork` excluye cerradas; `boardColumns` (orden, topes 20/10, abierto antes que cerrado, estado fuera del enum → «Otros
+  estados»); preferencia `miTrabajoVista` (valor inválido → `lista`); validación del motivo (vacío, solo espacios, 500 y 501 caracteres).
+- **API (Jest):** `blockedReason` con `BLOQUEADA` (guarda), sin motivo (permitido), con otro estado (400), > 500 (400), solo espacios (ausente), salida de
+  `BLOQUEADA` (lo pone a `null` y queda en el historial); `/my-work` devuelve los cuatro campos (predecesoras no terminadas, estado, compromiso).
+- **MCP (`node --test`):** cobertura de contrato con `blockedReason` en `task.status.update` y los campos nuevos.
+- **Playwright (en CI, con fixtures de `GET /my-work`):** alternar Lista/Tablero y recordarlo tras recargar; los contadores y la búsqueda filtran el tablero;
+  tarjeta con chips (vencimiento, «Espera a “X”», «N predecesoras pendientes»); motivo truncado con texto completo en el DOM; **diálogo**: vacío → error junto al
+  campo y foco al campo, contador y límite 500, Esc cancela sin cambiar nada, foco de vuelta al disparador, éxito mueve la tarjeta y el foco la sigue, fallo 409
+  mantiene el diálogo y el texto; proyecto cerrado (controles deshabilitados con motivo visible, no cuenta en Vencidas, grupo «De proyectos cerrados»); móvil
+  390×844: pestañas con conteo, objetivos ≥ 44 px, cambio de pestaña con teclado; `@axe` o revisión de roles de `tablist` y `region`.
+- **Manual:** teclado completo, lector de pantalla, tablet 768–1023 (scroll horizontal del tablero), zoom 200 %, `forced-colors`, modo oscuro.
+
+---
+
+## E2.16 Riesgos, no verificado y pendientes
+
+**Riesgos.** (1) Los miembros con tareas **ya bloqueadas** verán «Sin motivo registrado.» hasta que las retomen y vuelvan a bloquear (decisión 6). (2) «Terminada: las
+más recientes» se ordena por **vencimiento descendente**, no por fecha de cierre, porque `/my-work` no la trae; una tarea terminada con una fecha lejana
+aparece antes que una terminada ayer. Si molesta, la solución es añadir `completedAt` en una entrega posterior (campo + migración). (3) Mover el diálogo de
+motivo al hook compartido cambia el camino de **Planificación**: la prueba e2e `plan-inline-status` debe revisarse. (4) Un diálogo sobre el panel lateral apila dos capas
+`z-50`; se verifica en la implementación que el orden de montaje basta.
+
+**No verificado.** Lectores de pantalla (el diseño usa `tablist`, `region`, `aria-live`), tablet real (las cuentas de ancho salen de las clases del shell, no de una medición
+en navegador), `forced-colors`, toasts, rendimiento con cientos de tareas, Playwright local (BL-018, se valida en CI).
+
+**Candidatos de backlog derivados (no se hacen en la Entrega 2).** Editar el motivo sin cambiar de estado; arrastre accesible en el tablero (táctil); `completedAt` en
+`/my-work`; mostrar la fecha de compromiso como señal de riesgo cuando el vencimiento de la tarea la supera. **Entrega 3:** regla de cierre.
 
 ---
