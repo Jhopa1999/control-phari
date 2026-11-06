@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -36,7 +37,29 @@ type TaskWithDeps = TaskModel & {
   dependenciesAsDependent: Array<{
     predecessor: { id: string; title: string; status: string; accepted: boolean };
   }>;
+  phase: {
+    name: string;
+    plan: { requestId: string; request: { title: string } };
+  };
 };
+
+/**
+ * Relaciones que necesita `toResponse` en una sola consulta (sin N+1):
+ * predecesoras directas y fase/solicitud para phaseName, requestId y requestTitle.
+ */
+const TASK_RESPONSE_INCLUDE = {
+  dependenciesAsDependent: {
+    include: {
+      predecessor: { select: { id: true, title: true, status: true, accepted: true } },
+    },
+  },
+  phase: {
+    select: {
+      name: true,
+      plan: { select: { requestId: true, request: { select: { title: true } } } },
+    },
+  },
+} satisfies Prisma.TaskInclude;
 
 /**
  * CRUD de tareas + cambio de estado + aceptacion + "mi trabajo" (design §2.4/
@@ -79,6 +102,10 @@ export class TaskService {
       acceptedAt: task.acceptedAt,
       acceptedByUserId: task.acceptedByUserId,
       evidenceUrl: task.evidenceUrl,
+      blockedReason: task.blockedReason,
+      phaseName: task.phase.name,
+      requestId: task.phase.plan.requestId,
+      requestTitle: task.phase.plan.request.title,
       predecessors: task.dependenciesAsDependent.map((d) => ({
         id: d.predecessor.id,
         title: d.predecessor.title,
@@ -107,6 +134,7 @@ export class TaskService {
       acceptanceCriteria: task.acceptanceCriteria,
       evidenceUrl: task.evidenceUrl,
       frameworkPhaseRequired: task.frameworkPhaseRequired,
+      blockedReason: task.blockedReason,
     };
   }
 
@@ -128,15 +156,9 @@ export class TaskService {
     const tasks = await this.prisma.task.findMany({
       where,
       orderBy: { createdAt: 'asc' },
-      include: {
-        dependenciesAsDependent: {
-          include: {
-            predecessor: { select: { id: true, title: true, status: true, accepted: true } },
-          },
-        },
-      },
+      include: TASK_RESPONSE_INCLUDE,
     });
-    return tasks.map((t) => this.toResponse(t as TaskWithDeps));
+    return tasks.map((t) => this.toResponse(t));
   }
 
   /**
@@ -156,18 +178,12 @@ export class TaskService {
     await this.planState.requireTaskInScope(actor, taskId);
     const task = await this.prisma.task.findFirst({
       where: { id: taskId },
-      include: {
-        dependenciesAsDependent: {
-          include: {
-            predecessor: { select: { id: true, title: true, status: true, accepted: true } },
-          },
-        },
-      },
+      include: TASK_RESPONSE_INCLUDE,
     });
     if (!task) {
       throw new NotFoundException(`Tarea "${taskId}" no encontrada.`);
     }
-    return this.toResponse(task as TaskWithDeps);
+    return this.toResponse(task);
   }
 
 
@@ -481,6 +497,14 @@ export class TaskService {
       );
     }
 
+    // El motivo solo tiene sentido al bloquear: fuera de esa transición se
+    // rechaza (400) para no ocultar un error del cliente.
+    if (dto.blockedReason !== undefined && dto.status !== TaskStatus.BLOQUEADA) {
+      throw new BadRequestException(
+        'El motivo de bloqueo solo aplica al marcar la tarea como bloqueada.',
+      );
+    }
+
     const nextStatus = this.planState.assertTaskTransition(task.status, dto.status);
 
     // Gate de predecesoras al entrar EN_CURSO (desde POR_HACER o BLOQUEADA).
@@ -488,7 +512,12 @@ export class TaskService {
       await this.planState.assertPredecessorsSatisfied(task.id);
     }
 
-    const data: Prisma.TaskUpdateInput = { status: nextStatus };
+    // El motivo vive solo mientras la tarea está BLOQUEADA: se guarda al
+    // bloquear (opcional) y se limpia al salir (queda en el historial).
+    const data: Prisma.TaskUpdateInput = {
+      status: nextStatus,
+      blockedReason: nextStatus === TaskStatus.BLOQUEADA ? (dto.blockedReason ?? null) : null,
+    };
     if (dto.progress !== undefined) data.progress = dto.progress;
     if (dto.evidenceUrl !== undefined) data.evidenceUrl = dto.evidenceUrl;
 
@@ -500,8 +529,18 @@ export class TaskService {
         objectType: 'TASK',
         objectId: task.id,
         scopeProcessId: mainProcessId,
-        before: { status: task.status, progress: task.progress, accepted: task.accepted },
-        after: { status: next.status, progress: next.progress, accepted: next.accepted },
+        before: {
+          status: task.status,
+          progress: task.progress,
+          accepted: task.accepted,
+          blockedReason: task.blockedReason,
+        },
+        after: {
+          status: next.status,
+          progress: next.progress,
+          accepted: next.accepted,
+          blockedReason: next.blockedReason,
+        },
       });
     });
 
@@ -627,12 +666,42 @@ export class TaskService {
             name: true,
             planId: true,
             plan: {
-              select: { requestId: true, request: { select: { title: true } } },
+              select: {
+                requestId: true,
+                commitmentDate: true,
+                request: {
+                  select: { title: true, operationalState: true, initialCommitmentDate: true },
+                },
+              },
             },
           },
         },
       },
     });
+
+    // Predecesoras pendientes de todas las tareas en UNA consulta (sin N+1).
+    // Mismo criterio que assertPredecessorsSatisfied: pendiente = no TERMINADA.
+    const pendingByTask = new Map<string, Array<{ taskId: string; title: string }>>();
+    if (tasks.length > 0) {
+      const deps = await this.prisma.taskDependency.findMany({
+        where: {
+          dependentTaskId: { in: tasks.map((t) => t.id) },
+          predecessor: { status: { not: TaskStatus.TERMINADA } },
+        },
+        select: {
+          dependentTaskId: true,
+          predecessor: { select: { id: true, title: true } },
+        },
+      });
+      for (const dep of deps) {
+        const list = pendingByTask.get(dep.dependentTaskId) ?? [];
+        list.push({ taskId: dep.predecessor.id, title: dep.predecessor.title });
+        pendingByTask.set(dep.dependentTaskId, list);
+      }
+      for (const list of pendingByTask.values()) {
+        list.sort((a, b) => a.title.localeCompare(b.title, 'es'));
+      }
+    }
 
     return tasks.map((task) => ({
       taskId: task.id,
@@ -647,6 +716,11 @@ export class TaskService {
       planId: task.phase.planId,
       requestId: task.phase.plan.requestId,
       requestTitle: task.phase.plan.request.title,
+      pendingPredecessors: pendingByTask.get(task.id) ?? [],
+      blockedReason: task.blockedReason,
+      requestOperationalState: task.phase.plan.request.operationalState,
+      requestCommitmentDate:
+        task.phase.plan.commitmentDate ?? task.phase.plan.request.initialCommitmentDate,
     }));
   }
 }

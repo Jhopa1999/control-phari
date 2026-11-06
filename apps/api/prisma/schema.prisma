@@ -594,6 +594,9 @@ model Task {
   acceptedAt             DateTime? @map("accepted_at")
   acceptedByUserId       String?   @map("accepted_by_user_id") @db.Uuid
   evidenceUrl            String?   @map("evidence_url")
+  // Motivo vigente del bloqueo (max 500). Solo tiene valor mientras status =
+  // BLOQUEADA; se limpia al salir. El historial conserva el motivo anterior.
+  blockedReason          String?   @map("blocked_reason")
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 
