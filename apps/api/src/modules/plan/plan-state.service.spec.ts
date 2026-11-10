@@ -344,5 +344,79 @@ describe('PlanStateService', () => {
       ).resolves.toBeUndefined();
       expect(prisma.requestParticipant.findMany).not.toHaveBeenCalled();
     });
+
+    it('participantes múltiples: personas de cualquiera de los procesos marcados habilitan', async () => {
+      prisma.requestParticipant.findMany.mockResolvedValue([
+        { processId: 'bi' },
+        { processId: 'integraciones' },
+        { processId: 'ia' },
+      ]);
+      prisma.grant.findFirst.mockResolvedValue({ id: 'g-ia' });
+      await expect(
+        service.assertResponsibleInParticipants('r1', 'miembro-ia'),
+      ).resolves.toBeUndefined();
+      expect(prisma.grant.findFirst.mock.calls[0][0].where.processId).toEqual({
+        in: ['bi', 'integraciones', 'ia'],
+      });
+    });
+
+    it('un proceso no marcado en el triage no habilita a su gente (400)', async () => {
+      prisma.requestParticipant.findMany.mockResolvedValue([{ processId: 'bi' }]);
+      prisma.grant.findFirst.mockResolvedValue(null);
+      await expect(
+        service.assertResponsibleInParticipants('r1', 'miembro-ia'),
+      ).rejects.toMatchObject({
+        status: 400,
+        message:
+          'El responsable debe pertenecer a un proceso interviniente de la solicitud.',
+      });
+    });
+
+    it('conservar al responsable actual de un proceso desmarcado no se bloquea', async () => {
+      await expect(
+        service.assertResponsibleInParticipants('r1', 'miembro-ia', 'miembro-ia'),
+      ).resolves.toBeUndefined();
+      expect(prisma.requestParticipant.findMany).not.toHaveBeenCalled();
+      expect(prisma.grant.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('cambiar a OTRA persona fuera de los participantes sí se rechaza aunque haya responsable actual', async () => {
+      prisma.requestParticipant.findMany.mockResolvedValue([{ processId: 'bi' }]);
+      prisma.grant.findFirst.mockResolvedValue(null);
+      await expect(
+        service.assertResponsibleInParticipants('r1', 'otra-ia', 'miembro-ia'),
+      ).rejects.toMatchObject({ status: 400 });
+    });
+  });
+
+  describe('assertResponsiblesInParticipants (importación)', () => {
+    const ana = { id: 'u1', identifier: 'ana@demo.local' };
+    const beto = { id: 'u2', identifier: 'beto@demo.local' };
+
+    it('acepta a los de procesos participantes y a los ya responsables del plan', async () => {
+      prisma.requestParticipant.findMany.mockResolvedValue([{ processId: 'bi' }]);
+      prisma.grant.findMany.mockResolvedValue([{ userId: 'u1' }]);
+      await expect(
+        service.assertResponsiblesInParticipants('r1', [ana, beto], new Set(['u2'])),
+      ).resolves.toBeUndefined();
+      expect(prisma.grant.findMany.mock.calls[0][0].where).toMatchObject({
+        active: true,
+        processId: { in: ['bi'] },
+        userId: { in: ['u1'] },
+      });
+    });
+
+    it('rechaza (400) a quien no es participante ni responsable previo, listando su identificador', async () => {
+      prisma.requestParticipant.findMany.mockResolvedValue([{ processId: 'bi' }]);
+      prisma.grant.findMany.mockResolvedValue([]);
+      await expect(
+        service.assertResponsiblesInParticipants('r1', [ana], new Set()),
+      ).rejects.toMatchObject({ status: 400 });
+    });
+
+    it('sin nada pendiente no consulta', async () => {
+      await service.assertResponsiblesInParticipants('r1', [ana], new Set(['u1']));
+      expect(prisma.requestParticipant.findMany).not.toHaveBeenCalled();
+    });
   });
 });

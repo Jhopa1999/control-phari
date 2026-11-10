@@ -4175,6 +4175,8 @@ export interface components {
              * @description Responsable de la tarea.
              */
             responsibleUserId: string | null;
+            /** @description Nombre del responsable de la tarea. Se informa siempre que haya responsable, incluso si ya no es elegible para nuevas asignaciones (su proceso dejó de intervenir en la solicitud). */
+            responsibleName: string | null;
             /**
              * Format: date-time
              * @description Fecha de inicio.
@@ -9880,7 +9882,7 @@ export interface operations {
                     "application/json": components["schemas"]["TaskResponseDto"];
                 };
             };
-            /** @description Datos invalidos o regla hito. */
+            /** @description Datos inválidos, regla hito o responsable que no pertenece a un proceso interviniente de la solicitud (el principal o los marcados en el triage). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -10004,7 +10006,7 @@ export interface operations {
                     "application/json": components["schemas"]["TaskResponseDto"];
                 };
             };
-            /** @description Datos invalidos o regla hito. */
+            /** @description Datos inválidos, regla hito o responsable que no pertenece a un proceso interviniente de la solicitud (el principal o los marcados en el triage). */
             400: {
                 headers: {
                     [name: string]: unknown;

@@ -376,7 +376,7 @@ export function TaskDetail({
   const due = taskDueInfo(task, localDateInputValue());
   const dueText = dueLabel(due);
   const responsibleName = task.responsibleUserId
-    ? (people.find((p) => p.id === task.responsibleUserId)?.name ?? 'Responsable asignado')
+    ? (people.find((p) => p.id === task.responsibleUserId)?.name ?? task.responsibleName ?? 'Responsable asignado')
     : null;
   const isManager = (permissions?.grants ?? []).some(
     (g) => g.roleCode === 'JEFE_AREA' || g.roleCode === 'LIDER_PROCESO',

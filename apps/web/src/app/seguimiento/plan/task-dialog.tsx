@@ -407,6 +407,11 @@ export function TaskDialog({
                         <SelectValue placeholder="Sin asignar" />
                       </SelectTrigger>
                       <SelectContent>
+                        {task?.responsibleUserId && !users.some((u) => u.id === task.responsibleUserId) ? (
+                          <SelectItem value={task.responsibleUserId}>
+                            {task.responsibleName ?? 'Responsable actual'}
+                          </SelectItem>
+                        ) : null}
                         {users.map((u) => (
                           <SelectItem key={u.id} value={u.id}>
                             {u.name}

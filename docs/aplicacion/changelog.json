@@ -651,6 +651,15 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Solicitudes y Portafolio: los filtros de Estado, Proceso y Prioridad/Banda pasan a selección múltiple (panel con casillas, O dentro de un filtro, Y entre filtros, «Todos» limpia, resumen en el disparador, teclado completo). En Solicitudes se filtra en cliente al instante y ?proceso= acepta SIN_PROCESO y listas con comas; en Portafolio la selección se envía como parámetros repetidos al cerrar el panel. «Limpiar filtros» restablece todos y devuelve el foco a la búsqueda."
+    },
+    {
+      "timestamp": "2026-11-10T18:00:00Z",
+      "trigger_file": "apps/api/src/modules/plan/plan-state.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Planificación multiproceso: los responsables elegibles son la unión de las personas de los procesos participantes del triage (principal y marcados); se conserva al responsable actual de un proceso desmarcado (no se bloquea el PATCH) y se muestra con su nombre real (TaskResponseDto.responsibleName); la importación del plan valida los responsables con la misma regla."
     }
   ]
 }

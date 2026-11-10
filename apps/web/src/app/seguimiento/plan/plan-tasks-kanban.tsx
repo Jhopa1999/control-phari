@@ -388,6 +388,7 @@ export function PlanTasksKanban({
 
                               <TaskResponsibleControl
                                 value={task.responsibleUserId}
+                                currentName={task.responsibleName}
                                 people={people}
                                 loadError={peopleState === 'error'}
                                 busy={taskBusy}

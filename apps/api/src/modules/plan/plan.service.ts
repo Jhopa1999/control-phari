@@ -658,6 +658,21 @@ export class PlanService {
           `Responsables inexistentes o inactivos: ${unknown.join(', ')}.`
         );
       }
+      // Mismo criterio que al asignar una tarea: solo personas de los procesos
+      // que intervienen en la solicitud (o que ya eran responsables en el plan).
+      const current = await this.prisma.task.findMany({
+        where: { phase: { planId: plan.id }, responsibleUserId: { not: null } },
+        select: { responsibleUserId: true },
+        distinct: ['responsibleUserId'],
+      });
+      await this.planState.assertResponsiblesInParticipants(
+        plan.requestId,
+        [...identifiers].map((i) => ({
+          id: userIdByIdentifier.get(i) as string,
+          identifier: i,
+        })),
+        new Set(current.map((t) => t.responsibleUserId as string)),
+      );
     }
 
     const beforeCounts = {

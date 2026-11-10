@@ -41,6 +41,7 @@ import {
  * Tarea con sus predecesoras embebidas (para TaskResponseDto).
  */
 type TaskWithDeps = TaskModel & {
+  responsible: { name: string } | null;
   dependenciesAsDependent: Array<{
     predecessor: { id: string; title: string; status: string; accepted: boolean };
   }>;
@@ -56,6 +57,9 @@ type TaskWithDeps = TaskModel & {
  * predecesoras directas y fase/solicitud para phaseName, requestId y requestTitle.
  */
 const TASK_RESPONSE_INCLUDE = {
+  // Nombre real del responsable: se muestra aunque ya no sea elegible para
+  // NUEVAS asignaciones (p. ej. su proceso dejó de intervenir en la solicitud).
+  responsible: { select: { name: true } },
   dependenciesAsDependent: {
     include: {
       predecessor: { select: { id: true, title: true, status: true, accepted: true } },
@@ -99,6 +103,7 @@ export class TaskService {
       processId: task.processId,
       title: task.title,
       responsibleUserId: task.responsibleUserId,
+      responsibleName: task.responsible?.name ?? null,
       startDate: task.startDate,
       endDate: task.endDate,
       estimateHours: task.estimateHours,
@@ -377,10 +382,13 @@ export class TaskService {
 
     // Condición dura: si se reasigna responsable, debe pertenecer a un proceso
     // interviniente de la solicitud (RequestParticipant). Fuente de verdad.
+    // Conservar al responsable actual no es una asignación nueva: sigue válido
+    // aunque su proceso ya no intervenga (se desmarcó en el triage o perdió el grant).
     if (dto.responsibleUserId !== undefined) {
       await this.planState.assertResponsibleInParticipants(
         requestId,
         dto.responsibleUserId,
+        task.responsibleUserId,
       );
     }
 

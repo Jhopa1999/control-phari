@@ -110,7 +110,7 @@ export class TaskController {
   @ApiParam({ name: 'phaseId', format: 'uuid' })
   @ApiBody({ type: CreateTaskDto })
   @ApiResponse({ status: 201, description: 'Tarea creada.', type: TaskResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos invalidos o regla hito.' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos, regla hito o responsable que no pertenece a un proceso interviniente de la solicitud (el principal o los marcados en el triage).' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Fase/plan fuera de alcance.' })
   create(
@@ -155,7 +155,7 @@ export class TaskController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: UpdateTaskDto })
   @ApiResponse({ status: 200, description: 'Tarea actualizada.', type: TaskResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos invalidos o regla hito.' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos, regla hito o responsable que no pertenece a un proceso interviniente de la solicitud (el principal o los marcados en el triage).' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Tarea fuera de alcance.' })
   update(

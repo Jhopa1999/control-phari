@@ -1071,6 +1071,7 @@ export function PlanView(): React.ReactElement {
                     <TableCell className="min-w-36">
                       <TaskResponsibleControl
                         value={task.responsibleUserId}
+                        currentName={task.responsibleName}
                         people={people}
                         loadError={peopleState === 'error'}
                         busy={rowBusyId === task.id}
