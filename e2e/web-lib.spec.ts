@@ -12,8 +12,15 @@ import {
 } from '../apps/api/src/modules/plan/task-status';
 import {
   TASK_TRANSITIONS as WEB_TASK_TRANSITIONS,
+  canApproveTasks,
   nextTaskStatuses,
 } from '../apps/web/src/lib/task-transitions';
+import {
+  hasPendingReviewRequirements,
+  missingRequirementsText,
+  reviewRequirementsOf,
+} from '../apps/web/src/lib/review-requirements';
+import { waitingInfo } from '../apps/web/src/lib/pending-review-wait';
 import {
   RECORD_STATE_LABEL,
   nextStates,
@@ -1080,9 +1087,90 @@ test.describe('task-transitions', () => {
   });
 
   test('nextTaskStatuses con un valor fuera del enum devuelve [] sin lanzar', () => {
-    expect(
-      nextTaskStatuses('INEXISTENTE' as unknown as keyof typeof WEB_TASK_TRANSITIONS),
-    ).toEqual([]);
+    for (const canApprove of [true, false]) {
+      expect(
+        nextTaskStatuses('INEXISTENTE' as unknown as keyof typeof WEB_TASK_TRANSITIONS, canApprove),
+      ).toEqual([]);
+    }
+  });
+  test('quien puede aprobar ve la máquina completa (espejo exacto del backend)', () => {
+    for (const from of Object.keys(WEB_TASK_TRANSITIONS) as Array<keyof typeof WEB_TASK_TRANSITIONS>) {
+      expect(nextTaskStatuses(from, true), from).toEqual(WEB_TASK_TRANSITIONS[from]);
+    }
+  });
+  test('quien no puede aprobar no ve «Terminar» desde En revisión ni «Reabrir» desde Terminada', () => {
+    expect(nextTaskStatuses('EN_REVISION', false)).toEqual(['EN_CURSO', 'BLOQUEADA']);
+    expect(nextTaskStatuses('TERMINADA', false)).toEqual([]);
+    // El resto de estados no cambia.
+    for (const from of ['POR_HACER', 'EN_CURSO', 'BLOQUEADA'] as const) {
+      expect(nextTaskStatuses(from, false), from).toEqual(WEB_TASK_TRANSITIONS[from]);
+    }
+  });
+});
+test.describe('canApproveTasks (espejo de isPlanManager)', () => {
+  test('solo el jefe de área y el líder de proceso pueden aprobar', () => {
+    expect(canApproveTasks(['JEFE_AREA'])).toBe(true);
+    expect(canApproveTasks(['LIDER_PROCESO'])).toBe(true);
+    expect(canApproveTasks(['INTEGRANTE', 'LIDER_PROCESO'])).toBe(true);
+    expect(canApproveTasks(['INTEGRANTE'])).toBe(false);
+    expect(canApproveTasks(['ADMIN'])).toBe(false);
+    expect(canApproveTasks(['ROL_DESCONOCIDO'])).toBe(false);
+    expect(canApproveTasks([])).toBe(false);
+    expect(canApproveTasks(undefined)).toBe(false);
+    expect(canApproveTasks(null)).toBe(false);
+  });
+});
+test.describe('reviewRequirementsOf (requisitos de envío a revisión)', () => {
+  test('avance al 100 % sin evidencia exigida: no falta nada', () => {
+    expect(reviewRequirementsOf({ progress: 100, evidenceRequired: false, hasEvidence: false })).toEqual({
+      needsProgress: false,
+      needsEvidence: false,
+      evidenceRequired: false,
+    });
+    expect(hasPendingReviewRequirements({ progress: 100, evidenceRequired: false, hasEvidence: false })).toBe(false);
+  });
+  test('evidencia exigida y ausente: falta evidencia', () => {
+    const req = reviewRequirementsOf({ progress: 100, evidenceRequired: true, hasEvidence: false });
+    expect(req.needsEvidence).toBe(true);
+    expect(req.needsProgress).toBe(false);
+    expect(missingRequirementsText(req)).toBe('evidencia');
+  });
+  test('evidencia exigida y presente: no falta', () => {
+    expect(hasPendingReviewRequirements({ progress: 100, evidenceRequired: true, hasEvidence: true })).toBe(false);
+  });
+  test('avance por debajo de 100: falta avance; con ambos lo dice junto', () => {
+    expect(reviewRequirementsOf({ progress: 99, evidenceRequired: false }).needsProgress).toBe(true);
+    const both = reviewRequirementsOf({ progress: 90, evidenceRequired: true, hasEvidence: false });
+    expect(missingRequirementsText(both)).toBe('avance al 100 % y evidencia');
+  });
+  test('banderas ausentes (respuesta antigua) se tratan como sin requisito de evidencia', () => {
+    const req = reviewRequirementsOf({ progress: 100 });
+    expect(req.needsEvidence).toBe(false);
+    expect(req.evidenceRequired).toBe(false);
+  });
+});
+test.describe('waitingInfo (tiempo de espera en «Por aprobar»)', () => {
+  const now = new Date('2026-11-10T12:00:00Z');
+  const wait = (iso: string, approximate = false) =>
+    waitingInfo({ waitingSince: iso, waitingSinceApproximate: approximate }, now);
+  test('menos de 24 h es «desde hoy»', () => {
+    expect(wait('2026-11-10T01:00:00Z')).toMatchObject({ label: 'Espera desde hoy', days: 0, long: false });
+  });
+  test('una fecha futura cuenta como hoy', () => {
+    expect(wait('2026-11-12T00:00:00Z').label).toBe('Espera desde hoy');
+  });
+  test('1 día y varios días, con singular y plural', () => {
+    expect(wait('2026-11-09T11:00:00Z').label).toBe('Espera hace 1 día');
+    expect(wait('2026-11-08T11:00:00Z')).toMatchObject({ label: 'Espera hace 2 días', long: false });
+  });
+  test('desde 3 días la espera es larga', () => {
+    expect(wait('2026-11-07T11:00:00Z')).toMatchObject({ days: 3, long: true });
+  });
+  test('la fecha aproximada lo dice con «unos»', () => {
+    expect(wait('2026-11-06T11:00:00Z', true)).toMatchObject({
+      label: 'Espera hace unos 4 días',
+      approximate: true,
+    });
   });
 });
 
@@ -1287,30 +1375,38 @@ test.describe('task-next-step', () => {
       EN_REVISION: 'TERMINADA',
     };
     for (const [from, to] of Object.entries(esperado)) {
-      const { ordered, naturalFirst } = orderTransitions(from, nextTaskStatuses(from as never));
+      const { ordered, naturalFirst } = orderTransitions(from, nextTaskStatuses(from as never, true), true);
       expect(naturalFirst, from).toBe(true);
       expect(ordered[0], from).toBe(to);
-      expect(nextStepFor(from)?.to, from).toBe(to);
+      expect(nextStepFor(from, true)?.to, from).toBe(to);
     }
   });
 
   test('conserva todas las transiciones, sin duplicar ni inventar', () => {
     for (const from of ['POR_HACER', 'EN_CURSO', 'BLOQUEADA', 'EN_REVISION', 'TERMINADA']) {
-      const base = nextTaskStatuses(from as never);
-      const { ordered } = orderTransitions(from, base);
+      const base = nextTaskStatuses(from as never, true);
+      const { ordered } = orderTransitions(from, base, true);
       expect([...ordered].sort()).toEqual([...base].sort());
     }
   });
 
   test('desde TERMINADA solo se reabre: no hay siguiente paso', () => {
-    const { ordered, naturalFirst } = orderTransitions('TERMINADA', nextTaskStatuses('TERMINADA'));
+    const { ordered, naturalFirst } = orderTransitions('TERMINADA', nextTaskStatuses('TERMINADA', true), true);
     expect(naturalFirst).toBe(false);
     expect(ordered).toEqual(['EN_CURSO']);
-    expect(nextStepFor('TERMINADA')).toBeNull();
+    expect(nextStepFor('TERMINADA', true)).toBeNull();
+    expect(nextStepFor('TERMINADA', false)).toBeNull();
+  });
+  test('un integrante en En revisión no tiene siguiente paso: espera aprobación', () => {
+    expect(nextStepFor('EN_REVISION', false)).toBeNull();
+    expect(nextStepFor('EN_REVISION', true)?.to).toBe('TERMINADA');
+    const { ordered, naturalFirst } = orderTransitions('EN_REVISION', nextTaskStatuses('EN_REVISION', false), false);
+    expect(naturalFirst).toBe(false);
+    expect(ordered).toEqual(['EN_CURSO', 'BLOQUEADA']);
   });
 
   test('un estado fuera del enum no ofrece opciones ni lanza', () => {
-    const { ordered, naturalFirst } = orderTransitions('RARO', nextTaskStatuses('RARO' as never));
+    const { ordered, naturalFirst } = orderTransitions('RARO', nextTaskStatuses('RARO' as never, true), true);
     expect(ordered).toEqual([]);
     expect(naturalFirst).toBe(false);
   });
