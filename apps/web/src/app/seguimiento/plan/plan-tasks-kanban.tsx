@@ -158,7 +158,7 @@ export function PlanTasksKanban({
     return (
       draggingTask !== null &&
       canChangeStatus(draggingTask) &&
-      nextTaskStatuses(draggingTask.status as TaskStatus).includes(status)
+      nextTaskStatuses(draggingTask.status as TaskStatus, isPlanManager).includes(status)
     );
   }
 
@@ -232,7 +232,7 @@ export function PlanTasksKanban({
                     if (
                       task &&
                       canChangeStatus(task) &&
-                      nextTaskStatuses(task.status as TaskStatus).includes(status)
+                      nextTaskStatuses(task.status as TaskStatus, isPlanManager).includes(status)
                     ) {
                       onInlineStatusChange(task, status);
                     }
@@ -414,6 +414,7 @@ export function PlanTasksKanban({
                                   disabled={!canChangeStatus(task)}
                                   disabledReason={statusReason}
                                   taskTitle={task.title}
+                                  canApprove={isPlanManager}
                                   onChange={(next) => onInlineStatusChange(task, next)}
                                 />
                               </div>

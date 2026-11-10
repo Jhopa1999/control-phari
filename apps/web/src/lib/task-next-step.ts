@@ -20,8 +20,13 @@ const NEXT_STEP: Partial<Record<string, NextStep>> = {
   EN_REVISION: { label: 'Terminar', to: 'TERMINADA' },
 };
 
-/** Siguiente paso desde `status`; null en TERMINADA o ante un estado fuera del enum. */
-export function nextStepFor(status: string): NextStep | null {
+/**
+ * Siguiente paso desde `status`; null en TERMINADA, ante un estado fuera del enum
+ * y, para quien no puede aprobar, en EN_REVISION (espera la aprobación de un
+ * líder o del jefe de área). `canApprove` es obligatorio: ninguna vista lo olvida.
+ */
+export function nextStepFor(status: string, canApprove: boolean): NextStep | null {
+  if (status === 'EN_REVISION' && !canApprove) return null;
   return NEXT_STEP[status] ?? null;
 }
 
@@ -34,8 +39,9 @@ export function nextStepFor(status: string): NextStep | null {
 export function orderTransitions<T extends string>(
   from: string,
   transitions: readonly T[],
+  canApprove: boolean,
 ): { ordered: T[]; naturalFirst: boolean } {
-  const natural = nextStepFor(from)?.to as T | undefined;
+  const natural = nextStepFor(from, canApprove)?.to as T | undefined;
   if (natural !== undefined && transitions.includes(natural)) {
     return { ordered: [natural, ...transitions.filter((t) => t !== natural)], naturalFirst: true };
   }

@@ -25,6 +25,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/
 import { Skeleton } from '@/components/ui/skeleton';
 import type { MyWorkItem, Task, TaskStatus } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
+import { canApproveTasks } from '@/lib/task-transitions';
 import { formatPercent } from '@/lib/format';
 import { createLocalPrefStore } from '@/lib/local-pref-store';
 import {
@@ -37,12 +38,12 @@ import {
 import { boardColumns } from '@/lib/my-work-board';
 import { listMyWork } from '@/lib/my-work';
 import { matchesSearch } from '@/lib/table-sort';
-import { listTaskEvidence } from '@/lib/task-evidence';
 import { TASK_STATUSES, taskStatusLabel } from '@/lib/tasks';
 import { useMyWorkView, type MyWorkView } from '@/lib/use-my-work-view';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useTodayLocal } from '@/lib/use-today-local';
 import { BlockReasonDialog } from '../seguimiento/plan/block-reason-dialog';
+import { SubmitReviewDialog, type SubmitReviewExtra } from '../seguimiento/plan/submit-review-dialog';
 import { useInlineTaskActions } from '../seguimiento/plan/use-inline-task-actions';
 import { TaskDetail } from '../seguimiento/tareas/task-detail';
 import { CLOSED_PROJECT_REASON } from './mi-trabajo-chips';
@@ -56,6 +57,7 @@ import {
 } from './mi-trabajo-parts';
 import { findControl, focusControl, restoreFocus, type FocusTarget } from './mi-trabajo-focus';
 import { boardHeadingId, boardTabId, columnLabel, MyWorkBoard } from './my-work-board';
+import { PendingReviewSection } from './pending-review-section';
 
 type LoadState = 'loading' | 'success' | 'error';
 
@@ -119,11 +121,9 @@ function mergeMyWork(item: MyWorkItem, updated: Task): MyWorkItem {
     status: updated.status,
     progress: updated.progress,
     blockedReason: updated.blockedReason,
+    evidenceRequired: updated.evidenceRequired,
+    hasEvidence: updated.hasEvidence,
   };
-}
-
-function hasEvidenceNote(evidenceUrl: string | null | undefined): boolean {
-  return Boolean(evidenceUrl && evidenceUrl.trim() !== '');
 }
 
 /**
@@ -133,12 +133,14 @@ function hasEvidenceNote(evidenceUrl: string | null | undefined): boolean {
  * es presentación; el backend manda en permisos y transiciones (403/409).
  */
 export function MiTrabajoView(): React.ReactElement {
-  const { actorId, allowedModules } = useActor();
+  const { actorId, allowedModules, permissions, state: permissionsState } = useActor();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const today = useTodayLocal();
   const canOpenRequest = allowedModules.has('requests');
+  // Espejo de isPlanManager: guía la UI (Terminar, Reabrir, «Por aprobar»); el servidor decide. Sin permisos cargados: no.
+  const canApprove = permissionsState === 'success' && canApproveTasks(permissions?.roleCodes);
 
   const [items, setItems] = React.useState<MyWorkItem[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
@@ -159,7 +161,9 @@ export function MiTrabajoView(): React.ReactElement {
   // Destino del foco tras confirmar el diálogo de motivo (se aplica al cerrarse).
   const blockFocus = React.useRef<FocusTarget | null>(null);
   const [boardExpanded, setBoardExpanded] = React.useState<ReadonlySet<string>>(new Set());
+  // Tarea que abrió el diálogo de motivo o el de requisitos (a ella vuelve el foco al cancelar).
   const [blockAnchorId, setBlockAnchorId] = React.useState<string | null>(null);
+  const [panelTab, setPanelTab] = React.useState<'resumen' | 'evidencia'>('resumen');
   const { view, setView } = useMyWorkView();
   const boardMode = view === 'tablero';
   const donePref = React.useSyncExternalStore(
@@ -257,6 +261,7 @@ export function MiTrabajoView(): React.ReactElement {
     setItems,
     getId: (item) => item.taskId,
     merge: mergeMyWork,
+    reviewRequirements: 'dialog',
     onStatusError: (message) => {
       toast.error(message);
       announce(message);
@@ -302,62 +307,37 @@ export function MiTrabajoView(): React.ReactElement {
     pendingFocus.current = focusTargetFor(item, control);
   }
 
-  async function runStatus(
-    item: MyWorkItem,
-    next: TaskStatus,
-    control: string,
-    restoreProgress?: number,
-  ): Promise<void> {
-    const adjustTo100 = next === 'TERMINADA' && item.progress < 100;
-    const extra =
-      restoreProgress !== undefined ? { progress: restoreProgress } : adjustTo100 ? { progress: 100 } : undefined;
-    planFocus(item, control);
-    const updated = await inline.changeStatus(item, next, extra);
-    if (!updated) return;
-
-    const merged: MyWorkItem = { ...item, status: updated.status, progress: updated.progress };
-    const where = groupLabelOf(merged);
+  /** Mensajes de éxito de un cambio de estado (toast y región viva). */
+  function announceStatus(item: MyWorkItem, next: TaskStatus, merged: MyWorkItem): void {
     const title = item.title;
     if (next === 'TERMINADA') {
-      const text = adjustTo100
-        ? `“${title}” terminada. Avance ajustado a 100 %.`
-        : `“${title}” terminada.`;
-      toast.success(text, {
+      toast.success(`“${title}” terminada.`, {
         duration: 8000,
         action: {
           label: 'Reabrir',
-          onClick: () => void runStatus(merged, 'EN_CURSO', 'title', adjustTo100 ? item.progress : undefined),
+          // Solo envía el estado: quien puede terminar puede reabrir; el servidor decide.
+          onClick: () => void runStatus(merged, 'EN_CURSO', 'title'),
         },
       });
     } else if (next === 'EN_REVISION') {
-      toast.success(
-        item.progress < 100
-          ? `“${title}” enviada a revisión. Avance al ${formatPercent(item.progress)}.`
-          : `“${title}” enviada a revisión.`,
-      );
+      toast.success(`“${title}” enviada a revisión. Queda a la espera de aprobación.`);
     } else if (item.status === 'TERMINADA' && next === 'EN_CURSO') {
       toast.success(`“${title}” vuelve a En curso.`);
     } else {
       toast.success(`Estado actualizado: ${taskStatusLabel(next)}.`);
     }
-    announce(`“${title}” pasó a ${taskStatusLabel(next)}. Ahora está en ${where}.`);
+    announce(
+      next === 'EN_REVISION'
+        ? `“${title}” pasó a En revisión. Espera aprobación.`
+        : `“${title}” pasó a ${taskStatusLabel(next)}. Ahora está en ${groupLabelOf(merged)}.`,
+    );
+  }
 
-    if (next === 'EN_REVISION' || next === 'TERMINADA') {
-      void listTaskEvidence(item.taskId)
-        .then((files) => {
-          if (files.length === 0 && !hasEvidenceNote(updated.evidenceUrl)) {
-            toast.warning('Sin evidencia registrada.', {
-              action: {
-                label: 'Añadir evidencia',
-                onClick: () => openPanel(item.taskId),
-              },
-            });
-          }
-        })
-        .catch(() => {
-          // Si la consulta falla no se muestra aviso: no se inventa.
-        });
-    }
+  async function runStatus(item: MyWorkItem, next: TaskStatus, control: string): Promise<void> {
+    planFocus(item, control);
+    const updated = await inline.changeStatus(item, next);
+    if (!updated) return;
+    announceStatus(item, next, { ...item, status: updated.status, progress: updated.progress });
     // Si el destino cae tras el corte de «Ver las N restantes», que siga visible.
     setKeepVisibleId(item.taskId);
   }
@@ -375,7 +355,8 @@ export function MiTrabajoView(): React.ReactElement {
   const panelTaskId = rawTaskId !== null && VALID_TASK_ID.test(rawTaskId) ? rawTaskId : null;
   const panelItem = panelTaskId ? items.find((i) => i.taskId === panelTaskId) : undefined;
 
-  function openPanel(taskId: string): void {
+  function openPanel(taskId: string, tab: 'resumen' | 'evidencia' = 'resumen'): void {
+    setPanelTab(tab);
     setOpenedFromList(true);
     setReturnFocusId(taskId);
     router.push(`${pathname}?taskId=${encodeURIComponent(taskId)}`, { scroll: false });
@@ -412,10 +393,12 @@ export function MiTrabajoView(): React.ReactElement {
 
   const actions: RowActions = {
     busyId: inline.rowBusyId,
+    canApprove,
     onOpen: (item) => openPanel(item.taskId),
     onStatus: (item, next) => {
-      // «Marcar como bloqueada» abre antes el diálogo de motivo (hook compartido).
-      if (next === 'BLOQUEADA') setBlockAnchorId(item.taskId);
+      // «Marcar como bloqueada» y «Enviar a revisión» (con requisitos pendientes)
+      // abren antes su diálogo (hook compartido).
+      if (next === 'BLOQUEADA' || next === 'EN_REVISION') setBlockAnchorId(item.taskId);
       inline.requestStatus(item, next, (target, to) => {
         const control = to === 'EN_CURSO' || to === 'EN_REVISION' || to === 'TERMINADA' ? 'title' : 'status';
         void runStatus(target, to, control);
@@ -434,6 +417,21 @@ export function MiTrabajoView(): React.ReactElement {
     const merged = mergeMyWork(item, result.task);
     toast.success(`“${item.title}” marcada como bloqueada.`);
     announce(`“${item.title}” pasó a Bloqueada. Ahora está en ${groupLabelOf(merged)}.`);
+    setKeepVisibleId(item.taskId);
+    return null;
+  }
+
+  /**
+   * Confirma «Antes de enviar a revisión»: el avance y la nota viajan en el mismo
+   * PATCH de estado. Devuelve el error del servidor o null si salió bien.
+   */
+  async function confirmReview(extra: SubmitReviewExtra): Promise<string | null> {
+    const item = inline.reviewPrompt;
+    if (!item) return 'La tarea ya no está disponible.';
+    blockFocus.current = focusTargetFor(item, 'title');
+    const result = await inline.tryChangeStatus(item, 'EN_REVISION', extra);
+    if ('error' in result) return result.error;
+    announceStatus(item, 'EN_REVISION', mergeMyWork(item, result.task));
     setKeepVisibleId(item.taskId);
     return null;
   }
@@ -510,6 +508,7 @@ export function MiTrabajoView(): React.ReactElement {
   const allDone = ready && items.length > 0 && items.every((i) => i.status === 'TERMINADA');
   const noPending = groups ? PENDING_GROUPS.every((key) => groups[key].length === 0) : true;
   const noResults = ready && items.length > 0 && filteredItems.length === 0;
+  const ownInReview = items.filter((i) => i.status === 'EN_REVISION').length;
 
   let body: React.ReactElement;
   if (state === 'error') {
@@ -718,6 +717,13 @@ export function MiTrabajoView(): React.ReactElement {
         {state === 'loading' || (state === 'success' && today === '') ? 'Cargando tus tareas…' : announcement}
       </p>
       <div className="@container flex flex-col gap-4" aria-busy={state === 'loading' || undefined}>
+        {canApprove ? (
+          <PendingReviewSection
+            ownInReview={ownInReview}
+            onOpen={(taskId) => openPanel(taskId)}
+            announce={announce}
+          />
+        ) : null}
         {body}
       </div>
       <Sheet open={panelTaskId !== null} onOpenChange={(open) => !open && closePanel()}>
@@ -736,12 +742,17 @@ export function MiTrabajoView(): React.ReactElement {
             <TaskDetail
               key={panelTaskId}
               taskId={panelTaskId}
+              initialTab={panelTab}
               embedded
               readOnlyReason={panelItem && isProjectClosed(panelItem) ? CLOSED_PROJECT_REASON : undefined}
-              onSelectTask={(id) =>
-                router.replace(`${pathname}?taskId=${encodeURIComponent(id)}`, { scroll: false })
-              }
+              onSelectTask={(id) => {
+                setPanelTab('resumen');
+                router.replace(`${pathname}?taskId=${encodeURIComponent(id)}`, { scroll: false });
+              }}
               onChanged={handleDetailChanged}
+              onEvidenceChange={(taskId, hasEvidence) =>
+                setItems((prev) => prev.map((i) => (i.taskId === taskId ? { ...i, hasEvidence } : i)))
+              }
             />
           ) : null}
         </SheetContent>
@@ -755,6 +766,23 @@ export function MiTrabajoView(): React.ReactElement {
         onConfirm={confirmBlock}
         onClosedAfterSuccess={handleBlockClosed}
         returnFocusTo={blockReturnFocus}
+      />
+      <SubmitReviewDialog
+        open={inline.reviewPrompt !== null}
+        taskTitle={inline.reviewPrompt?.title ?? ''}
+        progress={inline.reviewPrompt?.progress ?? 0}
+        evidenceRequired={inline.reviewPrompt?.evidenceRequired === true}
+        hasEvidence={inline.reviewPrompt?.hasEvidence === true}
+        onOpenChange={(open) => {
+          if (!open) inline.closeReviewPrompt();
+        }}
+        onConfirm={confirmReview}
+        onClosedAfterSuccess={handleBlockClosed}
+        returnFocusTo={blockReturnFocus}
+        onUploadFile={() => {
+          const item = inline.reviewPrompt;
+          if (item) openPanel(item.taskId, 'evidencia');
+        }}
       />
     </PageLayout>
   );

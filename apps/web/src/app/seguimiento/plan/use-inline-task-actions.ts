@@ -3,6 +3,7 @@
 import * as React from 'react';
 import type { Task, TaskStatus } from '@/lib/api-client';
 import { PlanError } from '@/lib/plan';
+import { hasPendingReviewRequirements } from '@/lib/review-requirements';
 import { updateTaskProgress, updateTaskStatus } from '@/lib/tasks';
 
 function messageOf(err: unknown): string {
@@ -14,9 +15,21 @@ export interface StatusExtra {
   progress?: number;
   /** Solo con BLOQUEADA: lo pide el diálogo de motivo. */
   blockedReason?: string;
+  /** Solo con EN_REVISION: nota o enlace de evidencia escrito en el diálogo de requisitos. */
+  evidenceUrl?: string;
 }
 
-export interface UseInlineTaskActionsOptions<T extends { status: string; progress: number }> {
+/** Elemento sobre el que actúa el hook: una Task o un MyWorkItem. */
+export interface InlineTaskItem {
+  status: string;
+  progress: number;
+  title: string;
+  /** Banderas que calcula la API (regla de cierre); ausentes = sin requisito. */
+  evidenceRequired?: boolean;
+  hasEvidence?: boolean;
+}
+
+export interface UseInlineTaskActionsOptions<T extends InlineTaskItem> {
   /** Actualiza la lista de elementos que pinta la vista. */
   setItems: (updater: (prev: T[]) => T[]) => void;
   /** Id de la tarea de un elemento (`id` en Task, `taskId` en MyWorkItem). */
@@ -37,6 +50,13 @@ export interface UseInlineTaskActionsOptions<T extends { status: string; progres
   onStatusSuccess?: (updated: Task, prev: T) => void | Promise<void>;
   /** Se invoca con el mensaje del servidor cuando el cambio falla (tras revertir). */
   onStatusError: (message: string) => void;
+  /**
+   * Qué hace «Enviar a revisión» cuando faltan requisitos (avance < 100 % o
+   * evidencia exigida y ausente). 'dialog' abre el diálogo «Antes de enviar a
+   * revisión» (`reviewPrompt`); 'server' (por defecto, Planificación) envía
+   * directo y el servidor responde 409 con su mensaje, que se muestra como toast.
+   */
+  reviewRequirements?: 'dialog' | 'server';
 }
 
 export interface InlineTaskActions<T> {
@@ -57,13 +77,19 @@ export interface InlineTaskActions<T> {
   ) => Promise<{ task: Task } | { error: string }>;
   /**
    * Punto de entrada de los menús de estado: si el destino es BLOQUEADA abre el
-   * diálogo de motivo (`blockPrompt`); si no, ejecuta `run` (por defecto `changeStatus`).
+   * diálogo de motivo (`blockPrompt`); si es EN_REVISION y faltan requisitos (con
+   * `reviewRequirements: 'dialog'`) abre el de requisitos (`reviewPrompt`); si no,
+   * ejecuta `run` (por defecto `changeStatus`).
    */
   requestStatus: (item: T, next: TaskStatus, run?: (item: T, next: TaskStatus) => void) => void;
   /** Elemento pendiente de motivo (el diálogo está abierto) o null. */
   blockPrompt: T | null;
   /** Cierra el diálogo de motivo sin cambiar nada. */
   closeBlockPrompt: () => void;
+  /** Elemento al que le faltan requisitos para enviarse a revisión (el diálogo está abierto) o null. */
+  reviewPrompt: T | null;
+  /** Cierra el diálogo de requisitos sin cambiar nada. */
+  closeReviewPrompt: () => void;
   /** Cambio de avance (no optimista). Devuelve la tarea o el mensaje del servidor. */
   changeProgress: (item: T, progress: number) => Promise<{ task: Task } | { error: string }>;
 }
@@ -75,16 +101,18 @@ export interface InlineTaskActions<T> {
  * revierte y se entrega su mensaje accionable a `onStatusError`. Marcar como
  * bloqueada pasa antes por el diálogo de motivo (`requestStatus`).
  */
-export function useInlineTaskActions<T extends { status: string; progress: number }>({
+export function useInlineTaskActions<T extends InlineTaskItem>({
   setItems,
   getId,
   busyExternal = false,
   merge,
   onStatusSuccess,
   onStatusError,
+  reviewRequirements = 'server',
 }: UseInlineTaskActionsOptions<T>): InlineTaskActions<T> {
   const [rowBusyId, setRowBusyId] = React.useState<string | null>(null);
   const [blockPrompt, setBlockPrompt] = React.useState<T | null>(null);
+  const [reviewPrompt, setReviewPrompt] = React.useState<T | null>(null);
 
   const apply = React.useCallback(
     (id: string, updated: Task) => {
@@ -145,13 +173,18 @@ export function useInlineTaskActions<T extends { status: string; progress: numbe
         setBlockPrompt(item);
         return;
       }
+      if (next === 'EN_REVISION' && reviewRequirements === 'dialog' && hasPendingReviewRequirements(item)) {
+        setReviewPrompt(item);
+        return;
+      }
       if (run) run(item, next);
       else void changeStatus(item, next);
     },
-    [changeStatus],
+    [changeStatus, reviewRequirements],
   );
 
   const closeBlockPrompt = React.useCallback(() => setBlockPrompt(null), []);
+  const closeReviewPrompt = React.useCallback(() => setReviewPrompt(null), []);
 
   const changeProgress = React.useCallback(
     async (item: T, progress: number): Promise<{ task: Task } | { error: string }> => {
@@ -179,6 +212,8 @@ export function useInlineTaskActions<T extends { status: string; progress: numbe
     requestStatus,
     blockPrompt,
     closeBlockPrompt,
+    reviewPrompt,
+    closeReviewPrompt,
     changeProgress,
   };
 }

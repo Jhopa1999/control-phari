@@ -32,9 +32,16 @@ function messageForStatus(status: number): string {
  * en lugar del genérico. Solo si llega como texto simple.
  */
 function conflictMessage(status: number, body: unknown): string | undefined {
-  if (status !== 409 || typeof body !== 'object' || body === null) return undefined;
+  if ((status !== 409 && status !== 403) || typeof body !== 'object' || body === null) {
+    return undefined;
+  }
   const message = (body as { message?: unknown }).message;
-  return typeof message === 'string' && message.trim() !== '' ? message : undefined;
+  if (typeof message !== 'string' || message.trim() === '') return undefined;
+  // Los 403 genéricos de Nest llegan en inglés («Forbidden», «Forbidden resource»):
+  // se sustituyen por el mensaje en español. Los 403 con texto propio del
+  // backend (p. ej. «Solo un líder de proceso o el jefe de área puede terminar…») se muestran tal cual.
+  if (status === 403 && /^forbidden/i.test(message.trim())) return undefined;
+  return message;
 }
 
 function toTaskError(status: number | undefined, body?: unknown): PlanError {
