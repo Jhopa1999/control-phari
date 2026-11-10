@@ -117,8 +117,14 @@ export class PlanStateService {
   async assertResponsibleInParticipants(
     requestId: string,
     userId: string | null | undefined,
+    currentResponsibleUserId?: string | null,
   ): Promise<void> {
     if (userId === null || userId === undefined) {
+      return;
+    }
+    // Conservar al responsable actual no es una asignación nueva: se permite
+    // aunque su proceso ya no intervenga en la solicitud.
+    if (currentResponsibleUserId === userId) {
       return;
     }
     const processIds = await this.participantProcessIds(requestId);
@@ -132,6 +138,44 @@ export class PlanStateService {
     if (!grant) {
       throw new BadRequestException(
         'El responsable debe pertenecer a un proceso interviniente de la solicitud.',
+      );
+    }
+  }
+
+  /**
+   * Variante masiva para la importación del plan (que reemplaza todas las
+   * tareas): cada usuario debe pertenecer a un proceso interviniente de la
+   * solicitud, salvo los que ya eran responsables de tareas del plan
+   * (`conservedUserIds`), que se conservan. 400 con la lista de identificadores.
+   */
+  async assertResponsiblesInParticipants(
+    requestId: string,
+    users: Array<{ id: string; identifier: string }>,
+    conservedUserIds: ReadonlySet<string>,
+  ): Promise<void> {
+    const pending = users.filter((u) => !conservedUserIds.has(u.id));
+    if (pending.length === 0) {
+      return;
+    }
+    const processIds = await this.participantProcessIds(requestId);
+    const grants =
+      processIds.length === 0
+        ? []
+        : await this.prisma.grant.findMany({
+            where: {
+              active: true,
+              processId: { in: processIds },
+              userId: { in: pending.map((u) => u.id) },
+            },
+            select: { userId: true },
+          });
+    const allowed = new Set(grants.map((g) => g.userId));
+    const rejected = pending.filter((u) => !allowed.has(u.id));
+    if (rejected.length > 0) {
+      throw new BadRequestException(
+        `Responsables que no pertenecen a un proceso interviniente de la solicitud: ${rejected
+          .map((u) => u.identifier)
+          .join(', ')}.`,
       );
     }
   }

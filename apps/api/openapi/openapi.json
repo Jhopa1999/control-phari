@@ -3286,7 +3286,7 @@
             }
           },
           "400": {
-            "description": "Datos invalidos o regla hito."
+            "description": "Datos inválidos, regla hito o responsable que no pertenece a un proceso interviniente de la solicitud (el principal o los marcados en el triage)."
           },
           "403": {
             "description": "Rol insuficiente."
@@ -3373,7 +3373,7 @@
             }
           },
           "400": {
-            "description": "Datos invalidos o regla hito."
+            "description": "Datos inválidos, regla hito o responsable que no pertenece a un proceso interviniente de la solicitud (el principal o los marcados en el triage)."
           },
           "403": {
             "description": "Rol insuficiente."
@@ -12528,6 +12528,11 @@
             "nullable": true,
             "description": "Responsable de la tarea."
           },
+          "responsibleName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del responsable de la tarea. Se informa siempre que haya responsable, incluso si ya no es elegible para nuevas asignaciones (su proceso dejó de intervenir en la solicitud)."
+          },
           "startDate": {
             "type": "string",
             "format": "date-time",
@@ -12643,6 +12648,7 @@
           "processId",
           "title",
           "responsibleUserId",
+          "responsibleName",
           "startDate",
           "endDate",
           "estimateHours",

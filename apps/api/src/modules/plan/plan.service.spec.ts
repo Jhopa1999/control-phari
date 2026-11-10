@@ -561,6 +561,52 @@ describe('PlanService', () => {
       expect(res.dependenciesCreated).toBe(1);
     });
 
+    describe('responsables del documento importado', () => {
+      function docWithResponsible(identifier: string): any {
+        const doc = emptyDoc();
+        doc.phases = [
+          {
+            order: 0,
+            name: 'Fase',
+            tasks: [
+              { ref: 't0', title: 'A', isMilestone: false, responsibleIdentifier: identifier },
+            ],
+          },
+        ];
+        return doc;
+      }
+      beforeEach(() => {
+        stubPlanInScope(PlanStatus.BORRADOR);
+        (m.prismaObj as any).user = {
+          findMany: jest.fn().mockResolvedValue([{ id: 'u9', identifier: 'ia@demo.local' }]),
+        };
+        (m.prismaObj.task as any).findMany.mockResolvedValue([{ responsibleUserId: 'u7' }]);
+        (m.planState as any).assertResponsiblesInParticipants = jest
+          .fn()
+          .mockResolvedValue(undefined);
+        (m.prismaObj.planPhase as any).create.mockResolvedValue({ id: 'phase-1' });
+        (m.prismaObj.task as any).create.mockResolvedValue({ id: 'task-1' });
+      });
+
+      it('valida los responsables contra los procesos participantes, conservando a los responsables previos del plan', async () => {
+        await service.importPlan(lider(), 'r1', docWithResponsible('IA@demo.local'));
+        const call = (m.planState as any).assertResponsiblesInParticipants.mock.calls[0];
+        expect(call[0]).toBe('r1');
+        expect(call[1]).toEqual([{ id: 'u9', identifier: 'ia@demo.local' }]);
+        expect([...call[2]]).toEqual(['u7']);
+        expect((m.prismaObj.task as any).create.mock.calls[0][0].data.responsibleUserId).toBe('u9');
+      });
+
+      it('si algún responsable no es de un proceso interviniente (400) no se reemplaza nada', async () => {
+        (m.planState as any).assertResponsiblesInParticipants.mockRejectedValue(
+          new BadRequestException('fuera de participantes'),
+        );
+        await expect(
+          service.importPlan(lider(), 'r1', docWithResponsible('ia@demo.local')),
+        ).rejects.toBeInstanceOf(BadRequestException);
+        expect((m.prismaObj.task as any).deleteMany).not.toHaveBeenCalled();
+      });
+    });
     it('audita un unico UPDATE PLAN dentro de la transaccion', async () => {
       stubPlanInScope(PlanStatus.BORRADOR);
       (m.prismaObj.planPhase as any).create.mockResolvedValue({ id: 'phase-1' });

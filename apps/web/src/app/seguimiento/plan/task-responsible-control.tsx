@@ -20,6 +20,11 @@ const UNASSIGNED = 'Sin asignar';
 export interface TaskResponsibleControlProps {
   /** Responsable actual (userId) o null si no hay. */
   value: string | null;
+  /**
+   * Nombre real del responsable actual (viene de la API). Se usa cuando la
+   * persona ya no es candidata para nuevas asignaciones.
+   */
+  currentName?: string | null;
   /** Candidatos a responsable (procesos intervinientes) ya cargados en la vista. */
   people: ResponsibleCandidate[];
   /** La carga de personas falló (distinto de lista vacía legítima). */
@@ -41,12 +46,15 @@ export interface TaskResponsibleControlProps {
  * (planificación). Lista las personas en alcance (`GET /coordination/people`) y
  * reasigna con un clic (`PATCH /tasks/{id}`). No ofrece «Sin asignar» como
  * acción de escritura (desasignar no existe hoy en la app; design §3.9); sí lo
- * muestra en solo lectura cuando la tarea no tiene responsable. Un valor fuera
+ * muestra en solo lectura cuando la tarea no tiene responsable. Un responsable
+ * que ya no es candidato se muestra con su nombre real (`currentName`, no
+ * seleccionable); solo sin nombre cae al texto genérico. Un valor fuera
  * de alcance se muestra como «Persona fuera de tu alcance», nunca un UUID
  * (design §3.6, AC-7).
  */
 export function TaskResponsibleControl({
   value,
+  currentName,
   people,
   loadError,
   disabled,
@@ -71,9 +79,9 @@ export function TaskResponsibleControl({
   const describedBy = isDisabled && reason ? reasonId : undefined;
 
   // Texto del disparador según el valor actual.
-  const currentName =
-    value === null ? UNASSIGNED : inScope ? null : OUT_OF_SCOPE;
-  const placeholder = currentName ?? UNASSIGNED;
+  const triggerText =
+    value === null ? UNASSIGNED : inScope ? null : (currentName ?? OUT_OF_SCOPE);
+  const placeholder = triggerText ?? UNASSIGNED;
   const unassignedTone = value === null;
 
   return (
@@ -103,7 +111,7 @@ export function TaskResponsibleControl({
           {/* Valor fuera de alcance: item deshabilitado, no seleccionable (AC-7). */}
           {!inScope && value !== null ? (
             <SelectItem value={value} disabled>
-              {OUT_OF_SCOPE}
+              {currentName ?? OUT_OF_SCOPE}
             </SelectItem>
           ) : null}
           {people.map((p) => (

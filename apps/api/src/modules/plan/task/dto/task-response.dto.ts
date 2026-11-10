@@ -32,6 +32,14 @@ export class TaskResponseDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Responsable de la tarea.' })
   responsibleUserId!: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Nombre del responsable de la tarea. Se informa siempre que haya responsable, incluso si ya no es elegible para nuevas asignaciones (su proceso dejó de intervenir en la solicitud).',
+  })
+  responsibleName!: string | null;
+
   @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Fecha de inicio.' })
   startDate!: Date | null;
 

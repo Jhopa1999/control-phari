@@ -411,6 +411,20 @@ describe('TaskService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
+    it('informa el nombre real del responsable', async () => {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task: makeTask(),
+        planId: 'plan1',
+        requestId: 'r1',
+        mainProcessId: 'p1',
+      });
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(
+        makeTaskWithDeps({ id: 't1', responsible: { name: 'Wilmer Castro' } }),
+      );
+      const res = await service.findOne(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1');
+      expect(res.responsibleName).toBe('Wilmer Castro');
+    });
+
     it('task existente -> respuesta mapeada', async () => {
       (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
         task: makeTask(),
@@ -425,6 +439,7 @@ describe('TaskService', () => {
       const res = await service.findOne(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1');
       expect(res.id).toBe('t1');
       expect(res.predecessors).toEqual([]);
+      expect(res.responsibleName).toBeNull();
       expect(res).toMatchObject({
         phaseName: 'Fase 1',
         requestId: 'r1',
@@ -490,6 +505,21 @@ describe('TaskService', () => {
         objectId: 't1',
         scopeProcessId: 'p1',
       });
+    });
+
+    it('valida el nuevo responsable pasando el actual, para conservar a quien ya lo era', async () => {
+      scopeTask(makeTask({ id: 't1', responsibleUserId: 'u-ia' }));
+      (m.prismaObj.task as any).update.mockResolvedValue(makeTask({ id: 't1' }));
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(makeTaskWithDeps({ id: 't1' }));
+      await service.update(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1', {
+        responsibleUserId: 'u-ia',
+        title: 'Renombrada',
+      });
+      expect(m.planState.assertResponsibleInParticipants).toHaveBeenCalledWith(
+        'r1',
+        'u-ia',
+        'u-ia',
+      );
     });
 
     it('convertir en hito con horas>0 -> 400', async () => {
