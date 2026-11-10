@@ -3098,6 +3098,31 @@
         ]
       }
     },
+    "/tasks/pending-review": {
+      "get": {
+        "operationId": "TaskController_pendingReview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Tareas por aprobar (hasta 100) y total real.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingReviewListDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente (solo jefe de área y líder de proceso)."
+          }
+        },
+        "summary": "Cola «Por aprobar»: tareas en revisión dentro del alcance del actor (sin las propias), las que más esperan primero.",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
     "/plans/{planId}/tasks": {
       "get": {
         "operationId": "TaskController_findForPlan",
@@ -3475,16 +3500,16 @@
             "description": "Datos invalidos."
           },
           "403": {
-            "description": "Rol insuficiente o tarea ajena (integrante)."
+            "description": "Rol insuficiente, tarea ajena (integrante) o terminar/reabrir sin ser líder de proceso ni jefe de área (mensaje en español)."
           },
           "404": {
             "description": "Tarea fuera de alcance."
           },
           "409": {
-            "description": "Transicion no permitida o predecesora no satisfecha."
+            "description": "Transicion no permitida, predecesora no satisfecha o requisitos de envío a revisión sin cumplir (avance < 100 % o falta evidencia; el mensaje dice cuál)."
           }
         },
-        "summary": "Cambia el estado de una tarea (gate de predecesoras).",
+        "summary": "Cambia el estado de una tarea. Enviar a revisión exige avance 100 % y, si la tarea pide evidencia, nota/enlace o archivo; terminar y reabrir solo los hace un líder de proceso o el jefe de área.",
         "tags": [
           "tasks"
         ]
@@ -12293,6 +12318,14 @@
             "format": "date-time",
             "nullable": true,
             "description": "Fecha de compromiso vigente: la del plan si la tiene; si no, el compromiso inicial de la solicitud."
+          },
+          "evidenceRequired": {
+            "type": "boolean",
+            "description": "La tarea exige evidencia para enviarse a revisión: tiene criterios de aceptación o fase de gobierno requerida."
+          },
+          "hasEvidence": {
+            "type": "boolean",
+            "description": "La tarea tiene evidencia: una nota o enlace guardado, o al menos un archivo subido."
           }
         },
         "required": [
@@ -12311,7 +12344,121 @@
           "pendingPredecessors",
           "blockedReason",
           "requestOperationalState",
-          "requestCommitmentDate"
+          "requestCommitmentDate",
+          "evidenceRequired",
+          "hasEvidence"
+        ]
+      },
+      "PendingReviewTaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id de la tarea."
+          },
+          "title": {
+            "type": "string",
+            "description": "Título de la tarea."
+          },
+          "responsibleUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Id del responsable; null si no tiene."
+          },
+          "responsibleName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del responsable; null si no tiene."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud a la que pertenece el plan de la tarea."
+          },
+          "requestTitle": {
+            "type": "string",
+            "description": "Título de la solicitud."
+          },
+          "phaseName": {
+            "type": "string",
+            "description": "Nombre de la fase."
+          },
+          "progress": {
+            "type": "number",
+            "description": "Avance 0-100."
+          },
+          "evidenceRequired": {
+            "type": "boolean",
+            "description": "La tarea exige evidencia para enviarse a revisión (criterios de aceptación o fase de gobierno)."
+          },
+          "hasEvidence": {
+            "type": "boolean",
+            "description": "La tarea tiene evidencia: una nota o enlace guardado, o al menos un archivo subido."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de vencimiento."
+          },
+          "isMilestone": {
+            "type": "boolean",
+            "description": "Indica si la tarea es un hito."
+          },
+          "reviewRequestedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Momento exacto en que pasó a revisión; null en tareas que ya estaban en revisión antes de existir este dato."
+          },
+          "waitingSince": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Desde cuándo espera aprobación: reviewRequestedAt o, si es null, la última actualización de la tarea."
+          },
+          "waitingSinceApproximate": {
+            "type": "boolean",
+            "description": "true cuando waitingSince es aproximado (se tomó de la última actualización por falta de reviewRequestedAt)."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "responsibleUserId",
+          "responsibleName",
+          "requestId",
+          "requestTitle",
+          "phaseName",
+          "progress",
+          "evidenceRequired",
+          "hasEvidence",
+          "endDate",
+          "isMilestone",
+          "reviewRequestedAt",
+          "waitingSince",
+          "waitingSinceApproximate"
+        ]
+      },
+      "PendingReviewListDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total real de tareas por aprobar (puede superar los ítems devueltos)."
+          },
+          "items": {
+            "description": "Hasta 100 tareas; las que llevan más tiempo esperando, primero.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PendingReviewTaskDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "items"
         ]
       },
       "TaskPredecessorDto": {
@@ -12470,6 +12617,14 @@
             "type": "string",
             "format": "date-time",
             "description": "Fecha de actualizacion."
+          },
+          "evidenceRequired": {
+            "type": "boolean",
+            "description": "La tarea exige evidencia para enviarse a revisión: tiene criterios de aceptación o fase de gobierno requerida."
+          },
+          "hasEvidence": {
+            "type": "boolean",
+            "description": "La tarea tiene evidencia: una nota o enlace guardado, o al menos un archivo subido."
           }
         },
         "required": [
@@ -12497,7 +12652,9 @@
           "requestTitle",
           "predecessors",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "evidenceRequired",
+          "hasEvidence"
         ]
       },
       "ResponsibleCandidateDto": {
@@ -16551,6 +16708,10 @@
           "overdueTasks": {
             "type": "number",
             "description": "Tareas no terminadas con fecha de fin anterior a hoy, de solicitudes aun abiertas."
+          },
+          "pendingTaskReviews": {
+            "type": "number",
+            "description": "Tareas en revisión por aprobar dentro del alcance del actor (misma regla que GET /tasks/pending-review: sin las propias ni las de proyectos cerrados). 0 para quien no puede aprobar (integrante)."
           }
         },
         "required": [
@@ -16558,7 +16719,8 @@
           "pendingNoProcess",
           "readyToPrioritize",
           "pendingApproval",
-          "overdueTasks"
+          "overdueTasks",
+          "pendingTaskReviews"
         ]
       },
       "PortfolioItemResponseDto": {
