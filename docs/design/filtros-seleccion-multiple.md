@@ -34,7 +34,7 @@ dependencia nueva, igual que descartó `workspace-apps-gibo.md` (§1 #3).
 | D6 | **Botón «Limpiar» dentro del panel** | **No.** La opción **«Todos»** (primera fila) ya limpia ese filtro; «Limpiar filtros» de la barra limpia todos. | Dos formas de limpiar en el mismo panel serían redundantes y añadirían una fila de acciones que se mueve con el scroll. |
 | D7 | **Sincronización con la URL** | **No** se escribe la selección en la URL. Se **conserva la lectura** de `?proceso=` al abrir Solicitudes: `?proceso=SIN_PROCESO` sigue funcionando tal cual y además se acepta una lista separada por comas (`?proceso=SIN_PROCESO,<uuid>`). Los tokens que no sean `SIN_PROCESO` ni un UUID se ignoran; los UUID que no existan entre los procesos cargados se descartan al llegar la lista. | Cumple el enlace del Panel sin convertir el filtro en estado de URL (que obligaría a decidir historial, `replace` vs `push` y compartir enlaces). |
 | D8 | **Portafolio: clic a clic o con antirrebote** | **Cada clic se aplica tal cual**, con el panel abierto, **sin antirrebote** (consecuencia de D1: es filtrado en memoria). Si en el futuro se moviera el filtro al servidor, el criterio sería aplicar al **cerrar** el panel y no por clic. | Filtrar 45 o unos cientos de filas en memoria es inmediato, y ver la lista cambiar bajo el panel confirma el efecto. Con el servidor, un clic por opción dispararía una petición y una pantalla de carga por casilla. |
-| D9 | **Agrupación visual de estados** | **Sí, en Estado (16 opciones)**, en cuatro grupos con encabezado (sección 2.3). Proceso lleva «Sin proceso aún» aparte y un encabezado «Procesos». Prioridad/Banda (5) no se agrupa. | 16 filas planas obligan a leer todas; el orden por fase es el del flujo (`REQUEST_STATE_LABELS`). Los encabezados son solo presentación: el valor sigue siendo el estado. |
+| D9 | **Agrupación visual de estados** | **Sí, en Estado (15 opciones)**, en cuatro grupos con encabezado (sección 2.3). Proceso lleva «Sin proceso aún» aparte y un encabezado «Procesos». Prioridad/Banda (5) no se agrupa. | 16 filas planas obligan a leer todas; el orden por fase es el del flujo (`REQUEST_STATE_LABELS`). Los encabezados son solo presentación: el valor sigue siendo el estado. |
 | D10 | **Todo seleccionado ≠ «Todos»** | Si el usuario marca **todas** las opciones una a una, la selección se queda como está (no se convierte sola en «Todos»). El resumen dice «N seleccionados». | No son equivalentes: en Proceso, marcar todos los procesos listados **excluye** las solicitudes «Sin proceso aún» y las de procesos fuera del listado. Convertir la selección en silencio desmarcaría casillas bajo el cursor. |
 | D11 | **Orden del valor** | `onChange` entrega los valores **en el orden de `options`**, sin duplicados, no en el orden de clic. | El resumen y las pruebas son estables; el resultado no depende de la historia de clics. |
 | D12 | **Altura del disparador en táctil** | **Idéntica a `SelectTrigger`**: `h-9`, y `pointer-coarse:h-10` (40 px). Las **opciones del panel** sí llegan a **44 px** en táctil. | El disparador debe convivir sin saltos con la búsqueda (`Input`) y el resto de la barra, ambos de 40 px en táctil; subir solo los filtros desalinearía la fila. Ocupa todo el ancho en móvil, así que su lado corto (40 px) supera el mínimo AA de 24 px de WCAG 2.5.8. Las opciones son donde el dedo acierta o falla, y ahí se cumple 44 px. |
@@ -44,7 +44,7 @@ dependencia nueva, igual que descartó `workspace-apps-gibo.md` (§1 #3).
 - El panel se abre bajo el disparador y se cierra con Esc, clic fuera o al enfocar fuera: es el comportamiento de
   Radix `DropdownMenu` con `modal` por omisión (`true`), que además deja inertes los demás controles mientras está
   abierto (no se pueden tocar otros filtros con el panel abierto).
-- `REQUEST_STATE_LABELS` (16 estados) y la lista de procesos de `listProcesses()` siguen siendo la fuente de las opciones.
+- `REQUEST_STATE_LABELS` (15 estados) y la lista de procesos de `listProcesses()` siguen siendo la fuente de las opciones.
 - «Prioridad» (Solicitudes) y «Banda de prioridad» (Portafolio) conservan etiquetas de texto (`P1`, `Sin priorizar`)
   como hoy dentro del filtro; los badges de prioridad se mantienen en las filas de la tabla.
 
@@ -140,7 +140,7 @@ text-popover-foreground`, borde y `shadow-md` (los de `DropdownMenuContent`).
 
 | Propiedad | Escritorio | Táctil (`pointer-coarse`) |
 | --- | --- | --- |
-| Ancho | `min-w-56` (224 px) y nunca menos que el disparador (`min-w-[var(--radix-dropdown-menu-trigger-width)]`); `max-w-80` | igual, con `max-w-[calc(100vw-1rem)]` |
+| Ancho | `min-w-56` (224 px) y nunca menos que el disparador (`min-w-[var(--radix-dropdown-menu-trigger-width)]`); `max-w-72` (288 px, el máximo de `DropdownMenuContent`) | igual, con `max-w-[calc(100vw-1rem)]` (304 px a 320 px de viewport; como 288 < 304, el tope efectivo sigue siendo 288 px) |
 | Alto máximo | `max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))]` con `overflow-y-auto` | igual |
 | Fila (opción) | `min-h-8` (32 px), `px-2 py-1.5`, `gap-2.5` | `pointer-coarse:min-h-11` (44 px) |
 | Encabezado de grupo | `px-2 py-1.5 text-xs font-medium text-muted-foreground` (el de `DropdownMenuLabel`) | igual |
@@ -209,7 +209,7 @@ blanca sobre `primary` (4.84:1) transmite el estado. El estado nunca depende sol
 | `Inicio` / `Fin` | Primera («Todos») / última opción. |
 | `Espacio` / `Enter` | Alternan la opción enfocada (el panel sigue abierto). |
 | Escribir letras (typeahead de Radix) | Enfoca la siguiente opción cuyo texto empieza por lo escrito (se usa `textValue = etiqueta`). No alterna: solo enfoca. |
-| `Tab` | Radix **impide** que `Tab` mueva el foco dentro de un menú; no deja el foco "atrapado" en una opción oculta. Para salir: `Esc` (foco al disparador) y luego `Tab`. Se verifica en las pruebas (sección 11). |
+| `Tab` | **Decisión:** dentro del panel `Tab` no mueve el foco entre opciones (Radix lo neutraliza en `role="menu"`); el foco se queda en la opción actual y el panel sigue abierto. Para salir: `Esc` (foco al disparador) y luego `Tab`. La prueba de §11 comprueba que, tras `Tab`, el foco sigue dentro del panel; si la versión de Radix instalada cerrara el menú, el criterio válido es que el foco vuelva al disparador y nunca se pierda en `body`. |
 
 ### 3.1 Alternar sin cerrar
 
@@ -322,7 +322,7 @@ resumen con dos opciones es «2 seleccionados» (D3). En Portafolio se aplica la
 ## 8. Componente reutilizable (API)
 
 Archivo previsto: `apps/web/src/components/multi-select-filter.tsx` (+ `DropdownMenuCheckboxItem` en `ui/dropdown-menu.tsx`).
-Función pura de resumen y de alternancia en `apps/web/src/lib/multi-select.ts` (módulo puro, sin React, para que
+Función pura de resumen y de alternancia en `apps/web/src/lib/multi-filter.ts` (módulo puro, sin React, para que
 `e2e/web-lib.spec.ts` lo cargue en Node, como `request-state.ts`).
 
 ```ts
@@ -352,7 +352,7 @@ export interface MultiSelectFilterProps {
 }
 ```
 
-Funciones puras (`lib/multi-select.ts`):
+Funciones puras (`lib/multi-filter.ts`):
 
 - `summarizeSelection(options, selected, placeholder, gender): string` — regla exacta de 1.2.
 - `toggleValue(options, selected, value): string[]` — 3.2.
@@ -454,11 +454,11 @@ Para cada filtro y tema (claro/oscuro) el implementador debe poder mostrar:
 
 ## 11. Pruebas previstas (para quien implemente)
 
-- **Unitarias (Node, `lib/multi-select.ts`)**: `summarizeSelection` con todos los ejemplos de la tabla de 1.2 (incluidos
+- **Unitarias (Node, `lib/multi-filter.ts`)**: `summarizeSelection` con todos los ejemplos de la tabla de 1.2 (incluidos
   los límites 14/15 caracteres y n = 3/4, género f); `toggleValue` (orden de `options`, sin duplicados, ignora valores
   desconocidos).
 - **Playwright**: abrir con clic y con `↓`; alternar con clic, `Espacio` y `Enter` sin que se cierre el panel; `Esc` devuelve el
-  foco al disparador (`document.activeElement`); `Tab` dentro del panel no pierde el foco; `Inicio`/`Fin`; typeahead; que
+  foco al disparador (`document.activeElement`); `Tab` dentro del panel no pierde el foco (se queda en el panel o vuelve al disparador, nunca en `body`); `Inicio`/`Fin`; typeahead; que
   «Todos» limpia y que marcar otra la desmarca; nombre accesible del disparador (`getByRole('button', { name: /Estado .*En triage/ })`);
   roles `menuitemcheckbox` y `aria-checked`; **O dentro y Y entre** filtros con datos de prueba; `?proceso=SIN_PROCESO` y
   `?proceso=SIN_PROCESO,<uuid>`; «Limpiar filtros» vacía todo y enfoca la búsqueda; a 320 px el panel no desborda
