@@ -1,4 +1,4 @@
-import { PrismaService } from '../../database/prisma.service';
+﻿import { PrismaService } from '../../database/prisma.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import { RequestStateService } from '../request/request-state.service';
@@ -134,13 +134,13 @@ describe('PortfolioService', () => {
   it('filtros intersectan el alcance (no lo amplian)', async () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([]);
     await service.list(lider(['p1']), {
-      mainProcessId: 'p1',
-      state: 'CERRADA' as any,
+      mainProcessId: ['p1'],
+      state: ['CERRADA'] as any,
     });
     const and = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND;
     expect(and[0]).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
-    expect(and).toContainEqual({ mainProcessId: 'p1' });
-    expect(and).toContainEqual({ operationalState: 'CERRADA' });
+    expect(and).toContainEqual({ mainProcessId: { in: ['p1'] } });
+    expect(and).toContainEqual({ operationalState: { in: ['CERRADA'] } });
   });
 
   it('filtro de banda SIN_PRIORIZAR excluye items con evaluacion vigente', async () => {
@@ -155,27 +155,27 @@ describe('PortfolioService', () => {
     (m.state.priorityBand as jest.Mock).mockReturnValue('P1');
     (m.state.priorityLabel as jest.Mock).mockReturnValue('P1');
 
-    const items = await service.list(jefe(), { band: 'SIN_PRIORIZAR' });
+    const items = await service.list(jefe(), { band: ['SIN_PRIORIZAR'] });
     expect(items).toHaveLength(1);
     expect(items[0].id).toBe('r1');
   });
 
   it('filtro mainProcessId SIN_PROCESO produce where con mainProcessId null', async () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([]);
-    await service.list(jefe(), { mainProcessId: 'SIN_PROCESO' });
+    await service.list(jefe(), { mainProcessId: ['SIN_PROCESO'] });
     const and = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND;
     expect(and).toContainEqual({ mainProcessId: null });
-    expect(and).not.toContainEqual({ mainProcessId: 'SIN_PROCESO' });
+    expect(and).not.toContainEqual({ mainProcessId: ['SIN_PROCESO'] });
   });
 
   it('filtro mainProcessId con UUID produce where con igualdad por UUID', async () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([]);
     await service.list(jefe(), {
-      mainProcessId: '11111111-1111-1111-1111-111111111111',
+      mainProcessId: ['11111111-1111-1111-1111-111111111111'],
     });
     const and = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND;
     expect(and).toContainEqual({
-      mainProcessId: '11111111-1111-1111-1111-111111111111',
+      mainProcessId: { in: ['11111111-1111-1111-1111-111111111111'] },
     });
   });
 
@@ -185,5 +185,69 @@ describe('PortfolioService', () => {
     ]);
     const [item] = await service.list(jefe(), {});
     expect(item.operationalState).toBe('COMPROMETIDA');
+  });
+
+  describe('filtros de seleccion multiple', () => {
+    const U1 = '11111111-1111-1111-1111-111111111111';
+    const U2 = '22222222-2222-2222-2222-222222222222';
+    const whereAnd = () =>
+      (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND;
+
+    beforeEach(() => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([]);
+    });
+
+    it('varios UUID -> mainProcessId IN (uuids)', async () => {
+      await service.list(jefe(), { mainProcessId: [U1, U2] });
+      expect(whereAnd()).toContainEqual({ mainProcessId: { in: [U1, U2] } });
+    });
+
+    it('SIN_PROCESO + UUID -> OR (IN uuids o IS NULL)', async () => {
+      await service.list(jefe(), { mainProcessId: [U1, 'SIN_PROCESO', U2] });
+      expect(whereAnd()).toContainEqual({
+        OR: [{ mainProcessId: { in: [U1, U2] } }, { mainProcessId: null }],
+      });
+    });
+
+    it('varios estados -> operationalState IN', async () => {
+      await service.list(jefe(), { state: ['EN_EJECUCION', 'BLOQUEADA'] as any });
+      expect(whereAnd()).toContainEqual({
+        operationalState: { in: ['EN_EJECUCION', 'BLOQUEADA'] },
+      });
+    });
+
+    it('arreglos vacios no restringen', async () => {
+      await service.list(jefe(), { mainProcessId: [], state: [], band: [] });
+      expect(whereAnd()).toEqual([{ deletedAt: null }]);
+    });
+
+    it('filtros multiples intersectan el alcance sin ampliarlo (AND con el alcance)', async () => {
+      await service.list(lider(['p1']), {
+        mainProcessId: [U1, 'SIN_PROCESO'],
+        state: ['CERRADA'] as any,
+      });
+      const and = whereAnd();
+      expect(and[0]).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
+      expect(and).toHaveLength(3);
+    });
+
+    it('banda multiple: OR entre bandas incluida SIN_PRIORIZAR', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([
+        requestRow({ id: 'r1' }),
+        requestRow({ id: 'r2' }),
+        requestRow({ id: 'r3' }),
+      ]);
+      (m.prismaObj.priorityEvaluation as any).findMany.mockResolvedValue([
+        { requestId: 'r2', score: 85, evaluatedAt: new Date('2025-03-02') },
+        { requestId: 'r3', score: 10, evaluatedAt: new Date('2025-03-02') },
+      ]);
+      (m.state.priorityBand as jest.Mock).mockImplementation((s: number) =>
+        s >= 80 ? 'P1' : 'P4',
+      );
+      (m.state.priorityLabel as jest.Mock).mockReturnValue('x');
+
+      const items = await service.list(jefe(), { band: ['P1', 'SIN_PRIORIZAR'] });
+      expect(items.map((i) => i.id).sort()).toEqual(['r1', 'r2']);
+    });
   });
 });

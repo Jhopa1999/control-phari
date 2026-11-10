@@ -1,5 +1,5 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+﻿import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PortfolioService } from './portfolio.service';
 import { ListPortfolioDto } from './dto/list-portfolio.dto';
 import { PortfolioItemResponseDto } from './dto/portfolio-item-response.dto';
@@ -23,10 +23,7 @@ export class PortfolioController {
   constructor(private readonly portfolioService: PortfolioService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Listado del portafolio en alcance (filtros opcionales).' })
-  @ApiQuery({ name: 'mainProcessId', required: false, format: 'uuid' })
-  @ApiQuery({ name: 'state', required: false })
-  @ApiQuery({ name: 'band', required: false, example: 'P1' })
+  @ApiOperation({ summary: 'Listado del portafolio en alcance (filtros opcionales de selección múltiple: OR dentro de un filtro, AND entre filtros).' })
   @ApiResponse({ status: 200, description: 'Iniciativas del portafolio.', type: [PortfolioItemResponseDto] })
   @ApiResponse({ status: 400, description: 'Filtros invalidos.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })

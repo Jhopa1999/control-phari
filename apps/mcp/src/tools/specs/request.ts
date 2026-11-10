@@ -78,6 +78,7 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
     access: 'read',
     description:
       'Obtiene la vista de portafolio (GET /portfolio), con filtros opcionales ' +
-      'por banda, estado y proceso principal.',
+      'por banda, estado y proceso principal; cada filtro admite varios valores ' +
+      '(arreglo, se combinan con O; entre filtros es Y; máximo 50 por filtro).',
   },
 ];

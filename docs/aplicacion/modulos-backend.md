@@ -261,7 +261,7 @@ Vistas de solo lectura: el portafolio de iniciativas y el control del área
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/portfolio` | Listado del portafolio en alcance (filtros `mainProcessId`, `state`, `band`). `mainProcessId` admite un UUID o el literal `SIN_PROCESO` para las solicitudes sin proceso principal (aún por triar). Cada ítem incluye `progressPercent` (promedio del avance de las tareas del plan, `TERMINADA` = 100; `null` sin tareas) y la alerta de fecha objetivo `dueStatus` (`SIN_FECHA`, `EN_TIEMPO`, `PROXIMO_A_VENCER`, `VENCIDO`, `NO_APLICA` en cerradas/rechazadas/retiradas) con `daysToTarget`. El umbral de «próximo a vencer» es `PORTFOLIO_DUE_SOON_DAYS` (7 por defecto). |
+| GET | `/portfolio` | Listado del portafolio en alcance (filtros `mainProcessId`, `state`, `band`). Cada filtro admite uno o varios valores como parámetro repetido (`?state=A&state=B`; un solo valor se comporta como antes), con máximo 50 valores por filtro y 400 en español si algún elemento es inválido. Semántica: O dentro de un filtro, Y entre filtros, siempre intersectando el alcance del actor (nunca lo amplía). `mainProcessId` admite UUID o el literal `SIN_PROCESO` (solicitudes sin proceso principal, aún por triar), que se combina en O con los UUID; `band` admite `P1`..`P4` y `SIN_PRIORIZAR`. Cada ítem incluye `progressPercent` (promedio del avance de las tareas del plan, `TERMINADA` = 100; `null` sin tareas) y la alerta de fecha objetivo `dueStatus` (`SIN_FECHA`, `EN_TIEMPO`, `PROXIMO_A_VENCER`, `VENCIDO`, `NO_APLICA` en cerradas/rechazadas/retiradas) con `daysToTarget`. El umbral de «próximo a vencer» es `PORTFOLIO_DUE_SOON_DAYS` (7 por defecto). |
 
 ### Control del área (`area-control.controller.ts`)
 

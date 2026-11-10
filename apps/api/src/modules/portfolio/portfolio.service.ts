@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { CurrentActor } from '../auth/current-actor';
@@ -48,19 +48,29 @@ export class PortfolioService {
     };
     const and = where.AND as Prisma.RequestWhereInput[];
 
-    // Filtros que INTERSECTAN el alcance (se suman al AND, no lo amplian). El
-    // centinela SIN_PROCESO filtra las solicitudes sin proceso principal (aun
-    // sin triar); el resto es igualdad por UUID.
-    if (filters.mainProcessId !== undefined) {
-      and.push(
-        filters.mainProcessId === NO_PROCESS_SENTINEL
-          ? { mainProcessId: null }
-          : { mainProcessId: filters.mainProcessId },
-      );
+    // Filtros que INTERSECTAN el alcance (se suman al AND, no lo amplian). OR
+    // dentro de cada filtro, AND entre filtros. El centinela SIN_PROCESO se
+    // combina en OR con los UUID (mainProcessId IN (uuids) OR IS NULL).
+    const processFilter = filters.mainProcessId;
+    if (processFilter !== undefined && processFilter.length > 0) {
+      const uuids = processFilter.filter((id) => id !== NO_PROCESS_SENTINEL);
+      const includeNull = uuids.length !== processFilter.length;
+      const branches: Prisma.RequestWhereInput[] = [];
+      if (uuids.length > 0) {
+        branches.push({ mainProcessId: { in: uuids } });
+      }
+      if (includeNull) {
+        branches.push({ mainProcessId: null });
+      }
+      and.push(branches.length === 1 ? branches[0] : { OR: branches });
     }
-    if (filters.state !== undefined) {
-      and.push({ operationalState: filters.state });
+    if (filters.state !== undefined && filters.state.length > 0) {
+      and.push({ operationalState: { in: filters.state } });
     }
+    const bandFilter =
+      filters.band !== undefined && filters.band.length > 0
+        ? new Set<string>(filters.band)
+        : null;
 
     const requests = await this.prisma.request.findMany({
       where,
@@ -141,9 +151,9 @@ export class PortfolioService {
       const currentScore = hasEvaluation ? evaluation.score : null;
 
       // El filtro de banda intersecta el alcance tras resolver la vigente.
-      if (filters.band !== undefined) {
+      if (bandFilter !== null) {
         const effectiveBand = priorityBand ?? 'SIN_PRIORIZAR';
-        if (effectiveBand !== filters.band) {
+        if (!bandFilter.has(effectiveBand)) {
           continue;
         }
       }

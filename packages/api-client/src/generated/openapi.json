@@ -7878,53 +7878,63 @@
             "name": "mainProcessId",
             "required": false,
             "in": "query",
-            "description": "Filtra por proceso principal (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aun por triar).",
+            "description": "Filtra por uno o varios procesos principales (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aún por triar). Se repite el parámetro (?mainProcessId=a&mainProcessId=b); los valores se combinan con O. Máximo 50 valores.",
             "schema": {
-              "format": "uuid",
-              "type": "string"
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
             "name": "state",
             "required": false,
             "in": "query",
-            "description": "Filtra por estado operativo.",
+            "description": "Filtra por uno o varios estados operativos (?state=A&state=B; se combinan con O). Máximo 50 valores.",
             "schema": {
-              "type": "string",
-              "enum": [
-                "REGISTRADA",
-                "EN_TRIAGE",
-                "DEVUELTA",
-                "RECHAZADA",
-                "BACKLOG_PRIORIZADO",
-                "COMPROMETIDA",
-                "EN_PLANIFICACION",
-                "EN_EJECUCION",
-                "BLOQUEADA",
-                "EN_VALIDACION",
-                "LISTA_PARA_LIBERAR",
-                "EN_ESTABILIZACION",
-                "OPERATIVA",
-                "CERRADA",
-                "RETIRADA"
-              ]
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "REGISTRADA",
+                  "EN_TRIAGE",
+                  "DEVUELTA",
+                  "RECHAZADA",
+                  "BACKLOG_PRIORIZADO",
+                  "COMPROMETIDA",
+                  "EN_PLANIFICACION",
+                  "EN_EJECUCION",
+                  "BLOQUEADA",
+                  "EN_VALIDACION",
+                  "LISTA_PARA_LIBERAR",
+                  "EN_ESTABILIZACION",
+                  "OPERATIVA",
+                  "CERRADA",
+                  "RETIRADA"
+                ]
+              }
             }
           },
           {
             "name": "band",
             "required": false,
             "in": "query",
-            "description": "Filtra por banda de prioridad o SIN_PRIORIZAR.",
+            "description": "Filtra por una o varias bandas de prioridad (P1..P4) o SIN_PRIORIZAR (?band=P1&band=SIN_PRIORIZAR; se combinan con O). Máximo 50 valores.",
             "schema": {
-              "example": "P1",
-              "type": "string",
-              "enum": [
-                "P1",
-                "P2",
-                "P3",
-                "P4",
-                "SIN_PRIORIZAR"
-              ]
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "P1",
+                  "P2",
+                  "P3",
+                  "P4",
+                  "SIN_PRIORIZAR"
+                ]
+              }
             }
           }
         ],
@@ -7949,7 +7959,7 @@
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Listado del portafolio en alcance (filtros opcionales).",
+        "summary": "Listado del portafolio en alcance (filtros opcionales de selección múltiple: OR dentro de un filtro, AND entre filtros).",
         "tags": [
           "portfolio"
         ]

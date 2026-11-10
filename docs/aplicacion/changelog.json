@@ -635,6 +635,14 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "BL-036 (Entrega 3, front) · Mi trabajo: sección «Por aprobar» para jefes y líderes (Aprobar/Devolver), estado «Espera aprobación» para el integrante (sin Terminar ni Reabrir), diálogo «Antes de enviar a revisión» (avance 100 % y evidencia en un solo PATCH), tarjeta «tareas por aprobar» en el Panel, detalle y tablero coherentes, retiro de los avisos no bloqueantes de la Entrega 1 y mensajes 403 del servidor en español."
+    },
+    {
+      "timestamp": "2026-11-13T12:00:00Z",
+      "trigger_file": "apps/api/src/modules/portfolio/dto/list-portfolio.dto.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md"
+      ],
+      "summary": "GET /portfolio admite selección múltiple en mainProcessId, state y band (parámetro repetido, O dentro de cada filtro, Y entre filtros, máximo 50 valores, SIN_PROCESO en O con los UUID); un solo valor se comporta como antes y el alcance del actor no se amplía. Contrato, cliente y descripción de la tool portfolio.get actualizados."
     }
   ]
 }

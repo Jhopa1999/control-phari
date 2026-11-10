@@ -2155,7 +2155,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Listado del portafolio en alcance (filtros opcionales). */
+        /** Listado del portafolio en alcance (filtros opcionales de selección múltiple: OR dentro de un filtro, AND entre filtros). */
         get: operations["PortfolioController_list"];
         put?: never;
         post?: never;
@@ -13781,12 +13781,12 @@ export interface operations {
     PortfolioController_list: {
         parameters: {
             query?: {
-                /** @description Filtra por proceso principal (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aun por triar). */
-                mainProcessId?: string;
-                /** @description Filtra por estado operativo. */
-                state?: "REGISTRADA" | "EN_TRIAGE" | "DEVUELTA" | "RECHAZADA" | "BACKLOG_PRIORIZADO" | "COMPROMETIDA" | "EN_PLANIFICACION" | "EN_EJECUCION" | "BLOQUEADA" | "EN_VALIDACION" | "LISTA_PARA_LIBERAR" | "EN_ESTABILIZACION" | "OPERATIVA" | "CERRADA" | "RETIRADA";
-                /** @description Filtra por banda de prioridad o SIN_PRIORIZAR. */
-                band?: "P1" | "P2" | "P3" | "P4" | "SIN_PRIORIZAR";
+                /** @description Filtra por uno o varios procesos principales (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aún por triar). Se repite el parámetro (?mainProcessId=a&mainProcessId=b); los valores se combinan con O. Máximo 50 valores. */
+                mainProcessId?: string[];
+                /** @description Filtra por uno o varios estados operativos (?state=A&state=B; se combinan con O). Máximo 50 valores. */
+                state?: ("REGISTRADA" | "EN_TRIAGE" | "DEVUELTA" | "RECHAZADA" | "BACKLOG_PRIORIZADO" | "COMPROMETIDA" | "EN_PLANIFICACION" | "EN_EJECUCION" | "BLOQUEADA" | "EN_VALIDACION" | "LISTA_PARA_LIBERAR" | "EN_ESTABILIZACION" | "OPERATIVA" | "CERRADA" | "RETIRADA")[];
+                /** @description Filtra por una o varias bandas de prioridad (P1..P4) o SIN_PRIORIZAR (?band=P1&band=SIN_PRIORIZAR; se combinan con O). Máximo 50 valores. */
+                band?: ("P1" | "P2" | "P3" | "P4" | "SIN_PRIORIZAR")[];
             };
             header?: never;
             path?: never;
