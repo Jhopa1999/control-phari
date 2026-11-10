@@ -15,6 +15,7 @@ import {
   Lock,
   Plus,
   Upload,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -95,6 +96,7 @@ import { SegmentedRadio } from '@/components/ui/segmented-radio';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { TaskDetail } from '../tareas/task-detail';
 import { PhaseDialog } from './phase-dialog';
+import { ParticipantsDialog } from './participants-dialog';
 import { PlanGuidePanel } from './plan-guide-panel';
 import { PlanSummary } from './plan-summary';
 import { BlockReasonDialog } from './block-reason-dialog';
@@ -197,6 +199,9 @@ export function PlanView(): React.ReactElement {
   const [people, setPeople] = React.useState<ResponsibleCandidate[]>([]);
   // Distingue el fallo de carga de una lista legitimamente vacia (design 3.6.1).
   const [peopleState, setPeopleState] = React.useState<LoadState>('loading');
+  // Sube al cambiar los procesos que intervienen: vuelve a pedir los candidatos.
+  const [peopleVersion, setPeopleVersion] = React.useState(0);
+  const [participantsOpen, setParticipantsOpen] = React.useState(false);
 
   // --- Filtros de la lista de tareas ---
   const [q, setQ] = React.useState('');
@@ -307,7 +312,7 @@ export function PlanView(): React.ReactElement {
     return () => {
       active = false;
     };
-  }, [planId, permissionsLoaded, planAllowed]);
+  }, [planId, permissionsLoaded, planAllowed, peopleVersion]);
 
   // Regla 1 de §7.9.1: adoptar ?requestId= al terminar la carga y cuando cambia.
   React.useEffect(() => {
@@ -683,6 +688,9 @@ export function PlanView(): React.ReactElement {
   const isPlanManager = (permissions?.grants ?? []).some(
     (g) => g.roleCode === 'JEFE_AREA' || g.roleCode === 'LIDER_PROCESO',
   );
+  // Gestionar procesos que intervienen es exclusivo del jefe de área (el líder no;
+  // ADMIN no hereda JEFE_AREA). Gating cosmético: la API impone el 403.
+  const isJefeArea = (permissions?.grants ?? []).some((g) => g.roleCode === 'JEFE_AREA');
   // Fila ocupada: el busy global bloquea toda la tabla; rowBusyId, su propia fila.
   const inlineBusy = React.useCallback(
     (taskId: string) => busy || rowBusyId === taskId,
@@ -1227,6 +1235,7 @@ export function PlanView(): React.ReactElement {
           </InlineNotice>
         ) : null}
         <PlanSummary plan={plan} />
+        {isJefeArea ? renderParticipantsAction() : null}
         {renderPlanActions()}
         {importErrors.length > 0 ? (
           <InlineNotice tone="danger" title={`No se importó el archivo: se encontraron ${importErrors.length} error(es).`}>
@@ -1257,6 +1266,36 @@ export function PlanView(): React.ReactElement {
           />
         ) : null}
       </>
+    );
+  }
+
+  /** Acceso del jefe de área al diálogo de procesos que intervienen. */
+  function renderParticipantsAction(): React.ReactElement {
+    return (
+      <section
+        aria-label="Procesos que intervienen"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-card p-4 shadow-card"
+      >
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-link"
+          >
+            <Users className="size-5" />
+          </span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <h3 className="text-sm font-semibold">Procesos que intervienen</h3>
+            <p className="text-meta text-muted-foreground">
+              Solo las personas de estos procesos pueden ser responsables de tareas. Agrega o quita
+              procesos sin repetir el triage.
+            </p>
+          </div>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => setParticipantsOpen(true)}>
+          <Users aria-hidden="true" />
+          Gestionar procesos que intervienen
+        </Button>
+      </section>
     );
   }
 
@@ -1458,6 +1497,14 @@ export function PlanView(): React.ReactElement {
 
       {plan ? (
         <>
+          {isJefeArea ? (
+            <ParticipantsDialog
+              open={participantsOpen}
+              requestId={selectedId}
+              onOpenChange={setParticipantsOpen}
+              onSaved={() => setPeopleVersion((n) => n + 1)}
+            />
+          ) : null}
           <PhaseDialog
             open={phaseDialog.open}
             phase={phaseDialog.phase}

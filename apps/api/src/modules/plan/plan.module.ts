@@ -8,6 +8,7 @@ import { PlanController } from './plan.controller';
 import { PlanService } from './plan.service';
 import { PlanExcelService } from './plan-excel.service';
 import { PlanStateService } from './plan-state.service';
+import { PlanParticipantsService } from './plan-participants.service';
 import { PlanGuideService } from './plan-guide.service';
 import { PhaseController } from './phase/phase.controller';
 import { PhaseService } from './phase/phase.service';
@@ -41,6 +42,7 @@ import { EvidenceService } from './evidence/evidence.service';
     PlanService,
     PlanExcelService,
     PlanStateService,
+    PlanParticipantsService,
     PlanGuideService,
     PhaseService,
     TaskService,

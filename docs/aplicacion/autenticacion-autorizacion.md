@@ -132,6 +132,7 @@ crear/editar/borrar exige `JEFE_AREA`/`LIDER_PROCESO`. En `approval`, la clase p
 `JEFE_AREA`/`LIDER_PROCESO` (ver cola e histórico), pero `POST /requests/:id/approval`
 declara `@Roles(JEFE_AREA)`: la **decisión** de aprobar o devolver es exclusiva del jefe
 de área y un líder recibe `403`.
+También es exclusiva del jefe de área la gestión de los procesos que intervienen en el plan (GET/PUT /requests/:requestId/plan/participants, @Roles(JEFE_AREA) por handler sobre un controller que admite jefe y líder): el líder, el integrante y ADMIN (ortogonal a JEFE_AREA) reciben 403.
 
 En `assets` la lectura (`GET`) la tienen los 3 roles de área (`JEFE_AREA`,
 `LIDER_PROCESO`, `INTEGRANTE`); `ADMIN` no figura en el `@Roles` del controller y por

@@ -1139,6 +1139,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests/{requestId}/plan/participants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Procesos que intervienen en la solicitud del plan y si se pueden quitar (solo jefe de área). */
+        get: operations["PlanController_getParticipants"];
+        /** Corrige los procesos que intervienen en la solicitud del plan: agrega o quita procesos participantes (solo jefe de área). No reabre el triage. */
+        put: operations["PlanController_updateParticipants"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/requests/{requestId}/plan/submit": {
         parameters: {
             query?: never;
@@ -4645,6 +4663,58 @@ export interface components {
             dependenciesCreated: number;
             /** @description Resumen legible del reemplazo. */
             message: string;
+        };
+        PlanParticipantBlockingTaskDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la tarea.
+             */
+            id: string;
+            /** @description Título de la tarea. */
+            title: string;
+            /** @description Nombre de la persona responsable de la tarea. */
+            responsibleName: string;
+        };
+        PlanParticipantProcessDto: {
+            /**
+             * Format: uuid
+             * @description Identificador del proceso.
+             */
+            processId: string;
+            /** @description Código del proceso. */
+            code: string;
+            /** @description Nombre del proceso. */
+            name: string;
+            /** @description Es el proceso principal (líder): participa siempre y no se quita. */
+            isMain: boolean;
+            /** @description Interviene hoy en la solicitud. */
+            isParticipant: boolean;
+            /** @description Se puede quitar hoy: participa, no es el principal y ninguna tarea del plan lo impide. */
+            canRemove: boolean;
+            /** @description Tareas del plan asignadas a personas que dejarían de ser elegibles si se quita este proceso (vacío si no impide nada). */
+            removalBlockedBy: components["schemas"]["PlanParticipantBlockingTaskDto"][];
+        };
+        PlanParticipantsResponseDto: {
+            /**
+             * Format: uuid
+             * @description Solicitud del plan.
+             */
+            requestId: string;
+            /**
+             * Format: uuid
+             * @description Proceso principal de la solicitud.
+             */
+            mainProcessId: string | null;
+            /** @description Procesos activos y los que ya participan, con el principal primero. */
+            processes: components["schemas"]["PlanParticipantProcessDto"][];
+            /** @description Procesos agregados por esta operación (vacío en la consulta). */
+            addedProcessIds: string[];
+            /** @description Procesos quitados por esta operación (vacío en la consulta). */
+            removedProcessIds: string[];
+        };
+        UpdatePlanParticipantsDto: {
+            /** @description Procesos que intervienen además del principal (el principal participa siempre y no se quita). Un proceso ausente de la lista se quita si ya participaba; solo se puede quitar si ninguna tarea del plan está asignada a personas que dejarían de ser elegibles. */
+            participantProcessIds: string[];
         };
         SubmitPlanDto: Record<string, never>;
         AuthorizePlanDto: Record<string, never>;
@@ -10583,6 +10653,96 @@ export interface operations {
                 content?: never;
             };
             /** @description El plan no esta en borrador ni devuelto. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_getParticipants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Procesos activos y participantes con su situación. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanParticipantsResponseDto"];
+                };
+            };
+            /** @description Solo el jefe de área puede gestionar los procesos que intervienen. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_updateParticipants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePlanParticipantsDto"];
+            };
+        };
+        responses: {
+            /** @description Procesos que intervienen tras el cambio. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanParticipantsResponseDto"];
+                };
+            };
+            /** @description Algún proceso no existe o no está activo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solo el jefe de área puede gestionar los procesos que intervienen. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan inexistente o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Estado de la solicitud no admitido o tareas asignadas impiden quitar un proceso. */
             409: {
                 headers: {
                     [name: string]: unknown;

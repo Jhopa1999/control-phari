@@ -10,6 +10,7 @@ import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
 import { AssetService } from '../../knowledge/asset/asset.service';
 import { RequestResponseDto } from '../dto/request-response.dto';
+import { resolveParticipantProcessIds } from '../request-participants';
 import { RequestState } from '../request-state';
 import { RequestStateService } from '../request-state.service';
 import { AssociateAssetDto } from './dto/associate-asset.dto';
@@ -144,35 +145,6 @@ export class TriageService {
       distinct: ['userId'],
     });
     return members.map((g) => g.userId);
-  }
-
-  /**
-   * Resuelve el conjunto de procesos que intervienen en la Request a partir de
-   * los ids enviados en el triage (design §2.3). El proceso principal participa
-   * SIEMPRE (BR-001): se deduplica y se antepone. Cada proceso extra debe
-   * existir y estar activo (400 si no, sin exponer Prisma). NO filtra por
-   * alcance: intervenir no amplia el scope del actor.
-   */
-  private async resolveParticipantIds(
-    mainProcessId: string,
-    participantProcessIds: string[] | undefined,
-  ): Promise<string[]> {
-    const requested = new Set<string>(participantProcessIds ?? []);
-    // El principal se materializa siempre; se deduplica para no duplicarlo.
-    requested.delete(mainProcessId);
-
-    const extra = Array.from(requested);
-    if (extra.length > 0) {
-      const active = await this.prisma.process.findMany({
-        where: { id: { in: extra }, active: true },
-        select: { id: true },
-      });
-      if (active.length !== extra.length) {
-        throw new BadRequestException('Revisa los datos ingresados.');
-      }
-    }
-
-    return [mainProcessId, ...extra];
   }
 
   /**
@@ -313,7 +285,8 @@ export class TriageService {
       dto.participantProcessIds !== undefined || fixesNewProcess;
     const participantIds =
       mustReconcileParticipants && effectiveMainProcessId !== null
-        ? await this.resolveParticipantIds(
+        ? await resolveParticipantProcessIds(
+            this.prisma,
             effectiveMainProcessId,
             dto.participantProcessIds,
           )

@@ -77,6 +77,29 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
     description: 'Lista las tareas de un plan (GET /plans/{planId}/tasks).',
   },
   {
+    name: 'plan.participants.get',
+    operation: 'GET /requests/{requestId}/plan/participants',
+    access: 'read',
+    description:
+      'Consulta los procesos que intervienen en la solicitud de un plan ' +
+      '(GET /requests/{requestId}/plan/participants): procesos activos y ' +
+      'participantes, cuál es el principal, si cada uno se puede quitar y qué ' +
+      'tareas lo impiden. Solo lectura; exclusivo del jefe de área.',
+  },
+  {
+    name: 'plan.participants.update',
+    operation: 'PUT /requests/{requestId}/plan/participants',
+    access: 'destructive',
+    description:
+      'Corrige los procesos que intervienen en la solicitud de un plan ' +
+      '(PUT /requests/{requestId}/plan/participants). El cuerpo es ' +
+      'UpdatePlanParticipantsDto { participantProcessIds: [uuid] }: reemplaza ' +
+      'los procesos participantes ADEMÁS del principal (que no se quita). ' +
+      'Agregar habilita al instante a su gente como responsables; quitar se ' +
+      'rechaza (409) si hay tareas asignadas a personas que dejarían de ser ' +
+      'elegibles. No reabre el triage. Exclusivo del jefe de área; se audita.',
+  },
+  {
     name: 'plan.responsible-candidates',
     operation: 'GET /plans/{planId}/responsible-candidates',
     access: 'read',

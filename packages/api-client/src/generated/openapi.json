@@ -3999,6 +3999,96 @@
         ]
       }
     },
+    "/requests/{requestId}/plan/participants": {
+      "get": {
+        "operationId": "PlanController_getParticipants",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Procesos activos y participantes con su situación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanParticipantsResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Solo el jefe de área puede gestionar los procesos que intervienen."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          }
+        },
+        "summary": "Procesos que intervienen en la solicitud del plan y si se pueden quitar (solo jefe de área).",
+        "tags": [
+          "plan"
+        ]
+      },
+      "put": {
+        "operationId": "PlanController_updateParticipants",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlanParticipantsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Procesos que intervienen tras el cambio.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanParticipantsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Algún proceso no existe o no está activo."
+          },
+          "403": {
+            "description": "Solo el jefe de área puede gestionar los procesos que intervienen."
+          },
+          "404": {
+            "description": "Plan inexistente o fuera de alcance."
+          },
+          "409": {
+            "description": "Estado de la solicitud no admitido o tareas asignadas impiden quitar un proceso."
+          }
+        },
+        "summary": "Corrige los procesos que intervienen en la solicitud del plan: agrega o quita procesos participantes (solo jefe de área). No reabre el triage.",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
     "/requests/{requestId}/plan/submit": {
       "post": {
         "operationId": "PlanController_submit",
@@ -13456,6 +13546,137 @@
           "tasksCreated",
           "dependenciesCreated",
           "message"
+        ]
+      },
+      "PlanParticipantBlockingTaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador de la tarea."
+          },
+          "title": {
+            "type": "string",
+            "description": "Título de la tarea."
+          },
+          "responsibleName": {
+            "type": "string",
+            "description": "Nombre de la persona responsable de la tarea."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "responsibleName"
+        ]
+      },
+      "PlanParticipantProcessDto": {
+        "type": "object",
+        "properties": {
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador del proceso."
+          },
+          "code": {
+            "type": "string",
+            "description": "Código del proceso."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del proceso."
+          },
+          "isMain": {
+            "type": "boolean",
+            "description": "Es el proceso principal (líder): participa siempre y no se quita."
+          },
+          "isParticipant": {
+            "type": "boolean",
+            "description": "Interviene hoy en la solicitud."
+          },
+          "canRemove": {
+            "type": "boolean",
+            "description": "Se puede quitar hoy: participa, no es el principal y ninguna tarea del plan lo impide."
+          },
+          "removalBlockedBy": {
+            "description": "Tareas del plan asignadas a personas que dejarían de ser elegibles si se quita este proceso (vacío si no impide nada).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanParticipantBlockingTaskDto"
+            }
+          }
+        },
+        "required": [
+          "processId",
+          "code",
+          "name",
+          "isMain",
+          "isParticipant",
+          "canRemove",
+          "removalBlockedBy"
+        ]
+      },
+      "PlanParticipantsResponseDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud del plan."
+          },
+          "mainProcessId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Proceso principal de la solicitud."
+          },
+          "processes": {
+            "description": "Procesos activos y los que ya participan, con el principal primero.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanParticipantProcessDto"
+            }
+          },
+          "addedProcessIds": {
+            "description": "Procesos agregados por esta operación (vacío en la consulta).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "removedProcessIds": {
+            "description": "Procesos quitados por esta operación (vacío en la consulta).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "requestId",
+          "mainProcessId",
+          "processes",
+          "addedProcessIds",
+          "removedProcessIds"
+        ]
+      },
+      "UpdatePlanParticipantsDto": {
+        "type": "object",
+        "properties": {
+          "participantProcessIds": {
+            "description": "Procesos que intervienen además del principal (el principal participa siempre y no se quita). Un proceso ausente de la lista se quita si ya participaba; solo se puede quitar si ninguna tarea del plan está asignada a personas que dejarían de ser elegibles.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "participantProcessIds"
         ]
       },
       "SubmitPlanDto": {
