@@ -27,6 +27,7 @@ import { AcceptTaskDto } from './dto/accept-task.dto';
 import { ListPlanTasksDto } from './dto/list-plan-tasks.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
 import { MyWorkItemDto } from './dto/my-work-item.dto';
+import { PendingReviewListDto } from './dto/pending-review-task.dto';
 import { TaskHistoryEntryDto } from './dto/task-history-entry.dto';
 import { ResponsibleCandidateDto } from './dto/responsible-candidate.dto';
 import { CurrentActor } from '../../auth/current-actor.decorator';
@@ -56,6 +57,19 @@ export class TaskController {
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   myWork(@CurrentActor() actor: CurrentActorType) {
     return this.taskService.myWork(actor);
+  }
+
+  // Declarada ANTES de `tasks/:id` para que "pending-review" no se lea como un id.
+  @Get('tasks/pending-review')
+  @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO)
+  @ApiOperation({
+    summary:
+      'Cola «Por aprobar»: tareas en revisión dentro del alcance del actor (sin las propias), las que más esperan primero.',
+  })
+  @ApiResponse({ status: 200, description: 'Tareas por aprobar (hasta 100) y total real.', type: PendingReviewListDto })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente (solo jefe de área y líder de proceso).' })
+  pendingReview(@CurrentActor() actor: CurrentActorType) {
+    return this.taskService.pendingReview(actor);
   }
 
   @Get('plans/:planId/tasks')
@@ -170,14 +184,25 @@ export class TaskController {
 
   @Patch('tasks/:id/status')
   @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE)
-  @ApiOperation({ summary: 'Cambia el estado de una tarea (gate de predecesoras).' })
+  @ApiOperation({
+    summary:
+      'Cambia el estado de una tarea. Enviar a revisión exige avance 100 % y, si la tarea pide evidencia, nota/enlace o archivo; terminar y reabrir solo los hace un líder de proceso o el jefe de área.',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: UpdateTaskStatusDto })
   @ApiResponse({ status: 200, description: 'Estado actualizado.', type: TaskResponseDto })
   @ApiResponse({ status: 400, description: 'Datos invalidos.' })
-  @ApiResponse({ status: 403, description: 'Rol insuficiente o tarea ajena (integrante).' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Rol insuficiente, tarea ajena (integrante) o terminar/reabrir sin ser líder de proceso ni jefe de área (mensaje en español).',
+  })
   @ApiResponse({ status: 404, description: 'Tarea fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'Transicion no permitida o predecesora no satisfecha.' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Transicion no permitida, predecesora no satisfecha o requisitos de envío a revisión sin cumplir (avance < 100 % o falta evidencia; el mensaje dice cuál).',
+  })
   changeStatus(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

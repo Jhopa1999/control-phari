@@ -597,6 +597,9 @@ model Task {
   // Motivo vigente del bloqueo (max 500). Solo tiene valor mientras status =
   // BLOQUEADA; se limpia al salir. El historial conserva el motivo anterior.
   blockedReason          String?   @map("blocked_reason")
+  // BL-036 (Entrega 3): momento en que la tarea pasó a EN_REVISION. Se fija al
+  // entrar y se limpia al salir; null en tareas ya en revisión antes del despliegue.
+  reviewRequestedAt      DateTime? @map("review_requested_at")
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 

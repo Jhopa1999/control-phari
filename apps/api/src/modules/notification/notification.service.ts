@@ -10,6 +10,12 @@ export enum NotificationType {
   PLAN_AUTHORIZED = 'PLAN_AUTHORIZED',
   PLAN_RETURNED = 'PLAN_RETURNED',
   TASK_ASSIGNED = 'TASK_ASSIGNED',
+  /** Una tarea llegó a «En revisión» (a líderes del proceso y jefes del área). */
+  TASK_REVIEW_REQUESTED = 'TASK_REVIEW_REQUESTED',
+  /** Una tarea en revisión fue aprobada y quedó terminada (al responsable). */
+  TASK_APPROVED = 'TASK_APPROVED',
+  /** Una tarea en revisión fue devuelta a «En curso» (al responsable). */
+  TASK_RETURNED = 'TASK_RETURNED',
   DOCUMENT_PENDING_APPROVAL = 'DOCUMENT_PENDING_APPROVAL',
   DOCUMENT_APPROVED = 'DOCUMENT_APPROVED',
   DOCUMENT_REJECTED = 'DOCUMENT_REJECTED',

@@ -17,10 +17,12 @@ function createMocks() {
     task: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     },
+    taskEvidence: { count: jest.fn().mockResolvedValue(0) },
     planPhase: { findFirst: jest.fn() },
     taskDependency: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
   };
@@ -81,8 +83,11 @@ function makeTask(overrides: Record<string, unknown> = {}) {
     acceptedByUserId: null,
     evidenceUrl: null,
     blockedReason: null,
+    reviewRequestedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    // Conteo de archivos de evidencia que Prisma embebe con `_count`.
+    _count: { evidences: 0 },
     ...overrides,
   };
 }
@@ -101,10 +106,20 @@ function makeTaskWithDeps(overrides: Record<string, unknown> = {}) {
 describe('TaskService', () => {
   let service: TaskService;
   let m: ReturnType<typeof createMocks>;
+  let notifier: {
+    notify: jest.Mock;
+    areaHeadsForProcess: jest.Mock;
+    processLeaders: jest.Mock;
+  };
 
   beforeEach(() => {
     m = createMocks();
-    service = new TaskService(m.prisma, m.audit, m.planState, { notify: jest.fn(), areaHeadsForProcess: jest.fn().mockResolvedValue([]), processLeaders: jest.fn().mockResolvedValue([]) } as never);
+    notifier = {
+      notify: jest.fn(),
+      areaHeadsForProcess: jest.fn().mockResolvedValue(['jefe1']),
+      processLeaders: jest.fn().mockResolvedValue(['lider1']),
+    };
+    service = new TaskService(m.prisma, m.audit, m.planState, notifier as never);
   });
 
   describe('create (regla hito, AC-011)', () => {
@@ -808,6 +823,395 @@ describe('TaskService', () => {
       expect(data.accepted).toBe(false);
       expect(data.acceptedAt).toBeNull();
       expect(data.acceptedBy).toEqual({ disconnect: true });
+    });
+  });
+
+  describe('regla de cierre (BL-036, Entrega 3)', () => {
+    const integrante = () => actorWith(RoleCode.INTEGRANTE, 'u1');
+    const lider = () => actorWith(RoleCode.LIDER_PROCESO, 'ul');
+    const jefe = () => actorWith(RoleCode.JEFE_AREA, 'uj');
+
+    function scope(overrides: Record<string, unknown> = {}) {
+      const task = makeTask({ responsibleUserId: 'u1', status: TaskStatus.EN_CURSO, progress: 100, ...overrides });
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task,
+        planId: 'plan1',
+        requestId: 'r1',
+        mainProcessId: 'p1',
+        requestState: 'EN_EJECUCION',
+      });
+      (m.prismaObj.task as any).update.mockResolvedValue(task);
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(makeTaskWithDeps({ ...overrides }));
+      // El plan aún tiene tareas pendientes: no se dispara el aviso de plan completo.
+      (m.prismaObj.task as any).count.mockResolvedValue(1);
+      return task;
+    }
+    const updateData = () => (m.prismaObj.task as any).update.mock.calls[0][0].data;
+    const sendToReview = (actor: CurrentActor, extra: Record<string, unknown> = {}) =>
+      service.changeStatus(actor, 't1', { status: TaskStatus.EN_REVISION, ...extra });
+    const messageOf = async (p: Promise<unknown>) => {
+      try {
+        await p;
+      } catch (e) {
+        return (e as Error).message;
+      }
+      return null;
+    };
+
+    describe('enviar a revisión: avance', () => {
+      it('con avance menor a 100 -> 409 y no escribe', async () => {
+        scope({ progress: 90 });
+        const p = sendToReview(integrante());
+        await expect(p).rejects.toBeInstanceOf(ConflictException);
+        await expect(messageOf(sendToReview(integrante()))).resolves.toContain('ahora está en 90 %');
+        expect((m.prismaObj.task as any).update).not.toHaveBeenCalled();
+      });
+
+      it('el avance del mismo PATCH cuenta como efectivo (90 guardado, 100 enviado) -> ok', async () => {
+        scope({ progress: 90 });
+        await sendToReview(integrante(), { progress: 100 });
+        expect(updateData().progress).toBe(100);
+        expect(updateData().status).toBe(TaskStatus.EN_REVISION);
+      });
+
+      it('el avance del PATCH menor a 100 gana sobre el guardado en 100 -> 409', async () => {
+        scope({ progress: 100 });
+        await expect(sendToReview(integrante(), { progress: 80 })).rejects.toBeInstanceOf(ConflictException);
+      });
+
+      it('aplica también a líder y jefe', async () => {
+        scope({ progress: 50, responsibleUserId: 'otro' });
+        await expect(sendToReview(lider())).rejects.toBeInstanceOf(ConflictException);
+        await expect(sendToReview(jefe())).rejects.toBeInstanceOf(ConflictException);
+      });
+    });
+
+    describe('enviar a revisión: evidencia', () => {
+      const msgEvidencia = 'Esta tarea exige evidencia para enviarse a revisión';
+
+      it('con criterios de aceptación y sin evidencia -> 409', async () => {
+        scope({ acceptanceCriteria: 'Debe cuadrar el saldo' });
+        await expect(messageOf(sendToReview(integrante()))).resolves.toContain(msgEvidencia);
+        expect((m.prismaObj.taskEvidence as any).count).toHaveBeenCalledWith({ where: { taskId: 't1' } });
+        expect((m.prismaObj.task as any).update).not.toHaveBeenCalled();
+      });
+
+      it('con fase de gobierno requerida y sin evidencia -> 409', async () => {
+        scope({ frameworkPhaseRequired: 'PLANIFICACION' });
+        await expect(messageOf(sendToReview(integrante()))).resolves.toContain(msgEvidencia);
+      });
+
+      it('criterios solo con espacios no exigen evidencia', async () => {
+        scope({ acceptanceCriteria: '   ' });
+        await sendToReview(integrante());
+        expect(updateData().status).toBe(TaskStatus.EN_REVISION);
+        expect((m.prismaObj.taskEvidence as any).count).not.toHaveBeenCalled();
+      });
+
+      it('evidencia por nota enviada en el mismo PATCH -> ok sin consultar archivos', async () => {
+        scope({ acceptanceCriteria: 'AC' });
+        await sendToReview(integrante(), { evidenceUrl: 'https://ev/acta' });
+        expect(updateData().evidenceUrl).toBe('https://ev/acta');
+        expect((m.prismaObj.taskEvidence as any).count).not.toHaveBeenCalled();
+      });
+
+      it('evidencia por nota ya guardada en la tarea -> ok', async () => {
+        scope({ acceptanceCriteria: 'AC', evidenceUrl: 'https://ev/previa' });
+        await sendToReview(integrante());
+        expect(updateData().status).toBe(TaskStatus.EN_REVISION);
+      });
+
+      it('nota enviada vacía no sustituye a la guardada: cuenta como sin nota -> 409', async () => {
+        scope({ acceptanceCriteria: 'AC', evidenceUrl: 'https://ev/previa' });
+        await expect(sendToReview(integrante(), { evidenceUrl: '   ' })).rejects.toBeInstanceOf(ConflictException);
+      });
+
+      it('evidencia por archivo (task_evidences) -> ok', async () => {
+        scope({ acceptanceCriteria: 'AC' });
+        (m.prismaObj.taskEvidence as any).count.mockResolvedValue(2);
+        await sendToReview(integrante());
+        expect(updateData().status).toBe(TaskStatus.EN_REVISION);
+      });
+
+      it('sin criterios ni fase de gobierno y sin evidencia -> ok', async () => {
+        scope();
+        await sendToReview(integrante());
+        expect(updateData().status).toBe(TaskStatus.EN_REVISION);
+      });
+
+      it('faltan avance y evidencia -> un solo 409 que nombra las dos cosas', async () => {
+        scope({ progress: 70, acceptanceCriteria: 'AC' });
+        const msg = await messageOf(sendToReview(integrante()));
+        expect(msg).toContain('falta: avance al 100 % (ahora está en 70 %) y evidencia');
+      });
+    });
+
+    describe('terminar (EN_REVISION -> TERMINADA)', () => {
+      it('integrante responsable -> 403 con mensaje en español', async () => {
+        scope({ status: TaskStatus.EN_REVISION });
+        const p = service.changeStatus(integrante(), 't1', { status: TaskStatus.TERMINADA });
+        await expect(p).rejects.toBeInstanceOf(ForbiddenException);
+        const msg = await messageOf(service.changeStatus(integrante(), 't1', { status: TaskStatus.TERMINADA }));
+        expect(msg).toContain('Solo un líder de proceso o el jefe de área puede terminar una tarea');
+        expect(msg).toContain('la aprueba un líder o el jefe de área');
+        expect((m.prismaObj.task as any).update).not.toHaveBeenCalled();
+      });
+
+      it('líder (no responsable) -> ok', async () => {
+        scope({ status: TaskStatus.EN_REVISION });
+        await service.changeStatus(lider(), 't1', { status: TaskStatus.TERMINADA });
+        expect(updateData().status).toBe(TaskStatus.TERMINADA);
+      });
+
+      it('jefe -> ok', async () => {
+        scope({ status: TaskStatus.EN_REVISION });
+        await service.changeStatus(jefe(), 't1', { status: TaskStatus.TERMINADA });
+        expect(updateData().status).toBe(TaskStatus.TERMINADA);
+      });
+
+      it('líder que es el responsable -> ok', async () => {
+        scope({ status: TaskStatus.EN_REVISION, responsibleUserId: 'ul' });
+        await service.changeStatus(lider(), 't1', { status: TaskStatus.TERMINADA });
+        expect(updateData().status).toBe(TaskStatus.TERMINADA);
+      });
+
+      it('desde EN_CURSO sigue sin ser transición válida (409), también para el líder', async () => {
+        scope({ status: TaskStatus.EN_CURSO });
+        await expect(
+          service.changeStatus(lider(), 't1', { status: TaskStatus.TERMINADA }),
+        ).rejects.toBeInstanceOf(ConflictException);
+      });
+    });
+
+    describe('reabrir (TERMINADA -> EN_CURSO)', () => {
+      it('integrante responsable -> 403 con mensaje en español', async () => {
+        scope({ status: TaskStatus.TERMINADA });
+        const msg = await messageOf(service.changeStatus(integrante(), 't1', { status: TaskStatus.EN_CURSO }));
+        expect(msg).toBe('Solo un líder de proceso o el jefe de área puede reabrir una tarea terminada.');
+        expect((m.prismaObj.task as any).update).not.toHaveBeenCalled();
+      });
+
+      it('líder y jefe -> ok', async () => {
+        scope({ status: TaskStatus.TERMINADA });
+        await service.changeStatus(lider(), 't1', { status: TaskStatus.EN_CURSO });
+        expect(updateData().status).toBe(TaskStatus.EN_CURSO);
+        (m.prismaObj.task as any).update.mockClear();
+        await service.changeStatus(jefe(), 't1', { status: TaskStatus.EN_CURSO });
+        expect(updateData().status).toBe(TaskStatus.EN_CURSO);
+      });
+    });
+
+    describe('devolver y resto de transiciones: sin cambios', () => {
+      it('el responsable integrante devuelve su tarea de EN_REVISION a EN_CURSO', async () => {
+        scope({ status: TaskStatus.EN_REVISION });
+        await service.changeStatus(integrante(), 't1', { status: TaskStatus.EN_CURSO });
+        expect(updateData().status).toBe(TaskStatus.EN_CURSO);
+      });
+
+      it('líder devuelve de EN_REVISION a EN_CURSO', async () => {
+        scope({ status: TaskStatus.EN_REVISION, responsibleUserId: 'otro' });
+        await service.changeStatus(lider(), 't1', { status: TaskStatus.EN_CURSO });
+        expect(updateData().status).toBe(TaskStatus.EN_CURSO);
+      });
+
+      it('integrante sigue sin poder mutar tareas ajenas (403 existente)', async () => {
+        scope({ status: TaskStatus.EN_REVISION, responsibleUserId: 'otro' });
+        await expect(
+          service.changeStatus(integrante(), 't1', { status: TaskStatus.EN_CURSO }),
+        ).rejects.toBeInstanceOf(ForbiddenException);
+      });
+
+      it('bloquear una tarea en revisión no pide requisitos', async () => {
+        scope({ status: TaskStatus.EN_REVISION, progress: 20 });
+        await service.changeStatus(integrante(), 't1', { status: TaskStatus.BLOQUEADA });
+        expect(updateData().status).toBe(TaskStatus.BLOQUEADA);
+      });
+    });
+
+    describe('reviewRequestedAt', () => {
+      it('se fija al pasar a EN_REVISION', async () => {
+        scope();
+        const before = Date.now();
+        await sendToReview(integrante());
+        const stamp = updateData().reviewRequestedAt as Date;
+        expect(stamp).toBeInstanceOf(Date);
+        expect(stamp.getTime()).toBeGreaterThanOrEqual(before);
+      });
+
+      it.each([
+        [TaskStatus.EN_CURSO, 'devolver'],
+        [TaskStatus.BLOQUEADA, 'bloquear'],
+      ])('se limpia al salir de EN_REVISION (%s: %s)', async (target) => {
+        scope({ status: TaskStatus.EN_REVISION, reviewRequestedAt: new Date() });
+        await service.changeStatus(integrante(), 't1', { status: target });
+        expect(updateData().reviewRequestedAt).toBeNull();
+      });
+
+      it('se limpia al terminar', async () => {
+        scope({ status: TaskStatus.EN_REVISION, reviewRequestedAt: new Date() });
+        await service.changeStatus(lider(), 't1', { status: TaskStatus.TERMINADA });
+        expect(updateData().reviewRequestedAt).toBeNull();
+      });
+    });
+
+    describe('notificaciones del flujo de revisión', () => {
+      it('al llegar a revisión avisa a líderes y jefes (excluye al actor)', async () => {
+        scope();
+        await sendToReview(integrante());
+        const call = notifier.notify.mock.calls.find((c) => c[0].type === 'TASK_REVIEW_REQUESTED');
+        expect(call?.[0]).toMatchObject({
+          userIds: ['lider1', 'jefe1'],
+          excludeUserId: 'u1',
+          title: 'Tarea por aprobar',
+          link: '/mi-trabajo#por-aprobar',
+        });
+        expect(call?.[0].message).toContain('espera tu aprobación');
+      });
+
+      it('al aprobar avisa al responsable', async () => {
+        scope({ status: TaskStatus.EN_REVISION });
+        await service.changeStatus(lider(), 't1', { status: TaskStatus.TERMINADA });
+        const call = notifier.notify.mock.calls.find((c) => c[0].type === 'TASK_APPROVED');
+        expect(call?.[0]).toMatchObject({ userIds: ['u1'], excludeUserId: 'ul', title: 'Tarea aprobada' });
+      });
+
+      it('al devolver avisa al responsable', async () => {
+        scope({ status: TaskStatus.EN_REVISION });
+        await service.changeStatus(lider(), 't1', { status: TaskStatus.EN_CURSO });
+        const call = notifier.notify.mock.calls.find((c) => c[0].type === 'TASK_RETURNED');
+        expect(call?.[0]).toMatchObject({ userIds: ['u1'], excludeUserId: 'ul', title: 'Tarea devuelta' });
+      });
+
+      it('un fallo al notificar no revierte el cambio de estado', async () => {
+        scope();
+        notifier.processLeaders.mockRejectedValue(new Error('boom'));
+        await expect(sendToReview(integrante())).resolves.toMatchObject({ id: 't1' });
+      });
+    });
+  });
+
+  describe('banderas de evidencia (evidenceRequired / hasEvidence)', () => {
+    it('findOne: exige evidencia por criterios y la cuenta desde _count (sin consulta extra)', async () => {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task: makeTask(), planId: 'plan1', requestId: 'r1', mainProcessId: 'p1',
+      });
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(
+        makeTaskWithDeps({ acceptanceCriteria: 'AC', _count: { evidences: 2 } }),
+      );
+      const res = await service.findOne(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1');
+      expect(res).toMatchObject({ evidenceRequired: true, hasEvidence: true });
+      expect((m.prismaObj.taskEvidence as any).count).not.toHaveBeenCalled();
+    });
+
+    it('findOne: sin criterios, sin fase de gobierno ni evidencia -> ambas false', async () => {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({
+        task: makeTask(), planId: 'plan1', requestId: 'r1', mainProcessId: 'p1',
+      });
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(makeTaskWithDeps());
+      const res = await service.findOne(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 't1');
+      expect(res).toMatchObject({ evidenceRequired: false, hasEvidence: false });
+    });
+
+    it('myWork: fase de gobierno exige; la nota guardada cuenta como evidencia; todo en una consulta', async () => {
+      const phase = {
+        id: 'ph1', name: 'F', planId: 'plan1',
+        plan: { requestId: 'r1', commitmentDate: null, request: { title: 'S', operationalState: 'EN_EJECUCION', initialCommitmentDate: null } },
+      };
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        { ...makeTask({ id: 'a', frameworkPhaseRequired: 'PLANIFICACION', evidenceUrl: 'nota' }), phase },
+        { ...makeTask({ id: 'b', acceptanceCriteria: 'AC' }), phase },
+        { ...makeTask({ id: 'c', acceptanceCriteria: 'AC', _count: { evidences: 1 } }), phase },
+      ]);
+      const res = await service.myWork(actorWith(RoleCode.INTEGRANTE, 'u1'));
+      expect(res.map((r) => [r.evidenceRequired, r.hasEvidence])).toEqual([
+        [true, true], [true, false], [true, true],
+      ]);
+      expect((m.prismaObj.task as any).findMany).toHaveBeenCalledTimes(1);
+      expect((m.prismaObj.task as any).findMany.mock.calls[0][0].include._count).toEqual({ select: { evidences: true } });
+      expect((m.prismaObj.taskEvidence as any).count).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('pendingReview (cola «Por aprobar»)', () => {
+    const row = (overrides: Record<string, unknown> = {}) => ({
+      ...makeTask({ id: 'q1', status: TaskStatus.EN_REVISION, progress: 100, ...overrides }),
+      responsible: 'responsible' in overrides ? overrides.responsible : { name: 'Ana' },
+      phase: { name: 'Fase 1', plan: { requestId: 'r1', request: { title: 'Solicitud 1' } } },
+    });
+
+    it('alcance de líder: procesos de sus grants, solo EN_REVISION, sin CERRADA ni las propias (null sí cuenta)', async () => {
+      (m.prismaObj.task as any).count.mockResolvedValue(0);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([]);
+      await service.pendingReview(actorWith(RoleCode.LIDER_PROCESO, 'ul'));
+      const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
+      expect(where).toEqual({
+        status: TaskStatus.EN_REVISION,
+        phase: {
+          plan: {
+            request: { deletedAt: null, operationalState: { not: 'CERRADA' }, mainProcessId: { in: ['p1'] } },
+          },
+        },
+        OR: [{ responsibleUserId: null }, { responsibleUserId: { not: 'ul' } }],
+      });
+      // El total usa exactamente la misma cláusula.
+      expect((m.prismaObj.task as any).count.mock.calls[0][0].where).toEqual(where);
+    });
+
+    it('jefe: sin filtro de proceso', async () => {
+      (m.prismaObj.task as any).count.mockResolvedValue(0);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([]);
+      await service.pendingReview(actorWith(RoleCode.JEFE_AREA, 'uj'));
+      const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
+      expect(where.phase.plan.request).toEqual({ deletedAt: null, operationalState: { not: 'CERRADA' } });
+      expect(where.OR).toContainEqual({ responsibleUserId: { not: 'uj' } });
+    });
+
+    it('orden: reviewRequestedAt ascendente con null primero, luego updatedAt; tope 100', async () => {
+      (m.prismaObj.task as any).count.mockResolvedValue(130);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([]);
+      const res = await service.pendingReview(actorWith(RoleCode.LIDER_PROCESO, 'ul'));
+      const args = (m.prismaObj.task as any).findMany.mock.calls[0][0];
+      expect(args.orderBy).toEqual([{ reviewRequestedAt: { sort: 'asc', nulls: 'first' } }, { updatedAt: 'asc' }]);
+      expect(args.take).toBe(100);
+      expect(res.total).toBe(130);
+    });
+
+    it('mapea ítems: con fecha exacta no es aproximado; sin ella usa updatedAt y lo marca aproximado', async () => {
+      const requested = new Date('2026-11-01T10:00:00Z');
+      const updated = new Date('2026-10-20T10:00:00Z');
+      (m.prismaObj.task as any).count.mockResolvedValue(2);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        row({ id: 'viejo', reviewRequestedAt: null, updatedAt: updated, acceptanceCriteria: 'AC' }),
+        row({ id: 'nuevo', reviewRequestedAt: requested, evidenceUrl: 'nota', acceptanceCriteria: 'AC' }),
+      ]);
+      const res = await service.pendingReview(actorWith(RoleCode.LIDER_PROCESO, 'ul'));
+      expect(res.items[0]).toMatchObject({
+        id: 'viejo', responsibleName: 'Ana', requestTitle: 'Solicitud 1', phaseName: 'Fase 1',
+        waitingSince: updated, waitingSinceApproximate: true, reviewRequestedAt: null,
+        evidenceRequired: true, hasEvidence: false,
+      });
+      expect(res.items[1]).toMatchObject({
+        id: 'nuevo', waitingSince: requested, waitingSinceApproximate: false, hasEvidence: true,
+      });
+    });
+
+    it('sin N+1: una consulta de lista (responsable, fase y conteo de archivos incluidos) y un count', async () => {
+      (m.prismaObj.task as any).count.mockResolvedValue(1);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([row({ _count: { evidences: 3 }, acceptanceCriteria: 'AC' })]);
+      const res = await service.pendingReview(actorWith(RoleCode.JEFE_AREA, 'uj'));
+      expect((m.prismaObj.task as any).findMany).toHaveBeenCalledTimes(1);
+      expect((m.prismaObj.task as any).count).toHaveBeenCalledTimes(1);
+      expect((m.prismaObj.taskEvidence as any).count).not.toHaveBeenCalled();
+      const include = (m.prismaObj.task as any).findMany.mock.calls[0][0].include;
+      expect(include._count).toEqual({ select: { evidences: true } });
+      expect(res.items[0].hasEvidence).toBe(true);
+    });
+
+    it('tarea sin responsable: nombre null', async () => {
+      (m.prismaObj.task as any).count.mockResolvedValue(1);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([row({ responsibleUserId: null, responsible: null })]);
+      const res = await service.pendingReview(actorWith(RoleCode.LIDER_PROCESO, 'ul'));
+      expect(res.items[0]).toMatchObject({ responsibleUserId: null, responsibleName: null });
     });
   });
 });
