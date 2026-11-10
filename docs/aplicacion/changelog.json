@@ -627,6 +627,14 @@
         "apps/mcp/README.md"
       ],
       "summary": "BL-036 (Entrega 3, API) · Regla de cierre de tareas (CAMBIO DE REGLAS): enviar a revisión exige avance 100 % y evidencia si hay criterios o fase de gobierno (409); terminar y reabrir solo jefe de área o líder de proceso (403). Nueva cola GET /tasks/pending-review (tool MCP task.pending-review), pendingTaskReviews en GET /area-control/attention, evidenceRequired/hasEvidence en las respuestas de tarea y /my-work, columna tasks.review_requested_at (migración aditiva) y notificaciones TASK_REVIEW_REQUESTED, TASK_APPROVED y TASK_RETURNED. Contrato, cliente, MCP (116 tools) y asistente actualizados."
+    },
+    {
+      "timestamp": "2026-11-12T12:00:00Z",
+      "trigger_file": "apps/web/src/app/mi-trabajo/mi-trabajo-view.tsx",
+      "updated_docs": [
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "BL-036 (Entrega 3, front) · Mi trabajo: sección «Por aprobar» para jefes y líderes (Aprobar/Devolver), estado «Espera aprobación» para el integrante (sin Terminar ni Reabrir), diálogo «Antes de enviar a revisión» (avance 100 % y evidencia en un solo PATCH), tarjeta «tareas por aprobar» en el Panel, detalle y tablero coherentes, retiro de los avisos no bloqueantes de la Entrega 1 y mensajes 403 del servidor en español."
     }
   ]
 }

@@ -1,4 +1,4 @@
-﻿# Mi trabajo para miembros (`/mi-trabajo`): especificación UX/UI
+# Mi trabajo para miembros (`/mi-trabajo`): especificación UX/UI
 
 Especificación visual y de interacción (rol Diseñador) de la Entrega 1 del rediseño de «Mi trabajo», la vista del
 rol integrante. **No toca API, contrato OpenAPI, MCP, esquema ni permisos.** Reglas vigentes: `25-marca-gibo.md`,
@@ -1636,7 +1636,7 @@ Nunca se pinta la fila de evidencia si `evidenceRequired` es falso.
 - **«Poner el avance en 100 %»**: `Button variant="outline" size="sm"` (44 px en `< 640 px`), `aria-label="Poner el avance de «{título}» en 100 %"`. Al activarla, el foco **se queda** en el botón (ahora «Deshacer»).
 - **Campo**: `Textarea` con `id` propio, etiqueta visible «Nota o enlace de evidencia», `rows={3}`, `maxLength={2048}` (el límite del DTO), sin `placeholder` que sustituya a la etiqueta
   (ejemplo opcional «Ej.: https://… o una descripción breve»), `aria-describedby` = ayuda («Se guarda junto con el cambio de estado.») + error.
-- **«Subir archivo en el detalle»**: botón con aspecto de enlace (`text-link underline`, `ExternalLink` no; abre el panel). Cierra el diálogo y abre el panel lateral en la pestaña **Evidencia**
+- **«Subir archivo en el detalle»**: botón con aspecto de enlace (`text-link underline`, sin icono; abre el panel). Cierra el diálogo y abre el panel lateral en la pestaña **Evidencia**
   (en el detalle ya abierto, activa esa pestaña). Texto de ayuda bajo el enlace: «Cuando subas el archivo, vuelve a pulsar «Enviar a revisión».» Decisión simple: lo escrito en la nota
   **no se conserva** al ir al detalle; si el campo tiene texto, la ayuda bajo el enlace añade «Se perderá lo escrito aquí.». Tras subir el archivo, `hasEvidence` llega recalculado al refrescar la lista y el siguiente
   «Enviar a revisión» ya no abre el diálogo por evidencia.
@@ -1703,7 +1703,7 @@ Tareas de tu alcance que esperan tu decisión. Las que llevan más tiempo, prime
 │  Sin fecha                                [ Devolver ]  [ ✓ Aprobar ]           │
 └──────────────────────────────────────────────────────────────────────────────┘
         [ Ver las 2 restantes ]
-Tus propias tareas en revisión están en tu lista: ahí las terminas con «Terminar».   ← text-meta, solo si hay propias... (ver nota)
+Tus propias tareas en revisión están en tu lista: ahí las terminas con «Terminar».   ← text-meta, solo si el actor tiene propias en revisión
 ```
 
 | Elemento | Especificación |
@@ -1918,6 +1918,17 @@ Consecuencias: (1) todo cumple con margen; el más ajustado es el foco en oscuro
 - **Visual (obligatoria, capturas en `.agents/tasks/mi-trabajo-entrega3/screenshots/`):** integrante con tarea en revisión; diálogo (falta avance, falta evidencia, ambas); «Por aprobar» de un líder en 1440 claro y oscuro, 1024 y 1180 con menú expandido, 768 y 390; Panel con la tarjeta;
   Planificación con un error de regla.
 - **Manual:** teclado completo, lector de pantalla (los `aria-live` y `aria-describedby` nuevos), zoom 200 %, `forced-colors`.
+
+---
+
+## E3.14b Notas de la implementación
+
+- **`canApprove` por tarea:** no se añadió (decisión E3.0 #5); el front usa `canApproveTasks(roleCodes)` y el servidor decide (403).
+- **Orden de validación:** confirmado contra `changeStatus`: proyecto abierto → responsable → `blockedReason` → permiso de aprobar (403) → transición → predecesoras → requisitos (409). Coincide con E3.1.
+- **«Subir archivo en el detalle»:** lo escrito en la nota no se conserva al ir al detalle (la ayuda lo avisa).
+- **Detalle del integrante en En revisión:** el selector arranca vacío con la ayuda «Esta tarea espera la aprobación…» y el botón principal no disponible con su motivo visible hasta elegir Devolver o Bloquear.
+- **Aprobar/Devolver en la cola:** la fila queda ocupada (botones con carga) mientras responde el servidor y sale al confirmar; si falla, permanece y se muestra el mensaje.
+- **Módulo puro:** `waitingInfo` vive en `lib/pending-review-wait.ts` (sin importar el cliente de la API) para poder probarse en `e2e/web-lib.spec.ts`.
 
 ---
 
