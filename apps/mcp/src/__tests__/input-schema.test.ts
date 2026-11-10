@@ -144,6 +144,54 @@ describe('argumentos planos (query y ruta)', () => {
   });
 });
 
+describe('portfolio.get: filtros de selección múltiple (query de tipo arreglo)', () => {
+  it('expone mainProcessId, state y band como arreglos con tope de 50', async () => {
+    const { tools } = await client.listTools();
+    const tool = tools.find((t) => t.name === 'portfolio.get');
+    const props = tool?.inputSchema.properties as Record<
+      string,
+      { type?: string; maxItems?: number; items?: { enum?: string[] } }
+    >;
+    for (const name of ['mainProcessId', 'state', 'band']) {
+      assert.equal(props[name].type, 'array', `${name} debe ser arreglo`);
+      assert.equal(props[name].maxItems, 50);
+    }
+    assert.ok(props.band.items?.enum?.includes('SIN_PRIORIZAR'));
+  });
+
+  it('reenvía los arreglos tal cual como query', async () => {
+    const res = await call('portfolio.get', { band: ['P1', 'SIN_PRIORIZAR'], state: ['EN_EJECUCION'] });
+    assert.notEqual(res.isError, true);
+    assert.equal(calls[0].path, '/portfolio');
+    // Los filtros no indicados llegan como `undefined` (openapi-fetch los omite).
+    assert.deepEqual(JSON.parse(JSON.stringify(calls[0].options)), {
+      params: { query: { band: ['P1', 'SIN_PRIORIZAR'], state: ['EN_EJECUCION'] } },
+    });
+  });
+
+  it('rechaza valores fuera del enum y más de 50 elementos', async () => {
+    assert.equal((await call('portfolio.get', { band: ['P9'] })).isError, true);
+    assert.equal((await call('portfolio.get', { mainProcessId: Array(51).fill('SIN_PROCESO') })).isError, true);
+    assert.equal(calls.length, 0);
+  });
+
+  it('el cliente tipado serializa los arreglos como parámetros repetidos', async () => {
+    const { createApiClient } = await import('@plantilla-portales/api-client');
+    const api = createApiClient({ baseUrl: 'http://api.test' });
+    let url = '';
+    await api.GET('/portfolio', {
+      params: { query: { band: ['P1', 'P2'], mainProcessId: ['SIN_PROCESO'] } },
+      fetch: (req: Request) => {
+        url = req.url;
+        return Promise.resolve(new Response('{}', { headers: { 'content-type': 'application/json' } }));
+      },
+    });
+    const search = new URL(url).searchParams;
+    assert.deepEqual(search.getAll('band'), ['P1', 'P2']);
+    assert.deepEqual(search.getAll('mainProcessId'), ['SIN_PROCESO']);
+  });
+});
+
 describe('body opcional con {} por defecto', () => {
   for (const [name, args] of [
     ['plan.submit', { requestId: 'r-1' }],
