@@ -643,6 +643,14 @@
         "docs/aplicacion/modulos-backend.md"
       ],
       "summary": "GET /portfolio admite selección múltiple en mainProcessId, state y band (parámetro repetido, O dentro de cada filtro, Y entre filtros, máximo 50 valores, SIN_PROCESO en O con los UUID); un solo valor se comporta como antes y el alcance del actor no se amplía. Contrato, cliente y descripción de la tool portfolio.get actualizados."
+    },
+    {
+      "timestamp": "2026-11-13T18:00:00Z",
+      "trigger_file": "apps/web/src/components/multi-select-filter.tsx",
+      "updated_docs": [
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Solicitudes y Portafolio: los filtros de Estado, Proceso y Prioridad/Banda pasan a selección múltiple (panel con casillas, O dentro de un filtro, Y entre filtros, «Todos» limpia, resumen en el disparador, teclado completo). En Solicitudes se filtra en cliente al instante y ?proceso= acepta SIN_PROCESO y listas con comas; en Portafolio la selección se envía como parámetros repetidos al cerrar el panel. «Limpiar filtros» restablece todos y devuelve el foco a la búsqueda."
     }
   ]
 }
