@@ -14,17 +14,10 @@ import { DataView, type DataViewState } from '@/components/data-view';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { PriorityBadge, PriorityLegend, StatusBadge } from '@/components/status-badge';
+import { MultiSelectFilter } from '@/components/multi-select-filter';
 import { SearchInput, Toolbar } from '@/components/toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -36,13 +29,19 @@ import {
 } from '@/components/ui/table';
 import type { CatalogItem, Process } from '@/lib/api-client';
 import { listCatalogItems } from '@/lib/catalog';
+import {
+  BAND_FILTER_OPTIONS,
+  processFilterOptions,
+  stateFilterOptions,
+} from '@/lib/filter-options';
 import { formatDateOnly } from '@/lib/format';
 import {
   ApiError,
   listPortfolio,
+  type PortfolioFilters,
   type PortfolioItem,
 } from '@/lib/portfolio';
-import { REQUEST_STATE_LABELS, requestStateLabel } from '@/lib/request-state';
+import { REQUEST_STATE_LABELS } from '@/lib/request-state';
 import { routeLabel } from '@/lib/status-presentation';
 import {
   compareByOrder,
@@ -57,25 +56,24 @@ import { useClientTable } from '@/lib/use-client-table';
 type LoadState = 'loading' | 'success' | 'error';
 type SortKey = 'title' | 'state' | 'band' | 'registered' | 'target';
 
-/** Valor centinela del Select para "sin filtro" (Radix no admite value vacío). */
-const ANY = '__any';
-/** Centinela del filtro de proceso: solicitudes sin proceso asignado (por triar). */
-const NO_PROCESS = 'SIN_PROCESO';
-
-/** Bandas de prioridad del marco §4 + SIN_PRIORIZAR. */
-const BANDS = ['P1', 'P2', 'P3', 'P4', 'SIN_PRIORIZAR'] as const;
-
-const BAND_LABELS: Record<string, string> = {
-  P1: 'P1',
-  P2: 'P2',
-  P3: 'P3',
-  P4: 'P4',
-  SIN_PRIORIZAR: 'Sin priorizar',
-};
+/** Opciones del filtro de estado, agrupadas por fase del flujo. */
+const STATE_FILTER_OPTIONS = stateFilterOptions();
 
 /** Estados operativos en orden del enum RequestState. */
 const STATE_OPTIONS = Object.keys(REQUEST_STATE_LABELS);
 const NOUN = { one: 'iniciativa', other: 'iniciativas' };
+
+/** Selección de los tres filtros de servidor; vacío = sin restricción. */
+interface SelectionState {
+  process: string[];
+  state: string[];
+  band: string[];
+}
+const EMPTY_SELECTION: SelectionState = { process: [], state: [], band: [] };
+
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
 
 const compareState = compareByOrder(STATE_OPTIONS);
 // P1 → P4; sin priorizar (null) al final en las dos direcciones.
@@ -158,14 +156,17 @@ function DueBadge({
 
 /**
  * Portafolio (design §11.12, patrón A): vista de solo lectura de las
- * iniciativas en alcance. Proceso, estado y banda filtran en el servidor, como
- * siempre; la búsqueda por título, el orden y la paginación son de
- * presentación, en cliente.
+ * iniciativas en alcance. Proceso, estado y banda son de selección múltiple y
+ * filtran en el servidor (parámetros repetidos; O dentro de cada filtro, Y
+ * entre filtros); cada selección se aplica al cerrar su panel. La búsqueda por
+ * título, el orden y la paginación son de presentación, en cliente.
  */
 export function PortafolioView(): React.ReactElement {
-  const [processId, setProcessId] = React.useState<string>(ANY);
-  const [stateFilter, setStateFilter] = React.useState<string>(ANY);
-  const [bandFilter, setBandFilter] = React.useState<string>(ANY);
+  // Selección aplicada (la que viaja al servidor) y borrador (lo que el usuario
+  // marca con el panel abierto). Se aplica al CERRAR el panel: un clic por
+  // casilla no dispara una petición ni una pantalla de carga (spec D8).
+  const [applied, setApplied] = React.useState<SelectionState>(EMPTY_SELECTION);
+  const [draft, setDraft] = React.useState<SelectionState>(EMPTY_SELECTION);
   const [query, setQuery] = React.useState('');
   const searchRef = React.useRef<HTMLInputElement>(null);
 
@@ -186,8 +187,10 @@ export function PortafolioView(): React.ReactElement {
       .catch(() => setRoutes([]));
   }, []);
 
+  const processOptions = React.useMemo(() => processFilterOptions(processes), [processes]);
+
   const fetchPortfolio = React.useCallback(
-    (filters: { mainProcessId?: string; state?: string; band?: string }) => {
+    (filters: PortfolioFilters) => {
       return listPortfolio(filters)
         .then((data) => {
           setItems(data);
@@ -201,7 +204,7 @@ export function PortafolioView(): React.ReactElement {
     [],
   );
   const load = React.useCallback(
-    (filters: { mainProcessId?: string; state?: string; band?: string }) => {
+    (filters: PortfolioFilters) => {
       setState('loading');
       setErrorMessage(null);
       return fetchPortfolio(filters);
@@ -209,14 +212,18 @@ export function PortafolioView(): React.ReactElement {
     [fetchPortfolio],
   );
 
-  const activeFilters = React.useMemo(
-    () => ({
-      ...(processId !== ANY ? { mainProcessId: processId } : {}),
-      ...(stateFilter !== ANY ? { state: stateFilter } : {}),
-      ...(bandFilter !== ANY ? { band: bandFilter } : {}),
-    }),
-    [processId, stateFilter, bandFilter],
+  // Solo cambia cuando cambia la selección aplicada (no la del borrador).
+  const activeFilters = React.useMemo<PortfolioFilters>(
+    () => ({ mainProcessId: applied.process, state: applied.state, band: applied.band }),
+    [applied],
   );
+
+  /** Al cerrar el panel de un filtro, su borrador pasa a aplicarse (solo si cambió). */
+  function commit(key: keyof SelectionState, open: boolean): void {
+    if (open) return;
+    if (sameList(draft[key], applied[key])) return;
+    setApplied({ ...applied, [key]: draft[key] });
+  }
 
   // Filtros de servidor: recarga automática al cambiar, como hasta ahora.
   // Al cambiar los filtros se vuelve a mostrar la carga.
@@ -228,7 +235,8 @@ export function PortafolioView(): React.ReactElement {
     void fetchPortfolio(activeFilters);
   }, [activeFilters, fetchPortfolio]);
 
-  const hasServerFilters = processId !== ANY || stateFilter !== ANY || bandFilter !== ANY;
+  const hasServerFilters =
+    applied.process.length > 0 || applied.state.length > 0 || applied.band.length > 0;
   const hasFilters = hasServerFilters || query.trim() !== '';
   const filter = React.useCallback((item: PortfolioItem) => matchesSearch(item.title, query), [query]);
   const table = useClientTable({
@@ -236,15 +244,14 @@ export function PortafolioView(): React.ReactElement {
     filter,
     comparators: COMPARATORS,
     defaultSort: null,
-    resetKey: JSON.stringify([query, processId, stateFilter, bandFilter]),
+    resetKey: JSON.stringify([query, applied]),
     pageSize: 25,
   });
 
   function clearFilters(): void {
     // Restablecer los filtros de servidor dispara la misma recarga que elegirlos.
-    setProcessId(ANY);
-    setStateFilter(ANY);
-    setBandFilter(ANY);
+    setApplied(EMPTY_SELECTION);
+    setDraft(EMPTY_SELECTION);
     setQuery('');
     // «Limpiar filtros» desaparece: el foco pasa a la búsqueda (NIT 4, plan D9).
     searchRef.current?.focus();
@@ -294,55 +301,35 @@ export function PortafolioView(): React.ReactElement {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="portafolio-proceso">Proceso</Label>
-          <Select value={processId} onValueChange={setProcessId}>
-            <SelectTrigger id="portafolio-proceso" className="w-full sm:w-44">
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ANY}>Todos</SelectItem>
-              <SelectItem value={NO_PROCESS}>Sin proceso aún</SelectItem>
-              {processes.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="portafolio-estado">Estado operativo</Label>
-          <Select value={stateFilter} onValueChange={setStateFilter}>
-            <SelectTrigger id="portafolio-estado" className="w-full sm:w-44">
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ANY}>Todos</SelectItem>
-              {STATE_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {requestStateLabel(s)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="portafolio-banda">Banda de prioridad</Label>
-          <Select value={bandFilter} onValueChange={setBandFilter}>
-            <SelectTrigger id="portafolio-banda" className="w-full sm:w-40">
-              <SelectValue placeholder="Todas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ANY}>Todas</SelectItem>
-              {BANDS.map((b) => (
-                <SelectItem key={b} value={b}>
-                  {BAND_LABELS[b]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <MultiSelectFilter
+          id="portafolio-proceso"
+          label="Proceso"
+          options={processOptions}
+          selected={draft.process}
+          onChange={(next) => setDraft({ ...draft, process: next })}
+          onOpenChange={(open) => commit('process', open)}
+          className="sm:w-44"
+        />
+        <MultiSelectFilter
+          id="portafolio-estado"
+          label="Estado operativo"
+          options={STATE_FILTER_OPTIONS}
+          selected={draft.state}
+          onChange={(next) => setDraft({ ...draft, state: next })}
+          onOpenChange={(open) => commit('state', open)}
+          className="sm:w-44"
+        />
+        <MultiSelectFilter
+          id="portafolio-banda"
+          label="Banda de prioridad"
+          options={BAND_FILTER_OPTIONS}
+          selected={draft.band}
+          onChange={(next) => setDraft({ ...draft, band: next })}
+          onOpenChange={(open) => commit('band', open)}
+          placeholder="Todas"
+          gender="f"
+          className="sm:w-40"
+        />
       </Toolbar>
 
       <PriorityLegend />

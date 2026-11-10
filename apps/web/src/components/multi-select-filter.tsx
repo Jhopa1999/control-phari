@@ -39,6 +39,8 @@ export interface MultiSelectFilterProps {
   gender?: 'm' | 'f';
   /** Ancho del disparador, p. ej. 'sm:w-44' (el resto es w-full). */
   className?: string;
+  /** Aviso de apertura/cierre del panel (p. ej. para aplicar la selección al cerrar). */
+  onOpenChange?: (open: boolean) => void;
 }
 
 // Evita que Radix cierre el panel al alternar una opción (spec §3.1).
@@ -60,6 +62,7 @@ export function MultiSelectFilter({
   placeholder = 'Todos',
   gender = 'm',
   className,
+  onOpenChange,
 }: MultiSelectFilterProps) {
   const labelId = `${id}-etiqueta`;
   const valueId = `${id}-valor`;
@@ -80,7 +83,7 @@ export function MultiSelectFilter({
       <Label id={labelId} htmlFor={id}>
         {label}
       </Label>
-      <DropdownMenu>
+      <DropdownMenu onOpenChange={onOpenChange}>
         <DropdownMenuTrigger
           id={id}
           aria-labelledby={`${labelId} ${valueId}`}
