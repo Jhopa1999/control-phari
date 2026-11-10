@@ -53,6 +53,11 @@ export interface TaskStatusControlProps {
   optionHint?: (next: TaskStatus) => string | undefined;
   /** Id de un texto visible que explica el estado deshabilitado (aria-describedby). */
   describedById?: string;
+  /**
+   * El actor puede aprobar (jefe de área o líder de proceso): solo entonces se
+   * ofrecen «Terminar» y «Reabrir». Guía la UI; el servidor decide (403).
+   */
+  canApprove: boolean;
 }
 
 /**
@@ -77,20 +82,25 @@ export function TaskStatusControl({
   triggerVariant = 'badge',
   optionHint,
   describedById,
+  canApprove,
 }: TaskStatusControlProps): React.ReactElement {
-  const transitions = nextTaskStatuses(status as TaskStatus);
+  const transitions = nextTaskStatuses(status as TaskStatus, canApprove);
   // Con verbos de acción (Mi trabajo) el siguiente paso natural va primero y es
   // el único rotulado «Siguiente paso»; sin ellos (Planificación) el menú queda
   // como siempre.
   const { ordered, naturalFirst } = optionLabel
-    ? orderTransitions(status, transitions)
+    ? orderTransitions(status, transitions, canApprove)
     : { ordered: [...transitions], naturalFirst: false };
   const reasonId = React.useId();
   // Sin transiciones ofrecidas no hay nada que elegir: solo lectura.
   const isDisabled = disabled || busy || transitions.length === 0;
   const reason =
     disabledReason ??
-    (transitions.length === 0 ? 'No hay transiciones disponibles desde este estado.' : undefined);
+    (transitions.length === 0
+      ? status === 'TERMINADA' && !canApprove
+        ? 'Solo un líder o el jefe de área puede reabrir una tarea terminada.'
+        : 'No hay transiciones disponibles desde este estado.'
+      : undefined);
   const describedBy = describedById ?? (isDisabled && reason ? reasonId : undefined);
   const isMove = triggerVariant === 'move';
   const statusLabel = taskStatusLabel(status);

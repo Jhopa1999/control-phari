@@ -1136,6 +1136,7 @@ export function PlanView(): React.ReactElement {
                             : undefined
                         }
                         taskTitle={task.title}
+                        canApprove={isPlanManager}
                         onChange={(next) => handleInlineStatusChange(task, next)}
                       />
                       {task.status === 'BLOQUEADA' ? <BlockedReasonLine reason={task.blockedReason} /> : null}

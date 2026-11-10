@@ -21,7 +21,7 @@ import {
   PredecessorChip,
   startWarning,
 } from './mi-trabajo-chips';
-import { MilestoneBadge, type RowActions } from './mi-trabajo-parts';
+import { MilestoneBadge, WaitingApproval, type RowActions } from './mi-trabajo-parts';
 
 const TOUCH = 'max-md:min-h-11 max-md:min-w-11 pointer-coarse:min-h-11 pointer-coarse:min-w-11';
 
@@ -41,7 +41,8 @@ export function MyWorkBoardCard({ item, today, actions }: MyWorkBoardCardProps):
   const busy = actions.busyId === item.taskId;
   const due = closed ? { kind: 'none' as const, days: 0 } : taskDueInfo(item, today);
   const dueText = dueLabel(due);
-  const step = closed ? null : nextStepFor(item.status);
+  const step = closed ? null : nextStepFor(item.status, actions.canApprove);
+  const awaitingApproval = !closed && item.status === 'EN_REVISION' && !actions.canApprove;
   const blocked = item.status === 'BLOQUEADA' && !closed;
   const waiting = step?.to === 'EN_CURSO' && startWarning(item, 'EN_CURSO') !== undefined;
   const predId = `board-pred-${item.taskId}`;
@@ -135,6 +136,8 @@ export function MyWorkBoardCard({ item, today, actions }: MyWorkBoardCardProps):
               >
                 {step.label}
               </Button>
+            ) : awaitingApproval ? (
+              <WaitingApproval className="flex-1" />
             ) : (
               <span className="flex-1" />
             )}
@@ -150,6 +153,7 @@ export function MyWorkBoardCard({ item, today, actions }: MyWorkBoardCardProps):
                 optionLabel={(next) => transitionVerb(item.status, next)}
                 optionHint={(next) => startWarning(item, next)}
                 triggerClassName={cn('max-md:size-11 pointer-coarse:size-11')}
+                canApprove={actions.canApprove}
                 onChange={(next) => actions.onStatus(item, next)}
               />
             </span>

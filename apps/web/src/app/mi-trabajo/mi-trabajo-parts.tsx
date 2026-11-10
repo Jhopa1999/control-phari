@@ -14,6 +14,7 @@ import {
   CirclePlay,
   Clock,
   Flag,
+  Hourglass,
   Lock,
   OctagonAlert,
   type LucideIcon,
@@ -138,6 +139,18 @@ export interface RowActions {
   onProgress: (item: MyWorkItem, value: number) => Promise<string | null>;
   /** Abre el panel lateral con el detalle de la tarea. */
   onOpen: (item: MyWorkItem) => void;
+  /** El actor puede aprobar (terminar y reabrir): jefe de área o líder de proceso. El servidor decide. */
+  canApprove: boolean;
+}
+
+/** «Espera aprobación»: el integrante no tiene siguiente paso en En revisión. */
+export function WaitingApproval({ className }: { className?: string }): React.ReactElement {
+  return (
+    <span className={cn('inline-flex items-center gap-1 text-meta text-muted-foreground', className)}>
+      <Hourglass className="size-3.5 shrink-0" aria-hidden="true" />
+      Espera aprobación
+    </span>
+  );
 }
 
 interface RowCommon {
@@ -300,7 +313,8 @@ function StatusCell({
 }: Pick<RowCommon, 'item' | 'actions'> & { touch?: boolean; idPrefix: string }): React.ReactElement {
   const closed = isProjectClosed(item);
   // En un proyecto cerrado no hay «Siguiente paso»: el servidor respondería 409.
-  const step = closed ? null : nextStepFor(item.status);
+  const step = closed ? null : nextStepFor(item.status, actions.canApprove);
+  const awaitingApproval = !closed && item.status === 'EN_REVISION' && !actions.canApprove;
   const busy = actions.busyId === item.taskId;
   const waiting = step?.to === 'EN_CURSO' && startWarning(item, 'EN_CURSO') !== undefined;
   return (
@@ -318,9 +332,11 @@ function StatusCell({
           optionLabel={(next) => transitionVerb(item.status, next)}
           optionHint={(next) => startWarning(item, next)}
           triggerClassName={touch ? TOUCH : undefined}
+          canApprove={actions.canApprove}
           onChange={(next) => actions.onStatus(item, next)}
         />
       </span>
+      {awaitingApproval ? <WaitingApproval /> : null}
       {step ? (
         <Button
           type="button"
@@ -422,7 +438,9 @@ function MyWorkCard(props: RowCommon): React.ReactElement {
       <ProgressCell item={item} today={today} actions={actions} wide />
       {item.status === 'TERMINADA' ? (
         <p className="text-meta text-muted-foreground">
-          La tarea está terminada. Reábrela para cambiar su avance.
+          {actions.canApprove
+            ? 'La tarea está terminada. Reábrela para cambiar su avance.'
+            : 'La tarea está terminada. Solo un líder o el jefe de área puede reabrirla.'}
         </p>
       ) : null}
       <div className="flex items-center gap-2">

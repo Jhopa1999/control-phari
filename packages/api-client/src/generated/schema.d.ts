@@ -863,6 +863,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tasks/pending-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cola «Por aprobar»: tareas en revisión dentro del alcance del actor (sin las propias), las que más esperan primero. */
+        get: operations["TaskController_pendingReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/plans/{planId}/tasks": {
         parameters: {
             query?: never;
@@ -963,7 +980,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Cambia el estado de una tarea (gate de predecesoras). */
+        /** Cambia el estado de una tarea. Enviar a revisión exige avance 100 % y, si la tarea pide evidencia, nota/enlace o archivo; terminar y reabrir solo los hace un líder de proceso o el jefe de área. */
         patch: operations["TaskController_changeStatus"];
         trace?: never;
     };
@@ -4061,6 +4078,66 @@ export interface components {
              * @description Fecha de compromiso vigente: la del plan si la tiene; si no, el compromiso inicial de la solicitud.
              */
             requestCommitmentDate: string | null;
+            /** @description La tarea exige evidencia para enviarse a revisión: tiene criterios de aceptación o fase de gobierno requerida. */
+            evidenceRequired: boolean;
+            /** @description La tarea tiene evidencia: una nota o enlace guardado, o al menos un archivo subido. */
+            hasEvidence: boolean;
+        };
+        PendingReviewTaskDto: {
+            /**
+             * Format: uuid
+             * @description Id de la tarea.
+             */
+            id: string;
+            /** @description Título de la tarea. */
+            title: string;
+            /**
+             * Format: uuid
+             * @description Id del responsable; null si no tiene.
+             */
+            responsibleUserId: string | null;
+            /** @description Nombre del responsable; null si no tiene. */
+            responsibleName: string | null;
+            /**
+             * Format: uuid
+             * @description Solicitud a la que pertenece el plan de la tarea.
+             */
+            requestId: string;
+            /** @description Título de la solicitud. */
+            requestTitle: string;
+            /** @description Nombre de la fase. */
+            phaseName: string;
+            /** @description Avance 0-100. */
+            progress: number;
+            /** @description La tarea exige evidencia para enviarse a revisión (criterios de aceptación o fase de gobierno). */
+            evidenceRequired: boolean;
+            /** @description La tarea tiene evidencia: una nota o enlace guardado, o al menos un archivo subido. */
+            hasEvidence: boolean;
+            /**
+             * Format: date-time
+             * @description Fecha de vencimiento.
+             */
+            endDate: string | null;
+            /** @description Indica si la tarea es un hito. */
+            isMilestone: boolean;
+            /**
+             * Format: date-time
+             * @description Momento exacto en que pasó a revisión; null en tareas que ya estaban en revisión antes de existir este dato.
+             */
+            reviewRequestedAt: string | null;
+            /**
+             * Format: date-time
+             * @description Desde cuándo espera aprobación: reviewRequestedAt o, si es null, la última actualización de la tarea.
+             */
+            waitingSince: string;
+            /** @description true cuando waitingSince es aproximado (se tomó de la última actualización por falta de reviewRequestedAt). */
+            waitingSinceApproximate: boolean;
+        };
+        PendingReviewListDto: {
+            /** @description Total real de tareas por aprobar (puede superar los ítems devueltos). */
+            total: number;
+            /** @description Hasta 100 tareas; las que llevan más tiempo esperando, primero. */
+            items: components["schemas"]["PendingReviewTaskDto"][];
         };
         TaskPredecessorDto: {
             /**
@@ -4159,6 +4236,10 @@ export interface components {
              * @description Fecha de actualizacion.
              */
             updatedAt: string;
+            /** @description La tarea exige evidencia para enviarse a revisión: tiene criterios de aceptación o fase de gobierno requerida. */
+            evidenceRequired: boolean;
+            /** @description La tarea tiene evidencia: una nota o enlace guardado, o al menos un archivo subido. */
+            hasEvidence: boolean;
         };
         ResponsibleCandidateDto: {
             /**
@@ -6091,6 +6172,8 @@ export interface components {
             pendingApproval: number;
             /** @description Tareas no terminadas con fecha de fin anterior a hoy, de solicitudes aun abiertas. */
             overdueTasks: number;
+            /** @description Tareas en revisión por aprobar dentro del alcance del actor (misma regla que GET /tasks/pending-review: sin las propias ni las de proyectos cerrados). 0 para quien no puede aprobar (integrante). */
+            pendingTaskReviews: number;
         };
         PortfolioItemResponseDto: {
             /**
@@ -9665,6 +9748,33 @@ export interface operations {
             };
         };
     };
+    TaskController_pendingReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tareas por aprobar (hasta 100) y total real. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingReviewListDto"];
+                };
+            };
+            /** @description Rol insuficiente (solo jefe de área y líder de proceso). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     TaskController_findForPlan: {
         parameters: {
             query?: {
@@ -9984,7 +10094,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Rol insuficiente o tarea ajena (integrante). */
+            /** @description Rol insuficiente, tarea ajena (integrante) o terminar/reabrir sin ser líder de proceso ni jefe de área (mensaje en español). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9998,7 +10108,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Transicion no permitida o predecesora no satisfecha. */
+            /** @description Transicion no permitida, predecesora no satisfecha o requisitos de envío a revisión sin cumplir (avance < 100 % o falta evidencia; el mensaje dice cuál). */
             409: {
                 headers: {
                     [name: string]: unknown;

@@ -49,9 +49,20 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
     'GET /my-work',
     'Obtiene el trabajo asignado al usuario autenticado: tareas con su contexto (GET /my-work). ' +
       'Cada tarea trae las predecesoras pendientes (pendingPredecessors), el motivo de bloqueo ' +
-      '(blockedReason), el estado operativo de la solicitud y su fecha de compromiso vigente.',
+      '(blockedReason), si exige evidencia y la tiene (evidenceRequired, hasEvidence), el estado ' +
+      'operativo de la solicitud y su fecha de compromiso vigente.',
   ),
 
+  lectura(
+    'task.pending-review',
+    'GET /tasks/pending-review',
+    'Cola «Por aprobar» (GET /tasks/pending-review): tareas En revisión dentro del alcance del usuario, ' +
+      'sin las propias ni las de proyectos cerrados, las que más esperan primero (máximo 100; total trae ' +
+      'el conteo real). Cada una indica responsable, solicitud, fase, avance, si exige evidencia y si la ' +
+      'tiene (evidenceRequired, hasEvidence) y desde cuándo espera (waitingSince; waitingSinceApproximate ' +
+      'indica que es aproximado). Solo para jefe de área y líder de proceso; para aprobar o devolver usa ' +
+      'task.status.update.',
+  ),
   // Cierre, aprobación y prioridad
   lectura(
     'closure.pending',

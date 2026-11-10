@@ -17,7 +17,6 @@ import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -46,10 +45,12 @@ import {
   updateTaskStatus,
 } from '@/lib/tasks';
 import { BlockReasonDialog } from '../plan/block-reason-dialog';
+import { SubmitReviewDialog, type SubmitReviewExtra } from '../plan/submit-review-dialog';
 import { TaskProgressControl } from '../plan/task-progress-control';
 import { TaskHistory } from './task-history';
 import { TaskEvidenceFiles } from './task-evidence-files';
-import { nextTaskStatuses } from '@/lib/task-transitions';
+import { hasPendingReviewRequirements } from '@/lib/review-requirements';
+import { canApproveTasks, nextTaskStatuses } from '@/lib/task-transitions';
 
 type LoadState = 'loading' | 'success' | 'error';
 type FieldKey = 'nextStatus';
@@ -61,11 +62,16 @@ function messageOf(err: unknown): string {
   return err instanceof PlanError ? err.message : 'Ocurrió un error inesperado.';
 }
 
-/** Estado preseleccionado: el siguiente paso natural; en TERMINADA, reabrir. */
-function defaultNextStatus(status: string): string {
-  const step = nextStepFor(status);
+/**
+ * Estado preseleccionado: el siguiente paso natural; en TERMINADA, reabrir. Quien
+ * no puede aprobar y tiene la tarea En revisión no tiene siguiente paso (espera
+ * aprobación): el selector arranca vacío para no empujar a deshacer el envío.
+ */
+function defaultNextStatus(status: string, canApprove: boolean): string {
+  const step = nextStepFor(status, canApprove);
   if (step) return step.to;
-  return nextTaskStatuses(status as TaskStatus)[0] ?? '';
+  if (status === 'EN_REVISION' && !canApprove) return '';
+  return nextTaskStatuses(status as TaskStatus, canApprove)[0] ?? '';
 }
 
 function isWebUrl(value: string): boolean {
@@ -98,6 +104,10 @@ export interface TaskDetailProps {
    * cerrado). Lo conoce quien abre el detalle; si falta, manda el servidor (409).
    */
   readOnlyReason?: string;
+  /** Pestaña con la que se abre el detalle (p. ej. «evidencia» desde el diálogo de requisitos). */
+  initialTab?: 'resumen' | 'evidencia';
+  /** Se invoca cuando cambia si la tarea tiene evidencia (archivo subido o borrado). */
+  onEvidenceChange?: (taskId: string, hasEvidence: boolean) => void;
 }
 
 /**
@@ -112,13 +122,17 @@ export function TaskDetail({
   onSelectTask,
   onChanged,
   readOnlyReason,
+  initialTab = 'resumen',
+  onEvidenceChange,
 }: TaskDetailProps): React.ReactElement {
   const [task, setTask] = React.useState<Task | null>(null);
   const [state, setState] = React.useState<LoadState>('loading');
   const [savingStatus, setSavingStatus] = React.useState(false);
-  const { permissions, allowedModules } = useActor();
+  const { permissions, allowedModules, state: permissionsState } = useActor();
   const canOpenRequest = allowedModules.has('requests');
   const [blockOpen, setBlockOpen] = React.useState(false);
+  const [reviewOpen, setReviewOpen] = React.useState(false);
+  const [tab, setTab] = React.useState<string>(initialTab);
   // Número de archivos de evidencia (null = aún no se sabe: no se acusa de lo que no se sabe).
   const [fileCount, setFileCount] = React.useState<{ taskId: string; count: number } | null>(null);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
@@ -127,12 +141,13 @@ export function TaskDetail({
 
   // Formulario de cambio de estado (reset solo en éxito, AC-031).
   const [nextStatus, setNextStatus] = React.useState<string>('');
-  const [registerFull, setRegisterFull] = React.useState(true);
   const [evidenceUrl, setEvidenceUrl] = React.useState<string>('');
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [formError, setFormError] = React.useState<string | null>(null);
   const statusRef = React.useRef<HTMLButtonElement>(null);
   const formId = embedded ? 'task-status-form-panel' : 'task-status-form';
+  // Espejo de `isPlanManager`: guía el selector (Terminar, Reabrir); el servidor decide. Sin permisos cargados: no.
+  const canApprove = permissionsState === 'success' && canApproveTasks(permissions?.roleCodes);
 
   const loadHistory = React.useCallback((id: string) => {
     return getTaskHistory(id)
@@ -166,7 +181,6 @@ export function TaskDetail({
         setTask(data);
         setEvidenceUrl(data.evidenceUrl ?? '');
         setNextStatus('');
-        setRegisterFull(true);
         setFieldErrors({});
         setFormError(null);
         setState('success');
@@ -214,7 +228,6 @@ export function TaskDetail({
     setTask(updated);
     setEvidenceUrl(updated.evidenceUrl ?? '');
     setNextStatus('');
-    setRegisterFull(true);
     toast.success('Estado de la tarea actualizado.');
     onChanged?.(updated);
     void loadHistory(updated.id);
@@ -236,10 +249,39 @@ export function TaskDetail({
     }
   }
 
+  /**
+   * Requisitos de envío a revisión con lo que se sabe ahora: las banderas de la
+   * API, corregidas con los archivos subidos o borrados en esta sesión y la nota
+   * escrita en el formulario (aún sin guardar). La regla la aplica el servidor.
+   */
+  function reviewSource(t: Task): { progress: number; evidenceRequired: boolean; hasEvidence: boolean } {
+    const known = fileCount && fileCount.taskId === t.id ? fileCount.count : null;
+    const savedNote = Boolean(t.evidenceUrl?.trim());
+    const hasEvidence =
+      evidenceUrl.trim() !== '' || (known !== null ? known > 0 || savedNote : t.hasEvidence === true);
+    return { progress: t.progress, evidenceRequired: t.evidenceRequired === true, hasEvidence };
+  }
+
+  /** Confirma «Antes de enviar a revisión»: devuelve el error del servidor o null si salió bien. */
+  async function confirmReview(extra: SubmitReviewExtra): Promise<string | null> {
+    if (!task) return 'La tarea no está disponible.';
+    try {
+      const updated = await updateTaskStatus(task.id, {
+        status: 'EN_REVISION',
+        progress: extra.progress,
+        evidenceUrl: extra.evidenceUrl ?? (evidenceUrl.trim() || undefined),
+      });
+      afterStatusUpdate(updated);
+      return null;
+    } catch (err) {
+      return messageOf(err);
+    }
+  }
+
   async function handleStatusChange(event: React.FormEvent) {
     event.preventDefault();
     if (!task || savingStatus) return;
-    const chosen = nextStatus || defaultNextStatus(task.status);
+    const chosen = nextStatus || defaultNextStatus(task.status, canApprove);
     const errors: FieldErrors = {};
     if (!chosen) errors.nextStatus = 'Elige el nuevo estado.';
     setFieldErrors(errors);
@@ -253,12 +295,16 @@ export function TaskDetail({
       setBlockOpen(true);
       return;
     }
+    // Enviar a revisión con requisitos pendientes: «Antes de enviar a revisión»
+    // (la nota ya escrita en el formulario llega precargada).
+    if (chosen === 'EN_REVISION' && hasPendingReviewRequirements(reviewSource(task))) {
+      setReviewOpen(true);
+      return;
+    }
     setSavingStatus(true);
     try {
       const updated = await updateTaskStatus(task.id, {
         status: chosen as TaskStatus,
-        // Propuesta de 100 % al terminar (desmarcable); el avance no se edita aquí.
-        progress: chosen === 'TERMINADA' && task.progress < 100 && registerFull ? 100 : undefined,
         evidenceUrl: evidenceUrl.trim() || undefined,
       });
       afterStatusUpdate(updated);
@@ -307,16 +353,25 @@ export function TaskDetail({
 
   // Fase y solicitud vienen en la propia tarea (GET /tasks/:id).
   const { phaseName, requestId, requestTitle } = task;
-  const chosenStatus = nextStatus || defaultNextStatus(task.status);
+  const chosenStatus = nextStatus || defaultNextStatus(task.status, canApprove);
   const knownFileCount = fileCount && fileCount.taskId === task.id ? fileCount.count : null;
   const evidenceCount =
     knownFileCount === null ? null : knownFileCount + (task.evidenceUrl?.trim() ? 1 : 0);
   const blocking = task.predecessors.some((p) => p.status !== 'TERMINADA');
   const pendingPredecessors = task.predecessors.filter((p) => p.status !== 'TERMINADA').length;
-  const transitions = nextTaskStatuses(task.status as TaskStatus);
+  const transitions = nextTaskStatuses(task.status as TaskStatus, canApprove);
   const noTransitions = transitions.length === 0;
-  const statusLocked = noTransitions || readOnlyReason !== undefined;
-  const lockedReasonText = readOnlyReason ?? `No hay transiciones disponibles desde «${taskStatusLabel(task.status)}».`;
+  // Integrante con la tarea En revisión: espera la aprobación; hasta elegir (Devolver o Bloquear) no hay acción.
+  const awaitingApproval = task.status === 'EN_REVISION' && !canApprove;
+  const awaitingChoice = !noTransitions && chosenStatus === '';
+  const statusLocked = noTransitions || awaitingChoice || readOnlyReason !== undefined;
+  const lockedReasonText =
+    readOnlyReason ??
+    (noTransitions
+      ? task.status === 'TERMINADA' && !canApprove
+        ? 'Solo un líder o el jefe de área puede reabrir una tarea terminada.'
+        : `No hay transiciones disponibles desde «${taskStatusLabel(task.status)}».`
+      : 'Esta tarea espera la aprobación de un líder o del jefe de área. Elige un paso para continuar.');
   const statusLabel = taskStatusLabel(task.status);
   const due = taskDueInfo(task, localDateInputValue());
   const dueText = dueLabel(due);
@@ -512,18 +567,6 @@ export function TaskDetail({
     </div>
   );
 
-  const evidenceWarning =
-    (chosenStatus === 'EN_REVISION' || chosenStatus === 'TERMINADA') &&
-    knownFileCount === 0 &&
-    evidenceUrl.trim() === ''
-      ? 'Esta tarea no tiene evidencia (ni nota ni archivos). Puedes añadirla ahora o después.'
-      : null;
-  const progressWarning =
-    chosenStatus === 'TERMINADA' && task.progress < 100
-      ? `El avance es ${formatPercent(task.progress)}. Se propone registrar 100 % al terminarla.`
-      : chosenStatus === 'EN_REVISION' && task.progress < 100
-        ? `El avance es ${formatPercent(task.progress)}.`
-        : null;
   const waitingNote =
     chosenStatus === 'EN_CURSO' && (task.status === 'POR_HACER' || task.status === 'BLOQUEADA')
       ? task.predecessors.find((p) => p.status !== 'TERMINADA')
@@ -544,7 +587,11 @@ export function TaskDetail({
         id={`${formId}-next`}
         label="Siguiente paso"
         error={fieldErrors.nextStatus}
-        help={`Ahora: ${statusLabel}.`}
+        help={
+          awaitingApproval
+            ? 'Esta tarea espera la aprobación de un líder o del jefe de área.'
+            : `Ahora: ${statusLabel}.`
+        }
       >
         {(control) => (
           <Select
@@ -574,39 +621,22 @@ export function TaskDetail({
         )}
       </Field>
 
-      {chosenStatus === 'TERMINADA' && task.progress < 100 ? (
-        <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm max-lg:min-h-11">
-          <Checkbox checked={registerFull} onChange={(e) => setRegisterFull(e.target.checked)} />
-          Registrar avance en 100 %
-        </label>
-      ) : null}
-
       <Field
         id={`${formId}-evidence`}
-        label="Nota o enlace de evidencia (opcional)"
-        help="Se guarda junto con el cambio de estado."
+        label={task.evidenceRequired ? 'Nota o enlace de evidencia' : 'Nota o enlace de evidencia (opcional)'}
+        help={
+          task.evidenceRequired
+            ? 'Se guarda junto con el cambio de estado. Esta tarea exige evidencia para enviarse a revisión.'
+            : 'Se guarda junto con el cambio de estado.'
+        }
       >
         <Input value={evidenceUrl} onChange={(e) => setEvidenceUrl(e.target.value)} />
       </Field>
 
-      {evidenceWarning || progressWarning || waitingNote ? (
-        <div className="flex flex-col gap-2">
-          {waitingNote ? (
-            <InlineNotice tone="warning" role="status">
-              {`Aún espera a «${waitingNote.title}». Si no está terminada, el servidor no te dejará empezar.`}
-            </InlineNotice>
-          ) : null}
-          {evidenceWarning ? (
-            <InlineNotice tone="warning" role="status">
-              {evidenceWarning}
-            </InlineNotice>
-          ) : null}
-          {progressWarning ? (
-            <InlineNotice tone="warning" role="status">
-              {progressWarning}
-            </InlineNotice>
-          ) : null}
-        </div>
+      {waitingNote ? (
+        <InlineNotice tone="warning" role="status">
+          {`Aún espera a «${waitingNote.title}». Si no está terminada, el servidor no te dejará empezar.`}
+        </InlineNotice>
       ) : null}
 
       <FormError id={formId} message={formError} />
@@ -660,7 +690,10 @@ export function TaskDetail({
         </h3>
         <TaskEvidenceFiles
           taskId={task.id}
-          onCountChange={(count) => setFileCount({ taskId: task.id, count })}
+          onCountChange={(count) => {
+            setFileCount({ taskId: task.id, count });
+            onEvidenceChange?.(task.id, count > 0 || Boolean(task.evidenceUrl?.trim()));
+          }}
         />
       </section>
     </div>
@@ -670,7 +703,7 @@ export function TaskDetail({
     history === null ? null : history.filter((e) => e.action !== 'UPDATE' || e.changes.length > 0).length;
 
   const tabs = (
-    <Tabs defaultValue="resumen" className="flex min-w-0 flex-col gap-4">
+    <Tabs value={tab} onValueChange={setTab} className="flex min-w-0 flex-col gap-4">
       <TabsList className="overflow-x-auto">
         <TabsTrigger value="resumen">Resumen</TabsTrigger>
         <TabsTrigger value="historial">
@@ -703,6 +736,17 @@ export function TaskDetail({
         taskTitle={task.title}
         onOpenChange={setBlockOpen}
         onConfirm={confirmBlock}
+      />
+      <SubmitReviewDialog
+        open={reviewOpen}
+        taskTitle={task.title}
+        progress={task.progress}
+        evidenceRequired={task.evidenceRequired === true}
+        hasEvidence={reviewSource(task).hasEvidence}
+        initialNote={evidenceUrl}
+        onOpenChange={setReviewOpen}
+        onConfirm={confirmReview}
+        onUploadFile={() => setTab('evidencia')}
       />
     </div>,
   );

@@ -243,7 +243,7 @@ Fase del plan (ordenada por `order` 0-based; la inicial es la de `order` mínimo
 Tarea del plan.
 - Campos clave: `phaseId`, `processId?`, `title`, `responsibleUserId?`, `startDate?`,
   `endDate?`, `estimateHours?`, `isMilestone`, `description?`, `acceptanceCriteria?`,
-  `status` (default `POR_HACER`), `progress`, `frameworkPhaseRequired?`, `blockedReason?` (columna `blocked_reason`, motivo vigente del bloqueo; solo tiene valor con `status = BLOQUEADA`), `accepted`,
+  `status` (default `POR_HACER`), `progress`, `frameworkPhaseRequired?`, `blockedReason?` (columna `blocked_reason`, motivo vigente del bloqueo; solo tiene valor con `status = BLOQUEADA`), `reviewRequestedAt?` (columna `review_requested_at`, BL-036 E3: momento en que la tarea pasó a `EN_REVISION`; se fija al entrar, se limpia al salir y queda `null` en las tareas que ya estaban en revisión al desplegar, para las que la API usa `updatedAt` como respaldo aproximado; migración aditiva `20261112120000_task_review_requested_at`), `accepted`,
   `acceptedAt?`, `acceptedByUserId?`, `evidenceUrl?`.
 - Restricciones/índices: por `phaseId`, `responsibleUserId`, `status`.
 

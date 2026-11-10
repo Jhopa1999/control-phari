@@ -227,4 +227,11 @@ export class AttentionResponseDto {
       'Tareas no terminadas con fecha de fin anterior a hoy, de solicitudes aun abiertas.',
   })
   overdueTasks!: number;
+
+  @ApiProperty({
+    type: Number,
+    description:
+      'Tareas en revisión por aprobar dentro del alcance del actor (misma regla que GET /tasks/pending-review: sin las propias ni las de proyectos cerrados). 0 para quien no puede aprobar (integrante).',
+  })
+  pendingTaskReviews!: number;
 }

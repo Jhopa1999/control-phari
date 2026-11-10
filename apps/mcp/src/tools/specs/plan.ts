@@ -104,8 +104,9 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
     access: 'read',
     description:
       'Obtiene una tarea por id (GET /tasks/{id}), con sus predecesoras, el ' +
-      'motivo de bloqueo vigente (blockedReason) y el nombre de la fase y la ' +
-      'solicitud (phaseName, requestId, requestTitle).',
+      'motivo de bloqueo vigente (blockedReason), el nombre de la fase y la ' +
+      'solicitud (phaseName, requestId, requestTitle) y si exige evidencia y la ' +
+      'tiene (evidenceRequired, hasEvidence).',
   },
   {
     name: 'task.history',
@@ -137,7 +138,14 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
       'debe cumplir UpdateTaskStatusDto { status, progress?, evidenceUrl?, ' +
       'blockedReason? }; blockedReason (max 500, opcional) solo es valido con ' +
       'status BLOQUEADA (con otro estado el backend responde 400) y se limpia ' +
-      'al salir de ese estado. El backend valida los datos.',
+      'al salir de ese estado. REGLA DE CIERRE: pasar a EN_REVISION exige avance 100 % ' +
+      '(el del mismo PATCH o el guardado) y, si la tarea tiene criterios de aceptacion o ' +
+      'fase de gobierno (evidenceRequired), evidencia: evidenceUrl con texto o al menos un ' +
+      'archivo; si falta algo responde 409 con el detalle. Pasar a TERMINADA (aprobar) y ' +
+      'reabrir (TERMINADA a EN_CURSO) solo puede hacerlo un lider de proceso o el jefe de ' +
+      'area; un integrante, aunque sea el responsable, recibe 403. Devolver (EN_REVISION a ' +
+      'EN_CURSO) no cambia. Para ver que tareas esperan aprobacion usa task.pending-review. ' +
+      'El backend valida los datos.',
   },
   {
     name: 'task.progress.update',

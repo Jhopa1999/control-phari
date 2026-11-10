@@ -95,4 +95,17 @@ export class TaskResponseDto {
 
   @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de actualizacion.' })
   updatedAt!: Date;
+
+  @ApiProperty({
+    type: Boolean,
+    description:
+      'La tarea exige evidencia para enviarse a revisión: tiene criterios de aceptación o fase de gobierno requerida.',
+  })
+  evidenceRequired!: boolean;
+
+  @ApiProperty({
+    type: Boolean,
+    description: 'La tarea tiene evidencia: una nota o enlace guardado, o al menos un archivo subido.',
+  })
+  hasEvidence!: boolean;
 }

@@ -29,6 +29,13 @@ import { TaskResponseDto } from './dto/task-response.dto';
 import { TaskHistoryEntryDto } from './dto/task-history-entry.dto';
 import { collectReferencedIds, diffTaskSnapshots } from './task-history';
 import { MyWorkItemDto } from './dto/my-work-item.dto';
+import { PendingReviewListDto } from './dto/pending-review-task.dto';
+import {
+  PENDING_REVIEW_LIMIT,
+  hasEvidenceOf,
+  isEvidenceRequired,
+  pendingReviewWhere,
+} from './pending-review';
 
 /**
  * Tarea con sus predecesoras embebidas (para TaskResponseDto).
@@ -41,6 +48,7 @@ type TaskWithDeps = TaskModel & {
     name: string;
     plan: { requestId: string; request: { title: string } };
   };
+  _count: { evidences: number };
 };
 
 /**
@@ -59,6 +67,8 @@ const TASK_RESPONSE_INCLUDE = {
       plan: { select: { requestId: true, request: { select: { title: true } } } },
     },
   },
+  // Conteo de archivos de evidencia en la misma consulta (sin N+1).
+  _count: { select: { evidences: true } },
 } satisfies Prisma.TaskInclude;
 
 /**
@@ -103,6 +113,8 @@ export class TaskService {
       acceptedByUserId: task.acceptedByUserId,
       evidenceUrl: task.evidenceUrl,
       blockedReason: task.blockedReason,
+      evidenceRequired: isEvidenceRequired(task),
+      hasEvidence: hasEvidenceOf(task, task._count.evidences),
       phaseName: task.phase.name,
       requestId: task.phase.plan.requestId,
       requestTitle: task.phase.plan.request.title,
@@ -505,6 +517,23 @@ export class TaskService {
       );
     }
 
+    // Regla de cierre (BL-036, Entrega 3): terminar (EN_REVISION -> TERMINADA) y
+    // reabrir (TERMINADA -> EN_CURSO) son decisiones de un líder o del jefe de
+    // área, incluso sobre la propia tarea. Se evalúa antes que la transición
+    // para que el integrante reciba un 403 claro y no un 409 genérico.
+    if (!this.isPlanManager(actor)) {
+      if (task.status === TaskStatus.EN_REVISION && dto.status === TaskStatus.TERMINADA) {
+        throw new ForbiddenException(
+          'Solo un líder de proceso o el jefe de área puede terminar una tarea. Envíala a revisión: la aprueba un líder o el jefe de área.',
+        );
+      }
+      if (task.status === TaskStatus.TERMINADA && dto.status === TaskStatus.EN_CURSO) {
+        throw new ForbiddenException(
+          'Solo un líder de proceso o el jefe de área puede reabrir una tarea terminada.',
+        );
+      }
+    }
+
     const nextStatus = this.planState.assertTaskTransition(task.status, dto.status);
 
     // Gate de predecesoras al entrar EN_CURSO (desde POR_HACER o BLOQUEADA).
@@ -512,11 +541,20 @@ export class TaskService {
       await this.planState.assertPredecessorsSatisfied(task.id);
     }
 
+    // Requisitos de envío a revisión (todos los roles): avance 100 % y, si la
+    // tarea exige evidencia, una nota/enlace o al menos un archivo. Se evalúan
+    // con los valores efectivos (los del mismo PATCH o, si no llegan, los guardados).
+    if (nextStatus === TaskStatus.EN_REVISION) {
+      await this.assertReviewRequirements(task, dto);
+    }
+
     // El motivo vive solo mientras la tarea está BLOQUEADA: se guarda al
     // bloquear (opcional) y se limpia al salir (queda en el historial).
+    // `reviewRequestedAt` se fija al entrar a EN_REVISION y se limpia al salir.
     const data: Prisma.TaskUpdateInput = {
       status: nextStatus,
       blockedReason: nextStatus === TaskStatus.BLOQUEADA ? (dto.blockedReason ?? null) : null,
+      reviewRequestedAt: nextStatus === TaskStatus.EN_REVISION ? new Date() : null,
     };
     if (dto.progress !== undefined) data.progress = dto.progress;
     if (dto.evidenceUrl !== undefined) data.evidenceUrl = dto.evidenceUrl;
@@ -547,7 +585,160 @@ export class TaskService {
     if (nextStatus === TaskStatus.TERMINADA && task.status !== TaskStatus.TERMINADA) {
       await this.notifyIfPlanCompleted(actor, planId, requestId, mainProcessId);
     }
-    return this.findOne(actor, task.id);
+    const result = await this.findOne(actor, task.id);
+    await this.notifyReviewFlow(actor, task, nextStatus, result.requestTitle, requestId, mainProcessId);
+    return result;
+  }
+
+  /**
+   * Exige, para pasar a EN_REVISION, avance 100 % y la evidencia que la tarea
+   * pida. 409 con el detalle de lo que falta (precondición del estado de la tarea).
+   */
+  private async assertReviewRequirements(
+    task: TaskModel,
+    dto: UpdateTaskStatusDto,
+  ): Promise<void> {
+    const progress = dto.progress ?? task.progress;
+    const missingProgress = progress < 100;
+
+    let missingEvidence = false;
+    if (isEvidenceRequired(task)) {
+      const note = dto.evidenceUrl !== undefined ? dto.evidenceUrl : task.evidenceUrl;
+      const hasNote = (note ?? '').trim() !== '';
+      // Solo se consultan los archivos si la nota no basta (un único count).
+      missingEvidence =
+        !hasNote && (await this.prisma.taskEvidence.count({ where: { taskId: task.id } })) === 0;
+    }
+
+    if (missingProgress && missingEvidence) {
+      throw new ConflictException(
+        `Para enviar la tarea a revisión falta: avance al 100 % (ahora está en ${progress} %) y evidencia (una nota o enlace, o un archivo).`,
+      );
+    }
+    if (missingProgress) {
+      throw new ConflictException(
+        `Para enviar la tarea a revisión primero debe estar al 100 % de avance (ahora está en ${progress} %). Registra el avance y vuelve a intentarlo.`,
+      );
+    }
+    if (missingEvidence) {
+      throw new ConflictException(
+        'Esta tarea exige evidencia para enviarse a revisión: escribe una nota o enlace de evidencia, o sube un archivo.',
+      );
+    }
+  }
+
+  /**
+   * Avisos del flujo de revisión (efecto secundario: un fallo nunca revierte el
+   * cambio de estado). A líderes/jefes cuando una tarea llega a revisión; al
+   * responsable cuando se la aprueban o la devuelven otra persona.
+   */
+  private async notifyReviewFlow(
+    actor: CurrentActor,
+    task: TaskModel,
+    nextStatus: TaskStatus,
+    requestTitle: string,
+    requestId: string,
+    mainProcessId: string | null,
+  ): Promise<void> {
+    try {
+      if (nextStatus === TaskStatus.EN_REVISION) {
+        const recipients = [
+          ...(await this.notifications.processLeaders(mainProcessId)),
+          ...(await this.notifications.areaHeadsForProcess(mainProcessId)),
+        ];
+        await this.notifications.notify({
+          userIds: recipients,
+          excludeUserId: actor.userId,
+          type: NotificationType.TASK_REVIEW_REQUESTED,
+          title: 'Tarea por aprobar',
+          message: `«${task.title}» de «${requestTitle}» espera tu aprobación.`,
+          link: '/mi-trabajo#por-aprobar',
+          requestId,
+        });
+      } else if (
+        task.status === TaskStatus.EN_REVISION &&
+        nextStatus === TaskStatus.TERMINADA
+      ) {
+        await this.notifications.notify({
+          userIds: [task.responsibleUserId],
+          excludeUserId: actor.userId,
+          type: NotificationType.TASK_APPROVED,
+          title: 'Tarea aprobada',
+          message: `Tu tarea «${task.title}» fue aprobada y quedó terminada.`,
+          link: '/mi-trabajo',
+          requestId,
+        });
+      } else if (
+        task.status === TaskStatus.EN_REVISION &&
+        nextStatus === TaskStatus.EN_CURSO
+      ) {
+        await this.notifications.notify({
+          userIds: [task.responsibleUserId],
+          excludeUserId: actor.userId,
+          type: NotificationType.TASK_RETURNED,
+          title: 'Tarea devuelta',
+          message: `«${task.title}» volvió a En curso para que la corrijas.`,
+          link: '/mi-trabajo',
+          requestId,
+        });
+      }
+    } catch {
+      // Efecto secundario: nunca revierte la acción de negocio.
+    }
+  }
+
+  /**
+   * Cola «Por aprobar» (BL-036, Entrega 3): tareas EN_REVISION que el actor
+   * (jefe o líder) puede aprobar o devolver. Alcance y exclusiones en
+   * `pendingReviewWhere` (compartido con el contador del Panel). Orden: las que
+   * llevan más tiempo esperando primero; las de `reviewRequestedAt` null (previas
+   * al dato) van primero, ordenadas por `updatedAt`. Sin N+1: responsable, fase,
+   * solicitud y conteo de archivos vienen en la misma consulta.
+   */
+  async pendingReview(actor: CurrentActor): Promise<PendingReviewListDto> {
+    const where = pendingReviewWhere(actor);
+    const [total, tasks] = await Promise.all([
+      this.prisma.task.count({ where }),
+      this.prisma.task.findMany({
+        where,
+        orderBy: [
+          { reviewRequestedAt: { sort: 'asc', nulls: 'first' } },
+          { updatedAt: 'asc' },
+        ],
+        take: PENDING_REVIEW_LIMIT,
+        include: {
+          responsible: { select: { name: true } },
+          phase: {
+            select: {
+              name: true,
+              plan: { select: { requestId: true, request: { select: { title: true } } } },
+            },
+          },
+          _count: { select: { evidences: true } },
+        },
+      }),
+    ]);
+
+    return {
+      total,
+      items: tasks.map((task) => ({
+        id: task.id,
+        title: task.title,
+        responsibleUserId: task.responsibleUserId,
+        responsibleName: task.responsible?.name ?? null,
+        requestId: task.phase.plan.requestId,
+        requestTitle: task.phase.plan.request.title,
+        phaseName: task.phase.name,
+        progress: task.progress,
+        evidenceRequired: isEvidenceRequired(task),
+        hasEvidence: hasEvidenceOf(task, task._count.evidences),
+        endDate: task.endDate,
+        isMilestone: task.isMilestone,
+        reviewRequestedAt: task.reviewRequestedAt,
+        waitingSince: task.reviewRequestedAt ?? task.updatedAt,
+        waitingSinceApproximate: task.reviewRequestedAt === null,
+      })),
+    };
   }
 
   /**
@@ -660,6 +851,8 @@ export class TaskService {
       },
       orderBy: [{ endDate: 'asc' }, { createdAt: 'asc' }],
       include: {
+        // Conteo de archivos de evidencia en la misma consulta (sin N+1).
+        _count: { select: { evidences: true } },
         phase: {
           select: {
             id: true,
@@ -718,6 +911,8 @@ export class TaskService {
       requestTitle: task.phase.plan.request.title,
       pendingPredecessors: pendingByTask.get(task.id) ?? [],
       blockedReason: task.blockedReason,
+      evidenceRequired: isEvidenceRequired(task),
+      hasEvidence: hasEvidenceOf(task, task._count.evidences),
       requestOperationalState: task.phase.plan.request.operationalState,
       requestCommitmentDate:
         task.phase.plan.commitmentDate ?? task.phase.plan.request.initialCommitmentDate,

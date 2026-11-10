@@ -159,6 +159,9 @@ export function MyWorkBoard({
         </TabsList>
         {columns.map((column) => (
           <TabsContent key={column.key} value={column.key} className="flex flex-col gap-3 pt-0">
+            {column.key === 'EN_REVISION' ? (
+              <p className="text-meta text-muted-foreground">Espera aprobación</p>
+            ) : null}
             {column.items.length === 0 && filtered ? (
               <p className="py-6 text-center text-meta text-muted-foreground">
                 Ninguna tarea aquí con los filtros actuales.
@@ -212,6 +215,9 @@ export function MyWorkBoard({
                 <span className="sr-only">{column.items.length === 1 ? ' tarea' : ' tareas'}</span>
               </span>
             </div>
+            {column.key === 'EN_REVISION' ? (
+              <p className="px-1 text-meta text-muted-foreground">Espera aprobación</p>
+            ) : null}
             <CardList
               column={column}
               today={today}

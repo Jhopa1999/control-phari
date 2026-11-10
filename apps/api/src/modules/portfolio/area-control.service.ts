@@ -6,6 +6,7 @@ import { RecordState } from '../coordination/record-state';
 import { REQUEST_STATES } from '../request/request-state';
 import { RequestState } from '../request/request-state';
 import { RequestStateService } from '../request/request-state.service';
+import { canApproveTasks, pendingReviewWhere } from '../plan/task/pending-review';
 import { PortfolioScopeService } from './portfolio-scope.service';
 import { daysBetween, median, percentage } from './indicators';
 import { dateToIsoDate, resolvePeriod } from './period';
@@ -547,8 +548,14 @@ export class AreaControlService {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
-    const [pendingTriage, pendingNoProcess, inTriage, pendingApproval, overdueTasks] =
-      await Promise.all([
+    const [
+      pendingTriage,
+      pendingNoProcess,
+      inTriage,
+      pendingApproval,
+      overdueTasks,
+      pendingTaskReviews,
+    ] = await Promise.all([
         this.prisma.request.count({
           where: {
             AND: [requestScope, { operationalState: RequestState.REGISTRADA }],
@@ -607,6 +614,11 @@ export class AreaControlService {
             ],
           },
         }),
+        // Tareas por aprobar: misma cláusula que la cola de GET /tasks/pending-review.
+        // Solo cuenta para quien puede aprobar (jefe/líder); el integrante recibe 0.
+        canApproveTasks(actor)
+          ? this.prisma.task.count({ where: pendingReviewWhere(actor) })
+          : Promise.resolve(0),
       ]);
 
     return {
@@ -617,6 +629,7 @@ export class AreaControlService {
       ).length,
       pendingApproval,
       overdueTasks,
+      pendingTaskReviews,
     };
   }
 }

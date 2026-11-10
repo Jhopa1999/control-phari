@@ -957,6 +957,7 @@ describe('AssistantService · memoria entre turnos y validación de identificado
     await runTurn(deps);
     const system = (deps.converseStream.mock.calls[0][0] as unknown as { system: string }).system;
     expect(system).toMatch(/Flujo de una solicitud/);
+    expect(system).toMatch(/NO propongas pasar a TERMINADA ni reabrir/);
     expect(system).toMatch(/UNA sola propuesta plan\.import/);
     expect(system).toMatch(/Nunca inventes/);
   });

@@ -143,6 +143,17 @@ pueden verlo/usarlo (tabla puente `AssetProcessVisibility`), y el líder solo **
 activos visibles a sus solicitudes y gestiona los documentos vinculados
 (`requireAssetWritable`/`requireProcessManager`, sin cambios).
 
+**Cierre de tareas (BL-036 E3, cambio de reglas).** En `PATCH /tasks/:id/status` el
+permiso sobre el estado depende además de la transición: **terminar** una tarea
+(`EN_REVISION → TERMINADA`, es decir, aprobarla) y **reabrirla** (`TERMINADA → EN_CURSO`)
+solo pueden hacerlo `JEFE_AREA` y `LIDER_PROCESO`; un integrante, aunque sea el
+responsable, recibe `403` con un mensaje en español (debe enviarla a revisión y esperar
+la aprobación). Enviar a revisión y devolver siguen siendo del responsable, el líder y el
+jefe, y enviar a revisión exige avance 100 % y la evidencia que pida la tarea (`409`). La
+cola de aprobación `GET /tasks/pending-review` es exclusiva de `JEFE_AREA` y
+`LIDER_PROCESO`. La interfaz solo refleja este permiso con los `roleCodes` del actor; el
+servidor es quien decide.
+
 ## Matriz de módulos (`auth/module-matrix.ts`)
 
 `MODULE_MATRIX` mapea cada clave de módulo a los roles permitidos. Es la **única fuente

@@ -14,6 +14,10 @@ Los contrastes de la sección 16 están **medidos** (WCAG 2.2; ver el método al
 > Entrega 1, la Entrega 2 sí toca API, contrato, MCP y esquema** (campos nuevos de `/my-work`, motivo de bloqueo). Donde el
 > anexo contradice una frase de las secciones 0 a 19 (p. ej. «sin tratamiento especial» para proyectos cerrados, 0.1 #4, o
 > «no hay motivo de bloqueo», 6.1), **manda el anexo**.
+>
+> **Entrega 3 (BL-036).** El **Anexo E3** (al final) añade la regla de cierre: requisitos para enviar a revisión (diálogo), cola «Por aprobar»
+> para líderes y jefes, estado «Espera aprobación» del integrante y tarjeta del Panel. También toca API, esquema, contrato y MCP.
+> Donde contradice las secciones 6.2 («Sin permiso»), 8.1, 8.3, 10.1 o 10.2, **manda el Anexo E3**.
 
 ---
 
@@ -1496,5 +1500,447 @@ en navegador), `forced-colors`, toasts, rendimiento con cientos de tareas, Playw
 
 **Candidatos de backlog derivados (no se hacen en la Entrega 2).** Editar el motivo sin cambiar de estado; arrastre accesible en el tablero (táctil); `completedAt` en
 `/my-work`; mostrar la fecha de compromiso como señal de riesgo cuando el vencimiento de la tarea la supera. **Entrega 3:** regla de cierre.
+
+---
+
+# Anexo E3. Entrega 3: regla de cierre, «Por aprobar» y requisitos de envío a revisión
+
+Especificación visual y de interacción (rol Diseñador) de la **regla de cierre de tareas** (BL-036, Entrega 3). **Toca API, esquema,
+contrato, MCP y documentación** (como la Entrega 2). Donde este anexo contradice una frase de las secciones 0 a 19 o del Anexo E2,
+**manda este anexo**; los casos concretos son: 8.1 (el botón «Terminar» ya no existe para el integrante), 8.3 (se retiran los
+avisos no bloqueantes y la propuesta de avance 100 % al terminar), 10.1 y 10.2 (la casilla «Registrar avance en 100 %» y los avisos
+de evidencia pasan a ser los requisitos del diálogo E3.3) y 6.2 «Sin permiso» (ahora el front **sí** conoce un permiso: aprobar, E3.0 #5).
+
+La **regla ya está aprobada por el usuario** y no se reabre; este anexo solo la hace visible:
+
+1. **Enviar a revisión** (`EN_CURSO → EN_REVISION`) exige avance 100 % y, si la tarea tiene criterios de aceptación o
+   `frameworkPhaseRequired`, evidencia (nota o enlace guardado, o al menos un archivo). Aplica a todos los roles.
+2. **Terminar** (`EN_REVISION → TERMINADA`) y **reabrir** (`TERMINADA → EN_CURSO`): solo jefe de área o líder de proceso.
+3. **Devolver** (`EN_REVISION → EN_CURSO`) y el resto de transiciones: sin cambio de permisos.
+4. Los líderes y jefes **aprueban** desde una cola («Por aprobar») en Mi trabajo y un contador en el Panel.
+
+La lógica vive **solo en el backend**; la interfaz refleja datos que la API calcula (`evidenceRequired`, `hasEvidence`) y el espejo
+de transiciones que ya existía.
+
+Los contrastes de E3.13 están **medidos** con `.agents/tasks/mi-trabajo-entrega3/contrast-e3.mjs` (ver el método allí).
+
+---
+
+## E3.0 Decisiones de los puntos abiertos
+
+| # | Punto abierto | Decisión | Por qué |
+| --- | --- | --- | --- |
+| 1 | **Código HTTP y textos de error** | **409** para los requisitos de envío a revisión (avance / evidencia) y **403** para terminar y reabrir sin ser líder o jefe. Textos exactos en E3.1. | Los requisitos son una **precondición del estado de la tarea** (igual que la predecesora pendiente y el proyecto cerrado, que ya son 409 y el front ya muestra su `message`). El 403 es de **permiso de rol**. 400 se reserva para entradas mal formadas (p. ej. `blockedReason` fuera de lugar). |
+| 2 | **Columna `reviewRequestedAt`** | **Sí**: columna nullable aditiva `review_requested_at` en `tasks` (migración nueva posterior a `20261111120000_task_blocked_reason`). Se fija al pasar a `EN_REVISION` y se pone a `null` al salir. Las tareas **ya en revisión** al desplegar quedan con `null`: la API devuelve `waitingSince = updatedAt` y `waitingSinceApproximate = true`. **Sin relleno retroactivo** en la migración. | Sin la columna, «desde cuándo espera» se confundiría con cualquier edición posterior (`updatedAt` cambia al editar el avance). El respaldo se marca como aproximado y la interfaz lo dice («unos N días»). Un `UPDATE` retroactivo con `updated_at` daría una falsa precisión. |
+| 3 | **Endpoint y alcance de la cola** | `GET /tasks/pending-review` (declarado **antes** de `tasks/:id` en el controlador). Roles `JEFE_AREA` y `LIDER_PROCESO`. Devuelve `{ total, items }` (tope de 100 ítems; `total` es el real). Alcance: `PortfolioScopeService.taskScope(actor)` (jefe sin filtro; resto, procesos de **todos** sus grants, que es el alcance de lectura vigente de tareas) **más** `status = EN_REVISION`, **menos** las tareas cuyo responsable es el propio actor, **menos** solicitudes con `operationalState = CERRADA`. Una tarea **sin responsable** sí aparece. Orden: `reviewRequestedAt` ascendente con los `null` primero (son anteriores al despliegue, o sea, las que más esperan) y luego `updatedAt` ascendente. | La ruta sigue el patrón `closure.pending` / `document.pending-approval` («pendientes de»). Excluir las propias respeta el brief (las ve en su lista con «Terminar»). Excluir proyectos cerrados evita ofrecer «Aprobar» a algo que el servidor rechazaría con 409. Un `NOT responsibleUserId = actor` descartaría por error los `null` (SQL): el filtro es `OR [null, ≠ actor]`. El tope evita una respuesta sin cota; con `total` la interfaz avisa si hay más. |
+| 4 | **Notificaciones** | **Sí se hacen** (cambio pequeño con patrón existente: `NotificationService.notify`, `processLeaders`, `areaHeadsForProcess`, como `notifyAssignment` y `notifyIfPlanCompleted` en `task.service.ts`; la columna `type` es `String`, **sin migración**). Tres tipos nuevos: `TASK_REVIEW_REQUESTED` (a líderes del proceso y jefes del área, excluyendo al actor), `TASK_APPROVED` y `TASK_RETURNED` (al responsable, excluyendo al actor). Textos en E3.9. | Sin aviso, una tarea en revisión depende de que el líder abra Mi trabajo. Son efectos secundarios que nunca revierten la acción (el servicio ya lo garantiza). |
+| 5 | **Cómo sabe el front que puede aprobar** | `useActor().permissions.roleCodes` (ya viene de `GET /me/permissions`) contiene `JEFE_AREA` o `LIDER_PROCESO`. Se concentra en **un solo helper** `canApproveTasks(roleCodes)` (en `lib/task-transitions.ts`) que **espeja `isPlanManager`** y solo **guía la UI**; el servidor decide (403). **No** se añade `canApprove` por tarea a `MyWorkItemDto` ni a `TaskResponseDto`. | `/my-work` solo devuelve las tareas del propio actor y el permiso para terminar depende del **rol**, no de la tarea: un flag por tarea sería idéntico en todas las filas (ruido en respuestas masivas). `roleCodes` ya es un dato servido por el backend; la regla «quién aprueba» no se redefine, se refleja con los mismos dos roles. Mientras los permisos cargan (`state !== 'success'`) se trata como **no puede aprobar** (nunca se ofrece Terminar de más). |
+| 6 | **Contadores de Mi trabajo** | **«En revisión» no tiene contador ni grupo propio.** Sigue agrupada por fecha de vencimiento y **cuenta** en «Vencidas» y «Para hoy» si corresponde (sigue sin terminar y su plazo es real). En «En curso» **no** cuenta (ya es otro estado). La fila del integrante dice «En revisión» + «Espera aprobación» (E3.4) y el chip de vencimiento sigue visible. | Un contador más (5.º) rompe la cuadrícula 2×2/4 y duplica la señal del estado. Esconderlas de «Vencidas» para el integrante ocultaría un retraso verdadero y exigiría pasar el permiso a `groupMyWork`/`countMyWork`, que hoy son puras de datos. |
+| 7 | **Tareas ya en `EN_REVISION` al desplegar** | No se migran. El integrante las ve con «Espera aprobación» y **sin Terminar** (solo Devolver / Bloquear). Los líderes y jefes las ven en la cola con el tiempo **aproximado**. Se avisa en «Al desplegar» del PR. | Es la consecuencia directa de la regla; un `UPDATE` masivo de estados sería destructivo. |
+| 8 | **Enlace propio de la cola** | **La cola vive solo en Mi trabajo** (`/mi-trabajo#por-aprobar`). **Sin** ítem nuevo de menú ni ruta propia. La tarjeta del Panel enlaza a ese ancla y, al llegar, el foco va al encabezado de la sección. | Un líder ya entra a Mi trabajo; otra ruta duplicaría navegación y permisos de módulo (`assigned` lo tienen los tres roles). |
+| 9 | **Cola frente a Lista/Tablero** | La sección «Por aprobar» va **encima** de los contadores y es **independiente** de la vista Lista/Tablero, de la búsqueda y de los contadores (esos filtran solo «mis tareas»). | Son dos colas con dueños distintos: lo que debo hacer yo y lo que debo decidir yo. |
+| 10 | **Diálogo en Planificación** | **No se monta** en Planificación: allí el error 409/403 del servidor se muestra como toast (el hook recibe `reviewRequirements: 'server'`). En Mi trabajo y en el detalle (`reviewRequirements: 'dialog'`) sí. | Lo pide el brief: Planificación no cambia de comportamiento más que mostrar el mensaje. |
+| 11 | **Aprobar / Devolver sin confirmación ni motivo** | «Aprobar» y «Devolver» actúan al primer clic, sin diálogo. «Devolver» no pide motivo (idea futura). Quien aprueba por error puede **reabrir** desde el menú de estado de la tarea. | Reversibles (reabrir / reenviar) y es el volumen alto del líder. El motivo de devolución está fuera de alcance por decisión del usuario. |
+
+---
+
+## E3.1 Errores del servidor y su texto exacto
+
+Orden de validación en `PATCH /tasks/:id/status` (el primero que falla responde): proyecto abierto (409) → responsable o líder (403, existente)
+→ `blockedReason` mal usado (400, existente) → **permiso de aprobar (403, nuevo)** → transición válida (409/400, existente) → predecesoras (409,
+existente) → **requisitos de envío (409, nuevo)**.
+
+| Caso | HTTP | `message` (texto exacto) |
+| --- | --- | --- |
+| Enviar a revisión sin avance 100 % | 409 | `Para enviar la tarea a revisión primero debe estar al 100 % de avance (ahora está en {n} %). Registra el avance y vuelve a intentarlo.` |
+| Enviar a revisión sin evidencia exigida | 409 | `Esta tarea exige evidencia para enviarse a revisión: escribe una nota o enlace de evidencia, o sube un archivo.` |
+| Ambos faltan | 409 | `Para enviar la tarea a revisión falta: avance al 100 % (ahora está en {n} %) y evidencia (una nota o enlace, o un archivo).` |
+| Integrante intenta terminar | 403 | `Solo un líder de proceso o el jefe de área puede terminar una tarea. Envíala a revisión: la aprueba un líder o el jefe de área.` |
+| Integrante intenta reabrir | 403 | `Solo un líder de proceso o el jefe de área puede reabrir una tarea terminada.` |
+
+- El **avance efectivo** es el del mismo PATCH (`progress`) o, si no llega, el de la tarea. La **evidencia efectiva** es `evidenceUrl` del PATCH (con texto
+  tras recortar) o, si no llega, el guardado; si no hay texto, se cuenta `task_evidences` **solo cuando hace falta** (una sola consulta `count`).
+- **El front muestra siempre el `message` del servidor** de estos 403 y 409. `toTaskError` (`lib/tasks.ts`) ya lo hace en 409; los 403 con **texto simple**
+  (cadena, no lista) también deben mostrarse tal cual. Los 403 genéricos en inglés de Nest («Forbidden resource») siguen sustituyéndose por el genérico.
+- Un líder o jefe que quiere terminar una tarea propia en `EN_CURSO` sigue la máquina (`EN_CURSO → EN_REVISION → TERMINADA`): la regla de requisitos le aplica
+  igual al enviar.
+
+---
+
+## E3.2 Datos que la interfaz espera (contrato)
+
+| Dato | Dónde | Regla |
+| --- | --- | --- |
+| `evidenceRequired: boolean` | `MyWorkItemDto`, `TaskResponseDto` | `acceptanceCriteria` con texto tras recortar **o** `frameworkPhaseRequired`. |
+| `hasEvidence: boolean` | ídem | `evidenceUrl` con texto **o** al menos una fila en `task_evidences`. Conteo en lote (`_count` en la misma consulta; sin N+1). |
+| `GET /tasks/pending-review` → `{ total, items }` | nuevo | `items[]`: `id`, `title`, `responsibleUserId` (nullable), `responsibleName` (nullable), `requestId`, `requestTitle`, `phaseName`, `progress`, `evidenceRequired`, `hasEvidence`, `endDate` (nullable), `isMilestone`, `reviewRequestedAt` (nullable), `waitingSince`, `waitingSinceApproximate`. |
+| `pendingTaskReviews: number` | `GET /area-control/attention` | Cuenta con **la misma cláusula** que la cola (función compartida); `0` para quien no puede aprobar. |
+
+La interfaz no calcula si falta evidencia: lee `evidenceRequired && !hasEvidence`. Si un dato falta (respuesta antigua en caché) se trata como «sin requisito»
+y el servidor responde con su mensaje: nada se inventa.
+
+---
+
+## E3.3 Diálogo «Antes de enviar a revisión» (`SubmitReviewDialog`)
+
+Un único componente (`app/seguimiento/plan/submit-review-dialog.tsx`), **montado una vez por vista** como `BlockReasonDialog` (E2.7.1) y alimentado por el hook
+compartido: `requestStatus(item, 'EN_REVISION', anchor?)` abre el diálogo **solo si faltan requisitos** (`progress < 100` o
+`evidenceRequired && !hasEvidence`); si todo se cumple, **envía directo, sin diálogo, como hoy**. Se abre desde la fila de la tabla, la tarjeta de lista,
+la tarjeta del tablero (menú «Mover a…»), el menú de estado y el botón principal del detalle (en el detalle, la nota ya escrita en el formulario llega
+precargada).
+
+### E3.3.1 Anatomía (variante «faltan las dos cosas»)
+
+```
+┌ Antes de enviar a revisión ───────────────────[x]┐
+│ “Documentar reglas de conciliación”               │  ← DialogDescription (título de la tarea)
+│ Para revisarla necesita lo siguiente.             │
+│                                                   │
+│ ┌ ⚠ Avance al 100 %                    Falta ───┐ │  ← requisito pendiente (warning-subtle)
+│ │ Ahora está en 90 %.                           │ │
+│ │ [ Poner el avance en 100 % ]                  │ │
+│ └───────────────────────────────────────────────┘ │
+│ ┌ ⚠ Evidencia                          Falta ───┐ │
+│ │ Esta tarea exige evidencia.                   │ │
+│ │ Nota o enlace de evidencia                    │ │  ← Label
+│ │ ┌───────────────────────────────────────────┐ │ │
+│ │ │                                           │ │ │  ← Textarea rows 3, maxLength 2048
+│ │ └───────────────────────────────────────────┘ │ │
+│ │ ¿Prefieres un archivo? Subir archivo en el detalle │ │  ← enlace-botón
+│ └───────────────────────────────────────────────┘ │
+│ ⓘ Completa lo que falta para enviar a revisión.   │  ← error de validación / del servidor (si aplica)
+│                                                   │
+│              [ Cancelar ]  [ Enviar a revisión ]  │
+└───────────────────────────────────────────────────┘
+```
+
+### E3.3.2 Variantes
+
+| Variante | Qué se muestra |
+| --- | --- |
+| **Falta avance** (evidencia no exigida o ya cumplida) | Solo el requisito «Avance al 100 %» si la evidencia **no se exige**. Si se exige y ya está cumplida, se añade la fila «Evidencia» en estado **Listo** (contexto: el usuario ve que lo demás está en orden). |
+| **Falta evidencia** (avance ya en 100 %) | Fila «Avance al 100 %» en **Listo** («Ya está al 100 %.») y fila «Evidencia» **pendiente** con el campo. |
+| **Faltan ambas** | Las dos filas pendientes, como el esquema anterior. |
+
+Nunca se pinta la fila de evidencia si `evidenceRequired` es falso.
+
+### E3.3.3 Filas de requisito
+
+| Estado | Presentación |
+| --- | --- |
+| **Pendiente** | `rounded-lg bg-warning-subtle p-3`; encabezado: icono `CircleAlert` (`text-warning`) + nombre (`text-foreground font-medium`) y, a la derecha, la palabra **«Falta»** (`text-warning`, `font-medium`). Nunca solo color: icono, palabra y texto. |
+| **Cumplido** | `rounded-lg bg-success-subtle p-3`; icono `CircleCheck` (`text-success`) + nombre y la palabra **«Listo»** (`text-success`). |
+| **Avance puesto en 100 % en el diálogo** | La fila pasa a **Listo** con el texto «Se guardará al 100 %.» y el botón cambia a «Deshacer» (`ghost sm`). No se llama a la API todavía: el `progress: 100` viaja en el **mismo PATCH de estado**. |
+| **Nota escrita** | La fila de evidencia pasa a **Listo** en cuanto el campo tiene texto tras recortar («Se guardará con la tarea.»); si se vacía, vuelve a **Falta**. Sin anuncio en vivo mientras se escribe. |
+
+- **«Poner el avance en 100 %»**: `Button variant="outline" size="sm"` (44 px en `< 640 px`), `aria-label="Poner el avance de «{título}» en 100 %"`. Al activarla, el foco **se queda** en el botón (ahora «Deshacer»).
+- **Campo**: `Textarea` con `id` propio, etiqueta visible «Nota o enlace de evidencia», `rows={3}`, `maxLength={2048}` (el límite del DTO), sin `placeholder` que sustituya a la etiqueta
+  (ejemplo opcional «Ej.: https://… o una descripción breve»), `aria-describedby` = ayuda («Se guarda junto con el cambio de estado.») + error.
+- **«Subir archivo en el detalle»**: botón con aspecto de enlace (`text-link underline`, sin icono; abre el panel). Cierra el diálogo y abre el panel lateral en la pestaña **Evidencia**
+  (en el detalle ya abierto, activa esa pestaña). Texto de ayuda bajo el enlace: «Cuando subas el archivo, vuelve a pulsar «Enviar a revisión».» Decisión simple: lo escrito en la nota
+  **no se conserva** al ir al detalle; si el campo tiene texto, la ayuda bajo el enlace añade «Se perderá lo escrito aquí.». Tras subir el archivo, `hasEvidence` llega recalculado al refrescar la lista y el siguiente
+  «Enviar a revisión» ya no abre el diálogo por evidencia.
+
+### E3.3.4 Comportamiento
+
+| Aspecto | Especificación |
+| --- | --- |
+| Contenedor | `Dialog` de `ui/dialog` (patrón E2.7.1), `bg-popover`, `z-50`. Se apila sobre el panel lateral si se abre desde él. |
+| Foco al abrir | En el **primer control sin cumplir**: «Poner el avance en 100 %» si falta avance; el campo de nota si solo falta evidencia (`onOpenAutoFocus`). Se registra el disparador con `useDialogReturnFocus().captureTrigger`. |
+| Validación | **Solo al pulsar «Enviar a revisión»**. Si algo sigue pendiente: `FormError` encima de los botones («Completa lo que falta para enviar a revisión: {avance al 100 %}{ y }{evidencia}.»), el foco va al primer control pendiente y el diálogo **no** se cierra. El botón principal **no** se deshabilita. |
+| Envío | `PATCH /tasks/{id}/status` con `{ status: 'EN_REVISION', progress?: 100, evidenceUrl?: texto }`. `progress` solo si el usuario lo puso en 100 % aquí; `evidenceUrl` solo si escribió nota. |
+| Éxito | Se cierra; toast «“{título}” enviada a revisión. Queda a la espera de aprobación.»; región viva «“{título}” pasó a En revisión. Espera aprobación.»; el foco sigue la regla de 12.6/E2.11 (título de la fila/tarjeta en su nuevo sitio). |
+| Fallo del servidor | El diálogo **no se cierra**; muestra el `message` del servidor (409/403/red) en `FormError` y **conserva** nota y avance puesto; se revierte el pintado optimista. Usa `tryChangeStatus` (sin toast duplicado). |
+| Cancelar / Esc | Cierra sin cambiar nada; el foco vuelve al disparador. Clic fuera: cierra solo si el campo está vacío y no se puso el avance (se ignora en caso contrario). |
+| Botones | «Cancelar» (`outline`) y «Enviar a revisión» (`default`); en guardado `loading` con «Enviando…» y ambos bloqueados. A `< 640 px` apilados, de ancho completo y 44 px. |
+| Móvil | Cabe en 320 px (`w-[calc(100%-1rem)]`); `DialogBody` desplaza si el teclado virtual reduce el alto; filas apiladas. |
+| Datos desactualizados | Si el servidor acepta el envío aunque el diálogo se abrió (otro usuario subió el archivo), simplemente se cierra con éxito. Si exige algo nuevo, se muestra su mensaje. |
+
+**Retiro de avisos viejos (sin mensajes contradictorios).** Se eliminan: en el toast de «Terminar»/«Enviar a revisión» el «Avance ajustado a 100 %» y «Sin evidencia registrada»
+con la acción «Añadir evidencia» (8.3), la consulta paralela `listTaskEvidence` de la fila y los tres `InlineNotice` del detalle (10.2) junto con la casilla «Registrar avance en 100 %» (10.1). Los
+requisitos del diálogo **son** esos avisos, ahora reglas. El toast de «Terminar» queda «“{título}” terminada.» con la acción **Reabrir** (solo para quien puede reabrir; envía solo `status: EN_CURSO`).
+
+---
+
+## E3.4 Estado «En revisión · espera aprobación» (integrante)
+
+Para quien **no** puede aprobar, una tarea `EN_REVISION` no tiene «siguiente paso»: espera a un líder.
+
+| Lugar | Presentación |
+| --- | --- |
+| **Fila de tabla** (columna Estado y siguiente paso) | Badge/menú «En revisión» (siempre) y, **en lugar del botón de siguiente paso**, el texto `text-meta text-muted-foreground` con icono `Hourglass` (`aria-hidden`) «Espera aprobación» (no es un botón ni está en el orden de tabulación). Se lee «En revisión, espera aprobación». |
+| **Tarjeta de lista y tablero** | Misma pareja: el texto ocupa el lugar del botón «Siguiente paso»; «Mover a…» sigue a la derecha. |
+| **Columna «En revisión» del tablero** | Subtítulo `text-meta text-muted-foreground` bajo el título de la columna: «Espera aprobación» (para todos los roles; es verdad para todos). |
+| **Menú de estado** | Opciones: «Devolver a En curso» y «Marcar como bloqueada» (sin «Terminar»). Primera opción **sin** etiqueta «Siguiente paso» (`naturalFirst = false`). |
+| **Detalle y panel** | El selector «Siguiente paso» no ofrece Terminar; preseleccionado «Devolver a En curso» **no** (para no empujar a deshacer): el selector arranca **vacío con la ayuda** «Esta tarea espera la aprobación de un líder o del jefe de área.» y el botón principal deshabilitado con motivo visible hasta elegir. |
+| **`TERMINADA` para el integrante** | `nextTaskStatuses` devuelve `[]`: el control de estado queda deshabilitado con el motivo «Solo un líder o el jefe de área puede reabrir una tarea terminada.» (texto visible en la tarjeta; `title` en la tabla, límite conocido de 6.2). |
+| **Líder / jefe** | Todo como hoy: en `EN_REVISION` ven «Terminar» (`default`) como siguiente paso y «Reabrir» desde `TERMINADA`. |
+
+Espejo en el front (puros, `e2e/web-lib.spec.ts`): `nextTaskStatuses(from, canApprove)`, `nextStepFor(status, canApprove)`, `orderTransitions(from, transitions, canApprove)` y
+`transitionVerb` sin cambios. Con `canApprove = false`: `EN_REVISION → ['EN_CURSO','BLOQUEADA']`, `TERMINADA → []`, `nextStepFor('EN_REVISION') = null`. El parámetro es **obligatorio** (sin valor por
+defecto) para que ninguna vista olvide pasarlo. El servidor sigue decidiendo (403).
+
+Contadores y agrupación: ver E3.0 #6. El chip de vencimiento de una tarea en revisión se mantiene.
+
+---
+
+## E3.5 Sección «Por aprobar» (líderes y jefes)
+
+Solo se pinta si `canApproveTasks(roleCodes)`; para el integrante **no existe** (ni hueco ni título). Va entre `PageHeader` y los contadores, con `id="por-aprobar"`.
+
+### E3.5.1 Estructura
+
+```
+Por aprobar (3)                                         ← h2 + chip de conteo
+Tareas de tu alcance que esperan tu decisión. Las que llevan más tiempo, primero.
+┌──────────────────────────────────────────────────────────────────────────────┐
+│▌ Documentar reglas de conciliación                       [Espera hace 4 días]  │  ← borde izq. warning si ≥ 3 días
+│▌ Ana Pérez · [UX] Tablero de ventas · Levantamiento      [Con evidencia]       │
+│▌ Vence 12 nov 2026                       [ Devolver ]  [ ✓ Aprobar ]           │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  Conciliar saldos de caja                                [Espera desde hoy]    │
+│  Luis Gómez · Cierre mensual · Ejecución              [Falta evidencia][Avance 90 %]│
+│  Sin fecha                                [ Devolver ]  [ ✓ Aprobar ]           │
+└──────────────────────────────────────────────────────────────────────────────┘
+        [ Ver las 2 restantes ]
+Tus propias tareas en revisión están en tu lista: ahí las terminas con «Terminar».   ← text-meta, solo si el actor tiene propias en revisión
+```
+
+| Elemento | Especificación |
+| --- | --- |
+| Contenedor | `<section id="por-aprobar" aria-labelledby="por-aprobar-titulo">`. En `≥ lg`/contenedor ≥ 920 px es tarjeta (`bg-card shadow-card rounded-xl`); en menor ancho cada `li` es la tarjeta y la cabecera va sobre `bg-background` (misma regla que 5.3). |
+| Encabezado | `h2` (`font-heading text-base font-semibold`) «Por aprobar» con icono `ClipboardCheck` (`aria-hidden`), chip de conteo (`bg-muted text-muted-foreground`, el **total** de la API) y descripción `text-meta text-muted-foreground`. `tabIndex={-1}` para recibir el foco al llegar desde el Panel. |
+| Fila | `<li data-task-id>` con dos zonas: **información** (izquierda, flexible) y **acciones** (derecha ≥ 640 px de contenedor; debajo, a ancho completo, en menor). |
+| Línea 1 | Botón-título (`text-sm font-medium`, abre el panel lateral con `?taskId=`) y, a la derecha o debajo, el **chip de espera**. |
+| Línea 2 | `text-meta text-muted-foreground line-clamp-1`: `{responsable} · {solicitud} · {fase}`; sin responsable: «Sin responsable». Nombre completo en `title`. |
+| Chips | **Espera** (siempre): `Badge neutral` + `Clock`, «Espera desde hoy» (< 24 h), «Espera hace N día(s)»; con `waitingSinceApproximate`, «Espera hace unos N días» y `title` «Fecha aproximada: la tarea ya estaba en revisión antes de que el portal registrara cuándo se envió.»; desde **3 días**, `Badge warning` y borde izquierdo `border-l-4 border-l-warning`. **Evidencia** (solo si `evidenceRequired`): `Badge success` + `CircleCheck` «Con evidencia» o `Badge warning` + `CircleAlert` «Falta evidencia» (las leyó el servidor; un líder puede aprobar igualmente: la regla de envío ya se cumplió o se saltó por una edición posterior, el chip informa). **Avance** solo si `< 100`: `Badge warning` «Avance {n} %». Vencimiento: `taskDueInfo` como en la lista (`overdue` → `Badge danger`). Máximo cuatro chips; en la fila nunca hay solo color. |
+| Línea 3 | `Vence {fecha}` o «Sin fecha» en `text-meta text-muted-foreground tabular-nums` (junto a los botones en escritorio). |
+| **Acciones** | **«Aprobar»** (`Button default sm`, icono `Check`) y **«Devolver»** (`Button outline sm`, icono `Undo2`), en ese orden visual de derecha a izquierda (Aprobar al extremo, la acción principal). `aria-label="Aprobar: {título}"` / `"Devolver a En curso: {título}"`. «Aprobar» envía `status: TERMINADA`; «Devolver» envía `status: EN_CURSO`. |
+| Tope | Se muestran **5** filas; el resto con «Ver las N restantes» (patrón de la sección 2: el foco pasa a la primera fila revelada y la región viva lo anuncia). Si `total` supera los `items` (100), pie `text-meta`: «Se muestran las {items.length} que más esperan. Hay {total} por aprobar.» |
+| Nota de propias | Solo si el actor tiene tareas propias en `EN_REVISION` en su lista: pie `text-meta text-muted-foreground` «Tus propias tareas en revisión están en tu lista: ahí las terminas con «Terminar».» (así el contador de la cola no engaña). |
+
+### E3.5.2 Estados de la sección
+
+| Estado | Presentación |
+| --- | --- |
+| **Carga** | El encabezado se pinta con «Por aprobar» sin conteo; `aria-busy="true"` y `role="status"` sr-only «Cargando las tareas por aprobar…»; tres `Skeleton` `h-16 rounded-lg` **sin** `opacity`. No bloquea el resto de la página (carga en paralelo con «Mi trabajo»). |
+| **Vacío** | `EmptyState` compacto (`py-6`) con `CircleCheck` (`text-success`, `aria-hidden`) y **«No hay tareas por aprobar»**; segunda línea `text-meta`: «Cuando alguien envíe una tarea a revisión, aparecerá aquí.» La sección **sigue visible** (el líder sabe que la cola existe y está al día). |
+| **Error de carga** | `InlineNotice tone="danger"` con «No se pudieron cargar las tareas por aprobar.» + el mensaje del servidor si lo hay, y botón **Reintentar** (`outline sm`). No oculta la lista personal. |
+| **Fila ocupada** | `aria-busy="true"` en la `li`; ambos botones `disabled` con `loading` en el pulsado; el resto de filas siguen activas. Sin `opacity`. |
+| **Éxito de Aprobar** | La fila **sale** al instante (optimista); toast «“{título}” aprobada. Quedó terminada.» con acción **Reabrir** (`status: EN_CURSO`, 8 000 ms; siempre disponible después desde el menú de estado de la tarea); región viva «“{título}” aprobada. Quedan {n} por aprobar.». |
+| **Éxito de Devolver** | La fila sale; toast «“{título}” devuelta a En curso. El responsable la verá en su lista.»; región viva igual con «devuelta». |
+| **Fallo** | La fila **vuelve**, toast `error` con el `message` del servidor (409 de proyecto cerrado, 403, red). Si la tarea ya no estaba en revisión (otro líder la resolvió), el servidor responde la transición inválida y la lista se **recarga** tras el toast. |
+| **Contador y Panel** | Tras cada acción se actualiza el chip del encabezado (`total − 1`); el Panel se recalcula al volver a él (carga en el montaje). |
+
+Al terminar una tarea, si era la última del plan, el backend ya notifica el cierre posible (`PLAN_TASKS_COMPLETED`); la interfaz no añade nada.
+
+---
+
+## E3.6 Tarjeta «Tareas por aprobar» en el Panel (`/inicio`)
+
+Se añade un elemento a `ITEMS` de `attention-section.tsx` (el mismo componente, mismo estilo y misma regla de «solo si hay trabajo»): clave `pendingTaskReviews`, módulo `assigned`,
+`href: '/mi-trabajo#por-aprobar'`, textos `one: 'tarea por aprobar'` / `other: 'tareas por aprobar'`, sin tono `danger`. Orden: después de «solicitudes por aprobar» y antes de «tareas vencidas».
+
+- Solo aparece si `pendingTaskReviews > 0`; para el integrante el servidor devuelve `0`, así que **no** aparece (no hay lógica de rol en el front).
+- Tarjeta enlace completa (como las demás): cifra `text-2xl font-semibold tabular-nums text-foreground`, etiqueta `text-muted-foreground`, flecha `ArrowRight` (`aria-hidden`). Nombre accesible
+  «{n} tareas por aprobar». Foco con `outline-ring` (4.22 · 3.75 sobre `background`, E3.13). Sin color propio: no es una alarma, es trabajo asignado.
+- **Carga/error** los del bloque existente (esqueleto de cuatro tarjetas y `ErrorState` con Reintentar). El esqueleto no cambia.
+- Al llegar a `/mi-trabajo#por-aprobar` la página espera a que la sección salga de la carga, hace `scrollIntoView({ block: 'start' })` (respeta `prefers-reduced-motion`: sin animación) y mueve el foco al `h2`.
+  Si la sección está en error o el usuario no puede aprobar, el ancla se ignora sin mensaje.
+
+---
+
+## E3.7 Responsive, 44 px, teclado y foco
+
+**Responsive** (la misma técnica de contenedor de la sección 6, no el viewport):
+
+| Ancho | «Por aprobar» | Diálogo |
+| --- | --- | --- |
+| 1440 (menú expandido, contenedor ≈ 1100) | Tarjeta; fila en una línea de información y acciones a la derecha. | Ancho máx. `max-w-lg`. |
+| 1180 y 1024 con menú expandido (`sidebarCollapsed='false'`; contenedor 892 y 736) | Contenedor < 920: cada fila es tarjeta; las acciones **pasan debajo** si el contenedor es < 640, a la derecha si no. | Igual. |
+| 768 | Tarjetas; acciones debajo, en dos columnas de igual ancho (44 px). | Ancho completo menos margen. |
+| 390 móvil | Tarjetas apiladas; chips envuelven; botones «Devolver» y «Aprobar» a ancho completo en dos columnas, de **44 px**. | Botones apilados de 44 px; filas de requisito apiladas. |
+
+**44 px (< 640 px / táctil):** «Aprobar», «Devolver», «Poner el avance en 100 %», «Deshacer», «Subir archivo en el detalle», «Ver las N restantes», «Reintentar» y los botones del diálogo miden ≥ 44 px
+(`min-h-11`); entre dos objetivos contiguos, ≥ 8 px (`gap-2`).
+
+**Teclado y orden de tabulación.**
+
+- «Por aprobar»: título → «Devolver» → «Aprobar» de cada fila (hasta 3 paradas por fila). Dentro de la sección el orden DOM es el visual. Los chips no son interactivos.
+- Diálogo: foco en el primer requisito pendiente (E3.3.4). Tab: [Poner el avance en 100 %] → campo de nota → «Subir archivo en el detalle» → Cancelar → Enviar a revisión → cierre. Esc cancela. Enter en el `Textarea` inserta salto de línea (no envía).
+- **Foco tras Aprobar/Devolver:** la fila desaparece → el foco va al **título de la fila siguiente**; si no hay siguiente, al de la **anterior**; si la cola queda vacía, al `h2` «Por aprobar» (`tabIndex={-1}`). Con «Reabrir» del toast, el foco no se mueve.
+- **Tras enviar a revisión desde el diálogo:** regla 12.6 (la fila/tarjeta sigue en su grupo; el foco va a su título).
+- **Región viva:** la única existente (12.6). Mensajes nuevos: «Por aprobar: {n} tareas.» (al cargar, una vez), «“X” aprobada. Quedan {n} por aprobar.», «“X” devuelta a En curso. Quedan {n} por aprobar.», «“X” pasó a En revisión. Espera aprobación.».
+- Todo control tiene `focus-visible:outline-2 outline-offset-2 outline-ring`; los botones deshabilitados repiten su motivo en un `<span hidden>` enlazado con `aria-describedby` (patrón vigente).
+
+---
+
+## E3.8 Claro, oscuro y tokens
+
+Layout idéntico en los dos temas; solo tokens semánticos **existentes** (no se crea ninguno; sin color crudo, sin `z-[n]`, sin `opacity` en texto).
+
+| Uso | Token |
+| --- | --- |
+| Tarjeta / fila de la cola | `bg-card shadow-card rounded-xl` |
+| Borde de espera larga | `border-l-4 border-l-warning` |
+| Chip de espera | `Badge neutral` (< 3 días) / `Badge warning` (≥ 3 días) + `Clock` |
+| Chip evidencia | `Badge success` + `CircleCheck` / `Badge warning` + `CircleAlert` |
+| Texto «Espera aprobación» | `text-meta text-muted-foreground` + `Hourglass` |
+| Requisito pendiente | `bg-warning-subtle`; icono y «Falta» en `text-warning`; texto en `text-foreground` |
+| Requisito cumplido | `bg-success-subtle`; icono y «Listo» en `text-success`; texto en `text-foreground` |
+| Error del diálogo | `FormError` (`text-danger`) |
+| «Aprobar» | `Button default` (`bg-primary text-primary-foreground`) |
+| «Devolver», «Poner el avance en 100 %» | `Button outline` |
+| Enlace «Subir archivo en el detalle» | `text-link` |
+| Vacío | icono `text-success`, texto `text-foreground` |
+| Capas | Ninguna nueva: diálogo y menús heredan `z-50`. |
+
+---
+
+## E3.9 Notificaciones (texto)
+
+| Evento | Destinatarios | Tipo | Título | Mensaje | Enlace |
+| --- | --- | --- | --- | --- | --- |
+| Tarea pasa a `EN_REVISION` | Líderes del proceso principal y jefes del área, excluyendo al actor | `TASK_REVIEW_REQUESTED` | `Tarea por aprobar` | `«{título}» de «{solicitud}» espera tu aprobación.` | `/mi-trabajo#por-aprobar` |
+| Tarea pasa a `TERMINADA` (aprobada) | Responsable, excluyendo al actor | `TASK_APPROVED` | `Tarea aprobada` | `Tu tarea «{título}» fue aprobada y quedó terminada.` | `/mi-trabajo` |
+| `EN_REVISION → EN_CURSO` por alguien distinto del responsable | Responsable | `TASK_RETURNED` | `Tarea devuelta` | `«{título}» volvió a En curso para que la corrijas.` | `/mi-trabajo` |
+
+Son efectos secundarios (un fallo se registra y no revierte). El centro de notificaciones muestra cualquier tipo con su título y mensaje; la implementación debe comprobar si hay un mapeo de iconos por tipo.
+
+---
+
+## E3.10 Planificación y detalle
+
+- **Planificación:** sin diálogo nuevo. Cualquier 409/403 de la regla aparece como **toast `error` con el `message` del servidor** (en ambos caminos: menú de estado y arrastre en el tablero). El arrastre a «Terminada» de un integrante muestra el 403 y la tarjeta vuelve a su columna. Planificación sigue ofreciendo
+  las transiciones de `nextTaskStatuses` con `canApprove` del actor (un integrante no ve «Terminar» ni «Reabrir» en su menú).
+- **Detalle de tarea y panel lateral:** el botón principal lleva el verbo elegido (8.2); al elegir «Enviar a revisión» con requisitos pendientes abre el diálogo E3.3 (con la nota del formulario precargada); la
+  casilla «Registrar avance en 100 %» y los tres avisos se retiran (E3.3.4). Para el integrante en `EN_REVISION` ver E3.4. Los errores del servidor van en `FormError` y toast, y el formulario se conserva.
+- **Tablero (Entrega 2):** el carril «En revisión» muestra «Espera aprobación» (E3.4) y las acciones respetan los mismos permisos.
+
+---
+
+## E3.11 Carga, vacío y error: resumen
+
+| Pieza | Carga | Vacío | Error |
+| --- | --- | --- | --- |
+| Sección «Por aprobar» | 3 esqueletos, `aria-busy` | «No hay tareas por aprobar» | `InlineNotice` + Reintentar (no bloquea la página) |
+| Diálogo de requisitos | No carga datos propios (usa los banderas del elemento) | — | `FormError` con el mensaje del servidor; no se cierra |
+| Tarjeta del Panel | Esqueleto existente | No se pinta con `0` | `ErrorState` existente con Reintentar |
+| Estado del integrante | — | — | Toast con el mensaje del servidor (403/409) y la fila revierte |
+
+---
+
+## E3.12 Componentes y archivos
+
+| Archivo | Cambio |
+| --- | --- |
+| `lib/task-transitions.ts` | `canApproveTasks(roleCodes)`; `nextTaskStatuses(from, canApprove)`. |
+| `lib/task-next-step.ts` | `nextStepFor(status, canApprove)`, `orderTransitions(from, transitions, canApprove)`. Puro y sin imports de la app. |
+| `lib/pending-review.ts` (nuevo) | Cliente de `GET /tasks/pending-review`, `waitingLabel(item, now)` puro. |
+| `lib/review-requirements.ts` (nuevo) | `reviewRequirementsOf(item)` → `{ needsProgress, needsEvidence }` desde los flags; puro. |
+| `lib/tasks.ts` | `toTaskError` muestra 403 con texto simple en español. |
+| `app/seguimiento/plan/submit-review-dialog.tsx` (nuevo) | Diálogo E3.3. |
+| `app/seguimiento/plan/use-inline-task-actions.ts` | `reviewRequirements: 'dialog' \| 'server'`, `reviewPrompt`, `requestStatus` abre el diálogo; se retira la consulta de evidencia y los avisos de 8.3. |
+| `app/mi-trabajo/pending-review-section.tsx` (nuevo) | Sección E3.5. |
+| `app/mi-trabajo/**` filas, tarjetas, tablero | «Espera aprobación», `canApprove` a las transiciones, subtítulo de carril. |
+| `app/seguimiento/tareas/task-detail.tsx` | E3.10. |
+| `app/inicio/attention-section.tsx` | Elemento E3.6. |
+| API / contrato / MCP / docs | `task.service.ts`, DTOs, `GET /tasks/pending-review`, `pendingTaskReviews`, migración `review_requested_at`, notificaciones, tool `task.pending-review`, descripciones de `task.status.update` y del asistente, `docs/aplicacion/**`. |
+
+Prohibido: color crudo, `z-[n]`, dependencias nuevas, reglas de negocio nuevas en el front.
+
+---
+
+## E3.13 Contrastes medidos (WCAG 2.2 AA)
+
+**Método.** Script Node versionado fuera del código de la aplicación: `.agents/tasks/mi-trabajo-entrega3/contrast-e3.mjs` (ejecutable con `node contrast-e3.mjs`; su salida completa está en
+`contrast-e3.out.txt` de la misma carpeta). Lee `apps/web/src/app/globals.css`, quita comentarios, resuelve `var(--x)`, convierte cada token OKLCH de `:root` y `.dark` a sRGB (Oklab → LMS → sRGB lineal → gamma, con
+recorte de gamut por canal), compone los translúcidos en sRGB codificado sobre su fondo real (los `Badge`, su token al 10 a 14 % sobre `card` o el carril; el carril, `muted` al 40 % sobre `background`), calcula la
+luminancia relativa y `(L1+0.05)/(L2+0.05)`. **Control cruzado automático** (el script falla si no coincide): reproduce seis pares ya publicados (`foreground`/`card` 14.75 · 14.98; `muted-foreground`/`card` 7.13 · 7.62;
+`ring`/`card` 4.84 · 3.37; `warning/14` sobre `card` 5.47 · 7.19; `info/12` sobre carril 4.92 · 6.69; `foreground`/`danger-subtle` 13.05 · 13.64). Umbrales: texto normal ≥ **4.5:1**; iconos, bordes de controles y foco ≥ **3:1**. Se midieron los dos temas.
+**Resultado: 46 pares, 0 incumplen; salida del script con código 0.**
+
+| Par | Claro | Oscuro | Umbral |
+| --- | --- | --- | --- |
+| `foreground` / `popover` (título, descripción, etiquetas del diálogo) | 14.75 ✔ | 14.13 ✔ | 4.5 |
+| `muted-foreground` / `popover` (ayuda y contador) | 7.13 ✔ | 7.19 ✔ | 4.5 |
+| `text-danger` / `popover` (error del diálogo) | 6.59 ✔ | 6.79 ✔ | 4.5 |
+| `text-link` / `popover` («Subir archivo en el detalle») | 6.14 ✔ | 6.93 ✔ | 4.5 |
+| `foreground` / `warning-subtle` (texto del requisito pendiente) | 13.32 ✔ | 13.48 ✔ | 4.5 |
+| `text-warning` / `warning-subtle` («Falta» e icono) | 6.10 ✔ | 8.62 ✔ | 4.5 |
+| `muted-foreground` / `warning-subtle` (ayuda) | 6.44 ✔ | 6.86 ✔ | 4.5 |
+| `foreground` / `success-subtle` (requisito cumplido) | 13.29 ✔ | 13.62 ✔ | 4.5 |
+| `text-success` / `success-subtle` («Listo» e icono) | 6.07 ✔ | 8.36 ✔ | 4.5 |
+| `muted-foreground` / `success-subtle` (ayuda) | 6.43 ✔ | 6.93 ✔ | 4.5 |
+| `foreground` / `background` (texto escrito en la nota) | 12.86 ✔ | 16.66 ✔ | 4.5 |
+| `muted-foreground` / `background` (placeholder) | 6.22 ✔ | 8.47 ✔ | 4.5 |
+| `input` / `popover` (borde de campo y de botón outline, no texto) | 3.95 ✔ | 3.59 ✔ | 3 |
+| `input` / `background` (borde del campo contra su relleno) | 3.44 ✔ | 4.24 ✔ | 3 |
+| `danger` / `popover` (borde `aria-invalid`, no texto) | 6.59 ✔ | 6.79 ✔ | 3 |
+| `ring` / `popover` (foco en el diálogo) | 4.84 ✔ | 3.18 ✔ | 3 |
+| `primary-foreground` / `primary` («Enviar a revisión», «Aprobar») | 4.84 ✔ | 4.84 ✔ | 4.5 |
+| `foreground` / `card` (título de la fila; «Devolver»; cifra del Panel; texto del vacío) | 14.75 ✔ | 14.98 ✔ | 4.5 |
+| `muted-foreground` / `card` (responsable · solicitud · fase; «Espera aprobación»; etiqueta del Panel; motivo de «Terminada») | 7.13 ✔ | 7.62 ✔ | 4.5 |
+| `foreground` / `background` (título «Por aprobar» en móvil, sin tarjeta) | 12.86 ✔ | 16.66 ✔ | 4.5 |
+| `muted-foreground` / `muted` (chip de conteo) | 5.72 ✔ | 6.95 ✔ | 4.5 |
+| `neutral` / `neutral/10` sobre `card` (chip «Espera hace N días») | 7.24 ✔ | 7.60 ✔ | 4.5 |
+| `warning` / `warning/14` sobre `card` (espera ≥ 3 días, «Falta evidencia», «Avance n %») | 5.47 ✔ | 7.19 ✔ | 4.5 |
+| `success` / `success/12` sobre `card` («Con evidencia») | 5.62 ✔ | 7.17 ✔ | 4.5 |
+| `danger` / `danger/12` sobre `card` («Vencida…») | 5.40 ✔ | 5.95 ✔ | 4.5 |
+| `info` / `info/12` sobre `card` (badge «En revisión») | 5.77 ✔ | 6.43 ✔ | 4.5 |
+| `text-danger` / `card` (error de la sección) | 6.59 ✔ | 7.20 ✔ | 4.5 |
+| `muted-foreground` / carril (subtítulo «Espera aprobación» y texto en el tablero) | 6.02 ✔ | 7.90 ✔ | 4.5 |
+| `warning` / `card` (borde izquierdo de espera larga, no texto) | 6.76 ✔ | 9.57 ✔ | 3 |
+| `success` / `card` (icono del vacío, no texto) | 6.74 ✔ | 9.19 ✔ | 3 |
+| `borde input` / `card` (botón «Devolver», no texto) | 3.95 ✔ | 3.81 ✔ | 3 |
+| `ring` / `card` (foco en la cola) | 4.84 ✔ | 3.37 ✔ | 3 |
+| `ring` / `background` (foco de la tarjeta del Panel, fuera de la tarjeta) | 4.22 ✔ | 3.75 ✔ | 3 |
+| `muted-foreground` / `card` (flecha del Panel, no texto) | 7.13 ✔ | 7.62 ✔ | 3 |
+
+(Las filas agrupadas comparten el mismo par; la lista completa de los 46 está en `contrast-e3.out.txt`.)
+
+Consecuencias: (1) todo cumple con margen; el más ajustado es el foco en oscuro sobre `popover` (3.18) y sobre `card` (3.37), ya conocido desde la sección 16; (2) las filas de requisito usan `text-foreground` para el cuerpo (13+) y reservan
+`text-warning`/`text-success` para la palabra «Falta»/«Listo» y el icono (≥ 6.07), de modo que el significado nunca depende solo del color; (3) los chips van sobre `card` (≥ 5.4), no sobre el carril, como se decidió en E2.13.
+**No medido:** `forced-colors`, toasts de `sonner`, hover de botones existentes y el estado deshabilitado (exento de WCAG 1.4.3, pero se mantiene `muted-foreground` sin `opacity`).
+
+---
+
+## E3.14 Pruebas sugeridas
+
+- **Puras (`e2e/web-lib.spec.ts`):** `nextTaskStatuses`/`nextStepFor`/`orderTransitions` con `canApprove` verdadero y falso en cada estado (bordes: `EN_REVISION` y `TERMINADA`; estado fuera del enum → `[]`/`null`);
+  `canApproveTasks` (jefe, líder, integrante, lista vacía, rol desconocido); `reviewRequirementsOf` (avance 100 con y sin evidencia exigida, flags ausentes → sin requisitos); `waitingLabel` (hoy, 1 día, N días, aproximado, ≥ 3 días → advertencia).
+- **API (Jest):** cada rama de E3.1; `reviewRequestedAt` se fija y se limpia; cola (alcance jefe/líder, exclusión de propias y de sin-responsable incluida, proyectos cerrados excluidos, orden, tope y `total`, sin N+1: número de consultas
+  constante); `pendingTaskReviews`; flags; notificaciones (tres tipos, sin auto-aviso).
+- **MCP (`node --test`):** cobertura de la tool nueva y del conteo («expone N tools»).
+- **Playwright (`e2e/mi-trabajo.spec.ts`, con fixtures de `GET /my-work` y de `/tasks/pending-review`):** integrante en `EN_REVISION` ve «Espera aprobación» y **no** «Terminar» (fila, tarjeta y tablero); `TERMINADA` sin «Reabrir»; diálogo en las
+  tres variantes (poner 100 %, nota, vacío → error y foco al control, Esc, 409 se queda, éxito); envío directo sin diálogo cuando todo se cumple; líder ve «Por aprobar (N)», aprueba y devuelve, foco tras aprobar, vacío, error con Reintentar, carga;
+  integrante **no** ve la sección; ancla `#por-aprobar` desde el Panel; Planificación muestra el error del servidor como toast. Revisar y ajustar los specs que terminan tareas como integrante (`grep` de `TERMINADA`, `EN_REVISION`, «Terminar», «Terminada»).
+- **Visual (obligatoria, capturas en `.agents/tasks/mi-trabajo-entrega3/screenshots/`):** integrante con tarea en revisión; diálogo (falta avance, falta evidencia, ambas); «Por aprobar» de un líder en 1440 claro y oscuro, 1024 y 1180 con menú expandido, 768 y 390; Panel con la tarjeta;
+  Planificación con un error de regla.
+- **Manual:** teclado completo, lector de pantalla (los `aria-live` y `aria-describedby` nuevos), zoom 200 %, `forced-colors`.
+
+---
+
+## E3.14b Notas de la implementación
+
+- **`canApprove` por tarea:** no se añadió (decisión E3.0 #5); el front usa `canApproveTasks(roleCodes)` y el servidor decide (403).
+- **Orden de validación:** confirmado contra `changeStatus`: proyecto abierto → responsable → `blockedReason` → permiso de aprobar (403) → transición → predecesoras → requisitos (409). Coincide con E3.1.
+- **«Subir archivo en el detalle»:** lo escrito en la nota no se conserva al ir al detalle (la ayuda lo avisa).
+- **Detalle del integrante en En revisión:** el selector arranca vacío con la ayuda «Esta tarea espera la aprobación…» y el botón principal no disponible con su motivo visible hasta elegir Devolver o Bloquear.
+- **Aprobar/Devolver en la cola:** la fila queda ocupada (botones con carga) mientras responde el servidor y sale al confirmar; si falla, permanece y se muestra el mensaje.
+- **Módulo puro:** `waitingInfo` vive en `lib/pending-review-wait.ts` (sin importar el cliente de la API) para poder probarse en `e2e/web-lib.spec.ts`.
+
+---
+
+## E3.15 Riesgos, no verificado y pendientes
+
+**Riesgos.** (1) **Cambio de comportamiento** para clientes de la API, el MCP y el asistente de IA: reciben 403/409 donde antes pasaba (terminar como integrante, enviar a revisión sin avance 100 % o sin evidencia). Se documenta en docs y en el PR.
+(2) Las tareas ya en revisión al desplegar sólo pueden terminarlas líderes y jefes; su tiempo de espera es aproximado. (3) El avance se puede **bajar** mientras la tarea está en revisión (la edición de avance sigue permitida) y la aprobación no vuelve a validarlo: el chip «Avance n %»
+de la cola lo muestra y el líder decide. (4) El alcance de lectura de tareas es el de **todos los grants** del actor (patrón vigente), mientras que aprobar depende del rol global: un líder de un proceso que además es integrante en otro verá
+las tareas de ambos en la cola y el servidor aceptará la aprobación (vigente en el resto de las acciones de líder). (5) Un diálogo sobre el panel lateral apila dos capas `z-50` (se verifica en la implementación).
+
+**No verificado en el diseño.** Lectores de pantalla, tablet real, `forced-colors`, toasts, el comportamiento de `sonner` con foco dentro del toast de «Reabrir».
+
+**Candidatos de backlog derivados.** Motivo de devolución (idea futura pedida por el usuario), motivo de bloqueo editable, aprobación en lote, aviso al responsable cuando su tarea lleva mucho tiempo en revisión.
 
 ---

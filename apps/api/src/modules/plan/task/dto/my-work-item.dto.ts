@@ -73,4 +73,17 @@ export class MyWorkItemDto {
       'Fecha de compromiso vigente: la del plan si la tiene; si no, el compromiso inicial de la solicitud.',
   })
   requestCommitmentDate!: Date | null;
+
+  @ApiProperty({
+    type: Boolean,
+    description:
+      'La tarea exige evidencia para enviarse a revisión: tiene criterios de aceptación o fase de gobierno requerida.',
+  })
+  evidenceRequired!: boolean;
+
+  @ApiProperty({
+    type: Boolean,
+    description: 'La tarea tiene evidencia: una nota o enlace guardado, o al menos un archivo subido.',
+  })
+  hasEvidence!: boolean;
 }

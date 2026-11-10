@@ -19,6 +19,7 @@ interface AttentionItem {
     | 'pendingNoProcess'
     | 'readyToPrioritize'
     | 'pendingApproval'
+    | 'pendingTaskReviews'
     | 'overdueTasks';
   moduleKey: ModuleKey;
   href: string;
@@ -57,6 +58,14 @@ const ITEMS: AttentionItem[] = [
     href: '/administracion/revision',
     one: 'solicitud por aprobar',
     other: 'solicitudes por aprobar',
+  },
+  {
+    // El servidor devuelve 0 a quien no puede aprobar: no hay lógica de rol aquí.
+    key: 'pendingTaskReviews',
+    moduleKey: 'assigned',
+    href: '/mi-trabajo#por-aprobar',
+    one: 'tarea por aprobar',
+    other: 'tareas por aprobar',
   },
   {
     key: 'overdueTasks',

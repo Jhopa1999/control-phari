@@ -1,3 +1,4 @@
+import { pendingReviewWhere } from '../plan/task/pending-review';
 import { PrismaService } from '../../database/prisma.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
@@ -572,7 +573,30 @@ describe('AreaControlService', () => {
         readyToPrioritize: 2,
         pendingApproval: 2,
         overdueTasks: 5,
+        pendingTaskReviews: 5,
       });
+    });
+
+    it('pendingTaskReviews usa la misma cláusula que la cola «Por aprobar» (líder)', async () => {
+      await service.attention(lider(['p1']));
+      // Orden del Promise.all: vencidas (0) y por aprobar (1).
+      const reviewWhere = (m.prismaObj.task as any).count.mock.calls[1][0].where;
+      expect(reviewWhere).toEqual(pendingReviewWhere(lider(['p1'])));
+      expect(reviewWhere.status).toBe('EN_REVISION');
+      expect(reviewWhere.OR).toContainEqual({ responsibleUserId: { not: 'ul' } });
+    });
+
+    it('el integrante recibe pendingTaskReviews = 0 sin consultar', async () => {
+      const integrante: CurrentActor = {
+        ...lider(['p1']),
+        userId: 'ui',
+        roleCodes: new Set([RoleCode.INTEGRANTE]),
+      };
+      (m.prismaObj.task as any).count.mockResolvedValue(7);
+      const res = await service.attention(integrante);
+      expect(res.pendingTaskReviews).toBe(0);
+      // Solo la consulta de vencidas.
+      expect((m.prismaObj.task as any).count).toHaveBeenCalledTimes(1);
     });
 
     it('aplica el alcance del actor y excluye tareas terminadas y de solicitudes cerradas', async () => {
