@@ -18,15 +18,18 @@ export type PortfolioItem =
 type PortfolioListQuery = NonNullable<paths['/portfolio']['get']['parameters']['query']>;
 
 export interface PortfolioFilters {
-  mainProcessId?: string;
-  state?: string;
-  band?: string;
+  /** Ids de proceso o `SIN_PROCESO`; varios se combinan con O. */
+  mainProcessId?: string[];
+  state?: string[];
+  band?: string[];
 }
 
 /**
  * Lista las iniciativas del portafolio en alcance (GET /portfolio). Accesible
- * a los 3 roles; el alcance se impone en el where del backend. Filtros fuera de
- * rango devuelven 400; un proceso fuera de alcance intersecta a vacio (no 404).
+ * a los 3 roles; el alcance se impone en el where del backend. Cada filtro
+ * admite varios valores (el cliente generado repite el parametro) que se
+ * combinan con O; entre filtros, Y. Valores fuera de rango devuelven 400; un
+ * proceso fuera de alcance intersecta a vacio (no 404).
  */
 export async function listPortfolio(
   filters: PortfolioFilters = {},
@@ -35,11 +38,9 @@ export async function listPortfolio(
     const { data, error, response } = await api.GET('/portfolio', {
       params: {
         query: {
-          ...(filters.mainProcessId
-            ? { mainProcessId: filters.mainProcessId }
-            : {}),
-          ...(filters.state ? { state: filters.state as PortfolioListQuery['state'] } : {}),
-          ...(filters.band ? { band: filters.band as PortfolioListQuery['band'] } : {}),
+          ...(filters.mainProcessId?.length ? { mainProcessId: filters.mainProcessId } : {}),
+          ...(filters.state?.length ? { state: filters.state as PortfolioListQuery['state'] } : {}),
+          ...(filters.band?.length ? { band: filters.band as PortfolioListQuery['band'] } : {}),
         },
       },
     });

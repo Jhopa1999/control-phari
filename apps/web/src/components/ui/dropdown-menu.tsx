@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
-import { LoaderCircle } from 'lucide-react';
+import { Check, LoaderCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
@@ -90,6 +90,38 @@ const DropdownMenuItem = React.forwardRef<
 );
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
 
+/**
+ * Ítem con casilla (menuitemcheckbox). El indicador es un cuadro de 16 px: vacío
+ * con `border-input` y, marcado, relleno `bg-primary` con `Check` (el borde se
+ * conserva para el contraste sobre `accent`). Para no cerrar el menú al marcar,
+ * el consumidor pasa `onSelect={(e) => e.preventDefault()}`.
+ */
+const DropdownMenuCheckboxItem = React.forwardRef<
+  React.ComponentRef<typeof DropdownMenuPrimitive.CheckboxItem>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.CheckboxItem>
+>(({ className, children, checked, ...props }, ref) => (
+  <DropdownMenuPrimitive.CheckboxItem
+    ref={ref}
+    checked={checked}
+    className={cn(
+      'group relative flex min-h-8 cursor-default select-none items-center gap-2.5 rounded-sm px-2 py-1.5 text-sm font-normal outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[state=checked]:font-medium data-[disabled]:pointer-events-none data-[disabled]:opacity-50 pointer-coarse:min-h-11',
+      className,
+    )}
+    {...props}
+  >
+    <span
+      aria-hidden="true"
+      className="flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input group-data-[state=checked]:bg-primary"
+    >
+      <DropdownMenuPrimitive.ItemIndicator>
+        <Check className="size-3.5 text-primary-foreground" />
+      </DropdownMenuPrimitive.ItemIndicator>
+    </span>
+    <span className="line-clamp-2 min-w-0 whitespace-normal">{children}</span>
+  </DropdownMenuPrimitive.CheckboxItem>
+));
+DropdownMenuCheckboxItem.displayName = DropdownMenuPrimitive.CheckboxItem.displayName;
+
 const DropdownMenuLabel = React.forwardRef<
   React.ComponentRef<typeof DropdownMenuPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Label>
@@ -119,6 +151,7 @@ export {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuGroup,

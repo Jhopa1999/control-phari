@@ -115,6 +115,14 @@ import {
 import { nextStepFor, orderTransitions } from '../apps/web/src/lib/task-next-step';
 import { BOARD_OTHER_KEY, boardColumns } from '../apps/web/src/lib/my-work-board';
 import { BLOCK_REASON_MAX, validateBlockReason } from '../apps/web/src/lib/block-reason';
+import {
+  announceSelection,
+  matchesAny,
+  normalizeSelection,
+  summarizeSelection,
+  toggleValue,
+  type MultiFilterOption,
+} from '../apps/web/src/lib/multi-filter';
 
 /**
  * Pruebas de funciones puras de apps/web/src/lib (design §7.9.2 y §20) con el
@@ -1472,5 +1480,88 @@ test.describe('Mi trabajo: proyectos cerrados, tablero y motivo de bloqueo', () 
     expect(validateBlockReason('a'.repeat(BLOCK_REASON_MAX)).ok).toBe(true);
     expect(validateBlockReason('a'.repeat(BLOCK_REASON_MAX + 1)).ok).toBe(false);
     expect(validateBlockReason('  falta acceso  ')).toEqual({ ok: true, reason: 'falta acceso' });
+  });
+});
+
+test.describe('multi-filter', () => {
+  const states: MultiFilterOption[] = [
+    { value: 'REGISTRADA', label: 'Registrada', group: 'Entrada' },
+    { value: 'EN_TRIAGE', label: 'En triage', group: 'Entrada' },
+    { value: 'DEVUELTA', label: 'Devuelta', group: 'Entrada' },
+    { value: 'BLOQUEADA', label: 'Bloqueada', group: 'Ejecución' },
+    { value: 'CERRADA', label: 'Cerrada', group: 'Cierre' },
+    { value: 'RETIRADA', label: 'Retirada', group: 'Cierre' },
+  ];
+  const bands: MultiFilterOption[] = [
+    { value: 'P1', label: 'P1' },
+    { value: 'P2', label: 'P2' },
+    { value: 'P3', label: 'P3' },
+    { value: 'P4', label: 'P4' },
+    { value: 'SIN_PRIORIZAR', label: 'Sin priorizar' },
+  ];
+
+  test('summarizeSelection: sin selección devuelve el placeholder', () => {
+    expect(summarizeSelection(states, [])).toBe('Todos');
+    expect(summarizeSelection(bands, [], 'Todas', 'f')).toBe('Todas');
+  });
+  test('summarizeSelection: una opción devuelve su etiqueta completa', () => {
+    expect(summarizeSelection(states, ['BLOQUEADA'])).toBe('Bloqueada');
+    expect(summarizeSelection([{ value: 'a', label: 'Backlog priorizado' }], ['a'])).toBe('Backlog priorizado');
+  });
+  test('summarizeSelection: 2 o 3 opciones se listan solo si caben en 14 caracteres', () => {
+    expect(summarizeSelection(bands, ['P1', 'P2'], 'Todas', 'f')).toBe('P1, P2');
+    expect(summarizeSelection(bands, ['P1', 'P2', 'P3'], 'Todas', 'f')).toBe('P1, P2, P3');
+    // «En triage, Devuelta» = 19 caracteres
+    expect(summarizeSelection(states, ['EN_TRIAGE', 'DEVUELTA'])).toBe('2 seleccionados');
+    // «Cerrada, Retirada» = 17 caracteres
+    expect(summarizeSelection(states, ['CERRADA', 'RETIRADA'])).toBe('2 seleccionados');
+    // «P1, Sin priorizar» = 17 caracteres
+    expect(summarizeSelection(bands, ['P1', 'SIN_PRIORIZAR'], 'Todas', 'f')).toBe('2 seleccionadas');
+  });
+  test('summarizeSelection: límite exacto 14 y 15 caracteres', () => {
+    const opts: MultiFilterOption[] = [
+      { value: 'a', label: 'Abcdef' }, // «Abcdef, Ghijkl» = 14
+      { value: 'b', label: 'Ghijkl' },
+      { value: 'c', label: 'Ghijklm' }, // «Abcdef, Ghijklm» = 15
+    ];
+    expect(summarizeSelection(opts, ['a', 'b'])).toBe('Abcdef, Ghijkl');
+    expect(summarizeSelection(opts, ['a', 'c'])).toBe('2 seleccionados');
+  });
+  test('summarizeSelection: más de 3 opciones usa el contador y respeta el género', () => {
+    expect(summarizeSelection(bands, ['P1', 'P2', 'P3', 'P4'], 'Todas', 'f')).toBe('4 seleccionadas');
+    expect(summarizeSelection(bands, ['P1', 'P2', 'P3', 'P4'])).toBe('4 seleccionados');
+  });
+  test('summarizeSelection: ignora valores que no están en options y usa el orden de options', () => {
+    expect(summarizeSelection(bands, ['FANTASMA'], 'Todas', 'f')).toBe('Todas');
+    expect(summarizeSelection(bands, ['P2', 'P1', 'FANTASMA'], 'Todas', 'f')).toBe('P1, P2');
+  });
+  test('toggleValue: añade, quita, ordena según options y no duplica', () => {
+    expect(toggleValue(bands, [], 'P3')).toEqual(['P3']);
+    expect(toggleValue(bands, ['P3'], 'P1')).toEqual(['P1', 'P3']);
+    expect(toggleValue(bands, ['P1', 'P3'], 'P1')).toEqual(['P3']);
+    expect(toggleValue(bands, ['P1', 'P1'], 'P2')).toEqual(['P1', 'P2']);
+    expect(toggleValue(bands, ['P3'], 'P3')).toEqual([]);
+  });
+  test('toggleValue: ignora valores desconocidos y los descarta de la selección', () => {
+    expect(toggleValue(bands, ['P1'], 'FANTASMA')).toEqual(['P1']);
+    expect(toggleValue(bands, ['FANTASMA', 'P2'], 'P1')).toEqual(['P1', 'P2']);
+  });
+  test('normalizeSelection: no convierte «todo marcado» en vacío (D10)', () => {
+    const all = bands.map((b) => b.value);
+    expect(normalizeSelection(bands, [...all].reverse())).toEqual(all);
+  });
+  test('announceSelection: texto de la región viva', () => {
+    expect(announceSelection('Estado', states, [])).toBe('Estado: ninguna selección, se muestran todos');
+    expect(announceSelection('Prioridad', bands, [], 'f')).toBe('Prioridad: ninguna selección, se muestran todas');
+    expect(announceSelection('Estado', states, ['CERRADA'])).toBe('Estado: 1 seleccionado');
+    expect(announceSelection('Prioridad', bands, ['P1', 'P2', 'P3'], 'f')).toBe('Prioridad: 3 seleccionadas');
+  });
+  test('matchesAny: sin selección todo pasa; con selección es OR y el nulo no coincide', () => {
+    expect(matchesAny([], 'X')).toBe(true);
+    expect(matchesAny([], null)).toBe(true);
+    expect(matchesAny(['A', 'B'], 'B')).toBe(true);
+    expect(matchesAny(['A', 'B'], 'C')).toBe(false);
+    expect(matchesAny(['A'], null)).toBe(false);
+    expect(matchesAny(['A'], undefined)).toBe(false);
   });
 });

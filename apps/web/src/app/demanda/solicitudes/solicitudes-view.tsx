@@ -16,16 +16,9 @@ import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { PriorityBadge, PriorityLegend, StatusBadge } from '@/components/status-badge';
+import { MultiSelectFilter } from '@/components/multi-select-filter';
 import { SearchInput, Toolbar } from '@/components/toolbar';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -37,7 +30,16 @@ import {
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import type { Process, Request, Requester } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
+import {
+  BAND_FILTER_OPTIONS,
+  NO_BAND,
+  NO_PROCESS,
+  parseProcessParam,
+  processFilterOptions,
+  stateFilterOptions,
+} from '@/lib/filter-options';
 import { formatDate } from '@/lib/format';
+import { matchesAny, normalizeSelection } from '@/lib/multi-filter';
 import { listRequesters } from '@/lib/requesters';
 import {
   RequestError,
@@ -72,13 +74,8 @@ import {
 type LoadState = 'loading' | 'success' | 'error';
 type SortKey = 'title' | 'state' | 'priority' | 'registered';
 
-/** Centinela de «Todos» / «Todas» en los filtros. */
-const ALL = 'ALL';
-/** Centinela del filtro de proceso para las solicitudes sin proceso aún. */
-const NO_PROCESS = 'SIN_PROCESO';
-/** Valor del filtro de prioridad para las solicitudes sin banda. */
-const NO_BAND = 'SIN_PRIORIZAR';
-const BAND_OPTIONS = ['P1', 'P2', 'P3', 'P4'] as const;
+/** Opciones del filtro de estado, agrupadas por fase del flujo. */
+const STATE_OPTIONS = stateFilterOptions();
 const NOUN = { one: 'solicitud', other: 'solicitudes' };
 
 /** Estados en el orden del flujo (el de REQUEST_STATE_LABELS). */
@@ -135,12 +132,14 @@ export function SolicitudesView(): React.ReactElement {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const [query, setQuery] = React.useState('');
-  const [stateFilter, setStateFilter] = React.useState(ALL);
-  // El Panel enlaza a ?proceso=SIN_PROCESO para abrir la bandeja «Sin proceso aún».
-  const [processFilter, setProcessFilter] = React.useState(
-    searchParams.get('proceso') === NO_PROCESS ? NO_PROCESS : ALL,
+  // Filtros de selección múltiple: arreglo de valores; vacío = sin restricción.
+  const [stateFilter, setStateFilter] = React.useState<string[]>([]);
+  // El Panel enlaza a ?proceso=SIN_PROCESO para abrir la bandeja «Sin proceso aún»;
+  // también se acepta una lista separada por comas (SIN_PROCESO,<uuid>).
+  const [processSelection, setProcessFilter] = React.useState<string[]>(() =>
+    parseProcessParam(searchParams.get('proceso')),
   );
-  const [bandFilter, setBandFilter] = React.useState(ALL);
+  const [bandFilter, setBandFilter] = React.useState<string[]>([]);
   const searchRef = React.useRef<HTMLInputElement>(null);
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -188,17 +187,26 @@ export function SolicitudesView(): React.ReactElement {
     [processName],
   );
 
+  const processOptions = React.useMemo(() => processFilterOptions(processes), [processes]);
+  // Los UUID de ?proceso= que no existen entre los procesos cargados se descartan.
+  const processFilter = React.useMemo(
+    () => normalizeSelection(processOptions, processSelection),
+    [processOptions, processSelection],
+  );
+
   const hasFilters =
-    query.trim() !== '' || stateFilter !== ALL || processFilter !== ALL || bandFilter !== ALL;
+    query.trim() !== '' ||
+    stateFilter.length > 0 ||
+    processFilter.length > 0 ||
+    bandFilter.length > 0;
+  // Y entre filtros, O dentro de cada uno. Una solicitud sin proceso (null)
+  // coincide con el centinela SIN_PROCESO; con proceso, con su id.
   const filter = React.useCallback(
     (r: Request) =>
       matchesSearch(r.title, query) &&
-      (stateFilter === ALL || r.operationalState === stateFilter) &&
-      (processFilter === ALL ||
-        (processFilter === NO_PROCESS
-          ? r.mainProcessId === null
-          : r.mainProcessId === processFilter)) &&
-      (bandFilter === ALL || bandOf(r) === bandFilter),
+      matchesAny(stateFilter, r.operationalState) &&
+      matchesAny(processFilter, r.mainProcessId === null ? NO_PROCESS : r.mainProcessId) &&
+      matchesAny(bandFilter, bandOf(r)),
     [query, stateFilter, processFilter, bandFilter],
   );
   const table = useClientTable({
@@ -212,9 +220,9 @@ export function SolicitudesView(): React.ReactElement {
 
   function clearFilters(): void {
     setQuery('');
-    setStateFilter(ALL);
-    setProcessFilter(ALL);
-    setBandFilter(ALL);
+    setStateFilter([]);
+    setProcessFilter([]);
+    setBandFilter([]);
     // «Limpiar filtros» desaparece: el foco pasa a la búsqueda (NIT 4, plan D9).
     searchRef.current?.focus();
   }
@@ -393,56 +401,32 @@ export function SolicitudesView(): React.ReactElement {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="sol-filtro-estado">Estado</Label>
-          <Select value={stateFilter} onValueChange={setStateFilter}>
-            <SelectTrigger id="sol-filtro-estado" className="w-full sm:w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Todos</SelectItem>
-              {REQUEST_STATES.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {REQUEST_STATE_LABELS[value]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="sol-filtro-proceso">Proceso</Label>
-          <Select value={processFilter} onValueChange={setProcessFilter}>
-            <SelectTrigger id="sol-filtro-proceso" className="w-full sm:w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Todos</SelectItem>
-              <SelectItem value={NO_PROCESS}>Sin proceso aún</SelectItem>
-              {processes.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="sol-filtro-banda">Prioridad</Label>
-          <Select value={bandFilter} onValueChange={setBandFilter}>
-            <SelectTrigger id="sol-filtro-banda" className="w-full sm:w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Todas</SelectItem>
-              {BAND_OPTIONS.map((band) => (
-                <SelectItem key={band} value={band}>
-                  {band}
-                </SelectItem>
-              ))}
-              <SelectItem value={NO_BAND}>Sin priorizar</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <MultiSelectFilter
+          id="sol-filtro-estado"
+          label="Estado"
+          options={STATE_OPTIONS}
+          selected={stateFilter}
+          onChange={setStateFilter}
+          className="sm:w-44"
+        />
+        <MultiSelectFilter
+          id="sol-filtro-proceso"
+          label="Proceso"
+          options={processOptions}
+          selected={processFilter}
+          onChange={setProcessFilter}
+          className="sm:w-44"
+        />
+        <MultiSelectFilter
+          id="sol-filtro-banda"
+          label="Prioridad"
+          options={BAND_FILTER_OPTIONS}
+          selected={bandFilter}
+          onChange={setBandFilter}
+          placeholder="Todas"
+          gender="f"
+          className="sm:w-40"
+        />
       </Toolbar>
 
       <PriorityLegend />
