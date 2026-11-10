@@ -660,6 +660,17 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Planificación multiproceso: los responsables elegibles son la unión de las personas de los procesos participantes del triage (principal y marcados); se conserva al responsable actual de un proceso desmarcado (no se bloquea el PATCH) y se muestra con su nombre real (TaskResponseDto.responsibleName); la importación del plan valida los responsables con la misma regla."
+    },
+    {
+      "timestamp": "2026-11-11T00:00:00Z",
+      "trigger_file": "apps/api/src/modules/plan/plan-participants.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "apps/mcp/README.md"
+      ],
+      "summary": "Gestionar procesos que intervienen en el plan: GET/PUT /requests/:requestId/plan/participants (solo jefe de área) agrega o quita procesos participantes después del triage; quitar se rechaza con 409 si hay tareas asignadas a su gente; se audita; diálogo en Planificación y tools MCP plan.participants.get/update."
     }
   ]
 }

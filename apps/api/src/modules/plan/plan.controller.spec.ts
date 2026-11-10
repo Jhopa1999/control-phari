@@ -34,7 +34,11 @@ describe('PlanController (delegacion)', () => {
     templateExcel: jest.fn().mockResolvedValue(Buffer.from('x')),
     importExcel: jest.fn().mockResolvedValue('importExcel'),
   };
-  const controller = new PlanController(svc, excelSvc as never);
+  const participantsSvc = {
+    get: jest.fn().mockResolvedValue('getParticipants'),
+    update: jest.fn().mockResolvedValue('updateParticipants'),
+  };
+  const controller = new PlanController(svc, excelSvc as never, participantsSvc as never);
   const a = actor();
 
   it('create delega actor, requestId y dto', async () => {
@@ -95,5 +99,18 @@ describe('PlanController (delegacion)', () => {
     const dto = {} as never;
     await expect(controller.return(a, 'r1', dto)).resolves.toBe('return');
     expect(svc.return).toHaveBeenCalledWith(a, 'r1', dto);
+  });
+  it('getParticipants y updateParticipants delegan en el servicio', async () => {
+    const dto = { participantProcessIds: [] };
+    await expect(controller.getParticipants(a, 'r1')).resolves.toBe('getParticipants');
+    expect(participantsSvc.get).toHaveBeenCalledWith(a, 'r1');
+    await expect(controller.updateParticipants(a, 'r1', dto)).resolves.toBe('updateParticipants');
+    expect(participantsSvc.update).toHaveBeenCalledWith(a, 'r1', dto);
+  });
+  it('gestionar procesos es exclusivo del jefe de área (sin líder ni admin)', () => {
+    for (const handler of [PlanController.prototype.getParticipants, PlanController.prototype.updateParticipants]) {
+      const roles = Reflect.getMetadata('roles', handler) as RoleCode[];
+      expect(roles).toEqual([RoleCode.JEFE_AREA]);
+    }
   });
 });

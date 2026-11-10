@@ -20,7 +20,7 @@ Las tools no se escriben a mano: son **entradas de datos** en
 - la **llamada** al api-client (con re-login reactivo ante 401 y traducción de
   errores) y el `resourceId` de los 404 (primer parámetro de ruta);
 - las **anotaciones** MCP: `readOnlyHint` solo en `read`; `destructiveHint` solo
-  en `destructive` (`DELETE` y `plan.import`); `idempotentHint` en
+  en `destructive` (`DELETE`, `plan.import` y `plan.participants.update`); `idempotentHint` en
   GET/PATCH/PUT/DELETE.
 
 `optionalBody: true` hace opcional el `body` y envía `{}` si falta (DTO con todos
@@ -53,7 +53,7 @@ puede bajar). El test `src/__tests__/coverage.test.ts` **falla** si una
 operación no tiene tool ni exclusión, si una exclusión está obsoleta, si una
 tool no tiene operación en el contrato, si falta una anotación, si una tool GET
 no es de solo lectura, si un `body` es de forma libre o si hay más pendientes
-que el tope. Hoy hay 116 tools sobre 206 operaciones (37 exclusiones permanentes
+que el tope. Hoy hay 118 tools sobre 208 operaciones (37 exclusiones permanentes
 y 55 pendientes, todas de escritura). Ya están expuestas las de coordinación (crear y editar
 hallazgos, reuniones y compromisos, y cambiar el estado de hallazgos y compromisos), las de
 planes (editar el plan; crear, editar y reordenar fases; añadir predecesoras a una tarea) y las de

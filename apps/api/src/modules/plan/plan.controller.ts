@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   StreamableFile,
   UseGuards,
 } from '@nestjs/common';
@@ -19,6 +20,9 @@ import {
 } from '@nestjs/swagger';
 import { PlanService } from './plan.service';
 import { PlanExcelService } from './plan-excel.service';
+import { PlanParticipantsService } from './plan-participants.service';
+import { UpdatePlanParticipantsDto } from './dto/update-plan-participants.dto';
+import { PlanParticipantsResponseDto } from './dto/plan-participants-response.dto';
 import { ImportPlanExcelDto } from './dto/import-plan-excel.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
@@ -52,6 +56,7 @@ export class PlanController {
   constructor(
     private readonly planService: PlanService,
     private readonly planExcel: PlanExcelService,
+    private readonly planParticipants: PlanParticipantsService,
   ) {}
 
   @Post(':requestId/plan')
@@ -192,6 +197,44 @@ export class PlanController {
     @Body() dto: PlanDocumentDto,
   ) {
     return this.planService.importPlan(actor, requestId, dto);
+  }
+
+  @Get(':requestId/plan/participants')
+  @Roles(RoleCode.JEFE_AREA)
+  @ApiOperation({
+    summary:
+      'Procesos que intervienen en la solicitud del plan y si se pueden quitar (solo jefe de área).',
+  })
+  @ApiParam({ name: 'requestId', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Procesos activos y participantes con su situación.', type: PlanParticipantsResponseDto })
+  @ApiResponse({ status: 403, description: 'Solo el jefe de área puede gestionar los procesos que intervienen.' })
+  @ApiResponse({ status: 404, description: 'Plan inexistente o fuera de alcance.' })
+  getParticipants(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('requestId', ParseUUIDPipe) requestId: string,
+  ) {
+    return this.planParticipants.get(actor, requestId);
+  }
+
+  @Put(':requestId/plan/participants')
+  @Roles(RoleCode.JEFE_AREA)
+  @ApiOperation({
+    summary:
+      'Corrige los procesos que intervienen en la solicitud del plan: agrega o quita procesos participantes (solo jefe de área). No reabre el triage.',
+  })
+  @ApiParam({ name: 'requestId', format: 'uuid' })
+  @ApiBody({ type: UpdatePlanParticipantsDto })
+  @ApiResponse({ status: 200, description: 'Procesos que intervienen tras el cambio.', type: PlanParticipantsResponseDto })
+  @ApiResponse({ status: 400, description: 'Algún proceso no existe o no está activo.' })
+  @ApiResponse({ status: 403, description: 'Solo el jefe de área puede gestionar los procesos que intervienen.' })
+  @ApiResponse({ status: 404, description: 'Plan inexistente o fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'Estado de la solicitud no admitido o tareas asignadas impiden quitar un proceso.' })
+  updateParticipants(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('requestId', ParseUUIDPipe) requestId: string,
+    @Body() dto: UpdatePlanParticipantsDto,
+  ) {
+    return this.planParticipants.update(actor, requestId, dto);
   }
 
   @Post(':requestId/plan/submit')
