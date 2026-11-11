@@ -184,6 +184,15 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
     'Obtiene una bitácora diaria por id (GET /worklog/daily/{id}).',
   ),
   lectura(
+    'worklog.options',
+    'GET /worklog/options',
+    'Lista los proyectos y tareas que el usuario puede imputar en el diario de un proceso y una fecha (GET /worklog/options): ' +
+      'processId es obligatorio; date (AAAA-MM-DD) fija la ventana de gracia de los proyectos cerrados; q busca por código y título; ' +
+      'includeTerminated incluye tareas terminadas; scope=all solo lo aplica el jefe de área. Es la misma regla con la que la API valida ' +
+      'las actividades planificadas: integrante solo sus tareas, líder y jefe además las ajenas de su alcance, y solo proyectos ' +
+      'activos de ese proceso (o cerrados dentro de la ventana de gracia). Devuelve hasta 200 proyectos y 200 tareas con banderas de truncado.',
+  ),
+  lectura(
     'weekly-report.list',
     'GET /weekly-reports',
     'Lista los reportes semanales (GET /weekly-reports), con filtros opcionales.',

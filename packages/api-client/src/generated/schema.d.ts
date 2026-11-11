@@ -1487,6 +1487,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklog/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Proyectos y tareas que quien consulta puede imputar en el diario de un proceso y una fecha (misma regla que aplica al guardar una actividad). */
+        get: operations["WorklogController_listOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklog/daily": {
         parameters: {
             query?: never;
@@ -1618,7 +1635,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Agrega una actividad al diario (valida clasificacion). */
+        /** Agrega una actividad al diario. Valida la clasificacion y, en PLANIFICADA, que el proyecto/tarea sean imputables (estado, proceso del diario, responsable y coherencia). */
         post: operations["WorklogController_addActivity"];
         delete?: never;
         options?: never;
@@ -1640,7 +1657,7 @@ export interface paths {
         delete: operations["WorklogController_removeActivity"];
         options?: never;
         head?: never;
-        /** Edita una actividad del diario. */
+        /** Edita una actividad del diario. Solo la referencia (proyecto/tarea) que cambia se revalida; lo que se conserva sigue valiendo aunque el proyecto ya no sea imputable. */
         patch: operations["WorklogController_updateActivity"];
         trace?: never;
     };
@@ -5148,6 +5165,53 @@ export interface components {
             /** @description Identificador funcional (correo/usuario). */
             identifier: string;
         };
+        WorklogProjectOptionDto: {
+            /** Format: uuid */
+            id: string;
+            /** @description ID visible (PRY-0012). */
+            code: string;
+            title: string;
+            /** @description Estado operativo de la solicitud. */
+            state: string;
+            /**
+             * Format: date-time
+             * @description Fecha de cierre (solo proyectos CERRADA dentro de la ventana de gracia).
+             */
+            closedAt: string | null;
+            /** @description Tiene tareas propias imputables. */
+            hasMyTasks: boolean;
+        };
+        WorklogTaskOptionDto: {
+            /** Format: uuid */
+            id: string;
+            /** @description ID visible (PRY-0012-T07). */
+            code: string;
+            title: string;
+            /** @description Estado de la tarea. */
+            status: string;
+            phaseName: string;
+            /**
+             * Format: uuid
+             * @description Proyecto al que pertenece.
+             */
+            requestId: string;
+            /** @description ID visible del proyecto. */
+            requestCode: string;
+            /** @description Título del proyecto. */
+            requestTitle: string;
+            /** @description La tarea es del usuario que consulta. */
+            isMine: boolean;
+            /** @description Responsable de la tarea. */
+            responsibleName: string | null;
+        };
+        WorklogOptionsResponseDto: {
+            projects: components["schemas"]["WorklogProjectOptionDto"][];
+            tasks: components["schemas"]["WorklogTaskOptionDto"][];
+            /** @description Hay más proyectos que el tope (200). Usa `q` para acotar. */
+            projectsTruncated: boolean;
+            /** @description Hay más tareas que el tope (200). Usa `q` para acotar. */
+            tasksTruncated: boolean;
+        };
         DailyLogActionsDto: {
             /** @description Puede editar notas y actividades. */
             edit: boolean;
@@ -5178,14 +5242,16 @@ export interface components {
             projectRequestId: string | null;
             /** @description Titulo del proyecto (solicitud) referenciado. */
             projectRequestTitle: string | null;
+            /** @description ID visible del proyecto (PRY-0012). */
+            projectRequestCode: string | null;
+            /** @description Estado operativo del proyecto referenciado (CERRADA = cerrado). */
+            projectRequestState: string | null;
             /** Format: uuid */
             taskId: string | null;
             /** @description Titulo de la tarea referenciada. */
             taskTitle: string | null;
-            /** Format: uuid */
-            relatedIssueId: string | null;
-            /** @description Titulo de la novedad relacionada. */
-            relatedIssueTitle: string | null;
+            /** @description ID visible de la tarea (PRY-0012-T07). */
+            taskCode: string | null;
             assetRef: string | null;
             requesterRef: string | null;
             justification: string | null;
@@ -5359,11 +5425,6 @@ export interface components {
              * @description Tarea planificada.
              */
             taskId?: string;
-            /**
-             * Format: uuid
-             * @description Novedad relacionada (del proceso del diario).
-             */
-            relatedIssueId?: string;
             /** @description Activo (texto, para soporte). */
             assetRef?: string;
             /** @description Solicitante (texto, para extraordinaria). */
@@ -5404,11 +5465,6 @@ export interface components {
              * @description Tarea planificada.
              */
             taskId?: string;
-            /**
-             * Format: uuid
-             * @description Novedad relacionada.
-             */
-            relatedIssueId?: string;
             /** @description Activo (texto, para soporte). */
             assetRef?: string;
             /** @description Solicitante (texto, para extraordinaria). */
@@ -11899,6 +11955,51 @@ export interface operations {
             };
         };
     };
+    WorklogController_listOptions: {
+        parameters: {
+            query: {
+                /** @description Proceso del diario. El proyecto debe pertenecer a él (principal o participante). */
+                processId: string;
+                /** @description Fecha del diario (YYYY-MM-DD). Referencia para la ventana de gracia de los proyectos cerrados. Por defecto, hoy. */
+                date?: string;
+                /** @description Texto a buscar en código y título del proyecto y de la tarea, fase y proyecto de la tarea. Sin él, se devuelve el listado completo hasta el tope. */
+                q?: string;
+                /** @description Incluye también las tareas TERMINADA (por defecto se ocultan). */
+                includeTerminated?: boolean;
+                /** @description `mine` (por defecto): proyectos con tareas propias y solo tareas propias. `all`: solo la aplica el jefe de área (proyectos y tareas de todo su alcance). El líder siempre recibe además las tareas ajenas de los procesos que lidera; el integrante, nunca. */
+                scope?: "mine" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Opciones imputables (hasta 200 por lista). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorklogOptionsResponseDto"];
+                };
+            };
+            /** @description Parámetros inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     WorklogController_listDailyLogs: {
         parameters: {
             query?: {
@@ -12340,7 +12441,7 @@ export interface operations {
                     "application/json": components["schemas"]["ActivityResponseDto"];
                 };
             };
-            /** @description Clasificacion o datos invalidos. */
+            /** @description Clasificacion o datos invalidos, o proyecto/tarea no imputable (cerrado, proceso distinto, tarea ajena, incoherencia). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -12407,7 +12508,7 @@ export interface operations {
                     "application/json": components["schemas"]["ActivityResponseDto"];
                 };
             };
-            /** @description Clasificacion o datos invalidos. */
+            /** @description Clasificacion o datos invalidos, o proyecto/tarea nuevo no imputable. */
             400: {
                 headers: {
                     [name: string]: unknown;
