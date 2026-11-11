@@ -6,6 +6,7 @@ import type { PlanPhaseModel } from '../../../generated/prisma/models/PlanPhase'
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { PlanStateService } from '../plan-state.service';
+import { formatPhaseCode, reservePlanSequence } from '../visible-code';
 import { CreatePhaseDto } from './dto/create-phase.dto';
 import { UpdatePhaseDto } from './dto/update-phase.dto';
 import { ReorderPhasesDto } from './dto/reorder-phases.dto';
@@ -28,6 +29,7 @@ export class PhaseService {
   private toResponse(phase: PlanPhaseModel): PlanPhaseResponseDto {
     return {
       id: phase.id,
+      code: phase.code,
       planId: phase.planId,
       name: phase.name,
       startDate: phase.startDate,
@@ -88,9 +90,12 @@ export class PhaseService {
     }
 
     const created = await this.prisma.$transaction(async (tx) => {
+      // ID visible: número reservado atómicamente en el contador del plan.
+      const { requestCode, first } = await reservePlanSequence(tx, planId, 'phase', 1);
       const phase = await tx.planPhase.create({
         data: {
           planId,
+          code: formatPhaseCode(requestCode, first),
           name: dto.name,
           order: order as number,
           ...(dto.startDate !== undefined ? { startDate: new Date(dto.startDate) } : {}),

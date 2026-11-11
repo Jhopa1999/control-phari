@@ -4,6 +4,7 @@ import * as React from 'react';
 import { AlarmClock, Check, CircleAlert, CircleCheck, Clock, ClipboardCheck, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
+import { IdChip } from '@/components/id-chip';
 import { InlineNotice } from '@/components/inline-notice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -338,9 +339,12 @@ function PendingReviewRow({
         >
           <span className="line-clamp-2">{item.title}</span>
         </button>
-        <p title={context} className="line-clamp-1 text-meta text-muted-foreground">
-          {context}
-        </p>
+        <div className="flex min-w-0 items-center gap-2">
+          <IdChip code={item.code} />
+          <p title={context} className="min-w-0 line-clamp-1 text-meta text-muted-foreground">
+            {context}
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge
             variant={waiting.long ? 'warning' : 'neutral'}

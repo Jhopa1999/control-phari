@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
+import { codeSearchConditions, formatTaskCode, reservePlanSequence } from '../visible-code';
 import type { TaskModel } from '../../../generated/prisma/models/Task';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
@@ -43,11 +44,12 @@ import {
 type TaskWithDeps = TaskModel & {
   responsible: { name: string } | null;
   dependenciesAsDependent: Array<{
-    predecessor: { id: string; title: string; status: string; accepted: boolean };
+    predecessor: { id: string; code: string; title: string; status: string; accepted: boolean };
   }>;
   phase: {
     name: string;
-    plan: { requestId: string; request: { title: string } };
+    code: string;
+    plan: { requestId: string; request: { title: string; code: string } };
   };
   _count: { evidences: number };
 };
@@ -62,13 +64,14 @@ const TASK_RESPONSE_INCLUDE = {
   responsible: { select: { name: true } },
   dependenciesAsDependent: {
     include: {
-      predecessor: { select: { id: true, title: true, status: true, accepted: true } },
+      predecessor: { select: { id: true, code: true, title: true, status: true, accepted: true } },
     },
   },
   phase: {
     select: {
       name: true,
-      plan: { select: { requestId: true, request: { select: { title: true } } } },
+      code: true,
+      plan: { select: { requestId: true, request: { select: { title: true, code: true } } } },
     },
   },
   // Conteo de archivos de evidencia en la misma consulta (sin N+1).
@@ -99,6 +102,7 @@ export class TaskService {
   private toResponse(task: TaskWithDeps): TaskResponseDto {
     return {
       id: task.id,
+      code: task.code,
       phaseId: task.phaseId,
       processId: task.processId,
       title: task.title,
@@ -121,10 +125,13 @@ export class TaskService {
       evidenceRequired: isEvidenceRequired(task),
       hasEvidence: hasEvidenceOf(task, task._count.evidences),
       phaseName: task.phase.name,
+      phaseCode: task.phase.code,
       requestId: task.phase.plan.requestId,
       requestTitle: task.phase.plan.request.title,
+      requestCode: task.phase.plan.request.code,
       predecessors: task.dependenciesAsDependent.map((d) => ({
         id: d.predecessor.id,
+        code: d.predecessor.code,
         title: d.predecessor.title,
         status: d.predecessor.status,
         accepted: d.predecessor.accepted,
@@ -167,7 +174,11 @@ export class TaskService {
     if (filters.status !== undefined) where.status = filters.status;
     if (filters.mine === 'true') where.responsibleUserId = actor.userId;
     if (filters.q !== undefined && filters.q !== '') {
-      where.title = { contains: filters.q, mode: 'insensitive' };
+      // Coincide con el título o con el ID visible (completo o forma corta T07).
+      where.OR = [
+        { title: { contains: filters.q, mode: 'insensitive' } },
+        ...codeSearchConditions(filters.q),
+      ];
     }
 
     const tasks = await this.prisma.task.findMany({
@@ -176,6 +187,23 @@ export class TaskService {
       include: TASK_RESPONSE_INCLUDE,
     });
     return tasks.map((t) => this.toResponse(t));
+  }
+
+  /**
+   * Resuelve una tarea por su ID visible (PRY-0012-T07), sin distinguir
+   * mayúsculas. Reutiliza `findOne`, así el alcance es idéntico al del detalle
+   * por id: si no existe o está fuera de alcance -> 404.
+   */
+  async findByCode(actor: CurrentActor, code: string): Promise<TaskResponseDto> {
+    const normalized = code.trim().toUpperCase();
+    const task = await this.prisma.task.findFirst({
+      where: { code: normalized },
+      select: { id: true },
+    });
+    if (!task) {
+      throw new NotFoundException(`Tarea "${code}" no encontrada.`);
+    }
+    return this.findOne(actor, task.id);
   }
 
   /**
@@ -285,9 +313,12 @@ export class TaskService {
     );
 
     const created = await this.prisma.$transaction(async (tx) => {
+      // ID visible: número reservado atómicamente en el contador del plan.
+      const { requestCode, first } = await reservePlanSequence(tx, phase.planId, 'task', 1);
       const task = await tx.task.create({
         data: {
           phaseId,
+          code: formatTaskCode(requestCode, first),
           title: dto.title,
           isMilestone,
           ...(dto.responsibleUserId !== undefined ? { responsibleUserId: dto.responsibleUserId } : {}),
@@ -719,7 +750,8 @@ export class TaskService {
           phase: {
             select: {
               name: true,
-              plan: { select: { requestId: true, request: { select: { title: true } } } },
+              code: true,
+              plan: { select: { requestId: true, request: { select: { title: true, code: true } } } },
             },
           },
           _count: { select: { evidences: true } },
@@ -731,12 +763,15 @@ export class TaskService {
       total,
       items: tasks.map((task) => ({
         id: task.id,
+        code: task.code,
         title: task.title,
         responsibleUserId: task.responsibleUserId,
         responsibleName: task.responsible?.name ?? null,
         requestId: task.phase.plan.requestId,
         requestTitle: task.phase.plan.request.title,
+        requestCode: task.phase.plan.request.code,
         phaseName: task.phase.name,
+        phaseCode: task.phase.code,
         progress: task.progress,
         evidenceRequired: isEvidenceRequired(task),
         hasEvidence: hasEvidenceOf(task, task._count.evidences),
@@ -865,13 +900,14 @@ export class TaskService {
           select: {
             id: true,
             name: true,
+            code: true,
             planId: true,
             plan: {
               select: {
                 requestId: true,
                 commitmentDate: true,
                 request: {
-                  select: { title: true, operationalState: true, initialCommitmentDate: true },
+                  select: { title: true, code: true, operationalState: true, initialCommitmentDate: true },
                 },
               },
             },
@@ -906,6 +942,7 @@ export class TaskService {
 
     return tasks.map((task) => ({
       taskId: task.id,
+      code: task.code,
       title: task.title,
       status: task.status,
       progress: task.progress,
@@ -914,9 +951,11 @@ export class TaskService {
       endDate: task.endDate,
       phaseId: task.phase.id,
       phaseName: task.phase.name,
+      phaseCode: task.phase.code,
       planId: task.phase.planId,
       requestId: task.phase.plan.requestId,
       requestTitle: task.phase.plan.request.title,
+      requestCode: task.phase.plan.request.code,
       pendingPredecessors: pendingByTask.get(task.id) ?? [],
       blockedReason: task.blockedReason,
       evidenceRequired: isEvidenceRequired(task),

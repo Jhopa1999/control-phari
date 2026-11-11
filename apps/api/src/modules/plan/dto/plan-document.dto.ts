@@ -69,6 +69,17 @@ export class PlanDocumentTaskDto {
   @MaxLength(128)
   ref!: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      'ID visible de la tarea (p. ej. PRY-0012-T07). Solo informativo y de solo lectura: se incluye al exportar y la importacion lo IGNORA (las tareas importadas reciben IDs nuevos).',
+    maxLength: 64,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  code?: string;
+
   @ApiProperty({ type: String, description: 'Titulo de la tarea.', maxLength: 255 })
   @Transform(trim)
   @IsString()
@@ -146,6 +157,17 @@ export class PlanDocumentPhaseDto {
   @IsInt()
   @Min(0)
   order!: number;
+
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      'ID visible de la fase (p. ej. PRY-0012-F2). Solo informativo y de solo lectura: se incluye al exportar y la importacion lo IGNORA (las fases importadas reciben IDs nuevos).',
+    maxLength: 64,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  code?: string;
 
   @ApiProperty({ type: String, description: 'Nombre de la fase.', maxLength: 255 })
   @Transform(trim)

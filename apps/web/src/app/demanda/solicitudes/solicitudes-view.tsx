@@ -13,6 +13,7 @@ import {
 } from '@/components/data-table';
 import { DataCardList } from '@/components/data-card-list';
 import { DataView, type DataViewState } from '@/components/data-view';
+import { IdChip } from '@/components/id-chip';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
@@ -62,6 +63,7 @@ import {
   compareDate,
   compareNumber,
   compareText,
+  matchCode,
   matchesSearch,
   type Comparator,
   type SortState,
@@ -205,7 +207,7 @@ export function SolicitudesView(): React.ReactElement {
   // coincide con el centinela SIN_PROCESO; con proceso, con su id.
   const filter = React.useCallback(
     (r: Request) =>
-      matchesSearch(r.title, query) &&
+      (matchesSearch(r.title, query) || matchCode(r.code, query)) &&
       matchesAny(stateFilter, r.operationalState) &&
       matchesAny(processFilter, r.mainProcessId === null ? NO_PROCESS : r.mainProcessId) &&
       matchesAny(bandFilter, bandOf(r)),
@@ -424,7 +426,7 @@ export function SolicitudesView(): React.ReactElement {
         <SearchInput
           ref={searchRef}
           id="sol-buscar"
-          placeholder="Título"
+          placeholder="Título o ID"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -460,7 +462,7 @@ export function SolicitudesView(): React.ReactElement {
 
       <DataView
         state={viewState}
-        loading={{ rows: 8, columns: 7 }}
+        loading={{ rows: 8, columns: 8 }}
         mobileCards
         error={{
           title: 'No fue posible cargar las solicitudes.',
@@ -483,6 +485,7 @@ export function SolicitudesView(): React.ReactElement {
         <Table scrollLabel="Tabla de solicitudes">
           <TableHeader>
             <TableRow>
+              <TableHead className="w-28">ID</TableHead>
               <SortableTableHead
                 label="Título"
                 sortKey="title"
@@ -515,6 +518,9 @@ export function SolicitudesView(): React.ReactElement {
           <TableBody>
             {table.pageRows.map((r) => (
               <TableRow key={r.id}>
+                <TableCell>
+                  <IdChip code={r.code} />
+                </TableCell>
                 <TableCell className="min-w-56 max-w-[28rem]">
                   <CellTitle onOpen={() => openEdit(r)}>{r.title}</CellTitle>
                 </TableCell>
@@ -565,7 +571,12 @@ export function SolicitudesView(): React.ReactElement {
                 {r.title}
               </CellTitle>
             ),
-            subtitle: processCell(r),
+            subtitle: (
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <IdChip code={r.code} />
+                {processCell(r)}
+              </span>
+            ),
             badges: [
               <StatusBadge key="state" kind="request" value={r.operationalState} />,
               r.currentTriageDecision ? (
@@ -618,7 +629,7 @@ export function SolicitudesView(): React.ReactElement {
         onOpenChange={(open) => {
           if (!open) setToDelete(null);
         }}
-        title={`¿Eliminar la solicitud «${toDelete?.title ?? ''}»?`}
+        title={`¿Eliminar la solicitud ${toDelete?.code ?? ''} «${toDelete?.title ?? ''}»?`}
         description="La solicitud dejará de mostrarse en el portal. Se conserva su historial para trazabilidad."
         confirmLabel="Eliminar solicitud"
         onConfirm={handleDelete}

@@ -74,7 +74,11 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
     name: 'plan.tasks.list',
     operation: 'GET /plans/{planId}/tasks',
     access: 'read',
-    description: 'Lista las tareas de un plan (GET /plans/{planId}/tasks).',
+    description:
+      'Lista las tareas de un plan (GET /plans/{planId}/tasks). Cada tarea trae ' +
+      'su ID visible (code, p. ej. PRY-0012-T07), el de su fase (phaseCode) y el ' +
+      'de la solicitud (requestCode). El filtro q busca por título o por ese ID ' +
+      'visible (completo, parcial o forma corta T07/F2).',
   },
   {
     name: 'plan.participants.get',
@@ -129,7 +133,18 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
       'Obtiene una tarea por id (GET /tasks/{id}), con sus predecesoras, el ' +
       'motivo de bloqueo vigente (blockedReason), el nombre de la fase y la ' +
       'solicitud (phaseName, requestId, requestTitle) y si exige evidencia y la ' +
-      'tiene (evidenceRequired, hasEvidence).',
+      'tiene (evidenceRequired, hasEvidence). Incluye los IDs visibles code, ' +
+      'phaseCode y requestCode (p. ej. PRY-0012-T07).',
+  },
+  {
+    name: 'task.get_by_code',
+    operation: 'GET /tasks/by-code/{code}',
+    access: 'read',
+    description:
+      'Obtiene una tarea por su ID visible (GET /tasks/by-code/{code}), por ejemplo ' +
+      'PRY-0012-T07, sin distinguir mayusculas. Devuelve lo mismo que task.get ' +
+      '(code, phaseCode, requestCode, predecesoras, estado, evidencia...). Usala ' +
+      'cuando el usuario cite la tarea por su ID visible en vez de por su UUID.',
   },
   {
     name: 'task.history',

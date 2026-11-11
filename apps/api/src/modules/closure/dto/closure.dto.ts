@@ -107,6 +107,9 @@ export class PendingClosureDto {
   @ApiProperty({ type: String })
   requestTitle!: string;
 
+  @ApiProperty({ type: String, example: 'PRY-0012', description: 'ID visible de la solicitud (solo lectura).' })
+  requestCode!: string;
+
   @ApiProperty({ type: String, format: 'date-time' })
   requestedAt!: Date;
 

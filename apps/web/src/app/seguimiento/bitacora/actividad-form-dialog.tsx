@@ -303,7 +303,7 @@ export function ActividadFormDialog({
                           <SelectItem value={SIN_VALOR}>Sin proyecto</SelectItem>
                           {requests.map((r) => (
                             <SelectItem key={r.id} value={r.id}>
-                              {r.title}
+                              {r.code} · {r.title}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -327,7 +327,7 @@ export function ActividadFormDialog({
                           <SelectItem value={SIN_VALOR}>Sin tarea</SelectItem>
                           {tasks.map((t) => (
                             <SelectItem key={t.taskId} value={t.taskId}>
-                              {t.title}
+                              {t.code} · {t.title}
                             </SelectItem>
                           ))}
                         </SelectContent>

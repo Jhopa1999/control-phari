@@ -243,3 +243,20 @@ export function buildTableView<T, K extends string>(
   const slice = paginate(sorted, options.page, options.pageSize);
   return { ...slice, total: rows.length, filtered: filteredRows.length };
 }
+
+/**
+ * Coincidencia con el ID visible (PRY-0012-T07), sin distinguir mayúsculas:
+ * acepta el código completo o parcial (`pry-0012`) y la forma corta (`T07`,
+ * `t7`, `F2`). Misma regla que `?q=` en la API.
+ */
+export function matchCode(code: string | null | undefined, query: string): boolean {
+  const q = query.trim().toUpperCase();
+  if (q === '' || !code) return false;
+  const upper = code.toUpperCase();
+  if (upper.includes(q)) return true;
+  const short = /^([FT])(\d+)$/.exec(q);
+  if (!short) return false;
+  const seq = Number(short[2]);
+  const suffix = short[1] === 'T' ? `-T${String(seq).padStart(2, '0')}` : `-F${seq}`;
+  return upper.endsWith(suffix);
+}

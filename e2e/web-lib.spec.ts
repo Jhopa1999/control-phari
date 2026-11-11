@@ -826,6 +826,18 @@ test.describe('task-filters', () => {
     ).toBe(false);
   });
 
+  test('q también coincide con el ID visible (completo, parcial y forma corta)', () => {
+    const coded = { ...task, code: 'PRY-0012-T07' };
+    for (const q of ['PRY-0012-T07', 'pry-0012-t07', 'pry-0012', 'T07', 't7', ' t07 ']) {
+      expect(matchesTaskFilters(coded, { ...noFilters, q })).toBe(true);
+    }
+    for (const q of ['T08', 'F2', 'PRY-0013']) {
+      expect(matchesTaskFilters(coded, { ...noFilters, q })).toBe(false);
+    }
+    // Sin code (llamadores antiguos) sigue buscando solo por título.
+    expect(matchesTaskFilters(task, { ...noFilters, q: 'T07' })).toBe(false);
+  });
+
   test('q no distingue mayúsculas ni tildes', () => {
     expect(matchesTaskFilters(task, { ...noFilters, q: 'MODELO' })).toBe(true);
     expect(matchesTaskFilters(task, { ...noFilters, q: ' diseno ' })).toBe(true);

@@ -407,13 +407,14 @@ export class ClosureService {
     const rows = await this.prisma.projectClosure.findMany({
       where: { status: ClosureStatus.PENDIENTE, request: this.scopeWhere(actor) },
       orderBy: { requestedAt: 'asc' },
-      include: { request: { select: { title: true } } },
+      include: { request: { select: { title: true, code: true } } },
     });
     const names = await this.userNames(rows.map((r) => r.requestedByUserId));
     return rows.map((r) => ({
       closureId: r.id,
       requestId: r.requestId,
       requestTitle: r.request.title,
+      requestCode: r.request.code,
       requestedAt: r.requestedAt,
       requestedByName: names.get(r.requestedByUserId) ?? null,
     }));

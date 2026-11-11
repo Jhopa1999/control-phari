@@ -50,7 +50,8 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
     'Obtiene el trabajo asignado al usuario autenticado: tareas con su contexto (GET /my-work). ' +
       'Cada tarea trae las predecesoras pendientes (pendingPredecessors), el motivo de bloqueo ' +
       '(blockedReason), si exige evidencia y la tiene (evidenceRequired, hasEvidence), el estado ' +
-      'operativo de la solicitud y su fecha de compromiso vigente.',
+      'operativo de la solicitud y su fecha de compromiso vigente, mas los IDs ' +
+      'visibles code, phaseCode y requestCode (p. ej. PRY-0012-T07).',
   ),
 
   lectura(
@@ -59,7 +60,8 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
     'Cola «Por aprobar» (GET /tasks/pending-review): tareas En revisión dentro del alcance del usuario, ' +
       'sin las propias ni las de proyectos cerrados, las que más esperan primero (máximo 100; total trae ' +
       'el conteo real). Cada una indica responsable, solicitud, fase, avance, si exige evidencia y si la ' +
-      'tiene (evidenceRequired, hasEvidence) y desde cuándo espera (waitingSince; waitingSinceApproximate ' +
+      'tiene (evidenceRequired, hasEvidence), sus IDs visibles (code, phaseCode, requestCode) ' +
+      'y desde cuándo espera (waitingSince; waitingSinceApproximate ' +
       'indica que es aproximado). Solo para jefe de área y líder de proceso; para aprobar o devolver usa ' +
       'task.status.update.',
   ),
@@ -130,7 +132,7 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   lectura(
     'plan.phases.list',
     'GET /plans/{planId}/phases',
-    'Lista las fases de un plan (GET /plans/{planId}/phases).',
+    'Lista las fases de un plan (GET /plans/{planId}/phases), cada una con su ID visible (code, p. ej. PRY-0012-F2).',
   ),
   lectura(
     'task.dependencies.list',

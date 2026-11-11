@@ -12,6 +12,17 @@ import { PlanStateService } from '../plan-state.service';
 import { TaskStatus } from '../task-status';
 import { TaskService } from './task.service';
 
+/** Simula plan.update({ data: { xSeqNext: { increment } } }) con contadores en memoria. */
+function planCounterUpdate(start = { phaseSeqNext: 1, taskSeqNext: 1 }) {
+  const state = { ...start };
+  return async (args: { data: Record<string, { increment: number }> }) => {
+    for (const [key, value] of Object.entries(args.data)) {
+      state[key as keyof typeof state] += value.increment;
+    }
+    return { ...state, request: { code: 'PRY-0012' } };
+  };
+}
+
 function createMocks() {
   const prismaObj: Record<string, unknown> = {
     task: {
@@ -24,6 +35,9 @@ function createMocks() {
     },
     taskEvidence: { count: jest.fn().mockResolvedValue(0) },
     planPhase: { findFirst: jest.fn() },
+    // Contador atómico del plan (ID visible): simula el increment de Prisma, que
+    // devuelve el valor ya incrementado.
+    plan: { update: jest.fn(planCounterUpdate()) },
     taskDependency: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaObj));
@@ -65,6 +79,7 @@ function actorWith(role: RoleCode, userId = 'u1'): CurrentActor {
 function makeTask(overrides: Record<string, unknown> = {}) {
   return {
     id: 't1',
+    code: 'PRY-0012-T01',
     phaseId: 'ph1',
     processId: null,
     title: 'Tarea',
@@ -98,7 +113,8 @@ function makeTaskWithDeps(overrides: Record<string, unknown> = {}) {
     dependenciesAsDependent: [],
     phase: {
       name: 'Fase 1',
-      plan: { requestId: 'r1', request: { title: 'Solicitud 1' } },
+      code: 'PRY-0012-F1',
+      plan: { requestId: 'r1', request: { title: 'Solicitud 1', code: 'PRY-0012' } },
     },
   };
 }
@@ -163,6 +179,7 @@ describe('TaskService', () => {
       });
 
       const data = (m.prismaObj.task as any).create.mock.calls[0][0].data;
+      expect(data.code).toBe('PRY-0012-T01');
       expect(data.estimateHours).toBe(0);
       // Una sola fecha informada: se copia a ambas columnas.
       expect(data.startDate).toEqual(data.endDate);
@@ -187,6 +204,57 @@ describe('TaskService', () => {
         'ajeno',
       );
       expect((m.prismaObj.task as any).create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ID visible de la tarea', () => {
+    function prepareCreate() {
+      (m.prismaObj.planPhase as any).findFirst.mockResolvedValue({ id: 'ph1', planId: 'plan1' });
+      (m.prismaObj.task as any).create.mockImplementation(async ({ data }: any) =>
+        makeTask({ id: `id-${data.code}`, code: data.code }),
+      );
+      (m.prismaObj.task as any).findFirst.mockImplementation(async ({ where }: any) =>
+        makeTaskWithDeps({ id: where.id }),
+      );
+    }
+
+    it('crea tareas con códigos consecutivos PRY-0012-T01, T02... y no acepta code del DTO', async () => {
+      prepareCreate();
+      const actor = actorWith(RoleCode.LIDER_PROCESO);
+      await service.create(actor, 'ph1', { title: 'A' });
+      await service.create(actor, 'ph1', { title: 'B' });
+      const codes = (m.prismaObj.task as any).create.mock.calls.map((c: any[]) => c[0].data.code);
+      expect(codes).toEqual(['PRY-0012-T01', 'PRY-0012-T02']);
+    });
+
+    it('creación paralela de varias tareas produce códigos únicos y consecutivos', async () => {
+      prepareCreate();
+      const actor = actorWith(RoleCode.LIDER_PROCESO);
+      await Promise.all(
+        Array.from({ length: 10 }, (_, i) => service.create(actor, 'ph1', { title: `T${i}` })),
+      );
+      const codes = (m.prismaObj.task as any).create.mock.calls
+        .map((c: any[]) => c[0].data.code as string)
+        .sort();
+      expect(new Set(codes).size).toBe(10);
+      expect(codes[0]).toBe('PRY-0012-T01');
+      expect(codes[9]).toBe('PRY-0012-T10');
+    });
+
+    it('el contador se incrementa en una sola sentencia sobre el plan de la fase', async () => {
+      prepareCreate();
+      await service.create(actorWith(RoleCode.LIDER_PROCESO), 'ph1', { title: 'A' });
+      const call = (m.prismaObj.plan as any).update.mock.calls[0][0];
+      expect(call.where).toEqual({ id: 'plan1' });
+      expect(call.data).toEqual({ taskSeqNext: { increment: 1 } });
+    });
+
+    it('la lista y el detalle devuelven code, phaseCode y requestCode', async () => {
+      (m.prismaObj.task as any).findMany.mockResolvedValue([makeTaskWithDeps({ id: 'tA' })]);
+      const [item] = await service.findForPlan(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 'plan1', {});
+      expect(item.code).toBe('PRY-0012-T01');
+      expect(item.phaseCode).toBe('PRY-0012-F1');
+      expect(item.requestCode).toBe('PRY-0012');
     });
   });
 
@@ -320,6 +388,25 @@ describe('TaskService', () => {
     });
   });
 
+  describe('findByCode (ID visible)', () => {
+    it('normaliza a mayúsculas, resuelve el id y reutiliza el alcance del detalle', async () => {
+      (m.prismaObj.task as any).findFirst
+        .mockResolvedValueOnce({ id: 't1' })
+        .mockResolvedValueOnce(makeTaskWithDeps({ id: 't1' }));
+      const res = await service.findByCode(actorWith(RoleCode.LIDER_PROCESO), ' pry-0012-t01 ');
+      expect((m.prismaObj.task as any).findFirst.mock.calls[0][0].where).toEqual({ code: 'PRY-0012-T01' });
+      expect(m.planState.requireTaskInScope).toHaveBeenCalledWith(expect.anything(), 't1');
+      expect(res.code).toBe('PRY-0012-T01');
+    });
+
+    it('código inexistente -> 404', async () => {
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(null);
+      await expect(
+        service.findByCode(actorWith(RoleCode.LIDER_PROCESO), 'PRY-9999-T99'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
   describe('findForPlan (filtros §3.4)', () => {
     it('sin filtros -> where base solo por plan', async () => {
       (m.prismaObj.task as any).findMany.mockResolvedValue([]);
@@ -344,7 +431,24 @@ describe('TaskService', () => {
       expect(where.phaseId).toBe('ph9');
       expect(where.status).toBe(TaskStatus.EN_CURSO);
       expect(where.responsibleUserId).toBe('u1');
-      expect(where.title).toEqual({ contains: 'auditoria', mode: 'insensitive' });
+      // Busca por título O por ID visible (completo/parcial).
+      expect(where.OR).toEqual([
+        { title: { contains: 'auditoria', mode: 'insensitive' } },
+        { code: { contains: 'auditoria', mode: 'insensitive' } },
+      ]);
+    });
+
+    it('q con forma corta (t7) o completa (PRY-0012-T07) coincide también con el código', async () => {
+      (m.prismaObj.task as any).findMany.mockResolvedValue([]);
+      await service.findForPlan(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 'plan1', { q: 't7' });
+      await service.findForPlan(actorWith(RoleCode.LIDER_PROCESO, 'ul'), 'plan1', {
+        q: 'PRY-0012-T07',
+      });
+      const [short, full] = (m.prismaObj.task as any).findMany.mock.calls.map(
+        (c: any[]) => c[0].where.OR,
+      );
+      expect(short).toContainEqual({ code: { endsWith: '-T07', mode: 'insensitive' } });
+      expect(full).toContainEqual({ code: { contains: 'PRY-0012-T07', mode: 'insensitive' } });
     });
 
     it('q vacio y mine distinto de "true" no agregan filtros', async () => {
@@ -356,6 +460,7 @@ describe('TaskService', () => {
       const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
       expect(where.responsibleUserId).toBeUndefined();
       expect(where.title).toBeUndefined();
+      expect(where.OR).toBeUndefined();
     });
 
     it('mapea las tareas a respuesta con predecesoras', async () => {

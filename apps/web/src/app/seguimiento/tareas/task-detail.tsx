@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { BlockedReasonBox } from '@/components/blocked-reason';
 import { DisabledReason } from '@/components/disabled-reason';
 import { ErrorState } from '@/components/error-state';
+import { IdChip } from '@/components/id-chip';
 import { Field, FormError } from '@/components/field';
 import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader, type Crumb } from '@/components/page-header';
@@ -447,6 +448,14 @@ export function TaskDetail({
       </div>
 
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+        {task.code ? (
+          <div className="min-w-0">
+            <dt className="text-meta text-muted-foreground">Código</dt>
+            <dd>
+              <IdChip code={task.code} />
+            </dd>
+          </div>
+        ) : null}
         <div className="min-w-0">
           <dt className="text-meta text-muted-foreground">Responsable</dt>
           <dd className={cn('text-sm font-medium wrap-break-word', !responsibleName && 'text-warning')}>

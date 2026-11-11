@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CellTitle, ResultCount, SortableTableHead } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
+import { IdChip } from '@/components/id-chip';
 import { DisabledReason } from '@/components/disabled-reason';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -655,6 +656,7 @@ export function PlanView(): React.ReactElement {
   }, [phases]);
 
   const phaseNameById = React.useMemo(() => new Map(phases.map((p) => [p.id, p.name])), [phases]);
+  const detailTask = React.useMemo(() => tasks.find((t) => t.id === detailTaskId), [tasks, detailTaskId]);
   const taskTitleById = React.useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
   const taskCountByPhase = React.useMemo(() => {
     const counts = new Map<string, number>();
@@ -825,6 +827,7 @@ export function PlanView(): React.ReactElement {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10 text-right">#</TableHead>
+                <TableHead className="w-16">ID</TableHead>
                 <TableHead>Fase</TableHead>
                 <TableHead>Fechas</TableHead>
                 <TableHead>Entregable</TableHead>
@@ -841,6 +844,9 @@ export function PlanView(): React.ReactElement {
                   <TableRow key={phase.id}>
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       {index + 1}
+                    </TableCell>
+                    <TableCell>
+                      <IdChip code={phase.code} variant="short" />
                     </TableCell>
                     <TableCell className="min-w-48 max-w-[22rem]">
                       <div className="flex flex-col gap-0.5 py-0.5">
@@ -939,7 +945,7 @@ export function PlanView(): React.ReactElement {
         >
           <SearchInput
             id="task-q"
-            placeholder="Título de la tarea"
+            placeholder="Título o ID (T07)"
             value={q}
             onChange={(event) => setQ(event.target.value)}
           />
@@ -1030,6 +1036,7 @@ export function PlanView(): React.ReactElement {
           <Table scrollLabel="Tabla de tareas del plan">
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">ID</TableHead>
                 <TableHead>Tarea</TableHead>
                 <TableHead>Responsable</TableHead>
                 <TableHead>Avance</TableHead>
@@ -1047,6 +1054,11 @@ export function PlanView(): React.ReactElement {
                   !isPlanManager && task.responsibleUserId !== permissions?.userId;
                 return (
                   <TableRow key={task.id}>
+                    <TableCell className="align-top">
+                      <div className="py-0.5">
+                        <IdChip code={task.code} variant="short" />
+                      </div>
+                    </TableCell>
                     <TableCell className="min-w-56 max-w-[26rem]">
                       <div className="flex flex-col gap-1 py-0.5">
                         <div className="flex items-center gap-2">
@@ -1352,7 +1364,8 @@ export function PlanView(): React.ReactElement {
               <h3 className="text-sm font-semibold">Importar desde Excel</h3>
               <p className="text-meta text-muted-foreground">
                 Carga un archivo .xlsx y reemplaza las fases, tareas y dependencias actuales. Antes
-                de reemplazar te pedimos confirmación.{' '}
+                de reemplazar te pedimos confirmación. Las filas importadas reciben códigos nuevos
+                que continúan la numeración; no se reutilizan los anteriores.{' '}
                 <button
                   type="button"
                   disabled={busy}
@@ -1521,8 +1534,9 @@ export function PlanView(): React.ReactElement {
               closeLabel="Cerrar detalle"
               className="w-[40rem] max-w-full gap-4 overflow-y-auto bg-background p-5"
             >
-              <SheetTitle className="pr-10">
-                {tasks.find((t) => t.id === detailTaskId)?.title ?? 'Detalle de la tarea'}
+              <SheetTitle className="flex flex-col items-start gap-1.5 pr-10">
+                {detailTask ? <IdChip code={detailTask.code} variant="short" /> : null}
+                <span>{detailTask?.title ?? 'Detalle de la tarea'}</span>
               </SheetTitle>
               <SheetDescription className="sr-only">
                 Detalle de la tarea: estado, avance, historial de cambios, predecesoras y evidencia.
@@ -1562,7 +1576,7 @@ export function PlanView(): React.ReactElement {
           <ConfirmDialog
             open={phaseConfirmOpen}
             onOpenChange={setPhaseConfirmOpen}
-            title={`¿Eliminar la fase «${phaseToDelete?.name ?? ''}»?`}
+            title={`¿Eliminar la fase ${phaseToDelete?.code ?? ''} «${phaseToDelete?.name ?? ''}»?`}
             description="Esta acción no se puede deshacer."
             confirmLabel="Eliminar fase"
             onConfirm={async () => {
@@ -1575,14 +1589,14 @@ export function PlanView(): React.ReactElement {
             onOpenChange={setImportConfirmOpen}
             tone="danger"
             title="¿Importar y reemplazar el plan?"
-            description="Importar reemplaza las fases, tareas y dependencias actuales por las del archivo. Esta acción no se puede deshacer."
+            description="Importar reemplaza las fases, tareas y dependencias actuales por las del archivo. Los códigos (T07, F2) de lo reemplazado no se reutilizan: lo importado recibe códigos nuevos que continúan la numeración. Esta acción no se puede deshacer."
             confirmLabel="Importar y reemplazar"
             onConfirm={handleImportPlan}
           />
           <ConfirmDialog
             open={taskConfirmOpen}
             onOpenChange={setTaskConfirmOpen}
-            title={`¿Eliminar la tarea «${taskToDelete?.title ?? ''}»?`}
+            title={`¿Eliminar la tarea ${taskToDelete?.code ?? ''} «${taskToDelete?.title ?? ''}»?`}
             description="Esta acción no se puede deshacer. Si otra tarea depende de esta, no se podrá eliminar."
             confirmLabel="Eliminar tarea"
             onConfirm={async () => {

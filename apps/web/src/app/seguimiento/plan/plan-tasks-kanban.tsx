@@ -5,6 +5,7 @@ import { AlarmClock, Clock, GripVertical, Link2, ListChecks, Plus } from 'lucide
 import { BlockedReasonBox } from '@/components/blocked-reason';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { DisabledReason } from '@/components/disabled-reason';
+import { IdChip } from '@/components/id-chip';
 import { RowActions } from '@/components/row-actions';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
@@ -300,6 +301,7 @@ export function PlanTasksKanban({
                                     className="mt-0.5 hidden size-4 shrink-0 cursor-grab text-muted-foreground opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 md:block"
                                   />
                                 ) : null}
+                                <IdChip code={task.code} variant="short" />
                                 <button
                                   type="button"
                                   id={`task-${task.id}-open`}

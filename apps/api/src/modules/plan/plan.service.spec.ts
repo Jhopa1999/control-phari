@@ -33,6 +33,16 @@ function createMocks() {
     },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaObj));
+  // Contadores de ID visible del plan: simulan el increment atómico de Prisma
+  // (devuelve el valor ya incrementado). Empiezan en 7 y 13 para probar que el
+  // reemplazo por importación CONTINÚA el contador en vez de reiniciarlo.
+  const counters = { phaseSeqNext: 3, taskSeqNext: 13 };
+  (prismaObj.plan as { update: jest.Mock }).update.mockImplementation(async (args: any) => {
+    const seq = Object.entries<any>(args.data).filter(([k]) => k in counters);
+    if (seq.length === 0) return undefined;
+    for (const [key, value] of seq) counters[key as keyof typeof counters] += value.increment;
+    return { ...counters, request: { code: 'PRY-0012' } };
+  });
   const prisma = prismaObj as unknown as PrismaService;
 
   const audit = { record: jest.fn() } as unknown as AuditService;
@@ -350,6 +360,7 @@ describe('PlanService', () => {
       (m.prismaObj.planPhase as any).findMany.mockResolvedValue([
         {
           order: 0,
+          code: 'PRY-0012-F1',
           name: 'Analisis',
           startDate: null,
           endDate: null,
@@ -357,6 +368,7 @@ describe('PlanService', () => {
           tasks: [
             {
               id: 'task-A',
+              code: 'PRY-0012-T01',
               title: 'A',
               isMilestone: false,
               estimateHours: 8,
@@ -396,6 +408,9 @@ describe('PlanService', () => {
       expect(doc.dependencies).toEqual([
         { dependentRef: 't1', predecessorRef: 't0' },
       ]);
+      // El ID visible viaja como dato informativo de solo lectura.
+      expect(doc.phases[0].code).toBe('PRY-0012-F1');
+      expect(doc.phases[0].tasks[0].code).toBe('PRY-0012-T01');
       // Export es solo lectura: ni transaccion ni auditoria.
       expect((m.prismaObj as any).$transaction).not.toHaveBeenCalled();
       expect(m.auditRecord).not.toHaveBeenCalled();
@@ -475,6 +490,41 @@ describe('PlanService', () => {
       expect(res.replaced).toBe(true);
       expect(res.phasesCreated).toBe(1);
       expect(res.tasksCreated).toBe(1);
+    });
+
+    it('IDs visibles: reserva N números de una vez y CONTINÚA los contadores del plan (nunca reutiliza)', async () => {
+      stubPlanInScope(PlanStatus.BORRADOR);
+      (m.prismaObj.planPhase as any).create.mockImplementation(async ({ data }: any) => ({ id: `ph-${data.code}` }));
+      (m.prismaObj.task as any).create.mockImplementation(async ({ data }: any) => ({ id: `t-${data.code}` }));
+
+      const doc = emptyDoc();
+      doc.phases = [
+        { order: 0, name: 'F-a', tasks: [{ ref: 'a', title: 'A', isMilestone: false }, { ref: 'b', title: 'B', isMilestone: false }] },
+        { order: 1, name: 'F-b', tasks: [{ ref: 'c', title: 'C', isMilestone: false }] },
+      ];
+      await service.importPlan(lider(), 'r1', doc);
+
+      const phaseCodes = (m.prismaObj.planPhase as any).create.mock.calls.map((c: any[]) => c[0].data.code);
+      const taskCodes = (m.prismaObj.task as any).create.mock.calls.map((c: any[]) => c[0].data.code);
+      // Los contadores estaban en F3 y T13 (el plan ya había usado 2 fases y 12 tareas).
+      expect(phaseCodes).toEqual(['PRY-0012-F3', 'PRY-0012-F4']);
+      expect(taskCodes).toEqual(['PRY-0012-T13', 'PRY-0012-T14', 'PRY-0012-T15']);
+      // Una sola sentencia por contador, con el total de números a reservar.
+      const seqCalls = (m.prismaObj.plan as any).update.mock.calls.map((c: any[]) => c[0].data).filter((d: any) => d.phaseSeqNext || d.taskSeqNext);
+      expect(seqCalls).toEqual([{ phaseSeqNext: { increment: 2 } }, { taskSeqNext: { increment: 3 } }]);
+    });
+
+    it('IDs visibles: ignora el code informativo que trae el documento exportado', async () => {
+      stubPlanInScope(PlanStatus.BORRADOR);
+      (m.prismaObj.planPhase as any).create.mockResolvedValue({ id: 'ph' });
+      (m.prismaObj.task as any).create.mockResolvedValue({ id: 't' });
+      const doc = emptyDoc();
+      doc.phases = [
+        { order: 0, name: 'F', code: 'PRY-9999-F1', tasks: [{ ref: 'a', code: 'PRY-9999-T01', title: 'A', isMilestone: false }] },
+      ];
+      await service.importPlan(lider(), 'r1', doc);
+      expect((m.prismaObj.planPhase as any).create.mock.calls[0][0].data.code).toBe('PRY-0012-F3');
+      expect((m.prismaObj.task as any).create.mock.calls[0][0].data.code).toBe('PRY-0012-T13');
     });
 
     it('tarea hito invalida (estimateHours > 0) -> 400', async () => {

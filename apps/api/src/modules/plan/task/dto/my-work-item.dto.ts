@@ -16,6 +16,9 @@ export class MyWorkItemDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Id de la tarea.' })
   taskId!: string;
 
+  @ApiProperty({ type: String, example: 'PRY-0012-T07', description: 'ID visible de la tarea (solo lectura).' })
+  code!: string;
+
   @ApiProperty({ type: String, description: 'Titulo de la tarea.' })
   title!: string;
 
@@ -40,6 +43,9 @@ export class MyWorkItemDto {
   @ApiProperty({ type: String, description: 'Nombre de la fase.' })
   phaseName!: string;
 
+  @ApiProperty({ type: String, example: 'PRY-0012-F2', description: 'ID visible de la fase (solo lectura).' })
+  phaseCode!: string;
+
   @ApiProperty({ type: String, format: 'uuid', description: 'Plan al que pertenece.' })
   planId!: string;
 
@@ -48,6 +54,9 @@ export class MyWorkItemDto {
 
   @ApiProperty({ type: String, description: 'Titulo de la solicitud.' })
   requestTitle!: string;
+
+  @ApiProperty({ type: String, example: 'PRY-0012', description: 'ID visible de la solicitud (solo lectura).' })
+  requestCode!: string;
 
   @ApiProperty({
     type: () => [MyWorkPendingPredecessorDto],

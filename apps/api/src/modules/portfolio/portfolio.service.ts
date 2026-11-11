@@ -77,6 +77,7 @@ export class PortfolioService {
       orderBy: [{ registeredAt: 'desc' }, { createdAt: 'desc' }],
       select: {
         id: true,
+        code: true,
         title: true,
         mainProcessId: true,
         operationalState: true,
@@ -160,6 +161,7 @@ export class PortfolioService {
 
       items.push({
         id: req.id,
+        code: req.code,
         title: req.title,
         mainProcessId: req.mainProcessId,
         mainProcessCode: req.mainProcess?.code ?? null,

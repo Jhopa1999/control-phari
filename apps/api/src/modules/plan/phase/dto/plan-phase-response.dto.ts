@@ -5,6 +5,13 @@ export class PlanPhaseResponseDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Identificador unico.' })
   id!: string;
 
+  @ApiProperty({
+    type: String,
+    example: 'PRY-0012-F2',
+    description: 'ID visible de la fase (solo lectura, inmutable, nunca se reutiliza). Forma corta: F2.',
+  })
+  code!: string;
+
   @ApiProperty({ type: String, format: 'uuid', description: 'Plan al que pertenece.' })
   planId!: string;
 

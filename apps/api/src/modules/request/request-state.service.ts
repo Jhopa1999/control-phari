@@ -98,6 +98,7 @@ equest-scope.service.ts). */
 
     return {
       id: request.id,
+      code: request.code,
       title: request.title,
       registeredAt: request.registeredAt,
       requesterId: request.requesterId,

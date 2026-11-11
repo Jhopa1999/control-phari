@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { ChevronRight } from 'lucide-react';
+import { IdChip } from '@/components/id-chip';
 import {
   groupRequests,
   RequestSummary,
@@ -60,7 +61,10 @@ export function RequestInbox({
                     className="group flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                      <span className="line-clamp-2 font-medium wrap-break-word">{request.title}</span>
+                      <span className="flex items-start gap-2">
+                        <IdChip code={request.code} copyable={false} className="mt-0.5" />
+                        <span className="line-clamp-2 font-medium wrap-break-word">{request.title}</span>
+                      </span>
                       <RequestSummary request={request} show={show} />
                     </span>
                     <span className="hidden text-meta text-muted-foreground group-hover:text-foreground sm:inline">

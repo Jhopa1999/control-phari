@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { BlockedReasonBox, BlockedReasonLine } from '@/components/blocked-reason';
+import { IdChip } from '@/components/id-chip';
 import { progressTone } from '@/components/task-progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -225,18 +226,21 @@ export function Subline({
       item.requestTitle
     );
   return (
-    <p
-      title={full}
-      className={cn(
-        'text-meta text-muted-foreground',
-        lines === 1 ? 'line-clamp-1' : 'line-clamp-2',
-      )}
-    >
-      {request}
-      {item.requestTitle && item.phaseName ? ' · ' : null}
-      {item.phaseName}
-      {commitment ? <span className="whitespace-nowrap">{(item.requestTitle || item.phaseName) ? ' · ' : null}{commitment}</span> : null}
-    </p>
+    <div className="flex min-w-0 items-start gap-2">
+      <IdChip code={item.code} />
+      <p
+        title={full}
+        className={cn(
+          'min-w-0 text-meta text-muted-foreground',
+          lines === 1 ? 'line-clamp-1' : 'line-clamp-2',
+        )}
+      >
+        {request}
+        {item.requestTitle && item.phaseName ? ' · ' : null}
+        {item.phaseName}
+        {commitment ? <span className="whitespace-nowrap">{(item.requestTitle || item.phaseName) ? ' · ' : null}{commitment}</span> : null}
+      </p>
+    </div>
   );
 }
 

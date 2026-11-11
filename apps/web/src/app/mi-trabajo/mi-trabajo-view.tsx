@@ -37,7 +37,7 @@ import {
 } from '@/lib/my-work-groups';
 import { boardColumns } from '@/lib/my-work-board';
 import { listMyWork } from '@/lib/my-work';
-import { matchesSearch } from '@/lib/table-sort';
+import { matchCode, matchesSearch } from '@/lib/table-sort';
 import { TASK_STATUSES, taskStatusLabel } from '@/lib/tasks';
 import { useMyWorkView, type MyWorkView } from '@/lib/use-my-work-view';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
@@ -232,7 +232,7 @@ export function MiTrabajoView(): React.ReactElement {
           ? new Set(allGroups.today.map((i) => i.taskId))
           : null;
     return items.filter((item) => {
-      if (!matchesSearch(item.title, query)) return false;
+      if (!matchesSearch(item.title, query) && !matchCode(item.code, query)) return false;
       if (status !== ALL && item.status !== status) return false;
       if (counterIds && !counterIds.has(item.taskId)) return false;
       if (counter === 'inProgress' && item.status !== 'EN_CURSO') return false;
@@ -591,7 +591,7 @@ export function MiTrabajoView(): React.ReactElement {
           <SearchInput
             ref={searchRef}
             id="mt-buscar"
-            placeholder="Título de la tarea"
+            placeholder="Título o ID de la tarea"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />

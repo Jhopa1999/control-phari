@@ -1,5 +1,5 @@
 import type { Task } from './api-client';
-import { matchesSearch } from './table-sort';
+import { matchCode, matchesSearch } from './table-sort';
 
 /**
  * Filtros de presentación de la lista de tareas de Planificación (design
@@ -23,7 +23,10 @@ export interface TaskFilters {
 }
 
 export function matchesTaskFilters(
-  t: Pick<Task, 'title' | 'status' | 'phaseId' | 'responsibleUserId'>,
+  t: Pick<Task, 'title' | 'status' | 'phaseId' | 'responsibleUserId'> & {
+    /** ID visible de la tarea; opcional para no romper llamadores antiguos. */
+    code?: string;
+  },
   f: TaskFilters,
 ): boolean {
   if (f.status !== 'ALL' && t.status !== f.status) return false;
@@ -31,5 +34,6 @@ export function matchesTaskFilters(
   if (f.mineUserId !== null && t.responsibleUserId !== f.mineUserId) {
     return false;
   }
-  return matchesSearch(t.title, f.q);
+  // La búsqueda coincide con el título O con el ID visible.
+  return matchesSearch(t.title, f.q) || matchCode(t.code, f.q);
 }
