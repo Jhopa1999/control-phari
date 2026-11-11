@@ -78,7 +78,7 @@ export function groupRequests(
 }
 
 function optionLabel(request: Request): string {
-  return `${request.title} · ${getStatus('request', request.operationalState).label}`;
+  return `${request.code} · ${request.title} · ${getStatus('request', request.operationalState).label}`;
 }
 
 /**

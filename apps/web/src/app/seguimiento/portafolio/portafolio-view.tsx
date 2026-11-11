@@ -13,6 +13,7 @@ import {
 } from '@/components/data-table';
 import { DataCardList } from '@/components/data-card-list';
 import { DataView, type DataViewState } from '@/components/data-view';
+import { IdChip } from '@/components/id-chip';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { PriorityBadge, PriorityLegend, StatusBadge } from '@/components/status-badge';
@@ -52,6 +53,7 @@ import {
   compareByOrder,
   compareDate,
   compareText,
+  matchCode,
   matchesSearch,
   type Comparator,
   type SortState,
@@ -274,7 +276,7 @@ export function PortafolioView(): React.ReactElement {
     !sameList(applied.state, DEFAULT_SELECTION.state);
   const hasFilters = hasServerFilters || query.trim() !== '';
   const pendingIncluded = includesPending(applied.state);
-  const filter = React.useCallback((item: PortfolioItem) => matchesSearch(item.title, query), [query]);
+  const filter = React.useCallback((item: PortfolioItem) => matchesSearch(item.title, query) || matchCode(item.code, query), [query]);
   const table = useClientTable({
     rows: items,
     filter,
@@ -360,7 +362,7 @@ export function PortafolioView(): React.ReactElement {
         <SearchInput
           ref={searchRef}
           id="portafolio-buscar"
-          placeholder="Título"
+          placeholder="Título o ID"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -464,13 +466,16 @@ export function PortafolioView(): React.ReactElement {
           <TableBody>
             {table.pageRows.map((item) => (
               <TableRow key={item.id}>
-                <TableCell className="min-w-56 max-w-[28rem]">
-                  <CellTitle
-                    href={`/seguimiento/portafolio/${encodeURIComponent(item.id)}`}
-                    meta={rowMeta(item, routes)}
-                  >
-                    {item.title}
-                  </CellTitle>
+                <TableCell className="min-w-56 max-w-[30rem]">
+                  <div className="flex items-start gap-2">
+                    <IdChip code={item.code} className="mt-0.5" />
+                    <CellTitle
+                      href={`/seguimiento/portafolio/${encodeURIComponent(item.id)}`}
+                      meta={rowMeta(item, routes)}
+                    >
+                      {item.title}
+                    </CellTitle>
+                  </div>
                 </TableCell>
                 <TableCell className="min-w-36">
                   <div className="flex flex-col items-start gap-1 py-0.5">
@@ -545,7 +550,12 @@ export function PortafolioView(): React.ReactElement {
                 {item.title}
               </CellTitle>
             ),
-            subtitle: rowMeta(item, routes),
+            subtitle: (
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <IdChip code={item.code} />
+                {rowMeta(item, routes)}
+              </span>
+            ),
             badges: [
               <StatusBadge key="state" kind="request" value={item.operationalState} />,
               item.blocked ? <StatusBadge key="blocked" kind="blocked" value="true" /> : null,

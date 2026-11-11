@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { ErrorState } from '@/components/error-state';
+import { IdChip } from '@/components/id-chip';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RequestFacts } from '@/components/request-context-bar';
@@ -259,6 +260,7 @@ export function FichaView({
         ]}
         meta={
           <>
+            <IdChip code={request.code} />
             <StatusBadge kind="request" value={request.operationalState} />
             <PriorityBadge
               variant="full"

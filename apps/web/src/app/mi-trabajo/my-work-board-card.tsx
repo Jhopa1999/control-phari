@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { AlarmClock, Clock } from 'lucide-react';
 import { BlockedReasonBox } from '@/components/blocked-reason';
+import { IdChip } from '@/components/id-chip';
 import { progressTone } from '@/components/task-progress';
 import { Button } from '@/components/ui/button';
 import type { MyWorkItem } from '@/lib/api-client';
@@ -77,11 +78,14 @@ export function MyWorkBoardCard({ item, today, actions }: MyWorkBoardCardProps):
           {item.isMilestone ? <MilestoneBadge /> : null}
         </div>
 
-        {context ? (
-          <p title={context} className="line-clamp-2 text-meta text-muted-foreground">
-            {context}
-          </p>
-        ) : null}
+        <div className="flex min-w-0 items-start gap-2">
+          <IdChip code={item.code} />
+          {context ? (
+            <p title={context} className="min-w-0 line-clamp-2 text-meta text-muted-foreground">
+              {context}
+            </p>
+          ) : null}
+        </div>
 
         {dueText || item.pendingPredecessors?.length || closed ? (
           <div className="flex flex-wrap items-center gap-1.5">

@@ -1,5 +1,5 @@
 import type { Task } from './api-client';
-import { matchesSearch } from './table-sort';
+import { matchCode, matchesSearch } from './table-sort';
 
 /**
  * Filtros de presentación de la lista de tareas de Planificación (design
@@ -22,23 +22,6 @@ export interface TaskFilters {
   mineUserId: string | null;
 }
 
-/**
- * Coincidencia con el ID visible (PRY-0012-T07), sin distinguir mayúsculas:
- * acepta el código completo o parcial (`pry-0012`) y la forma corta (`T07`,
- * `t7`, `F2`). Misma regla que `?q=` en la API.
- */
-export function matchesCode(code: string | null | undefined, query: string): boolean {
-  const q = query.trim().toUpperCase();
-  if (q === '' || !code) return false;
-  const upper = code.toUpperCase();
-  if (upper.includes(q)) return true;
-  const short = /^([FT])(\d+)$/.exec(q);
-  if (!short) return false;
-  const seq = Number(short[2]);
-  const suffix = short[1] === 'T' ? `-T${String(seq).padStart(2, '0')}` : `-F${seq}`;
-  return upper.endsWith(suffix);
-}
-
 export function matchesTaskFilters(
   t: Pick<Task, 'title' | 'status' | 'phaseId' | 'responsibleUserId'> & {
     /** ID visible de la tarea; opcional para no romper llamadores antiguos. */
@@ -52,5 +35,5 @@ export function matchesTaskFilters(
     return false;
   }
   // La búsqueda coincide con el título O con el ID visible.
-  return matchesSearch(t.title, f.q) || matchesCode(t.code, f.q);
+  return matchesSearch(t.title, f.q) || matchCode(t.code, f.q);
 }

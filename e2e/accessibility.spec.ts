@@ -24,6 +24,7 @@ function fakeRequest(i: number): Request {
   const at = new Date(Date.UTC(2026, 0, i, 12)).toISOString();
   return {
     id: `00000000-0000-4000-8000-0000000000${n}`,
+    code: `PRY-00${n}`,
     title: `Solicitud a11y ${n}`,
     registeredAt: at,
     createdAt: at,

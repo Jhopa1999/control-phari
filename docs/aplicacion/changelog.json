@@ -692,6 +692,14 @@
         "apps/mcp/README.md"
       ],
       "summary": "IDs visibles y automáticos (F1, backend): solicitud PRY-0012, fase PRY-0012-F2 y tarea PRY-0012-T07, de solo lectura, inmutables y nunca reutilizados (migración 20261113120000_visible_ids con relleno determinista, secuencia requests_number_seq y contadores por plan); `code` en las respuestas de solicitud, fase, tarea, Mi trabajo, Por aprobar, Portafolio y cierre; `?q=` del plan busca por código (completo o T07); export/Excel con código informativo que la importación ignora; GET /tasks/by-code/{code} y tool MCP task.get_by_code."
+    },
+    {
+      "timestamp": "2026-11-12T12:00:00Z",
+      "trigger_file": "apps/web/src/components/id-chip.tsx",
+      "updated_docs": [
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "IDs visibles (F2, web): componente IdChip (monoespaciada, copiable, accesible) con forma corta (T07, F2) en Planificación y completa en Mi trabajo, ficha, Solicitudes, Portafolio, bandeja/selector y Bitácora; búsqueda por ID (T07 o código completo) en tareas del Plan, Mi trabajo, Solicitudes y Portafolio; aviso de códigos nuevos al importar el plan."
     }
   ]
 }

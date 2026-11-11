@@ -34,6 +34,10 @@ Se expresan en `apps/web/src/app/globals.css` como variables semánticas.
 
 - Tipografía de interfaz: **Inter** (400, 500, 600). Titulares: **Montserrat**
   700. El logo es vectorial y nunca se recompone con texto.
+- Monoespaciada (`font-mono`) solo para códigos que se leen carácter a carácter o
+  se copian: IDs visibles (`PRY-0012-T07`) y códigos técnicos. Los IDs visibles
+  usan el componente `IdChip` (`components/id-chip.tsx`): chip discreto,
+  copiable, contraste ≥ 4.5:1 y nunca solo color.
 - Los tokens se definen en OKLCH en `globals.css`; el HEX de la marca es la
   referencia. Si hay diferencia visible, prevalece el HEX de la marca.
 - Un valor sugerido fuera del paquete de marca (por ejemplo `#00A8FF` como

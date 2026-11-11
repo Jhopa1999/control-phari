@@ -85,6 +85,16 @@ abrir, cada minuto y al volver a la pestaña.
 | `/seguimiento/reuniones` | Reuniones y compromisos | Módulo unificado de control de actas (`meeting`), con dos pestañas. **Actas**: lista de reuniones; el acta muestra participantes, responsable, agenda, decisiones y observaciones, y debajo sus compromisos (agregar, editar y cambiar estado). Se cierra como registro (*Cerrar acta*), se reabre (líder o jefe) y se descarga en Markdown o se imprime/guarda como PDF. **Compromisos**: seguimiento consolidado de todos los compromisos en alcance, con filtros de estado (abiertos, vencidos, terminados), persona y acta (incluido *Sin acta*); permite registrar compromisos sin acta. Admite `?tab=compromisos`, `?meetingId=` y `?commitmentId=` para los enlaces de las notificaciones. |
 | `/seguimiento/compromisos` | — | Ruta antigua: redirige a la pestaña *Compromisos* de *Reuniones y compromisos*. |
 
+## IDs visibles (`IdChip`)
+
+Solicitud (`PRY-0012`), fase (`PRY-0012-F2`) y tarea (`PRY-0012-T07`) llevan un ID asignado por el sistema, de solo lectura, inmutable y nunca reutilizado (campo `code` del contrato). Se pinta con el componente `components/id-chip.tsx` (`IdChip`): chip discreto en monoespaciada, copiable con clic, Enter o Espacio (copia siempre el código **completo** y avisa con un toast «Copiado …» en región `aria-live`), con `aria-label` «Código T07, copiar» y `title` con el código completo; contraste ≥ 4.5:1 en claro y oscuro y el significado no depende del color. Si va dentro de otro botón o enlace (bandeja de solicitudes) se usa `copyable={false}`.
+
+- **Forma corta** (`T07`, `F2`) en *Planificación*, donde el proyecto ya está a la vista: columna estrecha **ID** (`w-16`) al inicio de la tabla de fases y de la tabla de tareas (no rompe el ancho a 1024 px), prefijo en las tarjetas del kanban y encima del título en el panel lateral de detalle. La fase sigue como subtítulo de cada tarea.
+- **Forma completa** (`PRY-0012-T07`, `PRY-0012`) en las vistas que mezclan proyectos: *Mi trabajo* (lista, tablero y *Por aprobar*, en la línea de contexto), detalle de tarea (campo *Código*), ficha de la solicitud (junto al estado), *Solicitudes* (columna **ID** y tarjeta móvil), *Portafolio* (prefijo del título y tarjeta móvil), bandeja y selector de solicitudes (`PRY-0012 · título · estado`) y selectores de proyecto y tarea de la *Bitácora*.
+- **Búsqueda por ID**, sin distinguir mayúsculas: el buscador de tareas del Plan y de *Mi trabajo* acepta `T07`, `t7` o el código completo; *Solicitudes* y *Portafolio* (filtro de cliente) aceptan el código del proyecto, completo o parcial (`pry-0012`). Lógica compartida en `matchCode` (`lib/table-sort.ts`).
+- Los diálogos de eliminar fase y tarea nombran el código (`¿Eliminar la tarea PRY-0012-T07 «…»?`). El aviso de importar plan indica que lo importado recibe códigos **nuevos** que continúan la numeración y no reutilizan los anteriores.
+- Pendiente (BL-043): notificaciones y correos (el texto se arma en el backend) y el resto de pantallas de la fase F3.
+
 ## Activos y conocimiento (`/activos/*`)
 
 | Ruta | Pantalla | Qué permite hacer |
