@@ -220,7 +220,7 @@ test.describe('integrante', () => {
 
   test('la API rechaza una tarea ajena aunque el cliente la mande', async ({ request }) => {
     const mine = (await (
-      await request.get(`${API_URL}/worklog/options?processId=${processId}&date=${logDate}&scope=all`, {
+      await request.get(`${API_URL}/worklog/options?processId=${processId}&date=${logDate}&scope=all&q=${ts}`, {
         headers: { 'X-Actor-Id': JEFE },
       })
     ).json()) as { tasks: Array<{ id: string; title: string; isMine: boolean }> };
@@ -255,6 +255,59 @@ test.describe('integrante', () => {
     await dialog.getByLabel('Horas (dedicación)').fill('5');
     await dialog.getByRole('button', { name: 'Guardar cambios' }).click();
     await expect(page.getByText('Actividad actualizada.')).toBeVisible();
+  });
+
+  test('edición: cambiar de proyecto en una actividad con tarea quita la tarea y guarda (B1)', async ({ page, request }) => {
+    test.setTimeout(90_000);
+    // Segundo proyecto con una tarea del integrante, para poder elegirlo en el formulario.
+    const req2 = await send(request, JEFE, 'post', '/requests', { title: `E2E selectores B ${ts}`, mainProcessId: processId });
+    const request2Id = req2.id as string;
+    const request2Code = req2.code as string;
+    await send(request, JEFE, 'post', `/requests/${request2Id}/triage`, { decision: 'CONTINUAR' });
+    const asset2 = await send(request, JEFE, 'post', '/assets', { processId, name: `Activo selectores B ${ts}` });
+    await send(request, JEFE, 'post', `/requests/${request2Id}/asset`, { assetId: asset2.id as string });
+    await send(request, JEFE, 'post', `/requests/${request2Id}/priority`, {
+      impact: 3, alignment: 3, riskControl: 3, urgency: 3, scope: 3, dataAvailability: 3, feasibility: 3, reuse: 3,
+    });
+    await send(request, JEFE, 'post', `/requests/${request2Id}/approval`, { decision: 'APROBAR' });
+    const plan2 = await send(request, JEFE, 'post', `/requests/${request2Id}/plan`, {});
+    const phase2 = await send(request, JEFE, 'post', `/plans/${plan2.id as string}/phases`, { name: 'Construcción B' });
+    const t = await send(request, JEFE, 'post', `/phases/${phase2.id as string}/tasks`, { title: `Tarea B ${ts}` });
+    const perms = await send(request, INTEGRANTE, 'get', '/me/permissions');
+    await send(request, JEFE, 'patch', `/tasks/${t.id as string}`, { responsibleUserId: perms.userId as string });
+
+    // Actividad con proyecto A y su tarea (el id de la tarea sale de las opciones).
+    const opts = (await (
+      await request.get(`${API_URL}/worklog/options?processId=${processId}&date=${logDate}`, { headers: { 'X-Actor-Id': INTEGRANTE } })
+    ).json()) as { tasks: Array<{ id: string; title: string }> };
+    const taskA = opts.tasks.find((x) => x.title === titles.mine1)!;
+    const act = await send(request, INTEGRANTE, 'post', `/worklog/daily/${integranteLogId}/activities`, {
+      classificationCode: 'PLANIFICADA',
+      taskId: taskA.id,
+      hours: 1,
+    });
+    const actId = act.id as string;
+
+    await page.goto(`/seguimiento/bitacora?diario=${integranteLogId}`);
+    // Cada actividad es un <details>: se abre el que contiene esta actividad.
+    await page.locator('details', { has: page.locator(`#act-edit-${actId}`) }).locator('summary').click();
+    await page.locator(`#act-edit-${actId}`).click();
+    const dialog = page.getByRole('dialog', { name: 'Editar actividad' });
+    const project = dialog.getByRole('combobox', { name: 'Proyecto (solicitud)' });
+    await expect(project).toBeEnabled();
+    await project.click();
+    await project.fill(request2Code);
+    await dialog.getByRole('option', { name: new RegExp(request2Code) }).first().click();
+    await expect(dialog.getByRole('combobox', { name: 'Tarea' })).toHaveValue('');
+    await dialog.getByRole('button', { name: 'Guardar cambios' }).click();
+    await expect(page.getByText('Actividad actualizada.')).toBeVisible();
+
+    const after = (await (
+      await request.get(`${API_URL}/worklog/daily/${integranteLogId}`, { headers: { 'X-Actor-Id': INTEGRANTE } })
+    ).json()) as { activities: Array<{ id: string; projectRequestId: string | null; taskId: string | null }> };
+    const saved = after.activities.find((a) => a.id === actId)!;
+    expect(saved.projectRequestId).toBe(request2Id);
+    expect(saved.taskId).toBeNull();
   });
 
   test('edición: un proyecto cerrado se rotula «Cerrado»', async ({ page }) => {
@@ -326,6 +379,9 @@ test.describe('jefe de área', () => {
 
     await scope.getByText('Todos del área').click();
     await task.click();
+    // En la BD de desarrollo «Todos del área» supera el tope de 200: se acota por el fixture
+    // (con lista recortada, lo escrito se busca también en el servidor).
+    await task.fill(String(ts));
     await expect(list.getByRole('group', { name: 'Otras tareas de tus procesos' })).toBeVisible();
     await expect(list.getByRole('option', { name: new RegExp(titles.mine1) })).toBeVisible();
   });

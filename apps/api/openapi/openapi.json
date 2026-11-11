@@ -15239,7 +15239,8 @@
           "taskId": {
             "type": "string",
             "format": "uuid",
-            "description": "Tarea planificada."
+            "nullable": true,
+            "description": "Tarea planificada. Envía null para quitar la tarea de la actividad."
           },
           "assetRef": {
             "type": "string",

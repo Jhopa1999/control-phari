@@ -949,6 +949,34 @@ describe('WorklogService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
+    it('taskId null quita la tarea y no se valida como conservada (B1)', async () => {
+      (m.prismaObj.dailyLogActivity as any).findFirst.mockResolvedValue(
+        activityRow({ taskId: 't-vieja', projectRequestId: 'r3' }),
+      );
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(dailyLogRow());
+      (m.prismaObj.dailyLogActivity as any).update.mockImplementation(
+        ({ data }: any) => Promise.resolve(activityRow(data)),
+      );
+      const spy = jest
+        .spyOn(WorklogEligibilityService.prototype, 'validateReferences')
+        .mockResolvedValue({});
+      try {
+        await m.service.updateActivity(integrante(['p1']), 'a1', {
+          projectRequestId: '00000000-0000-4000-8000-000000000020',
+          taskId: null,
+        });
+        expect(spy.mock.calls[0][4]).toEqual({
+          projectRequestId: 'r3',
+          taskId: null,
+        });
+        expect(
+          (m.prismaObj.dailyLogActivity as any).update.mock.calls[0][0].data,
+        ).toMatchObject({ taskId: null });
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
     it('actividad inexistente -> 404', async () => {
       (m.prismaObj.dailyLogActivity as any).findFirst.mockResolvedValue(null);
       await expect(

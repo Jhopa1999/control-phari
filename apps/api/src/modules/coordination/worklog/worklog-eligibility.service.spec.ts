@@ -364,6 +364,45 @@ describe('WorklogEligibilityService', () => {
     });
   });
 
+  describe('validateReferences · cambio de proyecto con tarea guardada (B1)', () => {
+    it('tarea quitada (current.taskId null) al cambiar de proyecto -> ok sin validar la tarea vieja', async () => {
+      const { prismaObj, service } = setup();
+      prismaObj.request.findFirst
+        .mockResolvedValueOnce(requestRow())
+        .mockResolvedValueOnce({ id: 'r20' });
+      await expect(
+        service.validateReferences(
+          actor('integrante'),
+          P1,
+          DAY,
+          { projectRequestId: 'r20', declaredProjectRequestId: 'r20' },
+          { projectRequestId: 'r3', taskId: null },
+        ),
+      ).resolves.toEqual({});
+      expect(prismaObj.task.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('tarea conservada de otro proyecto al cambiar de proyecto -> 400', async () => {
+      const { prismaObj, service } = setup();
+      prismaObj.request.findFirst
+        .mockResolvedValueOnce(requestRow())
+        .mockResolvedValueOnce({ id: 'r20' });
+      prismaObj.task.findFirst.mockResolvedValue({
+        code: 'PRY-0003-T01',
+        phase: { plan: { requestId: 'r3' } },
+      });
+      await expect(
+        service.validateReferences(
+          actor('integrante'),
+          P1,
+          DAY,
+          { projectRequestId: 'r20', declaredProjectRequestId: 'r20' },
+          { projectRequestId: 'r3', taskId: 't-vieja' },
+        ),
+      ).rejects.toThrow('La tarea PRY-0003-T01 no pertenece al proyecto elegido.');
+    });
+  });
+
   describe('listOptions', () => {
     const query = { processId: P1, date: '2026-11-11' };
 

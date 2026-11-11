@@ -329,7 +329,7 @@ Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reun
 | POST | `/worklog/daily/:id/review` | Jefe de área o líder del proceso (nunca el autor): `ENVIADO → REVISADO`; 403 si no puede revisar. |
 | POST | `/worklog/daily/:id/return` | Igual que revisar, devuelve `ENVIADO → BORRADOR` con `{ reason }` (10 a 1000 caracteres) y avisa al autor (notificación `WORKLOG_RETURNED`). 409 si su semanal ya se envió. |
 | POST | `/worklog/daily/:id/activities` | Agrega una actividad al diario. Valida la clasificación y, en *Planificada*, la **regla de imputación** de abajo (404 fuera de alcance; 400 con el código visible si no es imputable). Si llega solo la tarea, el proyecto se deriva de ella. Ya no acepta `relatedIssueId` (400 por campo desconocido). |
-| PATCH | `/worklog/activities/:id` | Edita una actividad del diario. Solo se revalida la referencia (proyecto/tarea) que **cambia**: si no cambia se conserva aunque el proyecto ya no sea imputable. |
+| PATCH | `/worklog/activities/:id` | Edita una actividad del diario. Solo se revalida la referencia (proyecto/tarea) que **cambia**: si no cambia se conserva aunque el proyecto ya no sea imputable. `taskId: null` quita la tarea (omitirlo la conserva); al cambiar de proyecto, una tarea conservada debe pertenecer al nuevo (`400` si no), por eso el formulario envía `taskId: null` al vaciarla. |
 | DELETE | `/worklog/activities/:id` | Borra una actividad del diario. |
 | GET | `/weekly-reports` | Lista semanales en alcance (filtros: `weekStart`, `processId`, `authorUserId`, `status`); incluye `authorName` y datos de revisión. |
 | POST | `/weekly-reports` | Crea un semanal (se ancla al lunes ISO). |

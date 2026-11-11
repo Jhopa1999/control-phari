@@ -922,7 +922,8 @@ export class WorklogService {
       changedRefs,
       {
         projectRequestId: activity.projectRequestId,
-        taskId: activity.taskId,
+        // dto.taskId === null: el cliente quitó la tarea; ya no se conserva.
+        taskId: dto.taskId === null ? null : activity.taskId,
       },
     );
     // Si cambia la tarea sin indicar proyecto, el proyecto se deriva de ella (D8).

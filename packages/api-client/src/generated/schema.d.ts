@@ -5462,9 +5462,9 @@ export interface components {
             projectRequestId?: string;
             /**
              * Format: uuid
-             * @description Tarea planificada.
+             * @description Tarea planificada. Envía null para quitar la tarea de la actividad.
              */
-            taskId?: string;
+            taskId?: string | null;
             /** @description Activo (texto, para soporte). */
             assetRef?: string;
             /** @description Solicitante (texto, para extraordinaria). */

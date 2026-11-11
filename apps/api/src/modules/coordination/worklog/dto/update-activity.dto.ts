@@ -42,10 +42,15 @@ export class UpdateActivityDto {
   @IsUUID()
   projectRequestId?: string;
 
-  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Tarea planificada.' })
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Tarea planificada. Envía null para quitar la tarea de la actividad.',
+  })
   @IsOptional()
   @IsUUID()
-  taskId?: string;
+  taskId?: string | null;
 
   @ApiPropertyOptional({ type: String, description: 'Activo (texto, para soporte).', maxLength: 500 })
   @IsOptional()

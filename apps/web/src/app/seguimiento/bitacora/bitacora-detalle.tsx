@@ -295,7 +295,11 @@ export function BitacoraDetalle({
     setActError(null);
     try {
       if (actEditing) {
-        await updateActivity(actEditing.id, activityBody(values));
+        await updateActivity(actEditing.id, {
+          ...activityBody(values),
+          // Al editar, una tarea vaciada se envía como null: omitirla la conservaría.
+          ...(actEditing.taskId && !values.taskId.trim() ? { taskId: null } : {}),
+        });
         toast.success('Actividad actualizada.');
       } else {
         await createActivity(detail.id, activityBody(values));
