@@ -14,6 +14,8 @@ import {
   type UpdateWeeklyReport,
   type WeeklyReportsQuery,
   type WeeklyReport,
+  type WorklogOptions,
+  type WorklogOptionsQuery,
 } from './api-client';
 
 /**
@@ -81,6 +83,33 @@ export async function listCoordinationPeople(): Promise<CoordinationPerson[]> {
   }
 }
 
+// --- Opciones de imputación ---
+
+/**
+ * Proyectos y tareas que el usuario puede imputar en el diario de un proceso y
+ * una fecha (GET /worklog/options). Es la misma regla que aplica el servidor al
+ * guardar la actividad. `signal` permite cancelar la petición anterior.
+ */
+export async function getWorklogOptions(
+  query: WorklogOptionsQuery,
+  signal?: AbortSignal,
+): Promise<WorklogOptions> {
+  try {
+    const { data, error, response } = await api.GET('/worklog/options', {
+      params: { query },
+      signal,
+    });
+    if (error || !data) {
+      throw toWorklogError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof WorklogError) throw err;
+    // Una petición cancelada no es un fallo para el usuario.
+    if (err instanceof DOMException && err.name === 'AbortError') throw err;
+    throw toWorklogError(undefined);
+  }
+}
 // --- Diarios (DailyLog) ---
 
 /**

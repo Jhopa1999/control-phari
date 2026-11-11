@@ -489,3 +489,17 @@ Lo que esta especificación no puede cerrar sola:
 | P7 | **`SegmentedRadio` con `className`.** Verificar que ningún otro uso cambia de aspecto y que `tailwind-merge` resuelve `inline-flex` frente a `flex`. | Implementación web. |
 | P8 | **Reglas de paridad del MCP.** `projectRequestState` obligatorio y los campos nuevos de opciones deben reflejarse en el catálogo del MCP y en la prueba de cobertura contra el contrato; revisar si algún test de contrato fija el DTO anterior. | MCP, mismo PR. |
 | P9 | **Hallazgo LOW 21 (zoom y alto contraste)** quedó recogido en §4 y §6; falta ejecutar las capturas a 320 px y con `forced-colors`. | Implementación web. |
+
+### 8.1 Resolución en la implementación (PR1)
+
+| # | Resolución |
+| --- | --- |
+| P1 | **Contrato confirmado y ampliado.** `date` es la fecha del diario y fija la ventana de gracia (`closedAt` ≥ fecha − días de gracia). `scope=mine` (por defecto) devuelve los proyectos con tareas propias y solo `isMine = true`; `scope=all` solo lo aplica el **jefe**. Decisión D2 del brief frente a E13: el **líder** del proceso del diario recibe siempre además las tareas ajenas de ese proceso (grupo «Otras tareas de tus procesos») y todos los proyectos elegibles; el integrante ignora `all`. Nombres definitivos: `q`, `projectsTruncated`, `tasksTruncated`; la respuesta añade `requestTitle` y `responsibleName` a cada tarea. |
+| P2 | **Ventana de gracia gestionable.** Maestra `WORKLOG_PARAM` / `CLOSED_PROJECT_GRACE_DAYS` (valor entero en la etiqueta, editable en Maestras); sin ella o con un valor inválido, 7 días. «Cerrado» (E7) sale de `projectRequestState = CERRADA`, que ahora trae la actividad. |
+| P3 | **Contrastes medidos** (script `contraste-pr1.mjs`, resultado en `contraste-pr1.txt`, claro y oscuro). Dos correcciones: la barra de la opción activa pasó de `bg-ring` a `bg-link` (en oscuro `bg-ring` daba 2.89:1 frente a `bg-accent`; ahora 4.93:1 claro y 6.29:1 oscuro) y, en la fila activa, los estados (`StatusBadge`, «Cerrado», «No disponible») van sobre una píldora `bg-card` (sobre `bg-accent` solo daban 4.37:1 y 4.45:1 en claro). El `IdChip` de la fila activa usa `bg-card` (repliegue fijado). `bg-muted/50` pasa sin cambios (13.2:1 y 13.8:1). |
+| P4 | Antirrebote de 250 ms y cancelación con `AbortController` implementados; la búsqueda en servidor solo se activa con la lista recortada. Pendiente de confirmar la sensación con datos de producción. |
+| P5 | Cálculo de `--sel-max` con `visualViewport` implementado; **solo validado en emulación** (390×664). Falta probarlo en iOS Safari y Android Chrome reales. |
+| P6 | Sin ejecutar: requiere prueba manual con NVDA/VoiceOver. Se verificó con axe (sin violaciones serias o críticas) y por pruebas de rol/nombre. |
+| P7 | `SegmentedRadio` ganó la prop opcional `className` (retrocompatible); ningún otro uso cambia. |
+| P8 | `projectRequestState`, `projectRequestCode` y `taskCode` están en el contrato y en el cliente; `worklog.options` es una tool MCP de lectura y la prueba de cobertura (120 tools sobre 210 operaciones) pasa. |
+| P9 | Capturas a 1440, 1024 y 390 en claro y oscuro hechas; **320 px, `forced-colors` y teclado virtual en dispositivo no se capturaron** (quedan como verificación manual). |

@@ -116,6 +116,13 @@ export type CoordinationPerson =
   components['schemas']['CoordinationPersonDto'];
 export type DailyLog = components['schemas']['DailyLogResponseDto'];
 export type DailyLogActivity = components['schemas']['ActivityResponseDto'];
+/** Proyectos y tareas imputables en el diario de un proceso y una fecha (GET /worklog/options). */
+export type WorklogOptions = components['schemas']['WorklogOptionsResponseDto'];
+export type WorklogProjectOption = components['schemas']['WorklogProjectOptionDto'];
+export type WorklogTaskOption = components['schemas']['WorklogTaskOptionDto'];
+export type WorklogOptionsQuery = NonNullable<
+  paths['/worklog/options']['get']['parameters']['query']
+>;
 /** Pagina de diarios { data, page, pageSize, total, hasMore } del contrato. */
 export type PaginatedDailyLogs =
   components['schemas']['PaginatedDailyLogsResponseDto'];

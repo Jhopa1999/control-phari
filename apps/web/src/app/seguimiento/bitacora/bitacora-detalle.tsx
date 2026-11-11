@@ -6,8 +6,10 @@ import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { useActor } from '@/lib/actor-context';
 import { InlineNotice } from '@/components/inline-notice';
 import { ReasonDialog } from '@/components/reason-dialog';
+import { IdChip } from '@/components/id-chip';
 import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +21,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { DailyLog, DailyLogActivity, Issue, MyWorkItem, Process, Request } from '@/lib/api-client';
+import type { DailyLog, DailyLogActivity, Process } from '@/lib/api-client';
 import {
   formatDateOnly,
   formatDateOnlyWithWeekday,
@@ -63,7 +65,6 @@ function activityBody(values: ActividadFormValues) {
     hours: values.hours.trim() === '' ? undefined : Number(values.hours),
     projectRequestId: trimOrUndefined(values.projectRequestId),
     taskId: trimOrUndefined(values.taskId),
-    relatedIssueId: trimOrUndefined(values.relatedIssueId),
     assetRef: trimOrUndefined(values.assetRef),
     requesterRef: trimOrUndefined(values.requesterRef),
     justification: trimOrUndefined(values.justification),
@@ -87,15 +88,29 @@ interface DetailRow {
   value: React.ReactNode;
 }
 
+/** ID visible (chip) seguido del título; sin código (dato antiguo), solo el título. */
+function referenceValue(
+  code: string | null | undefined,
+  title: string | null | undefined,
+  copyable: boolean,
+): React.ReactNode {
+  if (!title && !code) return null;
+  return (
+    <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+      <IdChip code={code} variant="full" copyable={copyable} />
+      {title ? <span className="min-w-0 wrap-break-word">{title}</span> : null}
+    </span>
+  );
+}
+
 /** Los campos de una actividad que tienen valor, listos para la lista de detalle. */
 function activityRows(act: DailyLogActivity): DetailRow[] {
   const rows: DetailRow[] = [];
   const add = (label: string, value: React.ReactNode | null | undefined) => {
     if (value !== null && value !== undefined && value !== '') rows.push({ label, value });
   };
-  add('Proyecto', act.projectRequestTitle);
-  add('Tarea', act.taskTitle);
-  add('Novedad', act.relatedIssueTitle);
+  add('Proyecto', referenceValue(act.projectRequestCode, act.projectRequestTitle, true));
+  add('Tarea', referenceValue(act.taskCode, act.taskTitle, true));
   add('Activo', act.assetRef);
   add('Solicitante', act.requesterRef);
   add('Justificación', act.justification);
@@ -122,9 +137,6 @@ function activityRows(act: DailyLogActivity): DetailRow[] {
 export interface BitacoraDetalleProps {
   logId: string;
   processes: Process[];
-  requests: Request[];
-  tasks: MyWorkItem[];
-  issues: Issue[];
   /** Se llama tras cualquier cambio para que la lista y los indicadores se recarguen. */
   onChanged: () => void;
   onClose: () => void;
@@ -140,9 +152,6 @@ export interface BitacoraDetalleProps {
 export function BitacoraDetalle({
   logId,
   processes,
-  requests,
-  tasks,
-  issues,
   onChanged,
   onClose,
   returnFocusTo,
@@ -202,10 +211,8 @@ export function BitacoraDetalle({
   const processName = detail
     ? detail.processName || processes.find((p) => p.id === detail.processId)?.name || ''
     : '';
-  const processIssues = React.useMemo(
-    () => (detail ? issues.filter((i) => i.processId === detail.processId) : []),
-    [issues, detail],
-  );
+  const { permissions } = useActor();
+  const isJefe = (permissions?.grants ?? []).some((g) => g.roleCode === 'JEFE_AREA');
 
   // --- Acciones del diario ---
   async function run(action: () => Promise<unknown>, success: string): Promise<boolean> {
@@ -448,6 +455,16 @@ export function BitacoraDetalle({
                         ) : (
                           <span className="text-muted-foreground">Sin descripción</span>
                         )}
+                        {act.projectRequestTitle || act.taskTitle ? (
+                          <span className="mt-1 flex flex-col gap-1 text-xs text-muted-foreground">
+                            {act.projectRequestTitle || act.projectRequestCode ? (
+                              <span>{referenceValue(act.projectRequestCode, act.projectRequestTitle, false)}</span>
+                            ) : null}
+                            {act.taskTitle || act.taskCode ? (
+                              <span>{referenceValue(act.taskCode, act.taskTitle, false)}</span>
+                            ) : null}
+                          </span>
+                        ) : null}
                       </span>
                       <span className="shrink-0 text-sm font-medium tabular-nums">
                         {formatHours(act.hours)}
@@ -684,9 +701,9 @@ export function BitacoraDetalle({
           }
         }}
         editing={actEditing}
-        requests={requests}
-        tasks={tasks}
-        issues={processIssues}
+        processId={detail?.processId ?? ''}
+        date={detail?.date ?? ''}
+        isJefe={isJefe}
         submitting={actSubmitting}
         errorMessage={actError}
         onSubmit={handleActSubmit}

@@ -16,6 +16,8 @@ export interface SegmentedRadioProps {
   disabled?: boolean;
   /** Clases extra de cada opción (p. ej. objetivo táctil de 44 px). */
   optionClassName?: string;
+  /** Clases del contenedor (p. ej. ancho completo en móvil). */
+  className?: string;
 }
 
 /**
@@ -34,6 +36,7 @@ function SegmentedRadio({
   describedBy,
   disabled = false,
   optionClassName,
+  className,
 }: SegmentedRadioProps): React.ReactElement {
   return (
     <div
@@ -41,7 +44,10 @@ function SegmentedRadio({
       role="radiogroup"
       aria-labelledby={labelledBy}
       aria-describedby={describedBy}
-      className="inline-flex gap-0.5 rounded-md border border-border-strong bg-background p-0.5"
+      className={cn(
+        'inline-flex gap-0.5 rounded-md border border-border-strong bg-background p-0.5',
+        className,
+      )}
     >
       {options.map((option) => {
         const optionId = `${id}-${option.value}`;

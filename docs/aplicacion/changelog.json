@@ -700,6 +700,19 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "IDs visibles (F2, web): componente IdChip (monoespaciada, copiable, accesible) con forma corta (T07, F2) en Planificación y completa en Mi trabajo, ficha, Solicitudes, Portafolio, bandeja/selector y Bitácora; búsqueda por ID (T07 o código completo) en tareas del Plan, Mi trabajo, Solicitudes y Portafolio; aviso de códigos nuevos al importar el plan."
+    },
+    {
+      "timestamp": "2026-11-14T12:00:00Z",
+      "trigger_file": "apps/api/src/modules/coordination/worklog/worklog-eligibility.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/design/bitacoras-ux.md",
+        "apps/mcp/README.md"
+      ],
+      "summary": "Bitácora: la API ahora valida qué se puede imputar en una actividad planificada (proyecto activo o cerrado dentro de la ventana de gracia de 7 días gestionable en Maestras, del proceso del diario; el integrante solo sus tareas, líder y jefe también las ajenas de su alcance; coherencia proyecto-tarea) y rechaza con 400 lo que antes aceptaba; nuevo GET /worklog/options y tool MCP worklog.options; selectores de Proyecto y Tarea con buscador, agrupados y con el valor guardado conservado; ID visible (projectRequestCode, taskCode, projectRequestState) en las actividades; se retira «Novedad relacionada» (relatedIssueId ya no se acepta, la columna se conserva)."
     }
   ]
 }

@@ -1,5 +1,7 @@
 # Bitácora y Reporte semanal: especificación UX/UI
 
+> **Actualización (selectores de proyecto y tarea).** El campo «Novedad relacionada» ya no existe en el formulario ni en la fila de detalle de la actividad, y los selectores de Proyecto y Tarea pasaron a un combobox con buscador alimentado por `GET /worklog/options`. Lo que describe este documento sobre la novedad relacionada está superado; ver `docs/design/bitacora-selectores.md`.
+
 Especificación visual, de interacción y de contrato de datos (rol Diseñador). No toca código de la aplicación ni
 el backend: describe lo que se debe construir y en qué orden.
 
