@@ -30,6 +30,30 @@ export function requestStateLabel(state: string): string {
   return REQUEST_STATE_LABELS[state] ?? state;
 }
 
+/**
+ * Estados de una solicitud ya COMPROMETIDA: desde la aprobación del compromiso
+ * hasta el cierre. Son las «iniciativas» que muestra el Portafolio por defecto.
+ * Quedan fuera los de decisión pendiente o sin compromiso: REGISTRADA,
+ * EN_TRIAGE, DEVUELTA, RECHAZADA, BACKLOG_PRIORIZADO y RETIRADA. BLOQUEADA se
+ * incluye por completitud del enum (hoy el bloqueo es un indicador aparte).
+ */
+export const COMMITTED_STATES: readonly string[] = [
+  'COMPROMETIDA',
+  'EN_PLANIFICACION',
+  'EN_EJECUCION',
+  'BLOQUEADA',
+  'EN_VALIDACION',
+  'LISTA_PARA_LIBERAR',
+  'EN_ESTABILIZACION',
+  'OPERATIVA',
+  'CERRADA',
+];
+
+/** La solicitud ya está comprometida (es una iniciativa; ver COMMITTED_STATES). */
+export function isCommitted(r: Pick<Request, 'operationalState'>): boolean {
+  return COMMITTED_STATES.includes(r.operationalState);
+}
+
 /** Decisiones de triage legibles. */
 export const TRIAGE_DECISION_LABELS: Record<string, string> = {
   CONTINUAR: 'Continuar',

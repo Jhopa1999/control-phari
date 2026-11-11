@@ -28,6 +28,19 @@ async function loadProcesses(request: APIRequestContext): Promise<ProcessRef[]> 
 }
 
 const BAND_P1 = 'P1 · Primera consideración para compromiso';
+/** Estados que el Portafolio muestra por defecto (iniciativas comprometidas). */
+const COMMITTED = [
+  'COMPROMETIDA',
+  'EN_PLANIFICACION',
+  'EN_EJECUCION',
+  'BLOQUEADA',
+  'EN_VALIDACION',
+  'LISTA_PARA_LIBERAR',
+  'EN_ESTABILIZACION',
+  'OPERATIVA',
+  'CERRADA',
+];
+
 const BAND_P2 = 'P2 · Programación en el horizonte cercano';
 
 interface FixtureSpec {
@@ -282,7 +295,9 @@ test.describe('Portafolio: filtros de selección múltiple', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Portafolio', exact: true })).toBeVisible();
     await expect.poll(() => urls.length).toBeGreaterThanOrEqual(1);
     const initial = urls.length;
-    expect(urls[0].searchParams.getAll('state')).toEqual([]);
+    // El Portafolio parte del conjunto de iniciativas comprometidas (filtro de la UI).
+    expect([...urls[0].searchParams.getAll('state')].sort()).toEqual([...COMMITTED].sort());
+    await expect(page.locator('#portafolio-estado')).toContainText('9 seleccionados');
 
     const trigger = page.locator('#portafolio-estado');
     await trigger.click();
@@ -295,10 +310,11 @@ test.describe('Portafolio: filtros de selección múltiple', () => {
 
     await expect.poll(() => urls.length).toBe(initial + 1);
     const last = urls[urls.length - 1];
-    expect(last.searchParams.getAll('state')).toEqual(['REGISTRADA', 'EN_TRIAGE']);
-    expect(last.search).toContain('state=REGISTRADA&state=EN_TRIAGE');
+    expect([...last.searchParams.getAll('state')].sort()).toEqual(
+      [...COMMITTED, 'REGISTRADA', 'EN_TRIAGE'].sort(),
+    );
     // La lista con comas pasa de 14 caracteres: el resumen es el conteo.
-    await expect(trigger).toContainText('2 seleccionados');
+    await expect(trigger).toContainText('11 seleccionados');
 
     // Banda: otro filtro conserva el anterior (Y entre filtros).
     await page.locator('#portafolio-banda').click();
@@ -307,16 +323,16 @@ test.describe('Portafolio: filtros de selección múltiple', () => {
     await closePanel(page);
     await expect.poll(() => urls.length).toBe(initial + 2);
     const both = urls[urls.length - 1];
-    expect(both.searchParams.getAll('state')).toEqual(['REGISTRADA', 'EN_TRIAGE']);
+    expect(both.searchParams.getAll('state')).toHaveLength(11);
     expect(both.searchParams.getAll('band')).toEqual(['P1', 'P2']);
 
-    // «Limpiar filtros» vuelve a pedir sin parámetros.
+    // «Limpiar filtros» vuelve al conjunto por defecto (iniciativas comprometidas).
     await page.getByRole('button', { name: 'Limpiar filtros', exact: true }).click();
     await expect.poll(() => urls.length).toBe(initial + 3);
     const cleared = urls[urls.length - 1];
-    expect(cleared.searchParams.getAll('state')).toEqual([]);
+    expect([...cleared.searchParams.getAll('state')].sort()).toEqual([...COMMITTED].sort());
     expect(cleared.searchParams.getAll('band')).toEqual([]);
-    await expect(trigger).toContainText('Todos');
+    await expect(trigger).toContainText('9 seleccionados');
   });
 
   test('«Sin proceso aún» y un proceso viajan como mainProcessId repetido', async ({

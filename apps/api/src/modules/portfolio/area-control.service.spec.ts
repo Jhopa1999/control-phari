@@ -4,6 +4,7 @@ import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import { RequestStateService } from '../request/request-state.service';
 import { AreaControlService } from './area-control.service';
+import { RequestScopeService } from '../request/request-scope.service';
 import { PortfolioScopeService } from './portfolio-scope.service';
 
 function createMocks() {
@@ -20,7 +21,7 @@ function createMocks() {
     priorityBand: jest.fn(),
     priorityLabel: jest.fn(),
   } as unknown as RequestStateService;
-  const scope = new PortfolioScopeService();
+  const scope = new PortfolioScopeService(new RequestScopeService());
   return { prisma, prismaObj, state, scope };
 }
 
@@ -476,16 +477,21 @@ describe('AreaControlService', () => {
       expect(where.AND[0]).toEqual({ deletedAt: null });
     });
 
-    it('no-jefe -> mainProcessId in scopedProcessIds (sin filtrar por rol)', async () => {
+    it('integrante -> sus procesos o lo que creo (sin filtrar por rol)', async () => {
       await service.indicators(lider(['p1']), PERIOD);
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
-      expect(where.AND[0]).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
+      expect(where.AND[0]).toEqual({ deletedAt: null, OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }] });
+    });
+    it('lider -> todas las solicitudes no eliminadas (mismo alcance que Solicitudes)', async () => {
+      await service.indicators({ ...lider(['p1']), isLiderProceso: true }, PERIOD);
+      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
+      expect(where.AND[0]).toEqual({ deletedAt: null });
     });
 
     it('actor mixto (lider A + integrante B) ve A y B (union de grants)', async () => {
       await service.indicators(mixto(), PERIOD);
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
-      expect(where.AND[0].mainProcessId.in.sort()).toEqual(['A', 'B']);
+      expect(where.AND[0].OR[0].mainProcessId.in.sort()).toEqual(['A', 'B']);
     });
   });
 
@@ -543,7 +549,7 @@ describe('AreaControlService', () => {
       (m.prismaObj.request as any).findMany.mockResolvedValueOnce([]);
       await service.demandSummary(lider(['p1']), PERIOD);
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
-      expect(where).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
+      expect(where).toEqual({ deletedAt: null, OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }] });
     });
   });
 
@@ -603,10 +609,7 @@ describe('AreaControlService', () => {
       await service.attention(lider(['p1']));
 
       const requestWhere = (m.prismaObj.request as any).count.mock.calls[0][0].where;
-      expect(requestWhere.AND[0]).toEqual({
-        deletedAt: null,
-        mainProcessId: { in: ['p1'] },
-      });
+      expect(requestWhere.AND[0]).toEqual({ deletedAt: null, OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }] });
 
       // pendingNoProcess: REGISTRADA + sin proceso principal, dentro del alcance.
       const noProcessWhere = (m.prismaObj.request as any).count.mock.calls[1][0]

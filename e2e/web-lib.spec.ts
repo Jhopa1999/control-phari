@@ -72,7 +72,9 @@ import {
   type GuideActionKind,
 } from '../apps/web/src/lib/plan-guide';
 import {
+  COMMITTED_STATES,
   PLANNABLE_STATES,
+  isCommitted,
   isPlannable,
   isPrioritizable,
   isTriageable,
@@ -753,6 +755,26 @@ test.describe('request-state', () => {
         currentTriageDecision: null,
       }),
     ).toBe(false);
+  });
+
+  test('isCommitted: iniciativas desde COMPROMETIDA hasta CERRADA; el resto son solicitudes', () => {
+    expect(COMMITTED_STATES).toEqual([
+      'COMPROMETIDA',
+      'EN_PLANIFICACION',
+      'EN_EJECUCION',
+      'BLOQUEADA',
+      'EN_VALIDACION',
+      'LISTA_PARA_LIBERAR',
+      'EN_ESTABILIZACION',
+      'OPERATIVA',
+      'CERRADA',
+    ]);
+    for (const state of COMMITTED_STATES) {
+      expect(isCommitted({ operationalState: state }), state).toBe(true);
+    }
+    for (const state of ['REGISTRADA', 'EN_TRIAGE', 'DEVUELTA', 'RECHAZADA', 'BACKLOG_PRIORIZADO', 'RETIRADA']) {
+      expect(isCommitted({ operationalState: state }), state).toBe(false);
+    }
   });
 
   test('isPlannable con los tres estados de PLANNABLE_STATES', () => {

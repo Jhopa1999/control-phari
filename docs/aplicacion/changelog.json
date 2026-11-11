@@ -671,6 +671,17 @@
         "apps/mcp/README.md"
       ],
       "summary": "Gestionar procesos que intervienen en el plan: GET/PUT /requests/:requestId/plan/participants (solo jefe de área) agrega o quita procesos participantes después del triage; quitar se rechaza con 409 si hay tareas asignadas a su gente; se audita; diálogo en Planificación y tools MCP plan.participants.get/update."
+    },
+    {
+      "timestamp": "2026-11-11T02:00:00Z",
+      "trigger_file": "apps/api/src/modules/request/request-scope.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/README.md"
+      ],
+      "summary": "Solicitudes y Portafolio coherentes: alcance único de solicitudes (RequestScopeService) para Solicitudes, Triage, Aprobaciones, Planificación, Portafolio y Panel (amplía lo que ven el líder y el integrante en Portafolio y Panel); el Portafolio muestra por defecto solo iniciativas comprometidas con el conmutador «Incluir pendientes de decisión»; vocabulario unificado, «Ver en Portafolio», ficha en /seguimiento/portafolio/:id con miga y menú en Portafolio y columnas Avance y Objetivo antes de Registro."
     }
   ]
 }

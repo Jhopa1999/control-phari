@@ -1,6 +1,8 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { FolderKanban } from 'lucide-react';
 import {
@@ -17,7 +19,9 @@ import { PriorityBadge, PriorityLegend, StatusBadge } from '@/components/status-
 import { MultiSelectFilter } from '@/components/multi-select-filter';
 import { SearchInput, Toolbar } from '@/components/toolbar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -28,6 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { CatalogItem, Process } from '@/lib/api-client';
+import { useActor } from '@/lib/actor-context';
 import { listCatalogItems } from '@/lib/catalog';
 import {
   BAND_FILTER_OPTIONS,
@@ -41,7 +46,7 @@ import {
   type PortfolioFilters,
   type PortfolioItem,
 } from '@/lib/portfolio';
-import { REQUEST_STATE_LABELS } from '@/lib/request-state';
+import { COMMITTED_STATES, REQUEST_STATE_LABELS } from '@/lib/request-state';
 import { routeLabel } from '@/lib/status-presentation';
 import {
   compareByOrder,
@@ -49,6 +54,7 @@ import {
   compareText,
   matchesSearch,
   type Comparator,
+  type SortState,
 } from '@/lib/table-sort';
 import { listProcesses } from '@/lib/team';
 import { useClientTable } from '@/lib/use-client-table';
@@ -61,7 +67,10 @@ const STATE_FILTER_OPTIONS = stateFilterOptions();
 
 /** Estados operativos en orden del enum RequestState. */
 const STATE_OPTIONS = Object.keys(REQUEST_STATE_LABELS);
+/** Por defecto solo iniciativas (solicitudes ya comprometidas); ver COMMITTED_STATES. */
 const NOUN = { one: 'iniciativa', other: 'iniciativas' };
+/** Con «Incluir pendientes de decisión» el listado mezcla solicitudes e iniciativas. */
+const NOUN_ALL = { one: 'solicitud o iniciativa', other: 'solicitudes e iniciativas' };
 
 /** Selección de los tres filtros de servidor; vacío = sin restricción. */
 interface SelectionState {
@@ -69,12 +78,32 @@ interface SelectionState {
   state: string[];
   band: string[];
 }
-const EMPTY_SELECTION: SelectionState = { process: [], state: [], band: [] };
+/**
+ * Selección inicial: el Portafolio muestra las iniciativas comprometidas. El
+ * filtro por defecto vive en la UI; GET /portfolio sin parámetros sigue
+ * devolviendo todos los estados (MCP y asistente no cambian).
+ */
+const DEFAULT_SELECTION: SelectionState = {
+  process: [],
+  state: [...COMMITTED_STATES],
+  band: [],
+};
 
+/** Mismos elementos, sin importar el orden. */
 function sameList(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((value, index) => value === b[index]);
+  return a.length === b.length && a.every((value) => b.includes(value));
 }
 
+/**
+ * El listado incluye estados fuera del conjunto comprometido: sin filtro de
+ * estado (todos) o con algún estado de decisión pendiente marcado.
+ */
+function includesPending(states: readonly string[]): boolean {
+  return states.length === 0 || states.some((s) => !COMMITTED_STATES.includes(s));
+}
+
+/** Registro descendente, igual que Solicitudes (también en móvil). */
+const DEFAULT_SORT: SortState<SortKey> = { key: 'registered', direction: 'desc' };
 const compareState = compareByOrder(STATE_OPTIONS);
 // P1 → P4; sin priorizar (null) al final en las dos direcciones.
 const compareBand = compareByOrder(['P1', 'P2', 'P3', 'P4']);
@@ -105,7 +134,7 @@ function rowMeta(item: PortfolioItem, routes: CatalogItem[]): string {
     .join(' · ');
 }
 
-/** Barra de avance del proyecto; «—» si aún no tiene tareas. */
+/** Barra de avance de la iniciativa; «—» si aún no tiene tareas. */
 function ProgressCell({ value }: { value: number | null | undefined }): React.ReactElement {
   if (value === null || value === undefined) {
     return <span className="text-muted-foreground">Sin tareas</span>;
@@ -114,7 +143,7 @@ function ProgressCell({ value }: { value: number | null | undefined }): React.Re
     <div className="flex items-center gap-2">
       <div
         role="progressbar"
-        aria-label="Avance del proyecto"
+        aria-label="Avance de la iniciativa"
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={value}
@@ -165,9 +194,12 @@ export function PortafolioView(): React.ReactElement {
   // Selección aplicada (la que viaja al servidor) y borrador (lo que el usuario
   // marca con el panel abierto). Se aplica al CERRAR el panel: un clic por
   // casilla no dispara una petición ni una pantalla de carga (spec D8).
-  const [applied, setApplied] = React.useState<SelectionState>(EMPTY_SELECTION);
-  const [draft, setDraft] = React.useState<SelectionState>(EMPTY_SELECTION);
-  const [query, setQuery] = React.useState('');
+  const searchParams = useSearchParams();
+  const { allowedModules } = useActor();
+  const [applied, setApplied] = React.useState<SelectionState>(DEFAULT_SELECTION);
+  const [draft, setDraft] = React.useState<SelectionState>(DEFAULT_SELECTION);
+  // «Ver en Portafolio» (Solicitudes) llega con ?q=<título>: se precarga la búsqueda.
+  const [query, setQuery] = React.useState(() => (searchParams.get('q') ?? '').slice(0, 200));
   const searchRef = React.useRef<HTMLInputElement>(null);
 
   const [items, setItems] = React.useState<PortfolioItem[]>([]);
@@ -235,23 +267,28 @@ export function PortafolioView(): React.ReactElement {
     void fetchPortfolio(activeFilters);
   }, [activeFilters, fetchPortfolio]);
 
+  // Los filtros «activos» son los que se apartan del conjunto por defecto.
   const hasServerFilters =
-    applied.process.length > 0 || applied.state.length > 0 || applied.band.length > 0;
+    applied.process.length > 0 ||
+    applied.band.length > 0 ||
+    !sameList(applied.state, DEFAULT_SELECTION.state);
   const hasFilters = hasServerFilters || query.trim() !== '';
+  const pendingIncluded = includesPending(applied.state);
   const filter = React.useCallback((item: PortfolioItem) => matchesSearch(item.title, query), [query]);
   const table = useClientTable({
     rows: items,
     filter,
     comparators: COMPARATORS,
-    defaultSort: null,
+    defaultSort: DEFAULT_SORT,
     resetKey: JSON.stringify([query, applied]),
     pageSize: 25,
   });
 
   function clearFilters(): void {
-    // Restablecer los filtros de servidor dispara la misma recarga que elegirlos.
-    setApplied(EMPTY_SELECTION);
-    setDraft(EMPTY_SELECTION);
+    // Restablecer los filtros de servidor dispara la misma recarga que elegirlos;
+    // «Limpiar filtros» vuelve al conjunto por defecto (iniciativas comprometidas).
+    setApplied(DEFAULT_SELECTION);
+    setDraft(DEFAULT_SELECTION);
     setQuery('');
     // «Limpiar filtros» desaparece: el foco pasa a la búsqueda (NIT 4, plan D9).
     searchRef.current?.focus();
@@ -266,11 +303,37 @@ export function PortafolioView(): React.ReactElement {
   else if (table.filtered === 0) viewState = 'no-results';
   else viewState = 'ready';
 
+  /** «Incluir pendientes de decisión»: amplía a todos los estados; apagado vuelve al conjunto por defecto. */
+  function togglePending(include: boolean): void {
+    const next: SelectionState = {
+      ...applied,
+      state: include ? [] : [...DEFAULT_SELECTION.state],
+    };
+    setApplied(next);
+    setDraft((current) => ({ ...current, state: next.state }));
+  }
+
   return (
     <PageLayout>
       <PageHeader
         title="Portafolio"
-        description="Vista de conjunto de las iniciativas de tu alcance. Los filtros acotan tu alcance, no lo amplían."
+        description={
+          <>
+            Seguimiento de avance y fechas de las iniciativas comprometidas. Para registrar o
+            editar, ve a{' '}
+            {allowedModules.has('requests') ? (
+              <Link
+                href="/demanda/solicitudes"
+                className="rounded-sm font-medium text-foreground underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                Solicitudes
+              </Link>
+            ) : (
+              'Solicitudes'
+            )}
+            .
+          </>
+        }
       />
 
       <Toolbar
@@ -283,7 +346,7 @@ export function PortafolioView(): React.ReactElement {
                 loading={state === 'loading'}
                 total={table.total}
                 filtered={table.filtered}
-                noun={NOUN}
+                noun={pendingIncluded ? NOUN_ALL : NOUN}
               />
             ) : null}
             {hasFilters ? (
@@ -297,7 +360,7 @@ export function PortafolioView(): React.ReactElement {
         <SearchInput
           ref={searchRef}
           id="portafolio-buscar"
-          placeholder="Título de la iniciativa"
+          placeholder="Título"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -312,7 +375,7 @@ export function PortafolioView(): React.ReactElement {
         />
         <MultiSelectFilter
           id="portafolio-estado"
-          label="Estado operativo"
+          label="Estado"
           options={STATE_FILTER_OPTIONS}
           selected={draft.state}
           onChange={(next) => setDraft({ ...draft, state: next })}
@@ -321,7 +384,7 @@ export function PortafolioView(): React.ReactElement {
         />
         <MultiSelectFilter
           id="portafolio-banda"
-          label="Banda de prioridad"
+          label="Prioridad"
           options={BAND_FILTER_OPTIONS}
           selected={draft.band}
           onChange={(next) => setDraft({ ...draft, band: next })}
@@ -330,7 +393,23 @@ export function PortafolioView(): React.ReactElement {
           gender="f"
           className="sm:w-40"
         />
+        <div className="flex h-9 items-center gap-2">
+          <Switch
+            id="portafolio-incluir-pendientes"
+            checked={pendingIncluded}
+            onCheckedChange={togglePending}
+          />
+          <Label htmlFor="portafolio-incluir-pendientes" className="font-normal">
+            Incluir pendientes de decisión
+          </Label>
+        </div>
       </Toolbar>
+
+      <p className="text-meta text-muted-foreground">
+        {pendingIncluded
+          ? 'Se incluyen solicitudes pendientes de decisión (registradas, en triage, devueltas, rechazadas, en backlog o retiradas), además de las iniciativas comprometidas.'
+          : 'Solo iniciativas comprometidas, desde «Comprometida» hasta «Cerrada». Activa «Incluir pendientes de decisión» para ver también las solicitudes que aún no se comprometen.'}
+      </p>
 
       <PriorityLegend />
 
@@ -345,8 +424,17 @@ export function PortafolioView(): React.ReactElement {
         }}
         empty={{
           icon: FolderKanban,
-          title: 'No hay iniciativas en tu alcance.',
-          description: 'Las solicitudes de los procesos de tu alcance aparecen aquí desde su registro.',
+          title: pendingIncluded
+            ? 'No hay solicitudes ni iniciativas en tu alcance.'
+            : 'Aún no hay iniciativas comprometidas en tu alcance.',
+          description: pendingIncluded
+            ? 'Las solicitudes aparecen aquí cuando se registran y entran en tu alcance.'
+            : 'Una solicitud pasa a ser iniciativa cuando se aprueba su compromiso. Mientras tanto la gestionas en Solicitudes.',
+          action: allowedModules.has('requests') ? (
+            <Link href="/demanda/solicitudes" className={buttonVariants({ variant: 'outline' })}>
+              Ir a Solicitudes
+            </Link>
+          ) : undefined,
         }}
       >
         <div className="hidden md:block">
@@ -359,16 +447,18 @@ export function PortafolioView(): React.ReactElement {
             <TableRow>
               <SortableTableHead label="Título" sortKey="title" sort={table.sort} onSort={table.toggleSort} />
               <SortableTableHead label="Estado" sortKey="state" sort={table.sort} onSort={table.toggleSort} />
-              <SortableTableHead label="Banda" sortKey="band" sort={table.sort} onSort={table.toggleSort} />
+              <SortableTableHead label="Prioridad" sortKey="band" sort={table.sort} onSort={table.toggleSort} />
               <TableHead>Avance</TableHead>
+              <SortableTableHead label="Objetivo" sortKey="target" sort={table.sort} onSort={table.toggleSort} />
               <TableHead>Responsable</TableHead>
+              {/* Registro se oculta por debajo de 1280 px para que «Objetivo» quepa en tablet. */}
               <SortableTableHead
                 label="Registro"
                 sortKey="registered"
                 sort={table.sort}
                 onSort={table.toggleSort}
+                className="hidden xl:table-cell"
               />
-              <SortableTableHead label="Objetivo" sortKey="target" sort={table.sort} onSort={table.toggleSort} />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -376,7 +466,7 @@ export function PortafolioView(): React.ReactElement {
               <TableRow key={item.id}>
                 <TableCell className="min-w-56 max-w-[28rem]">
                   <CellTitle
-                    href={`/demanda/solicitudes/${encodeURIComponent(item.id)}`}
+                    href={`/seguimiento/portafolio/${encodeURIComponent(item.id)}`}
                     meta={rowMeta(item, routes)}
                   >
                     {item.title}
@@ -406,18 +496,6 @@ export function PortafolioView(): React.ReactElement {
                 <TableCell className="min-w-32">
                   <ProgressCell value={item.progressPercent} />
                 </TableCell>
-                <TableCell className="min-w-44 max-w-[16rem]">
-                  {item.responsibleName ? (
-                    <span className="line-clamp-2 wrap-break-word" title={item.responsibleName}>
-                      {item.responsibleName}
-                    </span>
-                  ) : (
-                    '—'
-                  )}
-                </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
-                  {formatDateOnly(item.registeredAt)}
-                </TableCell>
                 <TableCell className="whitespace-nowrap">
                   <div className="flex flex-col items-start gap-0.5">
                     <span className="tabular-nums">{formatDateOnly(item.targetDate)}</span>
@@ -429,13 +507,25 @@ export function PortafolioView(): React.ReactElement {
                     ) : null}
                   </div>
                 </TableCell>
+                <TableCell className="min-w-36 max-w-[16rem]">
+                  {item.responsibleName ? (
+                    <span className="line-clamp-2 wrap-break-word" title={item.responsibleName}>
+                      {item.responsibleName}
+                    </span>
+                  ) : (
+                    '—'
+                  )}
+                </TableCell>
+                <TableCell className="hidden whitespace-nowrap tabular-nums text-muted-foreground xl:table-cell">
+                  {formatDateOnly(item.registeredAt)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
         </div>
         <DataCardList
-          label="Iniciativas del portafolio"
+          label="Portafolio"
           rows={table.pageRows}
           getKey={(item) => item.id}
           sort={{
@@ -444,14 +534,14 @@ export function PortafolioView(): React.ReactElement {
             options: [
               { key: 'title', label: 'Título' },
               { key: 'state', label: 'Estado' },
-              { key: 'band', label: 'Banda' },
+              { key: 'band', label: 'Prioridad' },
               { key: 'registered', label: 'Registro' },
               { key: 'target', label: 'Objetivo' },
             ],
           }}
           card={(item) => ({
             title: (
-              <CellTitle touch href={`/demanda/solicitudes/${encodeURIComponent(item.id)}`}>
+              <CellTitle touch href={`/seguimiento/portafolio/${encodeURIComponent(item.id)}`}>
                 {item.title}
               </CellTitle>
             ),

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Inbox, Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -50,6 +51,7 @@ import {
 } from '@/lib/requests';
 import {
   REQUEST_STATE_LABELS,
+  isCommitted,
   isPlannable,
   isPrioritizable,
   isTriageable,
@@ -250,6 +252,16 @@ export function SolicitudesView(): React.ReactElement {
       },
       { key: 'edit', label: 'Editar ficha', onSelect: () => openEdit(r), placement: 'menu' },
     ];
+    // Una solicitud comprometida ya es una iniciativa: su avance está en Portafolio
+    // (se llega con la búsqueda por título precargada).
+    if (allowedModules.has('portfolio') && isCommitted(r)) {
+      actions.push({
+        key: 'portfolio',
+        label: 'Ver en Portafolio',
+        href: `/seguimiento/portafolio?q=${encodeURIComponent(r.title)}`,
+        placement: 'menu',
+      });
+    }
     if (allowedModules.has('triage') && isTriageable(r)) {
       actions.push({
         key: 'triage',
@@ -364,7 +376,22 @@ export function SolicitudesView(): React.ReactElement {
     <PageLayout>
       <PageHeader
         title="Solicitudes"
-        description="Registra y actualiza las solicitudes de demanda de tu alcance."
+        description={
+          <>
+            Bandeja de entrada y gestión de solicitudes. El avance de lo comprometido está en{' '}
+            {allowedModules.has('portfolio') ? (
+              <Link
+                href="/seguimiento/portafolio"
+                className="rounded-sm font-medium text-foreground underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                Portafolio
+              </Link>
+            ) : (
+              'Portafolio'
+            )}
+            .
+          </>
+        }
         actions={
           <Button type="button" onClick={openCreate}>
             <Plus aria-hidden="true" />
@@ -397,7 +424,7 @@ export function SolicitudesView(): React.ReactElement {
         <SearchInput
           ref={searchRef}
           id="sol-buscar"
-          placeholder="Título de la solicitud"
+          placeholder="Título"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />

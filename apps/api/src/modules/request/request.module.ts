@@ -6,6 +6,7 @@ import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { RequestController } from './request.controller';
 import { RequestService } from './request.service';
 import { RequestStateService } from './request-state.service';
+import { RequestScopeService } from './request-scope.service';
 import { TriageController } from './triage/triage.controller';
 import { TriageService } from './triage/triage.service';
 import { PriorityController } from './priority/priority.controller';
@@ -36,10 +37,11 @@ import { ApprovalService } from './approval/approval.service';
   providers: [
     RequestService,
     RequestStateService,
+    RequestScopeService,
     TriageService,
     PriorityService,
     ApprovalService,
   ],
-  exports: [RequestStateService],
+  exports: [RequestStateService, RequestScopeService],
 })
 export class RequestModule {}

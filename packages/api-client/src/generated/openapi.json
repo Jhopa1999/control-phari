@@ -8049,7 +8049,7 @@
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Listado del portafolio en alcance (filtros opcionales de selección múltiple: OR dentro de un filtro, AND entre filtros).",
+        "summary": "Listado del portafolio en alcance, el mismo que Solicitudes: jefe y líder ven todas; el integrante, sus procesos más las que creó (filtros opcionales de selección múltiple: OR dentro de un filtro, AND entre filtros).",
         "tags": [
           "portfolio"
         ]
