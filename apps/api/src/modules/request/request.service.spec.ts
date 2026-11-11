@@ -13,7 +13,11 @@ function createMocks() {
     process: { findFirst: jest.fn(), findMany: jest.fn() },
     triage: { findFirst: jest.fn() },
     priorityEvaluation: { findFirst: jest.fn() },
+    // Secuencia requests_number_seq (ID visible): devuelve 12, 13, 14...
+    $queryRaw: jest.fn(),
   };
+  let nextNumber = 12;
+  (prismaObj.$queryRaw as jest.Mock).mockImplementation(async () => [{ n: BigInt(nextNumber++) }]);
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
     cb(prismaObj),
   );
@@ -132,6 +136,9 @@ describe('RequestService', () => {
       const data = (m.prismaObj.request as any).create.mock.calls[0][0].data;
       // El service NO fija operationalState (default del schema).
       expect(data.operationalState).toBeUndefined();
+      // ID visible: número de la secuencia + código PRY-0012 (el DTO no lo aporta).
+      expect(data.number).toBe(12);
+      expect(data.code).toBe('PRY-0012');
       // Sin proceso: ni se escribe mainProcessId ni se crean participantes.
       expect(data.mainProcessId).toBeUndefined();
       expect(data.participants).toBeUndefined();
@@ -159,6 +166,14 @@ describe('RequestService', () => {
       expect(data.participants.create).toEqual([{ processId: 'p1' }]);
       // La Solicitud no valida procesos extra: process.findMany no se usa.
       expect((m.prismaObj.process as any).findMany).not.toHaveBeenCalled();
+    });
+
+    it('los códigos de solicitud siguen la secuencia y no se reutilizan', async () => {
+      (m.prismaObj.request as any).create.mockResolvedValue(makeRequestRow());
+      await service.create(lider(), { title: 'A' });
+      await service.create(lider(), { title: 'B' });
+      const datas = (m.prismaObj.request as any).create.mock.calls.map((c: any[]) => c[0].data);
+      expect(datas.map((d: any) => d.code)).toEqual(['PRY-0012', 'PRY-0013']);
     });
 
     it('si llega un proceso principal fuera de alcance -> 404', async () => {
@@ -249,6 +264,9 @@ describe('RequestService', () => {
       expect(data.registeredAt).toBeUndefined();
       expect(data.initialCommitmentDate).toBeUndefined();
       expect(data.operationalState).toBeUndefined();
+      // El ID visible es inmutable: la edición nunca lo escribe.
+      expect(data.number).toBeUndefined();
+      expect(data.code).toBeUndefined();
       expect(data.title).toBe('Nuevo');
       expect(m.auditRecord.mock.calls[0][1]).toMatchObject({
         action: 'UPDATE',

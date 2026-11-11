@@ -10,6 +10,9 @@ export class PortfolioItemResponseDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Id de la solicitud.' })
   id!: string;
 
+  @ApiProperty({ type: String, example: 'PRY-0012', description: 'ID visible de la iniciativa (solicitud). Solo lectura.' })
+  code!: string;
+
   @ApiProperty({ type: String, description: 'Titulo de la iniciativa.' })
   title!: string;
 

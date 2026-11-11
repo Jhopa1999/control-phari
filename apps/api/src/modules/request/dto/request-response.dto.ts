@@ -18,6 +18,14 @@ export class RequestResponseDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Identificador unico.' })
   id!: string;
 
+  @ApiProperty({
+    type: String,
+    example: 'PRY-0012',
+    description:
+      'ID visible de la solicitud (solo lectura, inmutable, nunca se reutiliza; las solicitudes eliminadas conservan su número).',
+  })
+  code!: string;
+
   @ApiProperty({ type: String, description: 'Titulo de la solicitud.' })
   title!: string;
 

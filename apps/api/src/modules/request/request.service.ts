@@ -9,6 +9,7 @@ import { Prisma } from '../../generated/prisma/client';
 import type { RequestModel } from '../../generated/prisma/models/Request';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
+import { formatRequestCode, nextRequestNumber } from '../plan/visible-code';
 import { requestScopeWhere } from './request-scope.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ListRequestsDto } from './dto/list-requests.dto';
@@ -202,8 +203,13 @@ equest-scope.service.ts). */
     const requesterData = await this.resolveRequesterData(dto.requesterId);
 
     const created = await this.prisma.$transaction(async (tx) => {
+      // ID visible (PRY-0012): número de la secuencia de Postgres; los huecos
+      // por transacciones revertidas son aceptables y nunca se reutilizan.
+      const number = await nextRequestNumber(tx);
       const request = await tx.request.create({
         data: {
+          number,
+          code: formatRequestCode(number),
           title: dto.title,
           // A1: el creador queda registrado para que siempre vea su solicitud,
           // aunque aún no tenga proceso principal (se determina en el triage).

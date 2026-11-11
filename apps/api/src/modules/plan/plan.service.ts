@@ -24,6 +24,7 @@ import { ImportPlanResultDto } from './dto/import-plan-result.dto';
 import { PlanGuideService } from './plan-guide.service';
 import { PlanStateService } from './plan-state.service';
 import { PlanStatus } from './plan-status';
+import { formatPhaseCode, formatTaskCode, reservePlanSequence } from './visible-code';
 import { hasCycle } from './dependency/cycle';
 import { assertTaskWithinPhase, assertValidRange } from './date-range';
 import {
@@ -472,6 +473,7 @@ export class PlanService {
     let counter = 0;
     const documentPhases = phases.map((phase) => ({
       order: phase.order,
+      code: phase.code,
       name: phase.name,
       startDate: phase.startDate ? phase.startDate.toISOString() : null,
       endDate: phase.endDate ? phase.endDate.toISOString() : null,
@@ -482,6 +484,7 @@ export class PlanService {
         refByTaskId.set(task.id, ref);
         return {
           ref,
+          code: task.code,
           title: task.title,
           isMilestone: task.isMilestone,
           responsibleIdentifier: task.responsible?.identifier ?? null,
@@ -703,6 +706,14 @@ export class PlanService {
         },
       });
 
+      // IDs visibles: se reservan de una vez los N números de fases y de tareas
+      // (increment atómico sobre los contadores del plan). El reemplazo genera
+      // números NUEVOS que continúan el contador; nunca reutiliza los anteriores.
+      const totalTasks = dto.phases.reduce((sum, p) => sum + p.tasks.length, 0);
+      const phaseSeq = await reservePlanSequence(tx, plan.id, 'phase', dto.phases.length);
+      const taskSeq = await reservePlanSequence(tx, plan.id, 'task', totalTasks);
+      let nextTaskSeq = taskSeq.first;
+
       // (c)+(d) Fases con order 0-based recalculado + tareas con valores
       //         normalizados. responsibleUserId/processId quedan null.
       const taskIdByRef = new Map<string, string>();
@@ -713,6 +724,7 @@ export class PlanService {
         const createdPhase = await tx.planPhase.create({
           data: {
             planId: plan.id,
+            code: formatPhaseCode(phaseSeq.requestCode, phaseSeq.first + i),
             name: phase.name,
             order: i,
             startDate: toDate(phase.startDate),
@@ -731,6 +743,7 @@ export class PlanService {
           const createdTask = await tx.task.create({
             data: {
               phaseId: createdPhase.id,
+              code: formatTaskCode(taskSeq.requestCode, nextTaskSeq++),
               title: task.title,
               isMilestone: task.isMilestone,
               ...(task.responsibleIdentifier?.trim()

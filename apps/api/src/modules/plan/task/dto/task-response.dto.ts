@@ -5,6 +5,9 @@ export class TaskPredecessorDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Id de la tarea predecesora.' })
   id!: string;
 
+  @ApiProperty({ type: String, example: 'PRY-0012-T03', description: 'ID visible de la predecesora (solo lectura).' })
+  code!: string;
+
   @ApiProperty({ type: String, description: 'Titulo de la predecesora.' })
   title!: string;
 
@@ -19,6 +22,14 @@ export class TaskPredecessorDto {
 export class TaskResponseDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Identificador unico.' })
   id!: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'PRY-0012-T07',
+    description:
+      'ID visible de la tarea (solo lectura, inmutable, nunca se reutiliza). Forma corta dentro del plan: T07.',
+  })
+  code!: string;
 
   @ApiProperty({ type: String, format: 'uuid', description: 'Fase a la que pertenece.' })
   phaseId!: string;
@@ -89,11 +100,17 @@ export class TaskResponseDto {
   @ApiProperty({ type: String, description: 'Nombre de la fase a la que pertenece.' })
   phaseName!: string;
 
+  @ApiProperty({ type: String, example: 'PRY-0012-F2', description: 'ID visible de la fase (solo lectura).' })
+  phaseCode!: string;
+
   @ApiProperty({ type: String, format: 'uuid', description: 'Solicitud a la que pertenece el plan de la tarea.' })
   requestId!: string;
 
   @ApiProperty({ type: String, description: 'Titulo de la solicitud.' })
   requestTitle!: string;
+
+  @ApiProperty({ type: String, example: 'PRY-0012', description: 'ID visible de la solicitud (solo lectura).' })
+  requestCode!: string;
 
   @ApiProperty({ type: [TaskPredecessorDto], description: 'Predecesoras directas de la tarea.' })
   predecessors!: TaskPredecessorDto[];

@@ -30,7 +30,12 @@ export class ListPlanTasksDto {
   @IsBooleanString()
   mine?: string;
 
-  @ApiPropertyOptional({ type: String, description: 'Busqueda por titulo.', maxLength: 255 })
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      'Busqueda por titulo o por ID visible (sin distinguir mayusculas): codigo completo (PRY-0012-T07), parcial (pry-0012) o forma corta (T07, F2).',
+    maxLength: 255,
+  })
   @IsOptional()
   @Transform(trim)
   @IsString()

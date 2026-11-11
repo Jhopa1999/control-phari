@@ -16,7 +16,16 @@ function createMocks() {
       delete: jest.fn(),
     },
     task: { count: jest.fn() },
+    // Contador atómico del plan (ID visible): simula el increment de Prisma.
+    plan: { update: jest.fn() },
   };
+  const counters = { phaseSeqNext: 1, taskSeqNext: 1 };
+  (prismaObj.plan as { update: jest.Mock }).update.mockImplementation(async (args: any) => {
+    for (const [key, value] of Object.entries<any>(args.data)) {
+      counters[key as keyof typeof counters] += value.increment;
+    }
+    return { ...counters, request: { code: 'PRY-0012' } };
+  });
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaObj));
   const prisma = prismaObj as unknown as PrismaService;
   const audit = { record: jest.fn() } as unknown as AuditService;
@@ -53,6 +62,46 @@ describe('PhaseService', () => {
   beforeEach(() => {
     m = createMocks();
     service = new PhaseService(m.prisma, m.audit, m.planState);
+  });
+
+  describe('ID visible de la fase', () => {
+    function prepareCreate() {
+      (m.prismaObj.planPhase as any).findFirst.mockResolvedValue(null);
+      (m.prismaObj.planPhase as any).create.mockImplementation(async ({ data }: any) => ({
+        id: `id-${data.code}`,
+        ...data,
+        startDate: null,
+        endDate: null,
+        deliverable: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+    }
+
+    it('asigna PRY-0012-F1, F2... sin relleno de ceros y devuelve code en la respuesta', async () => {
+      prepareCreate();
+      const a = await service.create(lider(), 'plan1', { name: 'Diseño' });
+      const b = await service.create(lider(), 'plan1', { name: 'Construcción' });
+      expect(a.code).toBe('PRY-0012-F1');
+      expect(b.code).toBe('PRY-0012-F2');
+    });
+
+    it('no reutiliza números: tras borrar una fase el contador sigue creciendo', async () => {
+      prepareCreate();
+      await service.create(lider(), 'plan1', { name: 'A' });
+      await service.create(lider(), 'plan1', { name: 'B' });
+      // (borrar B no decrementa el contador del plan)
+      const c = await service.create(lider(), 'plan1', { name: 'C' });
+      expect(c.code).toBe('PRY-0012-F3');
+    });
+
+    it('creación paralela produce códigos únicos', async () => {
+      prepareCreate();
+      const res = await Promise.all(
+        Array.from({ length: 8 }, (_, i) => service.create(lider(), 'plan1', { name: `F${i}` })),
+      );
+      expect(new Set(res.map((r) => r.code)).size).toBe(8);
+    });
   });
 
   describe('remove (AC-009 / D12)', () => {

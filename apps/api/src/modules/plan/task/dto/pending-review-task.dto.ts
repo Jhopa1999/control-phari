@@ -5,6 +5,9 @@ export class PendingReviewTaskDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Id de la tarea.' })
   id!: string;
 
+  @ApiProperty({ type: String, example: 'PRY-0012-T07', description: 'ID visible de la tarea (solo lectura).' })
+  code!: string;
+
   @ApiProperty({ type: String, description: 'Título de la tarea.' })
   title!: string;
 
@@ -20,8 +23,14 @@ export class PendingReviewTaskDto {
   @ApiProperty({ type: String, description: 'Título de la solicitud.' })
   requestTitle!: string;
 
+  @ApiProperty({ type: String, example: 'PRY-0012', description: 'ID visible de la solicitud (solo lectura).' })
+  requestCode!: string;
+
   @ApiProperty({ type: String, description: 'Nombre de la fase.' })
   phaseName!: string;
+
+  @ApiProperty({ type: String, example: 'PRY-0012-F2', description: 'ID visible de la fase (solo lectura).' })
+  phaseCode!: string;
 
   @ApiProperty({ type: Number, description: 'Avance 0-100.' })
   progress!: number;

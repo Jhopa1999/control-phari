@@ -121,6 +121,23 @@ export class TaskController {
     return this.taskService.create(actor, phaseId, dto);
   }
 
+  // Va ANTES de `tasks/:id`: resuelve una tarea por su ID visible (solo lectura).
+  @Get('tasks/by-code/:code')
+  @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE)
+  @ApiOperation({
+    summary:
+      'Detalle de una tarea a partir de su ID visible (p. ej. PRY-0012-T07), sin distinguir mayúsculas. Mismo alcance que el detalle por id.',
+  })
+  @ApiParam({ name: 'code', example: 'PRY-0012-T07', description: 'ID visible de la tarea.' })
+  @ApiResponse({ status: 200, description: 'Tarea encontrada.', type: TaskResponseDto })
+  @ApiResponse({ status: 404, description: 'Tarea inexistente o fuera de alcance.' })
+  findByCode(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('code') code: string,
+  ) {
+    return this.taskService.findByCode(actor, code);
+  }
+
   @Get('tasks/:id')
   @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE)
   @ApiOperation({ summary: 'Detalle de una tarea con sus predecesoras.' })

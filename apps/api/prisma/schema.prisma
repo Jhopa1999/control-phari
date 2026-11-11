@@ -327,6 +327,11 @@ model AuditEvent {
 model Request {
   id                      String    @id @default(uuid()) @db.Uuid
   title                   String
+  // ID visible (solo lectura, nunca se reutiliza): `number` sale de la secuencia
+  // requests_number_seq y `code` es "PRY-" + number con 4 dígitos mínimo. Ambos
+  // los asigna RequestService.create; ningún DTO de entrada los acepta.
+  number                  Int       @unique @default(autoincrement())
+  code                    String    @unique
   registeredAt            DateTime  @default(now()) @map("registered_at")
   requesterArea           String?   @map("requester_area")
   requesterName           String?   @map("requester_name")
@@ -538,6 +543,10 @@ model Plan {
   authorizedAt       DateTime? @map("authorized_at")
   authorizedByUserId String?   @map("authorized_by_user_id") @db.Uuid
   returnReason       String?   @map("return_reason")
+  // Contadores de ID visible: siguiente número de fase (PRY-0012-F2) y de tarea
+  // (PRY-0012-T07). Solo crecen; se incrementan atómicamente al crear.
+  phaseSeqNext       Int       @default(1) @map("phase_seq_next")
+  taskSeqNext        Int       @default(1) @map("task_seq_next")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
@@ -561,6 +570,8 @@ model PlanPhase {
   endDate     DateTime? @map("end_date")
   deliverable String?
   order       Int
+  // ID visible inmutable: "<código de la solicitud>-F<n>" (p. ej. PRY-0012-F2).
+  code        String    @unique
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
@@ -579,6 +590,8 @@ model Task {
   id                     String    @id @default(uuid()) @db.Uuid
   phaseId                String    @map("phase_id") @db.Uuid
   processId              String?   @map("process_id") @db.Uuid
+  // ID visible inmutable: "<código de la solicitud>-T<nn>" (p. ej. PRY-0012-T07).
+  code                   String    @unique
   title                  String
   responsibleUserId      String?   @map("responsible_user_id") @db.Uuid
   startDate              DateTime? @map("start_date")

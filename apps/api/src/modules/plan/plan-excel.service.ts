@@ -27,7 +27,13 @@ const PLAN_HEADERS = [
   'Riesgos',
   'Mitigaciones',
 ];
-const PHASE_HEADERS = ['Orden', 'Nombre', 'Inicio', 'Fin', 'Entregable'];
+// «Código» (ID visible) es la ÚLTIMA columna de Fases y Tareas: informativa y de
+// solo lectura. Un archivo antiguo sin ella sigue funcionando y la importación la
+// ignora (las filas importadas reciben códigos nuevos).
+const CODE_HEADER = 'Código (informativo)';
+const PHASE_DATA_COLUMNS = 5;
+const TASK_DATA_COLUMNS = 11;
+const PHASE_HEADERS = ['Orden', 'Nombre', 'Inicio', 'Fin', 'Entregable', CODE_HEADER];
 const TASK_HEADERS = [
   'Fase',
   'Referencia',
@@ -40,6 +46,7 @@ const TASK_HEADERS = [
   'Descripción',
   'Criterios de aceptación',
   'Predecesoras (referencias)',
+  CODE_HEADER,
 ];
 
 const INSTRUCTIONS = [
@@ -54,6 +61,7 @@ const INSTRUCTIONS = [
   '6. "Responsable (identificador)" es el identificador del usuario (opcional). La columna con el nombre es solo informativa.',
   '7. "Referencia" identifica la tarea (por ejemplo T1). "Predecesoras" lista las referencias de las tareas previas, separadas por coma.',
   '8. El esfuerzo se expresa en horas enteras.',
+  '9. La columna "Código (informativo)" muestra el ID visible de la fase o tarea (por ejemplo PRY-0012-T07). Es solo de lectura: al importar se ignora y las filas importadas reciben códigos nuevos.',
   '',
   'Importante: al importar se REEMPLAZAN las fases, tareas y dependencias del plan. Solo es posible con el plan en borrador o devuelto.',
   'El estado y el avance de las tareas no se importan: las tareas importadas quedan pendientes.',
@@ -123,6 +131,7 @@ export class PlanExcelService {
         this.toDate(phase.startDate),
         this.toDate(phase.endDate),
         phase.deliverable ?? '',
+        phase.code ?? '',
       ]);
       for (const task of phase.tasks) {
         taskSheet.addRow([
@@ -137,6 +146,7 @@ export class PlanExcelService {
           task.description ?? '',
           task.acceptanceCriteria ?? '',
           (predecessorsByRef.get(task.ref) ?? []).join(', '),
+          task.code ?? '',
         ]);
       }
     });
@@ -218,12 +228,12 @@ export class PlanExcelService {
     };
     const plan = addSheet(SHEET_PLAN, PLAN_HEADERS, [20, 20, 22, 50, 50]);
     [1, 2, 3].forEach((c) => (plan.getColumn(c).numFmt = DATE_FORMAT));
-    const phases = addSheet(SHEET_PHASES, PHASE_HEADERS, [8, 32, 14, 14, 50]);
+    const phases = addSheet(SHEET_PHASES, PHASE_HEADERS, [8, 32, 14, 14, 50, 22]);
     [3, 4].forEach((c) => (phases.getColumn(c).numFmt = DATE_FORMAT));
     const tasks = addSheet(
       SHEET_TASKS,
       TASK_HEADERS,
-      [24, 12, 40, 28, 28, 14, 14, 16, 50, 50, 26],
+      [24, 12, 40, 28, 28, 14, 14, 16, 50, 50, 26, 22],
     );
     [6, 7].forEach((c) => (tasks.getColumn(c).numFmt = DATE_FORMAT));
     return wb;
@@ -305,7 +315,7 @@ export class PlanExcelService {
     const phases: ParsedPhase[] = [];
     const phaseByName = new Map<string, ParsedPhase>();
     phasesWs.eachRow({ includeEmpty: false }, (row, n) => {
-      if (n === 1 || this.rowIsEmpty(row, PHASE_HEADERS.length)) return;
+      if (n === 1 || this.rowIsEmpty(row, PHASE_DATA_COLUMNS)) return;
       const ref: RowRef = { sheet: SHEET_PHASES, row: n };
       const name = this.cellText(row.getCell(2));
       if (!name) {
@@ -345,7 +355,7 @@ export class PlanExcelService {
     const predecessorSpecs: Array<{ ref: string; preds: string[]; row: number }> = [];
     let autoRef = 0;
     tasksWs.eachRow({ includeEmpty: false }, (row, n) => {
-      if (n === 1 || this.rowIsEmpty(row, TASK_HEADERS.length)) return;
+      if (n === 1 || this.rowIsEmpty(row, TASK_DATA_COLUMNS)) return;
       const ref: RowRef = { sheet: SHEET_TASKS, row: n };
       const phaseName = this.cellText(row.getCell(1));
       const phase = phaseByName.get(phaseName.toLowerCase());
