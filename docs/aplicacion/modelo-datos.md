@@ -175,6 +175,12 @@ persona revisa y puede corregir antes de enviarlo y que es lo único que recibe 
 
 ### Request (`requests`)
 Ficha de la demanda; núcleo del flujo.
+- ID visible (solo lectura): `number` (entero, único, de la secuencia de Postgres
+  `requests_number_seq`; `@default(autoincrement())`) y `code` (texto único,
+  `PRY-` + `number` con 4 dígitos mínimo: `PRY-0012`). Los asigna
+  `RequestService.create`; ningún DTO de entrada los acepta. Las solicitudes
+  eliminadas lógicamente conservan su número y nunca se reutiliza. Ver
+  «Regla de numeración de IDs visibles».
 - Eliminación lógica: `deletedAt?` y `deletedByUserId?` (las consultas filtran
   `deletedAt = null`). `requesterId?` referencia al maestro de solicitantes.
 - `createdByUserId?`: usuario que registró la solicitud (UUID sin relación, como
@@ -233,11 +239,17 @@ Plan de trabajo de una Request comprometida (1:1 efectivo con Request).
 - Campos clave: `requestId`, `periodStart?`, `periodEnd?`, `commitmentDate?`, `risks?`,
   `mitigations?`, `status` (default `BORRADOR`), datos de envío/autorización/devolución.
 - Restricciones: único `requestId`; índice por `status`.
+- Contadores de ID visible: `phaseSeqNext` y `taskSeqNext` (columnas `phase_seq_next` y
+  `task_seq_next`, enteros, default 1) = **siguiente** número de fase y de tarea del plan.
+  Solo crecen: se incrementan con una sola sentencia `UPDATE … RETURNING` (`increment`
+  de Prisma) dentro de la transacción de creación, que bloquea la fila del plan.
 
 ### PlanPhase (`plan_phases`)
 Fase del plan (ordenada por `order` 0-based; la inicial es la de `order` mínimo).
-- Campos clave: `planId`, `name`, `startDate?`, `endDate?`, `deliverable?`, `order`.
-- Restricciones: único `(planId, order)`; índice por `planId`.
+- Campos clave: `planId`, `name`, `startDate?`, `endDate?`, `deliverable?`, `order`,
+  `code` (ID visible `PRY-0012-F2`, texto único, solo lectura, inmutable; no cambia al
+  reordenar).
+- Restricciones: único `(planId, order)`; único `code`; índice por `planId`.
 
 ### Task (`tasks`)
 Tarea del plan.
@@ -245,7 +257,25 @@ Tarea del plan.
   `endDate?`, `estimateHours?`, `isMilestone`, `description?`, `acceptanceCriteria?`,
   `status` (default `POR_HACER`), `progress`, `frameworkPhaseRequired?`, `blockedReason?` (columna `blocked_reason`, motivo vigente del bloqueo; solo tiene valor con `status = BLOQUEADA`), `reviewRequestedAt?` (columna `review_requested_at`, BL-036 E3: momento en que la tarea pasó a `EN_REVISION`; se fija al entrar, se limpia al salir y queda `null` en las tareas que ya estaban en revisión al desplegar, para las que la API usa `updatedAt` como respaldo aproximado; migración aditiva `20261112120000_task_review_requested_at`), `accepted`,
   `acceptedAt?`, `acceptedByUserId?`, `evidenceUrl?`.
-- Restricciones/índices: por `phaseId`, `responsibleUserId`, `status`.
+- ID visible: `code` (`PRY-0012-T07`, texto único, solo lectura, inmutable). La tarea no
+  cambia de fase (`UpdateTaskDto` no tiene `phaseId`), así que el código es estable.
+- Restricciones/índices: único `code`; por `phaseId`, `responsibleUserId`, `status`.
+
+#### Regla de numeración de IDs visibles
+- Formato: solicitud `PRY-0012` (prefijo `PRY`, 4 dígitos mínimo, crece a 5+ sin truncar),
+  fase `PRY-0012-F2` (sin relleno) y tarea `PRY-0012-T07` (2 dígitos mínimo, crece a 3+).
+  El prefijo vive en una sola constante de la API (`VISIBLE_CODE_PREFIX` en
+  `apps/api/src/modules/plan/visible-code.ts`, que también concentra el formato).
+- Inmutables, de solo lectura y **nunca reutilizados**: los contadores solo crecen, borrar
+  una fase o tarea no libera su número y los huecos son aceptables (transacción revertida,
+  solicitud eliminada). Fase y tarea llevan el código de la solicitud de su plan.
+- Se asignan en todos los puntos de creación: solicitud (`RequestService.create`), fase
+  manual (`PhaseService.create`), tarea manual (`TaskService.create`) y fases/tareas
+  importadas (`PlanService.importPlan`). La importación **reemplaza** el contenido del plan
+  y reserva de una vez N números de fase y N de tarea: las filas nuevas reciben números
+  **nuevos que continúan el contador**; el `code` que traiga el archivo se ignora.
+- Búsqueda: `GET /plans/{planId}/tasks?q=` coincide con el título o con el código (completo,
+  parcial o forma corta `T07`/`F2`, sin distinguir mayúsculas).
 
 ### TaskEvidence (`task_evidences`)
 Archivo de evidencia de una tarea; el binario vive en el bucket S3 maestro y aquí solo el metadato.
@@ -517,3 +547,20 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     `ai_global_config` y de precio en `ai_model`; precios de los modelos por defecto)
 27. `20261102120000_ai_conversaciones` (aditiva: tablas `ai_conversation` y `ai_message`)
 28. `20261103120000_ai_propuestas` (aditiva: tabla `ai_proposal`)
+    (las migraciones intermedias hasta `20261112120000_task_review_requested_at` no se detallan aquí)
+41. `20261113120000_visible_ids` (IDs visibles: añade `requests.number`/`code`, la secuencia
+    `requests_number_seq`, `plans.phase_seq_next`/`task_seq_next`, `plan_phases.code` y
+    `tasks.code`; rellena las filas existentes de forma determinista —solicitudes por
+    `registered_at, created_at, id` incluidas las eliminadas; fases por plan en orden
+    `"order", id`; tareas por plan en orden `fase.order, created_at, id`—, ajusta la secuencia
+    y los contadores a máximo + 1 y recién entonces pone `NOT NULL` + `UNIQUE`. Reejecutarla
+    no renumera nada. Ensayada sobre copias de la BD de desarrollo y sobre un conjunto
+    sintético con empates de `created_at`; consulta de verificación en
+    `scripts/verificar-ids-visibles.sql`.
+    **Rollback** (solo antes de que haya código en uso externo, p. ej. citado en correos):
+    `DROP INDEX requests_number_key, requests_code_key, plan_phases_code_key, tasks_code_key;`
+    `ALTER TABLE requests DROP COLUMN number, DROP COLUMN code;` `DROP SEQUENCE IF EXISTS
+    requests_number_seq;` `ALTER TABLE plans DROP COLUMN phase_seq_next, DROP COLUMN task_seq_next;`
+    `ALTER TABLE plan_phases DROP COLUMN code;` `ALTER TABLE tasks DROP COLUMN code;` y quitar la
+    fila de `_prisma_migrations`; el código anterior sigue funcionando sin las columnas. Antes
+    de desplegar, respaldar con `pg_dump`.)
