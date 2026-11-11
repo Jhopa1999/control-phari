@@ -6,6 +6,8 @@ import { CoordinationScopeService } from './coordination-scope.service';
 import { WorkflowStateService } from './workflow-state.service';
 import { WorklogController } from './worklog/worklog.controller';
 import { WorklogService } from './worklog/worklog.service';
+import { WorklogEligibilityService } from './worklog/worklog-eligibility.service';
+import { RequestModule } from '../request/request.module';
 import { IssueController } from './issue/issue.controller';
 import { IssueService } from './issue/issue.service';
 import { MeetingController } from './meeting/meeting.controller';
@@ -27,7 +29,7 @@ import { CommitmentService } from './commitment/commitment.service';
  * registra primero por precaucion, replicando plan.module.ts.
  */
 @Module({
-  imports: [PrismaModule, AuthModule, AuditModule],
+  imports: [PrismaModule, AuthModule, AuditModule, RequestModule],
   controllers: [
     WorklogController,
     IssueController,
@@ -38,6 +40,7 @@ import { CommitmentService } from './commitment/commitment.service';
     CoordinationScopeService,
     WorkflowStateService,
     WorklogService,
+    WorklogEligibilityService,
     IssueService,
     MeetingService,
     CommitmentService,

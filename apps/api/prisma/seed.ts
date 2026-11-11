@@ -429,6 +429,26 @@ async function main(): Promise<void> {
     });
   }
 
+  // Parametro gestionable de la Bitacora: dias de gracia en que un proyecto
+  // CERRADA sigue admitiendo actividades. El valor es la etiqueta (entero >= 0).
+  // Solo se crea si no existe: no pisa lo que se cambie desde Maestras.
+  const graceParam = {
+    catalog: 'WORKLOG_PARAM',
+    code: 'CLOSED_PROJECT_GRACE_DAYS',
+  };
+  const existingGrace = await prisma.catalogItem.findFirst({ where: graceParam });
+  if (!existingGrace) {
+    await prisma.catalogItem.create({
+      data: {
+        ...graceParam,
+        label: '7',
+        sortOrder: 1,
+        description:
+          'Días tras el cierre de un proyecto en los que aún se pueden imputar actividades en la Bitácora. Escribe un número entero en la etiqueta (0 = sin gracia). Si la maestra se desactiva o el valor no es válido, se usan 7 días.',
+      },
+    });
+  }
+
   // Grants (upsert por la combinacion unica userId+roleId+processId).
   // Se resuelven los ids a partir de las claves naturales ya sembradas.
   const [roleByCode, processByCode, userByIdentifier] = await Promise.all([

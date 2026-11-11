@@ -1,5 +1,6 @@
 import { WorklogController } from './worklog.controller';
 import { WorklogService } from './worklog.service';
+import { WorklogEligibilityService } from './worklog-eligibility.service';
 import { CoordinationScopeService } from '../coordination-scope.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
@@ -38,12 +39,25 @@ describe('WorklogController (delegacion)', () => {
   const scopeService = {
     listPeople: jest.fn().mockResolvedValue('people'),
   } as unknown as CoordinationScopeService;
-  const controller = new WorklogController(worklogService, scopeService);
+  const eligibility = {
+    listOptions: jest.fn().mockResolvedValue('options'),
+  } as unknown as WorklogEligibilityService;
+  const controller = new WorklogController(
+    worklogService,
+    eligibility,
+    scopeService,
+  );
   const a = actor();
 
   it('people delega en scopeService', async () => {
     await expect(controller.people(a)).resolves.toBe('people');
     expect(scopeService.listPeople).toHaveBeenCalledWith(a);
+  });
+
+  it('listOptions delega actor y query en el servicio de elegibilidad', async () => {
+    const query = { processId: 'p1' } as never;
+    await expect(controller.listOptions(a, query)).resolves.toBe('options');
+    expect(eligibility.listOptions).toHaveBeenCalledWith(a, query);
   });
 
   it('listDailyLogs delega actor y filtros', async () => {

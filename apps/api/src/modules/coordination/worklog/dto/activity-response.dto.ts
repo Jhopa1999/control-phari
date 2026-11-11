@@ -24,17 +24,20 @@ export class ActivityResponseDto {
   @ApiProperty({ type: String, nullable: true, description: 'Titulo del proyecto (solicitud) referenciado.' })
   projectRequestTitle!: string | null;
 
+  @ApiProperty({ type: String, nullable: true, description: 'ID visible del proyecto (PRY-0012).' })
+  projectRequestCode!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Estado operativo del proyecto referenciado (CERRADA = cerrado).' })
+  projectRequestState!: string | null;
+
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   taskId!: string | null;
 
   @ApiProperty({ type: String, nullable: true, description: 'Titulo de la tarea referenciada.' })
   taskTitle!: string | null;
 
-  @ApiProperty({ type: String, format: 'uuid', nullable: true })
-  relatedIssueId!: string | null;
-
-  @ApiProperty({ type: String, nullable: true, description: 'Titulo de la novedad relacionada.' })
-  relatedIssueTitle!: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'ID visible de la tarea (PRY-0012-T07).' })
+  taskCode!: string | null;
 
   @ApiProperty({ type: String, nullable: true })
   assetRef!: string | null;

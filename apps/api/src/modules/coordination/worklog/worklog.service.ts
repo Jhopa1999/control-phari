@@ -18,6 +18,7 @@ import {
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
 import { CoordinationScopeService } from '../coordination-scope.service';
+import { WorklogEligibilityService } from './worklog-eligibility.service';
 import {
   addDaysUTC,
   dateStringToDate,
@@ -50,9 +51,12 @@ import {
 
 /** Actividad con los títulos de lo que referencia (para el mapeo de respuesta). */
 type ActivityWithRefs = DailyLogActivityModel & {
-  projectRequest?: { title: string } | null;
-  task?: { title: string } | null;
-  relatedIssue?: { title: string } | null;
+  projectRequest?: {
+    title: string;
+    code: string;
+    operationalState: string;
+  } | null;
+  task?: { title: string; code: string } | null;
 };
 
 /** Diario con su autor y sus actividades (para el mapeo de respuesta). */
@@ -79,9 +83,16 @@ const WEEKLY_INCLUDE = {
 
 /**
  * Relaciones que se cargan siempre con un diario: el nombre del autor y, en cada
- * actividad, el título del proyecto, la tarea y la novedad que referencia. Así la
+ * actividad, el título y el código del proyecto y de la tarea. Así la
  * pantalla no tiene que adivinar nombres a partir de ids.
  */
+const ACTIVITY_INCLUDE = {
+  projectRequest: {
+    select: { title: true, code: true, operationalState: true },
+  },
+  task: { select: { title: true, code: true } },
+} satisfies Prisma.DailyLogActivityInclude;
+
 const LOG_INCLUDE = {
   author: { select: { name: true } },
   process: { select: { name: true } },
@@ -89,11 +100,7 @@ const LOG_INCLUDE = {
   returner: { select: { name: true } },
   activities: {
     orderBy: { createdAt: 'asc' },
-    include: {
-      projectRequest: { select: { title: true } },
-      task: { select: { title: true } },
-      relatedIssue: { select: { title: true } },
-    },
+    include: ACTIVITY_INCLUDE,
   },
 } satisfies Prisma.DailyLogInclude;
 
@@ -123,6 +130,7 @@ export class WorklogService {
     private readonly audit: AuditService,
     private readonly scope: CoordinationScopeService,
     private readonly notifications: NotificationService,
+    private readonly eligibility: WorklogEligibilityService,
   ) {}
 
   // --- Snapshots de auditoria ---------------------------------------------
@@ -148,7 +156,6 @@ export class WorklogService {
       hours: row.hours,
       projectRequestId: row.projectRequestId,
       taskId: row.taskId,
-      relatedIssueId: row.relatedIssueId,
       assetRef: row.assetRef,
       requesterRef: row.requesterRef,
       justification: row.justification,
@@ -188,10 +195,11 @@ export class WorklogService {
       hours: row.hours,
       projectRequestId: row.projectRequestId,
       projectRequestTitle: row.projectRequest?.title ?? null,
+      projectRequestCode: row.projectRequest?.code ?? null,
+      projectRequestState: row.projectRequest?.operationalState ?? null,
       taskId: row.taskId,
       taskTitle: row.task?.title ?? null,
-      relatedIssueId: row.relatedIssueId,
-      relatedIssueTitle: row.relatedIssue?.title ?? null,
+      taskCode: row.task?.code ?? null,
       assetRef: row.assetRef,
       requesterRef: row.requesterRef,
       justification: row.justification,
@@ -322,88 +330,22 @@ export class WorklogService {
     };
   }
 
-  // --- Validacion de FK en visibilidad (design §1.2/§2.3) -----------------
-
-  /** `projectRequestId` por la visibilidad real de Request (HIGH-2). 404 fuera. */
-  private async requireProjectRequestVisible(
-    actor: CurrentActor,
-    requestId: string,
-  ): Promise<void> {
-    const request = await this.prisma.request.findFirst({
-      where: { AND: [{ id: requestId }, this.scope.requestVisibilityWhere(actor)] },
-      select: { id: true },
-    });
-    if (!request) {
-      throw new NotFoundException(`Solicitud "${requestId}" no encontrada.`);
-    }
-  }
+  // --- Validacion de clasificacion ------------------------------------------
 
   /**
-   * `taskId` por traversal `Task -> phase.planId -> Plan.requestId -> Request`
-   * (HIGH-1), replicando `requireTaskInScope`: Task NO tiene relacion `request`.
-   * 404 en cualquier paso fuera de visibilidad.
+   * Reglas de clasificacion server-side (design §2.3, BR-014/AC-014/015/016).
+   * `fields` es el estado RESULTANTE de la actividad (merge para PATCH). Falla
+   * de clasificacion -> 400. La elegibilidad de proyecto/tarea (alcance, estado,
+   * proceso del diario, responsable) la decide `WorklogEligibilityService`.
    */
-  private async requireTaskVisible(
-    actor: CurrentActor,
-    taskId: string,
-  ): Promise<void> {
-    const task = await this.prisma.task.findFirst({
-      where: { id: taskId },
-      include: { phase: { select: { planId: true } } },
-    });
-    if (!task) {
-      throw new NotFoundException(`Tarea "${taskId}" no encontrada.`);
-    }
-    const plan = await this.prisma.plan.findFirst({
-      where: { id: task.phase.planId },
-      select: { requestId: true },
-    });
-    if (!plan) {
-      throw new NotFoundException(`Tarea "${taskId}" no encontrada.`);
-    }
-    const request = await this.prisma.request.findFirst({
-      where: {
-        AND: [{ id: plan.requestId }, this.scope.requestVisibilityWhere(actor)],
-      },
-      select: { id: true },
-    });
-    if (!request) {
-      throw new NotFoundException(`Tarea "${taskId}" no encontrada.`);
-    }
-  }
-
-  /** `relatedIssueId` por el proceso del diario (MEDIUM-1). 404 fuera. */
-  private async requireIssueOfProcess(
-    issueId: string,
-    processId: string,
-  ): Promise<void> {
-    const issue = await this.prisma.issue.findFirst({
-      where: { id: issueId, processId },
-      select: { id: true },
-    });
-    if (!issue) {
-      throw new NotFoundException(`Novedad "${issueId}" no encontrada.`);
-    }
-  }
-
-  /**
-   * Reglas de clasificacion server-side (design §2.3, BR-014/AC-014/015/016) y
-   * validacion de FK en visibilidad. `fields` es el estado RESULTANTE de la
-   * actividad (merge para PATCH). Fallo de clasificacion -> 400; FK fuera -> 404.
-   */
-  private async validateActivity(
-    actor: CurrentActor,
-    processId: string,
-    fields: {
-      classificationCode: string;
-      projectRequestId?: string | null;
-      taskId?: string | null;
-      relatedIssueId?: string | null;
-      assetRef?: string | null;
-      requesterRef?: string | null;
-      justification?: string | null;
-    },
-  ): Promise<void> {
+  private validateClassification(fields: {
+    classificationCode: string;
+    projectRequestId?: string | null;
+    taskId?: string | null;
+    assetRef?: string | null;
+    requesterRef?: string | null;
+    justification?: string | null;
+  }): void {
     const notEmpty = (v?: string | null): boolean =>
       typeof v === 'string' && v.trim().length > 0;
 
@@ -433,19 +375,7 @@ export class WorklogService {
       default:
         throw new BadRequestException('Clasificacion de actividad invalida.');
     }
-
-    // Visibilidad de FK (solo cuando se informan).
-    if (fields.projectRequestId) {
-      await this.requireProjectRequestVisible(actor, fields.projectRequestId);
-    }
-    if (fields.taskId) {
-      await this.requireTaskVisible(actor, fields.taskId);
-    }
-    if (fields.relatedIssueId) {
-      await this.requireIssueOfProcess(fields.relatedIssueId, processId);
-    }
   }
-
   // --- Resolucion de alcance ----------------------------------------------
 
   private async requireDailyLogReadable(
@@ -866,15 +796,25 @@ export class WorklogService {
     const log = await this.requireDailyLogWritable(actor, dailyLogId);
     this.assertDailyLogEditable(log);
 
-    await this.validateActivity(actor, log.processId, {
+    this.validateClassification({
       classificationCode: dto.classificationCode,
       projectRequestId: dto.projectRequestId,
       taskId: dto.taskId,
-      relatedIssueId: dto.relatedIssueId,
       assetRef: dto.assetRef,
       requesterRef: dto.requesterRef,
       justification: dto.justification,
     });
+    // Elegibilidad (alcance, estado, proceso del diario, responsable). Si llega
+    // solo la tarea, el proyecto se deriva de ella (D8).
+    const refs = await this.eligibility.validateReferences(
+      actor,
+      log.processId,
+      log.date,
+      { projectRequestId: dto.projectRequestId, taskId: dto.taskId },
+      {},
+    );
+    const projectRequestId =
+      dto.projectRequestId ?? refs.derivedProjectRequestId;
 
     const nextStepDate =
       dto.nextStepDate !== undefined
@@ -888,13 +828,8 @@ export class WorklogService {
           classificationCode: dto.classificationCode,
           // hours opcional -> columna @default(0) (Finding 4).
           ...(dto.hours !== undefined ? { hours: dto.hours } : {}),
-          ...(dto.projectRequestId !== undefined
-            ? { projectRequestId: dto.projectRequestId }
-            : {}),
+          ...(projectRequestId !== undefined ? { projectRequestId } : {}),
           ...(dto.taskId !== undefined ? { taskId: dto.taskId } : {}),
-          ...(dto.relatedIssueId !== undefined
-            ? { relatedIssueId: dto.relatedIssueId }
-            : {}),
           ...(dto.assetRef !== undefined ? { assetRef: dto.assetRef } : {}),
           ...(dto.requesterRef !== undefined
             ? { requesterRef: dto.requesterRef }
@@ -915,6 +850,7 @@ export class WorklogService {
           ...(dto.nextStep !== undefined ? { nextStep: dto.nextStep } : {}),
           ...(nextStepDate !== undefined ? { nextStepDate } : {}),
         },
+        include: ACTIVITY_INCLUDE,
       });
 
       await this.audit.record(tx, {
@@ -953,10 +889,6 @@ export class WorklogService {
           ? dto.projectRequestId
           : activity.projectRequestId,
       taskId: dto.taskId !== undefined ? dto.taskId : activity.taskId,
-      relatedIssueId:
-        dto.relatedIssueId !== undefined
-          ? dto.relatedIssueId
-          : activity.relatedIssueId,
       assetRef: dto.assetRef !== undefined ? dto.assetRef : activity.assetRef,
       requesterRef:
         dto.requesterRef !== undefined
@@ -967,7 +899,35 @@ export class WorklogService {
           ? dto.justification
           : activity.justification,
     };
-    await this.validateActivity(actor, log.processId, merged);
+    this.validateClassification(merged);
+
+    // Elegibilidad solo de la referencia que CAMBIA: lo que se conserva sigue
+    // valiendo aunque el proyecto ya no sea elegible (historia).
+    const changedRefs = {
+      projectRequestId:
+        dto.projectRequestId !== undefined &&
+        dto.projectRequestId !== activity.projectRequestId
+          ? dto.projectRequestId
+          : null,
+      taskId:
+        dto.taskId !== undefined && dto.taskId !== activity.taskId
+          ? dto.taskId
+          : null,
+      declaredProjectRequestId: dto.projectRequestId ?? null,
+    };
+    const refs = await this.eligibility.validateReferences(
+      actor,
+      log.processId,
+      log.date,
+      changedRefs,
+      {
+        projectRequestId: activity.projectRequestId,
+        taskId: activity.taskId,
+      },
+    );
+    // Si cambia la tarea sin indicar proyecto, el proyecto se deriva de ella (D8).
+    const projectRequestId =
+      refs.derivedProjectRequestId ?? dto.projectRequestId;
 
     const nextStepDate =
       dto.nextStepDate !== undefined
@@ -982,13 +942,8 @@ export class WorklogService {
             ? { classificationCode: dto.classificationCode }
             : {}),
           ...(dto.hours !== undefined ? { hours: dto.hours } : {}),
-          ...(dto.projectRequestId !== undefined
-            ? { projectRequestId: dto.projectRequestId }
-            : {}),
+          ...(projectRequestId !== undefined ? { projectRequestId } : {}),
           ...(dto.taskId !== undefined ? { taskId: dto.taskId } : {}),
-          ...(dto.relatedIssueId !== undefined
-            ? { relatedIssueId: dto.relatedIssueId }
-            : {}),
           ...(dto.assetRef !== undefined ? { assetRef: dto.assetRef } : {}),
           ...(dto.requesterRef !== undefined
             ? { requesterRef: dto.requesterRef }
@@ -1009,6 +964,7 @@ export class WorklogService {
           ...(dto.nextStep !== undefined ? { nextStep: dto.nextStep } : {}),
           ...(nextStepDate !== undefined ? { nextStepDate } : {}),
         },
+        include: ACTIVITY_INCLUDE,
       });
 
       await this.audit.record(tx, {

@@ -47,11 +47,6 @@ export class UpdateActivityDto {
   @IsUUID()
   taskId?: string;
 
-  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Novedad relacionada.' })
-  @IsOptional()
-  @IsUUID()
-  relatedIssueId?: string;
-
   @ApiPropertyOptional({ type: String, description: 'Activo (texto, para soporte).', maxLength: 500 })
   @IsOptional()
   @Transform(trim)

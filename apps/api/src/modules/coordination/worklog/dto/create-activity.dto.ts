@@ -22,8 +22,10 @@ const trim = ({ value }: { value: unknown }): unknown =>
  * Entrada para agregar una actividad a un diario (design §3.4). `hours` es
  * OPCIONAL (columna `@default(0)`, Finding 4); si se informa, entero `>= 0`. Las
  * reglas condicionales por clasificacion (AC-014/015/016) y la visibilidad de
- * las FK (projectRequestId/taskId/relatedIssueId -> 404 fuera) se validan en el
- * service (§2.3), no solo aqui. `evidenceUrl` es texto libre `<= 2000` SIN
+ * la elegibilidad de projectRequestId/taskId (alcance 404; estado, proceso del
+ * diario, responsable y coherencia 400) se validan en el service (§2.3), no solo aqui.
+ * elatedIssueId ya no existe: el ValidationPipe global (forbidNonWhitelisted)
+ * lo rechaza con 400. `evidenceUrl` es texto libre `<= 2000` SIN
  * `@IsUrl` (MEDIUM-3/§11 D3).
  */
 export class CreateActivityDto {
@@ -56,11 +58,6 @@ export class CreateActivityDto {
   @IsOptional()
   @IsUUID()
   taskId?: string;
-
-  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Novedad relacionada (del proceso del diario).' })
-  @IsOptional()
-  @IsUUID()
-  relatedIssueId?: string;
 
   @ApiPropertyOptional({ type: String, description: 'Activo (texto, para soporte).', maxLength: 500 })
   @IsOptional()
