@@ -253,15 +253,18 @@ test.describe('Solicitudes: filtros de selección múltiple', () => {
     request,
   }) => {
     await openSolicitudes(page, request);
+    // El h1 ya viene en el HTML del servidor: sin esperar a la vista hidratada y
+    // con datos, el Enter llega antes de que Radix escuche el teclado y el
+    // resultado depende de la carrera (React lo reproduce tras hidratar, pero
+    // Radix lo toma como apertura con puntero y deja el foco en el contenedor).
+    await expect(countOf(page)).toHaveText('6 solicitudes');
     const trigger = page.locator('#sol-filtro-estado');
     await trigger.focus();
     await page.keyboard.press('Enter');
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible();
-    // Con Enter el foco entra en el panel (el contenedor del menú); la primera
-    // flecha lo lleva a «Todos» y la siguiente a la primera opción.
-    await expect(page.locator('[role="menu"]')).toBeFocused();
-    await page.keyboard.press('ArrowDown');
+    // Abierto con Enter, el foco va a la primera opción («Todos», patrón de
+    // botón de menú WAI-ARIA); la flecha pasa a la siguiente.
     await expect(page.getByRole('menuitemcheckbox', { name: 'Todos', exact: true })).toBeFocused();
     await page.keyboard.press('ArrowDown');
     const first = page.getByRole('menuitemcheckbox', { name: 'Registrada', exact: true });
