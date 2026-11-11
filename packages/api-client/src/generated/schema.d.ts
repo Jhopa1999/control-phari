@@ -931,6 +931,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tasks/by-code/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una tarea a partir de su ID visible (p. ej. PRY-0012-T07), sin distinguir mayúsculas. Mismo alcance que el detalle por id. */
+        get: operations["TaskController_findByCode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks/{id}": {
         parameters: {
             query?: never;
@@ -3142,6 +3159,11 @@ export interface components {
             /** Format: uuid */
             requestId: string;
             requestTitle: string;
+            /**
+             * @description ID visible de la solicitud (solo lectura).
+             * @example PRY-0012
+             */
+            requestCode: string;
             /** Format: date-time */
             requestedAt: string;
             requestedByName: string | null;
@@ -3221,6 +3243,11 @@ export interface components {
              * @description Identificador unico.
              */
             id: string;
+            /**
+             * @description ID visible de la solicitud (solo lectura, inmutable, nunca se reutiliza; las solicitudes eliminadas conservan su número).
+             * @example PRY-0012
+             */
+            code: string;
             /** @description Titulo de la solicitud. */
             title: string;
             /**
@@ -4048,6 +4075,11 @@ export interface components {
              * @description Id de la tarea.
              */
             taskId: string;
+            /**
+             * @description ID visible de la tarea (solo lectura).
+             * @example PRY-0012-T07
+             */
+            code: string;
             /** @description Titulo de la tarea. */
             title: string;
             /** @description Estado de la tarea (TaskStatus). */
@@ -4074,6 +4106,11 @@ export interface components {
             /** @description Nombre de la fase. */
             phaseName: string;
             /**
+             * @description ID visible de la fase (solo lectura).
+             * @example PRY-0012-F2
+             */
+            phaseCode: string;
+            /**
              * Format: uuid
              * @description Plan al que pertenece.
              */
@@ -4085,6 +4122,11 @@ export interface components {
             requestId: string;
             /** @description Titulo de la solicitud. */
             requestTitle: string;
+            /**
+             * @description ID visible de la solicitud (solo lectura).
+             * @example PRY-0012
+             */
+            requestCode: string;
             /** @description Predecesoras directas aun no terminadas (orden por titulo); [] si no hay. */
             pendingPredecessors: components["schemas"]["MyWorkPendingPredecessorDto"][];
             /** @description Motivo vigente del bloqueo; null si la tarea no esta BLOQUEADA o se bloqueo sin motivo. */
@@ -4107,6 +4149,11 @@ export interface components {
              * @description Id de la tarea.
              */
             id: string;
+            /**
+             * @description ID visible de la tarea (solo lectura).
+             * @example PRY-0012-T07
+             */
+            code: string;
             /** @description Título de la tarea. */
             title: string;
             /**
@@ -4123,8 +4170,18 @@ export interface components {
             requestId: string;
             /** @description Título de la solicitud. */
             requestTitle: string;
+            /**
+             * @description ID visible de la solicitud (solo lectura).
+             * @example PRY-0012
+             */
+            requestCode: string;
             /** @description Nombre de la fase. */
             phaseName: string;
+            /**
+             * @description ID visible de la fase (solo lectura).
+             * @example PRY-0012-F2
+             */
+            phaseCode: string;
             /** @description Avance 0-100. */
             progress: number;
             /** @description La tarea exige evidencia para enviarse a revisión (criterios de aceptación o fase de gobierno). */
@@ -4163,6 +4220,11 @@ export interface components {
              * @description Id de la tarea predecesora.
              */
             id: string;
+            /**
+             * @description ID visible de la predecesora (solo lectura).
+             * @example PRY-0012-T03
+             */
+            code: string;
             /** @description Titulo de la predecesora. */
             title: string;
             /** @description Estado de la predecesora (TaskStatus). */
@@ -4176,6 +4238,11 @@ export interface components {
              * @description Identificador unico.
              */
             id: string;
+            /**
+             * @description ID visible de la tarea (solo lectura, inmutable, nunca se reutiliza). Forma corta dentro del plan: T07.
+             * @example PRY-0012-T07
+             */
+            code: string;
             /**
              * Format: uuid
              * @description Fase a la que pertenece.
@@ -4238,12 +4305,22 @@ export interface components {
             /** @description Nombre de la fase a la que pertenece. */
             phaseName: string;
             /**
+             * @description ID visible de la fase (solo lectura).
+             * @example PRY-0012-F2
+             */
+            phaseCode: string;
+            /**
              * Format: uuid
              * @description Solicitud a la que pertenece el plan de la tarea.
              */
             requestId: string;
             /** @description Titulo de la solicitud. */
             requestTitle: string;
+            /**
+             * @description ID visible de la solicitud (solo lectura).
+             * @example PRY-0012
+             */
+            requestCode: string;
             /** @description Predecesoras directas de la tarea. */
             predecessors: components["schemas"]["TaskPredecessorDto"][];
             /**
@@ -4567,6 +4644,8 @@ export interface components {
         PlanDocumentTaskDto: {
             /** @description Referencia local unica dentro del documento. */
             ref: string;
+            /** @description ID visible de la tarea (p. ej. PRY-0012-T07). Solo informativo y de solo lectura: se incluye al exportar y la importacion lo IGNORA (las tareas importadas reciben IDs nuevos). */
+            code?: string;
             /** @description Titulo de la tarea. */
             title: string;
             /** @description Indica si la tarea es un hito. */
@@ -4597,6 +4676,8 @@ export interface components {
         PlanDocumentPhaseDto: {
             /** @description Orden 0-based de la fase. */
             order: number;
+            /** @description ID visible de la fase (p. ej. PRY-0012-F2). Solo informativo y de solo lectura: se incluye al exportar y la importacion lo IGNORA (las fases importadas reciben IDs nuevos). */
+            code?: string;
             /** @description Nombre de la fase. */
             name: string;
             /**
@@ -4728,6 +4809,11 @@ export interface components {
              * @description Identificador unico.
              */
             id: string;
+            /**
+             * @description ID visible de la fase (solo lectura, inmutable, nunca se reutiliza). Forma corta: F2.
+             * @example PRY-0012-F2
+             */
+            code: string;
             /**
              * Format: uuid
              * @description Plan al que pertenece.
@@ -6253,6 +6339,11 @@ export interface components {
              * @description Id de la solicitud.
              */
             id: string;
+            /**
+             * @description ID visible de la iniciativa (solicitud). Solo lectura.
+             * @example PRY-0012
+             */
+            code: string;
             /** @description Titulo de la iniciativa. */
             title: string;
             /**
@@ -9856,7 +9947,7 @@ export interface operations {
                 phaseId?: string;
                 /** @description Solo mis tareas ("true"/"false"). */
                 mine?: string;
-                /** @description Busqueda por titulo. */
+                /** @description Busqueda por titulo o por ID visible (sin distinguir mayusculas): codigo completo (PRY-0012-T07), parcial (pry-0012) o forma corta (T07, F2). */
                 q?: string;
             };
             header?: never;
@@ -9967,6 +10058,36 @@ export interface operations {
                 content?: never;
             };
             /** @description Fase/plan fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskController_findByCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID visible de la tarea. */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tarea encontrada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponseDto"];
+                };
+            };
+            /** @description Tarea inexistente o fuera de alcance. */
             404: {
                 headers: {
                     [name: string]: unknown;

@@ -3175,7 +3175,7 @@
             "name": "q",
             "required": false,
             "in": "query",
-            "description": "Busqueda por titulo.",
+            "description": "Busqueda por titulo o por ID visible (sin distinguir mayusculas): codigo completo (PRY-0012-T07), parcial (pry-0012) o forma corta (T07, F2).",
             "schema": {
               "maxLength": 255,
               "type": "string"
@@ -3296,6 +3296,42 @@
           }
         },
         "summary": "Crea una tarea en una fase (regla hito).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/tasks/by-code/{code}": {
+      "get": {
+        "operationId": "TaskController_findByCode",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "ID visible de la tarea.",
+            "schema": {
+              "example": "PRY-0012-T07",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tarea encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tarea inexistente o fuera de alcance."
+          }
+        },
+        "summary": "Detalle de una tarea a partir de su ID visible (p. ej. PRY-0012-T07), sin distinguir mayúsculas. Mismo alcance que el detalle por id.",
         "tags": [
           "tasks"
         ]
@@ -10525,6 +10561,11 @@
           "requestTitle": {
             "type": "string"
           },
+          "requestCode": {
+            "type": "string",
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud (solo lectura)."
+          },
           "requestedAt": {
             "type": "string",
             "format": "date-time"
@@ -10538,6 +10579,7 @@
           "closureId",
           "requestId",
           "requestTitle",
+          "requestCode",
           "requestedAt",
           "requestedByName"
         ]
@@ -10768,6 +10810,11 @@
             "format": "uuid",
             "description": "Identificador unico."
           },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud (solo lectura, inmutable, nunca se reutiliza; las solicitudes eliminadas conservan su número)."
+          },
           "title": {
             "type": "string",
             "description": "Titulo de la solicitud."
@@ -10882,6 +10929,7 @@
         },
         "required": [
           "id",
+          "code",
           "title",
           "registeredAt",
           "requesterArea",
@@ -12346,6 +12394,11 @@
             "format": "uuid",
             "description": "Id de la tarea."
           },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012-T07",
+            "description": "ID visible de la tarea (solo lectura)."
+          },
           "title": {
             "type": "string",
             "description": "Titulo de la tarea."
@@ -12383,6 +12436,11 @@
             "type": "string",
             "description": "Nombre de la fase."
           },
+          "phaseCode": {
+            "type": "string",
+            "example": "PRY-0012-F2",
+            "description": "ID visible de la fase (solo lectura)."
+          },
           "planId": {
             "type": "string",
             "format": "uuid",
@@ -12396,6 +12454,11 @@
           "requestTitle": {
             "type": "string",
             "description": "Titulo de la solicitud."
+          },
+          "requestCode": {
+            "type": "string",
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud (solo lectura)."
           },
           "pendingPredecessors": {
             "description": "Predecesoras directas aun no terminadas (orden por titulo); [] si no hay.",
@@ -12430,6 +12493,7 @@
         },
         "required": [
           "taskId",
+          "code",
           "title",
           "status",
           "progress",
@@ -12438,9 +12502,11 @@
           "endDate",
           "phaseId",
           "phaseName",
+          "phaseCode",
           "planId",
           "requestId",
           "requestTitle",
+          "requestCode",
           "pendingPredecessors",
           "blockedReason",
           "requestOperationalState",
@@ -12456,6 +12522,11 @@
             "type": "string",
             "format": "uuid",
             "description": "Id de la tarea."
+          },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012-T07",
+            "description": "ID visible de la tarea (solo lectura)."
           },
           "title": {
             "type": "string",
@@ -12481,9 +12552,19 @@
             "type": "string",
             "description": "Título de la solicitud."
           },
+          "requestCode": {
+            "type": "string",
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud (solo lectura)."
+          },
           "phaseName": {
             "type": "string",
             "description": "Nombre de la fase."
+          },
+          "phaseCode": {
+            "type": "string",
+            "example": "PRY-0012-F2",
+            "description": "ID visible de la fase (solo lectura)."
           },
           "progress": {
             "type": "number",
@@ -12525,12 +12606,15 @@
         },
         "required": [
           "id",
+          "code",
           "title",
           "responsibleUserId",
           "responsibleName",
           "requestId",
           "requestTitle",
+          "requestCode",
           "phaseName",
+          "phaseCode",
           "progress",
           "evidenceRequired",
           "hasEvidence",
@@ -12569,6 +12653,11 @@
             "format": "uuid",
             "description": "Id de la tarea predecesora."
           },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012-T03",
+            "description": "ID visible de la predecesora (solo lectura)."
+          },
           "title": {
             "type": "string",
             "description": "Titulo de la predecesora."
@@ -12584,6 +12673,7 @@
         },
         "required": [
           "id",
+          "code",
           "title",
           "status",
           "accepted"
@@ -12596,6 +12686,11 @@
             "type": "string",
             "format": "uuid",
             "description": "Identificador unico."
+          },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012-T07",
+            "description": "ID visible de la tarea (solo lectura, inmutable, nunca se reutiliza). Forma corta dentro del plan: T07."
           },
           "phaseId": {
             "type": "string",
@@ -12697,6 +12792,11 @@
             "type": "string",
             "description": "Nombre de la fase a la que pertenece."
           },
+          "phaseCode": {
+            "type": "string",
+            "example": "PRY-0012-F2",
+            "description": "ID visible de la fase (solo lectura)."
+          },
           "requestId": {
             "type": "string",
             "format": "uuid",
@@ -12705,6 +12805,11 @@
           "requestTitle": {
             "type": "string",
             "description": "Titulo de la solicitud."
+          },
+          "requestCode": {
+            "type": "string",
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud (solo lectura)."
           },
           "predecessors": {
             "description": "Predecesoras directas de la tarea.",
@@ -12734,6 +12839,7 @@
         },
         "required": [
           "id",
+          "code",
           "phaseId",
           "processId",
           "title",
@@ -12754,8 +12860,10 @@
           "evidenceUrl",
           "blockedReason",
           "phaseName",
+          "phaseCode",
           "requestId",
           "requestTitle",
+          "requestCode",
           "predecessors",
           "createdAt",
           "updatedAt",
@@ -13316,6 +13424,11 @@
             "description": "Referencia local unica dentro del documento.",
             "maxLength": 128
           },
+          "code": {
+            "type": "string",
+            "description": "ID visible de la tarea (p. ej. PRY-0012-T07). Solo informativo y de solo lectura: se incluye al exportar y la importacion lo IGNORA (las tareas importadas reciben IDs nuevos).",
+            "maxLength": 64
+          },
           "title": {
             "type": "string",
             "description": "Titulo de la tarea.",
@@ -13387,6 +13500,11 @@
             "type": "number",
             "description": "Orden 0-based de la fase.",
             "minimum": 0
+          },
+          "code": {
+            "type": "string",
+            "description": "ID visible de la fase (p. ej. PRY-0012-F2). Solo informativo y de solo lectura: se incluye al exportar y la importacion lo IGNORA (las fases importadas reciben IDs nuevos).",
+            "maxLength": 64
           },
           "name": {
             "type": "string",
@@ -13705,6 +13823,11 @@
             "format": "uuid",
             "description": "Identificador unico."
           },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012-F2",
+            "description": "ID visible de la fase (solo lectura, inmutable, nunca se reutiliza). Forma corta: F2."
+          },
           "planId": {
             "type": "string",
             "format": "uuid",
@@ -13748,6 +13871,7 @@
         },
         "required": [
           "id",
+          "code",
           "planId",
           "name",
           "startDate",
@@ -16968,6 +17092,11 @@
             "format": "uuid",
             "description": "Id de la solicitud."
           },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012",
+            "description": "ID visible de la iniciativa (solicitud). Solo lectura."
+          },
           "title": {
             "type": "string",
             "description": "Titulo de la iniciativa."
@@ -17064,6 +17193,7 @@
         },
         "required": [
           "id",
+          "code",
           "title",
           "mainProcessId",
           "mainProcessCode",
