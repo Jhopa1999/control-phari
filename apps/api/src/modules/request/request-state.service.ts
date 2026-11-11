@@ -12,6 +12,7 @@ import type { RequestParticipantModel } from '../../generated/prisma/models/Requ
 import type { TriageModel } from '../../generated/prisma/models/Triage';
 import type { PriorityEvaluationModel } from '../../generated/prisma/models/PriorityEvaluation';
 import { CurrentActor } from '../auth/current-actor';
+import { requestScopeWhere } from './request-scope.service';
 import { RequestResponseDto } from './dto/request-response.dto';
 import {
   isImplementedTransition,
@@ -60,28 +61,10 @@ export type PriorityCriteria = Record<keyof typeof PRIORITY_WEIGHTS, number>;
 export class RequestStateService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * `where` de alcance por proceso principal (design §2.5): jefe de área o líder
-   * de proceso sin filtro (ven TODAS las solicitudes); el resto (integrante
-   * puro) filtra por scopedProcessIds. Compartido por los submodulos
-   * triage/priority/approval para no duplicar la resolucion de scope; como
-   * `requireInScope` lo reutiliza, el líder también puede hacer triage y avanzar
-   * el flujo sobre cualquier solicitud que ahora ve.
-   */
+  /** Alcance de lectura compartido (ver 
+equest-scope.service.ts). */
   private scopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
-    if (actor.isJefeArea || actor.isLiderProceso) {
-      return { deletedAt: null };
-    }
-    // Integrante puro: ve las solicitudes de sus procesos y SIEMPRE las que él
-    // creó (A1). Duplicación deliberada con request.service.ts (centralizar es
-    // B2, fuera de alcance).
-    return {
-      deletedAt: null,
-      OR: [
-        { mainProcessId: { in: Array.from(actor.scopedProcessIds) } },
-        { createdByUserId: actor.userId },
-      ],
-    };
+    return requestScopeWhere(actor);
   }
 
   /**

@@ -9,6 +9,7 @@ import { Prisma } from '../../generated/prisma/client';
 import type { RequestModel } from '../../generated/prisma/models/Request';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
+import { requestScopeWhere } from './request-scope.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ListRequestsDto } from './dto/list-requests.dto';
 import { RequestResponseDto } from './dto/request-response.dto';
@@ -33,24 +34,10 @@ export class RequestService {
     private readonly state: RequestStateService,
   ) {}
 
-  /**
-   * `where` de lectura por alcance (design §2.5): la Request pertenece a su
-   * proceso principal. Jefe de área o líder de proceso: sin filtro (ven TODAS
-   * las solicitudes). Resto (integrante puro): filtra por scopedProcessIds.
-   */
+  /** Alcance de lectura compartido (ver 
+equest-scope.service.ts). */
   private scopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
-    if (actor.isJefeArea || actor.isLiderProceso) {
-      return { deletedAt: null };
-    }
-    // Integrante puro: ve las solicitudes de sus procesos y SIEMPRE las que él
-    // creó (A1), aunque aún no tengan proceso principal.
-    return {
-      deletedAt: null,
-      OR: [
-        { mainProcessId: { in: Array.from(actor.scopedProcessIds) } },
-        { createdByUserId: actor.userId },
-      ],
-    };
+    return requestScopeWhere(actor);
   }
 
   /** Snapshot JSON de una Request para auditoria (before/after). */

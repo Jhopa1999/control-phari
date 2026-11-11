@@ -10,6 +10,7 @@ import { Prisma } from '../../generated/prisma/client';
 import type { PlanModel } from '../../generated/prisma/models/Plan';
 import type { TaskModel } from '../../generated/prisma/models/Task';
 import { CurrentActor } from '../auth/current-actor';
+import { requestScopeWhere } from '../request/request-scope.service';
 import { assertPlanTransition, PlanStatus } from './plan-status';
 import {
   isTaskStatus,
@@ -49,16 +50,10 @@ export interface TaskInScope {
 export class PlanStateService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * `where` de alcance por proceso principal (design §2.8): jefe de área o líder
-   * de proceso sin filtro (ven TODAS las solicitudes); el resto (integrante
-   * puro) filtra por los procesos con grant activo.
-   */
+  /** Alcance de lectura compartido (ver 
+equest-scope.service.ts). */
   private requestScopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
-    if (actor.isJefeArea || actor.isLiderProceso) {
-      return { deletedAt: null };
-    }
-    return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+    return requestScopeWhere(actor);
   }
 
   /**

@@ -11,7 +11,7 @@ export default function SolicitudesPage(): React.ReactElement {
       fallback={
         <PageFallback
           title="Solicitudes"
-          description="Registra y actualiza las solicitudes de demanda de tu alcance."
+          description="Bandeja de entrada y gestión de solicitudes."
         />
       }
     >

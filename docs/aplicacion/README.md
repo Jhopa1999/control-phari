@@ -166,8 +166,10 @@ Notas de operación:
 - **Proyecto**: es la unidad de trabajo. Responde a «qué se hace y cómo va *este* proyecto».
   Reúne el detalle de una iniciativa comprometida: su plan, tareas, evidencias, documentos,
   bitácoras, avance y cierre. Aquí se **edita y opera**.
-- **Portafolio**: es la vista ejecutiva de *todos* los proyectos a la vez. Responde a «cómo va
-  el conjunto». Sirve para comparar, priorizar y detectar riesgos (avance, alertas por fecha
+- **Portafolio**: es la vista ejecutiva de *todas las iniciativas comprometidas* a la vez (por
+  defecto desde *Comprometida* hasta *Cerrada*; las solicitudes pendientes de decisión se
+  gestionan en *Solicitudes* y se incluyen con el conmutador *Incluir pendientes de
+  decisión*). Responde a «cómo va el conjunto». Sirve para comparar, priorizar y detectar riesgos (avance, alertas por fecha
   objetivo, estado, bloqueos) y permite entrar a la ficha de cada proyecto. Aquí se **consulta**
   de forma consolidada; no se edita.
 

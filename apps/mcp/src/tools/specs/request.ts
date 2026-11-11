@@ -8,7 +8,8 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
     access: 'read',
     description:
       'Lista solicitudes (GET /requests), con filtros opcionales por proceso ' +
-      'principal y estado.',
+      'principal y estado. Alcance: jefe y líder ven todas; el integrante, las de ' +
+      'sus procesos más las que él creó.',
   },
   {
     name: 'request.get',
@@ -79,6 +80,8 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
     description:
       'Obtiene la vista de portafolio (GET /portfolio), con filtros opcionales ' +
       'por banda, estado y proceso principal; cada filtro admite varios valores ' +
-      '(arreglo, se combinan con O; entre filtros es Y; máximo 50 por filtro).',
+      '(arreglo, se combinan con O; entre filtros es Y; máximo 50 por filtro). ' +
+      'Mismo alcance que request.list (jefe y líder ven todas; el integrante, sus ' +
+      'procesos más las que creó) y sin parámetros devuelve todos los estados.',
   },
 ];

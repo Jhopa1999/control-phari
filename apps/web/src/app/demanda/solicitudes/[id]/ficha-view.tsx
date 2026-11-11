@@ -110,7 +110,18 @@ function SinRegistro({ children }: { children: React.ReactNode }): React.ReactEl
  * permiten, ofrece un enlace «Ir a actuar» a la bandeja correspondiente. La
  * ficha nunca escribe: solo consulta y navega.
  */
-export function FichaView({ id }: { id: string }): React.ReactElement {
+export function FichaView({
+  id,
+  from = 'solicitudes',
+}: {
+  id: string;
+  /** Pantalla de origen: define la miga y el enlace de regreso (el menú lo marca la ruta). */
+  from?: 'solicitudes' | 'portafolio';
+}): React.ReactElement {
+  const origin =
+    from === 'portafolio'
+      ? { label: 'Portafolio', href: '/seguimiento/portafolio' }
+      : { label: 'Solicitudes', href: '/demanda/solicitudes' };
   const { allowedModules } = useActor();
   const [state, setState] = React.useState<LoadState>('loading');
   const [request, setRequest] = React.useState<Request | null>(null);
@@ -212,7 +223,7 @@ export function FichaView({ id }: { id: string }): React.ReactElement {
       <PageLayout>
         <PageHeader
           title="Detalle de la solicitud"
-          breadcrumbs={[{ label: 'Solicitudes', href: '/demanda/solicitudes' }]}
+          breadcrumbs={[{ label: origin.label, href: origin.href }]}
         />
         <div className="rounded-lg border bg-card">
           <ErrorState
@@ -222,10 +233,10 @@ export function FichaView({ id }: { id: string }): React.ReactElement {
           />
           <div className="flex justify-center pb-6">
             <Link
-              href="/demanda/solicitudes"
+              href={origin.href}
               className={buttonVariants({ variant: 'outline' })}
             >
-              Volver a Solicitudes
+              {`Volver a ${origin.label}`}
             </Link>
           </div>
         </div>
@@ -243,7 +254,7 @@ export function FichaView({ id }: { id: string }): React.ReactElement {
       <PageHeader
         title={request.title}
         breadcrumbs={[
-          { label: 'Solicitudes', href: '/demanda/solicitudes' },
+          { label: origin.label, href: origin.href },
           { label: request.title },
         ]}
         meta={

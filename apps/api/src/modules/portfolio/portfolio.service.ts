@@ -26,7 +26,7 @@ function toIsoDate(date: Date | null): string | null {
 
 /**
  * Listado del portafolio (design §5.3), read-only. Alcance de lectura via
- * `PortfolioScopeService` (jefe `{}`; resto `mainProcessId ∈ scopedProcessIds`).
+ * `PortfolioScopeService` (delega en el alcance compartido de solicitudes: jefe y líder todas; integrante sus procesos más las que creó).
  * Los filtros INTERSECTAN con el alcance, nunca lo amplian. La banda se resuelve
  * post-query sobre la evaluacion vigente (no es columna); "comprometida" solo
  * por `operationalState` explicito.

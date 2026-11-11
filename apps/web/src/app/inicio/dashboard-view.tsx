@@ -260,18 +260,18 @@ export function DashboardView(): React.ReactElement {
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-2">
-            <Section title="Por estado operativo">
+            <Section title="Por estado">
               <DistributionTable
-                caption="Número de solicitudes por estado operativo en el periodo seleccionado."
+                caption="Número de solicitudes por estado en el periodo seleccionado."
                 columnLabel="Estado"
                 kind="request"
                 rows={summary.byState.map((row) => ({ key: row.state, count: row.count }))}
                 total={summary.total}
               />
             </Section>
-            <Section title="Por banda de prioridad">
+            <Section title="Por prioridad">
               <DistributionTable
-                caption="Número de solicitudes por banda de prioridad en el periodo seleccionado."
+                caption="Número de solicitudes por prioridad en el periodo seleccionado."
                 columnLabel="Banda"
                 kind="band"
                 rows={summary.byPriorityBand.map((row) => ({ key: row.band, count: row.count }))}

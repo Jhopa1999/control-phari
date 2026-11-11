@@ -257,7 +257,19 @@ distintos; el integrante solo opera el estado de su propia tarea.
 ## portfolio — Portafolio e indicadores del área
 
 Vistas de solo lectura: el portafolio de iniciativas y el control del área
-(indicadores y panorama de demanda). El alcance se aplica en el `where` del service.
+(indicadores y panorama de demanda). El alcance se aplica en el `where` del service y es el
+**alcance único de solicitudes** (`RequestScopeService`, módulo `request`): jefe y líder ven
+todas las solicitudes no eliminadas (con o sin proceso); el integrante, las de sus procesos
+más las que creó. `PortfolioScopeService` ya no define el alcance de solicitudes: lo delega
+en ese servicio y solo proyecta el alcance a tareas e incidencias.
+
+**Estados del Portafolio.** `GET /portfolio` sin parámetros devuelve todos los estados (misma
+semántica para el MCP y el asistente). La pantalla *Portafolio* filtra por defecto, en la UI,
+a las **iniciativas comprometidas**: `COMPROMETIDA`, `EN_PLANIFICACION`, `EN_EJECUCION`,
+`BLOQUEADA`, `EN_VALIDACION`, `LISTA_PARA_LIBERAR`, `EN_ESTABILIZACION`, `OPERATIVA` y
+`CERRADA`. Quedan fuera `REGISTRADA`, `EN_TRIAGE`, `DEVUELTA`, `RECHAZADA`,
+`BACKLOG_PRIORIZADO` y `RETIRADA` (solicitudes sin compromiso o sin decisión); el
+conmutador *Incluir pendientes de decisión* los añade.
 
 ### Portafolio (`portfolio.controller.ts`)
 

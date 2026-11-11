@@ -2,6 +2,7 @@
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import { RequestStateService } from '../request/request-state.service';
+import { RequestScopeService } from '../request/request-scope.service';
 import { PortfolioScopeService } from './portfolio-scope.service';
 import { PortfolioService } from './portfolio.service';
 
@@ -16,7 +17,7 @@ function createMocks() {
     priorityBand: jest.fn(),
     priorityLabel: jest.fn(),
   } as unknown as RequestStateService;
-  const scope = new PortfolioScopeService();
+  const scope = new PortfolioScopeService(new RequestScopeService());
   return { prisma, prismaObj, state, scope };
 }
 
@@ -128,7 +129,13 @@ describe('PortfolioService', () => {
     await service.list(lider(['p1']), {});
     expect(
       (m.prismaObj.request as any).findMany.mock.calls[1][0].where.AND[0],
-    ).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
+    ).toEqual({ deletedAt: null, OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }] });
+    // Lider: todas las solicitudes (mismo alcance que Solicitudes), incluidas las
+    // de otros procesos y las sin proceso.
+    await service.list({ ...lider(['p1']), isLiderProceso: true }, {});
+    expect(
+      (m.prismaObj.request as any).findMany.mock.calls[2][0].where.AND[0],
+    ).toEqual({ deletedAt: null });
   });
 
   it('filtros intersectan el alcance (no lo amplian)', async () => {
@@ -138,7 +145,7 @@ describe('PortfolioService', () => {
       state: ['CERRADA'] as any,
     });
     const and = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND;
-    expect(and[0]).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
+    expect(and[0]).toEqual({ deletedAt: null, OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }] });
     expect(and).toContainEqual({ mainProcessId: { in: ['p1'] } });
     expect(and).toContainEqual({ operationalState: { in: ['CERRADA'] } });
   });
@@ -227,7 +234,7 @@ describe('PortfolioService', () => {
         state: ['CERRADA'] as any,
       });
       const and = whereAnd();
-      expect(and[0]).toEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
+      expect(and[0]).toEqual({ deletedAt: null, OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }] });
       expect(and).toHaveLength(3);
     });
 

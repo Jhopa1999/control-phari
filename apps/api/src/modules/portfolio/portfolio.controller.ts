@@ -12,8 +12,9 @@ import { RoleCode } from '../auth/role-code';
 
 /**
  * API REST del portafolio (design §5.3, SCR-07), read-only. Los 3 roles tienen
- * la pantalla; el alcance se aplica en el `where` del service (jefe `{}`; resto
- * `mainProcessId ∈ scopedProcessIds`). Los filtros intersectan el alcance.
+ * la pantalla; el alcance se aplica en el `where` del service y es el MISMO de
+ * Solicitudes (`RequestScopeService`): jefe y líder ven todas; el integrante, sus
+ * procesos más las que creó. Los filtros intersectan el alcance.
  */
 @ApiTags('portfolio')
 @Controller('portfolio')
@@ -23,7 +24,7 @@ export class PortfolioController {
   constructor(private readonly portfolioService: PortfolioService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Listado del portafolio en alcance (filtros opcionales de selección múltiple: OR dentro de un filtro, AND entre filtros).' })
+  @ApiOperation({ summary: 'Listado del portafolio en alcance, el mismo que Solicitudes: jefe y líder ven todas; el integrante, sus procesos más las que creó (filtros opcionales de selección múltiple: OR dentro de un filtro, AND entre filtros).' })
   @ApiResponse({ status: 200, description: 'Iniciativas del portafolio.', type: [PortfolioItemResponseDto] })
   @ApiResponse({ status: 400, description: 'Filtros invalidos.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })

@@ -223,9 +223,27 @@ menú, pero el servidor sigue validando cada operación.
 
 ## Visibilidad de solicitudes
 
-El alcance de **lectura** de las solicitudes (y del flujo que cuelga de ellas:
-triage, priorización, aprobación y plan) lo deciden los `scopeWhere`/`requestScopeWhere`
-de `request`/`plan`:
+El alcance de **lectura** de las solicitudes tiene **una sola definición**:
+`requestScopeWhere` / `RequestScopeService` (`apps/api/src/modules/request/request-scope.service.ts`,
+exportado por `RequestModule`). La usan Solicitudes, Triage, Priorización, Aprobaciones
+(cola `pending-approval`), Planificación, **Portafolio** (`GET /portfolio`) y el **Panel del
+área** (`/area-control/*`, incluidos sus conteos de tareas), de modo que las cifras de todas
+las pantallas coinciden para el mismo usuario. Los filtros de cada pantalla (proceso,
+estado, banda) solo **intersectan** este alcance: nunca lo amplían.
+- `ADMIN` conserva su comportamiento: no amplía este alcance (sin grants solo ve lo que
+  creó).
+- Excepciones deliberadas (flujos de escritura de jefatura): cierre de proyectos
+  (`closure`) y controles de gobierno (`governance`) siguen limitados al jefe de área o a
+  los procesos con grant.
+
+> **Cambio de visibilidad.** Antes el Portafolio y el Panel restringían al líder y al
+> integrante a `mainProcessId ∈ scopedProcessIds`. Ahora **amplían** lo que ven: el
+> **líder** ve en Portafolio y Panel todas las solicitudes (también las de otros procesos y
+> las sin proceso, como ya ocurría en Solicitudes) y el **integrante** ve también las que
+> creó aunque no tengan proceso. Los conteos del Panel (p. ej. «Solicitudes en alcance»,
+> «pendientes de triage») pasan a coincidir con los de Solicitudes y Triage.
+
+Regla:
 
 - `JEFE_AREA` **o** `LIDER_PROCESO`: ven **todas** las solicitudes (sin filtro por
   `mainProcessId`), incluidas las que **aún no tienen proceso principal** (recién

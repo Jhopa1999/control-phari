@@ -2173,7 +2173,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Listado del portafolio en alcance (filtros opcionales de selección múltiple: OR dentro de un filtro, AND entre filtros). */
+        /** Listado del portafolio en alcance, el mismo que Solicitudes: jefe y líder ven todas; el integrante, sus procesos más las que creó (filtros opcionales de selección múltiple: OR dentro de un filtro, AND entre filtros). */
         get: operations["PortfolioController_list"];
         put?: never;
         post?: never;

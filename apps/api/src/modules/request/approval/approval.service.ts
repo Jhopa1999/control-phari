@@ -8,6 +8,7 @@ import { Prisma } from '../../../generated/prisma/client';
 import type { ApprovalModel } from '../../../generated/prisma/models/Approval';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
+import { requestScopeWhere } from '../request-scope.service';
 import {
   RequestResponseDto,
 } from '../dto/request-response.dto';
@@ -56,11 +57,10 @@ export class ApprovalService {
     private readonly state: RequestStateService,
   ) {}
 
+  /** Alcance de lectura compartido (ver 
+equest-scope.service.ts). */
   private scopeWhere(actor: CurrentActor): Prisma.RequestWhereInput {
-    if (actor.isJefeArea) {
-      return { deletedAt: null };
-    }
-    return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+    return requestScopeWhere(actor);
   }
 
   private snapshot(approval: ApprovalModel): Prisma.InputJsonValue {
