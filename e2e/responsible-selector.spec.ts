@@ -3,18 +3,19 @@ import { type APIRequestContext, expect, test } from '@playwright/test';
 /**
  * Regresión: el selector de "Responsable" de los formularios de dominio
  * (tareas del plan, activos, documentos) debe poblarse desde el endpoint de
- * personas EN ALCANCE `GET /coordination/people` —disponible para los tres
- * roles— y NUNCA desde `GET /users`, que es administración de equipo y solo el
+ * personas EN ALCANCE del endpoint propio de cada flujo (en el Plan,
+ * `GET /plans/{planId}/responsible-candidates`, disponible para líder e
+ * integrante) y NUNCA desde `GET /users`, que es administración de equipo y solo el
  * JEFE puede consultar (devuelve 403 a líder/integrante).
  *
  * El bug original: el selector usaba /users; abierto por un LÍDER (justo el rol
  * que gestiona el plan y asigna responsables) recibía 403 y quedaba vacío, de
  * modo que no se podía asignar a nadie. Este test lo ejercita como líder.
  *
- * Se usa el diálogo «Nueva tarea» del Plan (/seguimiento/plan): monta ese
- * selector y es el flujo real donde el líder asigna responsables. El
- * prerrequisito (solicitud comprometida con plan y una fase) lo crea la API
- * real con el actor jefe. Activos no sirve: por gobernanza solo el jefe de
+ * Se usa el selector de responsable en línea de la tabla de tareas del Plan
+ * (/seguimiento/plan): es el flujo real donde el líder asigna responsables. El
+ * prerrequisito (solicitud comprometida con plan, una fase y una tarea) lo
+ * crea la API real con el actor jefe. Activos no sirve: por gobernanza solo el jefe de
  * área crea activos. El módulo Novedades, que se usaba antes, se retiró.
  */
 
@@ -40,6 +41,7 @@ async function send(
 
 const ts = Date.now();
 let requestId = '';
+const taskTitle = `Tarea selector responsable ${ts}`;
 
 test.beforeAll(async ({ request }) => {
   const processes = (await send(request, 'get', '/processes')) as unknown as Array<{ id: string }>;
@@ -54,7 +56,8 @@ test.beforeAll(async ({ request }) => {
   });
   await send(request, 'post', `/requests/${requestId}/approval`, { decision: 'APROBAR' });
   const plan = await send(request, 'post', `/requests/${requestId}/plan`, {});
-  await send(request, 'post', `/plans/${plan.id as string}/phases`, { name: 'Fase selector' });
+  const phase = await send(request, 'post', `/plans/${plan.id as string}/phases`, { name: 'Fase selector' });
+  await send(request, 'post', `/phases/${phase.id as string}/tasks`, { title: taskTitle });
 });
 
 // Fija el actor de desarrollo (líder) en localStorage antes de cargar la app,
@@ -71,16 +74,16 @@ test.beforeEach(async ({ context }) => {
   );
 });
 
-test('el selector de responsable se puebla vía /coordination/people para un líder (no /users)', async ({
+test('el selector de responsable se puebla vía responsible-candidates del plan para un líder (no /users)', async ({
   page,
 }) => {
-  // Capturamos las peticiones de personas que dispara el formulario.
+  // Capturamos las peticiones de personas que dispara el selector.
   const peopleRequests: string[] = [];
   let usersForbidden = false;
   page.on('response', (r) => {
     const url = r.url();
-    if (url.includes('/coordination/people')) {
-      peopleRequests.push(`coordination:${r.status()}`);
+    if (/\/plans\/[^/]+\/responsible-candidates/.test(url)) {
+      peopleRequests.push(`candidates:${r.status()}`);
     }
     if (/\/users(\?|$)/.test(url) && r.request().method() === 'GET') {
       peopleRequests.push(`users:${r.status()}`);
@@ -89,17 +92,14 @@ test('el selector de responsable se puebla vía /coordination/people para un lí
   });
 
   await page.goto(`/seguimiento/plan?requestId=${encodeURIComponent(requestId)}`);
-  // Abre el diálogo de nueva tarea (monta el selector de responsable).
-  await page
-    .getByRole('button', { name: /Nueva tarea/i })
-    .first()
-    .click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
+  // Abre el selector de responsable en línea de la tarea.
+  const row = page.getByRole('row', { name: new RegExp(taskTitle) });
+  await expect(row).toBeVisible();
+  await row.getByRole('combobox', { name: new RegExp(`Responsable de .*${taskTitle}`) }).click();
 
-  // La respuesta de /coordination/people llegó con 200 (personas en alcance).
+  // La respuesta de responsible-candidates llegó con 200 (personas en alcance).
   await expect
-    .poll(() => peopleRequests.some((e) => e === 'coordination:200'))
+    .poll(() => peopleRequests.some((e) => e === 'candidates:200'))
     .toBe(true);
   // Y NO se consultó /users (o si se hiciera, sería el 403 que rompía el flujo):
   // el fix garantiza que el selector no depende de /users.
@@ -108,7 +108,6 @@ test('el selector de responsable se puebla vía /coordination/people para un lí
 
   // El selector de Responsable ofrece opciones reales (no queda vacío):
   // al menos el propio líder debe aparecer entre las personas en alcance.
-  await dialog.getByLabel('Responsable').click();
   const options = page.getByRole('option');
   await expect(options.filter({ hasText: 'Lider Generico' })).toBeVisible();
 });
