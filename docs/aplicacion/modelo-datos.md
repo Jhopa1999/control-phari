@@ -316,8 +316,8 @@ Cabecera de registro diario por proceso + fecha + autor.
 ### DailyLogActivity (`daily_log_activities`)
 Actividad de un registro diario (con clasificación de maestra `ACTIVITY_CLASS`).
 - Campos clave: `dailyLogId`, `classificationCode`, referencias opcionales
-  (`projectRequestId?`, `taskId?`, `assetRef?`, `requesterRef?`, `relatedIssueId?`,
-  `assetId?`), `hours`, `evidenceUrl?`, `nextStep?`, `nextStepDate?` (estos dos últimos ya no se capturan ni se muestran en la UI; se conservan en BD).
+  (`projectRequestId?`, `taskId?`, `assetRef?`, `requesterRef?`,
+  `assetId?`). La columna `related_issue_id` (`relatedIssueId`) se **conserva en la BD pero ya no se expone ni se escribe**: la API la rechaza y la pantalla ya no la ofrece, `hours`, `evidenceUrl?`, `nextStep?`, `nextStepDate?` (estos dos últimos ya no se capturan ni se muestran en la UI; se conservan en BD).
 - Índices: por `dailyLogId`, `classificationCode`, `taskId`, `projectRequestId`,
   `relatedIssueId`, `assetId`.
 

@@ -22,6 +22,16 @@ import {
 } from '../apps/web/src/lib/review-requirements';
 import { waitingInfo } from '../apps/web/src/lib/pending-review-wait';
 import {
+  filterItems,
+  flattenGroups,
+  groupFiltered,
+  initialActiveIndex,
+  matchesQuery,
+  normalizeText,
+  shortCodeOf,
+  type SearchableItem,
+} from '../apps/web/src/lib/searchable-filter';
+import {
   RECORD_STATE_LABEL,
   nextStates,
   stateLabel,
@@ -1597,5 +1607,77 @@ test.describe('multi-filter', () => {
     expect(matchesAny(['A', 'B'], 'C')).toBe(false);
     expect(matchesAny(['A'], null)).toBe(false);
     expect(matchesAny(['A'], undefined)).toBe(false);
+  });
+});
+
+test.describe('searchable-filter (selector con buscador)', () => {
+  const items: SearchableItem[] = [
+    { code: 'PRY-0012-T07', label: 'Migrar endpoints a la API v2', searchText: 'PRY-0012 Portal de clientes Fase 2', groupKey: 'a' },
+    { code: 'PRY-0012-T08', label: 'Pruebas de integración', searchText: 'PRY-0012 Portal de clientes Fase 2', groupKey: 'a' },
+    { code: 'PRY-0020-T01', label: 'Ñandú: revisión de permisos', searchText: 'PRY-0020 Gestión', groupKey: 'b' },
+    { code: 'PRY-0120', label: 'Proyecto con código parecido', groupKey: 'b' },
+  ];
+
+  test('normaliza mayúsculas, tildes y espacios', () => {
+    expect(normalizeText('  ÑANDÚ   Revisión ')).toBe('nandu revision');
+  });
+
+  test('la forma corta sale del código completo', () => {
+    expect(shortCodeOf('PRY-0012-T07')).toBe('T07');
+    expect(shortCodeOf('PRY-0012-F2')).toBe('F2');
+    expect(shortCodeOf('PRY-0012')).toBe('PRY-0012');
+  });
+
+  test('encuentra por T0X, código completo, número y título sin tildes', () => {
+    for (const q of ['t07', 'T07', 'pry-0012-t07', 'PRY-0012-T07']) {
+      expect(filterItems(items, q).map((i) => i.code)).toEqual(['PRY-0012-T07']);
+    }
+    expect(filterItems(items, '0012').map((i) => i.code)).toEqual(['PRY-0012-T07', 'PRY-0012-T08']);
+    expect(filterItems(items, 'nandu revision').map((i) => i.code)).toEqual(['PRY-0020-T01']);
+    expect(filterItems(items, 'INTEGRACION').map((i) => i.code)).toEqual(['PRY-0012-T08']);
+  });
+
+  test('varios términos: todos deben aparecer (AND), también en el texto extra', () => {
+    expect(filterItems(items, 'portal pruebas').map((i) => i.code)).toEqual(['PRY-0012-T08']);
+    expect(filterItems(items, 'portal inexistente')).toEqual([]);
+  });
+
+  test('sin consulta devuelve todo en el orden original', () => {
+    expect(filterItems(items, '   ').map((i) => i.code)).toEqual(items.map((i) => i.code));
+    expect(matchesQuery(items[0], '')).toBe(true);
+  });
+
+  test('la coincidencia exacta de código va primero y luego el prefijo', () => {
+    const list: SearchableItem[] = [
+      { code: 'PRY-0120', label: 'A' },
+      { code: 'PRY-0012-T07', label: 'Menciona PRY-0012 en el título' },
+      { code: 'PRY-0012', label: 'B' },
+    ];
+    expect(filterItems(list, 'PRY-0012').map((i) => i.code)).toEqual(['PRY-0012', 'PRY-0012-T07']);
+    const exactLast: SearchableItem[] = [
+      { code: 'PRY-0012-T07', label: 'x' },
+      { code: 'PRY-0012-T17', label: 'x' },
+    ];
+    expect(filterItems(exactLast, 'pry-0012-t17').map((i) => i.code)).toEqual(['PRY-0012-T17']);
+  });
+
+  test('los grupos sin resultados desaparecen y la lista plana respeta el orden de los grupos', () => {
+    const groups = groupFiltered(items, 'nandu');
+    expect(groups.map((g) => g.key)).toEqual(['b']);
+    const all = groupFiltered(items, '');
+    expect(all.map((g) => g.key)).toEqual(['a', 'b']);
+    expect(flattenGroups(all).map((i) => i.code)).toEqual(items.map((i) => i.code));
+  });
+
+  test('la opción activa inicial es la de código exacto aunque esté en un grupo posterior', () => {
+    const flat = flattenGroups(groupFiltered(items, 'pry-0020-t01'));
+    expect(initialActiveIndex(flat, 'pry-0020-t01')).toBe(0);
+    const mixed: SearchableItem[] = [
+      { code: 'PRY-0012-T07', label: 'Primero T07', groupKey: 'a' },
+      { code: 'PRY-0099-T07', label: 'Segundo T07', groupKey: 'b' },
+    ];
+    expect(initialActiveIndex(mixed, 'PRY-0099-T07')).toBe(1);
+    expect(initialActiveIndex([], 'x')).toBe(-1);
+    expect(initialActiveIndex(mixed, 'cualquier cosa')).toBe(0);
   });
 });

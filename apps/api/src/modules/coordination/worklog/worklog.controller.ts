@@ -19,6 +19,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { WorklogService } from './worklog.service';
+import { WorklogEligibilityService } from './worklog-eligibility.service';
+import {
+  WorklogOptionsQueryDto,
+  WorklogOptionsResponseDto,
+} from './dto/worklog-options.dto';
 import { CoordinationScopeService } from '../coordination-scope.service';
 import { CreateDailyLogDto } from './dto/create-daily-log.dto';
 import { UpdateDailyLogDto } from './dto/update-daily-log.dto';
@@ -59,6 +64,7 @@ import { RoleCode } from '../../auth/role-code';
 export class WorklogController {
   constructor(
     private readonly worklogService: WorklogService,
+    private readonly eligibility: WorklogEligibilityService,
     private readonly scopeService: CoordinationScopeService,
   ) {}
 
@@ -70,6 +76,23 @@ export class WorklogController {
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   people(@CurrentActor() actor: CurrentActorType) {
     return this.scopeService.listPeople(actor);
+  }
+
+  // --- Opciones de imputación ----------------------------------------------
+
+  @Get('worklog/options')
+  @ApiOperation({
+    summary:
+      'Proyectos y tareas que quien consulta puede imputar en el diario de un proceso y una fecha (misma regla que aplica al guardar una actividad).',
+  })
+  @ApiResponse({ status: 200, description: 'Opciones imputables (hasta 200 por lista).', type: WorklogOptionsResponseDto })
+  @ApiResponse({ status: 400, description: 'Parámetros inválidos.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  listOptions(
+    @CurrentActor() actor: CurrentActorType,
+    @Query() query: WorklogOptionsQueryDto,
+  ) {
+    return this.eligibility.listOptions(actor, query);
   }
 
   // --- Diarios -------------------------------------------------------------
@@ -218,11 +241,14 @@ export class WorklogController {
   }
 
   @Post('worklog/daily/:id/activities')
-  @ApiOperation({ summary: 'Agrega una actividad al diario (valida clasificacion).' })
+  @ApiOperation({
+    summary:
+      'Agrega una actividad al diario. Valida la clasificacion y, en PLANIFICADA, que el proyecto/tarea sean imputables (estado, proceso del diario, responsable y coherencia).',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: CreateActivityDto })
   @ApiResponse({ status: 201, description: 'Actividad creada.', type: ActivityResponseDto })
-  @ApiResponse({ status: 400, description: 'Clasificacion o datos invalidos.' })
+  @ApiResponse({ status: 400, description: 'Clasificacion o datos invalidos, o proyecto/tarea no imputable (cerrado, proceso distinto, tarea ajena, incoherencia).' })
   @ApiResponse({ status: 404, description: 'Diario o referencia fuera de alcance.' })
   addActivity(
     @CurrentActor() actor: CurrentActorType,
@@ -233,11 +259,14 @@ export class WorklogController {
   }
 
   @Patch('worklog/activities/:id')
-  @ApiOperation({ summary: 'Edita una actividad del diario.' })
+  @ApiOperation({
+    summary:
+      'Edita una actividad del diario. Solo la referencia (proyecto/tarea) que cambia se revalida; lo que se conserva sigue valiendo aunque el proyecto ya no sea imputable.',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: UpdateActivityDto })
   @ApiResponse({ status: 200, description: 'Actividad actualizada.', type: ActivityResponseDto })
-  @ApiResponse({ status: 400, description: 'Clasificacion o datos invalidos.' })
+  @ApiResponse({ status: 400, description: 'Clasificacion o datos invalidos, o proyecto/tarea nuevo no imputable.' })
   @ApiResponse({ status: 404, description: 'Actividad o referencia fuera de alcance.' })
   updateActivity(
     @CurrentActor() actor: CurrentActorType,

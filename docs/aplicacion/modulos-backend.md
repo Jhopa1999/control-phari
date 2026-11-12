@@ -319,6 +319,7 @@ Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reun
 | GET | `/coordination/people` | Personas en alcance para los selectores. |
 | GET | `/worklog/daily` | Lista **paginada** (`{ data, page, pageSize, total, hasMore }`, 25 por defecto, máx. 100) de diarios en alcance. Filtros: `from`, `to`, `date`, `processId`, `authorUserId`, `status`, `classificationCode` (contiene al menos una actividad), `q` (notas, descripción, resultado, activo, solicitante y nombre del autor), `sort` y `page`/`pageSize`. Cada diario trae `authorName`, `processName`, `returned` y `actions` (qué puede hacer quien consulta). |
 | GET | `/worklog/daily/summary` | Resumen con los mismos filtros: diarios, horas, totales por estado, por clasificación y por persona. |
+| GET | `/worklog/options` | Proyectos y tareas que quien consulta puede **imputar** en el diario de un proceso y una fecha (misma regla que aplica al guardar). Query: `processId` (obligatorio), `date` (AAAA-MM-DD; referencia de la ventana de gracia, por defecto hoy), `q`, `includeTerminated`, `scope` (`mine` por defecto o `all`). Devuelve `projects` (`id, code, title, state, closedAt, hasMyTasks`), `tasks` (`id, code, title, status, phaseName, requestId, requestCode, requestTitle, isMine, responsibleName`) y `projectsTruncated`/`tasksTruncated` (tope de 200 por lista). |
 | POST | `/worklog/daily` | Crea la cabecera de un diario (autor = actor). |
 | GET | `/worklog/daily/:id` | Detalle de un diario con sus actividades. |
 | PATCH | `/worklog/daily/:id` | Edita la cabecera (notas) de un diario propio. |
@@ -327,8 +328,8 @@ Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reun
 | POST | `/worklog/daily/:id/recall` | El autor retira el envío (`ENVIADO → BORRADOR`); 409 si ya fue revisado o su semanal ya se envió. |
 | POST | `/worklog/daily/:id/review` | Jefe de área o líder del proceso (nunca el autor): `ENVIADO → REVISADO`; 403 si no puede revisar. |
 | POST | `/worklog/daily/:id/return` | Igual que revisar, devuelve `ENVIADO → BORRADOR` con `{ reason }` (10 a 1000 caracteres) y avisa al autor (notificación `WORKLOG_RETURNED`). 409 si su semanal ya se envió. |
-| POST | `/worklog/daily/:id/activities` | Agrega una actividad al diario (valida clasificación). |
-| PATCH | `/worklog/activities/:id` | Edita una actividad del diario. |
+| POST | `/worklog/daily/:id/activities` | Agrega una actividad al diario. Valida la clasificación y, en *Planificada*, la **regla de imputación** de abajo (404 fuera de alcance; 400 con el código visible si no es imputable). Si llega solo la tarea, el proyecto se deriva de ella. Ya no acepta `relatedIssueId` (400 por campo desconocido). |
+| PATCH | `/worklog/activities/:id` | Edita una actividad del diario. Solo se revalida la referencia (proyecto/tarea) que **cambia**: si no cambia se conserva aunque el proyecto ya no sea imputable. `taskId: null` quita la tarea (omitirlo la conserva); al cambiar de proyecto, una tarea conservada debe pertenecer al nuevo (`400` si no), por eso el formulario envía `taskId: null` al vaciarla. |
 | DELETE | `/worklog/activities/:id` | Borra una actividad del diario. |
 | GET | `/weekly-reports` | Lista semanales en alcance (filtros: `weekStart`, `processId`, `authorUserId`, `status`); incluye `authorName` y datos de revisión. |
 | POST | `/weekly-reports` | Crea un semanal (se ancla al lunes ISO). |
@@ -337,6 +338,16 @@ Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reun
 | POST | `/weekly-reports/:id/submit` | Envía un semanal a revisión (`BORRADOR → ENVIADO`). |
 | POST | `/weekly-reports/:id/review` | Jefe o líder del proceso (nunca el autor): `ENVIADO → REVISADO`. |
 | POST | `/weekly-reports/:id/return` | Devuelve `ENVIADO → BORRADOR` con `{ reason }` y avisa al autor. |
+
+**Regla de imputación de actividades planificadas** (`worklog/worklog-eligibility.service.ts`; la usan `GET /worklog/options` y la validación al guardar, así que la interfaz, el MCP y el asistente no pueden divergir):
+
+- **Proyecto imputable**: solicitud en el alcance de lectura unificado (`RequestScopeService`), con plan, en estado `EN_PLANIFICACION`, `EN_EJECUCION`, `EN_VALIDACION`, `LISTA_PARA_LIBERAR` o `EN_ESTABILIZACION`, o `CERRADA` dentro de la **ventana de gracia** (7 días por defecto, contados desde `closedAt` hasta la fecha del diario; si el proyecto se reabre vuelve a ser imputable). Quedan fuera `REGISTRADA`, `EN_TRIAGE`, `DEVUELTA`, `RECHAZADA`, `BACKLOG_PRIORIZADO`, `COMPROMETIDA`, `OPERATIVA`, `RETIRADA` y `CERRADA` vencida (`BLOQUEADA` es una marca, no un estado, y no cambia nada).
+- **Proceso del diario**: el proceso del diario debe ser el principal o un participante del proyecto.
+- **Tarea imputable**: de un proyecto imputable. El integrante solo imputa tareas **donde es responsable**; el líder del proceso del diario y el jefe de área también las ajenas de su alcance. Una tarea terminada se acepta (la interfaz la oculta por defecto).
+- **Coherencia**: si llegan proyecto y tarea, la tarea debe ser de ese proyecto (400).
+- **Historia**: en `PATCH` solo se aplican las reglas a la referencia que cambia; los diarios enviados o devueltos no se vuelven inválidos. La lectura de diarios y el reporte semanal no cambian.
+- **Errores**: fuera de alcance → 404; no imputable → 400 con mensaje que nombra el código (p. ej. «El proyecto PRY-0016 está cerrado y ya no admite nuevas actividades.»).
+- **Ventana de gracia gestionable**: maestra `WORKLOG_PARAM`, código `CLOSED_PROJECT_GRACE_DAYS`; el valor es un entero ≥ 0 en la **etiqueta** (se edita en *Maestras*). Si la maestra no existe, está inactiva o el valor no es válido, se usan 7 días. El seed solo la crea si falta.
 
 Reglas: la **escritura** de diarios y semanales es solo del autor (el jefe y el líder leen y revisan, no editan lo ajeno). Un diario o semanal que ya no está en borrador responde 409 a cualquier edición. `REVISADO` es terminal. Las horas de una actividad van de 0 a 24. El alta duplicada (persona, proceso, fecha) responde 409 con `existingId`.
 

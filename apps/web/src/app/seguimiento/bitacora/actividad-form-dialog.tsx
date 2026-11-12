@@ -1,9 +1,19 @@
 'use client';
 
 import * as React from 'react';
+import { Info } from 'lucide-react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Field, FormError, RequiredHint, type FieldControlProps } from '@/components/field';
+import { InlineNotice } from '@/components/inline-notice';
+import {
+  SearchableSelect,
+  isComboboxExpanded,
+  type SearchableOption,
+} from '@/components/searchable-select';
+import { StatusBadge } from '@/components/status-badge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogBody,
@@ -14,6 +24,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { SegmentedRadio } from '@/components/ui/segmented-radio';
 import {
   Select,
   SelectContent,
@@ -25,10 +36,12 @@ import { Textarea } from '@/components/ui/textarea';
 import type {
   ActivityClass,
   DailyLogActivity,
-  Issue,
-  MyWorkItem,
-  Request,
+  WorklogOptions,
+  WorklogProjectOption,
+  WorklogTaskOption,
 } from '@/lib/api-client';
+import { formatDate } from '@/lib/format';
+import { getWorklogOptions, WorklogError } from '@/lib/worklog';
 
 export interface ActividadFormValues {
   classificationCode: ActivityClass;
@@ -41,7 +54,6 @@ export interface ActividadFormValues {
   description: string;
   result: string;
   evidenceUrl: string;
-  relatedIssueId: string;
 }
 
 interface ActividadFormDialogProps {
@@ -49,12 +61,12 @@ interface ActividadFormDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Actividad en edición; si se pasa, el diálogo edita (PATCH). */
   editing?: DailyLogActivity | null;
-  /** Solicitudes en alcance (para el «proyecto» planificado). */
-  requests: Request[];
-  /** Tareas asignadas al actor (para la tarea planificada). */
-  tasks: MyWorkItem[];
-  /** Novedades del proceso del diario (relación opcional). */
-  issues: Issue[];
+  /** Proceso del diario: el proyecto debe pertenecer a él. */
+  processId: string;
+  /** Fecha del diario (AAAA-MM-DD): referencia de la ventana de gracia. */
+  date: string;
+  /** Jefe de área: puede alternar «Mis proyectos / Todos del área». */
+  isJefe: boolean;
   submitting: boolean;
   /** Error del backend; se conserva ante fallo (AC-031). */
   errorMessage: string | null;
@@ -84,11 +96,28 @@ export const CLASSIFICATIONS: { value: ActivityClass; label: string; hint: strin
   },
 ];
 
-const SIN_VALOR = '__none__';
-
 /** Id del formulario: el FormError lleva `act-form-error`. */
 const FORM_ID = 'act-form';
 const FORM_ERROR_ID = `${FORM_ID}-error`;
+
+const TASK_DEFAULT_HELP = 'Indica un proyecto o una tarea (al menos uno).';
+const HELP_CLOSED =
+  'Este proyecto está cerrado y ya no admite nuevas actividades. Puedes dejarlo como está; si lo cambias, no podrás volver a elegirlo.';
+const HELP_PROJECT_UNAVAILABLE =
+  'Este proyecto ya no está disponible para imputar. Puedes dejarlo como está; si lo cambias, no podrás volver a elegirlo.';
+const HELP_TASK_UNAVAILABLE =
+  'Esta tarea ya no está disponible para imputar. Puedes dejarla como está; si la cambias, no podrás volver a elegirla.';
+
+const CURRENT_GROUP = { groupKey: 'current', groupLabel: 'Valor actual' } as const;
+
+/** Proyecto elegido (objeto completo, no depende de que siga en las opciones). */
+type ProjectOpt = SearchableOption & { state: string | null };
+/** Tarea elegida; guarda su proyecto para rellenarlo y filtrar. */
+type TaskOpt = SearchableOption & {
+  requestId: string | null;
+  requestCode: string | null;
+  requestTitle: string | null;
+};
 
 type FieldKey = 'hours' | 'assetRef';
 
@@ -112,7 +141,6 @@ function emptyValues(): ActividadFormValues {
     description: '',
     result: '',
     evidenceUrl: '',
-    relatedIssueId: '',
   };
 }
 
@@ -157,13 +185,78 @@ function withCombined(control: FieldControlProps, invalid: boolean | undefined):
   return { ...control, 'aria-invalid': true, 'aria-describedby': describedBy };
 }
 
+function projectOptionFrom(project: WorklogProjectOption): ProjectOpt {
+  const closed = project.state === 'CERRADA';
+  return {
+    value: project.id,
+    code: project.code,
+    label: project.title,
+    state: project.state,
+    summary: project.title,
+    meta: (
+      <>
+        <StatusBadge kind="request" value={project.state} />
+        {closed ? <Badge variant="neutral">Cerrado</Badge> : null}
+      </>
+    ),
+    secondary:
+      closed && project.closedAt ? `Cerrado el ${formatDate(project.closedAt)}` : undefined,
+  };
+}
+
+function taskOptionFrom(task: WorklogTaskOption): TaskOpt {
+  return {
+    value: task.id,
+    code: task.code,
+    label: task.title,
+    requestId: task.requestId,
+    requestCode: task.requestCode,
+    requestTitle: task.requestTitle,
+    searchText: `${task.requestCode} ${task.requestTitle} ${task.phaseName}`,
+    summary: `${task.phaseName} · ${task.requestCode} ${task.requestTitle}`,
+    meta: <StatusBadge kind="task" value={task.status} />,
+  };
+}
+
+/** Objeto de proyecto a partir de lo guardado en la actividad (edición). */
+function persistedProject(act: DailyLogActivity): ProjectOpt | null {
+  if (!act.projectRequestId) return null;
+  const title = act.projectRequestTitle ?? 'Proyecto';
+  return {
+    value: act.projectRequestId,
+    code: act.projectRequestCode,
+    label: title,
+    state: act.projectRequestState,
+    summary: title,
+  };
+}
+
+function persistedTask(act: DailyLogActivity): TaskOpt | null {
+  if (!act.taskId) return null;
+  const title = act.taskTitle ?? 'Tarea';
+  return {
+    value: act.taskId,
+    code: act.taskCode,
+    label: title,
+    requestId: act.projectRequestId,
+    requestCode: act.projectRequestCode,
+    requestTitle: act.projectRequestTitle,
+    summary: title,
+  };
+}
+
+interface OptionsResult {
+  key: string;
+  data: WorklogOptions;
+}
+
 export function ActividadFormDialog({
   open,
   onOpenChange,
   editing,
-  requests,
-  tasks,
-  issues,
+  processId,
+  date,
+  isJefe,
   submitting,
   errorMessage,
   onSubmit,
@@ -171,7 +264,27 @@ export function ActividadFormDialog({
   const isEdit = Boolean(editing);
   const [values, setValues] = React.useState<ActividadFormValues>(emptyValues);
   const [validation, setValidation] = React.useState<Validation>(NO_ERRORS);
-  const projectRef = React.useRef<HTMLButtonElement>(null);
+  const [projectSel, setProjectSel] = React.useState<ProjectOpt | null>(null);
+  const [taskSel, setTaskSel] = React.useState<TaskOpt | null>(null);
+  const [notes, setNotes] = React.useState<{ project: string | null; task: string | null }>({
+    project: null,
+    task: null,
+  });
+  // Opciones de imputación (GET /worklog/options).
+  const [includeTerminated, setIncludeTerminated] = React.useState(false);
+  const [scope, setScope] = React.useState<'mine' | 'all'>('mine');
+  const [serverQ, setServerQ] = React.useState('');
+  const [retry, setRetry] = React.useState(0);
+  const [result, setResult] = React.useState<OptionsResult | null>(null);
+  const [failure, setFailure] = React.useState<{ key: string; message: string } | null>(null);
+  // Ids de la primera respuesta tras abrir: deciden, una sola vez, si el valor
+  // guardado ya no es elegible (grupo «Valor actual»).
+  const [firstIds, setFirstIds] = React.useState<{
+    projects: ReadonlySet<string>;
+    tasks: ReadonlySet<string>;
+  } | null>(null);
+
+  const projectInputRef = React.useRef<HTMLInputElement>(null);
   const assetRef = React.useRef<HTMLInputElement>(null);
   const requesterRef = React.useRef<HTMLInputElement>(null);
   const justificationRef = React.useRef<HTMLTextAreaElement>(null);
@@ -182,6 +295,13 @@ export function ActividadFormDialog({
   useResetOnChange([open, editing], () => {
     if (!open) return;
     setValidation(NO_ERRORS);
+    setNotes({ project: null, task: null });
+    setIncludeTerminated(false);
+    setScope('mine');
+    setServerQ('');
+    setResult(null);
+    setFailure(null);
+    setFirstIds(null);
     if (editing) {
       setValues({
         classificationCode: (editing.classificationCode as ActivityClass) ?? 'PLANIFICADA',
@@ -194,12 +314,140 @@ export function ActividadFormDialog({
         description: editing.description ?? '',
         result: editing.result ?? '',
         evidenceUrl: editing.evidenceUrl ?? '',
-        relatedIssueId: editing.relatedIssueId ?? '',
       });
+      setProjectSel(persistedProject(editing));
+      setTaskSel(persistedTask(editing));
     } else {
       setValues(emptyValues());
+      setProjectSel(null);
+      setTaskSel(null);
     }
   });
+
+  const cls = values.classificationCode;
+  const wantsOptions = open && cls === 'PLANIFICADA';
+  const effectiveScope = isJefe ? scope : 'mine';
+  const requestKey = [processId, date, includeTerminated, effectiveScope, serverQ, retry].join('|');
+
+  // Las opciones se piden al abrir (solo Planificada) y al cambiar un filtro de
+  // lista; la petición anterior se cancela.
+  React.useEffect(() => {
+    if (!wantsOptions) return;
+    const controller = new AbortController();
+    getWorklogOptions(
+      {
+        processId,
+        date,
+        ...(includeTerminated ? { includeTerminated: true } : {}),
+        ...(isJefe ? { scope: effectiveScope } : {}),
+        ...(serverQ ? { q: serverQ } : {}),
+      },
+      controller.signal,
+    )
+      .then((data) => {
+        setResult({ key: requestKey, data });
+        setFirstIds(
+          (prev) =>
+            prev ?? {
+              projects: new Set(data.projects.map((p) => p.id)),
+              tasks: new Set(data.tasks.map((t) => t.id)),
+            },
+        );
+      })
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        setFailure({
+          key: requestKey,
+          message:
+            err instanceof WorklogError
+              ? err.message
+              : 'Ocurrió un error inesperado. Inténtalo de nuevo.',
+        });
+      });
+    return () => controller.abort();
+  }, [wantsOptions, processId, date, includeTerminated, isJefe, effectiveScope, serverQ, requestKey]);
+
+  const data = result?.data ?? null;
+  const loadingOptions = wantsOptions && data === null && failure?.key !== requestKey;
+  const loadFailure = failure?.key === requestKey ? failure.message : null;
+
+  // Valor guardado que ya no es elegible: se conserva como «Valor actual».
+  const persistedProjectId = editing?.projectRequestId ?? null;
+  const persistedTaskId = editing?.taskId ?? null;
+  const projectIsCurrent =
+    firstIds !== null &&
+    persistedProjectId !== null &&
+    !firstIds.projects.has(persistedProjectId) &&
+    projectSel?.value === persistedProjectId;
+  const taskIsCurrent =
+    firstIds !== null &&
+    persistedTaskId !== null &&
+    !firstIds.tasks.has(persistedTaskId) &&
+    taskSel?.value === persistedTaskId;
+  const projectClosed = projectIsCurrent && projectSel?.state === 'CERRADA';
+
+  const projectOptions = React.useMemo<SearchableOption[]>(() => {
+    const list = [...(data?.projects ?? [])].sort(
+      (a, b) =>
+        Number(a.state === 'CERRADA') - Number(b.state === 'CERRADA') ||
+        a.code.localeCompare(b.code),
+    );
+    const hasOthers = list.some((p) => !p.hasMyTasks);
+    const hasMine = list.some((p) => p.hasMyTasks);
+    const grouped = hasOthers && hasMine;
+    const mapped: SearchableOption[] = list.map((p) => ({
+      ...projectOptionFrom(p),
+      ...(grouped
+        ? p.hasMyTasks
+          ? { groupKey: 'mine', groupLabel: 'Mis proyectos' }
+          : { groupKey: 'others', groupLabel: 'Otros proyectos de tu área' }
+        : {}),
+    }));
+    if (projectIsCurrent && projectSel) {
+      mapped.unshift({
+        ...projectSel,
+        ...CURRENT_GROUP,
+        meta: <Badge variant={projectSel.state === 'CERRADA' ? 'neutral' : 'warning'}>{projectSel.state === 'CERRADA' ? 'Cerrado' : 'No disponible'}</Badge>,
+      });
+    }
+    return mapped;
+  }, [data, projectIsCurrent, projectSel]);
+
+  const taskOptions = React.useMemo<SearchableOption[]>(() => {
+    const all = data?.tasks ?? [];
+    const scoped = projectSel ? all.filter((t) => t.requestId === projectSel.value) : all;
+    const mapped: SearchableOption[] = scoped.map((t) => {
+      const base = taskOptionFrom(t);
+      if (t.isMine) {
+        return {
+          ...base,
+          idVariant: 'short' as const,
+          groupKey: `mine|${t.requestId}|${t.phaseName}`,
+          groupLabel: `${t.requestCode} · ${t.requestTitle} › ${t.phaseName}`,
+        };
+      }
+      return {
+        ...base,
+        groupKey: 'others',
+        groupLabel: 'Otras tareas de tus procesos',
+        secondary: [t.requestCode, t.requestTitle, t.phaseName, t.responsibleName]
+          .filter(Boolean)
+          .join(' · '),
+      };
+    });
+    // Las propias primero; el grupo de ajenas siempre al final.
+    mapped.sort(
+      (a, b) => Number(a.groupKey === 'others') - Number(b.groupKey === 'others'),
+    );
+    if (taskIsCurrent && taskSel) {
+      mapped.unshift({
+        ...taskSel,
+        ...CURRENT_GROUP,
+        meta: <Badge variant="warning">No disponible</Badge>,
+      });
+    }
+    return mapped;
+  }, [data, projectSel, taskIsCurrent, taskSel]);
 
   function set<K extends keyof ActividadFormValues>(key: K, value: ActividadFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -214,31 +462,102 @@ export function ActividadFormDialog({
     });
   }
 
-  const cls = values.classificationCode;
+  function applyProject(next: ProjectOpt | null) {
+    setProjectSel(next);
+    set('projectRequestId', next?.value ?? '');
+  }
+
+  function applyTask(next: TaskOpt | null) {
+    setTaskSel(next);
+    set('taskId', next?.value ?? '');
+  }
+
+  function handleProjectSelect(option: SearchableOption | null) {
+    const next = option as ProjectOpt | null;
+    applyProject(next);
+    setNotes((prev) => ({ ...prev, project: null }));
+    // Cambiar o limpiar el proyecto quita la tarea si no pertenece al nuevo.
+    if (taskSel && (!next || taskSel.requestId !== next.value)) {
+      applyTask(null);
+      setNotes((prev) => ({ ...prev, task: 'Se quitó la tarea porque pertenece a otro proyecto.' }));
+    }
+  }
+
+  function handleTaskSelect(option: SearchableOption | null) {
+    const next = option as TaskOpt | null;
+    applyTask(next);
+    setNotes((prev) => ({ ...prev, task: null }));
+    // Elegir una tarea rellena su proyecto.
+    if (next && next.requestId && projectSel?.value !== next.requestId) {
+      const project = data?.projects.find((p) => p.id === next.requestId);
+      applyProject(
+        project
+          ? projectOptionFrom(project)
+          : {
+              value: next.requestId,
+              code: next.requestCode,
+              label: next.requestTitle ?? 'Proyecto',
+              state: null,
+              summary: next.requestTitle ?? 'Proyecto',
+            },
+      );
+      setNotes((prev) => ({ ...prev, project: `Proyecto actualizado a ${next.requestCode}.` }));
+    }
+  }
+
   const { fieldErrors, combined } = validation;
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const result = validate(values);
-    setValidation(result);
+    const outcome = validate(values);
+    setValidation(outcome);
     const hasErrors = Boolean(
-      result.formError || result.fieldErrors.hours || result.fieldErrors.assetRef,
+      outcome.formError || outcome.fieldErrors.hours || outcome.fieldErrors.assetRef,
     );
     if (hasErrors) {
       // Foco al primer campo con error, en orden del DOM.
-      if (result.combined.projectRequestId) projectRef.current?.focus();
-      else if (result.fieldErrors.assetRef) assetRef.current?.focus();
-      else if (result.combined.requesterRef) requesterRef.current?.focus();
-      else if (result.combined.justification) justificationRef.current?.focus();
-      else if (result.fieldErrors.hours) hoursRef.current?.focus();
+      if (outcome.combined.projectRequestId) projectInputRef.current?.focus();
+      else if (outcome.fieldErrors.assetRef) assetRef.current?.focus();
+      else if (outcome.combined.requesterRef) requesterRef.current?.focus();
+      else if (outcome.combined.justification) justificationRef.current?.focus();
+      else if (outcome.fieldErrors.hours) hoursRef.current?.focus();
       return;
     }
     onSubmit(values);
   }
 
+  const lockFields = Boolean(loadFailure);
+  const projectEmpty = isJefe && effectiveScope === 'mine' ? (
+    <>
+      <p>No tienes proyectos propios activos.</p>
+      <p className="text-xs">Activa “Todos del área” para ver los demás.</p>
+    </>
+  ) : isJefe ? (
+    <p>No hay proyectos activos en tu área.</p>
+  ) : (
+    <>
+      <p>No tienes proyectos activos con tareas asignadas.</p>
+      <p className="text-xs">Si necesitas imputar a uno, pide a tu líder que te asigne una tarea.</p>
+    </>
+  );
+  const taskEmpty = (
+    <>
+      <p>No hay tareas disponibles.</p>
+      {!includeTerminated ? (
+        <p className="text-xs">Marca “Incluir terminadas” para ver las que ya cerraste.</p>
+      ) : null}
+    </>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="md">
+      <DialogContent
+        size="md"
+        // Escape con el listado abierto solo cierra el listado, no el diálogo.
+        onEscapeKeyDown={(event) => {
+          if (isComboboxExpanded(document.activeElement)) event.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Editar actividad' : 'Agregar actividad'}</DialogTitle>
           <DialogDescription>
@@ -290,50 +609,132 @@ export function ActividadFormDialog({
                   autoritativa es el 400 del backend). */}
               {cls === 'PLANIFICADA' ? (
                 <>
-                  <Field id="act-project" label="Proyecto (solicitud)">
+                  <div
+                    role="group"
+                    aria-label="Opciones de la lista de proyectos y tareas"
+                    className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-md bg-muted/50 px-3 py-2"
+                  >
+                    <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm sm:min-h-8">
+                      <Checkbox
+                        checked={includeTerminated}
+                        onChange={(e) => setIncludeTerminated(e.target.checked)}
+                      />
+                      Incluir terminadas
+                      <span className="sr-only">. Muestra también las tareas ya terminadas.</span>
+                    </label>
+                    {isJefe ? (
+                      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                        <span id="act-scope-label" className="text-sm">
+                          Mostrar
+                        </span>
+                        <SegmentedRadio
+                          id="act-scope"
+                          name="act-scope"
+                          labelledBy="act-scope-label"
+                          value={scope}
+                          onValueChange={(v) => setScope(v === 'all' ? 'all' : 'mine')}
+                          options={[
+                            { value: 'mine', label: 'Mis proyectos' },
+                            { value: 'all', label: 'Todos del área' },
+                          ]}
+                          className="flex w-full sm:inline-flex sm:w-auto"
+                          optionClassName="h-11 sm:h-8 min-w-[7.5rem] flex-1 sm:flex-none"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {loadFailure ? (
+                    <InlineNotice
+                      tone="danger"
+                      role="alert"
+                      action={
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setRetry((n) => n + 1)}
+                        >
+                          Reintentar
+                        </Button>
+                      }
+                    >
+                      No se pudieron cargar los proyectos y tareas. {loadFailure}
+                    </InlineNotice>
+                  ) : null}
+
+                  <Field
+                    id="act-project"
+                    label="Proyecto (solicitud)"
+                    help={
+                      projectIsCurrent
+                        ? projectClosed
+                          ? HELP_CLOSED
+                          : HELP_PROJECT_UNAVAILABLE
+                        : undefined
+                    }
+                  >
                     {(control) => (
-                      <Select
-                        value={values.projectRequestId || SIN_VALOR}
-                        onValueChange={(v) => set('projectRequestId', v === SIN_VALOR ? '' : v)}
-                      >
-                        <SelectTrigger ref={projectRef} {...withCombined(control, combined.projectRequestId)}>
-                          <SelectValue placeholder="Sin proyecto" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={SIN_VALOR}>Sin proyecto</SelectItem>
-                          {requests.map((r) => (
-                            <SelectItem key={r.id} value={r.id}>
-                              {r.code} · {r.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        {...withCombined(control, combined.projectRequestId)}
+                        inputRef={projectInputRef}
+                        options={projectOptions}
+                        selected={projectSel}
+                        onSelect={handleProjectSelect}
+                        placeholder="Buscar proyecto…"
+                        listLabel="Proyectos"
+                        clearLabel="Quitar proyecto seleccionado"
+                        clearSearchLabel="Borrar búsqueda"
+                        loading={loadingOptions}
+                        loadingLabel="Cargando proyectos y tareas"
+                        readOnly={lockFields && Boolean(projectSel)}
+                        disabled={lockFields && !projectSel}
+                        emptyContent={projectEmpty}
+                        truncated={Boolean(data?.projectsTruncated)}
+                        onSearch={setServerQ}
+                        announcement={notes.project}
+                      />
                     )}
                   </Field>
+                  {notes.project ? (
+                    <p className="-mt-2 flex items-center gap-1 text-xs text-foreground">
+                      <Info className="size-3.5 shrink-0" aria-hidden="true" />
+                      {notes.project}
+                    </p>
+                  ) : null}
+
                   <Field
                     id="act-task"
                     label="Tarea"
-                    help="Indica un proyecto o una tarea (al menos uno)."
+                    help={taskIsCurrent ? HELP_TASK_UNAVAILABLE : TASK_DEFAULT_HELP}
                   >
                     {(control) => (
-                      <Select
-                        value={values.taskId || SIN_VALOR}
-                        onValueChange={(v) => set('taskId', v === SIN_VALOR ? '' : v)}
-                      >
-                        <SelectTrigger {...withCombined(control, combined.taskId)}>
-                          <SelectValue placeholder="Sin tarea" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={SIN_VALOR}>Sin tarea</SelectItem>
-                          {tasks.map((t) => (
-                            <SelectItem key={t.taskId} value={t.taskId}>
-                              {t.code} · {t.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        {...withCombined(control, combined.taskId)}
+                        options={taskOptions}
+                        selected={taskSel}
+                        onSelect={handleTaskSelect}
+                        placeholder="Buscar tarea…"
+                        listLabel="Tareas"
+                        clearLabel="Quitar tarea seleccionada"
+                        clearSearchLabel="Borrar búsqueda"
+                        loading={loadingOptions}
+                        loadingLabel="Cargando proyectos y tareas"
+                        readOnly={lockFields && Boolean(taskSel)}
+                        disabled={lockFields && !taskSel}
+                        emptyContent={taskEmpty}
+                        truncated={Boolean(data?.tasksTruncated)}
+                        onSearch={setServerQ}
+                        announcement={notes.task}
+                      />
                     )}
                   </Field>
+                  {notes.task ? (
+                    <p className="-mt-2 flex items-center gap-1 text-xs text-foreground">
+                      <Info className="size-3.5 shrink-0" aria-hidden="true" />
+                      {notes.task}
+                    </p>
+                  ) : null}
                 </>
               ) : null}
 
@@ -410,27 +811,6 @@ export function ActividadFormDialog({
                   placeholder="Resultado o entregable (opcional)"
                   onChange={(e) => set('result', e.target.value)}
                 />
-              </Field>
-
-              <Field id="act-issue" label="Novedad relacionada">
-                {(control) => (
-                  <Select
-                    value={values.relatedIssueId || SIN_VALOR}
-                    onValueChange={(v) => set('relatedIssueId', v === SIN_VALOR ? '' : v)}
-                  >
-                    <SelectTrigger {...control}>
-                      <SelectValue placeholder="Sin novedad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={SIN_VALOR}>Sin novedad</SelectItem>
-                      {issues.map((i) => (
-                        <SelectItem key={i.id} value={i.id}>
-                          {i.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
               </Field>
 
               <Field id="act-evidence" label="Evidencia">

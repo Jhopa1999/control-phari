@@ -11,6 +11,8 @@ import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
 import { NotificationService } from '../../notification/notification.service';
 import { CoordinationScopeService } from '../coordination-scope.service';
+import { RequestScopeService } from '../../request/request-scope.service';
+import { WorklogEligibilityService } from './worklog-eligibility.service';
 import { WorklogService } from './worklog.service';
 
 function createMocks() {
@@ -39,7 +41,7 @@ function createMocks() {
     request: { findFirst: jest.fn() },
     task: { findFirst: jest.fn() },
     plan: { findFirst: jest.fn() },
-    issue: { findFirst: jest.fn() },
+    catalogItem: { findFirst: jest.fn().mockResolvedValue(null) },
     user: { findMany: jest.fn() },
     grant: { findMany: jest.fn() },
   };
@@ -66,7 +68,8 @@ function createMocks() {
   const scope = new CoordinationScopeService(prisma);
   const notifications = { notify: jest.fn() } as unknown as NotificationService;
   const notify = notifications.notify as unknown as jest.Mock;
-  const service = new WorklogService(prisma, audit, scope, notifications);
+  const eligibility = new WorklogEligibilityService(prisma, new RequestScopeService());
+  const service = new WorklogService(prisma, audit, scope, notifications, eligibility);
   return { prisma, prismaObj, audit, auditRecord, scope, service, notify };
 }
 
@@ -155,7 +158,6 @@ function activityRow(overrides: Record<string, unknown> = {}) {
     activityStatus: null,
     hours: 0,
     evidenceUrl: null,
-    relatedIssueId: null,
     nextStep: null,
     nextStepDate: null,
     createdAt: now,
@@ -285,9 +287,13 @@ describe('WorklogService', () => {
     });
   });
 
-  // --- Visibilidad de FK (HIGH-1/HIGH-2/MEDIUM-1) -------------------------
+  // --- Elegibilidad de proyecto y tarea (alcance, estado, proceso, responsable) ---
+  // Las reglas completas (por rol, estado, ventana, proceso) están en
+  // worklog-eligibility.service.spec.ts; aquí se comprueba el cableado del service.
 
-  describe('addActivity · visibilidad de FK', () => {
+  describe('addActivity · referencias', () => {
+    const PROJECT = '11111111-1111-1111-1111-111111111111';
+    const TASK = '33333333-3333-3333-3333-333333333333';
     beforeEach(() => {
       (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(dailyLogRow());
       (m.prismaObj.dailyLogActivity as any).create.mockImplementation(
@@ -295,91 +301,94 @@ describe('WorklogService', () => {
       );
     });
 
-    it('(HIGH-2) projectRequestId visible por scopedProcessIds del integrante -> OK, where usa scopedProcessIds', async () => {
-      (m.prismaObj.request as any).findFirst.mockResolvedValue({ id: 'r1' });
-      await m.service.addActivity(integrante(['p1']), 'dl1', {
-        classificationCode: 'PLANIFICADA',
-        projectRequestId: '11111111-1111-1111-1111-111111111111',
-      });
-      const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0]
-        .where;
-      expect(where.AND).toContainEqual({ deletedAt: null, mainProcessId: { in: ['p1'] } });
-    });
-
-    it('(HIGH-2) projectRequestId de un proceso sin grant -> 404', async () => {
+    it('proyecto fuera de alcance -> 404 y no se guarda', async () => {
       (m.prismaObj.request as any).findFirst.mockResolvedValue(null);
       await expect(
         m.service.addActivity(integrante(['p1']), 'dl1', {
           classificationCode: 'PLANIFICADA',
-          projectRequestId: '22222222-2222-2222-2222-222222222222',
+          projectRequestId: PROJECT,
         }),
       ).rejects.toBeInstanceOf(NotFoundException);
+      expect((m.prismaObj.dailyLogActivity as any).create).not.toHaveBeenCalled();
     });
 
-    it('(HIGH-1) taskId fuera de visibilidad -> 404 por traversal phase.plan.request', async () => {
-      (m.prismaObj.task as any).findFirst.mockResolvedValue({
-        id: 't1',
-        phase: { planId: 'pl1' },
-      });
-      (m.prismaObj.plan as any).findFirst.mockResolvedValue({ requestId: 'r1' });
-      (m.prismaObj.request as any).findFirst.mockResolvedValue(null); // fuera
+    it('proyecto no elegible (REGISTRADA) -> 400 con el código visible', async () => {
+      (m.prismaObj.request as any).findFirst
+        .mockResolvedValueOnce({
+          code: 'PRY-0001',
+          operationalState: 'REGISTRADA',
+          closedAt: null,
+          plan: { id: 'pl1' },
+          participants: [],
+          mainProcessId: 'p1',
+        })
+        .mockResolvedValueOnce(null);
       await expect(
         m.service.addActivity(integrante(['p1']), 'dl1', {
           classificationCode: 'PLANIFICADA',
-          taskId: '33333333-3333-3333-3333-333333333333',
+          projectRequestId: PROJECT,
         }),
-      ).rejects.toBeInstanceOf(NotFoundException);
-      // Verifica el traversal (no un where: { request } sobre task).
-      expect((m.prismaObj.task as any).findFirst).toHaveBeenCalled();
-      expect((m.prismaObj.plan as any).findFirst).toHaveBeenCalled();
+      ).rejects.toThrow(/PRY-0001/);
     });
 
-    it('(HIGH-1) taskId cuya Request es visible -> OK', async () => {
+    it('solo tarea propia: el proyecto se deriva de la tarea (D8)', async () => {
       (m.prismaObj.task as any).findFirst.mockResolvedValue({
-        id: 't1',
-        phase: { planId: 'pl1' },
+        code: 'PRY-0003-T01',
+        responsibleUserId: 'ui',
+        phase: { plan: { requestId: 'r3' } },
       });
-      (m.prismaObj.plan as any).findFirst.mockResolvedValue({ requestId: 'r1' });
-      (m.prismaObj.request as any).findFirst.mockResolvedValue({ id: 'r1' });
-      const res = await m.service.addActivity(integrante(['p1']), 'dl1', {
-        classificationCode: 'PLANIFICADA',
-        taskId: '33333333-3333-3333-3333-333333333333',
+      (m.prismaObj.request as any).findFirst.mockResolvedValue({
+        code: 'PRY-0003',
+        operationalState: 'EN_EJECUCION',
+        plan: { id: 'pl1' },
+        participants: [],
       });
-      expect(res.classificationCode).toBe('PLANIFICADA');
-    });
-
-    it('(MEDIUM-1) relatedIssueId del mismo proceso del diario -> OK (por processId del diario)', async () => {
-      (m.prismaObj.issue as any).findFirst.mockResolvedValue({ id: 'is1' });
       await m.service.addActivity(integrante(['p1']), 'dl1', {
-        classificationCode: 'INTERNA',
-        relatedIssueId: '44444444-4444-4444-4444-444444444444',
+        classificationCode: 'PLANIFICADA',
+        taskId: TASK,
       });
-      const where = (m.prismaObj.issue as any).findFirst.mock.calls[0][0].where;
-      expect(where).toMatchObject({ processId: 'p1' });
+      const data = (m.prismaObj.dailyLogActivity as any).create.mock.calls[0][0]
+        .data;
+      expect(data.projectRequestId).toBe('r3');
+      expect(data.taskId).toBe(TASK);
     });
 
-    it('(MEDIUM-1) relatedIssueId de otro proceso -> 404', async () => {
-      (m.prismaObj.issue as any).findFirst.mockResolvedValue(null);
+    it('tarea ajena de un integrante -> 400', async () => {
+      (m.prismaObj.task as any).findFirst.mockResolvedValue({
+        code: 'PRY-0003-T02',
+        responsibleUserId: 'otro',
+        phase: { plan: { requestId: 'r3' } },
+      });
+      (m.prismaObj.request as any).findFirst.mockResolvedValue({
+        code: 'PRY-0003',
+        operationalState: 'EN_EJECUCION',
+        plan: { id: 'pl1' },
+        participants: [],
+      });
       await expect(
         m.service.addActivity(integrante(['p1']), 'dl1', {
-          classificationCode: 'INTERNA',
-          relatedIssueId: '44444444-4444-4444-4444-444444444444',
+          classificationCode: 'PLANIFICADA',
+          taskId: TASK,
         }),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toThrow(/PRY-0003-T02/);
     });
   });
-
   // --- Separacion de conceptos (§2.4, BR-013/023) -------------------------
 
   describe('separacion de conceptos (BR-013/023)', () => {
     it('crear actividad con taskId NO invoca mutacion de Task (solo lectura de visibilidad)', async () => {
       (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(dailyLogRow());
       (m.prismaObj.task as any).findFirst.mockResolvedValue({
-        id: 't1',
-        phase: { planId: 'pl1' },
+        code: 'PRY-0001-T01',
+        responsibleUserId: 'ui',
+        phase: { plan: { requestId: 'r1' } },
       });
-      (m.prismaObj.plan as any).findFirst.mockResolvedValue({ requestId: 'r1' });
-      (m.prismaObj.request as any).findFirst.mockResolvedValue({ id: 'r1' });
+      (m.prismaObj.request as any).findFirst.mockResolvedValue({
+        code: 'PRY-0001',
+        operationalState: 'EN_EJECUCION',
+        plan: { id: 'pl1' },
+        participants: [],
+      });
       (m.prismaObj.dailyLogActivity as any).create.mockImplementation(
         ({ data }: any) => Promise.resolve(activityRow(data)),
       );
@@ -938,6 +947,34 @@ describe('WorklogService', () => {
           classificationCode: 'PLANIFICADA',
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('taskId null quita la tarea y no se valida como conservada (B1)', async () => {
+      (m.prismaObj.dailyLogActivity as any).findFirst.mockResolvedValue(
+        activityRow({ taskId: 't-vieja', projectRequestId: 'r3' }),
+      );
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(dailyLogRow());
+      (m.prismaObj.dailyLogActivity as any).update.mockImplementation(
+        ({ data }: any) => Promise.resolve(activityRow(data)),
+      );
+      const spy = jest
+        .spyOn(WorklogEligibilityService.prototype, 'validateReferences')
+        .mockResolvedValue({});
+      try {
+        await m.service.updateActivity(integrante(['p1']), 'a1', {
+          projectRequestId: '00000000-0000-4000-8000-000000000020',
+          taskId: null,
+        });
+        expect(spy.mock.calls[0][4]).toEqual({
+          projectRequestId: 'r3',
+          taskId: null,
+        });
+        expect(
+          (m.prismaObj.dailyLogActivity as any).update.mock.calls[0][0].data,
+        ).toMatchObject({ taskId: null });
+      } finally {
+        spy.mockRestore();
+      }
     });
 
     it('actividad inexistente -> 404', async () => {

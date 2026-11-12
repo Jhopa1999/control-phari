@@ -268,4 +268,5 @@ las tareas del propio usuario.
 
 - **Escribir** (crear, editar, enviar, retirar el envío, eliminar) un diario o un semanal es solo del **autor**; el jefe de área y el líder ya no editan registros ajenos.
 - **Leer**: el integrante ve lo suyo, el líder lo de sus procesos y el jefe todo.
+- **Qué puede imputar cada rol en una actividad planificada** (lo valida la API, no solo la interfaz): el **integrante** solo tareas donde es responsable y sus proyectos activos; el **líder** sus tareas y, en los procesos que lidera, las de los planes de esos procesos; el **jefe de área** sus tareas y las de todo su alcance (la interfaz propone «Mis proyectos» y permite «Todos del área»). En todos los roles el proyecto debe estar activo (o cerrado dentro de la ventana de gracia) y pertenecer al proceso del diario. Detalle en `modulos-backend.md`.
 - **Revisar o devolver** (`/review`, `/return`): jefe de área o líder del proceso del registro, nunca el propio autor (403); solo desde `ENVIADO`. `REVISADO` es terminal. Devolver exige un motivo de 10 a 1000 caracteres y avisa al autor.

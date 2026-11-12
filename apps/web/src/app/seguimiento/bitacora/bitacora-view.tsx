@@ -37,15 +37,9 @@ import type {
   DailyLog,
   DailyLogsQuery,
   DailyLogSummary,
-  Issue,
-  MyWorkItem,
   Process,
-  Request,
 } from '@/lib/api-client';
 import { formatDateOnlyWithWeekday, formatHours, orDash } from '@/lib/format';
-import { listIssues } from '@/lib/issues';
-import { listMyWork } from '@/lib/my-work';
-import { listRequests } from '@/lib/requests';
 import { listProcesses } from '@/lib/team';
 import type { ClientTablePageSize } from '@/lib/use-client-table';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
@@ -172,9 +166,6 @@ export function BitacoraView(): React.ReactElement {
 
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
-  const [requests, setRequests] = React.useState<Request[]>([]);
-  const [tasks, setTasks] = React.useState<MyWorkItem[]>([]);
-  const [issues, setIssues] = React.useState<Issue[]>([]);
 
   const [diarioOpen, setDiarioOpen] = React.useState(false);
   const [diarioSubmitting, setDiarioSubmitting] = React.useState(false);
@@ -206,12 +197,10 @@ export function BitacoraView(): React.ReactElement {
     return () => window.clearTimeout(timer);
   }, [qInput, url.q, setParams]);
 
-  // Listas auxiliares: nombres de procesos y personas, y datos para el formulario de actividades.
+  // Listas auxiliares: nombres de procesos y personas. Los proyectos y tareas imputables
+  // los pide el formulario de actividades (GET /worklog/options) al abrirse.
   React.useEffect(() => {
     void listProcesses().then(setProcesses, () => undefined);
-    void listRequests().then(setRequests, () => undefined);
-    void listMyWork().then(setTasks, () => undefined);
-    void listIssues().then(setIssues, () => undefined);
   }, []);
   React.useEffect(() => {
     if (canReview) void listCoordinationPeople().then(setPeople, () => undefined);
@@ -744,9 +733,6 @@ export function BitacoraView(): React.ReactElement {
           key={url.diario}
           logId={url.diario}
           processes={processes}
-          requests={requests}
-          tasks={tasks}
-          issues={issues}
           onChanged={reload}
           onClose={() => setParams({ diario: null }, true)}
           returnFocusTo={() => headingRef.current}

@@ -5257,6 +5257,87 @@
         ]
       }
     },
+    "/worklog/options": {
+      "get": {
+        "operationId": "WorklogController_listOptions",
+        "parameters": [
+          {
+            "name": "processId",
+            "required": true,
+            "in": "query",
+            "description": "Proceso del diario. El proyecto debe pertenecer a él (principal o participante).",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "description": "Fecha del diario (YYYY-MM-DD). Referencia para la ventana de gracia de los proyectos cerrados. Por defecto, hoy.",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Texto a buscar en código y título del proyecto y de la tarea, fase y proyecto de la tarea. Sin él, se devuelve el listado completo hasta el tope.",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeTerminated",
+            "required": false,
+            "in": "query",
+            "description": "Incluye también las tareas TERMINADA (por defecto se ocultan).",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "description": "`mine` (por defecto): proyectos con tareas propias y solo tareas propias. `all`: solo la aplica el jefe de área (proyectos y tareas de todo su alcance). El líder siempre recibe además las tareas ajenas de los procesos que lidera; el integrante, nunca.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "mine",
+                "all"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opciones imputables (hasta 200 por lista).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorklogOptionsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros inválidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Proyectos y tareas que quien consulta puede imputar en el diario de un proceso y una fecha (misma regla que aplica al guardar una actividad).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
     "/worklog/daily": {
       "get": {
         "operationId": "WorklogController_listDailyLogs",
@@ -5911,13 +5992,13 @@
             }
           },
           "400": {
-            "description": "Clasificacion o datos invalidos."
+            "description": "Clasificacion o datos invalidos, o proyecto/tarea no imputable (cerrado, proceso distinto, tarea ajena, incoherencia)."
           },
           "404": {
             "description": "Diario o referencia fuera de alcance."
           }
         },
-        "summary": "Agrega una actividad al diario (valida clasificacion).",
+        "summary": "Agrega una actividad al diario. Valida la clasificacion y, en PLANIFICADA, que el proyecto/tarea sean imputables (estado, proceso del diario, responsable y coherencia).",
         "tags": [
           "worklog"
         ]
@@ -5959,13 +6040,13 @@
             }
           },
           "400": {
-            "description": "Clasificacion o datos invalidos."
+            "description": "Clasificacion o datos invalidos, o proyecto/tarea nuevo no imputable."
           },
           "404": {
             "description": "Actividad o referencia fuera de alcance."
           }
         },
-        "summary": "Edita una actividad del diario.",
+        "summary": "Edita una actividad del diario. Solo la referencia (proyecto/tarea) que cambia se revalida; lo que se conserva sigue valiendo aunque el proyecto ya no sea imputable.",
         "tags": [
           "worklog"
         ]
@@ -14434,6 +14515,132 @@
           "identifier"
         ]
       },
+      "WorklogProjectOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "description": "ID visible (PRY-0012)."
+          },
+          "title": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "description": "Estado operativo de la solicitud."
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de cierre (solo proyectos CERRADA dentro de la ventana de gracia)."
+          },
+          "hasMyTasks": {
+            "type": "boolean",
+            "description": "Tiene tareas propias imputables."
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "state",
+          "closedAt",
+          "hasMyTasks"
+        ]
+      },
+      "WorklogTaskOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "description": "ID visible (PRY-0012-T07)."
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado de la tarea."
+          },
+          "phaseName": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proyecto al que pertenece."
+          },
+          "requestCode": {
+            "type": "string",
+            "description": "ID visible del proyecto."
+          },
+          "requestTitle": {
+            "type": "string",
+            "description": "Título del proyecto."
+          },
+          "isMine": {
+            "type": "boolean",
+            "description": "La tarea es del usuario que consulta."
+          },
+          "responsibleName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Responsable de la tarea."
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "status",
+          "phaseName",
+          "requestId",
+          "requestCode",
+          "requestTitle",
+          "isMine",
+          "responsibleName"
+        ]
+      },
+      "WorklogOptionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorklogProjectOptionDto"
+            }
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorklogTaskOptionDto"
+            }
+          },
+          "projectsTruncated": {
+            "type": "boolean",
+            "description": "Hay más proyectos que el tope (200). Usa `q` para acotar."
+          },
+          "tasksTruncated": {
+            "type": "boolean",
+            "description": "Hay más tareas que el tope (200). Usa `q` para acotar."
+          }
+        },
+        "required": [
+          "projects",
+          "tasks",
+          "projectsTruncated",
+          "tasksTruncated"
+        ]
+      },
       "DailyLogActionsDto": {
         "type": "object",
         "properties": {
@@ -14501,6 +14708,16 @@
             "nullable": true,
             "description": "Titulo del proyecto (solicitud) referenciado."
           },
+          "projectRequestCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "ID visible del proyecto (PRY-0012)."
+          },
+          "projectRequestState": {
+            "type": "string",
+            "nullable": true,
+            "description": "Estado operativo del proyecto referenciado (CERRADA = cerrado)."
+          },
           "taskId": {
             "type": "string",
             "format": "uuid",
@@ -14511,15 +14728,10 @@
             "nullable": true,
             "description": "Titulo de la tarea referenciada."
           },
-          "relatedIssueId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "relatedIssueTitle": {
+          "taskCode": {
             "type": "string",
             "nullable": true,
-            "description": "Titulo de la novedad relacionada."
+            "description": "ID visible de la tarea (PRY-0012-T07)."
           },
           "assetRef": {
             "type": "string",
@@ -14574,10 +14786,11 @@
           "hours",
           "projectRequestId",
           "projectRequestTitle",
+          "projectRequestCode",
+          "projectRequestState",
           "taskId",
           "taskTitle",
-          "relatedIssueId",
-          "relatedIssueTitle",
+          "taskCode",
           "assetRef",
           "requesterRef",
           "justification",
@@ -14944,11 +15157,6 @@
             "format": "uuid",
             "description": "Tarea planificada."
           },
-          "relatedIssueId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Novedad relacionada (del proceso del diario)."
-          },
           "assetRef": {
             "type": "string",
             "description": "Activo (texto, para soporte).",
@@ -15031,12 +15239,8 @@
           "taskId": {
             "type": "string",
             "format": "uuid",
-            "description": "Tarea planificada."
-          },
-          "relatedIssueId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Novedad relacionada."
+            "nullable": true,
+            "description": "Tarea planificada. Envía null para quitar la tarea de la actividad."
           },
           "assetRef": {
             "type": "string",
