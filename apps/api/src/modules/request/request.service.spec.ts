@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
@@ -248,6 +248,35 @@ describe('RequestService', () => {
     });
   });
 
+  describe('findByCode (ID visible)', () => {
+    it('normaliza a mayúsculas y aplica el alcance del actor', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(makeRequestRow());
+      await service.findByCode(lider(['p1']), ' pry-0012 ');
+      const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0].where;
+      expect(where.AND[0]).toEqual({ code: 'PRY-0012' });
+      expect(where.AND[1]).toEqual({
+        deletedAt: null,
+        OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }],
+      });
+    });
+
+    it.each(['PRY-12', 'PRY-0012-F2', 'PRY-0012-T07', 'abc', 'T07'])(
+      '"%s" no es un código de solicitud -> 400',
+      async (code) => {
+        await expect(service.findByCode(lider(['p1']), code)).rejects.toBeInstanceOf(
+          BadRequestException,
+        );
+        expect((m.prismaObj.request as any).findFirst).not.toHaveBeenCalled();
+      },
+    );
+
+    it('inexistente o fuera de alcance -> 404', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(null);
+      await expect(service.findByCode(lider(['p1']), 'PRY-0099')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+  });
   describe('update', () => {
     it('conserva fechas iniciales (no toca registeredAt/initialCommitmentDate/estado) y audita UPDATE', async () => {
       (m.prismaObj.request as any).findFirst.mockResolvedValue(makeRequestRow());

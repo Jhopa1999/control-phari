@@ -2,6 +2,11 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { RoleCode } from '../auth/role-code';
 import { NotificationListDto } from './dto/notification-response.dto';
+import {
+  NOTIFICATION_MAX_MESSAGE,
+  NOTIFICATION_MAX_TITLE,
+  truncateText,
+} from './notification-text';
 
 /** Tipos de evento que generan notificaciones (NOT-01). */
 export enum NotificationType {
@@ -46,8 +51,6 @@ export interface NotifyInput {
   requestId?: string | null;
 }
 
-const MAX_TITLE = 255;
-const MAX_MESSAGE = 1000;
 
 /**
  * Centro de notificaciones (NOT-01): persiste notificaciones por usuario a
@@ -79,8 +82,8 @@ export class NotificationService {
         data: active.map((u) => ({
           userId: u.id,
           type: input.type,
-          title: input.title.slice(0, MAX_TITLE),
-          message: input.message.slice(0, MAX_MESSAGE),
+          title: truncateText(input.title, NOTIFICATION_MAX_TITLE),
+          message: truncateText(input.message, NOTIFICATION_MAX_MESSAGE),
           link: input.link ?? null,
           requestId: input.requestId ?? null,
         })),

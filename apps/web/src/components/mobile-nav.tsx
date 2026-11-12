@@ -7,6 +7,7 @@ import { Menu } from 'lucide-react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AssistantTrigger } from '@/components/assistant/assistant-trigger';
 import { BrandName } from '@/components/brand';
+import { GlobalCodeSearch } from '@/components/global-code-search';
 import { NotificationBell } from '@/components/notification-bell';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ const DESKTOP_QUERY = '(min-width: 1024px)';
  */
 export function MobileNav(): React.ReactElement {
   const [open, setOpen] = React.useState(false);
+  const [searching, setSearching] = React.useState(false);
   const pathname = usePathname();
 
   // Respaldo de onNavigate (p. ej. atrás/adelante con el cajón abierto).
@@ -35,7 +37,10 @@ export function MobileNav(): React.ReactElement {
   React.useEffect(() => {
     const query = window.matchMedia(DESKTOP_QUERY);
     const onChange = (event: MediaQueryListEvent): void => {
-      if (event.matches) setOpen(false);
+      if (event.matches) {
+        setOpen(false);
+        setSearching(false);
+      }
     };
     query.addEventListener('change', onChange);
     return () => query.removeEventListener('change', onChange);
@@ -44,7 +49,7 @@ export function MobileNav(): React.ReactElement {
   return (
     <header className="sticky top-0 z-30 flex h-14 print:hidden items-center gap-2 bg-card/90 px-3 backdrop-blur lg:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
+        <SheetTrigger asChild className={searching ? 'hidden' : undefined}>
           <Button type="button" variant="ghost" size="icon" aria-label="Abrir menú">
             <Menu aria-hidden="true" />
           </Button>
@@ -55,13 +60,21 @@ export function MobileNav(): React.ReactElement {
           <AppSidebar variant="drawer" onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
-      <BrandName showTagline={false} className="min-w-0" />
-      <div className="ml-auto flex items-center gap-1">
-        <AssistantTrigger iconOnly />
-        <NotificationBell />
+      {/* Modo búsqueda (design §3): el campo ocupa la fila y el resto se oculta. */}
+      <BrandName showTagline={false} className={searching ? 'hidden' : 'min-w-0'} />
+      <div className={searching ? 'flex min-w-0 flex-1 items-center' : 'ml-auto flex items-center gap-1'}>
+        <React.Suspense fallback={null}>
+          <GlobalCodeSearch placement="mobile" onModeChange={setSearching} />
+        </React.Suspense>
+        <div className={searching ? 'hidden' : 'contents'}>
+          <AssistantTrigger iconOnly />
+          <NotificationBell />
+        </div>
       </div>
-      <ThemeToggle />
-      <UserMenu />
+      <div className={searching ? 'hidden' : 'contents'}>
+        <ThemeToggle />
+        <UserMenu />
+      </div>
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-brand-gradient forced-colors:hidden print:hidden" />
     </header>
   );

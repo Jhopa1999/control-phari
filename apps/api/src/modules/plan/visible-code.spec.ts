@@ -15,6 +15,7 @@ import {
   formatRequestCode,
   formatTaskCode,
   nextRequestNumber,
+  parseVisibleCode,
   reservePlanSequence,
   shortCode,
 } from './visible-code';
@@ -73,6 +74,29 @@ describe('visible-code', () => {
     });
   });
 
+  describe('parseVisibleCode', () => {
+    it.each([
+      ['PRY-0012', 'REQUEST', 'PRY-0012'],
+      ['pry-0012', 'REQUEST', 'PRY-0012'],
+      ['PRY-00012', 'REQUEST', 'PRY-00012'],
+      ['PRY-0012-F2', 'PHASE', 'PRY-0012'],
+      ['PRY-0012-T07', 'TASK', 'PRY-0012'],
+      [' pry 0012 t07 ', 'TASK', 'PRY-0012'],
+      ['PRY_0012–F2', 'PHASE', 'PRY-0012'],
+    ])('"%s" -> %s', (raw, kind, requestCode) => {
+      const parsed = parseVisibleCode(raw);
+      expect(parsed?.kind).toBe(kind);
+      expect(parsed?.requestCode).toBe(requestCode);
+      expect(parsed?.code).toMatch(/^PRY-\d{4,}(-[FT]\d+)?$/);
+    });
+
+    it.each(['', 'PRY-12', 'PRY-0012-X1', 'PRY-0012-T', 'T07', 'F2', 'PRY-0012-T07-1', `PRY-${'9'.repeat(40)}`])(
+      '"%s" no tiene forma de código',
+      (raw) => {
+        expect(parseVisibleCode(raw)).toBeNull();
+      },
+    );
+  });
   describe('reserva atómica', () => {
     it('reserva N números con un único update y devuelve el primero reservado', async () => {
       const update = jest.fn().mockResolvedValue({

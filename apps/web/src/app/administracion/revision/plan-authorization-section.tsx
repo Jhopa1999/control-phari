@@ -5,6 +5,7 @@ import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { ChartGantt } from 'lucide-react';
 import { toast } from 'sonner';
 import { CellTitle } from '@/components/data-table';
+import { IdChip } from '@/components/id-chip';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { InlineNotice } from '@/components/inline-notice';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
@@ -219,7 +220,7 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
             {rows.map((row, index) => (
               <TableRow key={row.plan.id}>
                 <TableCell className="min-w-56 max-w-[28rem]">
-                  <CellTitle href={planAllowed ? `/seguimiento/plan?requestId=${encodeURIComponent(row.request.id)}` : undefined}>
+                  <CellTitle href={planAllowed ? `/seguimiento/plan?requestId=${encodeURIComponent(row.request.id)}` : undefined} meta={<IdChip code={row.request.code} />}>
                     {row.request.title}
                   </CellTitle>
                 </TableCell>

@@ -1,4 +1,4 @@
-# @plantilla-portales/mcp
+﻿# @plantilla-portales/mcp
 
 Servidor **Model Context Protocol** de la plantilla de portales. Soporta dos
 transportes: **stdio** (local, por defecto) y **HTTP** (por red, ver más abajo).
@@ -53,7 +53,7 @@ puede bajar). El test `src/__tests__/coverage.test.ts` **falla** si una
 operación no tiene tool ni exclusión, si una exclusión está obsoleta, si una
 tool no tiene operación en el contrato, si falta una anotación, si una tool GET
 no es de solo lectura, si un `body` es de forma libre o si hay más pendientes
-que el tope. Hoy hay 115 tools sobre 209 operaciones (37 exclusiones permanentes
+que el tope. Hoy hay 118 tools sobre 212 operaciones (37 exclusiones permanentes
 y 54 pendientes, todas de escritura). Ya están expuestas las de coordinación (crear y editar
 reuniones y compromisos, y cambiar el estado de compromisos; los hallazgos se retiraron con el módulo Novedades), las de
 planes (editar el plan; crear, editar y reordenar fases; añadir predecesoras a una tarea) y las de
@@ -64,6 +64,10 @@ están expuestas salvo las descargas binarias.
 > `PRY-0012-F2`, `PRY-0012-T07`; las tareas además `phaseCode` y `requestCode`).
 > `task.get_by_code` (`GET /tasks/by-code/{code}`, solo lectura) resuelve una
 > tarea por ese código y el filtro `q` de `plan.tasks.list` también lo busca.
+> Lo mismo para solicitud (`request.get_by_code`, `GET /requests/by-code/{code}`)
+> y fase (`phase.get_by_code`, `GET /plan-phases/by-code/{code}`); `code.resolve`
+> (`GET /codes/{code}`) resuelve cualquier código completo y devuelve su tipo.
+> Todas son de solo lectura; solo aceptan la forma completa (no `T07` suelto).
 > Nota: `audit.events.list` ahora sigue el contrato vigente (`objectType`,
 > `action`, `page`, `pageSize`); el argumento `take` ya no existe en la API.
 

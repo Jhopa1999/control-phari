@@ -18,6 +18,8 @@ import { DependencyController } from './dependency/dependency.controller';
 import { DependencyService } from './dependency/dependency.service';
 import { EvidenceController } from './evidence/evidence.controller';
 import { EvidenceService } from './evidence/evidence.service';
+import { CodeResolutionController } from './code-resolution/code-resolution.controller';
+import { CodeResolutionService } from './code-resolution/code-resolution.service';
 
 /**
  * Modulo raiz del plan (design §3.2, D13): plan + submodulos phase/task/
@@ -37,6 +39,7 @@ import { EvidenceService } from './evidence/evidence.service';
     PhaseController,
     DependencyController,
     EvidenceController,
+    CodeResolutionController,
   ],
   providers: [
     PlanService,
@@ -48,6 +51,7 @@ import { EvidenceService } from './evidence/evidence.service';
     TaskService,
     DependencyService,
     EvidenceService,
+    CodeResolutionService,
   ],
 })
 export class PlanModule {}
