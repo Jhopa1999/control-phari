@@ -22,7 +22,7 @@ Decisiones clave, en una línea cada una:
 | Logout | Nuevo `POST /auth/logout` (204, idempotente) que borra la cookie |
 | Guard | `CurrentUserGuard`: si hay `Authorization` lo usa (Bearer); si no, lee la cookie. Dev-header intacto |
 | CSRF | `SameSite=Lax` + cabecera propia obligatoria `X-Portal-Csrf: 1` en `POST/PUT/PATCH/DELETE` cuando la identidad vino por cookie. Bearer no la exige |
-| CORS | `credentials: true` solo con `CORS_ORIGINS` explícito; `*` rechazado al arrancar |
+| CORS | `credentials: true` solo con `CORS_ORIGINS` explícito; `*` se descarta con log de error en producción (sin abortar el arranque) y falla el arranque fuera de producción |
 | Web | `credentials: 'include'` en modo jwt; el cliente ya no guarda el token; al recargar recupera el usuario con `GET /me/permissions` |
 | Migración | Al cargar la nueva versión se borran `authToken` y `authUser` de `localStorage` y se pide login una vez. No se canjea el token viejo |
 | CSP | En Next (`headers()`), aplicada (no solo reporte), con `'unsafe-inline'` en scripts y estilos (justificado en 9.2) |
@@ -34,7 +34,7 @@ Decisiones clave, en una línea cada una:
 - Login: `apps/api/src/modules/auth/auth-login.controller.ts:18-25` devuelve `LoginResponseDto` (`accessToken`, `expiresIn`, `user`). El JWT lo firma `AuthLoginService.issueSessionForUser` (`auth-login.service.ts:57-81`) con `{ sub: identifier }` y `expiresIn = JWT_EXPIRES_IN ?? '8h'` (línea 10 y 60).
 - Restablecer/activar con autologin: `auth-reset.controller.ts:36-52` devuelve el mismo `LoginResponseDto`; el servicio reutiliza `issueSessionForUser` (`auth-reset.service.ts:150`). Son dos puntos de emisión, una sola fuente de firma.
 - No existe endpoint de logout ni de refresco (búsqueda de `refresh` en `apps/api/src` sin resultados relevantes). El logout actual solo borra `localStorage` (`actor-context.tsx:130-137,193-197`).
-- Guard: `current-user.guard.ts:48-50` elige la cabecera según el modo: en jwt lee `authorization` completo; si no, `x-actor-id`. Pasa el valor crudo a `ActorResolver.resolve(string)`. `JwtActorResolver` (`jwt-actor.resolver.ts:35-59`) exige el prefijo `Bearer `, verifica firma y expiración y carga el actor por `sub`. El guard se aplica por controlador (`@UseGuards(CurrentUserGuard)`, 80 usos), nunca como `APP_GUARD`; las rutas públicas son `login`, `forgot-password`, `reset-password` y `/dev/actors`.
+- Guard: `current-user.guard.ts:48-50` elige la cabecera según el modo: en jwt lee `authorization` completo; si no, `x-actor-id`. Pasa el valor crudo a `ActorResolver.resolve(string)`. `JwtActorResolver` (`jwt-actor.resolver.ts:35-59`) exige el prefijo `Bearer `, verifica firma y expiración y carga el actor por `sub`. El guard se aplica por controlador (`@UseGuards(CurrentUserGuard)`, 39 usos en `apps/api/src`), nunca como `APP_GUARD`; las rutas públicas son `login`, `forgot-password`, `reset-password` y `/dev/actors`.
 - Recuperar usuario: `GET /me/permissions` (`me.controller.ts:18-37`) ya devuelve `userId`, `name`, `identifier`, `roleCodes`, `allowedModules`. No hace falta `GET /auth/me`.
 - CORS: `app.config.ts:20-30` (`parseCorsOrigins`) y `62-68` (`enableCors({ origin, methods })`); el comentario de la línea 59-61 dice explícitamente «no se habilitan credentials». Sin `CORS_ORIGINS` no se habilita CORS. `compose.prod.yaml` pasa `CORS_ORIGINS: ${CORS_ORIGINS:-}`, y `.env.production.example` pide dejarlo vacío porque web y API van bajo el mismo dominio.
 - Topología de producción: `NEXT_PUBLIC_API_BASE_URL` es `/api` (`compose.prod.yaml`, args del servicio `web`; `apps/web/Dockerfile:22`), y `infra/nginx/nginx.conf` enruta `/api/` → `api:3001` (quitando el prefijo), `/mcp/` → `mcp:3002` y `/` → `web:3000`, todo con `X-Forwarded-Proto $scheme`. Es mismo origen: sin CORS. En desarrollo la web (3100) y la API (3101) son orígenes distintos pero del mismo sitio (`localhost`), por lo que sí hay CORS.
@@ -78,7 +78,7 @@ Riesgo residual (hay que comprobarlo al desplegar): no se puede leer el nginx HT
 
 ### 3.3 `SameSite=Lax` (no `Strict`)
 
-- `Strict` no envía la cookie en navegaciones que vienen de otro sitio. Los enlaces de los correos de restablecer/invitar y los enlaces compartidos llevan a la web desde fuera: con `Strict` la primera carga llegaría sin sesión y la web mostraría el login aunque haya sesión válida. En esta arquitectura las páginas las sirve Next (que no usa la cookie) y la sesión se comprueba con una petición `fetch` same-origin posterior, que sí llevaría la cookie; aun así `Lax` evita casos límite sin perder protección real, porque lo que protege las escrituras es la cabecera propia (3.6), no el atributo.
+- Las páginas las sirve Next, que no usa la cookie, y la sesión se comprueba con un `fetch` same-origin posterior que sí la lleva; por tanto `Strict` tampoco rompería la primera carga desde un enlace externo. Se elige `Lax` porque la cookie viaja en las navegaciones GET de nivel superior (menos casos límite y menor fricción) sin perder protección real: lo que protege las escrituras es la cabecera propia (sección 6), no el atributo.
 - `Lax` no se envía en `POST/PUT/PATCH/DELETE` entre sitios, que es lo que importa. Sí se envía en navegaciones GET de nivel superior. Condición: ningún `GET` de la API produce efectos de escritura. Se comprueba en la fase 1 (revisar los controladores `@Get`); la descarga de evidencias (`GET .../download`) solo devuelve una URL prefirmada.
 - En desarrollo, `localhost:3100` y `localhost:3101` son el mismo sitio (el esquema y el dominio registrable coinciden; el puerto no cuenta), por lo que la cookie viaja con `Lax`.
 
@@ -124,7 +124,7 @@ Orden en modo jwt:
 
 Modo `dev-header` (cualquier modo distinto de jwt): se conserva exactamente `X-Actor-Id` (`current-user.guard.ts:48-50`). La cookie se ignora por completo, así que el entorno de desarrollo y los specs que no definen `AUTH_MODE` no cambian.
 
-El guard anota en la petición el origen de la identidad (`authSource`) y el valor normalizado `Bearer <token>` en un campo que el asistente reutiliza (sección 8). `RequestWithActor` (`current-user.guard.ts:23-26`) ampliará `method`, `authSource` y `bearer`.
+El guard anota en la petición el origen de la identidad (`authSource`) y el valor normalizado `Bearer <token>` en un campo que el asistente reutiliza (sección 8). `RequestWithActor` (`current-user.guard.ts:23-26`) ampliará `method`, `authSource` y `bearer`. Valores: `authSource` es `'bearer'`, `'cookie'` o `'dev-header'`. En dev-header `bearer` queda `undefined`, igual que hoy el asistente recibe `req.headers.authorization` ausente, salvo que llegue un `Authorization` explícito (entonces se conserva tal cual). Caso de prueba del asistente en dev-header: sin `Authorization` reenvía `undefined`; con `Authorization` explícito lo reenvía.
 
 Consecuencia: la protección CSRF vive en el único punto que conoce el origen de la identidad. Toda ruta autenticada la obtiene sin tocar controladores. Las rutas públicas no usan la cookie.
 
@@ -152,7 +152,10 @@ Prueba de cobertura (Jest): enumerar las rutas `POST/PUT/PATCH/DELETE` de la apl
 Cambios en `app.config.ts:59-68`:
 
 - `credentials: true`, solo cuando hay `CORS_ORIGINS` (el bloque sigue condicionado a `corsOrigins.length > 0`). `origin` sigue siendo la lista exacta; nunca `*`.
-- `parseCorsOrigins` rechaza `*` (y orígenes vacíos): si aparece, la API falla al arrancar con un mensaje claro. Con credenciales el navegador ya ignoraría `*`; fallar pronto evita una configuración engañosa.
+- `parseCorsOrigins` descarta las entradas vacías y `*`. Hoy (`app.config.ts:20-30`) acepta cualquier cadena y la API arranca; el `.env.production` del servidor no está en el repo y `compose.prod.yaml:43` pasa `${CORS_ORIGINS:-}` (vacío por defecto), así que no se puede asegurar que no tenga `*`, y el despliegue no puede editarlo. Por eso el comportamiento depende del entorno:
+  - `NODE_ENV=production`: se descarta `*` con log `error` (motivo: incompatible con credenciales) y CORS se habilita solo con las entradas válidas restantes; si no queda ninguna, no se habilita CORS. **No se aborta el arranque**, para no provocar un bucle de reinicio de la API en el despliegue.
+  - Fuera de producción: `*` hace fallar el arranque con un mensaje claro (configuración engañosa detectada pronto).
+  - Con credenciales el navegador ya ignoraría `*`; descartarlo no cambia lo que funciona hoy.
 - `allowedHeaders` explícito: `Content-Type`, `Authorization`, `X-Actor-Id`, `X-Portal-Csrf`. Son las únicas cabeceras que manda la web (`authHeaders()` más `Content-Type`/`Accept`, que son seguras en CORS).
 - `methods` se mantiene (`GET, POST, PUT, PATCH, DELETE`); las preflight `OPTIONS` las gestiona el middleware de CORS.
 - Las respuestas CORS ya añaden `Vary: Origin`.
@@ -209,7 +212,9 @@ Justificación directiva a directiva:
 - No se incluye `upgrade-insecure-requests`: rompería el stack por red en http.
 - Las fuentes son `next/font` (autohospedadas, `layout.tsx` importa `./fonts`), por lo que `font-src 'self'` basta.
 
-Verificación obligatoria antes de dar la CSP por buena: recorrer en navegador, en modo jwt, Panel, Solicitudes, Plan, Mi trabajo, Bitácora, Asistente (SSE y adjunto), Documentos con Markdown y evidencias, con la consola abierta, sin violaciones de CSP. Si una pantalla exigiera relajar algo, se documenta qué y por qué. Plan B ya decidido: si una violación no se puede resolver sin una relajación inaceptable, la CSP se publica como `Content-Security-Policy-Report-Only` en esta iteración, con la razón anotada en el PR.
+Dependencia al endurecer con nonces: el acta imprimible de reuniones (`apps/web/src/lib/minutes.ts:83-117`) abre `window.open('')` y escribe con `document.write` un `<style>` y un `<script>` en línea (`window.print()`). Funciona con `'unsafe-inline'` porque la ventana hereda la CSP; al quitarlo habrá que rehacer ese flujo (p. ej. sin script en línea).
+
+Verificación obligatoria antes de dar la CSP por buena: recorrer en navegador, en modo jwt, Panel, Solicitudes, Plan, Mi trabajo, Bitácora, Asistente (SSE y adjunto), Documentos con Markdown, evidencias y Reuniones → imprimir acta, con la consola abierta, sin violaciones de CSP. Si una pantalla exigiera relajar algo, se documenta qué y por qué. Plan B ya decidido: si una violación no se puede resolver sin una relajación inaceptable, la CSP se publica como `Content-Security-Policy-Report-Only` en esta iteración, con la razón anotada en el PR.
 
 ### 9.3 Otras cabeceras de la web
 
@@ -291,7 +296,7 @@ Razón: canjear exigiría un endpoint que acepte un token que se asumía expuest
 - Logout: `204`, borra con los mismos atributos; sin cookie también 204; con cookie y sin cabecera CSRF, 403.
 - Guard: acepta cookie, acepta Bearer, rechaza sin nada, rechaza cookie inválida, Bearer inválido con cookie válida → 401, dev-header ignora la cookie y conserva `X-Actor-Id`.
 - CSRF: escritura por cookie sin `X-Portal-Csrf` → 403; con ella → pasa; Bearer sin ella → pasa; `GET` por cookie sin ella → pasa. Prueba de cobertura de rutas de escritura (sección 6).
-- CORS: preflight desde origen permitido con `Access-Control-Allow-Credentials: true`; origen no permitido sin cabeceras CORS; `CORS_ORIGINS` con `*` → falla al arrancar.
+- CORS: preflight desde origen permitido con `Access-Control-Allow-Credentials: true`; origen no permitido sin cabeceras CORS; `CORS_ORIGINS` con `*`: en producción se descarta con log de error y no entra en `origin` (la API arranca), fuera de producción falla al arrancar.
 - Cabeceras de seguridad presentes en respuestas de la API; `x-powered-by` ausente; CSP de API no aplicada a `/docs`; HSTS solo con `req.secure`; SSE conserva sus cabeceras.
 - Parser de cookies: vacía, varias, valor con `=`, valor codificado, nombre repetido.
 - Asistente: `chat` y `confirm` con cookie reenvían `Bearer <token>` al gateway.
@@ -305,8 +310,8 @@ Cobertura frente al contrato con la exclusión nueva; la autenticación Bearer d
 - `e2e/jwt-session.spec.ts`: el caso de sesión rechazada (líneas 128-150) deja de sembrar `authToken` y siembra la cookie `portal_session=invalido` con `context.addCookies` (`url` de la web; las cookies no distinguen puerto) más la pista; el caso `next` externo (162) limpia también las cookies (`context.clearCookies()`); las afirmaciones `authToken === null` (195-197, 215-217) se conservan y se añade que la cookie es `httpOnly`, `sameSite: 'Lax'` y que `document.cookie` no la contiene. Casos nuevos: tras login no hay token en `localStorage`; recargar mantiene la sesión; cerrar sesión borra la cookie y una recarga no la recupera; un `authToken` heredado en `localStorage` se purga y lleva al login.
 - `e2e/reset-password-autologin.spec.ts` (134, 150, 170): afirmar la cookie de sesión y una petición autenticada exitosa en lugar de `authToken`.
 - Nuevo `e2e/security-headers.spec.ts` (corre en cualquier modo): CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy` y `Permissions-Policy` en la web; HSTS ausente en http y presente con `x-forwarded-proto: https`; `x-powered-by` ausente; cabeceras de la API en `/health`.
-- Asistente SSE y subida de evidencia: si hay e2e que los cubra, ejecutarlos en jwt; si no, queda como comprobación manual en la fase 6.
-- La suite completa en dev-header (`global-setup.ts`) no se ve afectada, salvo por la CSP, que la ejercita.
+- Asistente SSE y subida de evidencia: si algún e2e los cubre, se ejecuta en la corrida jwt; si ninguno los cubre en jwt, se hace comprobación manual y se registra el resultado en la tabla de verificación del PR.
+- `e2e/jwt-session.spec.ts` se omite salvo con `E2E_AUTH_MODE=jwt` (líneas 28-34); la suite completa corre en dev-header (`global-setup.ts`) y omitiría los specs que cambian. Por eso la fase 6 exige dos corridas separadas (jwt para los specs afectados y dev-header para la suite completa).
 
 ## 13. Plan de implementación por fases
 
@@ -315,7 +320,10 @@ Cobertura frente al contrato con la exclusión nueva; la autenticación Bearer d
 3. **Web**: `api-client.ts`, `auth.ts`, `assistant.ts`, `actor-context.tsx`, `login-form.tsx`, `set-password-form.tsx`, `user-menu.tsx`; purga de `authToken`/`authUser`; `next.config.ts` (`headers()`, `poweredByHeader: false`); lint con `--max-warnings 0` y typecheck.
 4. **E2E**: actualizar los specs de la sección 12 y añadir `security-headers.spec.ts`.
 5. **Documentación y configuración**: docs de aplicación, despliegue, `changelog.json`, `.env.example`, `.env.production.example`, `compose.prod.yaml`, BACKLOG.
-6. **Verificación**: manual contra la API real en modo jwt (usuarios demo `jefe@/lider@/integrante@/admin@demo.local`): login, recarga, logout, una escritura, `curl` con Bearer, consola sin violaciones de CSP en las pantallas listadas en 9.2; suite e2e completa; build web sin `apps/web/.env.local`.
+6. **Verificación**: manual contra la API real en modo jwt (usuarios demo `jefe@/lider@/integrante@/admin@demo.local`): login, recarga, logout, una escritura, `curl` con Bearer, consola sin violaciones de CSP en las pantallas listadas en 9.2; build web sin `apps/web/.env.local`. Además, dos corridas e2e:
+   - **Corrida jwt** (API y web en jwt): API con `cmd /c "set AUTH_MODE=jwt&& set PORT=3101&& set CORS_ORIGINS=http://localhost:3100&& npm run start:dev --workspace apps/api"`, web con `NEXT_PUBLIC_AUTH_MODE=jwt` y `NEXT_PUBLIC_API_BASE_URL=http://localhost:3101`, y luego `cmd /c "set E2E_WEB_URL=http://localhost:3100&& set E2E_API_URL=http://localhost:3101&& set E2E_AUTH_MODE=jwt&& npx playwright test e2e/jwt-session.spec.ts e2e/reset-password-autologin.spec.ts e2e/security-headers.spec.ts"`. Ningún spec afectado puede quedar omitido (`skipped`).
+   - **Corrida dev-header** (modo por defecto): suite e2e completa una vez.
+   - SSE del asistente y subida de evidencia: comprobación manual en jwt si ningún e2e los cubre en esa corrida; el resultado se registra en la tabla del PR.
 
 Despliegue (lo ejecuta el orquestador, no esta tarea):
 
