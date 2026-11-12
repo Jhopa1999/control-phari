@@ -728,6 +728,12 @@
         "apps/mcp/README.md"
       ],
       "summary": "Se retira el módulo Novedades (modelo Issue) sin borrar datos: fuera el ítem de menú, las pantallas, el controlador y servicio /issues (ahora 404), las tools issue.* del MCP, las etiquetas del asistente y el tag OpenAPI issues; /seguimiento/novedades redirige a /seguimiento/bitacora. Se conservan la tabla issues, la columna daily_log_activities.related_issue_id, el catálogo ISSUE_TYPE, el tipo de auditoría ISSUE, record-state y WorkflowStateService (los usa Compromisos). Cambio visible en el Panel de demanda: «Bloqueos activos» cuenta solo las solicitudes con marca de bloqueo; se quita openBlockingIssues de GET /area-control/indicators y BlockCauseDto.origin solo vale REQUEST_FLAG, por lo que la cifra puede bajar. El borrado físico futuro queda en BL-050."
+    },
+    {
+      "timestamp": "2026-11-12T12:00:00Z",
+      "trigger_file": "apps/mcp/src/tools/specs/request.ts",
+      "updated_docs": ["apps/mcp/README.md"],
+      "summary": "MCP: nuevas tools de solo lectura code.resolve, request.get_by_code y phase.get_by_code (IDs visibles); catálogo de 118 tools."
     }
   ]
 }

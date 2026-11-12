@@ -120,8 +120,8 @@ describe('catálogo de tools', () => {
     );
   });
 
-  it('expone 115 tools: las 47 originales, 50 de lectura (incluye la cola task.pending-review y worklog.options), help.search y 16 de escritura (coordinación, planes, activos y documentos)', () => {
-    assert.equal(ALL_SPECS.length, 115);
+  it('expone 118 tools: las 47 originales, 53 de lectura (incluye la cola task.pending-review, worklog.options y la resolución por ID visible: code.resolve, request.get_by_code y phase.get_by_code), help.search y 16 de escritura (coordinación, planes, activos y documentos)', () => {
+    assert.equal(ALL_SPECS.length, 118);
   });
 });
 

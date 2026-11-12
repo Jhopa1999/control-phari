@@ -15,7 +15,34 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
     name: 'request.get',
     operation: 'GET /requests/{id}',
     access: 'read',
-    description: 'Obtiene una solicitud por id (GET /requests/{id}).',
+    description:
+      'Obtiene una solicitud por id (GET /requests/{id}). Incluye su ID visible ' +
+      '(code, p. ej. PRY-0012).',
+  },
+  {
+    name: 'request.get_by_code',
+    operation: 'GET /requests/by-code/{code}',
+    access: 'read',
+    description:
+      'Obtiene una solicitud por su ID visible (GET /requests/by-code/{code}), por ' +
+      'ejemplo PRY-0012, sin distinguir mayúsculas. Devuelve lo mismo que ' +
+      'request.get. Solo acepta el código de solicitud (400 si es de fase o ' +
+      'tarea); 404 si no existe o está fuera del alcance del usuario. Úsala ' +
+      'cuando el usuario cite el proyecto por su ID visible en vez de por su UUID.',
+  },
+  {
+    name: 'code.resolve',
+    operation: 'GET /codes/{code}',
+    access: 'read',
+    description:
+      'Resuelve cualquier ID visible completo (GET /codes/{code}): solicitud ' +
+      '(PRY-0012), fase (PRY-0012-F2) o tarea (PRY-0012-T07), sin distinguir ' +
+      'mayúsculas. Devuelve type (REQUEST, PHASE o TASK), id, code, title y los ' +
+      'datos de su solicitud (requestId, requestCode, requestTitle, ' +
+      'requestStatus), más phaseId/phaseName en fase y tarea. No acepta la forma ' +
+      'corta (T07, F2): si el usuario la cita, usa el proyecto en contexto para ' +
+      'armar el código completo. 400 si el formato es inválido; 404 si no existe ' +
+      'o está fuera del alcance. Úsala primero cuando no sepas qué tipo de ID es.',
   },
   {
     name: 'request.create',

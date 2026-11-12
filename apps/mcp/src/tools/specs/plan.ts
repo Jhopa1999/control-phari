@@ -147,6 +147,17 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
       'cuando el usuario cite la tarea por su ID visible en vez de por su UUID.',
   },
   {
+    name: 'phase.get_by_code',
+    operation: 'GET /plan-phases/by-code/{code}',
+    access: 'read',
+    description:
+      'Obtiene una fase por su ID visible (GET /plan-phases/by-code/{code}), por ' +
+      'ejemplo PRY-0012-F2, sin distinguir mayúsculas. Devuelve los datos de la ' +
+      'fase más planId, requestId, requestCode, requestTitle y requestStatus. ' +
+      'Solo acepta el código de fase (400 si es de solicitud o tarea); 404 si no ' +
+      'existe o está fuera del alcance del usuario.',
+  },
+  {
     name: 'task.history',
     operation: 'GET /tasks/{id}/history',
     access: 'read',
