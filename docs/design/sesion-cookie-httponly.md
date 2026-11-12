@@ -347,3 +347,10 @@ Despliegue (lo ejecuta el orquestador, no esta tarea):
 - `@ApiResponse({ headers })` de `@nestjs/swagger` genera el contrato sin romper `contracts:generate`.
 - Ningún `GET` de la API produce escrituras.
 - Un `GET /me/permissions` por carga completa no empeora de forma apreciable el tiempo hasta pintar.
+
+## 16. Resoluciones de la revisión (implementación)
+
+- Parser de cookies: `readSessionCookie` nunca lanza. Un valor malformado (p. ej. `portal_session=%E0%A4%A`) devuelve `undefined` y la API responde 401; con el nombre repetido gana la primera aparición. Cubierto en `session-cookie.spec.ts` y `current-user.guard.spec.ts`.
+- CSP de producción: debe verificarse contra `next build` + `next start -p 3100` (sin `'unsafe-eval'`), no solo contra `next dev`; `security-headers.spec.ts` afirma la ausencia de `'unsafe-eval'` en el build y su presencia en dev. Se ejecuta en la fase web/verificación.
+- El cliente web descarta el `accessToken` del cuerpo de login/reset sin guardarlo ni registrarlo; el e2e comprueba que no aparece en `localStorage` ni `sessionStorage`.
+- Nota 3.3: `Lax` se elige por compatibilidad con navegaciones GET de nivel superior; la defensa real de las escrituras es la cabecera `X-Portal-Csrf`. En 9.2 el bloque CSP termina todas sus directivas con `;`.
