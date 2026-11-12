@@ -23,6 +23,68 @@ El `CurrentUserGuard` es el único punto que conoce el request HTTP: según el m
 carga del actor y sus grants (`load-actor.ts`) es **común a ambos modos**, de modo que
 la lógica de autorización no se duplica entre modos de autenticación.
 
+## Sesión del navegador: cookie `HttpOnly` (modo `jwt`)
+
+Diseño y decisiones: `docs/design/sesion-cookie-httponly.md`. Cierra BL-013 y BL-017.
+
+El navegador ya **no guarda el token** (ni `authToken` ni `authUser` en `localStorage`).
+`POST /auth/login` y `POST /auth/reset-password` (autologin) siguen devolviendo
+`accessToken` en el cuerpo (lo usan Bearer, MCP y scripts; la web lo descarta) y además
+emiten la cookie de sesión:
+
+| Atributo | Valor |
+| --- | --- |
+| Nombre | `portal_session` (contiene el mismo JWT) |
+| `HttpOnly` | Sí: JavaScript no puede leerla |
+| `SameSite` | `Lax` |
+| `Path` | `/` (sin `Domain`) |
+| `Max-Age` | `exp` del JWT − ahora (misma vida que el token, `JWT_EXPIRES_IN`, 8 h por defecto). No hay refresco |
+| `Secure` | Según `COOKIE_SECURE` (ver abajo) |
+
+`COOKIE_SECURE` admite `auto` (por defecto), `true` o `false`. Con `auto` la cookie lleva
+`Secure` solo si la petición llegó por https: la API fija `trust proxy`
+(`loopback, linklocal, uniquelocal`) y lee `X-Forwarded-Proto` del nginx. Así funciona en
+producción (https) y en el stack por red / `localhost` (http) sin editar `.env.production`.
+Un valor desconocido se trata como `auto` y se avisa al arrancar.
+
+**Cierre de sesión:** `POST /auth/logout` (público, `204`, idempotente) borra la cookie con
+los mismos atributos de emisión. Si la petición trae la cookie, exige la cabecera CSRF
+(`403` si falta). No revoca tokens: un JWT copiado sigue siendo válido hasta `exp`.
+
+**Guard (`CurrentUserGuard`) en modo `jwt`:**
+
+1. Si llega `Authorization`, se usa como Bearer (no se cae a la cookie si es inválido: `401`).
+2. Si no, se lee la cookie `portal_session`; en `POST/PUT/PATCH/DELETE` se exige antes la
+   cabecera `X-Portal-Csrf: 1` (`403 Forbidden` si falta).
+3. Si no hay ninguna, `401`.
+
+El guard deja en la petición el origen de la identidad (`authSource`: `bearer`, `cookie` o
+`dev-header`) y el `Bearer <token>` normalizado, que el asistente reenvía al MCP.
+
+**CSRF:** `SameSite=Lax` más la cabecera propia `X-Portal-Csrf: 1`, obligatoria solo cuando
+la identidad vino por cookie y el método es de escritura. Bearer no la necesita (el navegador
+no lo adjunta solo). Los `GET` no la exigen.
+
+**CORS:** `credentials: true` únicamente cuando `CORS_ORIGINS` lista orígenes explícitos
+(`allowedHeaders`: `Content-Type`, `Authorization`, `X-Actor-Id`, `X-Portal-Csrf`). Un `*` en
+`CORS_ORIGINS` se descarta con un log de error en producción (la API arranca) y hace fallar
+el arranque fuera de producción. En producción web y API comparten origen (`/api`), sin CORS.
+
+**Recuperar al usuario al recargar:** la web llama a `GET /me/permissions` con la cookie; no
+existe `GET /auth/me`. Solo queda en `localStorage` la pista no sensible `authSessionHint`
+(distingue «sesión caducada» de «nunca hubo sesión»). Al cargar la nueva versión se purgan
+`authToken` y `authUser` heredados y cada persona inicia sesión una vez.
+
+**`dev-header`:** sin cambios; la cookie se ignora por completo.
+
+**Cabeceras de seguridad (BL-017):** Next envía CSP (con `'unsafe-inline'` en scripts y
+estilos, y `'unsafe-eval'`/`ws:` solo en desarrollo), `X-Frame-Options: DENY`, `nosniff`,
+`Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` mínima y HSTS
+(`max-age=15552000`) solo si `X-Forwarded-Proto` es `https`; sin `x-powered-by`. La API
+añade con un middleware propio `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy:
+no-referrer`, CSP `default-src 'none'` (excepto `/docs`) y HSTS si `req.secure`; sin
+`x-powered-by`; `set-cookie` y `cookie` se censuran en logs.
+
 ## Credenciales por correo (reset e invitación)
 
 Rutas **públicas** (sin `CurrentUserGuard`) para gestionar la contraseña por correo

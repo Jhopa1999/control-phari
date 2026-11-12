@@ -27,11 +27,21 @@ por `AUTH_MODE`: `dev-header` (header `X-Actor-Id`) y `jwt` (login real).
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| POST | `/auth/login` | Autentica por `identifier` y contraseña, devuelve un JWT (ruta pública). |
+| POST | `/auth/login` | Autentica por `identifier` y contraseña, devuelve un JWT y emite la cookie de sesión `portal_session` (`HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` según `COOKIE_SECURE`, `Cache-Control: no-store`) (ruta pública). |
+| POST | `/auth/logout` | Cierra la sesión del navegador borrando la cookie; `204`, idempotente; con la cookie presente exige la cabecera `X-Portal-Csrf: 1` (`403` si falta). No revoca Bearer (ruta pública; excluido del MCP). |
 | POST | `/auth/forgot-password` | Solicita el reestablecimiento de contraseña; responde `204` exista o no el usuario (ruta pública). |
-| POST | `/auth/reset-password` | Define una nueva contraseña consumiendo un token de reset o de activación y devuelve la sesión del login para entrar directo (`200` con `LoginResponseDto`; `400` token/contraseña inválidos, `410` token caducado/usado). |
+| POST | `/auth/reset-password` | Define una nueva contraseña consumiendo un token de reset o de activación y devuelve la sesión del login para entrar directo y emite también la cookie de sesión (`200` con `LoginResponseDto`; `400` token/contraseña inválidos, `410` token caducado/usado). |
 | GET | `/dev/actors` | Lista usuarios activos para el selector de desarrollo (solo con `AUTH_MODE=dev-header`; si no, `404`). |
 | GET | `/me/permissions` | Permisos del usuario actual: rol, alcance y módulos permitidos. |
+
+Transversal a la API (`app.config.ts`, `security/`): el `CurrentUserGuard` acepta
+`Authorization: Bearer` o la cookie `portal_session` (con cookie, las escrituras exigen
+`X-Portal-Csrf: 1`); CORS con `credentials: true` solo para `CORS_ORIGINS` explícitos
+(nunca `*`); `trust proxy` para que `req.secure` refleje `X-Forwarded-Proto`; middleware
+propio de cabeceras de seguridad (`nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`,
+CSP `default-src 'none'` salvo `/docs`, HSTS si es https) y sin `x-powered-by`. El
+asistente reenvía al MCP el `Bearer` normalizado por el guard. Detalle en
+`autenticacion-autorizacion.md`.
 
 Reglas relevantes: el login real vive solo en modo `jwt`; el selector dev solo existe
 en modo `dev-header`. La lógica de carga del actor y sus grants es común a ambos modos

@@ -51,7 +51,12 @@ cp .env.production.example .env.production
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | Credenciales de PostgreSQL. |
 | `NEXT_PUBLIC_API_BASE_URL` | Pública; por defecto `/api` (mismo dominio vía Nginx). Se incrusta en el build de la web. |
 | `CORS_ORIGINS` | Lista separada por comas. Vacío = sin CORS (correcto con `/api`). |
+| `COOKIE_SECURE` | Atributo `Secure` de la cookie de sesión `portal_session`: `auto` (por defecto), `true` o `false`. Con `auto` es `Secure` solo si la petición llegó por https (`X-Forwarded-Proto` del nginx). **No hace falta añadirla a `.env.production`**: el valor por defecto sirve en producción (https) y en el stack por red (http). Usa `true` si el nginx HTTPS no envía `X-Forwarded-Proto`. |
 | `HTTP_PORT` | Puerto público del host (80 por defecto). |
+
+Tras desplegar la sesión por cookie: despliega la API antes que la web (API nueva con web vieja funciona; al revés no). Comprueba por https `curl -i -X POST https://<dominio>/api/auth/login ...` y que `Set-Cookie` incluya `portal_session`, `Secure`, `HttpOnly` y `SameSite=Lax`; el login por Bearer (verificación de producción) sigue igual. Cada persona inicia sesión una vez. Rollback: volver a las imágenes anteriores; no hay cambios de esquema.
+
+nginx del servidor (el HTTPS es un archivo solo-servidor; nada es imprescindible): confirma `proxy_set_header X-Forwarded-Proto $scheme;` en el bloque 443 (de ello dependen `Secure` y HSTS de Next); opcionalmente `add_header Strict-Transport-Security "max-age=15552000" always;` (entonces no dupliques la de Next) y `server_tokens off;`. No añadas CSP en nginx: ya la emite Next.
 
 `DATABASE_URL` del backend la construye `compose.prod.yaml` como
 `postgresql://<user>:<pass>@postgres:5432/<db>`.
