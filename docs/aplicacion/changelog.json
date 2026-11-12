@@ -768,6 +768,14 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Vencimiento del portafolio contra el compromiso del plan: nuevo Plan.baselineDate congelado al autorizar; GET /portfolio mide el vencimiento contra la línea base del plan autorizado (la fecha objetivo de la solicitud queda como expectativa) y añade referenceDate, referenceSource, forecastDate, requestedGapDays y scheduleVarianceDays; PlanResponseDto expone baselineDate; la columna Objetivo pasa a Entrega. Descripción de portfolio.get actualizada en el MCP."
+    },
+    {
+      "timestamp": "2026-11-12T22:00:00Z",
+      "trigger_file": "apps/api/src/modules/recurring-activity/recurring-activity.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md"
+      ],
+      "summary": "Actividades recurrentes: crear o editar una definición activa genera de inmediato sus ocurrencias (misma lógica idempotente del cron, ahora en un método por definición), de modo que el responsable la ve en «Qué me toca» sin esperar al cron de las 01:00. Sin cambios de contrato, MCP ni esquema."
     }
   ]
 }

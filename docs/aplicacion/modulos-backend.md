@@ -761,7 +761,11 @@ operaciones idempotentes que corren como crons in-process (`@nestjs/schedule`,
 
 - Generación: por cada definición activa inserta las ocurrencias futuras dentro de su
   ventana de anticipación con `createMany` + `skipDuplicates` sobre el par único
-  `(activityId, targetDate)`; correrla dos veces no duplica.
+  `(activityId, targetDate)`; correrla dos veces no duplica. La misma generación se
+  ejecuta también al crear o editar una definición activa (`POST` / `PATCH
+  /recurring-activities`), para que la persona responsable vea sus ocurrencias en
+  «Qué me toca» sin esperar al cron; si esa generación inmediata falla, la definición
+  queda guardada y el cron diario la recupera.
 - Marcado de vencidas: pasa a VENCIDA las ocurrencias PENDIENTE/EN_CURSO cuyo
   `targetDate` ya quedó en el pasado (`updateMany` filtrado por estado, idempotente).
 - Recordatorios por correo: un tercer cron busca ocurrencias PENDIENTE/EN_CURSO cuyo día
