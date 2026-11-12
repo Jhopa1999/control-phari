@@ -10,6 +10,7 @@ import { Prisma } from '../../../generated/prisma/client';
 import { codeSearchConditions, formatTaskCode, reservePlanSequence } from '../visible-code';
 import type { TaskModel } from '../../../generated/prisma/models/Task';
 import { AuditService } from '../../audit/audit.service';
+import { entityRef, withCode } from '../../notification/notification-text';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
 import { PlanStateService } from '../plan-state.service';
@@ -348,19 +349,33 @@ export class TaskService {
     return this.findOne(actor, created.id);
   }
 
+  /** ID visible de la solicitud para los textos de notificación (null si falla). */
+  private async requestCodeOf(requestId: string): Promise<string | null> {
+    try {
+      const r = await this.prisma.request.findFirst({
+        where: { id: requestId },
+        select: { code: true },
+      });
+      return r?.code ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   /** NOT-01: avisa al responsable cuando se le asigna una tarea. */
   private async notifyAssignment(
     actor: CurrentActor,
-    task: { id: string; title: string; responsibleUserId: string | null },
+    task: { id: string; code?: string; title: string; responsibleUserId: string | null },
     requestId: string,
   ): Promise<void> {
     if (!task.responsibleUserId) return;
+    const requestCode = await this.requestCodeOf(requestId);
     await this.notifications.notify({
       userIds: [task.responsibleUserId],
       excludeUserId: actor.userId,
       type: NotificationType.TASK_ASSIGNED,
-      title: 'Nueva tarea asignada',
-      message: `Se te asignó la tarea «${task.title}».`,
+      title: withCode('Nueva tarea asignada', task.code),
+      message: `Se te asignó la tarea ${entityRef(task.code, task.title)}${requestCode ? ` del proyecto ${requestCode}` : ''}.`,
       link: '/mi-trabajo',
       requestId,
     });
@@ -385,7 +400,7 @@ export class TaskService {
     if (total === 0 || pending > 0) return;
     const request = await this.prisma.request.findFirst({
       where: { id: requestId },
-      select: { title: true },
+      select: { title: true, code: true },
     });
     const recipients = [
       ...(await this.notifications.processLeaders(mainProcessId)),
@@ -395,8 +410,8 @@ export class TaskService {
       userIds: recipients,
       excludeUserId: actor.userId,
       type: NotificationType.PLAN_TASKS_COMPLETED,
-      title: 'Plan con todas sus tareas completadas',
-      message: `Todas las tareas de «${request?.title ?? 'el proyecto'}» están terminadas. Ya puede gestionarse su cierre.`,
+      title: withCode('Plan con todas sus tareas completadas', request?.code),
+      message: `Todas las tareas de ${entityRef(request?.code, request?.title ?? 'el proyecto')} están terminadas. Ya puede gestionarse su cierre.`,
       link: `/demanda/solicitudes/${encodeURIComponent(requestId)}`,
       requestId,
     });
@@ -680,6 +695,8 @@ export class TaskService {
     mainProcessId: string | null,
   ): Promise<void> {
     try {
+      const requestCode = await this.requestCodeOf(requestId);
+      const taskRef = entityRef(task.code, task.title);
       if (nextStatus === TaskStatus.EN_REVISION) {
         const recipients = [
           ...(await this.notifications.processLeaders(mainProcessId)),
@@ -689,8 +706,8 @@ export class TaskService {
           userIds: recipients,
           excludeUserId: actor.userId,
           type: NotificationType.TASK_REVIEW_REQUESTED,
-          title: 'Tarea por aprobar',
-          message: `«${task.title}» de «${requestTitle}» espera tu aprobación.`,
+          title: withCode('Tarea por aprobar', task.code),
+          message: `${taskRef} de ${entityRef(requestCode, requestTitle)} espera tu aprobación.`,
           link: '/mi-trabajo#por-aprobar',
           requestId,
         });
@@ -702,8 +719,8 @@ export class TaskService {
           userIds: [task.responsibleUserId],
           excludeUserId: actor.userId,
           type: NotificationType.TASK_APPROVED,
-          title: 'Tarea aprobada',
-          message: `Tu tarea «${task.title}» fue aprobada y quedó terminada.`,
+          title: withCode('Tarea aprobada', task.code),
+          message: `Tu tarea ${taskRef} fue aprobada y quedó terminada.`,
           link: '/mi-trabajo',
           requestId,
         });
@@ -715,8 +732,8 @@ export class TaskService {
           userIds: [task.responsibleUserId],
           excludeUserId: actor.userId,
           type: NotificationType.TASK_RETURNED,
-          title: 'Tarea devuelta',
-          message: `«${task.title}» volvió a En curso para que la corrijas.`,
+          title: withCode('Tarea devuelta', task.code),
+          message: `${taskRef} volvió a En curso para que la corrijas.`,
           link: '/mi-trabajo',
           requestId,
         });

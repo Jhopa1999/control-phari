@@ -26,6 +26,17 @@ export class AssignmentResponseDto {
   })
   requestId!: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'PRY-0012',
+    description: 'ID visible de la solicitud ligada (solo lectura) o null.',
+  })
+  requestCode!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Título de la solicitud ligada o null.' })
+  requestTitle!: string | null;
+
   @ApiProperty({ type: Number, description: 'Horas comprometidas en el mes.' })
   committedHours!: number;
 

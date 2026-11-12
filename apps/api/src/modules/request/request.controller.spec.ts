@@ -38,6 +38,11 @@ describe('RequestController (delegacion)', () => {
     expect(svc.findOne).toHaveBeenCalledWith(a, 'r1');
   });
 
+  it('findByCode delega actor y código', async () => {
+    (svc as unknown as { findByCode: jest.Mock }).findByCode = jest.fn().mockResolvedValue('byCode');
+    await expect(controller.findByCode(a, 'PRY-0012')).resolves.toBe('byCode');
+    expect(svc.findByCode).toHaveBeenCalledWith(a, 'PRY-0012');
+  });
   it('create delega actor y dto', async () => {
     const dto = {} as never;
     await expect(controller.create(a, dto)).resolves.toBe('create');

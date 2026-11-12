@@ -62,6 +62,12 @@ export class ClosureStatusDto {
   @ApiProperty({ type: String, format: 'uuid' })
   requestId!: string;
 
+  @ApiProperty({ type: String, example: 'PRY-0012', description: 'ID visible de la solicitud (solo lectura).' })
+  requestCode!: string;
+
+  @ApiProperty({ type: String, description: 'Título de la solicitud.' })
+  requestTitle!: string;
+
   @ApiProperty({ type: String, description: 'Estado operativo de la solicitud.' })
   requestState!: string;
 

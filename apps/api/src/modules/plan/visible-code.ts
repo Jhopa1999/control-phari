@@ -38,6 +38,49 @@ export function shortCode(code: string): string {
   return match ? match[1] : code;
 }
 
+/** Longitud máxima de un código escrito por el usuario (se valida antes de la expresión). */
+export const VISIBLE_CODE_MAX_LENGTH = 32;
+
+/** Forma completa de un código visible: solicitud, fase o tarea (ya normalizado). */
+export const VISIBLE_CODE_PATTERN = /^PRY-\d{4,}(-(F\d+|T\d+))?$/;
+
+export type VisibleCodeKind = 'REQUEST' | 'PHASE' | 'TASK';
+
+export interface ParsedVisibleCode {
+  kind: VisibleCodeKind;
+  /** Código canónico en mayúsculas. */
+  code: string;
+  /** Código de la solicitud a la que pertenece. */
+  requestCode: string;
+}
+
+/**
+ * Normaliza lo escrito por el usuario: recorta, convierte tramos de espacios,
+ * guiones bajos y guiones largos en un único `-` y pasa a mayúsculas.
+ */
+export function normalizeVisibleCode(raw: string): string {
+  return raw
+    .trim()
+    .replace(/[\s_\u2013\u2014-]+/g, '-')
+    .toUpperCase();
+}
+
+/**
+ * Analiza un código completo (`PRY-0012`, `PRY-0012-F2`, `PRY-0012-T07`) sin
+ * distinguir mayúsculas. Devuelve `null` si no tiene la forma de un código
+ * (la longitud máxima se comprueba primero). La forma corta no se acepta.
+ */
+export function parseVisibleCode(raw: string): ParsedVisibleCode | null {
+  if (typeof raw !== 'string' || raw.length > VISIBLE_CODE_MAX_LENGTH * 2) return null;
+  const code = normalizeVisibleCode(raw);
+  if (code.length === 0 || code.length > VISIBLE_CODE_MAX_LENGTH) return null;
+  if (!VISIBLE_CODE_PATTERN.test(code)) return null;
+  const match = /^(PRY-\d+)(?:-([FT])\d+)?$/.exec(code);
+  if (!match) return null;
+  const kind: VisibleCodeKind = match[2] === 'F' ? 'PHASE' : match[2] === 'T' ? 'TASK' : 'REQUEST';
+  return { kind, code, requestCode: match[1] };
+}
+
 /** Siguiente número de solicitud (secuencia de Postgres; los huecos son válidos). */
 export async function nextRequestNumber(tx: CodeClient): Promise<number> {
   const rows = await tx.$queryRaw<Array<{ n: bigint | number }>>`

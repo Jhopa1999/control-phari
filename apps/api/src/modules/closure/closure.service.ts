@@ -9,6 +9,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import type { ProjectClosureModel } from '../../generated/prisma/models/ProjectClosure';
 import { AuditService } from '../audit/audit.service';
+import { entityRef, withCode } from '../notification/notification-text';
 import { CurrentActor } from '../auth/current-actor';
 import { CLOSURE_DOC_CATEGORY, DocStatus } from '../knowledge/document/doc-status';
 import {
@@ -44,7 +45,7 @@ const CLOSABLE_STATES = new Set<string>([
 ]);
 
 interface Evaluation {
-  request: { id: string; title: string; mainProcessId: string | null; operationalState: string; closedAt: Date | null; closedByUserId: string | null };
+  request: { id: string; code: string; title: string; mainProcessId: string | null; operationalState: string; closedAt: Date | null; closedByUserId: string | null };
   tasksTotal: number;
   tasksCompleted: number;
   documents: Array<{ id: string; title: string; status: string; reviewReason: string | null }>;
@@ -77,6 +78,7 @@ export class ClosureService {
       where: { AND: [{ id: requestId }, this.scopeWhere(actor)] },
       select: {
         id: true,
+        code: true,
         title: true,
         mainProcessId: true,
         operationalState: true,
@@ -202,6 +204,8 @@ export class ClosureService {
 
     return {
       requestId,
+      requestCode: ev.request.code,
+      requestTitle: ev.request.title,
       requestState: state,
       phase,
       tasksTotal: ev.tasksTotal,
@@ -263,8 +267,8 @@ export class ClosureService {
       userIds: await this.notifications.areaHeadsForProcess(ev.request.mainProcessId),
       excludeUserId: actor.userId,
       type: NotificationType.CLOSURE_REQUESTED,
-      title: 'Solicitud de cierre de proyecto',
-      message: `Se solicitó el cierre de «${ev.request.title}».`,
+      title: withCode('Solicitud de cierre de proyecto', ev.request.code),
+      message: `Se solicitó el cierre de ${entityRef(ev.request.code, ev.request.title)}.`,
       link: '/administracion/revision',
       requestId,
     });
@@ -344,10 +348,10 @@ export class ClosureService {
       ],
       excludeUserId: actor.userId,
       type: approve ? NotificationType.CLOSURE_APPROVED : NotificationType.CLOSURE_REJECTED,
-      title: approve ? 'Cierre de proyecto aprobado' : 'Cierre de proyecto rechazado',
+      title: withCode(approve ? 'Cierre de proyecto aprobado' : 'Cierre de proyecto rechazado', ev.request.code),
       message: approve
-        ? `«${ev.request.title}» quedó cerrado.`
-        : `El cierre de «${ev.request.title}» fue rechazado: ${dto.reason?.trim() ?? ''}`,
+        ? `${entityRef(ev.request.code, ev.request.title)} quedó cerrado.`
+        : `El cierre de ${entityRef(ev.request.code, ev.request.title)} fue rechazado: ${dto.reason?.trim() ?? ''}`,
       link: `/demanda/solicitudes/${encodeURIComponent(requestId)}`,
       requestId,
     });
@@ -394,8 +398,8 @@ export class ClosureService {
       userIds: await this.notifications.processLeaders(request.mainProcessId),
       excludeUserId: actor.userId,
       type: NotificationType.PROJECT_REOPENED,
-      title: 'Proyecto reabierto',
-      message: `«${request.title}» fue reabierto: ${dto.reason.trim()}`,
+      title: withCode('Proyecto reabierto', request.code),
+      message: `${entityRef(request.code, request.title)} fue reabierto: ${dto.reason.trim()}`,
       link: `/demanda/solicitudes/${encodeURIComponent(requestId)}`,
       requestId,
     });

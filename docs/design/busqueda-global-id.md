@@ -56,8 +56,9 @@ CodeResolutionDto
   requestTitle: título de la solicitud
   phaseId:      uuid de la fase (solo PHASE y TASK)
   phaseName:    nombre de la fase (solo PHASE y TASK)
-  status:       estado del PROPIO elemento (solicitud, fase o tarea); alimenta el StatusBadge del tipo que corresponda
-  requestStatus: estado de la SOLICITUD (siempre presente); decide si el Plan es un destino válido (§2.6)
+  status:       solo REQUEST y TASK (estado de la solicitud o de la tarea); AUSENTE en PHASE (la fase no tiene estado)
+  processName:  solo REQUEST; nombre del proceso principal o null
+  requestStatus: Request.operationalState (siempre presente; mismas cadenas que PLANNABLE_STATES); decide si el Plan es un destino válido (§2.6)
 ```
 
 Validación en la API: se normaliza a mayúsculas, se comprueba la longitud máxima (32) y la expresión de B6; si no
@@ -152,7 +153,7 @@ Cada estado cambia el panel, el `aria-invalid`/`aria-busy` del input y el texto 
 | **Foco vacío** | Campo enfocado sin texto | Sin pista | Cerrado | — | Ninguno |
 | **Escribiendo** | Texto que **aún no** forma un código completo (p. ej. `PRY-00`) | `aria-invalid` ausente | Abierto, sin listbox: bloque de ayuda | «Escribe el código completo. Ejemplos: PRY-0012, PRY-0012-F2, PRY-0012-T07.» (`text-sm text-muted-foreground`) | Ninguno (no interrumpir al escribir) |
 | **Formato no válido** | Se pulsa `Enter` con un texto que no tiene forma de código | `aria-invalid="true"` | Abierto, aviso | «No es un código válido. Usa PRY-0012, PRY-0012-F2 o PRY-0012-T07.» con icono `CircleAlert` | «Código no válido.» |
-| **Cargando** | Código completo, tras 250 ms o `Enter` | `aria-busy="true"`, spinner | Abierto, fila de carga | «Buscando PRY-0012-T07…» con `Loader2` | Ninguno hasta resolver (evita doble ruido) |
+| **Cargando** | Código completo, tras 400 ms (B9) o `Enter` | `aria-busy="true"`, spinner | Abierto, fila de carga | «Buscando PRY-0012-T07…» con `Loader2` | Ninguno hasta resolver (evita doble ruido) |
 | **Encontrado** | 200 | Sin invalid | Abierto, fila de resultado activa | Ver §2.2 | «Encontrado: tarea PRY-0012-T07, Migrar endpoints. Pulsa Intro para abrir.» |
 | **Encontrado sin pantalla** | 200 pero el actor no tiene destino (B10, §2.6) | — (`aria-activedescendant` se **mantiene** en la fila para que el lector la lea) | Fila no navegable (`data-disabled`, `aria-disabled="true"`, sigue activa) | «Tu rol no tiene una pantalla para abrir esta tarea.» | «Encontrado, pero tu rol no puede abrirlo.» |
 | **No encontrado** | 404 | `aria-invalid="true"` | Abierto, aviso | «No encontramos PRY-0012-T07, o no tienes acceso.» + ayuda «Revisa el código; debe escribirse completo.» con icono `SearchX` | «No se encontró PRY-0012-T07 o no tienes acceso.» |
@@ -175,7 +176,7 @@ Cada estado cambia el panel, el `aria-invalid`/`aria-busy` del input y el texto 
 | Código escrito | Tipo | Etiqueta | Título | Contexto |
 | --- | --- | --- | --- | --- |
 | `PRY-0012` | Solicitud | «Solicitud» | título de la solicitud | nombre del proceso (si existe); badge con `status` |
-| `PRY-0012-F2` | Fase | «Fase» | nombre de la fase | `PRY-0012 · Título de la solicitud`; badge con `status` de la fase |
+| `PRY-0012-F2` | Fase | «Fase» | nombre de la fase | `PRY-0012 · Título de la solicitud`; sin badge (la fase no tiene estado) |
 | `PRY-0012-T07` | Tarea | «Tarea» | título de la tarea | `Fase · PRY-0012 · Título de la solicitud`; badge con `status` de la tarea |
 
 ### 2.5 Teclado

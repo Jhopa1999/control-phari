@@ -645,6 +645,25 @@ describe('CapacityService', () => {
       });
     });
 
+    it('la respuesta trae el ID visible y el título de la solicitud ligada (o null)', async () => {
+      (m.prismaObj.process as any).findFirst.mockResolvedValue({ id: 'p1' });
+      (m.prismaObj.request as any).findFirst.mockResolvedValue({ id: 'r1' });
+      (m.prismaObj.assignment as any).create.mockResolvedValue(
+        assignmentRow({ requestId: 'r1', request: { code: 'PRY-0012', title: 'Portal' } }),
+      );
+      const res = await service.createAssignment(jefe(), {
+        userId: 'ui',
+        month: '2025-03',
+        processId: 'p1',
+        requestId: 'r1',
+        committedHours: 40,
+      });
+      expect(res.requestCode).toBe('PRY-0012');
+      expect(res.requestTitle).toBe('Portal');
+      expect((m.prismaObj.assignment as any).create.mock.calls[0][0].include).toEqual({
+        request: { select: { code: true, title: true } },
+      });
+    });
     it('sobreasignacion NO bloquea: crea aunque exceda la disponibilidad', async () => {
       (m.prismaObj.process as any).findFirst.mockResolvedValue({ id: 'p1' });
       (m.prismaObj.assignment as any).create.mockResolvedValue(
@@ -843,6 +862,7 @@ describe('CapacityService', () => {
       expect((m.prismaObj.assignment as any).update).toHaveBeenCalledWith({
         where: { id: 'as1' },
         data: { requestId: null },
+        include: { request: { select: { code: true, title: true } } },
       });
       expect(res.requestId).toBeNull();
     });

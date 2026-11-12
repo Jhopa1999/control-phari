@@ -7,6 +7,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import type { PlanModel } from '../../generated/prisma/models/Plan';
 import { AuditService } from '../audit/audit.service';
+import { entityRef, withCode } from '../notification/notification-text';
 import { CurrentActor } from '../auth/current-actor';
 import { RequestState } from '../request/request-state';
 import { RequestStateService } from '../request/request-state.service';
@@ -298,20 +299,29 @@ export class PlanService {
       ],
       excludeUserId: actor.userId,
       type: NotificationType.PLAN_PENDING_AUTHORIZATION,
-      title: 'Plan pendiente de autorización',
-      message: `El plan de «${await this.requestTitle(requestId)}» espera autorización.`,
+      title: withCode('Plan pendiente de autorización', await this.requestCode(requestId)),
+      message: `El plan de ${await this.requestRef(requestId)} espera autorización.`,
       link: '/administracion/revision',
       requestId,
     });
     return this.toResponse(updated);
   }
 
-  private async requestTitle(requestId: string): Promise<string> {
+  /** Referencia para textos de notificación: `PRY-0012 «Título»`. */
+  private async requestRef(requestId: string): Promise<string> {
     const r = await this.prisma.request.findFirst({
       where: { id: requestId },
-      select: { title: true },
+      select: { title: true, code: true },
     });
-    return r?.title ?? 'la solicitud';
+    return entityRef(r?.code, r?.title ?? 'la solicitud');
+  }
+
+  private async requestCode(requestId: string): Promise<string | null> {
+    const r = await this.prisma.request.findFirst({
+      where: { id: requestId },
+      select: { code: true },
+    });
+    return r?.code ?? null;
   }
 
   /**
@@ -374,8 +384,8 @@ export class PlanService {
       userIds: [plan.submittedByUserId, ...(await this.notifications.processLeaders(mainProcessId))],
       excludeUserId: actor.userId,
       type: NotificationType.PLAN_AUTHORIZED,
-      title: 'Plan aprobado',
-      message: `El plan de «${await this.requestTitle(requestId)}» fue autorizado. El proyecto pasa a ejecución.`,
+      title: withCode('Plan aprobado', await this.requestCode(requestId)),
+      message: `El plan de ${await this.requestRef(requestId)} fue autorizado. El proyecto pasa a ejecución.`,
       link: `/seguimiento/plan?requestId=${encodeURIComponent(requestId)}`,
       requestId,
     });
@@ -429,8 +439,8 @@ export class PlanService {
       userIds: [plan.submittedByUserId, ...(await this.notifications.processLeaders(mainProcessId))],
       excludeUserId: actor.userId,
       type: NotificationType.PLAN_RETURNED,
-      title: 'Plan devuelto',
-      message: `El plan de «${await this.requestTitle(requestId)}» fue devuelto: ${dto.reason}`,
+      title: withCode('Plan devuelto', await this.requestCode(requestId)),
+      message: `El plan de ${await this.requestRef(requestId)} fue devuelto: ${dto.reason}`,
       link: `/seguimiento/plan?requestId=${encodeURIComponent(requestId)}`,
       requestId,
     });

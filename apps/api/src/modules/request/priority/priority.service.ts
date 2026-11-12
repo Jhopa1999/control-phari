@@ -3,6 +3,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import type { PriorityEvaluationModel } from '../../../generated/prisma/models/PriorityEvaluation';
 import { AuditService } from '../../audit/audit.service';
+import { entityRef, withCode } from '../../notification/notification-text';
 import { CurrentActor } from '../../auth/current-actor';
 import { RequestState } from '../request-state';
 import {
@@ -220,8 +221,8 @@ export class PriorityService {
         userIds: await this.notifications.areaHeadsForProcess(request.mainProcessId),
         excludeUserId: actor.userId,
         type: NotificationType.APPROVAL_PENDING,
-        title: 'Nueva aprobación pendiente',
-        message: `«${request.title}» fue priorizada y espera la aprobación de su compromiso.`,
+        title: withCode('Nueva aprobación pendiente', request.code),
+        message: `${entityRef(request.code, request.title)} fue priorizada y espera la aprobación de su compromiso.`,
         link: '/administracion/revision',
         requestId,
       });

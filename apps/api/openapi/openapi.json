@@ -1330,6 +1330,45 @@
         ]
       }
     },
+    "/requests/by-code/{code}": {
+      "get": {
+        "operationId": "RequestController_findByCode",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "ID visible de la solicitud.",
+            "schema": {
+              "example": "PRY-0012",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El código no tiene formato de solicitud."
+          },
+          "404": {
+            "description": "No existe o está fuera de alcance."
+          }
+        },
+        "summary": "Obtiene una solicitud por su ID visible (p. ej. PRY-0012), sin distinguir mayúsculas. Mismo alcance que el detalle por id.",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
     "/requests/{id}": {
       "get": {
         "operationId": "RequestController_findOne",
@@ -4827,6 +4866,90 @@
         "summary": "Quita una evidencia de la tarea.",
         "tags": [
           "tasks"
+        ]
+      }
+    },
+    "/codes/{code}": {
+      "get": {
+        "operationId": "CodeResolutionController_resolve",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "ID visible en su forma completa.",
+            "schema": {
+              "example": "PRY-0012-T07",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Elemento encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeResolutionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de código no válido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "El código no existe o está fuera de alcance."
+          }
+        },
+        "summary": "Resuelve un ID visible (PRY-0012, PRY-0012-F2 o PRY-0012-T07, sin distinguir mayúsculas) y devuelve su tipo, id, título y datos para navegar.",
+        "tags": [
+          "codes"
+        ]
+      }
+    },
+    "/plan-phases/by-code/{code}": {
+      "get": {
+        "operationId": "CodeResolutionController_findPhaseByCode",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "ID visible de la fase.",
+            "schema": {
+              "example": "PRY-0012-F2",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fase encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhaseByCodeDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El código no tiene formato de fase."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Fase inexistente o fuera de alcance."
+          }
+        },
+        "summary": "Detalle de una fase a partir de su ID visible (p. ej. PRY-0012-F2), sin distinguir mayúsculas. Mismo alcance que la solicitud del plan.",
+        "tags": [
+          "codes"
         ]
       }
     },
@@ -10474,6 +10597,15 @@
             "type": "string",
             "format": "uuid"
           },
+          "requestCode": {
+            "type": "string",
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud (solo lectura)."
+          },
+          "requestTitle": {
+            "type": "string",
+            "description": "Título de la solicitud."
+          },
           "requestState": {
             "type": "string",
             "description": "Estado operativo de la solicitud."
@@ -10543,6 +10675,8 @@
         },
         "required": [
           "requestId",
+          "requestCode",
+          "requestTitle",
           "requestState",
           "phase",
           "tasksTotal",
@@ -13897,6 +14031,154 @@
           "expiresInSeconds"
         ]
       },
+      "CodeResolutionDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "REQUEST",
+              "PHASE",
+              "TASK"
+            ],
+            "description": "Tipo de elemento encontrado."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id del elemento encontrado."
+          },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012-T07",
+            "description": "Código canónico en mayúsculas."
+          },
+          "title": {
+            "type": "string",
+            "description": "Título de la solicitud, nombre de la fase o título de la tarea."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud del elemento (igual a `id` si el tipo es REQUEST)."
+          },
+          "requestCode": {
+            "type": "string",
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud."
+          },
+          "requestTitle": {
+            "type": "string",
+            "description": "Título de la solicitud."
+          },
+          "requestStatus": {
+            "type": "string",
+            "description": "Estado operativo de la solicitud (`Request.operationalState`); decide si el Plan es un destino válido."
+          },
+          "phaseId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Fase del elemento (solo PHASE y TASK)."
+          },
+          "phaseName": {
+            "type": "string",
+            "description": "Nombre de la fase (solo PHASE y TASK)."
+          },
+          "status": {
+            "type": "string",
+            "description": "Estado de la solicitud (REQUEST) o de la tarea (TASK). Las fases no tienen estado: se omite."
+          },
+          "processName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del proceso principal (solo REQUEST; null si aún no tiene proceso)."
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "code",
+          "title",
+          "requestId",
+          "requestCode",
+          "requestTitle",
+          "requestStatus"
+        ]
+      },
+      "PhaseByCodeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador de la fase."
+          },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012-F2",
+            "description": "ID visible de la fase."
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Plan al que pertenece la fase."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la fase."
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "deliverable": {
+            "type": "string",
+            "nullable": true
+          },
+          "order": {
+            "type": "number",
+            "description": "Posición de la fase en el plan (0-based)."
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitud a la que pertenece el plan."
+          },
+          "requestCode": {
+            "type": "string",
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud."
+          },
+          "requestTitle": {
+            "type": "string",
+            "description": "Título de la solicitud."
+          },
+          "requestStatus": {
+            "type": "string",
+            "description": "Estado operativo de la solicitud."
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "planId",
+          "name",
+          "startDate",
+          "endDate",
+          "deliverable",
+          "order",
+          "requestId",
+          "requestCode",
+          "requestTitle",
+          "requestStatus"
+        ]
+      },
       "CapacitySummaryRowDto": {
         "type": "object",
         "properties": {
@@ -14116,6 +14398,17 @@
             "nullable": true,
             "description": "Solicitud ligada o null."
           },
+          "requestCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud ligada (solo lectura) o null."
+          },
+          "requestTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Título de la solicitud ligada o null."
+          },
           "committedHours": {
             "type": "number",
             "description": "Horas comprometidas en el mes."
@@ -14142,6 +14435,8 @@
           "month",
           "processId",
           "requestId",
+          "requestCode",
+          "requestTitle",
           "committedHours",
           "description",
           "createdAt",

@@ -407,6 +407,25 @@ describe('TaskService', () => {
     });
   });
 
+  describe('notificación de asignación con ID visible', () => {
+    it('incluye el código de la tarea y de la solicitud en título y mensaje', async () => {
+      (m.prismaObj as Record<string, unknown>).request = {
+        findFirst: jest.fn().mockResolvedValue({ code: 'PRY-0012' }),
+      };
+      await (service as unknown as {
+        notifyAssignment: (a: CurrentActor, t: unknown, r: string) => Promise<void>;
+      }).notifyAssignment(
+        actorWith(RoleCode.LIDER_PROCESO, 'ul'),
+        { id: 't1', code: 'PRY-0012-T07', title: 'Migrar endpoints', responsibleUserId: 'u1' },
+        'r1',
+      );
+      const call = notifier.notify.mock.calls.find((c) => c[0].type === 'TASK_ASSIGNED');
+      expect(call?.[0].title).toBe('Nueva tarea asignada · PRY-0012-T07');
+      expect(call?.[0].message).toBe(
+        'Se te asignó la tarea PRY-0012-T07 «Migrar endpoints» del proyecto PRY-0012.',
+      );
+    });
+  });
   describe('findForPlan (filtros §3.4)', () => {
     it('sin filtros -> where base solo por plan', async () => {
       (m.prismaObj.task as any).findMany.mockResolvedValue([]);
@@ -1197,7 +1216,7 @@ describe('TaskService', () => {
         expect(call?.[0]).toMatchObject({
           userIds: ['lider1', 'jefe1'],
           excludeUserId: 'u1',
-          title: 'Tarea por aprobar',
+          title: 'Tarea por aprobar · PRY-0012-T01',
           link: '/mi-trabajo#por-aprobar',
         });
         expect(call?.[0].message).toContain('espera tu aprobación');
@@ -1207,14 +1226,14 @@ describe('TaskService', () => {
         scope({ status: TaskStatus.EN_REVISION });
         await service.changeStatus(lider(), 't1', { status: TaskStatus.TERMINADA });
         const call = notifier.notify.mock.calls.find((c) => c[0].type === 'TASK_APPROVED');
-        expect(call?.[0]).toMatchObject({ userIds: ['u1'], excludeUserId: 'ul', title: 'Tarea aprobada' });
+        expect(call?.[0]).toMatchObject({ userIds: ['u1'], excludeUserId: 'ul', title: 'Tarea aprobada · PRY-0012-T01' });
       });
 
       it('al devolver avisa al responsable', async () => {
         scope({ status: TaskStatus.EN_REVISION });
         await service.changeStatus(lider(), 't1', { status: TaskStatus.EN_CURSO });
         const call = notifier.notify.mock.calls.find((c) => c[0].type === 'TASK_RETURNED');
-        expect(call?.[0]).toMatchObject({ userIds: ['u1'], excludeUserId: 'ul', title: 'Tarea devuelta' });
+        expect(call?.[0]).toMatchObject({ userIds: ['u1'], excludeUserId: 'ul', title: 'Tarea devuelta · PRY-0012-T01' });
       });
 
       it('un fallo al notificar no revierte el cambio de estado', async () => {

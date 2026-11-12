@@ -9,7 +9,7 @@ import { Prisma } from '../../generated/prisma/client';
 import type { RequestModel } from '../../generated/prisma/models/Request';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
-import { formatRequestCode, nextRequestNumber } from '../plan/visible-code';
+import { formatRequestCode, nextRequestNumber, parseVisibleCode } from '../plan/visible-code';
 import { requestScopeWhere } from './request-scope.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ListRequestsDto } from './dto/list-requests.dto';
@@ -165,6 +165,28 @@ equest-scope.service.ts). */
   async findOne(actor: CurrentActor, id: string): Promise<RequestResponseDto> {
     const request = await this.requireInScope(actor, id);
     return this.state.buildResponse(request);
+  }
+
+  /**
+   * Resuelve una solicitud por su ID visible (PRY-0012), sin distinguir
+   * mayúsculas. Formato inválido o de otro tipo -> 400; inexistente o fuera de
+   * alcance -> 404 (mismo alcance que `findOne`).
+   */
+  async findByCode(actor: CurrentActor, code: string): Promise<RequestResponseDto> {
+    const parsed = parseVisibleCode(code);
+    if (!parsed || parsed.kind !== 'REQUEST') {
+      throw new BadRequestException(
+        'Código de solicitud no válido. Usa la forma completa, p. ej. PRY-0012.',
+      );
+    }
+    const request = await this.prisma.request.findFirst({
+      where: { AND: [{ code: parsed.code }, this.scopeWhere(actor)] },
+      include: { participants: true },
+    });
+    if (!request) {
+      throw new NotFoundException(`Solicitud "${parsed.code}" no encontrada.`);
+    }
+    return this.state.buildResponse(request as RequestWithParticipants);
   }
 
   async create(

@@ -421,6 +421,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests/by-code/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtiene una solicitud por su ID visible (p. ej. PRY-0012), sin distinguir mayúsculas. Mismo alcance que el detalle por id. */
+        get: operations["RequestController_findByCode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/requests/{id}": {
         parameters: {
             query?: never;
@@ -1360,6 +1377,40 @@ export interface paths {
         post?: never;
         /** Quita una evidencia de la tarea. */
         delete: operations["EvidenceController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/codes/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resuelve un ID visible (PRY-0012, PRY-0012-F2 o PRY-0012-T07, sin distinguir mayúsculas) y devuelve su tipo, id, título y datos para navegar. */
+        get: operations["CodeResolutionController_resolve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plan-phases/by-code/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una fase a partir de su ID visible (p. ej. PRY-0012-F2), sin distinguir mayúsculas. Mismo alcance que la solicitud del plan. */
+        get: operations["CodeResolutionController_findPhaseByCode"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3156,6 +3207,13 @@ export interface components {
         ClosureStatusDto: {
             /** Format: uuid */
             requestId: string;
+            /**
+             * @description ID visible de la solicitud (solo lectura).
+             * @example PRY-0012
+             */
+            requestCode: string;
+            /** @description Título de la solicitud. */
+            requestTitle: string;
             /** @description Estado operativo de la solicitud. */
             requestState: string;
             /**
@@ -4913,6 +4971,90 @@ export interface components {
             /** @description Segundos de vigencia de la URL. */
             expiresInSeconds: number;
         };
+        CodeResolutionDto: {
+            /**
+             * @description Tipo de elemento encontrado.
+             * @enum {string}
+             */
+            type: "REQUEST" | "PHASE" | "TASK";
+            /**
+             * Format: uuid
+             * @description Id del elemento encontrado.
+             */
+            id: string;
+            /**
+             * @description Código canónico en mayúsculas.
+             * @example PRY-0012-T07
+             */
+            code: string;
+            /** @description Título de la solicitud, nombre de la fase o título de la tarea. */
+            title: string;
+            /**
+             * Format: uuid
+             * @description Solicitud del elemento (igual a `id` si el tipo es REQUEST).
+             */
+            requestId: string;
+            /**
+             * @description ID visible de la solicitud.
+             * @example PRY-0012
+             */
+            requestCode: string;
+            /** @description Título de la solicitud. */
+            requestTitle: string;
+            /** @description Estado operativo de la solicitud (`Request.operationalState`); decide si el Plan es un destino válido. */
+            requestStatus: string;
+            /**
+             * Format: uuid
+             * @description Fase del elemento (solo PHASE y TASK).
+             */
+            phaseId?: string;
+            /** @description Nombre de la fase (solo PHASE y TASK). */
+            phaseName?: string;
+            /** @description Estado de la solicitud (REQUEST) o de la tarea (TASK). Las fases no tienen estado: se omite. */
+            status?: string;
+            /** @description Nombre del proceso principal (solo REQUEST; null si aún no tiene proceso). */
+            processName?: string | null;
+        };
+        PhaseByCodeDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la fase.
+             */
+            id: string;
+            /**
+             * @description ID visible de la fase.
+             * @example PRY-0012-F2
+             */
+            code: string;
+            /**
+             * Format: uuid
+             * @description Plan al que pertenece la fase.
+             */
+            planId: string;
+            /** @description Nombre de la fase. */
+            name: string;
+            /** Format: date-time */
+            startDate: string | null;
+            /** Format: date-time */
+            endDate: string | null;
+            deliverable: string | null;
+            /** @description Posición de la fase en el plan (0-based). */
+            order: number;
+            /**
+             * Format: uuid
+             * @description Solicitud a la que pertenece el plan.
+             */
+            requestId: string;
+            /**
+             * @description ID visible de la solicitud.
+             * @example PRY-0012
+             */
+            requestCode: string;
+            /** @description Título de la solicitud. */
+            requestTitle: string;
+            /** @description Estado operativo de la solicitud. */
+            requestStatus: string;
+        };
         CapacitySummaryRowDto: {
             /**
              * Format: uuid
@@ -5040,6 +5182,13 @@ export interface components {
              * @description Solicitud ligada o null.
              */
             requestId: string | null;
+            /**
+             * @description ID visible de la solicitud ligada (solo lectura) o null.
+             * @example PRY-0012
+             */
+            requestCode: string | null;
+            /** @description Título de la solicitud ligada o null. */
+            requestTitle: string | null;
             /** @description Horas comprometidas en el mes. */
             committedHours: number;
             /** @description Descripcion informativa o null. */
@@ -8184,6 +8333,43 @@ export interface operations {
                 content?: never;
             };
             /** @description Proceso principal fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RequestController_findByCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID visible de la solicitud. */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Solicitud encontrada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestResponseDto"];
+                };
+            };
+            /** @description El código no tiene formato de solicitud. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o está fuera de alcance. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -11379,6 +11565,94 @@ export interface operations {
                 content?: never;
             };
             /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CodeResolutionController_resolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID visible en su forma completa. */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Elemento encontrado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodeResolutionDto"];
+                };
+            };
+            /** @description Formato de código no válido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El código no existe o está fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CodeResolutionController_findPhaseByCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID visible de la fase. */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fase encontrada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhaseByCodeDto"];
+                };
+            };
+            /** @description El código no tiene formato de fase. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Fase inexistente o fuera de alcance. */
             404: {
                 headers: {
                     [name: string]: unknown;

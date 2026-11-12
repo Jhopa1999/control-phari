@@ -54,6 +54,23 @@ export class RequestController {
     return this.requestService.findMany(actor, filters);
   }
 
+  // Va ANTES de `:id`: resuelve una solicitud por su ID visible (solo lectura).
+  @Get('by-code/:code')
+  @ApiOperation({
+    summary:
+      'Obtiene una solicitud por su ID visible (p. ej. PRY-0012), sin distinguir mayúsculas. Mismo alcance que el detalle por id.',
+  })
+  @ApiParam({ name: 'code', example: 'PRY-0012', description: 'ID visible de la solicitud.' })
+  @ApiResponse({ status: 200, description: 'Solicitud encontrada.', type: RequestResponseDto })
+  @ApiResponse({ status: 400, description: 'El código no tiene formato de solicitud.' })
+  @ApiResponse({ status: 404, description: 'No existe o está fuera de alcance.' })
+  findByCode(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('code') code: string,
+  ) {
+    return this.requestService.findByCode(actor, code);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtiene una solicitud por id (404 fuera de alcance).' })
   @ApiParam({ name: 'id', format: 'uuid' })

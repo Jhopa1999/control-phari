@@ -28,6 +28,12 @@ import {
   CapacitySummaryRowDto,
 } from './dto/capacity-summary-row.dto';
 
+/** Asignación con la solicitud ligada (ID visible y título para la respuesta). */
+const ASSIGNMENT_INCLUDE = { request: { select: { code: true, title: true } } } as const;
+type AssignmentWithRequest = AssignmentModel & {
+  request: { code: string; title: string } | null;
+};
+
 /**
  * Logica de capacidad (design §2): disponibilidad por persona/mes, asignaciones
  * de horas y resumen de carga server-side. Sigue el patron de RequestService:
@@ -83,13 +89,15 @@ export class CapacityService {
     };
   }
 
-  private toAssignmentResponse(row: AssignmentModel): AssignmentResponseDto {
+  private toAssignmentResponse(row: AssignmentWithRequest): AssignmentResponseDto {
     return {
       id: row.id,
       userId: row.userId,
       month: dateToMonthString(row.month),
       processId: row.processId,
       requestId: row.requestId,
+      requestCode: row.request?.code ?? null,
+      requestTitle: row.request?.title ?? null,
       committedHours: row.committedHours,
       description: row.description,
       createdAt: row.createdAt,
@@ -352,6 +360,7 @@ export class CapacityService {
             ? { description: dto.description }
             : {}),
         },
+        include: ASSIGNMENT_INCLUDE,
       });
 
       await this.audit.record(tx, {
@@ -419,6 +428,7 @@ export class CapacityService {
             ? { description: dto.description }
             : {}),
         },
+        include: ASSIGNMENT_INCLUDE,
       });
 
       await this.audit.record(tx, {
@@ -493,6 +503,7 @@ export class CapacityService {
     const rows = await this.prisma.assignment.findMany({
       where,
       orderBy: [{ userId: 'asc' }, { createdAt: 'asc' }],
+      include: ASSIGNMENT_INCLUDE,
     });
 
     return rows.map((row) => this.toAssignmentResponse(row));
