@@ -109,6 +109,12 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
       'por banda, estado y proceso principal; cada filtro admite varios valores ' +
       '(arreglo, se combinan con O; entre filtros es Y; máximo 50 por filtro). ' +
       'Mismo alcance que request.list (jefe y líder ven todas; el integrante, sus ' +
-      'procesos más las que creó) y sin parámetros devuelve todos los estados.',
+      'procesos más las que creó) y sin parámetros devuelve todos los estados. ' +
+      'El vencimiento (dueStatus, daysToTarget) se mide contra referenceDate: el ' +
+      'compromiso del plan autorizado (referenceSource=PLAN) o, sin plan autorizado, ' +
+      'la fecha objetivo de la solicitud, que es solo una expectativa inicial ' +
+      '(referenceSource=SOLICITUD). requestedGapDays informa cuánto se aparta el plan ' +
+      'de lo solicitado y scheduleVarianceDays cuánto se corrió el pronóstico ' +
+      '(forecastDate) respecto al compromiso; ninguno de los dos es un vencimiento.',
   },
 ];

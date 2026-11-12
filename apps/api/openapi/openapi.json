@@ -13190,6 +13190,12 @@
             "nullable": true,
             "description": "Fecha de compromiso."
           },
+          "baselineDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Línea base de entrega: fecha fin comprometida, congelada al autorizar el plan (compromiso, si no fin del periodo, si no última fecha fin de las tareas). Null mientras el plan no se autoriza. Es la referencia del vencimiento en el portafolio."
+          },
           "risks": {
             "type": "string",
             "nullable": true,
@@ -13260,6 +13266,7 @@
           "periodStart",
           "periodEnd",
           "commitmentDate",
+          "baselineDate",
           "risks",
           "mitigations",
           "status",
@@ -17202,12 +17209,41 @@
               "VENCIDO",
               "NO_APLICA"
             ],
-            "description": "Alerta de la fecha objetivo. NO_APLICA en proyectos cerrados, rechazados o retirados."
+            "description": "Alerta de vencimiento medida contra la fecha de referencia (`referenceDate`): el compromiso del plan autorizado o, sin plan autorizado, la fecha objetivo de la solicitud. NO_APLICA en proyectos cerrados, rechazados o retirados."
           },
           "daysToTarget": {
             "type": "number",
             "nullable": true,
-            "description": "Dias hasta la fecha objetivo (negativo = vencido) o null."
+            "description": "Dias hasta la fecha de referencia (negativo = vencido) o null."
+          },
+          "referenceDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fecha (YYYY-MM-DD) contra la que se mide el vencimiento: línea base del plan autorizado o, sin él, la fecha objetivo. Null si no hay ninguna."
+          },
+          "referenceSource": {
+            "type": "string",
+            "enum": [
+              "PLAN",
+              "SOLICITUD",
+              "NINGUNA"
+            ],
+            "description": "Origen de `referenceDate`: PLAN (compromiso del plan autorizado), SOLICITUD (fecha objetivo, aún sin plan autorizado) o NINGUNA."
+          },
+          "forecastDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Pronóstico de fin (YYYY-MM-DD): mayor fecha fin entre las tareas sin terminar, o null."
+          },
+          "requestedGapDays": {
+            "type": "number",
+            "nullable": true,
+            "description": "Días del compromiso del plan respecto a la fecha solicitada (positivo = el plan termina después de lo solicitado). Informativo: no es un vencimiento. Null sin plan autorizado o sin fecha objetivo."
+          },
+          "scheduleVarianceDays": {
+            "type": "number",
+            "nullable": true,
+            "description": "Desviación en días del pronóstico respecto al compromiso del plan (positivo = se corrió). Null sin plan autorizado o sin tareas abiertas con fecha."
           },
           "blocked": {
             "type": "boolean",
@@ -17238,6 +17274,11 @@
           "progressPercent",
           "dueStatus",
           "daysToTarget",
+          "referenceDate",
+          "referenceSource",
+          "forecastDate",
+          "requestedGapDays",
+          "scheduleVarianceDays",
           "blocked",
           "blockedReason"
         ]

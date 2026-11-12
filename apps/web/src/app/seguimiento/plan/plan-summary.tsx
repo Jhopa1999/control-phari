@@ -44,6 +44,9 @@ export function PlanSummary({ plan: current }: PlanSummaryProps): React.ReactEle
   if (current.commitmentDate) {
     facts.push({ term: 'Fecha de compromiso', value: formatDateOnly(current.commitmentDate) });
   }
+  if (current.baselineDate) {
+    facts.push({ term: 'Línea base de entrega', value: formatDateOnly(current.baselineDate) });
+  }
   if (current.risks) facts.push({ term: 'Riesgos', value: current.risks, span: 2 });
   if (current.mitigations) {
     facts.push({ term: 'Mitigaciones', value: current.mitigations, span: 2 });

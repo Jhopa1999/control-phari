@@ -535,6 +535,10 @@ model Plan {
   periodStart        DateTime? @map("period_start")
   periodEnd          DateTime? @map("period_end")
   commitmentDate     DateTime? @map("commitment_date")
+  // Línea base de entrega: fecha fin comprometida, congelada al AUTORIZAR el plan
+  // (commitmentDate ?? periodEnd ?? última fecha fin de tareas). Es la referencia
+  // del vencimiento en el portafolio; editar commitmentDate después no la mueve.
+  baselineDate       DateTime? @map("baseline_date")
   risks              String?
   mitigations        String?
   status             String    @default("BORRADOR")

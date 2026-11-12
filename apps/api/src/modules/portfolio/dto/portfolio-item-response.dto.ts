@@ -76,16 +76,56 @@ export class PortfolioItemResponseDto {
     type: String,
     enum: ['SIN_FECHA', 'EN_TIEMPO', 'PROXIMO_A_VENCER', 'VENCIDO', 'NO_APLICA'],
     description:
-      'Alerta de la fecha objetivo. NO_APLICA en proyectos cerrados, rechazados o retirados.',
+      'Alerta de vencimiento medida contra la fecha de referencia (`referenceDate`): el compromiso del plan autorizado o, sin plan autorizado, la fecha objetivo de la solicitud. NO_APLICA en proyectos cerrados, rechazados o retirados.',
   })
   dueStatus!: string;
 
   @ApiProperty({
     type: Number,
     nullable: true,
-    description: 'Dias hasta la fecha objetivo (negativo = vencido) o null.',
+    description: 'Dias hasta la fecha de referencia (negativo = vencido) o null.',
   })
   daysToTarget!: number | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Fecha (YYYY-MM-DD) contra la que se mide el vencimiento: línea base del plan autorizado o, sin él, la fecha objetivo. Null si no hay ninguna.',
+  })
+  referenceDate!: string | null;
+
+  @ApiProperty({
+    type: String,
+    enum: ['PLAN', 'SOLICITUD', 'NINGUNA'],
+    description:
+      'Origen de `referenceDate`: PLAN (compromiso del plan autorizado), SOLICITUD (fecha objetivo, aún sin plan autorizado) o NINGUNA.',
+  })
+  referenceSource!: string;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Pronóstico de fin (YYYY-MM-DD): mayor fecha fin entre las tareas sin terminar, o null.',
+  })
+  forecastDate!: string | null;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description:
+      'Días del compromiso del plan respecto a la fecha solicitada (positivo = el plan termina después de lo solicitado). Informativo: no es un vencimiento. Null sin plan autorizado o sin fecha objetivo.',
+  })
+  requestedGapDays!: number | null;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description:
+      'Desviación en días del pronóstico respecto al compromiso del plan (positivo = se corrió). Null sin plan autorizado o sin tareas abiertas con fecha.',
+  })
+  scheduleVarianceDays!: number | null;
 
   @ApiProperty({ type: Boolean, description: 'Flag transversal de bloqueo activo (Fase 7).' })
   blocked!: boolean;
