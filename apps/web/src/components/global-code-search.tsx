@@ -349,7 +349,7 @@ function SearchBox({ placement, onModeChange }: GlobalCodeSearchProps): React.Re
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onFocus={() => text !== '' && setPanelOpen(true)}
-          placeholder="Buscar código (PRY-0012)"
+          placeholder="Buscar código"
           aria-label="Buscar por código"
           aria-describedby={helpId}
           aria-keyshortcuts="/"
@@ -365,7 +365,7 @@ function SearchBox({ placement, onModeChange }: GlobalCodeSearchProps): React.Re
           spellCheck={false}
           enterKeyHint="search"
           className={cn(
-            'w-full min-w-0 rounded-md border border-input bg-background pl-8 pr-9 text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring aria-invalid:border-danger aria-invalid:focus-visible:outline-danger',
+            '[&::-webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:appearance-none w-full min-w-0 rounded-md border border-input bg-background pl-8 pr-9 text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring aria-invalid:border-danger aria-invalid:focus-visible:outline-danger',
             mobile ? 'h-11 text-base sm:text-sm' : 'h-8 w-56 text-sm pointer-coarse:h-10 xl:w-72',
           )}
         />

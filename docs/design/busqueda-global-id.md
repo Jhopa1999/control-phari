@@ -118,7 +118,7 @@ Cambio en `app-shell.tsx` (solo la barra de escritorio): la barra pasa de `justi
 - El input tiene `type="search"` con `autocomplete="off"`, `autocapitalize="characters"`, `spellcheck="false"` y
   `enterkeyhint="search"`. El texto no se fuerza a mayúsculas visualmente (`uppercase`) para no alterar lo copiado;
   la normalización ocurre al enviar (B6).
-- `placeholder`: «Buscar código (PRY-0012)». No sustituye al nombre accesible: el input lleva
+- `placeholder`: «Buscar código» (el ejemplo PRY-0012 se truncaba a 1024 px; el ejemplo vive en la ayuda y en el panel). No sustituye al nombre accesible: el input lleva
   `aria-label="Buscar por código"`. Distinto del buscador del menú lateral, cuyo nombre es el de su etiqueta
   («Buscar en el menú»), de modo que los nombres accesibles de ambos campos son distintos y no se confunden al navegar por regiones.
 - Foco: `outline-ring`, igual que `Input`. La barra tiene `overflow` visible; el panel no se recorta.
