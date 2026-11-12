@@ -65,6 +65,7 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
     'Autenticación: el MCP no gestiona credenciales ni recuperación de contraseña; la identidad se configura por entorno (stdio) o por Bearer (HTTP).',
     [
       'POST /auth/login',
+      'POST /auth/logout',
       'POST /auth/forgot-password',
       'POST /auth/reset-password',
     ],

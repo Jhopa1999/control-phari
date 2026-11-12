@@ -15,6 +15,7 @@ import { AuthLoginService } from './auth-login.service';
 import { AuthResetController } from './auth-reset.controller';
 import { AuthResetService } from './auth-reset.service';
 import { AuthTokenService } from './auth-token.service';
+import { SessionCookieService } from './session-cookie.service';
 
 const JWT_MODE_AUTH = 'jwt';
 
@@ -67,6 +68,7 @@ function resolveJwtSecret(): string | undefined {
     AuthLoginService,
     AuthTokenService,
     AuthResetService,
+    SessionCookieService,
     {
       provide: ACTOR_RESOLVER,
       useFactory: (dev: DevActorResolver, jwt: JwtActorResolver) =>

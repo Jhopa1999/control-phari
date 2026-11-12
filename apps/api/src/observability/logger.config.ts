@@ -83,7 +83,11 @@ export function buildLoggerModuleOptions(): Params {
       // Censura de cabeceras sensibles. El cuerpo de la peticion NO se loguea
       // (comportamiento por defecto de pino-http, que no se altera).
       redact: {
-        paths: ['req.headers.authorization', 'req.headers.cookie'],
+        paths: [
+          'req.headers.authorization',
+          'req.headers.cookie',
+          'res.headers["set-cookie"]',
+        ],
         censor: '[redacted]',
       },
       // Salida legible solo en desarrollo (LOG_PRETTY=true); JSON en otro caso.

@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Inject,
   Injectable,
   UnauthorizedException,
@@ -8,6 +9,7 @@ import {
 import { ACTOR_RESOLVER, ActorResolver } from './actor-resolver';
 import { CurrentActor } from './current-actor';
 import { isJwtMode } from './dev-actor.resolver';
+import { hasCsrfHeader, readSessionCookie, requiresCsrf } from './session-cookie';
 
 /** Nombre del header de identidad de desarrollo (design 3.1). */
 export const ACTOR_HEADER = 'x-actor-id';
@@ -22,7 +24,12 @@ export const AUTHORIZATION_HEADER = 'authorization';
  */
 export interface RequestWithActor {
   headers: Record<string, string | string[] | undefined>;
+  method?: string;
   actor?: CurrentActor;
+  /** Origen de la identidad: Bearer, cookie de sesion o X-Actor-Id. */
+  authSource?: 'bearer' | 'cookie' | 'dev-header';
+  /** Bearer <token> normalizado (Bearer o cookie); lo reutiliza el asistente. */
+  bearer?: string;
 }
 
 /**
@@ -39,16 +46,36 @@ export class CurrentUserGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithActor>();
 
-    // El guard es el unico punto que ya conoce el request HTTP, asi que es
-    // quien elige QUE header leer segun el modo y pasa su valor crudo al
-    // resolver, manteniendo intacta la firma resolve(string | undefined):
-    // - modo jwt: el header `Authorization` completo ("Bearer <token>").
-    // - cualquier otro modo (dev-header o sin definir): `X-Actor-Id`, igual que
-    //   siempre, por lo que los specs que no definen AUTH_MODE no cambian.
-    const rawIdentity = isJwtMode()
-      ? headerValue(request.headers[AUTHORIZATION_HEADER])
-      : headerValue(request.headers[ACTOR_HEADER]);
-
+    // El guard es el unico punto que conoce el request HTTP: elige que leer
+    // segun el modo y pasa el valor al resolver (firma resolve(string)).
+    // - modo jwt: Authorization: Bearer si existe (no se cae a la cookie si
+    //   es invalido); si no, la cookie portal_session (exige CSRF en
+    //   escrituras); si no hay nada, undefined => 401.
+    // - cualquier otro modo: X-Actor-Id; la cookie se ignora por completo.
+    let rawIdentity: string | undefined;
+    if (isJwtMode()) {
+      const authorization = headerValue(request.headers[AUTHORIZATION_HEADER]);
+      if (authorization !== undefined) {
+        rawIdentity = authorization;
+        request.authSource = 'bearer';
+        request.bearer = authorization;
+      } else {
+        const cookieToken = readSessionCookie(request.headers.cookie);
+        if (cookieToken !== undefined) {
+          if (requiresCsrf(request.method) && !hasCsrfHeader(request.headers)) {
+            throw new ForbiddenException(
+              'Falta la cabecera de proteccion CSRF.',
+            );
+          }
+          rawIdentity = `Bearer ${cookieToken}`;
+          request.authSource = 'cookie';
+          request.bearer = rawIdentity;
+        }
+      }
+    } else {
+      rawIdentity = headerValue(request.headers[ACTOR_HEADER]);
+      request.authSource = 'dev-header';
+    }
     const actor = await this.actorResolver.resolve(rawIdentity);
     if (!actor) {
       throw new UnauthorizedException(

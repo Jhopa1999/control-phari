@@ -1,6 +1,7 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder } from '@nestjs/swagger';
+import { securityHeadersMiddleware } from './security/security-headers.middleware';
 
 /**
  * Limite del cuerpo de la peticion. El contenido de un documento Markdown
@@ -17,16 +18,39 @@ const BODY_LIMIT = '1mb';
  * comas). Si no esta definida, NO se abre CORS a "*": se devuelve una lista
  * vacia y no se habilita CORS.
  */
-function parseCorsOrigins(): string[] {
-  const raw = process.env.CORS_ORIGINS;
+export function parseCorsOrigins(
+  raw = process.env.CORS_ORIGINS,
+  nodeEnv = process.env.NODE_ENV,
+  logger: Pick<Logger, 'error'> = new Logger('Cors'),
+): string[] {
   if (!raw) {
     return [];
   }
-  return raw
+  const entries = raw
     .split(',')
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);
+  // "*" es incompatible con credenciales (cookie de sesion). En produccion se
+  // descarta con un error en log (no se aborta el arranque para no provocar un
+  // bucle de reinicio); fuera de produccion falla pronto con mensaje claro.
+  if (entries.includes('*')) {
+    const message =
+      'CORS_ORIGINS contiene "*", incompatible con credenciales; usa origenes explicitos.';
+    if (nodeEnv !== 'production') {
+      throw new Error(message);
+    }
+    logger.error(`${message} Se descarta "*".`);
+  }
+  return entries.filter((origin) => origin !== '*');
 }
+
+/** Cabeceras de peticion permitidas en CORS (las unicas que manda la web). */
+export const CORS_ALLOWED_HEADERS = [
+  'Content-Type',
+  'Authorization',
+  'X-Actor-Id',
+  'X-Portal-Csrf',
+];
 
 /**
  * Configuracion compartida de la aplicacion NestJS.
@@ -56,14 +80,30 @@ export function configureApp(app: INestApplication): void {
     }),
   );
 
+  // Detras de nginx (loopback / redes privadas de Docker) req.secure refleja
+  // X-Forwarded-Proto, de lo que depende el atributo Secure de la cookie.
+  // Cabeceras de seguridad propias y sin x-powered-by (guard typeof: el
+  // generador de OpenAPI crea la app sin adaptador HTTP completo).
+  if (typeof expressApp.set === 'function') {
+    expressApp.set('trust proxy', 'loopback, linklocal, uniquelocal');
+  }
+  if (typeof expressApp.disable === 'function') {
+    expressApp.disable('x-powered-by');
+  }
+  if (typeof expressApp.use === 'function') {
+    expressApp.use(securityHeadersMiddleware);
+  }
+
   // CORS configurable por CORS_ORIGINS. Solo se habilita si hay origenes
-  // declarados explicitamente; nunca se abre a "*" por defecto y no se
-  // habilitan credentials (todavia no hay necesidad).
+  // declarados explicitamente; nunca "*". Con origenes explicitos se permiten
+  // credenciales (cookie de sesion) unicamente para esa lista.
   const corsOrigins = parseCorsOrigins();
   if (corsOrigins.length > 0) {
     app.enableCors({
       origin: corsOrigins,
+      credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+      allowedHeaders: CORS_ALLOWED_HEADERS,
     });
   }
 }

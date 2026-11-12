@@ -46,6 +46,8 @@ import {
 /** Parte de la peticion HTTP (Express) que usa el flujo SSE. */
 interface SseRequest {
   headers: { authorization?: string };
+  /** Bearer normalizado por CurrentUserGuard (Bearer o cookie de sesion). */
+  bearer?: string;
 }
 
 /** Parte de la respuesta HTTP (Express) que usa el flujo SSE. */
@@ -114,7 +116,7 @@ export class AssistantController {
     // Las validaciones lanzan HTTP 4xx ANTES de abrir el flujo.
     const run = await this.assistant.prepareChat(
       actor,
-      req.headers.authorization,
+      req.bearer ?? req.headers.authorization,
       dto,
     );
 
@@ -208,7 +210,7 @@ export class AssistantController {
     @Req() req: SseRequest,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ProposalDto> {
-    return this.proposals.confirm(actor, req.headers.authorization, id);
+    return this.proposals.confirm(actor, req.bearer ?? req.headers.authorization, id);
   }
 
   @Post('proposals/:id/discard')
