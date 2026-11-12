@@ -213,7 +213,17 @@ describe('parseCorsOrigins', () => {
   const logger = { error: jest.fn() };
 
   it('sin CORS_ORIGINS no habilita nada', () => {
-    expect(parseCorsOrigins(undefined, 'production', logger)).toEqual([]);
+    // `undefined` activa el valor por defecto (process.env.CORS_ORIGINS): se
+    // aísla la variable para que la prueba no dependa del entorno (la CI la define).
+    const previous = process.env.CORS_ORIGINS;
+    delete process.env.CORS_ORIGINS;
+    try {
+      expect(parseCorsOrigins(undefined, 'production', logger)).toEqual([]);
+      expect(parseCorsOrigins('', 'production', logger)).toEqual([]);
+    } finally {
+      if (previous === undefined) delete process.env.CORS_ORIGINS;
+      else process.env.CORS_ORIGINS = previous;
+    }
   });
 
   it('lista explicita se conserva', () => {
