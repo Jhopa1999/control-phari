@@ -81,8 +81,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Autentica por identifier y contrasena, devuelve un JWT. */
+        /** Autentica por identifier y contraseña, devuelve un JWT y emite la cookie de sesión HttpOnly. */
         post: operations["AuthLoginController_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cierra la sesión del navegador borrando la cookie de sesión. Idempotente; no revoca tokens Bearer. */
+        post: operations["AuthLoginController_logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7334,17 +7351,47 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Credenciales validas. */
+            /** @description Credenciales válidas. Incluye la cabecera Set-Cookie con la sesión. */
             200: {
                 headers: {
+                    /** @description Cookie de sesión portal_session (HttpOnly, SameSite=Lax, Path=/, Secure según COOKIE_SECURE). */
+                    "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["LoginResponseDto"];
                 };
             };
-            /** @description Credenciales invalidas. */
+            /** @description Credenciales inválidas. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthLoginController_logout: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Obligatoria (valor 1) cuando la petición trae la cookie de sesión. */
+                "x-portal-csrf"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cookie de sesión borrada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Falta la cabecera de protección CSRF con la cookie presente. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7397,6 +7444,8 @@ export interface operations {
             /** @description Contrasena actualizada; devuelve la sesion para entrar directamente. */
             200: {
                 headers: {
+                    /** @description Cookie de sesión portal_session (HttpOnly, SameSite=Lax, Path=/, Secure según COOKIE_SECURE). */
+                    "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };
                 content: {

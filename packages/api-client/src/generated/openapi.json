@@ -124,7 +124,15 @@
         },
         "responses": {
           "200": {
-            "description": "Credenciales validas.",
+            "description": "Credenciales válidas. Incluye la cabecera Set-Cookie con la sesión.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Cookie de sesión portal_session (HttpOnly, SameSite=Lax, Path=/, Secure según COOKIE_SECURE).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -134,10 +142,38 @@
             }
           },
           "401": {
-            "description": "Credenciales invalidas."
+            "description": "Credenciales inválidas."
           }
         },
-        "summary": "Autentica por identifier y contrasena, devuelve un JWT.",
+        "summary": "Autentica por identifier y contraseña, devuelve un JWT y emite la cookie de sesión HttpOnly.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "AuthLoginController_logout",
+        "parameters": [
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "description": "Obligatoria (valor 1) cuando la petición trae la cookie de sesión.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cookie de sesión borrada."
+          },
+          "403": {
+            "description": "Falta la cabecera de protección CSRF con la cookie presente."
+          }
+        },
+        "summary": "Cierra la sesión del navegador borrando la cookie de sesión. Idempotente; no revoca tokens Bearer.",
         "tags": [
           "auth"
         ]
@@ -188,6 +224,14 @@
         "responses": {
           "200": {
             "description": "Contrasena actualizada; devuelve la sesion para entrar directamente.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Cookie de sesión portal_session (HttpOnly, SameSite=Lax, Path=/, Secure según COOKIE_SECURE).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {

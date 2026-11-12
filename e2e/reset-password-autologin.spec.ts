@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 /**
@@ -106,6 +106,28 @@ async function seedToken(
   });
 }
 
+const SESSION_COOKIE = 'portal_session';
+
+/** La sesión es una cookie HttpOnly Lax emitida por la API. */
+async function expectSessionCookie(context: BrowserContext): Promise<void> {
+  const cookie = (await context.cookies()).find((c) => c.name === SESSION_COOKIE);
+  expect(cookie).toBeDefined();
+  expect(cookie?.httpOnly).toBe(true);
+  expect(cookie?.sameSite).toBe('Lax');
+}
+
+/** Ni el token ni el usuario se guardan en el almacenamiento del navegador. */
+async function expectNoTokenInStorage(page: Page): Promise<void> {
+  const stored = await page.evaluate(() => ({
+    token: window.localStorage.getItem('authToken'),
+    user: window.localStorage.getItem('authUser'),
+    session: Object.keys(window.sessionStorage),
+  }));
+  expect(stored.token).toBeNull();
+  expect(stored.user).toBeNull();
+  expect(stored.session).toEqual([]);
+}
+
 const panelHeading = (page: Page) =>
   page
     .getByRole('main')
@@ -120,6 +142,7 @@ async function fillPasswordAndSubmit(page: Page): Promise<void> {
 
 test('restablecer contraseña inicia sesión y aterriza en /inicio sin pasar por /login', async ({
   page,
+  context,
 }) => {
   const token = `e2e-reset-${Date.now()}`;
   await seedToken(token, { purpose: 'PASSWORD_RESET', expiresInMinutes: 30 });
@@ -129,14 +152,14 @@ test('restablecer contraseña inicia sesión y aterriza en /inicio sin pasar por
 
   await expect(panelHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/inicio');
-  // La sesión jwt quedó persistida (auto-login real, no un simple redirect).
-  expect(
-    await page.evaluate(() => window.localStorage.getItem('authToken')),
-  ).not.toBeNull();
+  // Auto-login real: la API dejó la cookie HttpOnly y el token no está en JS.
+  await expectSessionCookie(context);
+  await expectNoTokenInStorage(page);
 });
 
 test('activar cuenta inicia sesión y aterriza en /inicio sin pasar por /login', async ({
   page,
+  context,
 }) => {
   const token = `e2e-activate-${Date.now()}`;
   await seedToken(token, { purpose: 'USER_INVITATION', expiresInMinutes: 30 });
@@ -146,13 +169,13 @@ test('activar cuenta inicia sesión y aterriza en /inicio sin pasar por /login',
 
   await expect(panelHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/inicio');
-  expect(
-    await page.evaluate(() => window.localStorage.getItem('authToken')),
-  ).not.toBeNull();
+  await expectSessionCookie(context);
+  await expectNoTokenInStorage(page);
 });
 
 test('token caducado muestra el error y NO redirige ni inicia sesión', async ({
   page,
+  context,
 }) => {
   const token = `e2e-expired-${Date.now()}`;
   await seedToken(token, { purpose: 'PASSWORD_RESET', expiresInMinutes: -5 });
@@ -166,7 +189,6 @@ test('token caducado muestra el error y NO redirige ni inicia sesión', async ({
   await expect(page).toHaveURL(
     `/restablecer-contrasena?token=${encodeURIComponent(token)}`,
   );
-  expect(
-    await page.evaluate(() => window.localStorage.getItem('authToken')),
-  ).toBeNull();
+  expect((await context.cookies()).find((c) => c.name === 'portal_session')).toBeUndefined();
+  await expectNoTokenInStorage(page);
 });

@@ -268,11 +268,29 @@ export type AiCredentialMode = AiGlobalConfig['credentialMode'];
  */
 export const ACTOR_STORAGE_KEY = 'actorId';
 /**
- * Clave de localStorage donde se guarda el JWT de la sesion en modo 'jwt'.
- * No es un secreto de configuración: es el token emitido por el backend para
- * la sesion del navegador. Coherente con el patron de ACTOR_STORAGE_KEY.
+ * Claves heredadas de la sesión en localStorage (token JWT y usuario). La
+ * sesión vive ahora en una cookie HttpOnly que JS no puede leer; estas claves
+ * solo se conservan para purgarlas al cargar (migración, ver purgeLegacySession).
  */
-export const TOKEN_STORAGE_KEY = 'authToken';
+export const LEGACY_TOKEN_STORAGE_KEY = 'authToken';
+export const LEGACY_USER_STORAGE_KEY = 'authUser';
+/**
+ * Pista no sensible de que hubo una sesión (valor '1'). No concede nada: solo
+ * permite distinguir «la sesión caducó» de «nunca hubo sesión».
+ */
+export const SESSION_HINT_STORAGE_KEY = 'authSessionHint';
+/** Cabecera propia que exige la API en escrituras autenticadas por cookie (CSRF). */
+export const CSRF_HEADER_NAME = 'X-Portal-Csrf';
+
+/** Borra el token y el usuario heredados de localStorage (migración a cookie). */
+export function purgeLegacySession(): void {
+  try {
+    window.localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_USER_STORAGE_KEY);
+  } catch {
+    // Almacenamiento no disponible: no hay nada que borrar.
+  }
+}
 /**
  * URL base de la API, leida de la configuración publica del frontend.
  * No es un secreto (no contiene credenciales). Si falta, se produce un error
@@ -288,23 +306,26 @@ if (!baseUrl) {
 /**
  * Instancia reutilizable del cliente tipado generado desde OpenAPI.
  */
-export const api = createApiClient({ baseUrl });
+export const api = createApiClient({
+  baseUrl,
+  // En jwt la sesión es una cookie HttpOnly: 'include' la envía también cuando
+  // la API está en otro origen (desarrollo). En dev-header no hay cookie.
+  ...(getAuthMode() === 'jwt' ? { credentials: 'include' as const } : {}),
+});
 /**
- * Middleware de request: inyecta UNA sola cabecera de identidad segun el modo
- * de autenticación, nunca ambas. Solo corre en el navegador; en el servidor
- * localStorage no existe y no se anade cabecera.
+ * Cabeceras de identidad segun el modo de autenticación, nunca ambas. Solo
+ * corre en el navegador; en el servidor no se anade cabecera.
  *
- * - modo 'jwt': si hay token guardado -> Authorization: Bearer <token>. Sin
- *   token no se anade cabecera (el backend respondera 401 y el guard de rutas
- *   lo gestiona).
+ * - modo 'jwt': la identidad viaja en la cookie HttpOnly `portal_session` (el
+ *   cliente no ve el token). Solo se añade la cabecera propia anti-CSRF que la
+ *   API exige en escrituras autenticadas por cookie.
  * - modo 'dev-header': se mantiene el comportamiento historico de X-Actor-Id
  *   leyendo el actor seleccionado en el selector dev (design 5.3).
  */
 export function authHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
   if (getAuthMode() === 'jwt') {
-    const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return { [CSRF_HEADER_NAME]: '1' };
   }
   const actorId = window.localStorage.getItem(ACTOR_STORAGE_KEY);
   return actorId ? { 'X-Actor-Id': actorId } : {};

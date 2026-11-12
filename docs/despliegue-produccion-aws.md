@@ -142,6 +142,12 @@ Notas prácticas aprendidas en esta instalación:
    (`systemctl start control-phari-backup.service`, ver
    [respaldo-restauracion-bd.md](respaldo-restauracion-bd.md)) y corre las
    migraciones (ver arriba).
+- Sesión por cookie (BL-013/BL-017): la variable `COOKIE_SECURE` tiene valor por
+   defecto `auto` y **no hay que editar `.env.production`**. Tras el despliegue
+   comprueba por https que el `Set-Cookie` de `/api/auth/login` lleva `Secure;
+   HttpOnly; SameSite=Lax`; si no lleva `Secure`, el nginx del servidor no envía
+   `X-Forwarded-Proto: https` (añádelo en el bloque 443 o pon `COOKIE_SECURE=true`).
+   Ver `deployment.md`.
 4. Si cambió la config de Nginx: `docker exec control-phari-nginx-1 nginx -s
    reload` (un `up -d nginx` no relee la config montada si el servicio no cambió).
 

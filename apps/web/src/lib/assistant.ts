@@ -157,6 +157,7 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
         Accept: 'text/event-stream',
         ...authHeaders(),
       },
+      credentials: 'include',
       body: JSON.stringify(body),
       signal: options.signal,
     });
@@ -226,6 +227,8 @@ export function uploadAttachment(
   return new Promise<Attachment>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${apiBaseUrl}/assistant/attachments`);
+    // Envía la cookie de sesión HttpOnly (la API puede estar en otro origen).
+    xhr.withCredentials = true;
     for (const [name, value] of Object.entries(authHeaders())) {
       xhr.setRequestHeader(name, value);
     }

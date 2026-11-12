@@ -1,6 +1,8 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { SET_COOKIE_DESCRIPTION } from './auth-login.controller';
 import { AuthResetService } from './auth-reset.service';
+import { CookieRequest, CookieResponse, SessionCookieService } from './session-cookie.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -18,7 +20,10 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthResetController {
-  constructor(private readonly authResetService: AuthResetService) {}
+  constructor(
+    private readonly authResetService: AuthResetService,
+    private readonly sessionCookie: SessionCookieService,
+  ) {}
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -44,10 +49,17 @@ export class AuthResetController {
     status: 200,
     description: 'Contrasena actualizada; devuelve la sesion para entrar directamente.',
     type: LoginResponseDto,
+    headers: { 'Set-Cookie': { description: SET_COOKIE_DESCRIPTION, schema: { type: 'string' } } },
   })
   @ApiResponse({ status: 400, description: 'Token invalido o contrasena demasiado corta.' })
   @ApiResponse({ status: 410, description: 'Token caducado o ya utilizado.' })
-  resetPassword(@Body() dto: ResetPasswordDto): Promise<LoginResponseDto> {
-    return this.authResetService.resetPassword(dto);
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+    @Req() req: CookieRequest,
+    @Res({ passthrough: true }) res: CookieResponse,
+  ): Promise<LoginResponseDto> {
+    const session = await this.authResetService.resetPassword(dto);
+    this.sessionCookie.issue(req, res, session.accessToken);
+    return session;
   }
 }

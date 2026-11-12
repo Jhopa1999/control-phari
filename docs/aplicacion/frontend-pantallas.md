@@ -49,6 +49,8 @@ abrir, cada minuto y al volver a la pestaña.
 
 ## Entrada y sesión
 
+En modo `jwt` la sesión vive en la cookie `HttpOnly` `portal_session`: el navegador no guarda el token. Las peticiones usan `credentials: 'include'` y la cabecera `X-Portal-Csrf: 1`; al recargar, la web recupera al usuario con `GET /me/permissions` (hasta que responde, el shell muestra su estado de carga). *Cerrar sesión* llama a `POST /auth/logout` y espera la respuesta antes de ir a `/login`; la pista `authSessionHint` en `localStorage` (no sensible) distingue «sesión caducada» de «sin sesión» y cierra la sesión en las demás pestañas. Tras el despliegue, quien tuviera un token en `localStorage` ve `/login` una vez (se purga `authToken`/`authUser`). La web envía CSP y demás cabeceras de seguridad (ver `autenticacion-autorizacion.md`).
+
 | Ruta | Pantalla | Qué permite hacer |
 | --- | --- | --- |
 | `/` | Raíz | Punto de entrada de la app (redirección/arranque). |

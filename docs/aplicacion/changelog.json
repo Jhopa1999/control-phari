@@ -745,6 +745,19 @@
         "docs/BACKLOG.md"
       ],
       "summary": "IDs visibles F3: nuevos GET /codes/:code, GET /requests/by-code/:code y GET /plan-phases/by-code/:code (solo lectura, mismo alcance que el detalle por id); requestCode/requestTitle en asignaciones de Capacidad y en el estado de cierre; código en el título y el mensaje de las notificaciones; búsqueda global por ID en la cabecera e IdChip en Triage, Priorización, Aprobaciones, Capacidad y Cierre."
+    },
+    {
+      "timestamp": "2026-11-13T12:00:00Z",
+      "trigger_file": "apps/api/src/modules/auth/auth-login.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/deployment.md",
+        "docs/despliegue-produccion-aws.md",
+        "docs/BACKLOG.md"
+      ],
+      "summary": "Sesión en cookie HttpOnly (BL-013) y cabeceras de seguridad (BL-017): POST /auth/login y /auth/reset-password emiten la cookie portal_session (HttpOnly, SameSite=Lax, Path=/, Secure según COOKIE_SECURE=auto); nuevo POST /auth/logout; el guard acepta Bearer o cookie y exige X-Portal-Csrf en escrituras por cookie; CORS con credenciales solo para CORS_ORIGINS; la web ya no guarda el token en localStorage; CSP y cabeceras en Next y middleware en la API. POST /auth/logout queda excluido del MCP."
     }
   ]
 }
