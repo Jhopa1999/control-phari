@@ -95,12 +95,7 @@ describe('CoordinationScopeService', () => {
     });
   });
 
-  describe('issueWhere / commitmentWhere / meetingWhere (integrante por persona)', () => {
-    it('issue integrante -> OR reporta/resuelve', () => {
-      expect(scope.issueWhere(integranteConProceso())).toEqual({
-        OR: [{ reportedByUserId: 'ui' }, { resolverUserId: 'ui' }],
-      });
-    });
+  describe('commitmentWhere / meetingWhere (integrante por persona)', () => {
     it('commitment integrante -> OR asignado/responsable', () => {
       expect(scope.commitmentWhere(integranteConProceso())).toEqual({
         OR: [{ assignedUserId: 'ui' }, { responsibleUserId: 'ui' }],

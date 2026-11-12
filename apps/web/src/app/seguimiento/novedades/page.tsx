@@ -1,7 +1,9 @@
-import { NovedadesView } from './novedades-view';
+import { redirect } from 'next/navigation';
 
-export const metadata = { title: 'Novedades' };
-
-export default function NovedadesPage(): React.ReactElement {
-  return <NovedadesView />;
+/**
+ * El módulo Novedades se retiró: la ruta antigua (marcadores y enlaces viejos)
+ * lleva a la Bitácora. Los datos se conservan en la base, sin pantalla ni API.
+ */
+export default function NovedadesPage(): never {
+  redirect('/seguimiento/bitacora');
 }

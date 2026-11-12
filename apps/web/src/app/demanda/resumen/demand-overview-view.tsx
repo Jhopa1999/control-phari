@@ -295,19 +295,13 @@ function IndicatorGroups({ indicators }: { indicators: AreaIndicators }): React.
         <IndicatorList>
           <IndicatorRow
             title="Bloqueos activos"
-            description="Solicitudes con bloqueo activo y novedades de bloqueo abiertas. Un conteo cero es un valor válido."
+            description="Solicitudes con bloqueo activo. Un conteo cero es un valor válido."
             value={
               blocks.status.applicable ? (
-                <div className="flex gap-6 sm:justify-end">
-                  <IndicatorValue
-                    value={NUMBER_FORMAT.format(blocks.blockedRequests)}
-                    sample="solicitudes bloqueadas"
-                  />
-                  <IndicatorValue
-                    value={NUMBER_FORMAT.format(blocks.openBlockingIssues)}
-                    sample="novedades de bloqueo abiertas"
-                  />
-                </div>
+                <IndicatorValue
+                  value={NUMBER_FORMAT.format(blocks.blockedRequests)}
+                  sample="solicitudes bloqueadas"
+                />
               ) : (
                 <NotApplicable status={blocks.status} />
               )
@@ -331,9 +325,7 @@ function IndicatorGroups({ indicators }: { indicators: AreaIndicators }): React.
                   {blocks.byCause.map((c, i) => (
                     <TableRow key={`${c.origin}-${c.cause}-${i}`}>
                       <TableCell className="font-medium">{c.cause}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {c.origin === 'ISSUE' ? 'Novedad' : 'Marca de solicitud'}
-                      </TableCell>
+                      <TableCell className="whitespace-nowrap">Marca de solicitud</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {NUMBER_FORMAT.format(c.count)}
                       </TableCell>

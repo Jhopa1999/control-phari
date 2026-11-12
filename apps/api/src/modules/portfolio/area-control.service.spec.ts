@@ -11,7 +11,6 @@ function createMocks() {
   const prismaObj: Record<string, unknown> = {
     request: { findMany: jest.fn(), count: jest.fn() },
     task: { findMany: jest.fn(), count: jest.fn() },
-    issue: { findMany: jest.fn() },
     auditEvent: { findFirst: jest.fn(), findMany: jest.fn() },
     priorityEvaluation: { findMany: jest.fn() },
   };
@@ -94,7 +93,6 @@ describe('AreaControlService', () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([]);
     (m.prismaObj.request as any).count.mockResolvedValue(0);
     (m.prismaObj.task as any).findMany.mockResolvedValue([]);
-    (m.prismaObj.issue as any).findMany.mockResolvedValue([]);
     (m.prismaObj.auditEvent as any).findFirst.mockResolvedValue(null);
     (m.prismaObj.auditEvent as any).findMany.mockResolvedValue([]);
     (m.prismaObj.priorityEvaluation as any).findMany.mockResolvedValue([]);
@@ -388,30 +386,26 @@ describe('AreaControlService', () => {
   // --- 2.4 Bloqueos --------------------------------------------------------
 
   describe('bloqueos', () => {
-    it('fusiona Request flag + Issue por causa/origen con dias acumulados', async () => {
+    it('agrupa las marcas de bloqueo de la solicitud por causa con dias acumulados', async () => {
       const now = Date.now();
       const fiveDaysAgo = new Date(now - 5 * 86_400_000);
-      const threeDaysAgo = new Date(now - 3 * 86_400_000);
       (m.prismaObj.request as any).findMany
         .mockResolvedValueOnce([]) // evaluationTime
         .mockResolvedValueOnce([]) // deliveryTime
         .mockResolvedValueOnce([
           { blockedAt: fiveDaysAgo, blockedReason: 'Espera de datos' },
         ]); // blocks requestScope
-      (m.prismaObj.issue as any).findMany.mockResolvedValue([
-        { date: threeDaysAgo, title: 'Dependencia externa' },
-      ]);
+
 
       const res = await service.indicators(jefe(), PERIOD);
       expect(res.blocks.blockedRequests).toBe(1);
-      expect(res.blocks.openBlockingIssues).toBe(1);
       expect(res.blocks.status.applicable).toBe(true);
       const req = res.blocks.byCause.find((c) => c.origin === 'REQUEST_FLAG');
-      const iss = res.blocks.byCause.find((c) => c.origin === 'ISSUE');
+
       expect(req).toMatchObject({ cause: 'Espera de datos', count: 1 });
       expect(req!.accumulatedDays).toBeGreaterThanOrEqual(5);
-      expect(iss).toMatchObject({ cause: 'Dependencia externa', count: 1 });
-      expect(iss!.accumulatedDays).toBeGreaterThanOrEqual(3);
+      expect(res.blocks.byCause).toHaveLength(1);
+      expect(res.blocks).not.toHaveProperty('openBlockingIssues');
     });
 
     it('acumula dos Request con la misma causa/origen y blockedAt null aporta 0 dias', async () => {
@@ -438,20 +432,10 @@ describe('AreaControlService', () => {
     it('cero bloqueos -> applicable:true con conteos 0 (NO No aplica)', async () => {
       const res = await service.indicators(jefe(), PERIOD);
       expect(res.blocks.blockedRequests).toBe(0);
-      expect(res.blocks.openBlockingIssues).toBe(0);
       expect(res.blocks.byCause).toEqual([]);
       expect(res.blocks.status.applicable).toBe(true);
     });
 
-    it('Issue abierta = state NOT IN (COMPLETADO, ARCHIVADO) via record-state', async () => {
-      await service.indicators(jefe(), PERIOD);
-      const issueWhere = (m.prismaObj.issue as any).findMany.mock.calls[0][0]
-        .where.AND;
-      expect(issueWhere).toContainEqual({ typeCode: 'BLOQUEO' });
-      expect(issueWhere).toContainEqual({
-        state: { notIn: ['COMPLETADO', 'ARCHIVADO'] },
-      });
-    });
   });
 
   // --- 2.5-2.7 Futuros -----------------------------------------------------

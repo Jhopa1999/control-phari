@@ -8,7 +8,7 @@ import { RequestScopeService } from '../request/request-scope.service';
  * NO se define aquí: se delega en `RequestScopeService` (fuente única, la misma
  * de Solicitudes, Triage, Priorización, Aprobaciones y Planificación), de modo
  * que las cifras de todas las pantallas coincidan. Aquí solo se proyecta ese
- * alcance a tareas y se define el de incidencias (por proceso dueño).
+ * alcance a tareas.
  */
 @Injectable()
 export class PortfolioScopeService {
@@ -25,16 +25,5 @@ export class PortfolioScopeService {
    */
   taskScope(actor: CurrentActor): Prisma.TaskWhereInput {
     return { phase: { plan: { request: this.requestScope(actor) } } };
-  }
-
-  /**
-   * `where` de Issue por su proceso dueño (`Issue.processId`). Jefe -> sin
-   * filtro; no-jefe -> `processId ∈ scopedProcessIds`.
-   */
-  issueScope(actor: CurrentActor): Prisma.IssueWhereInput {
-    if (actor.isJefeArea) {
-      return {};
-    }
-    return { processId: { in: Array.from(actor.scopedProcessIds) } };
   }
 }

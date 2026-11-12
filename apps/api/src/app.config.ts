@@ -106,7 +106,6 @@ export function buildOpenApiConfig() {
     .addTag('worklog', 'Registro de trabajo (worklog).')
     .addTag('commitments', 'Compromisos de coordinacion.')
     .addTag('meetings', 'Reuniones y sus participantes.')
-    .addTag('issues', 'Incidencias (issues) y sus transiciones.')
     .addTag('assets', 'Activos de conocimiento.')
     .addTag('documents', 'Documentos y sus versiones.')
     .addTag('portfolio', 'Portafolio de solicitudes dentro del alcance.')

@@ -2,13 +2,11 @@ import 'reflect-metadata';
 import { MODULE_METADATA } from '@nestjs/common/constants';
 import { CoordinationModule } from './coordination.module';
 import { WorklogController } from './worklog/worklog.controller';
-import { IssueController } from './issue/issue.controller';
 import { MeetingController } from './meeting/meeting.controller';
 import { CommitmentController } from './commitment/commitment.controller';
 import { CoordinationScopeService } from './coordination-scope.service';
 import { WorkflowStateService } from './workflow-state.service';
 import { WorklogService } from './worklog/worklog.service';
-import { IssueService } from './issue/issue.service';
 import { MeetingService } from './meeting/meeting.service';
 import { CommitmentService } from './commitment/commitment.service';
 
@@ -26,7 +24,6 @@ describe('CoordinationModule', () => {
 
   it('registra los 4 controllers', () => {
     expect(controllers).toContain(WorklogController);
-    expect(controllers).toContain(IssueController);
     expect(controllers).toContain(MeetingController);
     expect(controllers).toContain(CommitmentController);
   });
@@ -39,7 +36,6 @@ describe('CoordinationModule', () => {
     expect(providers).toContain(CoordinationScopeService);
     expect(providers).toContain(WorkflowStateService);
     expect(providers).toContain(WorklogService);
-    expect(providers).toContain(IssueService);
     expect(providers).toContain(MeetingService);
     expect(providers).toContain(CommitmentService);
   });

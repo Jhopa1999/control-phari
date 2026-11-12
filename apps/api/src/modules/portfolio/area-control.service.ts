@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { CurrentActor } from '../auth/current-actor';
-import { RecordState } from '../coordination/record-state';
 import { REQUEST_STATES } from '../request/request-state';
 import { RequestState } from '../request/request-state';
 import { RequestStateService } from '../request/request-state.service';
@@ -24,16 +23,6 @@ import {
 /** Bandas de prioridad del panorama de demanda (incl. SIN_PRIORIZAR). */
 const DEMAND_BANDS = ['P1', 'P2', 'P3', 'P4', 'SIN_PRIORIZAR'] as const;
 
-/**
- * Estados "cerrados" (no abiertos) de un Issue bloqueo (design §2.4): un bloqueo
- * esta abierto si su `state` NO esta en estos. Se importan de
- * `coordination/record-state` (RecordState), NO se hardcodea 'TERMINADA' (que no
- * existe en el enum). La columna `state` es texto; se compara por el `code`.
- */
-const CLOSED_ISSUE_STATES: string[] = [
-  RecordState.COMPLETADO,
-  RecordState.ARCHIVADO,
-];
 
 /** Etiquetas legibles de ruta de gobierno para el desglose de entrega. */
 const ROUTE_LABELS: Record<string, string> = {
@@ -368,23 +357,12 @@ export class AreaControlService {
       select: { blockedAt: true, blockedReason: true },
     });
 
-    const openBlockingIssueRows = await this.prisma.issue.findMany({
-      where: {
-        AND: [
-          this.scope.issueScope(actor),
-          { typeCode: 'BLOQUEO' },
-          { state: { notIn: CLOSED_ISSUE_STATES } },
-        ],
-      },
-      select: { date: true, title: true },
-    });
-
-    // Fusion por causa+origen: no se mezcla la semantica de un flag de Request
-    // con la de un Issue (origin REQUEST_FLAG | ISSUE).
+    // Desde el retiro del modulo Novedades el unico origen es la marca de
+    // bloqueo de la solicitud (origin REQUEST_FLAG).
     const byCauseMap = new Map<string, BlockCauseDto>();
     const accumulate = (
       cause: string,
-      origin: 'REQUEST_FLAG' | 'ISSUE',
+      origin: 'REQUEST_FLAG',
       days: number,
     ) => {
       const key = `${origin}:${cause}`;
@@ -407,15 +385,10 @@ export class AreaControlService {
       const days = req.blockedAt ? Math.max(daysBetween(req.blockedAt, now), 0) : 0;
       accumulate(cause, 'REQUEST_FLAG', days);
     }
-    for (const issue of openBlockingIssueRows) {
-      const cause = issue.title;
-      const days = Math.max(daysBetween(issue.date, now), 0);
-      accumulate(cause, 'ISSUE', days);
-    }
+
 
     return {
       blockedRequests: blockedRequestRows.length,
-      openBlockingIssues: openBlockingIssueRows.length,
       byCause: Array.from(byCauseMap.values()),
       // Conteo: cero bloqueos es dato legitimo -> applicable SIEMPRE true.
       status: {

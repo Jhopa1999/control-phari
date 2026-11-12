@@ -93,10 +93,10 @@ export class BlockCauseDto {
 
   @ApiProperty({
     type: String,
-    enum: ['REQUEST_FLAG', 'ISSUE'],
-    description: 'Origen de la senal del bloqueo.',
+    enum: ['REQUEST_FLAG'],
+    description: 'Origen de la senal del bloqueo (marca de bloqueo de la solicitud).',
   })
-  origin!: 'REQUEST_FLAG' | 'ISSUE';
+  origin!: 'REQUEST_FLAG';
 
   @ApiProperty({ type: Number, description: 'Numero de bloqueos con esta causa/origen.' })
   count!: number;
@@ -109,10 +109,7 @@ export class BlocksIndicatorDto {
   @ApiProperty({ type: Number, description: 'Solicitudes con bloqueo activo (0 valido).' })
   blockedRequests!: number;
 
-  @ApiProperty({ type: Number, description: 'Issues BLOQUEO abiertas (0 valido).' })
-  openBlockingIssues!: number;
-
-  @ApiProperty({ type: [BlockCauseDto], description: 'Desglose por causa fusionando ambas senales.' })
+  @ApiProperty({ type: [BlockCauseDto], description: 'Desglose por causa de las solicitudes bloqueadas.' })
   byCause!: BlockCauseDto[];
 
   @ApiProperty({ type: IndicatorStatusDto, description: 'applicable=true salvo error; conteos 0 NO son "No aplica".' })

@@ -12,7 +12,7 @@ const UserSelectContext = React.createContext<(() => void) | null>(null);
 const STACKED_QUERY = '(max-width: 1023.98px)';
 
 export interface MasterDetailProps {
-  /** h2 visible: «Mis diarios», «Novedades». */
+  /** h2 visible: «Mis diarios», «Reuniones». */
   listTitle: string;
   /** Normalmente <SelectableList/>. */
   list: React.ReactNode;

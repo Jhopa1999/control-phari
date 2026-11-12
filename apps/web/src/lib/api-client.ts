@@ -149,18 +149,13 @@ export type CreateWeeklyReport =
   components['schemas']['CreateWeeklyReportDto'];
 export type UpdateWeeklyReport =
   components['schemas']['UpdateWeeklyReportDto'];
-export type Issue = components['schemas']['IssueResponseDto'];
-export type CreateIssue = components['schemas']['CreateIssueDto'];
-export type UpdateIssue = components['schemas']['UpdateIssueDto'];
-/** Tipo de novedad (maestra ISSUE_TYPE). */
-export type IssueType = CreateIssue['typeCode'];
 export type Meeting = components['schemas']['MeetingResponseDto'];
 export type CreateMeeting = components['schemas']['CreateMeetingDto'];
 export type UpdateMeeting = components['schemas']['UpdateMeetingDto'];
 export type Commitment = components['schemas']['CommitmentResponseDto'];
 export type CreateCommitment = components['schemas']['CreateCommitmentDto'];
 export type UpdateCommitment = components['schemas']['UpdateCommitmentDto'];
-/** Cuerpo de una transicion de estado (Issue/Commitment). */
+/** Cuerpo de una transicion de estado (Commitment). */
 export type Transition = components['schemas']['TransitionDto'];
 /** Estado destino válido de una transicion (maestra RECORD_STATE). */
 export type RecordState = Transition['toState'];
