@@ -264,6 +264,8 @@ que ahora ve, pero las decisiones con `@Roles` más estrictos (p. ej. aprobar, e
 `JEFE_AREA`) no cambian. `GET /my-work` («mis tareas») no se amplía: sigue mostrando solo
 las tareas del propio usuario.
 
+Las lecturas por ID visible (`GET /codes/:code`, `GET /requests/by-code/:code`, `GET /plan-phases/by-code/:code`, junto con `GET /tasks/by-code/:code`) usan esa misma definición (`requestScopeWhere`) y los roles `JEFE_AREA`, `LIDER_PROCESO` e `INTEGRANTE`: un código inexistente o fuera de alcance responde `404` con el mismo mensaje, sin revelar que existe.
+
 ## Bitácora y reporte semanal: escritura y revisión
 
 - **Escribir** (crear, editar, enviar, retirar el envío, eliminar) un diario o un semanal es solo del **autor**; el jefe de área y el líder ya no editan registros ajenos.
