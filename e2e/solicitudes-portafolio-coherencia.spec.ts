@@ -146,6 +146,11 @@ function portfolioItem(n: number, operationalState: string) {
     progressPercent: null,
     dueStatus: 'SIN_FECHA',
     daysToTarget: null,
+    referenceDate: null,
+    referenceSource: 'NINGUNA',
+    forecastDate: null,
+    requestedGapDays: null,
+    scheduleVarianceDays: null,
     blocked: false,
     blockedReason: null,
   };

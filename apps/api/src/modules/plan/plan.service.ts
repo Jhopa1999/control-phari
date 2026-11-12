@@ -77,6 +77,7 @@ export class PlanService {
       periodStart: plan.periodStart,
       periodEnd: plan.periodEnd,
       commitmentDate: plan.commitmentDate,
+      baselineDate: plan.baselineDate,
       risks: plan.risks,
       mitigations: plan.mitigations,
       status: plan.status,
@@ -346,9 +347,23 @@ export class PlanService {
     );
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      // Línea base de entrega: se congela al autorizar. Compromiso del plan; si
+      // no hay, fin del periodo; si tampoco, la última fecha fin de sus tareas.
+      const lastTaskEnd = await tx.task.aggregate({
+        where: { phase: { planId: plan.id } },
+        _max: { endDate: true },
+      });
+      const baselineDate =
+        plan.commitmentDate ?? plan.periodEnd ?? lastTaskEnd._max.endDate ?? null;
+
       const next = await tx.plan.update({
         where: { id: plan.id },
-        data: { status: nextStatus, authorizedAt: new Date(), authorizedByUserId: actor.userId },
+        data: {
+          status: nextStatus,
+          authorizedAt: new Date(),
+          authorizedByUserId: actor.userId,
+          baselineDate,
+        },
         include: PLAN_USERS_INCLUDE,
       });
 

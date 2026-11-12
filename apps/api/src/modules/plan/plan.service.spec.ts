@@ -25,6 +25,7 @@ function createMocks() {
       deleteMany: jest.fn(),
       create: jest.fn(),
       count: jest.fn().mockResolvedValue(0),
+      aggregate: jest.fn().mockResolvedValue({ _max: { endDate: null } }),
     },
     taskDependency: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -92,6 +93,7 @@ function makePlan(
     periodStart: null,
     periodEnd: null,
     commitmentDate: null,
+    baselineDate: null,
     risks: null,
     mitigations: null,
     status,
@@ -299,6 +301,44 @@ describe('PlanService', () => {
       expect(m.auditRecord).toHaveBeenCalledTimes(2);
       expect(m.auditRecord.mock.calls[0][1]).toMatchObject({ objectType: 'PLAN' });
       expect(m.auditRecord.mock.calls[1][1]).toMatchObject({ objectType: 'REQUEST' });
+    });
+
+    describe('línea base de entrega', () => {
+      const authorizeWith = async (
+        planDates: { commitmentDate: Date | null; periodEnd: Date | null },
+        lastTaskEnd: Date | null,
+      ) => {
+        (m.planState.requirePlanInScope as jest.Mock).mockResolvedValue({
+          plan: { ...makePlan(PlanStatus.EN_AUTORIZACION), ...planDates },
+          requestId: 'r1',
+          mainProcessId: 'p1',
+          requestState: RequestState.EN_PLANIFICACION,
+        });
+        (m.prismaObj.task as any).aggregate.mockResolvedValue({ _max: { endDate: lastTaskEnd } });
+        (m.prismaObj.plan as any).update.mockResolvedValue(makePlan(PlanStatus.AUTORIZADO));
+        (m.prismaObj.request as any).update.mockResolvedValue(makeRequest(RequestState.EN_EJECUCION));
+        await service.authorize(lider(), 'r1');
+        return (m.prismaObj.plan as any).update.mock.calls[0][0].data.baselineDate;
+      };
+      const commitment = new Date('2026-11-30T00:00:00Z');
+      const periodEnd = new Date('2026-12-15T00:00:00Z');
+      const lastTask = new Date('2026-12-20T00:00:00Z');
+
+      it('congela el compromiso del plan', async () => {
+        expect(await authorizeWith({ commitmentDate: commitment, periodEnd }, lastTask)).toEqual(commitment);
+      });
+
+      it('sin compromiso usa el fin del periodo', async () => {
+        expect(await authorizeWith({ commitmentDate: null, periodEnd }, lastTask)).toEqual(periodEnd);
+      });
+
+      it('sin compromiso ni periodo usa la última fecha fin de las tareas', async () => {
+        expect(await authorizeWith({ commitmentDate: null, periodEnd: null }, lastTask)).toEqual(lastTask);
+      });
+
+      it('sin ninguna fecha deja la línea base en null', async () => {
+        expect(await authorizeWith({ commitmentDate: null, periodEnd: null }, null)).toBeNull();
+      });
     });
 
     it('autorizar fuera de EN_AUTORIZACION -> 409', async () => {

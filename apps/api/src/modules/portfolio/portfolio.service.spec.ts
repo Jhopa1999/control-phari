@@ -11,6 +11,7 @@ function createMocks() {
     request: { findMany: jest.fn() },
     priorityEvaluation: { findMany: jest.fn() },
     task: { findMany: jest.fn().mockResolvedValue([]) },
+    plan: { findMany: jest.fn().mockResolvedValue([]) },
   };
   const prisma = prismaObj as unknown as PrismaService;
   const state = {
@@ -183,6 +184,83 @@ describe('PortfolioService', () => {
     const and = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND;
     expect(and).toContainEqual({
       mainProcessId: { in: ['11111111-1111-1111-1111-111111111111'] },
+    });
+  });
+
+  describe('vencimiento contra el compromiso del plan', () => {
+    const isoDay = (offset: number) => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + offset);
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    };
+    const taskRow = (endDate: Date, status = 'EN_CURSO') => ({
+      status,
+      progress: 10,
+      endDate,
+      phase: { plan: { requestId: 'r1' } },
+    });
+    const planRow = (overrides: Record<string, unknown> = {}) => ({
+      requestId: 'r1',
+      status: 'AUTORIZADO',
+      baselineDate: isoDay(10),
+      commitmentDate: null,
+      periodEnd: null,
+      ...overrides,
+    });
+
+    it('fecha objetivo pasada pero plan autorizado vigente -> no está vencido', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([
+        requestRow({ operationalState: 'EN_EJECUCION', targetDate: isoDay(-10) }),
+      ]);
+      (m.prismaObj.plan as any).findMany.mockResolvedValue([planRow()]);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([taskRow(isoDay(10))]);
+
+      const [item] = await service.list(jefe(), {});
+      expect(item.dueStatus).toBe('EN_TIEMPO');
+      expect(item.daysToTarget).toBe(10);
+      expect(item.referenceSource).toBe('PLAN');
+      expect(item.requestedGapDays).toBe(20);
+      expect(item.scheduleVarianceDays).toBe(0);
+    });
+
+    it('superado el compromiso del plan sí queda vencido', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([
+        requestRow({ operationalState: 'EN_EJECUCION', targetDate: isoDay(-20) }),
+      ]);
+      (m.prismaObj.plan as any).findMany.mockResolvedValue([planRow({ baselineDate: isoDay(-2) })]);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([taskRow(isoDay(3))]);
+
+      const [item] = await service.list(jefe(), {});
+      expect(item.dueStatus).toBe('VENCIDO');
+      expect(item.daysToTarget).toBe(-2);
+      expect(item.scheduleVarianceDays).toBe(5);
+    });
+
+    it('plan sin autorizar: se mide contra la fecha objetivo', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([
+        requestRow({ operationalState: 'EN_PLANIFICACION', targetDate: isoDay(-3) }),
+      ]);
+      (m.prismaObj.plan as any).findMany.mockResolvedValue([
+        planRow({ status: 'BORRADOR', baselineDate: null, periodEnd: isoDay(20) }),
+      ]);
+
+      const [item] = await service.list(jefe(), {});
+      expect(item.dueStatus).toBe('VENCIDO');
+      expect(item.referenceSource).toBe('SOLICITUD');
+      expect(item.requestedGapDays).toBeNull();
+    });
+
+    it('plan autorizado antiguo sin línea base usa compromiso o fin del periodo', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([
+        requestRow({ operationalState: 'EN_EJECUCION', targetDate: isoDay(-5) }),
+      ]);
+      (m.prismaObj.plan as any).findMany.mockResolvedValue([
+        planRow({ baselineDate: null, commitmentDate: null, periodEnd: isoDay(8) }),
+      ]);
+
+      const [item] = await service.list(jefe(), {});
+      expect(item.referenceSource).toBe('PLAN');
+      expect(item.daysToTarget).toBe(8);
     });
   });
 

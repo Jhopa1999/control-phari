@@ -7,6 +7,7 @@ import { PortfolioScopeService } from './portfolio-scope.service';
 import {
   computeDueAlert,
   computeProgressPercent,
+  computeSchedule,
   dueSoonDaysFromEnv,
   type TaskProgressInput,
 } from './progress';
@@ -118,23 +119,56 @@ export class PortfolioService {
       select: {
         status: true,
         progress: true,
+        endDate: true,
         phase: { select: { plan: { select: { requestId: true } } } },
       },
     });
     const tasksByRequest = new Map<string, TaskProgressInput[]>();
+    // Pronóstico de fin: la mayor fecha fin entre las tareas sin terminar.
+    const forecastByRequest = new Map<string, Date>();
     for (const task of tasks) {
       const key = task.phase.plan.requestId;
       const list = tasksByRequest.get(key) ?? [];
       list.push({ status: task.status, progress: task.progress });
       tasksByRequest.set(key, list);
+      if (task.status !== 'TERMINADA' && task.endDate !== null) {
+        const current = forecastByRequest.get(key);
+        if (current === undefined || task.endDate > current) {
+          forecastByRequest.set(key, task.endDate);
+        }
+      }
     }
+
+    // Plan por solicitud: define si ya hay compromiso de entrega (plan AUTORIZADO)
+    // y cuál es su línea base.
+    const plans = await this.prisma.plan.findMany({
+      where: { requestId: { in: requestIds } },
+      select: {
+        requestId: true,
+        status: true,
+        baselineDate: true,
+        commitmentDate: true,
+        periodEnd: true,
+      },
+    });
+    const planByRequest = new Map(plans.map((plan) => [plan.requestId, plan]));
     const today = new Date();
     const dueSoonDays = dueSoonDaysFromEnv(process.env.PORTFOLIO_DUE_SOON_DAYS);
 
     const items: PortfolioItemResponseDto[] = [];
     for (const req of requests) {
+      // La fecha objetivo es una expectativa del solicitante; el vencimiento se
+      // mide contra el compromiso del plan autorizado y, sin plan, contra ella.
+      const plan = planByRequest.get(req.id) ?? null;
+      const schedule = computeSchedule({
+        targetDate: req.targetDate,
+        planAuthorized: plan?.status === 'AUTORIZADO',
+        baselineDate:
+          plan === null ? null : (plan.baselineDate ?? plan.commitmentDate ?? plan.periodEnd),
+        forecastDate: forecastByRequest.get(req.id) ?? null,
+      });
       const alert = computeDueAlert(
-        req.targetDate,
+        schedule.referenceDate,
         req.operationalState,
         today,
         dueSoonDays,
@@ -178,6 +212,11 @@ export class PortfolioService {
         progressPercent: computeProgressPercent(tasksByRequest.get(req.id) ?? []),
         dueStatus: alert.dueStatus,
         daysToTarget: alert.daysToTarget,
+        referenceDate: toIsoDate(schedule.referenceDate),
+        referenceSource: schedule.referenceSource,
+        forecastDate: toIsoDate(schedule.forecastDate),
+        requestedGapDays: schedule.requestedGapDays,
+        scheduleVarianceDays: schedule.scheduleVarianceDays,
         blocked: req.blockedAt !== null && req.blockedResolvedAt === null,
         blockedReason: req.blockedReason,
       });

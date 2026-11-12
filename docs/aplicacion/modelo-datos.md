@@ -238,6 +238,11 @@ Decisión de autorización del compromiso (append-only, sin `updatedAt`).
 Plan de trabajo de una Request comprometida (1:1 efectivo con Request).
 - Campos clave: `requestId`, `periodStart?`, `periodEnd?`, `commitmentDate?`, `risks?`,
   `mitigations?`, `status` (default `BORRADOR`), datos de envío/autorización/devolución.
+- Línea base de entrega: `baselineDate?` (`baseline_date`) la fija `PlanService.authorize` al
+  autorizar el plan, con `commitmentDate ?? periodEnd ?? última fecha fin de las tareas`, y no
+  se mueve si luego se edita `commitmentDate`. Es la referencia del vencimiento en el
+  portafolio. La migración `20261114120000_plan_baseline_date` rellena los planes ya
+  autorizados con la misma regla.
 - Restricciones: único `requestId`; índice por `status`.
 - Contadores de ID visible: `phaseSeqNext` y `taskSeqNext` (columnas `phase_seq_next` y
   `task_seq_next`, enteros, default 1) = **siguiente** número de fase y de tarea del plan.

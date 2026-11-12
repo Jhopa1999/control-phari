@@ -49,6 +49,7 @@ import {
 } from '@/lib/portfolio';
 import { COMMITTED_STATES, REQUEST_STATE_LABELS } from '@/lib/request-state';
 import { routeLabel } from '@/lib/status-presentation';
+import { cn } from '@/lib/utils';
 import {
   compareByOrder,
   compareDate,
@@ -114,7 +115,7 @@ const COMPARATORS: Record<SortKey, Comparator<PortfolioItem>> = {
   state: (a, b, direction) => compareState(a.operationalState, b.operationalState, direction),
   band: (a, b, direction) => compareBand(a.priorityBand, b.priorityBand, direction),
   registered: (a, b, direction) => compareDate(a.registeredAt, b.registeredAt, direction),
-  target: (a, b, direction) => compareDate(a.targetDate, b.targetDate, direction),
+  target: (a, b, direction) => compareDate(a.referenceDate, b.referenceDate, direction),
 };
 
 function messageOf(err: unknown): string {
@@ -183,6 +184,56 @@ function DueBadge({
     return <Badge variant="success">En tiempo</Badge>;
   }
   return null;
+}
+
+/** Texto de días con signo: «+20 d» / «−3 d». */
+function signedDays(days: number): string {
+  return `${days > 0 ? '+' : '−'}${Math.abs(days)} d`;
+}
+
+/**
+ * Fecha de entrega de una iniciativa. La fecha objetivo de la solicitud es una
+ * expectativa inicial; con el plan autorizado, el vencimiento se mide contra el
+ * compromiso del plan y la brecha con lo solicitado se informa aparte (no es un
+ * vencimiento).
+ */
+function DeliveryCell({
+  item,
+  compact = false,
+}: {
+  item: PortfolioItem;
+  compact?: boolean;
+}): React.ReactElement {
+  const fromPlan = item.referenceSource === 'PLAN';
+  const muted = compact ? 'text-muted-foreground' : 'text-meta text-muted-foreground';
+  const gap = item.requestedGapDays ?? 0;
+  const variance = item.scheduleVarianceDays ?? 0;
+  return (
+    <span className="flex flex-col items-start gap-0.5">
+      <span className="tabular-nums">
+        {fromPlan ? `Compromiso: ${formatDateOnly(item.referenceDate)}` : formatDateOnly(item.targetDate)}
+      </span>
+      <DueBadge status={item.dueStatus} days={item.daysToTarget} />
+      {fromPlan && item.targetDate ? (
+        <span className={cn('tabular-nums', muted)}>{`Solicitada: ${formatDateOnly(item.targetDate)}`}</span>
+      ) : null}
+      {fromPlan && gap > 0 ? (
+        <Badge variant="warning" title="El plan autorizado termina después de la fecha que pidió el solicitante.">
+          {`Plan ${signedDays(gap)} sobre lo solicitado`}
+        </Badge>
+      ) : null}
+      {fromPlan && variance > 0 ? (
+        <Badge variant="warning" title="Las tareas abiertas terminan después del compromiso del plan.">
+          {`Desviación ${signedDays(variance)}`}
+        </Badge>
+      ) : null}
+      {!fromPlan && item.initialCommitmentDate ? (
+        <span className={cn('tabular-nums', muted)}>
+          {`Compromiso: ${formatDateOnly(item.initialCommitmentDate)}`}
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 /**
@@ -443,7 +494,7 @@ export function PortafolioView(): React.ReactElement {
         <Table scrollLabel="Tabla del portafolio">
           <TableCaption>
             Iniciativas del portafolio dentro de tu alcance. Bajo cada título se indican el proceso y la
-            ruta de gobierno; el estado incluye el bloqueo, y el objetivo incluye la fecha de compromiso.
+            ruta de gobierno; el estado incluye el bloqueo, y la entrega muestra el compromiso del plan autorizado (o la fecha solicitada si aún no hay plan) con su alerta de vencimiento.
           </TableCaption>
           <TableHeader>
             <TableRow>
@@ -451,9 +502,9 @@ export function PortafolioView(): React.ReactElement {
               <SortableTableHead label="Estado" sortKey="state" sort={table.sort} onSort={table.toggleSort} />
               <SortableTableHead label="Prioridad" sortKey="band" sort={table.sort} onSort={table.toggleSort} />
               <TableHead>Avance</TableHead>
-              <SortableTableHead label="Objetivo" sortKey="target" sort={table.sort} onSort={table.toggleSort} />
+              <SortableTableHead label="Entrega" sortKey="target" sort={table.sort} onSort={table.toggleSort} />
               <TableHead>Responsable</TableHead>
-              {/* Registro se oculta por debajo de 1280 px para que «Objetivo» quepa en tablet. */}
+              {/* Registro se oculta por debajo de 1280 px para que «Entrega» quepa en tablet. */}
               <SortableTableHead
                 label="Registro"
                 sortKey="registered"
@@ -502,15 +553,7 @@ export function PortafolioView(): React.ReactElement {
                   <ProgressCell value={item.progressPercent} />
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
-                  <div className="flex flex-col items-start gap-0.5">
-                    <span className="tabular-nums">{formatDateOnly(item.targetDate)}</span>
-                    <DueBadge status={item.dueStatus} days={item.daysToTarget} />
-                    {item.initialCommitmentDate ? (
-                      <span className="text-meta tabular-nums text-muted-foreground">
-                        {`Compromiso: ${formatDateOnly(item.initialCommitmentDate)}`}
-                      </span>
-                    ) : null}
-                  </div>
+                  <DeliveryCell item={item} />
                 </TableCell>
                 <TableCell className="min-w-36 max-w-[16rem]">
                   {item.responsibleName ? (
@@ -541,7 +584,7 @@ export function PortafolioView(): React.ReactElement {
               { key: 'state', label: 'Estado' },
               { key: 'band', label: 'Prioridad' },
               { key: 'registered', label: 'Registro' },
-              { key: 'target', label: 'Objetivo' },
+              { key: 'target', label: 'Entrega' },
             ],
           }}
           card={(item) => ({
@@ -571,18 +614,8 @@ export function PortafolioView(): React.ReactElement {
               { label: 'Avance', value: <ProgressCell value={item.progressPercent} /> },
               { label: 'Responsable', value: item.responsibleName ?? '—' },
               {
-                label: 'Objetivo',
-                value: (
-                  <span className="flex flex-col items-start gap-0.5">
-                    <span>{formatDateOnly(item.targetDate)}</span>
-                    <DueBadge status={item.dueStatus} days={item.daysToTarget} />
-                    {item.initialCommitmentDate ? (
-                      <span className="text-muted-foreground">
-                        {`Compromiso: ${formatDateOnly(item.initialCommitmentDate)}`}
-                      </span>
-                    ) : null}
-                  </span>
-                ),
+                label: 'Entrega',
+                value: <DeliveryCell item={item} compact />,
               },
               { label: 'Registro', value: formatDateOnly(item.registeredAt) },
             ],

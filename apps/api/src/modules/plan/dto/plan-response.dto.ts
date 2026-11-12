@@ -17,6 +17,15 @@ export class PlanResponseDto {
   @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Fecha de compromiso.' })
   commitmentDate!: Date | null;
 
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    description:
+      'Línea base de entrega: fecha fin comprometida, congelada al autorizar el plan (compromiso, si no fin del periodo, si no última fecha fin de las tareas). Null mientras el plan no se autoriza. Es la referencia del vencimiento en el portafolio.',
+  })
+  baselineDate!: Date | null;
+
   @ApiProperty({ type: String, nullable: true, description: 'Riesgos.' })
   risks!: string | null;
 

@@ -4571,6 +4571,11 @@ export interface components {
              * @description Fecha de compromiso.
              */
             commitmentDate: string | null;
+            /**
+             * Format: date-time
+             * @description Línea base de entrega: fecha fin comprometida, congelada al autorizar el plan (compromiso, si no fin del periodo, si no última fecha fin de las tareas). Null mientras el plan no se autoriza. Es la referencia del vencimiento en el portafolio.
+             */
+            baselineDate: string | null;
             /** @description Riesgos. */
             risks: string | null;
             /** @description Mitigaciones. */
@@ -6426,12 +6431,25 @@ export interface components {
             /** @description Avance del proyecto (0..100) segun sus tareas; null si no tiene tareas. */
             progressPercent: number | null;
             /**
-             * @description Alerta de la fecha objetivo. NO_APLICA en proyectos cerrados, rechazados o retirados.
+             * @description Alerta de vencimiento medida contra la fecha de referencia (`referenceDate`): el compromiso del plan autorizado o, sin plan autorizado, la fecha objetivo de la solicitud. NO_APLICA en proyectos cerrados, rechazados o retirados.
              * @enum {string}
              */
             dueStatus: "SIN_FECHA" | "EN_TIEMPO" | "PROXIMO_A_VENCER" | "VENCIDO" | "NO_APLICA";
-            /** @description Dias hasta la fecha objetivo (negativo = vencido) o null. */
+            /** @description Dias hasta la fecha de referencia (negativo = vencido) o null. */
             daysToTarget: number | null;
+            /** @description Fecha (YYYY-MM-DD) contra la que se mide el vencimiento: línea base del plan autorizado o, sin él, la fecha objetivo. Null si no hay ninguna. */
+            referenceDate: string | null;
+            /**
+             * @description Origen de `referenceDate`: PLAN (compromiso del plan autorizado), SOLICITUD (fecha objetivo, aún sin plan autorizado) o NINGUNA.
+             * @enum {string}
+             */
+            referenceSource: "PLAN" | "SOLICITUD" | "NINGUNA";
+            /** @description Pronóstico de fin (YYYY-MM-DD): mayor fecha fin entre las tareas sin terminar, o null. */
+            forecastDate: string | null;
+            /** @description Días del compromiso del plan respecto a la fecha solicitada (positivo = el plan termina después de lo solicitado). Informativo: no es un vencimiento. Null sin plan autorizado o sin fecha objetivo. */
+            requestedGapDays: number | null;
+            /** @description Desviación en días del pronóstico respecto al compromiso del plan (positivo = se corrió). Null sin plan autorizado o sin tareas abiertas con fecha. */
+            scheduleVarianceDays: number | null;
             /** @description Flag transversal de bloqueo activo (Fase 7). */
             blocked: boolean;
             /** @description Motivo del bloqueo o null. */

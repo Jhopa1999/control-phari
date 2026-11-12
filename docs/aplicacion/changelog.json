@@ -758,6 +758,16 @@
         "docs/BACKLOG.md"
       ],
       "summary": "Sesión en cookie HttpOnly (BL-013) y cabeceras de seguridad (BL-017): POST /auth/login y /auth/reset-password emiten la cookie portal_session (HttpOnly, SameSite=Lax, Path=/, Secure según COOKIE_SECURE=auto); nuevo POST /auth/logout; el guard acepta Bearer o cookie y exige X-Portal-Csrf en escrituras por cookie; CORS con credenciales solo para CORS_ORIGINS; la web ya no guarda el token en localStorage; CSP y cabeceras en Next y middleware en la API. POST /auth/logout queda excluido del MCP."
+    },
+    {
+      "timestamp": "2026-11-14T12:00:00Z",
+      "trigger_file": "apps/api/prisma/schema.prisma",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Vencimiento del portafolio contra el compromiso del plan: nuevo Plan.baselineDate congelado al autorizar; GET /portfolio mide el vencimiento contra la línea base del plan autorizado (la fecha objetivo de la solicitud queda como expectativa) y añade referenceDate, referenceSource, forecastDate, requestedGapDays y scheduleVarianceDays; PlanResponseDto expone baselineDate; la columna Objetivo pasa a Entrega. Descripción de portfolio.get actualizada en el MCP."
     }
   ]
 }
