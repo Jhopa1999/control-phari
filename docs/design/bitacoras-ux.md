@@ -53,7 +53,7 @@ parte de por qué los módulos parecen flojos.
 | **Bitácora (diario)** | El registro de **lo que hice un día** en un proceso, con las horas que le dediqué. Un diario por persona + proceso + fecha. | Cada persona, sobre sí misma. | Dar visibilidad al líder y al jefe; sustentar el reporte semanal; evidenciar soporte y trabajo extraordinario; saber en qué se va el tiempo del equipo. | No cambia el avance de ninguna tarea (el % se actualiza en *Mi trabajo* o *Planificación*). No es un plan ni un compromiso. |
 | **Actividad** | Una línea del diario: qué hice, de qué tipo, cuántas horas. | Quien escribe el diario. | Es la unidad que se clasifica y se suma. | No es una tarea del plan. |
 | **Reporte semanal** | El **resumen narrativo de la semana** de una persona en un proceso, con un consolidado automático de sus diarios. | Cada persona, sobre sí misma. | Comunicar resultados, bloqueos, compromisos y decisiones sin reunión; dar base a la revisión del jefe. | No crea compromisos ni cambia prioridades (son texto). No reemplaza los diarios: los resume. |
-| **Novedad** | Un incidente o bloqueo puntual con seguimiento propio. | Quien lo detecta. | Gestionar el problema hasta resolverlo. | No es el registro del día; una actividad puede *apuntar* a una novedad. |
+| **Novedad** (módulo retirado) | Un incidente o bloqueo puntual con seguimiento propio. | Quien lo detecta. | Gestionar el problema hasta resolverlo. | No es el registro del día; una actividad puede *apuntar* a una novedad. |
 
 Quién ve y quién puede hacer qué (alcance real del código en `coordination-scope.service.ts`, con el cambio
 propuesto en H1 marcado):

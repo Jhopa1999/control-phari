@@ -309,7 +309,7 @@ agregan por periodo/proceso (varias filas por persona/mes). El mes se maneja com
 
 ## coordination — Trabajo diario y coordinación
 
-Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reuniones
+Agrupa tres submódulos: bitácora/semanal (worklog), reuniones
 (meetings) y compromisos (commitments). Los 3 roles, con alcance por proceso.
 
 ### Worklog — Bitácora y reporte semanal (`worklog/worklog.controller.ts`)
@@ -351,16 +351,11 @@ Agrupa cuatro submódulos: bitácora/semanal (worklog), novedades (issues), reun
 
 Reglas: la **escritura** de diarios y semanales es solo del autor (el jefe y el líder leen y revisan, no editan lo ajeno). Un diario o semanal que ya no está en borrador responde 409 a cualquier edición. `REVISADO` es terminal. Las horas de una actividad van de 0 a 24. El alta duplicada (persona, proceso, fecha) responde 409 con `existingId`.
 
-### Issues — Novedades (`issue/issue.controller.ts`)
-
-| Método | Ruta | Descripción |
-| --- | --- | --- |
-| GET | `/issues` | Lista novedades en alcance (filtros opcionales: `state`, `typeCode`, `processId`, `requestId` = solicitud relacionada). |
-| POST | `/issues` | Crea una novedad (tipo por defecto BLOQUEO). |
-| GET | `/issues/:id` | Detalle de una novedad. |
-| PATCH | `/issues/:id` | Edita una novedad (un registro por incidente). |
-| POST | `/issues/:id/transition` | Transiciona el estado (máquina mínima). |
-| DELETE | `/issues/:id` | Borra una novedad en alcance. |
+> **Novedades retiradas.** Los endpoints `/issues` (listar, crear, ver, editar, transicionar y borrar), `IssueService`
+> y las tools `issue.*` del MCP ya no existen: cualquier `/issues` responde 404. La tabla `issues` y sus datos se
+> conservan (ver `modelo-datos.md`). `record-state.ts` y `WorkflowStateService` se mantienen: los usa Compromisos.
+> El indicador «Bloqueos activos» del Panel de demanda (`GET /area-control/indicators`) cuenta solo las marcas de
+> bloqueo de las solicitudes: `blocks.openBlockingIssues` desapareció y `BlockCauseDto.origin` solo vale `REQUEST_FLAG`.
 
 ### Meetings — Reuniones (`meeting/meeting.controller.ts`)
 
@@ -386,7 +381,7 @@ Reglas: la **escritura** de diarios y semanales es solo del autor (el jefe y el 
 | DELETE | `/commitments/:id` | Borra un compromiso en alcance. |
 
 Reglas: los diarios/semanales son propios del autor; los participantes de una reunión
-deben estar dentro del alcance; las novedades y compromisos usan máquinas de estado
+deben estar dentro del alcance; los compromisos usan una máquina de estado
 mínimas reversibles.
 
 Actas y compromisos (módulo unificado): la reunión es el acta. Su estado reutiliza
@@ -684,7 +679,7 @@ consultar. El agente `ASISTENTE` nace con 8192 tokens de salida (un plan largo n
 **Propuestas de acción (F3).** El asistente nunca escribe datos: solo puede *proponer* con una lista
 cerrada de tools de escritura (`request.create`, `request.update`, `request.triage.create`,
 `request.priority.create`, `plan.create`, `task.create`, `task.update`, `task.status.update`,
-`issue.create`, `issue.update`, `issue.transition`, `meeting.create`, `meeting.update`,
+`meeting.create`, `meeting.update`,
 `commitment.create`, `commitment.update`, `commitment.transition`, `plan.update`, `phase.create`,
 `phase.update`, `phase.reorder`, `task.dependency.add`, `asset.create`, `asset.update`,
 `document.create`, `document.update`, `document.version.create` y `plan.import`, que carga un cronograma

@@ -6401,277 +6401,6 @@
         ]
       }
     },
-    "/issues": {
-      "get": {
-        "operationId": "IssueController_list",
-        "parameters": [
-          {
-            "name": "state",
-            "required": false,
-            "in": "query",
-            "description": "Filtra por estado.",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "BORRADOR",
-                "EN_CURSO",
-                "BLOQUEADO",
-                "COMPLETADO",
-                "ARCHIVADO"
-              ]
-            }
-          },
-          {
-            "name": "typeCode",
-            "required": false,
-            "in": "query",
-            "description": "Filtra por tipo.",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "BLOQUEO",
-                "INCIDENTE",
-                "CALIDAD_DATOS",
-                "SOLICITUD_APOYO"
-              ]
-            }
-          },
-          {
-            "name": "processId",
-            "required": false,
-            "in": "query",
-            "description": "Filtra por proceso.",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "requestId",
-            "required": false,
-            "in": "query",
-            "description": "Filtra por solicitud (proyecto) relacionada.",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Novedades.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/IssueResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          }
-        },
-        "summary": "Lista novedades en alcance (filtros opcionales).",
-        "tags": [
-          "issues"
-        ]
-      },
-      "post": {
-        "operationId": "IssueController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateIssueDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Novedad creada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IssueResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos."
-          },
-          "404": {
-            "description": "Proceso o referencia fuera de alcance."
-          }
-        },
-        "summary": "Crea una novedad (tipo por defecto BLOQUEO).",
-        "tags": [
-          "issues"
-        ]
-      }
-    },
-    "/issues/{id}": {
-      "get": {
-        "operationId": "IssueController_get",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Novedad.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IssueResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Novedad fuera de alcance."
-          }
-        },
-        "summary": "Detalle de una novedad.",
-        "tags": [
-          "issues"
-        ]
-      },
-      "patch": {
-        "operationId": "IssueController_update",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateIssueDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Novedad actualizada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IssueResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos."
-          },
-          "404": {
-            "description": "Novedad o referencia fuera de alcance."
-          }
-        },
-        "summary": "Edita una novedad (un registro por incidente, AC-019).",
-        "tags": [
-          "issues"
-        ]
-      },
-      "delete": {
-        "operationId": "IssueController_remove",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Novedad borrada."
-          },
-          "404": {
-            "description": "Novedad fuera de alcance."
-          }
-        },
-        "summary": "Borra una novedad en alcance (204 sin body).",
-        "tags": [
-          "issues"
-        ]
-      }
-    },
-    "/issues/{id}/transition": {
-      "post": {
-        "operationId": "IssueController_transition",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TransitionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Estado actualizado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IssueResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Transicion no permitida."
-          },
-          "404": {
-            "description": "Novedad fuera de alcance."
-          }
-        },
-        "summary": "Transiciona el estado de una novedad (maquina minima).",
-        "tags": [
-          "issues"
-        ]
-      }
-    },
     "/meetings": {
       "get": {
         "operationId": "MeetingController_list",
@@ -9790,10 +9519,6 @@
     {
       "name": "meetings",
       "description": "Reuniones y sus participantes."
-    },
-    {
-      "name": "issues",
-      "description": "Incidencias (issues) y sus transiciones."
     },
     {
       "name": "assets",
@@ -15540,260 +15265,6 @@
           }
         }
       },
-      "IssueResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "processId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Proceso de la novedad."
-          },
-          "reportedByUserId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Autor (quien reporta)."
-          },
-          "date": {
-            "type": "string",
-            "description": "Fecha de alta (YYYY-MM-DD)."
-          },
-          "typeCode": {
-            "type": "string",
-            "description": "Tipo (maestra ISSUE_TYPE)."
-          },
-          "state": {
-            "type": "string",
-            "description": "Estado (maestra RECORD_STATE)."
-          },
-          "title": {
-            "type": "string",
-            "description": "Titulo."
-          },
-          "relatedRequestId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "relatedTaskId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "relatedAssetRef": {
-            "type": "string",
-            "nullable": true
-          },
-          "detail": {
-            "type": "string",
-            "nullable": true
-          },
-          "impact": {
-            "type": "string",
-            "nullable": true
-          },
-          "resolverUserId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "targetDate": {
-            "type": "string",
-            "nullable": true,
-            "description": "Fecha objetivo (YYYY-MM-DD)."
-          },
-          "resolution": {
-            "type": "string",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "processId",
-          "reportedByUserId",
-          "date",
-          "typeCode",
-          "state",
-          "title",
-          "relatedRequestId",
-          "relatedTaskId",
-          "relatedAssetRef",
-          "detail",
-          "impact",
-          "resolverUserId",
-          "targetDate",
-          "resolution",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "CreateIssueDto": {
-        "type": "object",
-        "properties": {
-          "processId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Proceso de la novedad (requerido)."
-          },
-          "date": {
-            "type": "string",
-            "description": "Fecha de alta en formato YYYY-MM-DD.",
-            "example": "2025-03-10",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-          },
-          "title": {
-            "type": "string",
-            "description": "Titulo de la novedad (requerido).",
-            "maxLength": 300
-          },
-          "typeCode": {
-            "type": "string",
-            "enum": [
-              "BLOQUEO",
-              "INCIDENTE",
-              "CALIDAD_DATOS",
-              "SOLICITUD_APOYO"
-            ],
-            "description": "Tipo (por defecto BLOQUEO)."
-          },
-          "relatedRequestId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Solicitud relacionada."
-          },
-          "relatedTaskId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Tarea relacionada."
-          },
-          "relatedAssetRef": {
-            "type": "string",
-            "description": "Activo relacionado (texto).",
-            "maxLength": 500
-          },
-          "detail": {
-            "type": "string",
-            "description": "Detalle.",
-            "maxLength": 2000
-          },
-          "impact": {
-            "type": "string",
-            "description": "Impacto.",
-            "maxLength": 2000
-          },
-          "resolverUserId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Responsable de resolucion."
-          },
-          "targetDate": {
-            "type": "string",
-            "description": "Fecha objetivo (YYYY-MM-DD).",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-          },
-          "resolution": {
-            "type": "string",
-            "description": "Resolucion/evidencia.",
-            "maxLength": 2000
-          }
-        },
-        "required": [
-          "processId",
-          "date",
-          "title"
-        ]
-      },
-      "UpdateIssueDto": {
-        "type": "object",
-        "properties": {
-          "title": {
-            "type": "string",
-            "description": "Titulo.",
-            "maxLength": 300
-          },
-          "typeCode": {
-            "type": "string",
-            "enum": [
-              "BLOQUEO",
-              "INCIDENTE",
-              "CALIDAD_DATOS",
-              "SOLICITUD_APOYO"
-            ],
-            "description": "Tipo de novedad."
-          },
-          "relatedRequestId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Solicitud relacionada."
-          },
-          "relatedTaskId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Tarea relacionada."
-          },
-          "relatedAssetRef": {
-            "type": "string",
-            "description": "Activo relacionado (texto).",
-            "maxLength": 500
-          },
-          "detail": {
-            "type": "string",
-            "description": "Detalle.",
-            "maxLength": 2000
-          },
-          "impact": {
-            "type": "string",
-            "description": "Impacto.",
-            "maxLength": 2000
-          },
-          "resolverUserId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Responsable de resolucion."
-          },
-          "targetDate": {
-            "type": "string",
-            "description": "Fecha objetivo (YYYY-MM-DD).",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-          },
-          "resolution": {
-            "type": "string",
-            "description": "Resolucion/evidencia.",
-            "maxLength": 2000
-          }
-        }
-      },
-      "TransitionDto": {
-        "type": "object",
-        "properties": {
-          "toState": {
-            "type": "string",
-            "enum": [
-              "BORRADOR",
-              "EN_CURSO",
-              "BLOQUEADO",
-              "COMPLETADO",
-              "ARCHIVADO"
-            ],
-            "description": "Estado destino de la transicion.",
-            "example": "COMPLETADO"
-          }
-        },
-        "required": [
-          "toState"
-        ]
-      },
       "MeetingCommitmentDto": {
         "type": "object",
         "properties": {
@@ -16315,6 +15786,26 @@
             "maxLength": 2000
           }
         }
+      },
+      "TransitionDto": {
+        "type": "object",
+        "properties": {
+          "toState": {
+            "type": "string",
+            "enum": [
+              "BORRADOR",
+              "EN_CURSO",
+              "BLOQUEADO",
+              "COMPLETADO",
+              "ARCHIVADO"
+            ],
+            "description": "Estado destino de la transicion.",
+            "example": "COMPLETADO"
+          }
+        },
+        "required": [
+          "toState"
+        ]
       },
       "GatePendingItemResponseDto": {
         "type": "object",
@@ -17056,10 +16547,9 @@
           "origin": {
             "type": "string",
             "enum": [
-              "REQUEST_FLAG",
-              "ISSUE"
+              "REQUEST_FLAG"
             ],
-            "description": "Origen de la senal del bloqueo."
+            "description": "Origen de la senal del bloqueo (marca de bloqueo de la solicitud)."
           },
           "count": {
             "type": "number",
@@ -17084,12 +16574,8 @@
             "type": "number",
             "description": "Solicitudes con bloqueo activo (0 valido)."
           },
-          "openBlockingIssues": {
-            "type": "number",
-            "description": "Issues BLOQUEO abiertas (0 valido)."
-          },
           "byCause": {
-            "description": "Desglose por causa fusionando ambas senales.",
+            "description": "Desglose por causa de las solicitudes bloqueadas.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BlockCauseDto"
@@ -17106,7 +16592,6 @@
         },
         "required": [
           "blockedRequests",
-          "openBlockingIssues",
           "byCause",
           "status"
         ]

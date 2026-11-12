@@ -1748,60 +1748,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/issues": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista novedades en alcance (filtros opcionales). */
-        get: operations["IssueController_list"];
-        put?: never;
-        /** Crea una novedad (tipo por defecto BLOQUEO). */
-        post: operations["IssueController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/issues/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Detalle de una novedad. */
-        get: operations["IssueController_get"];
-        put?: never;
-        post?: never;
-        /** Borra una novedad en alcance (204 sin body). */
-        delete: operations["IssueController_remove"];
-        options?: never;
-        head?: never;
-        /** Edita una novedad (un registro por incidente, AC-019). */
-        patch: operations["IssueController_update"];
-        trace?: never;
-    };
-    "/issues/{id}/transition": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Transiciona el estado de una novedad (maquina minima). */
-        post: operations["IssueController_transition"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/meetings": {
         parameters: {
             query?: never;
@@ -5589,130 +5535,6 @@ export interface components {
             /** @description Decisiones para el jefe. */
             decisions?: string;
         };
-        IssueResponseDto: {
-            /** Format: uuid */
-            id: string;
-            /**
-             * Format: uuid
-             * @description Proceso de la novedad.
-             */
-            processId: string;
-            /**
-             * Format: uuid
-             * @description Autor (quien reporta).
-             */
-            reportedByUserId: string;
-            /** @description Fecha de alta (YYYY-MM-DD). */
-            date: string;
-            /** @description Tipo (maestra ISSUE_TYPE). */
-            typeCode: string;
-            /** @description Estado (maestra RECORD_STATE). */
-            state: string;
-            /** @description Titulo. */
-            title: string;
-            /** Format: uuid */
-            relatedRequestId: string | null;
-            /** Format: uuid */
-            relatedTaskId: string | null;
-            relatedAssetRef: string | null;
-            detail: string | null;
-            impact: string | null;
-            /** Format: uuid */
-            resolverUserId: string | null;
-            /** @description Fecha objetivo (YYYY-MM-DD). */
-            targetDate: string | null;
-            resolution: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        CreateIssueDto: {
-            /**
-             * Format: uuid
-             * @description Proceso de la novedad (requerido).
-             */
-            processId: string;
-            /**
-             * @description Fecha de alta en formato YYYY-MM-DD.
-             * @example 2025-03-10
-             */
-            date: string;
-            /** @description Titulo de la novedad (requerido). */
-            title: string;
-            /**
-             * @description Tipo (por defecto BLOQUEO).
-             * @enum {string}
-             */
-            typeCode?: "BLOQUEO" | "INCIDENTE" | "CALIDAD_DATOS" | "SOLICITUD_APOYO";
-            /**
-             * Format: uuid
-             * @description Solicitud relacionada.
-             */
-            relatedRequestId?: string;
-            /**
-             * Format: uuid
-             * @description Tarea relacionada.
-             */
-            relatedTaskId?: string;
-            /** @description Activo relacionado (texto). */
-            relatedAssetRef?: string;
-            /** @description Detalle. */
-            detail?: string;
-            /** @description Impacto. */
-            impact?: string;
-            /**
-             * Format: uuid
-             * @description Responsable de resolucion.
-             */
-            resolverUserId?: string;
-            /** @description Fecha objetivo (YYYY-MM-DD). */
-            targetDate?: string;
-            /** @description Resolucion/evidencia. */
-            resolution?: string;
-        };
-        UpdateIssueDto: {
-            /** @description Titulo. */
-            title?: string;
-            /**
-             * @description Tipo de novedad.
-             * @enum {string}
-             */
-            typeCode?: "BLOQUEO" | "INCIDENTE" | "CALIDAD_DATOS" | "SOLICITUD_APOYO";
-            /**
-             * Format: uuid
-             * @description Solicitud relacionada.
-             */
-            relatedRequestId?: string;
-            /**
-             * Format: uuid
-             * @description Tarea relacionada.
-             */
-            relatedTaskId?: string;
-            /** @description Activo relacionado (texto). */
-            relatedAssetRef?: string;
-            /** @description Detalle. */
-            detail?: string;
-            /** @description Impacto. */
-            impact?: string;
-            /**
-             * Format: uuid
-             * @description Responsable de resolucion.
-             */
-            resolverUserId?: string;
-            /** @description Fecha objetivo (YYYY-MM-DD). */
-            targetDate?: string;
-            /** @description Resolucion/evidencia. */
-            resolution?: string;
-        };
-        TransitionDto: {
-            /**
-             * @description Estado destino de la transicion.
-             * @example COMPLETADO
-             * @enum {string}
-             */
-            toState: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
-        };
         MeetingCommitmentDto: {
             /** Format: uuid */
             id: string;
@@ -5963,6 +5785,14 @@ export interface components {
             result?: string;
             /** @description Bloqueos. */
             blockers?: string;
+        };
+        TransitionDto: {
+            /**
+             * @description Estado destino de la transicion.
+             * @example COMPLETADO
+             * @enum {string}
+             */
+            toState: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
         };
         GatePendingItemResponseDto: {
             /**
@@ -6312,10 +6142,10 @@ export interface components {
             /** @description Causa del bloqueo. */
             cause: string;
             /**
-             * @description Origen de la senal del bloqueo.
+             * @description Origen de la senal del bloqueo (marca de bloqueo de la solicitud).
              * @enum {string}
              */
-            origin: "REQUEST_FLAG" | "ISSUE";
+            origin: "REQUEST_FLAG";
             /** @description Numero de bloqueos con esta causa/origen. */
             count: number;
             /** @description Dias acumulados de los bloqueos de esta causa/origen. */
@@ -6324,9 +6154,7 @@ export interface components {
         BlocksIndicatorDto: {
             /** @description Solicitudes con bloqueo activo (0 valido). */
             blockedRequests: number;
-            /** @description Issues BLOQUEO abiertas (0 valido). */
-            openBlockingIssues: number;
-            /** @description Desglose por causa fusionando ambas senales. */
+            /** @description Desglose por causa de las solicitudes bloqueadas. */
             byCause: components["schemas"]["BlockCauseDto"][];
             /** @description applicable=true salvo error; conteos 0 NO son "No aplica". */
             status: components["schemas"]["IndicatorStatusDto"];
@@ -12793,216 +12621,6 @@ export interface operations {
             };
             /** @description El semanal no está enviado. */
             409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    IssueController_list: {
-        parameters: {
-            query?: {
-                /** @description Filtra por estado. */
-                state?: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
-                /** @description Filtra por tipo. */
-                typeCode?: "BLOQUEO" | "INCIDENTE" | "CALIDAD_DATOS" | "SOLICITUD_APOYO";
-                /** @description Filtra por proceso. */
-                processId?: string;
-                /** @description Filtra por solicitud (proyecto) relacionada. */
-                requestId?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Novedades. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IssueResponseDto"][];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    IssueController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateIssueDto"];
-            };
-        };
-        responses: {
-            /** @description Novedad creada. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IssueResponseDto"];
-                };
-            };
-            /** @description Datos invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Proceso o referencia fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    IssueController_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Novedad. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IssueResponseDto"];
-                };
-            };
-            /** @description Novedad fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    IssueController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Novedad borrada. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Novedad fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    IssueController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateIssueDto"];
-            };
-        };
-        responses: {
-            /** @description Novedad actualizada. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IssueResponseDto"];
-                };
-            };
-            /** @description Datos invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Novedad o referencia fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    IssueController_transition: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TransitionDto"];
-            };
-        };
-        responses: {
-            /** @description Estado actualizado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IssueResponseDto"];
-                };
-            };
-            /** @description Transicion no permitida. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Novedad fuera de alcance. */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };

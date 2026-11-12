@@ -351,11 +351,11 @@ defecto de la plantilla.
   errores a la vez; las reglas que combinan campos (planificada: proyecto o
   tarea; extraordinaria: solicitante y justificación) van en `FormError` y
   marcan solo los campos que las incumplen.
-- Coordinación: Novedades (`/seguimiento/novedades`), Reuniones
-  (`/seguimiento/reuniones`) y Compromisos (`/seguimiento/compromisos`) usan
+- Coordinación: Reuniones (`/seguimiento/reuniones`) y Compromisos
+  (`/seguimiento/compromisos`) usan
   el mismo maestro‑detalle. La ficha es una `Card` con el título en `h2`, el
   estado (`StatusBadge kind="record"`), los metadatos y una `DescriptionList`.
-  Novedades y Compromisos agrupan sus transiciones bajo «Cambiar estado a:»
+  Los Compromisos agrupan sus transiciones bajo «Cambiar estado a:»
   (`role="group"`), un botón por destino de `nextStates` sin cambios; tras
   una transición, si el foco se perdió, pasa al encabezado del detalle.
   Eliminar una reunión pide confirmación (§13.3) y el foco va al encabezado de
@@ -570,7 +570,7 @@ defecto de la plantilla.
   `route.fulfill({ response, json })`), de modo que la petición pasa por la
   API real, con autenticación, permisos y CORS, y solo se sustituye el cuerpo;
   no depende de los datos de la base. Los valores por defecto
-  de diario, novedad, reunión, compromiso, reporte semanal, Capacidad, Panel
+  de diario, reunión, compromiso, reporte semanal, Capacidad, Panel
   del área e Indicadores se calculan con el calendario local en el cliente;
   las tres vistas con periodo o mes lo fijan después del montaje y, hasta
   entonces, muestran un esqueleto en el campo y no consultan la API.

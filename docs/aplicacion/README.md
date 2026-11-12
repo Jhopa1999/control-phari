@@ -20,7 +20,7 @@ coordinación multiproceso FMAA).
 El portal permite registrar la demanda entrante, clasificarla, priorizarla, convertir
 lo comprometido en un plan de trabajo con tareas y dependencias, repartir la capacidad
 mensual de las personas, dejar trazabilidad del trabajo diario y la coordinación
-(bitácoras, novedades, reuniones y compromisos), inventariar los activos analíticos y
+(bitácoras, reuniones y compromisos), inventariar los activos analíticos y
 su documentación, y aplicar un ciclo de control de gobierno (gates GC1–GC5) sobre cada
 solicitud.
 
@@ -36,7 +36,7 @@ El portal acompaña el ciclo de vida de una **solicitud** (`Request`) de princip
 5. **Planificación.** La solicitud comprometida obtiene un plan con fases, tareas y
    dependencias; el plan se envía, se autoriza o se devuelve.
 6. **Ejecución y seguimiento.** Se ejecutan las tareas (estado y evidencias en archivos), se
-   reparte la capacidad del mes y se registra el trabajo diario, las novedades, las
+   reparte la capacidad del mes y se registra el trabajo diario, las
    reuniones y los compromisos.
 7. **Gobierno.** En paralelo, cada solicitud pasa por un ciclo de control de 5 gates
    (GC1–GC5), con validaciones/evidencias, faltantes y un flag transversal de bloqueo.

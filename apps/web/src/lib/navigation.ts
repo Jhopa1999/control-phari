@@ -22,7 +22,6 @@ import {
   NotebookPen,
   ScrollText,
   ShieldCheck,
-  TriangleAlert,
   UserCog,
   UserRound,
   Users,
@@ -220,7 +219,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/seguimiento/bitacora', label: 'Bitácora', moduleKey: 'log', icon: NotebookPen },
       { href: '/seguimiento/semanal', label: 'Reporte semanal', moduleKey: 'log', icon: CalendarDays },
-      { href: '/seguimiento/novedades', label: 'Novedades', moduleKey: 'log', icon: TriangleAlert },
       {
         href: '/seguimiento/reuniones',
         label: 'Reuniones y compromisos',
@@ -312,7 +310,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   portfolio: 'Portafolio',
   demandOverview: 'Indicadores',
   project: 'Proyectos',
-  log: 'Bitácora, reporte semanal y novedades',
+  log: 'Bitácora y reporte semanal',
   meeting: 'Reuniones y compromisos',
   asset: 'Activos',
   docs: 'Documentos',

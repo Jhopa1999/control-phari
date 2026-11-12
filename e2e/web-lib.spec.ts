@@ -316,7 +316,6 @@ test.describe('navigation', () => {
       '/demanda/resumen',
       '/seguimiento/bitacora',
       '/seguimiento/semanal',
-      '/seguimiento/novedades',
       '/seguimiento/reuniones',
       '/activos/catalogo',
       '/activos/documentos',

@@ -8,7 +8,7 @@ backend.
 
 Nota sobre "enums lógicos": varios estados (`operationalState`, `Plan.status`,
 `Task.status`, `Asset.status`, `Document.status`, `GateCheck.status`, estados de
-diarios/novedades/compromisos) se guardan como `String`, no como enum de Prisma. Son
+diarios/compromisos) se guardan como `String`, no como enum de Prisma. Son
 máquinas de estado que escriben solo los *helpers* de estado del backend, nunca un DTO
 libre.
 
@@ -37,7 +37,7 @@ Proceso del área (BI, Integraciones, IA) y la coordinación multiproceso FMAA.
   (FK requerida al `Area`), `active`, `sortOrder`.
 - Restricciones: único `code`; índices por `active`, `sortOrder`.
 - Relaciones: `area` → `Area` (`onDelete: Restrict`); raíz de alcance de casi todo
-  (grants, requests, tasks, assignments, diarios, semanales, novedades, reuniones,
+  (grants, requests, tasks, assignments, diarios, semanales, reuniones,
   compromisos, activos, eventos de auditoría).
 
 ### User (`users`)
@@ -201,7 +201,7 @@ Ficha de la demanda; núcleo del flujo.
   `governanceRoute`, `blockedAt`, `assetId`.
 - Relaciones: `mainProcess?` (opcional, N:1 con `onDelete: Restrict`), `asset?` (activo base, N:1 con `onDelete: Restrict`,
   relación `RequestAsset`), participantes, triages, evaluaciones de prioridad,
-  aprobaciones, `plan?` (1:1 efectivo), asignaciones, actividades/novedades/reuniones/
+  aprobaciones, `plan?` (1:1 efectivo), asignaciones, actividades/reuniones/
   compromisos relacionados, activos de origen (`assets`, relación
   `AssetOriginRequest`), gates y validaciones de gobierno.
 
@@ -331,7 +331,12 @@ Registro semanal anclado al lunes; consolida por lectura los diarios del proceso
   `weekStart`.
 
 ### Issue (`issues`)
-Novedad (un registro por incidente que se edita hasta resolver).
+Novedad (un registro por incidente que se edita hasta resolver). **Módulo retirado**:
+ya no hay pantalla, API ni tools de MCP (menú, `/issues`, tools `issue.*` y asistente se
+quitaron en el cambio «retirar Novedades»), pero **la tabla, sus filas, la columna
+`daily_log_activities.related_issue_id`, el catálogo `ISSUE_TYPE` y el tipo de auditoría
+`ISSUE` se conservan sin cambios** para no perder datos ni historial. El Panel de demanda
+dejó de contarlas. El borrado físico queda en `docs/BACKLOG.md` (BL-050).
 - Campos clave: `processId`, `reportedByUserId`, `date`, `typeCode` (default `BLOQUEO`),
   referencias opcionales (`relatedRequestId?`, `relatedTaskId?`, `relatedAssetRef?`,
   `assetId?`), `title`, `detail?`, `impact?`, `resolverUserId?`, `targetDate?`,
@@ -374,7 +379,7 @@ está reservada al jefe de área.
   `AssetOriginRequest`), `owner?`, `requestsAssociated` (solicitudes que usan este
   activo como base, inversa de `Request.asset`, relación `RequestAsset`), `visibilities`
   (procesos que pueden ver/usar el activo), documentos, actividades de bitácora y
-  novedades.
+  novedades (módulo retirado; ver `Issue`).
 
 ### AssetProcessVisibility (`asset_process_visibilities`)
 Tabla puente N:M Activo↔Proceso: procesos que pueden ver y usar (asociar) un activo
@@ -487,8 +492,8 @@ y marca como completada.
   (waiver). Estados de preparación de etapa referenciados por GC4/GC5: `EN_EJECUCION`,
   `EN_VALIDACION`, `LISTA_PARA_LIBERAR`, `EN_ESTABILIZACION`, `OPERATIVA`.
 - **Estados de coordinación**: diarios/semanales `BORRADOR → ENVIADO` (con `REVISADO`);
-  novedades y compromisos usan `EN_CURSO` como estado inicial de una máquina mínima
-  reversible.
+  los compromisos usan `EN_CURSO` como estado inicial de una máquina mínima
+  reversible (las novedades, ya retiradas, la usaban igual).
 - **Cadencia de actividad recurrente** (`RecurringActivity.cadence`, enum `Recurrence`):
   `SEMANAL`, `MENSUAL`, `TRIMESTRAL`, `SEMESTRAL`, `ANUAL`.
 - **Tipo de responsable** (`RecurringActivity.responsibleKind`, enum `ResponsibleKind`):

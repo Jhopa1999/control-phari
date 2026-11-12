@@ -53,9 +53,9 @@ puede bajar). El test `src/__tests__/coverage.test.ts` **falla** si una
 operación no tiene tool ni exclusión, si una exclusión está obsoleta, si una
 tool no tiene operación en el contrato, si falta una anotación, si una tool GET
 no es de solo lectura, si un `body` es de forma libre o si hay más pendientes
-que el tope. Hoy hay 120 tools sobre 210 operaciones (37 exclusiones permanentes
-y 55 pendientes, todas de escritura). Ya están expuestas las de coordinación (crear y editar
-hallazgos, reuniones y compromisos, y cambiar el estado de hallazgos y compromisos), las de
+que el tope. Hoy hay 115 tools sobre 209 operaciones (37 exclusiones permanentes
+y 54 pendientes, todas de escritura). Ya están expuestas las de coordinación (crear y editar
+reuniones y compromisos, y cambiar el estado de compromisos; los hallazgos se retiraron con el módulo Novedades), las de
 planes (editar el plan; crear, editar y reordenar fases; añadir predecesoras a una tarea) y las de
 activos y documentos (crear y editar activos y documentos, y crear versiones de un documento). Todas las lecturas (GET) del contrato
 están expuestas salvo las descargas binarias.

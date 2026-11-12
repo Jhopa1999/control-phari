@@ -175,6 +175,12 @@ test.describe('escritorio 1440×900', () => {
     }
   });
 
+  test('Novedades se retiró: no está en el menú y su ruta antigua lleva a la Bitácora', async ({ page }) => {
+    await page.goto('/seguimiento/novedades');
+    await expect(page).toHaveURL(/\/seguimiento\/bitacora$/);
+    await expect(mainNav(page).getByRole('link', { name: 'Novedades', exact: true })).toHaveCount(0);
+  });
+
   test('Tareas marca «Mi trabajo» y /catalogs marca «Maestras»', async ({ page }) => {
     const menu = mainNav(page);
 

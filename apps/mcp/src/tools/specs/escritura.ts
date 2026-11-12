@@ -18,21 +18,7 @@ function escritura(
 
 export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   // Hallazgos
-  escritura(
-    'issue.create',
-    'POST /issues',
-    'Registra un hallazgo (POST /issues). El cuerpo debe cumplir el DTO de creación; el backend valida los datos.',
-  ),
-  escritura(
-    'issue.update',
-    'PATCH /issues/{id}',
-    'Actualiza los datos de un hallazgo (PATCH /issues/{id}). El backend valida los datos.',
-  ),
-  escritura(
-    'issue.transition',
-    'POST /issues/{id}/transition',
-    'Cambia el estado de un hallazgo (POST /issues/{id}/transition). El backend valida la transición.',
-  ),
+
 
   // Reuniones
   escritura(

@@ -17,7 +17,7 @@ import { CoordinationPersonDto } from './dto/coordination-person.dto';
  *   jefe `{}`; lider `processId ∈ leaderProcessIds`; integrante NO se expande.
  * - Plano por persona ("lo suyo" del integrante y ESCRITURA): DailyLog/
  *   WeeklyReport por `authorUserId`; Commitment por asignado/responsable;
- *   Issue por reporta/resuelve; Meeting por participante o responsable.
+ *   Meeting por participante o responsable.
  *
  * EXCEPCION (HIGH-2): la visibilidad de Request/Task para validar FK usa
  * `requestVisibilityWhere` = `scopedProcessIds` (visibilidad real de Request de
@@ -84,28 +84,6 @@ export class CoordinationScopeService {
 
   weeklyReportWriteWhere(actor: CurrentActor): Prisma.WeeklyReportWhereInput {
     return { authorUserId: actor.userId };
-  }
-
-  // --- Issue --------------------------------------------------------------
-
-  /**
-   * Alcance de Issue (design §2.2): jefe `{}`; lider por proceso; integrante por
-   * `reportedByUserId` O `resolverUserId` propios.
-   */
-  issueWhere(actor: CurrentActor): Prisma.IssueWhereInput {
-    if (actor.isJefeArea) {
-      return {};
-    }
-    const leaderIds = this.leaderProcessIds(actor);
-    if (leaderIds.length > 0) {
-      return { processId: { in: leaderIds } };
-    }
-    return {
-      OR: [
-        { reportedByUserId: actor.userId },
-        { resolverUserId: actor.userId },
-      ],
-    };
   }
 
   // --- Meeting ------------------------------------------------------------

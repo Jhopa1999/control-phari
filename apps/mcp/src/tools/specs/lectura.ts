@@ -203,9 +203,7 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
     'Obtiene un reporte semanal por id (GET /weekly-reports/{id}).',
   ),
 
-  // Hallazgos, reuniones y compromisos
-  lectura('issue.list', 'GET /issues', 'Lista los hallazgos (GET /issues), con filtros opcionales; usa requestId para ver los de un proyecto.'),
-  lectura('issue.get', 'GET /issues/{id}', 'Obtiene un hallazgo por id (GET /issues/{id}).'),
+  // Reuniones y compromisos
   lectura(
     'meeting.list',
     'GET /meetings',
