@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { SortableTableHead } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
+import { IdChip } from '@/components/id-chip';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell } from '@/components/row-actions';
@@ -730,8 +731,11 @@ export function CapacidadView(): React.ReactElement {
                   <TableCell className="min-w-40 font-medium">{personName(row.userId)}</TableCell>
                   <TableCell className="min-w-32">{processName(row.processId)}</TableCell>
                   <TableCell className="min-w-48 max-w-[24rem]">
-                    <span className="line-clamp-2" title={requestTitle(row.requestId)}>
-                      {requestTitle(row.requestId)}
+                    <span className="flex flex-col items-start gap-0.5">
+                      <IdChip code={row.requestCode} />
+                      <span className="line-clamp-2" title={row.requestTitle ?? requestTitle(row.requestId)}>
+                        {row.requestTitle ?? requestTitle(row.requestId)}
+                      </span>
                     </span>
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap tabular-nums">

@@ -3,6 +3,7 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { AssistantPanel } from '@/components/assistant/assistant-panel';
 import { AssistantProvider } from '@/components/assistant/assistant-provider';
 import { AssistantTrigger } from '@/components/assistant/assistant-trigger';
+import { CodeSearchShortcut, GlobalCodeSearch } from '@/components/global-code-search';
 import { MobileNav } from '@/components/mobile-nav';
 import { NotificationBell } from '@/components/notification-bell';
 import { SkipLink } from '@/components/skip-link';
@@ -20,14 +21,20 @@ export function AppShell({ children }: { children: React.ReactNode }): React.Rea
   return (
     <AssistantProvider>
       <SkipLink />
+      <CodeSearchShortcut />
       <div className="flex min-h-dvh bg-background">
         <AppSidebar variant="desktop" />
         <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
           <MobileNav />
           {/* Barra superior de escritorio: centro de notificaciones (NOT-01). */}
           <div className="sticky top-0 z-30 hidden h-12 items-center justify-between gap-4 bg-card/90 px-4 backdrop-blur lg:flex md:px-6 xl:px-8 print:hidden">
-            <WorkspaceCrumbs />
-            <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <WorkspaceCrumbs />
+            </div>
+            <React.Suspense fallback={null}>
+              <GlobalCodeSearch placement="desktop" />
+            </React.Suspense>
+            <div className="flex shrink-0 items-center gap-2">
               <AssistantTrigger />
               <NotificationBell />
               <UserMenu />

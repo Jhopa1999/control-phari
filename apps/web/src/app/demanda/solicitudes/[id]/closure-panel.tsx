@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DisabledReason } from '@/components/disabled-reason';
 import { Field, FormError, RequiredHint } from '@/components/field';
+import { IdChip } from '@/components/id-chip';
 import { InlineNotice } from '@/components/inline-notice';
 import { ReasonDialog } from '@/components/reason-dialog';
 import { Section } from '@/components/section';
@@ -157,7 +158,12 @@ export function ClosurePanel({
   return (
     <Section
       title="Cierre del proyecto"
-      actions={<Badge variant={closed ? 'success' : 'outline'}>{CLOSURE_PHASE_LABELS[status.phase] ?? status.phase}</Badge>}
+      actions={
+          <span className="flex flex-wrap items-center gap-2">
+            <IdChip code={status.requestCode} />
+            <Badge variant={closed ? 'success' : 'outline'}>{CLOSURE_PHASE_LABELS[status.phase] ?? status.phase}</Badge>
+          </span>
+        }
     >
       <div className="flex flex-col gap-4 rounded-lg border bg-card p-4">
         {closed ? (

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import Link from 'next/link';
 import {
@@ -169,6 +170,8 @@ function planStatePhrase(status: string): string {
 export function PlanView(): React.ReactElement {
   const { actorId, permissions, allowedModules } = useActor();
   const { requestId: urlId, setRequestId } = useRequestIdParam();
+  // ?phaseId= (búsqueda global): se lee una sola vez al montar y se consume al mostrar la fase.
+  const phaseTargetRef = React.useRef<string | null>(useSearchParams().get('phaseId'));
   // Presentación de la sección «Tareas»: tabla (por defecto) o kanban. Solo
   // cambia la vista; datos, filtros y acciones son los mismos.
   const { view: tasksView, setView: setTasksView } = usePlanTasksView();
@@ -328,6 +331,21 @@ export function PlanView(): React.ReactElement {
     }
   }, [requestsState, requests, urlId, selectRequest, setRequestId]);
 
+  // Fase pedida por ?phaseId=: espera al plan cargado, la muestra y la marca unos segundos;
+  // después quita phaseId de la URL conservando requestId. Si no existe, no hace nada.
+  React.useEffect(() => {
+    const target = phaseTargetRef.current;
+    if (!target || planState !== 'success' || phases.length === 0) return;
+    phaseTargetRef.current = null;
+    const row = document.getElementById(`fase-${target}`);
+    if (row) {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      row.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+      row.classList.add('outline-2', 'outline-ring', '-outline-offset-2');
+      window.setTimeout(() => row.classList.remove('outline-2', 'outline-ring', '-outline-offset-2'), 4000);
+    }
+    if (urlId) setRequestId(urlId);
+  }, [planState, phases, urlId, setRequestId]);
   // Regla 2: primero el estado, después la URL.
   function handlePick(id: string): void {
     setNotice(null);
@@ -841,7 +859,7 @@ export function PlanView(): React.ReactElement {
                 const count = taskCountByPhase.get(phase.id) ?? 0;
                 const lockedInitial = isInitial && count > 0;
                 return (
-                  <TableRow key={phase.id}>
+                  <TableRow key={phase.id} id={`fase-${phase.id}`}>
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       {index + 1}
                     </TableCell>

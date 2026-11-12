@@ -5,6 +5,7 @@ import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { FileCheck2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { CellTitle } from '@/components/data-table';
+import { IdChip } from '@/components/id-chip';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { ReasonDialog } from '@/components/reason-dialog';
 import { RowActions, RowActionsCell } from '@/components/row-actions';
@@ -211,7 +212,12 @@ export function PendingReviewsSections(): React.ReactElement | null {
                   <TableCell className="min-w-56 max-w-[28rem]">
                     <CellTitle
                       href={`/demanda/solicitudes/${encodeURIComponent(c.requestId)}`}
-                      meta={c.requestedByName ? `Solicitado por ${c.requestedByName}` : undefined}
+                      meta={
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <IdChip code={c.requestCode} />
+                    {c.requestedByName ? `Solicitado por ${c.requestedByName}` : null}
+                  </span>
+                }
                     >
                       {c.requestTitle}
                     </CellTitle>

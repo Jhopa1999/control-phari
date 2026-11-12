@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { DescriptionList, type DescriptionItem } from '@/components/description-list';
+import { IdChip } from '@/components/id-chip';
 import { PriorityBadge, StatusBadge } from '@/components/status-badge';
 import { Label } from '@/components/ui/label';
 import {
@@ -232,6 +233,7 @@ export function RequestFacts({
       reference
     );
   const items: DescriptionItem[] = [
+    { term: 'ID', value: <IdChip code={request.code} /> },
     { term: 'Proceso principal', value: processName },
     { term: 'Registro', value: formatDate(request.registeredAt) },
     { term: 'Área solicitante', value: request.requesterArea },

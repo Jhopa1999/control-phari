@@ -6,6 +6,7 @@ import { BadgeCheck, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { CellTitle } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
+import { IdChip } from '@/components/id-chip';
 import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
@@ -243,7 +244,7 @@ export function RevisionView(): React.ReactElement {
                 return (
                   <TableRow key={req.id}>
                     <TableCell className="min-w-56 max-w-[28rem]">
-                      <CellTitle href={allowedModules.has('requests') ? `/demanda/solicitudes/${encodeURIComponent(req.id)}` : undefined}>
+                      <CellTitle href={allowedModules.has('requests') ? `/demanda/solicitudes/${encodeURIComponent(req.id)}` : undefined} meta={<IdChip code={req.code} />}>
                         {req.title}
                       </CellTitle>
                     </TableCell>
