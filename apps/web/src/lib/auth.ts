@@ -12,6 +12,22 @@ export interface LoginCredentials {
   password: string;
 }
 /**
+ * Cierra la sesión en el servidor (POST /auth/logout): la API borra la cookie
+ * HttpOnly. Es idempotente (204 también sin sesión). Lanza ApiError si falla.
+ */
+export async function logout(): Promise<void> {
+  try {
+    const { error, response } = await api.POST('/auth/logout');
+    if (error || !response.ok) {
+      throw toApiError(response.status);
+    }
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/**
  * Autentica contra POST /auth/login reutilizando la respuesta tipada del
  * cliente (LoginResponseDto).
  *

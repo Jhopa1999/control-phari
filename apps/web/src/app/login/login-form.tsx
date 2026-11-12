@@ -72,7 +72,8 @@ export function LoginForm(): React.ReactElement {
         identifier: identifier.trim(),
         password,
       });
-      login(result.accessToken, result.user);
+      // La API ya dejó la sesión en la cookie HttpOnly; el accessToken del cuerpo se descarta.
+      login(result.user);
       // Vuelve a la ruta de origen (`next`) si es interna y segura; si no, /inicio.
       router.replace(postLoginPath(searchParams));
     } catch (err) {

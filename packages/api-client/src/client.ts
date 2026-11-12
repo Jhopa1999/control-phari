@@ -12,6 +12,12 @@ export interface ApiClientOptions {
    * Cabeceras por defecto opcionales para todas las peticiones.
    */
   headers?: Record<string, string>;
+  /**
+   * Política de credenciales de `fetch` (p. ej. "include" para enviar la cookie
+   * de sesión HttpOnly a una API de otro origen). Si se omite, se usa el valor
+   * por defecto del navegador.
+   */
+  credentials?: RequestCredentials;
 }
 
 /**
@@ -23,5 +29,6 @@ export function createApiClient(options: ApiClientOptions): Client<paths> {
   return createClient<paths>({
     baseUrl: options.baseUrl,
     headers: options.headers,
+    ...(options.credentials ? { credentials: options.credentials } : {}),
   });
 }

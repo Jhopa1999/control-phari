@@ -1,5 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
-import type { AuthUser } from '../apps/web/src/lib/api-client'; // solo tipo: el módulo no se evalúa
+import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
 /**
  * Regresiones de la sesión jwt (design §8.7):
@@ -10,7 +9,9 @@ import type { AuthUser } from '../apps/web/src/lib/api-client'; // solo tipo: el
  * (e) un `next` externo se ignora y lleva a /inicio del mismo origen;
  * (f) cerrar sesión lleva a /login sin `next` y una recarga no la recupera;
  * (g) credenciales incorrectas muestran el error genérico y no guardan sesión;
- * (h) sin sesión, una ruta protegida no pide sus datos ni muestra su contenido.
+ * (h) sin sesión, una ruta protegida no pide sus datos ni muestra su contenido;
+ * (i) la sesión es una cookie HttpOnly y el token no está al alcance de JS;
+ * (j) un token heredado en localStorage se purga al cargar.
  *
  * Solo corre con E2E_AUTH_MODE=jwt y con la API (AUTH_MODE=jwt) y la web
  * (NEXT_PUBLIC_AUTH_MODE=jwt) ya levantadas: fuera de CI Playwright reutiliza
@@ -38,12 +39,24 @@ test.skip(
 
 const IDENTIFIER = process.env.E2E_JWT_IDENTIFIER ?? 'jefe@demo.local';
 
-/** Usuario bien formado que acompaña a un token inválido (caso 4). */
-const STORED_USER: AuthUser = {
-  id: '00000000-0000-4000-8000-000000000001',
-  name: 'Usuario e2e',
-  identifier: IDENTIFIER,
-};
+const SESSION_COOKIE = 'portal_session';
+
+const sessionCookie = async (context: BrowserContext) =>
+  (await context.cookies()).find((c) => c.name === SESSION_COOKIE);
+
+/** Ni el token ni el usuario se guardan en el almacenamiento del navegador. */
+async function expectNoTokenInStorage(page: Page): Promise<void> {
+  const stored = await page.evaluate(() => ({
+    token: window.localStorage.getItem('authToken'),
+    user: window.localStorage.getItem('authUser'),
+    session: Object.keys(window.sessionStorage),
+    cookie: document.cookie,
+  }));
+  expect(stored.token).toBeNull();
+  expect(stored.user).toBeNull();
+  expect(stored.session).toEqual([]);
+  expect(stored.cookie).not.toContain(SESSION_COOKIE);
+}
 
 // Cada test parte de un navegador sin sesión: ni token jwt ni actor de dev.
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -127,19 +140,19 @@ test('/login con sesión válida lleva a /inicio', async ({ page }) => {
 
 test('una sesión rechazada lleva a /login?expired=1 con el aviso de sesión expirada', async ({
   page,
+  context,
+  baseURL,
 }) => {
   await page.goto('/login');
-  // El formulario aparece cuando la app ya leyó la identidad persistida: si se
-  // guardara el token antes, esta misma página lo leería, recibiría el 401 y lo
-  // borraría antes de llegar a /inicio.
+  // El formulario aparece cuando la app ya resolvió la identidad (sin sesión):
+  // si la cookie se pusiera antes, esta misma página recibiría el 401 y la
+  // pista se borraría antes de llegar a /inicio.
   await expect(loginForm(page)).toBeVisible();
-  await page.evaluate(
-    ([token, user]) => {
-      window.localStorage.setItem('authToken', token);
-      window.localStorage.setItem('authUser', user);
-    },
-    ['token-invalido', JSON.stringify(STORED_USER)] as const,
-  );
+  // Cookie de sesión inválida (la API responde 401) + la pista de que hubo sesión.
+  await context.addCookies([
+    { name: SESSION_COOKIE, value: 'token-invalido', url: baseURL ?? 'http://localhost:3100' },
+  ]);
+  await page.evaluate(() => window.localStorage.setItem('authSessionHint', '1'));
 
   await page.goto('/inicio');
   await expect(expiredNotice(page)).toBeVisible();
@@ -151,6 +164,7 @@ test('una sesión rechazada lleva a /login?expired=1 con el aviso de sesión exp
 
 test('un next externo se ignora y lleva a /inicio del mismo origen', async ({
   page,
+  context,
   baseURL,
 }) => {
   for (const next of ['https%3A%2F%2Fejemplo.invalid', '%2F%2Fejemplo.invalid']) {
@@ -159,12 +173,14 @@ test('un next externo se ignora y lleva a /inicio del mismo origen', async ({
     await expect(panelHeading(page)).toBeVisible();
     await expect(page).toHaveURL(`${baseURL}/inicio`);
     // El siguiente valor se prueba de nuevo sin sesión.
+    await context.clearCookies();
     await page.evaluate(() => window.localStorage.clear());
   }
 });
 
 test('cerrar sesión lleva a /login sin next y una recarga no la recupera', async ({
   page,
+  context,
 }) => {
   await page.goto('/login');
   await signIn(page);
@@ -172,6 +188,7 @@ test('cerrar sesión lleva a /login sin next y una recarga no la recupera', asyn
   // /login ya tiene su propio h1: la URL confirma que el inicio de sesión
   // terminó antes de navegar a otra ruta.
   await expect(page).toHaveURL('/inicio');
+  expect(await sessionCookie(context)).toBeDefined();
   // Desde una ruta distinta de /inicio, que sin cierre explícito llevaría `next`.
   await page.goto('/demanda/solicitudes');
   await settled(page);
@@ -192,9 +209,9 @@ test('cerrar sesión lleva a /login sin next y una recarga no la recupera', asyn
   await expect(loginForm(page)).toBeVisible();
   await expect(loginHeading(page)).toBeVisible();
   await expect(page).toHaveURL('/login');
-  expect(
-    await page.evaluate(() => window.localStorage.getItem('authToken')),
-  ).toBeNull();
+  // El servidor borró la cookie (POST /auth/logout) y no queda token en JS.
+  expect(await sessionCookie(context)).toBeUndefined();
+  await expectNoTokenInStorage(page);
 
   await page.goto('/inicio');
   await expect(loginForm(page)).toBeVisible();
@@ -203,6 +220,7 @@ test('cerrar sesión lleva a /login sin next y una recarga no la recupera', asyn
 });
 test('credenciales incorrectas muestran el error y no inician sesión', async ({
   page,
+  context,
 }) => {
   await page.goto('/login');
   await page.locator('#identifier').fill(IDENTIFIER);
@@ -212,9 +230,42 @@ test('credenciales incorrectas muestran el error y no inician sesión', async ({
   await expect(page.getByText('Usuario o contraseña incorrectos.')).toBeVisible();
   await expect(loginForm(page)).toBeVisible();
   await expect(page).toHaveURL('/login');
-  expect(
-    await page.evaluate(() => window.localStorage.getItem('authToken')),
-  ).toBeNull();
+  expect(await sessionCookie(context)).toBeUndefined();
+  await expectNoTokenInStorage(page);
+});
+
+test('la sesión es una cookie HttpOnly y el token no está al alcance de JS', async ({
+  page,
+  context,
+}) => {
+  await page.goto('/login');
+  await signIn(page);
+  await expect(panelHeading(page)).toBeVisible();
+
+  const cookie = await sessionCookie(context);
+  expect(cookie).toBeDefined();
+  expect(cookie?.httpOnly).toBe(true);
+  expect(cookie?.sameSite).toBe('Lax');
+  expect(cookie?.path).toBe('/');
+  await expectNoTokenInStorage(page);
+  // El nombre del usuario se pinta tras recuperarlo con GET /me/permissions.
+  await expect(userMenuButton(page)).toBeVisible();
+});
+
+test('un token heredado en localStorage se purga al cargar y pide iniciar sesión', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('authToken', 'token-heredado');
+    window.localStorage.setItem('authUser', '{\"identifier\":\"x\"}');
+  });
+  await page.goto('/inicio');
+  await expect(loginForm(page)).toBeVisible();
+  await expect(page).toHaveURL(/\/login/);
+  // El initScript siembra el token solo al crear el documento; la app lo purga al arrancar.
+  await expect
+    .poll(() => page.evaluate(() => window.localStorage.getItem('authToken')))
+    .toBeNull();
 });
 test('sin sesión, una ruta protegida no pide sus datos ni muestra su contenido', async ({
   page,

@@ -2,23 +2,16 @@
 import * as React from 'react';
 import {
   ACTOR_STORAGE_KEY,
-  TOKEN_STORAGE_KEY,
+  SESSION_HINT_STORAGE_KEY,
+  purgeLegacySession,
   type AuthUser,
   type MyPermissions,
 } from './api-client';
 import { getAuthMode, type AuthMode } from './auth-mode';
+import { logout as logoutRequest } from './auth';
 import { ApiError, getMyPermissions } from './me';
 type PermissionsState = 'loading' | 'success' | 'error' | 'none';
-/** Clave de localStorage donde se guarda el usuario autenticado (modo jwt). */
-const AUTH_USER_STORAGE_KEY = 'authUser';
-/**
- * Centinela interno de identidad para modo jwt cuando hay token pero el usuario
- * persistido no es legible (ausente o corrupto en localStorage). Sirve solo para
- * que el efecto de carga dispare GET /me/permissions y la identidad real quede
- * resuelta por el backend. NUNCA se envia como cabecera: en jwt onRequest solo
- * manda Authorization: Bearer <token>, nunca X-Actor-Id. No es un identifier real.
- */
-const JWT_IDENTITY_SENTINEL = '__jwt__';
+
 interface ActorContextValue {
   /** Modo de autenticacion efectivo del frontend ('jwt' | 'dev-header'). */
   authMode: AuthMode;
@@ -29,7 +22,7 @@ interface ActorContextValue {
   actorId: string | null;
   /**
    * Cambia el actor actual (solo relevante en dev-header; en jwt la identidad
-   * la define el token). Persiste en localStorage.
+   * la define la cookie de sesion). Persiste en localStorage.
    */
   setActorId: (identifier: string | null) => void;
   /** Permisos del actor (null mientras carga o si no hay actor). */
@@ -47,8 +40,9 @@ interface ActorContextValue {
   /** La ultima sesion jwt caduco (401 en peticion autenticada). */
   sessionExpired: boolean;
   /**
-   * La identidad persistida ya se leyo de localStorage. Vale false en el SSR y
-   * en el primer render; el guard no decide nada hasta que vale true.
+   * La identidad ya se resolvio: en dev-header se leyo el actor de
+   * localStorage; en jwt la API respondio a GET /me/permissions (con o sin
+   * sesion). Vale false en el SSR y hasta entonces; el guard no decide nada.
    */
   identityReady: boolean;
   /**
@@ -56,46 +50,34 @@ interface ActorContextValue {
    * en ese caso: otro usuario no debe aterrizar en la ruta del anterior.
    */
   signedOut: boolean;
-  /** Inicia sesion jwt: guarda token + usuario y carga permisos. */
-  login: (token: string, user: AuthUser) => void;
-  /** Cierra la sesion jwt: borra token, usuario y permisos. */
-  logout: () => void;
+  /**
+   * Registra la sesion jwt recien abierta. La cookie HttpOnly ya la puso la API
+   * en la respuesta del login; aqui solo se guarda el usuario en memoria y se
+   * cargan los permisos. El token del cuerpo de la respuesta se descarta.
+   */
+  login: (user: AuthUser) => void;
+  /** Cierra la sesion jwt: la API borra la cookie y se limpia el estado local. */
+  logout: () => Promise<void>;
 }
 const ActorContext = React.createContext<ActorContextValue | null>(null);
-/** Identidad persistida en localStorage. */
-interface PersistedIdentity {
-  actorId: string | null;
-  authUser: AuthUser | null;
-}
-/**
- * Lee la identidad persistida. En jwt deriva del token + usuario guardados; en
- * dev-header, del actorId del selector. Puede lanzar si localStorage no esta
- * disponible: quien la llama lo trata como "sin sesion".
- */
-function readPersistedIdentity(authMode: AuthMode): PersistedIdentity {
-  if (authMode === 'jwt') {
-    const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
-    if (!token) {
-      return { actorId: null, authUser: null };
-    }
-    const rawUser = window.localStorage.getItem(AUTH_USER_STORAGE_KEY);
-    if (rawUser) {
-      try {
-        const parsed = JSON.parse(rawUser) as AuthUser;
-        return { actorId: parsed.identifier, authUser: parsed };
-      } catch {
-        // Usuario corrupto en storage: se mantiene el token y la carga de
-        // permisos resolvera la identidad; si falla con 401, se limpia.
-      }
-    }
-    // Token sin usuario legible: aun asi hay sesion. Se usa el centinela
-    // JWT_IDENTITY_SENTINEL (no un identifier real) solo para disparar la
-    // carga de permisos; ver su definicion arriba.
-    return { actorId: JWT_IDENTITY_SENTINEL, authUser: null };
+
+function readSessionHint(): boolean {
+  try {
+    return window.localStorage.getItem(SESSION_HINT_STORAGE_KEY) === '1';
+  } catch {
+    return false;
   }
-  const stored = window.localStorage.getItem(ACTOR_STORAGE_KEY);
-  return { actorId: stored && stored.length > 0 ? stored : null, authUser: null };
 }
+
+function writeSessionHint(active: boolean): void {
+  try {
+    if (active) window.localStorage.setItem(SESSION_HINT_STORAGE_KEY, '1');
+    else window.localStorage.removeItem(SESSION_HINT_STORAGE_KEY);
+  } catch {
+    // Sin almacenamiento: solo se pierde la distincion «caduco» / «nunca hubo».
+  }
+}
+
 export function ActorProvider({
   children,
 }: {
@@ -111,30 +93,79 @@ export function ActorProvider({
   const [sessionExpired, setSessionExpired] = React.useState(false);
   const [identityReady, setIdentityReady] = React.useState(false);
   const [signedOut, setSignedOut] = React.useState(false);
-  // Lee la identidad persistida una sola vez al montar (evita desajustes SSR).
-  // identityReady pasa a true en todas las ramas, en la misma tanda de
-  // actualizaciones que actorId: el render siguiente trae ambos a la vez.
-  React.useEffect(() => {
-    let identity: PersistedIdentity;
-    try {
-      identity = readPersistedIdentity(authMode);
-    } catch {
-      // localStorage no disponible: se trata como "sin sesion".
-      identity = { actorId: null, authUser: null };
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- lee la sesión de localStorage tras montar (no existe en el servidor); la identidad e identityReady se publican en la misma tanda.
-    setAuthUser(identity.authUser);
-    setActorIdState(identity.actorId);
-    setIdentityReady(true);
-  }, [authMode]);
+  // Identidad (jwt) cuyos permisos ya se cargaron: evita pedirlos dos veces
+  // cuando la comprobacion de arranque fija `actorId`.
+  const loadedIdentifierRef = React.useRef<string | null>(null);
+  // Se incrementa en cada login/logout para descartar la respuesta tardia de
+  // una comprobacion de arranque que ya no corresponde al estado actual.
+  const epochRef = React.useRef(0);
+
   const clearSession = React.useCallback(() => {
-    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-    window.localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+    epochRef.current += 1;
+    loadedIdentifierRef.current = null;
     setAuthUser(null);
     setActorIdState(null);
     setPermissions(null);
     setState('none');
   }, []);
+
+  // Arranque. En dev-header lee el actor del selector. En jwt el token ya no
+  // esta al alcance de JS (cookie HttpOnly): se purga la sesion heredada de
+  // localStorage y se pregunta a la API quien es el usuario (GET /me/permissions).
+  React.useEffect(() => {
+    if (authMode !== 'jwt') {
+      let stored: string | null = null;
+      try {
+        stored = window.localStorage.getItem(ACTOR_STORAGE_KEY);
+      } catch {
+        // localStorage no disponible: se trata como "sin sesion".
+      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- lee el actor de localStorage tras montar (no existe en el servidor); la identidad e identityReady se publican en la misma tanda.
+      setActorIdState(stored && stored.length > 0 ? stored : null);
+      setIdentityReady(true);
+      return;
+    }
+    purgeLegacySession();
+    const epoch = epochRef.current;
+    setState('loading');
+    getMyPermissions()
+      .then((data) => {
+        if (epoch !== epochRef.current) return;
+        loadedIdentifierRef.current = data.identifier;
+        setPermissions(data);
+        setAuthUser({ id: data.userId, name: data.name, identifier: data.identifier });
+        setActorIdState(data.identifier);
+        setState('success');
+        writeSessionHint(true);
+        setIdentityReady(true);
+      })
+      .catch((err: unknown) => {
+        if (epoch !== epochRef.current) return;
+        if (err instanceof ApiError && err.status === 401) {
+          // Con pista = la sesion caduco; sin pista = nunca hubo sesion.
+          if (readSessionHint()) setSessionExpired(true);
+          writeSessionHint(false);
+          setState('none');
+        } else {
+          setState('error');
+        }
+        setIdentityReady(true);
+      });
+  }, [authMode]);
+
+  // Otras pestanas: al cerrar sesion se borra la pista y esta pestana sale.
+  React.useEffect(() => {
+    if (authMode !== 'jwt') return;
+    function onStorage(event: StorageEvent): void {
+      if (event.key === SESSION_HINT_STORAGE_KEY && event.newValue === null) {
+        setSignedOut(true);
+        clearSession();
+      }
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [authMode, clearSession]);
+
   const loadPermissions = React.useCallback(
     async (id: string | null) => {
       if (!id) {
@@ -145,16 +176,18 @@ export function ActorProvider({
       setState('loading');
       try {
         const data = await getMyPermissions();
+        if (authMode === 'jwt') loadedIdentifierRef.current = id;
         setPermissions(data);
         setState('success');
       } catch (err) {
-        // En jwt, un 401 al cargar permisos = token invalido/expirado: se
+        // En jwt, un 401 al cargar permisos = sesion invalida/expirada: se
         // limpia la sesion y se marca la expiracion para que el guard redirija.
         if (
           authMode === 'jwt' &&
           err instanceof ApiError &&
           err.status === 401
         ) {
+          writeSessionHint(false);
           setSessionExpired(true);
           clearSession();
           return;
@@ -166,9 +199,12 @@ export function ActorProvider({
     [authMode, clearSession],
   );
   React.useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga los permisos cuando cambia la identidad; el paso a 'loading' es parte del contrato del contexto (lo usa el guard de rutas).
+    if (authMode === 'jwt' && actorId !== null && loadedIdentifierRef.current === actorId) {
+      return;
+    }
+    // Carga los permisos cuando cambia la identidad; el paso a 'loading' es parte del contrato del contexto (lo usa el guard de rutas).
     void loadPermissions(actorId);
-  }, [actorId, loadPermissions]);
+  }, [authMode, actorId, loadPermissions]);
   const setActorId = React.useCallback((identifier: string | null) => {
     if (identifier && identifier.length > 0) {
       window.localStorage.setItem(ACTOR_STORAGE_KEY, identifier);
@@ -178,19 +214,27 @@ export function ActorProvider({
       setActorIdState(null);
     }
   }, []);
-  const login = React.useCallback((token: string, user: AuthUser) => {
+  const login = React.useCallback((user: AuthUser) => {
     // Al autenticar en jwt se limpia cualquier actorId de dev para no mezclar
     // mecanismos de identidad.
     window.localStorage.removeItem(ACTOR_STORAGE_KEY);
-    window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
-    window.localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
+    writeSessionHint(true);
+    epochRef.current += 1;
+    loadedIdentifierRef.current = null;
     setSessionExpired(false);
     setSignedOut(false);
     setAuthUser(user);
     // Dispara la carga de permisos via el efecto (identidad = identifier).
     setActorIdState(user.identifier);
   }, []);
-  const logout = React.useCallback(() => {
+  const logout = React.useCallback(async () => {
+    try {
+      await logoutRequest();
+    } catch {
+      // Sin red o error del servidor: se limpia igualmente el estado local; la
+      // cookie caduca sola por su Max-Age.
+    }
+    writeSessionHint(false);
     setSessionExpired(false);
     setSignedOut(true);
     clearSession();

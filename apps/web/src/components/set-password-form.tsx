@@ -107,8 +107,9 @@ export function SetPasswordForm({ copy }: { copy: SetPasswordCopy }): React.Reac
       // camino feliz (el componente deja de montarse tras la redireccion).
       setRedirecting(true);
       if (getAuthMode() === 'jwt') {
-        // Misma sesion que el login real: persiste token+usuario y carga permisos.
-        login(result.accessToken, result.user);
+        // Misma sesion que el login real: la API dejo la cookie HttpOnly; aqui
+        // solo se registra el usuario y se cargan permisos (accessToken descartado).
+        login(result.user);
         // `replace` para que el back no vuelva a la pantalla del token consumido.
         router.replace(postLoginPath(searchParams));
       } else {

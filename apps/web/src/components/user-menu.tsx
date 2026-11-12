@@ -52,9 +52,10 @@ export function UserMenu({ className }: { className?: string }): React.ReactElem
 
   const userName = authUser?.name ?? 'Usuario';
 
-  function handleLogout(): void {
+  async function handleLogout(): Promise<void> {
     setConfirmOpen(false);
-    logout();
+    // Espera a que la API borre la cookie: navegar antes podría dejar la sesión viva.
+    await logout();
     router.replace('/login');
   }
 
@@ -103,7 +104,7 @@ export function UserMenu({ className }: { className?: string }): React.ReactElem
             <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)}>
               Cancelar
             </Button>
-            <Button type="button" onClick={handleLogout}>
+            <Button type="button" onClick={() => void handleLogout()}>
               Cerrar sesión
             </Button>
           </DialogFooter>
