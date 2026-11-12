@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -37,6 +37,7 @@ interface PrismaMock {
     count: jest.Mock;
     findUnique: jest.Mock;
     update: jest.Mock;
+    createMany: jest.Mock;
   };
   $transaction: jest.Mock;
 }
@@ -57,6 +58,7 @@ function createPrismaMock(): PrismaService & PrismaMock {
       count: jest.fn().mockResolvedValue(0),
       findUnique: jest.fn(),
       update: jest.fn(),
+      createMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     // $transaction: ejecuta el callback con el mismo cliente (tx = prisma) o
     // resuelve un arreglo de promesas (modo batch de findMany/count).
@@ -238,6 +240,68 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
       ).resolves.toMatchObject({ id: 'act-1' });
       // No consulta areas del actor: ADMIN pasa directo.
       expect(prisma.process.findMany).not.toHaveBeenCalled();
+    });
+
+    it('genera al instante las ocurrencias de la definicion creada (sin esperar al cron)', async () => {
+      const today = service.today();
+      prisma.recurringActivity.create.mockResolvedValue(
+        definition({ cadence: Recurrence.SEMANAL as string, startDate: today }),
+      );
+      prisma.recurringActivityOccurrence.createMany.mockResolvedValue({ count: 3 });
+
+      await service.createActivity(actor({ isAdmin: true }), {
+        title: 'X',
+        activityType: 'REPORTE',
+        cadence: Recurrence.SEMANAL,
+        startDate: today.toISOString().slice(0, 10),
+        responsibleKind: ResponsibleKind.USER,
+        responsibleUserId: 'actor-1',
+      } as never);
+
+      expect(prisma.recurringActivityOccurrence.createMany).toHaveBeenCalledTimes(1);
+      const args = prisma.recurringActivityOccurrence.createMany.mock.calls[0][0] as {
+        data: Array<{ activityId: string; targetDate: Date; status: string }>;
+        skipDuplicates: boolean;
+      };
+      expect(args.skipDuplicates).toBe(true);
+      expect(args.data.length).toBeGreaterThanOrEqual(2);
+      expect(args.data[0]).toMatchObject({
+        activityId: 'act-1',
+        status: OccurrenceStatus.PENDIENTE,
+      });
+      expect(args.data[0].targetDate.getTime()).toBe(today.getTime());
+    });
+
+    it('no genera ocurrencias si la definicion se crea inactiva', async () => {
+      prisma.recurringActivity.create.mockResolvedValue(definition({ active: false }));
+      await service.createActivity(actor({ isAdmin: true }), {
+        title: 'X',
+        activityType: 'REPORTE',
+        cadence: Recurrence.MENSUAL,
+        startDate: '2024-01-10',
+        responsibleKind: ResponsibleKind.USER,
+        responsibleUserId: 'actor-1',
+        active: false,
+      } as never);
+      expect(prisma.recurringActivityOccurrence.createMany).not.toHaveBeenCalled();
+    });
+
+    it('la definicion se crea aunque falle la generacion inmediata (el cron la recupera)', async () => {
+      prisma.recurringActivity.create.mockResolvedValue(
+        definition({ startDate: service.today() }),
+      );
+      prisma.recurringActivityOccurrence.createMany.mockRejectedValue(new Error('db down'));
+      await expect(
+        service.createActivity(actor({ isAdmin: true }), {
+          title: 'X',
+          activityType: 'REPORTE',
+          cadence: Recurrence.MENSUAL,
+          startDate: '2024-01-10',
+          responsibleKind: ResponsibleKind.USER,
+          responsibleUserId: 'actor-1',
+        } as never),
+      ).resolves.toMatchObject({ id: 'act-1' });
+      expect(prisma.recurringActivityOccurrence.createMany).toHaveBeenCalled();
     });
 
     it('409 si endDate es anterior a startDate', async () => {

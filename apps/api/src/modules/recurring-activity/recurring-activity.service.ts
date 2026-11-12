@@ -143,84 +143,115 @@ export class RecurringActivityService {
     let occurrencesCreated = 0;
 
     for (const activity of activities) {
-      if (!isRecurrence(activity.cadence)) {
-        this.logger.warn(
-          `Definicion ${activity.id} con cadencia desconocida "${activity.cadence}"; se omite.`,
-        );
-        continue;
-      }
-
-      const anticipationDays =
-        activity.anticipationDays ?? this.config.anticipationDays;
-
-      const windowEndCandidate = addDaysUtc(todayUtc, anticipationDays);
-      // Acotar la ventana por endDate de la definicion (recurrencia con fin).
-      const windowEnd =
-        activity.endDate && activity.endDate.getTime() < windowEndCandidate.getTime()
-          ? activity.endDate
-          : windowEndCandidate;
-
-      const from =
-        activity.startDate.getTime() > todayUtc.getTime()
-          ? activity.startDate
-          : todayUtc;
-
-      const targetDates = nextTargetDatesFrom(
-        activity.cadence,
-        activity.intervalCount,
-        activity.startDate,
-        from,
-        windowEnd,
+      occurrencesCreated += await this.generateOccurrencesForActivity(
+        activity,
+        todayUtc,
       );
-
-      if (targetDates.length === 0) {
-        continue;
-      }
-
-      // Las ocurrencias YA existentes de este conjunto de fechas (idempotencia):
-      // createMany skipDuplicates no dice cuales inserto, asi que calculamos las
-      // NUEVAS = targetDates - existentes, para avisar solo de las que nacen.
-      const existing = await this.prisma.recurringActivityOccurrence.findMany({
-        where: { activityId: activity.id, targetDate: { in: targetDates } },
-        select: { targetDate: true },
-      });
-      const existingKeys = new Set(
-        existing.map((o) => o.targetDate.getTime()),
-      );
-      const newDates = targetDates.filter(
-        (d) => !existingKeys.has(d.getTime()),
-      );
-
-      const result = await this.prisma.recurringActivityOccurrence.createMany({
-        data: targetDates.map((targetDate) => ({
-          activityId: activity.id,
-          targetDate,
-          status: OccurrenceStatus.PENDIENTE,
-          periodLabel: periodLabelFor(
-            activity.cadence as Recurrence,
-            targetDate,
-            this.config.timezone,
-          ),
-        })),
-        skipDuplicates: true,
-      });
-
-      occurrencesCreated += result.count;
-
-      // Aviso "nueva" por cada ocurrencia recien nacida. El correo NO debe
-      // romper la generacion: degrada sin SMTP y cualquier fallo se registra y
-      // se ignora (la fila ya quedo creada).
-      for (const targetDate of newDates) {
-        await this.notifyOccurrence(activity, targetDate, 'nueva');
-      }
     }
-
     return {
       activitiesProcessed: activities.length,
       occurrencesCreated,
     };
   }
 
+  /**
+   * Genera las ocurrencias debidas de UNA definicion (ventana [hoy, hoy +
+   * anticipacion], acotada por endDate). Idempotente por (activityId,
+   * targetDate). Lo usan el cron diario y el alta/edicion de una definicion
+   * (para que la persona responsable la vea sin esperar al cron). Devuelve
+   * cuantas ocurrencias nacieron. El aviso por correo nunca rompe la generacion.
+   */
+  private async generateOccurrencesForActivity(
+    activity: ActivityRow,
+    todayUtc: Date,
+  ): Promise<number> {
+    if (!activity.active) {
+      return 0;
+    }
+    if (!isRecurrence(activity.cadence)) {
+      this.logger.warn(
+        `Definicion ${activity.id} con cadencia desconocida "${activity.cadence}"; se omite.`,
+      );
+      return 0;
+    }
+
+    const anticipationDays =
+      activity.anticipationDays ?? this.config.anticipationDays;
+
+    const windowEndCandidate = addDaysUtc(todayUtc, anticipationDays);
+    // Acotar la ventana por endDate de la definicion (recurrencia con fin).
+    const windowEnd =
+      activity.endDate && activity.endDate.getTime() < windowEndCandidate.getTime()
+        ? activity.endDate
+        : windowEndCandidate;
+
+    const from =
+      activity.startDate.getTime() > todayUtc.getTime()
+        ? activity.startDate
+        : todayUtc;
+
+    const targetDates = nextTargetDatesFrom(
+      activity.cadence,
+      activity.intervalCount,
+      activity.startDate,
+      from,
+      windowEnd,
+    );
+
+    if (targetDates.length === 0) {
+      return 0;
+    }
+
+    // Las ocurrencias YA existentes de este conjunto de fechas (idempotencia):
+    // createMany skipDuplicates no dice cuales inserto, asi que calculamos las
+    // NUEVAS = targetDates - existentes, para avisar solo de las que nacen.
+    const existing = await this.prisma.recurringActivityOccurrence.findMany({
+      where: { activityId: activity.id, targetDate: { in: targetDates } },
+      select: { targetDate: true },
+    });
+    const existingKeys = new Set(existing.map((o) => o.targetDate.getTime()));
+    const newDates = targetDates.filter((d) => !existingKeys.has(d.getTime()));
+
+    const result = await this.prisma.recurringActivityOccurrence.createMany({
+      data: targetDates.map((targetDate) => ({
+        activityId: activity.id,
+        targetDate,
+        status: OccurrenceStatus.PENDIENTE,
+        periodLabel: periodLabelFor(
+          activity.cadence as Recurrence,
+          targetDate,
+          this.config.timezone,
+        ),
+      })),
+      skipDuplicates: true,
+    });
+
+    // Aviso "nueva" por cada ocurrencia recien nacida. El correo NO debe romper
+    // la generacion: degrada sin SMTP y cualquier fallo se registra y se ignora
+    // (la fila ya quedo creada).
+    for (const targetDate of newDates) {
+      await this.notifyOccurrence(activity, targetDate, 'nueva');
+    }
+
+    return result.count;
+  }
+
+  /**
+   * Genera las ocurrencias de una definicion recien creada o editada, sin
+   * esperar al cron. Es un efecto secundario best-effort: si falla se registra
+   * y el cron diario lo recupera (la definicion ya quedo guardada).
+   */
+  private async generateAfterChange(activity: ActivityRow): Promise<void> {
+    try {
+      await this.generateOccurrencesForActivity(activity, this.today());
+    } catch (error) {
+      this.logger.warn(
+        `No se pudieron generar las ocurrencias de la actividad ${activity.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
   /**
    * Recorre las ocurrencias PENDIENTE/EN_CURSO cuyo dia objetivo esta dentro de
    * la ventana de recordatorio (targetDate - hoy <= reminderDays) y que aun no
@@ -613,6 +644,7 @@ export class RecurringActivityService {
       return activity;
     });
 
+    await this.generateAfterChange(created);
     return this.toActivityResponse(created);
   }
 
@@ -762,6 +794,7 @@ export class RecurringActivityService {
       return next;
     });
 
+    await this.generateAfterChange(updated);
     return this.toActivityResponse(updated);
   }
 
