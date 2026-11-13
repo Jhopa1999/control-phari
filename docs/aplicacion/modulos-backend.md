@@ -341,6 +341,10 @@ Agrupa tres submódulos: bitácora/semanal (worklog), reuniones
 | POST | `/worklog/daily/:id/recall` | El autor retira el envío (`ENVIADO → BORRADOR`); 409 si ya fue revisado o su semanal ya se envió. |
 | POST | `/worklog/daily/:id/review` | Jefe de área o líder del proceso (nunca el autor): `ENVIADO → REVISADO`; 403 si no puede revisar. |
 | POST | `/worklog/daily/:id/return` | Igual que revisar, devuelve `ENVIADO → BORRADOR` con `{ reason }` (10 a 1000 caracteres) y avisa al autor (notificación `WORKLOG_RETURNED`). 409 si su semanal ya se envió. |
+| GET | `/worklog/daily/:id/suggestions` | **Sugerencias de tiempo del día** de un diario propio (403 si es de otra persona): reuniones de la fecha donde el autor es participante o responsable (`REUNION`, horas = `durationMinutes / 60` o `null` sin duración; si el acta sigue en borrador, `meeting.minutesOpen = true`), ocurrencias de actividades recurrentes que el autor **completó** ese día local (`RECURRENTE`, horas = `actualHours` redondeadas al 0,25 con `hoursAdjusted`/`originalHours`; descripción = «qué se realizó») y tareas con cambio de **avance o estado** ese día según su historial (`PLANIFICADA` con la tarea, sin horas, `task.reasons`). Devuelve `editable`, `pendingCount`, `dismissedCount`, `authorDayTotalHours`, `workdayHours` y `overWorkday`. `includeDismissed=true` agrega las descartadas. |
+| POST | `/worklog/daily/:id/suggestions/accept` | Acepta 1..50 sugerencias `{ items: [{ key, hours?, description? }] }`; solo el autor y solo en `BORRADOR` (409 si no). Cada ítem crea la actividad por la misma ruta que una manual (`WorklogService.createActivity`) y su vínculo de origen en la misma transacción. Respuesta 200 parcial: `accepted` (actividades) y `failed` (`NO_DISPONIBLE`, `HORAS_REQUERIDAS`, `YA_REGISTRADA`, `NO_ELEGIBLE`, `HORAS_INVALIDAS`). |
+| POST | `/worklog/daily/:id/suggestions/dismiss` | Descarta 1..50 sugerencias `{ keys }` (no reaparecen en ningún diario del autor); idempotente; 409 si ya están registradas; 404 si la clave ya no está vigente. Solo en `BORRADOR`. |
+| POST | `/worklog/daily/:id/suggestions/restore` | Restaura descartadas `{ keys }` (borra la marca); idempotente. Solo en `BORRADOR`. |
 | POST | `/worklog/daily/:id/activities` | Agrega una actividad al diario. Valida la clasificación y, en *Planificada*, la **regla de imputación** de abajo (404 fuera de alcance; 400 con el código visible si no es imputable). Si llega solo la tarea, el proyecto se deriva de ella. Ya no acepta `relatedIssueId` (400 por campo desconocido). |
 | PATCH | `/worklog/activities/:id` | Edita una actividad del diario. Solo se revalida la referencia (proyecto/tarea) que **cambia**: si no cambia se conserva aunque el proyecto ya no sea imputable. `taskId: null` quita la tarea (omitirlo la conserva); al cambiar de proyecto, una tarea conservada debe pertenecer al nuevo (`400` si no), por eso el formulario envía `taskId: null` al vaciarla. |
 | DELETE | `/worklog/activities/:id` | Borra una actividad del diario. |
@@ -362,7 +366,18 @@ Agrupa tres submódulos: bitácora/semanal (worklog), reuniones
 - **Errores**: fuera de alcance → 404; no imputable → 400 con mensaje que nombra el código (p. ej. «El proyecto PRY-0016 está cerrado y ya no admite nuevas actividades.»).
 - **Ventana de gracia gestionable**: maestra `WORKLOG_PARAM`, código `CLOSED_PROJECT_GRACE_DAYS`; el valor es un entero ≥ 0 en la **etiqueta** (se edita en *Maestras*). Si la maestra no existe, está inactiva o el valor no es válido, se usan 7 días. El seed solo la crea si falta.
 
-Reglas: la **escritura** de diarios y semanales es solo del autor (el jefe y el líder leen y revisan, no editan lo ajeno). Un diario o semanal que ya no está en borrador responde 409 a cualquier edición. `REVISADO` es terminal. Las horas de una actividad van de 0 a 24. El alta duplicada (persona, proceso, fecha) responde 409 con `existingId`.
+Reglas: la **escritura** de diarios y semanales es solo del autor (el jefe y el líder leen y revisan, no editan lo ajeno). Un diario o semanal que ya no está en borrador responde 409 a cualquier edición. `REVISADO` es terminal. Las horas de una actividad van de **0,25 a 24 en pasos de 0,25** (400 «Las horas deben ir de 0,25 a 24 en pasos de 0,25.»; se validan en el DTO y en el servicio). Omitidas se guardan en 0 («sin horas», como los registros antiguos). El alta duplicada (persona, proceso, fecha) responde 409 con `existingId`.
+
+**Sugerencias del día e integración con Reuniones, Actividades recurrentes y Tareas** (`worklog/worklog-suggestion.service.ts`):
+
+- **Categorías del sistema** `REUNION` («Reunión») y `RECURRENTE` («Actividad recurrente») en `ACTIVITY_CLASS`, sembradas por migración (etiquetas editables en *Maestras*). Solo se crean desde una sugerencia: a mano → 400 «Las actividades de reunión y recurrentes se agregan desde las sugerencias del día.».
+- **Vínculo de origen único por autor** (`daily_log_suggestion_links`): una sugerencia aceptada en un diario desaparece de los demás diarios del autor (también de otro proceso el mismo día) y no se cuenta doble en el semanal. La clave (`MEETING:<id>`, `OCCURRENCE:<id>`, `TASK:<id>:<fecha>`) la construye el servidor; al aceptar se exige que siga vigente. Una carrera entre dos diarios responde `YA_REGISTRADA`. Borrar la actividad borra el vínculo y la sugerencia reaparece.
+- Una actividad de reunión o recurrente queda **bloqueada** (`locked`): no cambia de clasificación ni de origen; sí horas y textos. Una de tarea sugerida conserva su tarea. La respuesta de cada actividad trae `source` (`kind`, ids y `label`) y `locked`.
+- **Tarea trabajada el día D**: evento de auditoría `UPDATE` de `TASK` del autor cuyo día local es D y cuyo before/after cambia `progress` o `status` (`diffTaskSnapshots`). Se aplica la misma elegibilidad de imputación (`WorklogEligibilityService.eligibleTasksForLog`) y se excluye si el autor ya tiene una actividad con esa tarea en un diario de esa fecha.
+- **Día local**: zona `RECURRING_ACTIVITY_TIMEZONE` (por defecto `America/Lima`), helper `coordination/local-day.ts`.
+- **Jornada** (aviso, no bloquea): `GET /worklog/daily` y `GET /worklog/daily/:id` devuelven `authorDayTotalHours` (todas las actividades del autor en esa fecha, cualquier proceso y estado), `workdayHours` y `overWorkday`. El umbral es la maestra `WORKLOG_PARAM` / `WORKDAY_HOURS` (etiqueta numérica 1–24 en pasos de 0,25; inválida o inactiva → 9).
+- Diarios `ENVIADO`/`REVISADO`: las sugerencias se pueden consultar (`editable = false`) para avisar que hay tiempo sin registrar, pero aceptar, descartar y restaurar responden 409.
+- Auditoría: aceptar audita la actividad (`DAILY_LOG_ACTIVITY`, con `sourceKey`); descartar/restaurar auditan `DAILY_LOG_SUGGESTION`.
 
 > **Novedades retiradas.** Los endpoints `/issues` (listar, crear, ver, editar, transicionar y borrar), `IssueService`
 > y las tools `issue.*` del MCP ya no existen: cualquier `/issues` responde 404. La tabla `issues` y sus datos se
@@ -375,12 +390,15 @@ Reglas: la **escritura** de diarios y semanales es solo del autor (el jefe y el 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/meetings` | Lista reuniones en alcance (filtros opcionales: `processId`, `state`, `requestId` = solicitud relacionada o proyecto relacionado). |
-| POST | `/meetings` | Crea una reunión (estado inicial BORRADOR). |
-| GET | `/meetings/:id` | Detalle del acta: participantes y sus compromisos (`commitments`, `commitmentsTotal`, `commitmentsOpen`, `closed`). |
-| PATCH | `/meetings/:id` | Edita un acta abierta (incluye el set de participantes); `409` si está cerrada. |
-| POST | `/meetings/:id/close` | Cierra el acta (responsable, líder del proceso o jefe); exige decisiones o al menos un compromiso. |
+| GET | `/meetings/commitments-open` | **Compromisos abiertos de mis reuniones**: compromisos `EN_CURSO`/`BLOQUEADO` cuya reunión de origen tiene al actor como responsable (no amplía la visibilidad). Filtros: `assignedUserId`, `dueStatus`, `meetingId`, `processId`. Devuelve `counts` (`total`, `vencido`, `venceHoy`, `proximo`, `aTiempo`), `truncated` (tope 500) e `items` con asignado (o responsable), reunión, proceso y semáforo. |
+| POST | `/meetings` | Crea una reunión (estado inicial BORRADOR); `durationMinutes` opcional. |
+| GET | `/meetings/:id` | Detalle del acta: participantes y sus compromisos (`commitments` con `assignedUserName`, `responsibleUserName`, `dueStatus`, `daysToDue`; `commitmentsTotal`, `commitmentsOpen`, `closed`), `durationMinutes` y `meetingEndTime`. |
+| PATCH | `/meetings/:id` | Edita un acta abierta (incluye el set de participantes y `durationMinutes`; `null` la borra); `409` si está cerrada, salvo un PATCH **solo de duración** del responsable, líder del proceso o jefe (para actas cerradas sin duración; 403 a otros, 400 si intenta quitarla). |
+| POST | `/meetings/:id/close` | Cierra el acta (responsable, líder del proceso o jefe); exige la **duración** (400 «Indica la duración de la reunión antes de cerrar el acta.») y decisiones o al menos un compromiso (409). |
 | POST | `/meetings/:id/reopen` | Reabre un acta cerrada (líder del proceso o jefe). |
-| DELETE | `/meetings/:id` | Borra un acta abierta sin compromisos (cascade de participantes); `409` si no. |
+| DELETE | `/meetings/:id` | Borra un acta abierta sin compromisos (cascade de participantes); `409` si no, o si tiene tiempo registrado en una bitácora («La reunión tiene tiempo registrado en una bitácora.»). |
+
+Duración de la reunión: `durationMinutes` entero, múltiplo de 15, entre 15 y 1440 (coincide con el paso de 0,25 h de la Bitácora). Las reuniones anteriores quedan sin duración (sin backfill) y su sugerencia de bitácora sale sin horas. `meetingEndTime` (HH:mm) lo calcula la API como hora + duración; es `null` si falta alguna o si cruza la medianoche.
 
 ### Commitments — Compromisos (`commitment/commitment.controller.ts`)
 
@@ -388,6 +406,7 @@ Reglas: la **escritura** de diarios y semanales es solo del autor (el jefe y el 
 | --- | --- | --- |
 | GET | `/commitments` | Lista compromisos en alcance (filtros opcionales: `state`, `processId`, `assignedUserId`, `requestId` = solicitud relacionada o proyecto relacionado). |
 | POST | `/commitments` | Crea un compromiso (vencimiento requerido). |
+| GET | `/commitments/my-work` | Compromisos de Mi trabajo: abiertos (`EN_CURSO`/`BLOQUEADO`) del actor (asignado; si no hay asignado, responsable) que están **vencidos o vencen hoy** (vencidos primero), con `total`, `overdueCount`, `dueTodayCount`, `upcomingCount` y `canComplete`. Completar usa la transición existente (`POST /commitments/:id/transition` con `COMPLETADO`). |
 | GET | `/commitments/:id` | Detalle de un compromiso. |
 | PATCH | `/commitments/:id` | Edita un compromiso. |
 | POST | `/commitments/:id/transition` | Transiciona el estado (máquina mínima). |
@@ -406,6 +425,18 @@ Un compromiso con acta debe ser del mismo proceso que ella (`400`); se permiten
 compromisos sin acta. La respuesta del compromiso incluye `sourceMeetingTitle` y
 `sourceMeetingDate`. Al crear un compromiso, o al cambiar su asignado o responsable, se
 notifica a esas personas (`COMMITMENT_ASSIGNED`).
+
+Semáforo de vencimiento (`commitment/commitment-due.ts`, sobre el día local de la app): `VENCIDO` (antes de hoy),
+`VENCE_HOY`, `PROXIMO` (1 a 7 días) y `A_TIEMPO` (más de 7); `null` si el compromiso está `COMPLETADO` o `ARCHIVADO`.
+La respuesta de cada compromiso incluye `dueStatus` y `daysToDue`.
+
+**Avisos de vencimiento** (`CommitmentNoticeService` + `CommitmentNoticeScheduler`): cron in-process
+`COMMITMENT_NOTICES_CRON` (por defecto `30 7 * * *`, zona de la app; `COMMITMENT_SCHEDULER_ENABLED=false` lo apaga).
+Para compromisos abiertos avisa a la persona asignada (o, si no hay, a la responsable): `COMMITMENT_DUE_SOON`
+(vence mañana), `COMMITMENT_DUE_TODAY` (vence hoy) y `COMMITMENT_OVERDUE` (vencido, una sola vez). Es idempotente:
+cada aviso reclama su marca (`due_soon_notified_at`, `due_today_notified_at`, `overdue_notified_at`) con un
+`updateMany` condicionado a que siga en NULL. Cambiar el vencimiento o la persona destinataria, o reabrir el
+compromiso, reinicia las marcas. Sin destinatario no se avisa ni se marca; un fallo se registra y no tumba el cron.
 
 ## knowledge — Activos y documentos
 

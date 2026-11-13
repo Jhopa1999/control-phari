@@ -184,6 +184,13 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
     'Obtiene una bitácora diaria por id (GET /worklog/daily/{id}).',
   ),
   lectura(
+    'worklog.daily.suggestions',
+    'GET /worklog/daily/{id}/suggestions',
+    'Sugerencias de tiempo del día de un diario propio (GET /worklog/daily/{id}/suggestions): reuniones del día donde la persona participa o es responsable (horas = duración), ' +
+      'actividades recurrentes que completó ese día (horas reales) y tareas con avance o cambio de estado ese día (sin horas). Incluye el total del día, la jornada configurada ' +
+      'y el aviso si se supera; includeDismissed=true agrega las descartadas. Solo el autor del diario (403 si es de otra persona).',
+  ),
+  lectura(
     'worklog.options',
     'GET /worklog/options',
     'Lista los proyectos y tareas que el usuario puede imputar en el diario de un proceso y una fecha (GET /worklog/options): ' +
@@ -214,6 +221,16 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
     'commitment.list',
     'GET /commitments',
     'Lista los compromisos (GET /commitments), con filtros opcionales; usa requestId para ver los de un proyecto.',
+  ),
+  lectura(
+    'commitment.my-work',
+    'GET /commitments/my-work',
+    'Compromisos abiertos del usuario (asignado, o responsable si no hay asignado) que están vencidos o vencen hoy, con contadores de vencidos, de hoy y próximos (GET /commitments/my-work).',
+  ),
+  lectura(
+    'meeting.commitments-open',
+    'GET /meetings/commitments-open',
+    'Compromisos abiertos de las reuniones donde el usuario es responsable, con semáforo de vencimiento (VENCIDO, VENCE_HOY, PROXIMO, A_TIEMPO) y contadores (GET /meetings/commitments-open). Filtros: assignedUserId, dueStatus, meetingId, processId.',
   ),
   lectura(
     'commitment.get',
