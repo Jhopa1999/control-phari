@@ -250,7 +250,7 @@ export class WorklogService {
         : link.kind === 'OCCURRENCE'
           ? (link.occurrence?.activity.title ?? 'Actividad recurrente eliminada')
           : link.task
-            ? ` · ${link.task.title}`
+            ? `${link.task.code} · ${link.task.title}`
             : 'Tarea eliminada';
     return {
       kind: link.kind,

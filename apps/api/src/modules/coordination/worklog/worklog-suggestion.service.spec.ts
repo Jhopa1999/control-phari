@@ -475,4 +475,27 @@ describe('WorklogService · reglas de las categorías nuevas', () => {
       source: { kind: 'MEETING', meetingId: M1, label: 'Reunión 01' },
     });
   });
+
+  it('la etiqueta del origen TASK lleva código y título de la tarea', async () => {
+    const m = build();
+    m.prismaObj.meeting.findMany.mockResolvedValue([meeting(M1)]);
+    m.prismaObj.dailyLogActivity.findFirst.mockImplementation(async () => ({
+      ...m.created[0],
+      dailyLogSuggestionLink: {
+        kind: 'TASK',
+        meetingId: null,
+        occurrenceId: null,
+        taskId: T1,
+        meeting: null,
+        occurrence: null,
+        task: { code: 'TSK-7', title: 'Armar informe' },
+      },
+    }));
+    const res = await m.service.accept(author(), 'dl1', { items: [{ key: `MEETING:${M1}` }] });
+    expect(res.accepted[0].source).toMatchObject({
+      kind: 'TASK',
+      taskId: T1,
+      label: 'TSK-7 · Armar informe',
+    });
+  });
 });
