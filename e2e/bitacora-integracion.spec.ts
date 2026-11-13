@@ -178,7 +178,7 @@ test.describe('Bitácora con sugerencias del día', () => {
 
     // 2) Completar (cerrar) el acta.
     await page.getByRole('button', { name: 'Cerrar acta' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Cerrar acta' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Cerrar acta' }).click();
     await expect(page.getByText('El acta está cerrada y queda como registro.')).toBeVisible();
 
     // 3) El participante abre su bitácora en borrador de esa fecha.
@@ -291,7 +291,7 @@ test.describe('Bitácora con sugerencias del día', () => {
     const row = sheet.getByRole('listitem').filter({ hasText: title });
     await row.getByRole('button', { name: /^Aceptar sugerencia:/ }).click();
     await expect(
-      sheet.getByRole('list', { name: 'Actividades del diario' }).getByText(title),
+      sheet.getByRole('list', { name: 'Actividades del diario' }).getByText(title, { exact: true }),
     ).toBeVisible();
 
     // El otro diario del día (otro proceso) ya no la ofrece.
@@ -344,7 +344,7 @@ test.describe('Reuniones y compromisos', () => {
     await page.goto(`/seguimiento/reuniones?meetingId=${meetingId}`);
     await expect(page.getByRole('heading', { level: 2, name: title })).toBeVisible();
     await page.getByRole('button', { name: 'Cerrar acta' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Cerrar acta' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Cerrar acta' }).click();
     await expect(
       page.getByText('Indica la duración de la reunión antes de cerrar el acta.').first(),
     ).toBeVisible();

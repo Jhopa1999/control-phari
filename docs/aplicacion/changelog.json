@@ -814,6 +814,14 @@
         "docs/aplicacion/autenticacion-autorizacion.md"
       ],
       "summary": "Integración Bitácora ↔ Reuniones ↔ Actividades recurrentes ↔ Tareas (API): sugerencias del día con aceptar, descartar y restaurar y vínculo único por autor y origen (tabla daily_log_suggestion_links), categorías REUNION y RECURRENTE, horas en pasos de 0,25 (columna DECIMAL), aviso de jornada WORKDAY_HOURS, duración de reunión obligatoria al cerrar con meetingEndTime, compromisos en Mi trabajo y de mis reuniones con semáforo y avisos idempotentes de vencimiento. MCP: 6 tools nuevas (3 de lectura, 3 de escritura no destructivas)."
+    },
+    {
+      "timestamp": "2026-11-13T21:00:00Z",
+      "trigger_file": "apps/web/src/app/seguimiento/bitacora/sugerencias-panel.tsx",
+      "updated_docs": [
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Integración Bitácora ↔ Reuniones ↔ Compromisos ↔ Recurrentes (web): la Bitácora muestra el contador y «Revisar sugerencias del día» con Aceptar, Ajustar horas y aceptar y Descartar; categorías Reunión y Actividad recurrente, horas de 0,25, aviso de jornada y aviso en diarios enviados o revisados; Reuniones con duración, horario «10:00 – 11:00», registro de duración en actas cerradas y pestaña «Mis compromisos abiertos»; Mi trabajo con la sección Compromisos y completar en línea. Sin cambios de roles ni permisos."
     }
   ]
 }

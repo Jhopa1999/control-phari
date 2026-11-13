@@ -529,7 +529,7 @@ function SuggestionRow({
   return (
     <li
       aria-busy={busy || undefined}
-      className="flex flex-col gap-2 rounded-lg bg-surface-subtle px-3 py-3 lg:flex-row lg:items-start lg:gap-4"
+      className="flex flex-col gap-2 rounded-lg bg-surface-subtle px-3 py-3"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
@@ -573,9 +573,9 @@ function SuggestionRow({
               Completada a las {completedAtText(s.occurrence.completedAt)}
             </span>
             {s.description ? (
-              <span className="line-clamp-2 wrap-break-word" title={s.description}>
+              <p className="line-clamp-2 wrap-break-word" title={s.description}>
                 {s.description}
-              </span>
+              </p>
             ) : null}
             {s.hoursAdjusted && s.originalHours !== null && s.suggestedHours !== null ? (
               <span className="text-meta text-muted-foreground">
@@ -609,7 +609,7 @@ function SuggestionRow({
       </div>
 
       {!dismissed ? (
-        <div className="flex flex-col gap-1 lg:w-44">
+        <div className="flex flex-col gap-1">
           {editable ? (
             <>
               <label htmlFor={`sug-h-${s.key}`} className="text-meta font-medium">
@@ -652,7 +652,7 @@ function SuggestionRow({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 max-sm:[&>button]:flex-1 lg:w-auto lg:justify-end">
+      <div className="flex flex-wrap gap-2 max-sm:[&>button]:flex-1">
         {dismissed ? (
           <Button
             type="button"
