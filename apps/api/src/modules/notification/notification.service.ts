@@ -44,6 +44,12 @@ export enum NotificationType {
   RECURRING_DUE_TODAY = 'RECURRING_DUE_TODAY',
   /** Una actividad recurrente paso a vencida sin completarse. */
   RECURRING_OVERDUE = 'RECURRING_OVERDUE',
+  /** Un compromiso vence mañana (a la persona asignada o responsable). */
+  COMMITMENT_DUE_SOON = 'COMMITMENT_DUE_SOON',
+  /** Un compromiso vence hoy. */
+  COMMITMENT_DUE_TODAY = 'COMMITMENT_DUE_TODAY',
+  /** Un compromiso quedó vencido sin completarse. */
+  COMMITMENT_OVERDUE = 'COMMITMENT_OVERDUE',
 }
 
 export interface NotifyInput {

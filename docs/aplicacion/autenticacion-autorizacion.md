@@ -334,3 +334,10 @@ Las lecturas por ID visible (`GET /codes/:code`, `GET /requests/by-code/:code`, 
 - **Leer**: el integrante ve lo suyo, el líder lo de sus procesos y el jefe todo.
 - **Qué puede imputar cada rol en una actividad planificada** (lo valida la API, no solo la interfaz): el **integrante** solo tareas donde es responsable y sus proyectos activos; el **líder** sus tareas y, en los procesos que lidera, las de los planes de esos procesos; el **jefe de área** sus tareas y las de todo su alcance (la interfaz propone «Mis proyectos» y permite «Todos del área»). En todos los roles el proyecto debe estar activo (o cerrado dentro de la ventana de gracia) y pertenecer al proceso del diario. Detalle en `modulos-backend.md`.
 - **Revisar o devolver** (`/review`, `/return`): jefe de área o líder del proceso del registro, nunca el propio autor (403); solo desde `ENVIADO`. `REVISADO` es terminal. Devolver exige un motivo de 10 a 1000 caracteres y avisa al autor.
+- **Sugerencias del día** (`/worklog/daily/:id/suggestions*`): solo el **autor** del diario las consulta y gestiona (403 «Solo el autor del diario puede gestionar sus sugerencias.» a cualquier otro rol, incluido el jefe); aceptar, descartar y restaurar solo en `BORRADOR` (409). Las tareas sugeridas respetan la misma regla de imputación por rol.
+
+## Reuniones y compromisos: seguimiento
+
+- **Duración de un acta cerrada**: el PATCH que solo completa `durationMinutes` lo pueden hacer el responsable de la reunión, el líder del proceso o el jefe de área (403 a otros). Cualquier otro cambio sobre un acta cerrada sigue en 409.
+- **Compromisos abiertos de mis reuniones** (`GET /meetings/commitments-open`): cada persona ve solo los compromisos de las reuniones donde es **responsable**; no amplía la visibilidad de nadie (el seguimiento general sigue en `GET /commitments`, con su alcance por rol).
+- **Compromisos de Mi trabajo** (`GET /commitments/my-work`): los del propio actor (asignado, o responsable si no hay asignado) dentro de su alcance; completarlos usa la transición existente.

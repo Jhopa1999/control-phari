@@ -12,6 +12,8 @@ export const ACTIVITY_CLASS_CODES = [
   'SOPORTE',
   'INTERNA',
   'EXTRAORDINARIA',
+  'REUNION',
+  'RECURRENTE',
 ] as const;
 
 export type ActivityClassCode = (typeof ACTIVITY_CLASS_CODES)[number];

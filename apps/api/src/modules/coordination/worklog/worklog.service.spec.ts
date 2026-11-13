@@ -27,6 +27,7 @@ function createMocks() {
     },
     dailyLogActivity: {
       findFirst: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -37,6 +38,10 @@ function createMocks() {
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+    },
+    dailyLogSuggestionLink: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn(),
     },
     request: { findFirst: jest.fn() },
     task: { findFirst: jest.fn() },
@@ -478,6 +483,27 @@ describe('WorklogService', () => {
         extraordinaryCount: 1,
         hasBacking: true,
       });
+    });
+
+    it('suma horas decimales (Decimal de Prisma) y cuenta cada actividad una sola vez', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(weeklyRow());
+      // Una reunión aceptada vive en UN solo diario (vínculo único por autor y
+      // origen): el semanal suma lo que hay, sin duplicar.
+      (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([
+        {
+          ...dailyLogRow({ status: 'ENVIADO' }),
+          activities: [
+            activityRow({ hours: new Prisma.Decimal(1.5), classificationCode: 'REUNION' }),
+            activityRow({ hours: new Prisma.Decimal(0.25), classificationCode: 'RECURRENTE' }),
+          ],
+        },
+        {
+          ...dailyLogRow({ id: 'dl2', status: 'REVISADO' }),
+          activities: [activityRow({ hours: new Prisma.Decimal(2.75) })],
+        },
+      ]);
+      const res = await m.service.getWeeklyReport(integrante(['p1']), 'wr1');
+      expect(res.consolidation).toMatchObject({ activityCount: 3, totalHours: 4.5 });
     });
 
     it('sin diarios elegibles -> conteos en cero y hasBacking false', async () => {

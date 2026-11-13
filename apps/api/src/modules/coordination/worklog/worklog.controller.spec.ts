@@ -1,6 +1,7 @@
 import { WorklogController } from './worklog.controller';
 import { WorklogService } from './worklog.service';
 import { WorklogEligibilityService } from './worklog-eligibility.service';
+import { WorklogSuggestionService } from './worklog-suggestion.service';
 import { CoordinationScopeService } from '../coordination-scope.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
@@ -42,12 +43,28 @@ describe('WorklogController (delegacion)', () => {
   const eligibility = {
     listOptions: jest.fn().mockResolvedValue('options'),
   } as unknown as WorklogEligibilityService;
+  const suggestions = {
+    list: jest.fn().mockResolvedValue('suggestions'),
+    accept: jest.fn().mockResolvedValue('accepted'),
+    dismiss: jest.fn().mockResolvedValue('dismissed'),
+    restore: jest.fn().mockResolvedValue('restored'),
+  } as unknown as WorklogSuggestionService;
   const controller = new WorklogController(
     worklogService,
     eligibility,
     scopeService,
+    suggestions,
   );
   const a = actor();
+
+  it('las sugerencias del día delegan en WorklogSuggestionService', async () => {
+    await expect(controller.listSuggestions(a, 'd1', { includeDismissed: true })).resolves.toBe('suggestions');
+    expect(suggestions.list).toHaveBeenCalledWith(a, 'd1', true);
+    await expect(controller.acceptSuggestions(a, 'd1', { items: [{ key: 'k' }] })).resolves.toBe('accepted');
+    await expect(controller.dismissSuggestions(a, 'd1', { keys: ['k'] })).resolves.toBe('dismissed');
+    expect(suggestions.dismiss).toHaveBeenCalledWith(a, 'd1', ['k']);
+    await expect(controller.restoreSuggestions(a, 'd1', { keys: ['k'] })).resolves.toBe('restored');
+  });
 
   it('people delega en scopeService', async () => {
     await expect(controller.people(a)).resolves.toBe('people');

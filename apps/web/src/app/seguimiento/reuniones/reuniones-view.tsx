@@ -1,19 +1,21 @@
 'use client';
 
 import * as React from 'react';
-import { FileText, Handshake } from 'lucide-react';
+import { FileText, Handshake, ListChecks } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import type { Commitment, CoordinationPerson, Meeting, Process } from '@/lib/api-client';
 import { CommitmentError, listCommitments } from '@/lib/commitments';
-import { MeetingError, listMeetings } from '@/lib/meetings';
+import { MeetingError, listMeetings, listOpenCommitmentsOfMyMeetings } from '@/lib/meetings';
 import { listProcesses } from '@/lib/team';
 import { listCoordinationPeople } from '@/lib/worklog';
 import { ActasPanel } from './actas-panel';
+import { CompromisosMisReunionesPanel } from './compromisos-mis-reuniones-panel';
 import { CompromisosPanel } from './compromisos-panel';
 
-type Tab = 'actas' | 'compromisos';
+type Tab = 'actas' | 'compromisos' | 'mis-abiertos';
 export type LoadState = 'loading' | 'success' | 'error';
 
 /** Datos compartidos por las dos pestañas (una sola carga). */
@@ -25,6 +27,10 @@ export interface CoordinationData {
   state: LoadState;
   error: string | null;
   reload: () => Promise<void>;
+}
+
+function parseTab(value: string | null): Tab {
+  return value === 'compromisos' || value === 'mis-abiertos' ? value : 'actas';
 }
 
 function readParam(name: string): string | null {
@@ -50,11 +56,13 @@ export function ReunionesView(): React.ReactElement {
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
+  // Conteo de vencidos de «Mis compromisos abiertos» para la pestaña (null si no se pudo cargar).
+  const [myOverdue, setMyOverdue] = React.useState<number | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- lee la pestaña y los ids de la URL tras montar (window no existe en el servidor).
-    setTab(readParam('tab') === 'compromisos' ? 'compromisos' : 'actas');
+    setTab(parseTab(readParam('tab')));
     setInitialMeetingId(readParam('meetingId'));
     setInitialCommitmentId(readParam('commitmentId'));
   }, []);
@@ -65,8 +73,12 @@ export function ReunionesView(): React.ReactElement {
       listCommitments(),
       listProcesses().catch(() => [] as Process[]),
       listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
+      listOpenCommitmentsOfMyMeetings()
+        .then((res) => res.counts.vencido)
+        .catch(() => null),
     ])
-      .then(([mts, cmts, procs, ppl]) => {
+      .then(([mts, cmts, procs, ppl, overdue]) => {
+        setMyOverdue(overdue);
         setMeetings(mts);
         setCommitments(cmts);
         setProcesses(procs);
@@ -87,7 +99,7 @@ export function ReunionesView(): React.ReactElement {
   }, [reload]);
 
   function changeTab(next: string): void {
-    const value: Tab = next === 'compromisos' ? 'compromisos' : 'actas';
+    const value = parseTab(next);
     setTab(value);
     const url = new URL(window.location.href);
     url.searchParams.set('tab', value);
@@ -121,6 +133,16 @@ export function ReunionesView(): React.ReactElement {
               <span className="text-muted-foreground">{` (${openCommitments} abiertos)`}</span>
             ) : null}
           </TabsTrigger>
+          <TabsTrigger value="mis-abiertos">
+            <ListChecks aria-hidden="true" />
+            Mis compromisos abiertos
+            {myOverdue !== null && myOverdue > 0 ? (
+              <Badge variant="danger" className="tabular-nums">
+                {myOverdue}
+                <span className="sr-only"> vencidos</span>
+              </Badge>
+            ) : null}
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="actas">
           <ActasPanel
@@ -139,6 +161,19 @@ export function ReunionesView(): React.ReactElement {
             onOpenMeeting={(id) => {
               setInitialMeetingId(id);
               setTab('actas');
+            }}
+          />
+        </TabsContent>
+        <TabsContent value="mis-abiertos">
+          <CompromisosMisReunionesPanel
+            data={data}
+            onOpenMeeting={(id) => {
+              setInitialMeetingId(id);
+              setTab('actas');
+            }}
+            onOpenCommitment={(id) => {
+              setInitialCommitmentId(id);
+              setTab('compromisos');
             }}
           />
         </TabsContent>

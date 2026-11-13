@@ -1,5 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+/** Origen de una actividad registrada desde una sugerencia del día. */
+export class ActivitySourceDto {
+  @ApiProperty({ type: String, enum: ['MEETING', 'OCCURRENCE', 'TASK'] })
+  kind!: string;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  meetingId!: string | null;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  occurrenceId!: string | null;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  taskId!: string | null;
+
+  @ApiProperty({
+    type: String,
+    description: 'Etiqueta legible del origen (título del acta, de la actividad o código de la tarea).',
+  })
+  label!: string;
+}
+
 /**
  * Contrato HTTP de una actividad del diario (design §3.4). `hours` siempre
  * numero (columna `@default(0)`). Fechas de columna se exponen como `YYYY-MM-DD`
@@ -15,8 +36,25 @@ export class ActivityResponseDto {
   @ApiProperty({ type: String, description: 'Clasificacion (maestra ACTIVITY_CLASS).' })
   classificationCode!: string;
 
-  @ApiProperty({ type: Number, description: 'Horas de dedicacion (BR-013).' })
+  @ApiProperty({
+    type: Number,
+    multipleOf: 0.25,
+    description: 'Horas de dedicacion (pasos de 0,25; 0 = sin horas en registros antiguos). BR-013.',
+  })
   hours!: number;
+
+  @ApiProperty({
+    type: ActivitySourceDto,
+    nullable: true,
+    description: 'Origen si la actividad vino de una sugerencia del día.',
+  })
+  source!: ActivitySourceDto | null;
+
+  @ApiProperty({
+    type: Boolean,
+    description: 'Clasificación y origen no editables (actividad de reunión o recurrente).',
+  })
+  locked!: boolean;
 
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   projectRequestId!: string | null;

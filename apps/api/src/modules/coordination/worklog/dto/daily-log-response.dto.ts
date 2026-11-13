@@ -58,6 +58,21 @@ export class DailyLogResponseDto {
   @ApiProperty({ type: Number, description: 'Suma de horas de las actividades (dedicacion del dia).' })
   totalHours!: number;
 
+  @ApiProperty({
+    type: Number,
+    description: 'Horas del autor en esa fecha sumando todos sus diarios (cualquier proceso y estado).',
+  })
+  authorDayTotalHours!: number;
+
+  @ApiProperty({
+    type: Number,
+    description: 'Jornada diaria configurada (maestra WORKLOG_PARAM / WORKDAY_HOURS; 9 por defecto).',
+  })
+  workdayHours!: number;
+
+  @ApiProperty({ type: Boolean, description: 'El total del día supera la jornada (aviso, no bloquea).' })
+  overWorkday!: boolean;
+
 @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Cuando se marco como revisado.' })
   reviewedAt!: Date | null;
 

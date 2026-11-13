@@ -51,7 +51,7 @@ import {
   summarizeDailyLogs,
 } from '@/lib/worklog';
 import { RANGE_PRESETS, isRangePreset, rangeForPreset, type RangePreset } from '@/lib/worklog-range';
-import { CLASSIFICATIONS } from './actividad-form-dialog';
+import { CLASSIFICATION_META, classificationLabel } from './clasificaciones';
 import { BitacoraDetalle } from './bitacora-detalle';
 import { DiarioFormDialog, type DiarioFormValues } from './diario-form-dialog';
 
@@ -85,7 +85,7 @@ function PersonAvatar({ name }: { name: string }): React.ReactElement {
 }
 
 function classLabel(code: string): string {
-  return CLASSIFICATIONS.find((c) => c.value === code)?.label ?? code;
+  return classificationLabel(code);
 }
 
 function messageOf(err: unknown): string {
@@ -552,9 +552,9 @@ export function BitacoraView(): React.ReactElement {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>Todas</SelectItem>
-                {CLASSIFICATIONS.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
+                {Object.entries(CLASSIFICATION_META).map(([code, meta]) => (
+                  <SelectItem key={code} value={code}>
+                    {meta.label}
                   </SelectItem>
                 ))}
               </SelectContent>

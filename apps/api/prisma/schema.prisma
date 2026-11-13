@@ -170,18 +170,19 @@ model User {
   // Fase 5 (trabajo y coordinacion): registros donde la persona es autor,
   // responsable, asignada o participante. Cada relacion usa `name` propio
   // porque hay mas de una FK User por modelo (Prisma lo exige).
-  dailyLogs              DailyLog[]           @relation("DailyLogAuthor")
-  weeklyReports          WeeklyReport[]       @relation("WeeklyReportAuthor")
-  dailyLogsReviewed      DailyLog[]           @relation("DailyLogReviewer")
-  dailyLogsReturned      DailyLog[]           @relation("DailyLogReturner")
-  weeklyReportsReviewed  WeeklyReport[]       @relation("WeeklyReportReviewer")
-  weeklyReportsReturned  WeeklyReport[]       @relation("WeeklyReportReturner")
-  issuesReported         Issue[]              @relation("IssueReportedBy")
-  issuesResolved         Issue[]              @relation("IssueResolver")
-  meetingsResponsible    Meeting[]            @relation("MeetingResponsible")
+  dailyLogs              DailyLog[]               @relation("DailyLogAuthor")
+  suggestionLinks        DailyLogSuggestionLink[] @relation("SuggestionLinkAuthor")
+  weeklyReports          WeeklyReport[]           @relation("WeeklyReportAuthor")
+  dailyLogsReviewed      DailyLog[]               @relation("DailyLogReviewer")
+  dailyLogsReturned      DailyLog[]               @relation("DailyLogReturner")
+  weeklyReportsReviewed  WeeklyReport[]           @relation("WeeklyReportReviewer")
+  weeklyReportsReturned  WeeklyReport[]           @relation("WeeklyReportReturner")
+  issuesReported         Issue[]                  @relation("IssueReportedBy")
+  issuesResolved         Issue[]                  @relation("IssueResolver")
+  meetingsResponsible    Meeting[]                @relation("MeetingResponsible")
   meetingParticipations  MeetingParticipant[]
-  commitmentsResponsible Commitment[]         @relation("CommitmentResponsible")
-  commitmentsAssigned    Commitment[]         @relation("CommitmentAssigned")
+  commitmentsResponsible Commitment[]             @relation("CommitmentResponsible")
+  commitmentsAssigned    Commitment[]             @relation("CommitmentAssigned")
 
   // Fase 6 (activos y documentos): activos de los que es dueno/responsable y
   // versiones de documento de las que es autor.
@@ -632,8 +633,9 @@ model Task {
   evidences                 TaskEvidence[]
 
   // Fase 5 (trabajo y coordinacion): referencias opcionales a esta tarea.
-  dailyLogActivities DailyLogActivity[]
-  issues             Issue[]            @relation("IssueRelatedTask")
+  dailyLogActivities      DailyLogActivity[]
+  issues                  Issue[]                  @relation("IssueRelatedTask")
+  dailyLogSuggestionLinks DailyLogSuggestionLink[]
 
   @@index([phaseId])
   @@index([responsibleUserId])
@@ -788,7 +790,7 @@ model DailyLogActivity {
   description        String?
   result             String?
   activityStatus     String?   @map("activity_status")
-  hours              Int       @default(0)
+  hours              Decimal   @default(0) @db.Decimal(4, 2)
   evidenceUrl        String?   @map("evidence_url")
   relatedIssueId     String?   @map("related_issue_id") @db.Uuid
   nextStep           String?   @map("next_step")
@@ -799,11 +801,12 @@ model DailyLogActivity {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  dailyLog       DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
-  projectRequest Request? @relation(fields: [projectRequestId], references: [id], onDelete: Restrict)
-  task           Task?    @relation(fields: [taskId], references: [id], onDelete: Restrict)
-  relatedIssue   Issue?   @relation(fields: [relatedIssueId], references: [id], onDelete: Restrict)
-  asset          Asset?   @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  dailyLog               DailyLog                @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+  projectRequest         Request?                @relation(fields: [projectRequestId], references: [id], onDelete: Restrict)
+  task                   Task?                   @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  relatedIssue           Issue?                  @relation(fields: [relatedIssueId], references: [id], onDelete: Restrict)
+  asset                  Asset?                  @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  dailyLogSuggestionLink DailyLogSuggestionLink?
 
   @@index([dailyLogId])
   @@index([classificationCode])
@@ -901,6 +904,8 @@ model Meeting {
   responsibleUserId       String?  @map("responsible_user_id") @db.Uuid
   meetingDate             DateTime @map("meeting_date") @db.Date
   meetingTime             String?  @map("meeting_time")
+  /// Duracion en minutos (multiplo de 15, 15..1440). Obligatoria al cerrar el acta.
+  durationMinutes         Int?     @map("duration_minutes")
   relatedProjectRequestId String?  @map("related_project_request_id") @db.Uuid
   agenda                  String?
   decisions               String?
@@ -908,12 +913,13 @@ model Meeting {
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
-  process               Process              @relation(fields: [processId], references: [id], onDelete: Restrict)
-  responsible           User?                @relation("MeetingResponsible", fields: [responsibleUserId], references: [id], onDelete: Restrict)
-  relatedRequest        Request?             @relation("MeetingRelatedRequest", fields: [relatedRequestId], references: [id], onDelete: Restrict)
-  relatedProjectRequest Request?             @relation("MeetingRelatedProjectRequest", fields: [relatedProjectRequestId], references: [id], onDelete: Restrict)
-  participants          MeetingParticipant[]
-  commitments           Commitment[]
+  process                 Process                  @relation(fields: [processId], references: [id], onDelete: Restrict)
+  responsible             User?                    @relation("MeetingResponsible", fields: [responsibleUserId], references: [id], onDelete: Restrict)
+  relatedRequest          Request?                 @relation("MeetingRelatedRequest", fields: [relatedRequestId], references: [id], onDelete: Restrict)
+  relatedProjectRequest   Request?                 @relation("MeetingRelatedProjectRequest", fields: [relatedProjectRequestId], references: [id], onDelete: Restrict)
+  participants            MeetingParticipant[]
+  commitments             Commitment[]
+  dailyLogSuggestionLinks DailyLogSuggestionLink[]
 
   @@index([processId])
   @@index([state])
@@ -940,21 +946,25 @@ model MeetingParticipant {
 /// opcional (sin auto-creacion, §11 D7). `state` maestra RECORD_STATE con
 /// maquina minima reversible (default EN_CURSO).
 model Commitment {
-  id                      String   @id @default(uuid()) @db.Uuid
-  processId               String   @map("process_id") @db.Uuid
+  id                      String    @id @default(uuid()) @db.Uuid
+  processId               String    @map("process_id") @db.Uuid
   title                   String
-  state                   String   @default("EN_CURSO")
-  relatedRequestId        String?  @map("related_request_id") @db.Uuid
-  responsibleUserId       String?  @map("responsible_user_id") @db.Uuid
-  assignedUserId          String?  @map("assigned_user_id") @db.Uuid
-  dueDate                 DateTime @map("due_date") @db.Date
-  relatedProjectRequestId String?  @map("related_project_request_id") @db.Uuid
-  sourceMeetingId         String?  @map("source_meeting_id") @db.Uuid
-  expectedResult          String?  @map("expected_result")
+  state                   String    @default("EN_CURSO")
+  relatedRequestId        String?   @map("related_request_id") @db.Uuid
+  responsibleUserId       String?   @map("responsible_user_id") @db.Uuid
+  assignedUserId          String?   @map("assigned_user_id") @db.Uuid
+  dueDate                 DateTime  @map("due_date") @db.Date
+  relatedProjectRequestId String?   @map("related_project_request_id") @db.Uuid
+  sourceMeetingId         String?   @map("source_meeting_id") @db.Uuid
+  expectedResult          String?   @map("expected_result")
   result                  String?
   blockers                String?
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
+  /// Marcas de idempotencia de los avisos internos de vencimiento.
+  dueSoonNotifiedAt       DateTime? @map("due_soon_notified_at")
+  dueTodayNotifiedAt      DateTime? @map("due_today_notified_at")
+  overdueNotifiedAt       DateTime? @map("overdue_notified_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
 
   process               Process  @relation(fields: [processId], references: [id], onDelete: Restrict)
   responsible           User?    @relation("CommitmentResponsible", fields: [responsibleUserId], references: [id], onDelete: Restrict)
@@ -969,6 +979,7 @@ model Commitment {
   @@index([responsibleUserId])
   @@index([sourceMeetingId])
   @@index([dueDate])
+  @@index([dueDate, state])
   @@map("commitments")
 }
 
@@ -1514,10 +1525,11 @@ model RecurringActivityOccurrence {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  activity    RecurringActivity             @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  completedBy User?                         @relation("RecurringOccurrenceCompletedBy", fields: [completedByUserId], references: [id], onDelete: Restrict)
-  startedBy   User?                         @relation("RecurringOccurrenceStartedBy", fields: [startedByUserId], references: [id], onDelete: Restrict)
-  evidence    RecurringOccurrenceEvidence[]
+  activity                RecurringActivity             @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  completedBy             User?                         @relation("RecurringOccurrenceCompletedBy", fields: [completedByUserId], references: [id], onDelete: Restrict)
+  startedBy               User?                         @relation("RecurringOccurrenceStartedBy", fields: [startedByUserId], references: [id], onDelete: Restrict)
+  evidence                RecurringOccurrenceEvidence[]
+  dailyLogSuggestionLinks DailyLogSuggestionLink[]
 
   @@unique([activityId, targetDate], name: "recurring_occurrence_activity_target_unique")
   @@index([status])
@@ -1586,4 +1598,34 @@ model ProjectClosure {
 
   @@index([requestId, status])
   @@map("project_closures")
+}
+
+/// Vinculo entre una sugerencia de tiempo de la Bitacora y su origen. Una fila por
+/// (autor, origen): ACEPTADA (con actividad) o DESCARTADA (sin actividad). La
+/// unicidad evita contar dos veces un mismo origen entre los diarios del autor.
+model DailyLogSuggestionLink {
+  id           String   @id @default(uuid()) @db.Uuid
+  authorUserId String   @map("author_user_id") @db.Uuid
+  /// 'MEETING:<uuid>' | 'OCCURRENCE:<uuid>' | 'TASK:<uuid>:<YYYY-MM-DD>'
+  sourceKey    String   @map("source_key")
+  /// MEETING | OCCURRENCE | TASK
+  kind         String
+  /// ACEPTADA | DESCARTADA
+  status       String
+  workDate     DateTime @map("work_date") @db.Date
+  activityId   String?  @unique @map("activity_id") @db.Uuid
+  meetingId    String?  @map("meeting_id") @db.Uuid
+  occurrenceId String?  @map("occurrence_id") @db.Uuid
+  taskId       String?  @map("task_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  author     User                         @relation("SuggestionLinkAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  activity   DailyLogActivity?            @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  meeting    Meeting?                     @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  occurrence RecurringActivityOccurrence? @relation(fields: [occurrenceId], references: [id], onDelete: SetNull)
+  task       Task?                        @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@unique([authorUserId, sourceKey], name: "suggestion_link_author_source_unique")
+  @@index([authorUserId, workDate])
+  @@map("daily_log_suggestion_links")
 }

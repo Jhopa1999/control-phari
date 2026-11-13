@@ -34,6 +34,10 @@ export const CLOSED_GRACE_PARAM_CODE = 'CLOSED_PROJECT_GRACE_DAYS';
 export const DEFAULT_CLOSED_GRACE_DAYS = 7;
 const MAX_CLOSED_GRACE_DAYS = 365;
 
+/** Jornada diaria (horas): por encima, el total del día muestra un aviso. */
+export const WORKDAY_PARAM_CODE = 'WORKDAY_HOURS';
+export const DEFAULT_WORKDAY_HOURS = 9;
+
 /** Tope de proyectos y de tareas devueltos por `GET /worklog/options`. */
 export const WORKLOG_OPTIONS_LIMIT = 200;
 
@@ -92,6 +96,81 @@ export class WorklogEligibilityService {
       return parsed;
     }
     return DEFAULT_CLOSED_GRACE_DAYS;
+  }
+
+  /**
+   * Jornada diaria en horas; gestionable desde Maestras (WORKLOG_PARAM /
+   * WORKDAY_HOURS). Inválida, inactiva o ausente -> 9. Rango 1..24 en pasos de 0,25.
+   */
+  async workdayHours(): Promise<number> {
+    const item = await this.prisma.catalogItem.findFirst({
+      where: { catalog: WORKLOG_PARAM_CATALOG, code: WORKDAY_PARAM_CODE, active: true },
+      select: { label: true },
+    });
+    const raw = (item?.label ?? '').trim().replace(',', '.');
+    const parsed = Number(raw);
+    if (
+      item &&
+      /^\d+(\.\d+)?$/.test(raw) &&
+      parsed >= 1 &&
+      parsed <= 24 &&
+      Number.isInteger(parsed * 4)
+    ) {
+      return parsed;
+    }
+    return DEFAULT_WORKDAY_HOURS;
+  }
+
+  /**
+   * De las tareas candidatas, las que el actor puede imputar en el diario de
+   * `processId` y `date`: misma regla que `listOptions` y `validateReferences`
+   * (proyecto elegible y tarea propia, o el actor puede imputar ajenas).
+   */
+  async eligibleTasksForLog(
+    actor: CurrentActor,
+    processId: string,
+    date: Date,
+    taskIds: string[],
+  ): Promise<
+    Array<{
+      id: string;
+      code: string;
+      title: string;
+      requestId: string;
+      requestCode: string;
+      requestTitle: string;
+    }>
+  > {
+    if (taskIds.length === 0) return [];
+    const graceDays = await this.closedGraceDays();
+    const and: Prisma.TaskWhereInput[] = [
+      { id: { in: taskIds } },
+      { phase: { plan: { request: this.projectWhere(actor, processId, date, graceDays) } } },
+    ];
+    if (!this.canImputeOthers(actor, processId)) {
+      and.push({ responsibleUserId: actor.userId });
+    }
+    const rows = await this.prisma.task.findMany({
+      where: { AND: and },
+      select: {
+        id: true,
+        code: true,
+        title: true,
+        phase: {
+          select: {
+            plan: { select: { request: { select: { id: true, code: true, title: true } } } },
+          },
+        },
+      },
+    });
+    return rows.map((t) => ({
+      id: t.id,
+      code: t.code,
+      title: t.title,
+      requestId: t.phase.plan.request.id,
+      requestCode: t.phase.plan.request.code,
+      requestTitle: t.phase.plan.request.title,
+    }));
   }
 
   /** El actor puede imputar tareas de otras personas en el diario de `processId`. */

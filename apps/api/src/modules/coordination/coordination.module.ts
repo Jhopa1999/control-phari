@@ -7,11 +7,14 @@ import { WorkflowStateService } from './workflow-state.service';
 import { WorklogController } from './worklog/worklog.controller';
 import { WorklogService } from './worklog/worklog.service';
 import { WorklogEligibilityService } from './worklog/worklog-eligibility.service';
+import { WorklogSuggestionService } from './worklog/worklog-suggestion.service';
 import { RequestModule } from '../request/request.module';
 import { MeetingController } from './meeting/meeting.controller';
 import { MeetingService } from './meeting/meeting.service';
 import { CommitmentController } from './commitment/commitment.controller';
 import { CommitmentService } from './commitment/commitment.service';
+import { CommitmentNoticeService } from './commitment/commitment-notice.service';
+import { CommitmentNoticeScheduler } from './commitment/commitment-notice.scheduler';
 
 /**
  * Modulo raiz de trabajo y coordinacion de Fase 5 (design §D0): tres
@@ -38,8 +41,11 @@ import { CommitmentService } from './commitment/commitment.service';
     WorkflowStateService,
     WorklogService,
     WorklogEligibilityService,
+    WorklogSuggestionService,
     MeetingService,
     CommitmentService,
+    CommitmentNoticeService,
+    CommitmentNoticeScheduler,
   ],
 })
 export class CoordinationModule {}

@@ -1,6 +1,7 @@
 import {
   api,
   type Commitment,
+  type CommitmentMyWork,
   type CreateCommitment,
   type Transition,
   type UpdateCommitment,
@@ -149,6 +150,24 @@ export async function deleteCommitment(id: string): Promise<void> {
     if (error) {
       throw toCommitmentError(response.status, error);
     }
+  } catch (err) {
+    if (err instanceof CommitmentError) throw err;
+    throw toCommitmentError(undefined);
+  }
+}
+
+/**
+ * Compromisos del actor para Mi trabajo (GET /commitments/my-work): abiertos
+ * vencidos o que vencen hoy. La API decide cuáles son, su orden y si se pueden
+ * completar.
+ */
+export async function loadMyWorkCommitments(): Promise<CommitmentMyWork> {
+  try {
+    const { data, error, response } = await api.GET('/commitments/my-work');
+    if (error || !data) {
+      throw toCommitmentError(response.status, error);
+    }
+    return data;
   } catch (err) {
     if (err instanceof CommitmentError) throw err;
     throw toCommitmentError(undefined);

@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsIn,
-  IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -14,6 +14,8 @@ import {
 import { DATE_PATTERN } from '../../date';
 import { ACTIVITY_CLASS_CODES } from '../../catalog-codes';
 import { RECORD_STATES } from '../../record-state';
+import { IsMultipleOf } from '../../is-multiple-of';
+import { QUARTER_HOURS_MESSAGE } from '../quarter-hours';
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -30,11 +32,12 @@ export class UpdateActivityDto {
   @IsIn(ACTIVITY_CLASS_CODES, { message: 'Clasificacion de actividad invalida.' })
   classificationCode?: string;
 
-  @ApiPropertyOptional({ type: Number, description: 'Horas de dedicacion (entero >= 0).', minimum: 0 })
+  @ApiPropertyOptional({ type: Number, description: 'Horas de dedicacion (0,25 a 24 en pasos de 0,25).', minimum: 0.25, maximum: 24, multipleOf: 0.25 })
   @IsOptional()
-  @IsInt({ message: 'Las horas deben ser un numero entero.' })
-  @Min(0, { message: 'Las horas no pueden ser negativas.' })
-  @Max(24, { message: 'Las horas de una actividad no pueden pasar de 24.' })
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: QUARTER_HOURS_MESSAGE })
+  @Min(0.25, { message: QUARTER_HOURS_MESSAGE })
+  @Max(24, { message: QUARTER_HOURS_MESSAGE })
+  @IsMultipleOf(0.25, { message: QUARTER_HOURS_MESSAGE })
   hours?: number;
 
   @ApiPropertyOptional({ type: String, format: 'uuid', description: '"Proyecto" (Request) planificado.' })

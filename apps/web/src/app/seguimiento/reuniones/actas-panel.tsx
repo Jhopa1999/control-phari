@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DescriptionList } from '@/components/description-list';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { DueBadge } from '@/components/due-badge';
 import { InlineNotice } from '@/components/inline-notice';
 import { MasterDetail, SelectableList } from '@/components/master-detail';
 import { StatusBadge } from '@/components/status-badge';
@@ -23,7 +24,11 @@ import {
   transitionCommitment,
   updateCommitment,
 } from '@/lib/commitments';
-import { formatDateOnly, localDateInputValue } from '@/lib/format';
+import {
+  formatDateOnly,
+  formatDuration,
+  formatTimeRange,
+} from '@/lib/format';
 import {
   MeetingError,
   closeMeeting,
@@ -35,17 +40,26 @@ import {
 import { downloadMinutes, printMinutes } from '@/lib/minutes';
 import { nextStates, stateLabel } from '@/lib/record-state';
 import { CompromisoFormDialog, type CompromisoFormValues } from './compromiso-form-dialog';
+import { RegistrarDuracionDialog } from './registrar-duracion-dialog';
 import { ReunionFormDialog, type ReunionFormValues } from './reunion-form-dialog';
 import type { CoordinationData } from './reuniones-view';
 
 const OUT_OF_SCOPE_PROCESS = 'Proceso fuera de tu alcance';
 const OUT_OF_SCOPE_PERSON = 'Persona fuera de tu alcance';
-const DONE = new Set(['COMPLETADO', 'ARCHIVADO']);
 
 function messageOf(err: unknown): string {
   return err instanceof MeetingError || err instanceof CommitmentError
     ? err.message
     : 'Ocurrió un error inesperado. Inténtalo de nuevo.';
+}
+
+/** Horario y duración de una reunión para listados: «10:00 – 11:00 · 1 h». */
+function meetingSchedule(m: Meeting): string | null {
+  const range = formatTimeRange(m.meetingTime, m.meetingEndTime);
+  if (m.durationMinutes) {
+    return range ? `${range} · ${formatDuration(m.durationMinutes)}` : formatDuration(m.durationMinutes);
+  }
+  return range ? `${range} · sin duración` : null;
 }
 
 function trimOrUndefined(value: string): string | undefined {
@@ -86,6 +100,10 @@ export function ActasPanel({
   const [busy, setBusy] = React.useState(false);
   const [toDelete, setToDelete] = React.useState<Meeting | null>(null);
   const [closeOpen, setCloseOpen] = React.useState(false);
+  // Aviso del cierre rechazado (p. ej. falta la duración): se muestra en el acta.
+  const [closeError, setCloseError] = React.useState<string | null>(null);
+  const [focusDuration, setFocusDuration] = React.useState(false);
+  const [durationOpen, setDurationOpen] = React.useState(false);
   const listHeadingRef = React.useRef<HTMLHeadingElement>(null);
   const detailHeadingRef = React.useRef<HTMLHeadingElement>(null);
 
@@ -99,13 +117,17 @@ export function ActasPanel({
     });
   });
 
+  // Cambiar de acta descarta el aviso de un cierre rechazado.
+  useResetOnChange([selectedId], () => setCloseError(null));
+
   const selected = meetings.find((m) => m.id === selectedId) ?? null;
   const processName = (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS;
   const personName = (id: string | null) =>
     id ? (people.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PERSON) : 'Sin asignar';
   const meetingMeta = (m: Meeting) =>
-    [formatDateOnly(m.meetingDate), m.meetingTime, processName(m.processId)].filter(Boolean).join(' · ');
-  const today = localDateInputValue();
+    [formatDateOnly(m.meetingDate), meetingSchedule(m), processName(m.processId)]
+      .filter(Boolean)
+      .join(' · ');
   const editingCommitment = editingCommitmentId
     ? (commitments.find((c) => c.id === editingCommitmentId) ?? null)
     : null;
@@ -125,10 +147,15 @@ export function ActasPanel({
         notes: trimOrUndefined(values.notes),
       };
       if (editing) {
-        await updateMeeting(editing.id, body);
+        // En la edición, null borra la duración registrada.
+        await updateMeeting(editing.id, { ...body, durationMinutes: values.durationMinutes });
         toast.success('Acta actualizada.');
       } else {
-        const created = await createMeeting({ processId: values.processId, ...body });
+        const created = await createMeeting({
+          processId: values.processId,
+          ...body,
+          durationMinutes: values.durationMinutes ?? undefined,
+        });
         toast.success('Acta creada. Registra ahora los compromisos acordados.');
         setSelectedId(created.id);
       }
@@ -193,6 +220,40 @@ export function ActasPanel({
     }
   }
 
+  async function handleClose(m: Meeting): Promise<void> {
+    setBusy(true);
+    try {
+      await closeMeeting(m.id);
+      setCloseError(null);
+      toast.success('Acta cerrada.');
+      await reload();
+    } catch (err) {
+      const message = messageOf(err);
+      setCloseError(message);
+      toast.error(message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDurationSubmit(durationMinutes: number): Promise<void> {
+    if (!selected) return;
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await updateMeeting(selected.id, { durationMinutes });
+      toast.success('Duración registrada.');
+      setDurationOpen(false);
+      await reload();
+    } catch (err) {
+      const message = messageOf(err);
+      setFormError(message);
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   function exportCtx(m: Meeting) {
     return { processName: processName(m.processId), personName };
   }
@@ -202,7 +263,7 @@ export function ActasPanel({
       <div className="flex flex-col gap-3 border-t pt-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold">
-            {`Compromisos (${m.commitmentsTotal}${m.commitmentsTotal > 0 ? `, ${m.commitmentsOpen} abiertos` : ''})`}
+            {`Compromisos (${m.commitmentsTotal}${m.commitmentsTotal > 0 ? ` · ${m.commitmentsOpen} abiertos` : ''})`}
           </h3>
           {!m.closed ? (
             <Button
@@ -228,7 +289,7 @@ export function ActasPanel({
           <ul className="flex flex-col gap-2" aria-label="Compromisos del acta">
             {m.commitments.map((c) => {
               const full = commitments.find((x) => x.id === c.id);
-              const overdue = !DONE.has(c.state) && c.dueDate < today;
+
               return (
                 <li key={c.id} className="flex flex-col gap-2 rounded-md border px-3 py-2">
                   <div className="flex flex-wrap items-center gap-2">
@@ -241,11 +302,13 @@ export function ActasPanel({
                       {c.title}
                     </button>
                     <StatusBadge kind="record" value={c.state} />
-                    {overdue ? <Badge variant="danger">Vencido</Badge> : null}
+                    <DueBadge status={c.dueStatus} daysToDue={c.daysToDue} dueDate={c.dueDate} />
                   </div>
                   <p className="text-meta text-muted-foreground">
-                    {`Asignado: ${personName(c.assignedUserId)} · Vence ${formatDateOnly(c.dueDate)}`}
-                    {c.responsibleUserId ? ` · Responsable: ${personName(c.responsibleUserId)}` : ''}
+                    {`Asignado: ${c.assignedUserName ?? personName(c.assignedUserId)} · Vence ${formatDateOnly(c.dueDate)}`}
+                    {c.responsibleUserId
+                      ? ` · Responsable: ${c.responsibleUserName ?? personName(c.responsibleUserId)}`
+                      : ''}
                   </p>
                   {full ? (
                     <div className="flex flex-wrap gap-2">
@@ -313,6 +376,8 @@ export function ActasPanel({
     const m = selected;
     const canClose = !m.closed && (m.responsibleUserId === myId || isManagerOf(m.processId));
     const canReopen = m.closed && isManagerOf(m.processId);
+    // Sobre un acta cerrada la API admite solo la duración, a cargo del responsable, el líder o el jefe.
+    const canSetDuration = m.closed && (m.responsibleUserId === myId || isManagerOf(m.processId));
     return (
       <Card>
         <CardHeader className="gap-3 border-b">
@@ -395,6 +460,31 @@ export function ActasPanel({
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-6 pt-4">
+          {closeError && !m.closed ? (
+            <InlineNotice
+              tone="warning"
+              role="status"
+              action={
+                /duraci/i.test(closeError) ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setEditing(m);
+                      setFormError(null);
+                      setFocusDuration(true);
+                      setMeetingOpen(true);
+                    }}
+                  >
+                    Indicar duración
+                  </Button>
+                ) : undefined
+              }
+            >
+              {closeError}
+            </InlineNotice>
+          ) : null}
           {m.closed ? (
             <InlineNotice tone="info">
               El acta está cerrada y queda como registro. Sus compromisos siguen su propio seguimiento.
@@ -418,6 +508,34 @@ export function ActasPanel({
             className="border-t pt-4"
             items={[
               { term: 'Responsable', value: m.responsibleUserId ? personName(m.responsibleUserId) : null },
+              {
+                term: 'Horario',
+                value: formatTimeRange(m.meetingTime, m.meetingEndTime) ?? m.meetingTime,
+              },
+              {
+                term: 'Duración',
+                value: m.durationMinutes ? (
+                  formatDuration(m.durationMinutes)
+                ) : (
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-muted-foreground">Sin registrar</span>
+                    {canSetDuration ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => {
+                          setFormError(null);
+                          setDurationOpen(true);
+                        }}
+                      >
+                        Registrar duración
+                      </Button>
+                    ) : null}
+                  </span>
+                ),
+              },
               { term: 'Agenda', value: m.agenda },
               { term: 'Decisiones', value: m.decisions },
               { term: 'Observaciones', value: m.notes },
@@ -498,9 +616,22 @@ export function ActasPanel({
         editing={editing}
         processes={processes}
         people={people}
+        focusDuration={focusDuration}
         submitting={submitting}
         errorMessage={formError}
         onSubmit={handleMeetingSubmit}
+      />
+
+      <RegistrarDuracionDialog
+        open={durationOpen}
+        onOpenChange={(o) => {
+          setDurationOpen(o);
+          if (!o) setFormError(null);
+        }}
+        meeting={selected}
+        submitting={submitting}
+        errorMessage={formError}
+        onSubmit={(minutes) => void handleDurationSubmit(minutes)}
       />
 
       <CompromisoFormDialog
@@ -530,7 +661,7 @@ export function ActasPanel({
         description="El acta quedará como registro: no se podrá editar ni se le podrán agregar compromisos. Los compromisos ya registrados siguen su seguimiento."
         confirmLabel="Cerrar acta"
         onConfirm={async () => {
-          if (selected) await run(() => closeMeeting(selected.id), 'Acta cerrada.');
+          if (selected) await handleClose(selected);
         }}
       />
 

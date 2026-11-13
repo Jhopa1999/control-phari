@@ -323,8 +323,26 @@ Actividad de un registro diario (con clasificación de maestra `ACTIVITY_CLASS`)
 - Campos clave: `dailyLogId`, `classificationCode`, referencias opcionales
   (`projectRequestId?`, `taskId?`, `assetRef?`, `requesterRef?`,
   `assetId?`). La columna `related_issue_id` (`relatedIssueId`) se **conserva en la BD pero ya no se expone ni se escribe**: la API la rechaza y la pantalla ya no la ofrece, `hours`, `evidenceUrl?`, `nextStep?`, `nextStepDate?` (estos dos últimos ya no se capturan ni se muestran en la UI; se conservan en BD).
+- `hours` es `DECIMAL(4,2)` (antes entero; la migración `20261116130000_worklog_hours_decimal`
+  convirtió la columna conservando los valores) con CHECK `0 ≤ hours ≤ 24` y múltiplo de 0,25.
+  Default 0 («sin horas»). Clasificaciones nuevas del sistema: `REUNION` y `RECURRENTE`
+  (solo vía sugerencia del día, con vínculo de origen).
 - Índices: por `dailyLogId`, `classificationCode`, `taskId`, `projectRequestId`,
   `relatedIssueId`, `assetId`.
+
+### DailyLogSuggestionLink (`daily_log_suggestion_links`)
+Vínculo entre una sugerencia de tiempo de la Bitácora y su origen. Una fila por
+(autor, origen): `ACEPTADA` (con la actividad creada) o `DESCARTADA` (sin actividad).
+- Campos clave: `authorUserId`, `sourceKey` (`MEETING:<uuid>`, `OCCURRENCE:<uuid>` o
+  `TASK:<uuid>:<YYYY-MM-DD>`; la construye solo el servidor), `kind` (`MEETING`/`OCCURRENCE`/`TASK`),
+  `status` (`ACEPTADA`/`DESCARTADA`), `workDate` (`@db.Date`), `activityId?` (único),
+  `meetingId?`, `occurrenceId?`, `taskId?`, `createdAt`.
+- Restricciones: único `(authorUserId, sourceKey)` (evita contar dos veces un origen entre
+  los diarios del autor, a prueba de carreras); único `activityId`; CHECK de `kind`, de
+  `status` y de `(status = 'ACEPTADA') = (activity_id IS NOT NULL)`; índice
+  `(authorUserId, workDate)`.
+- FKs: autor y actividad con `ON DELETE CASCADE` (borrar la actividad hace reaparecer la
+  sugerencia); reunión, ocurrencia y tarea con `ON DELETE SET NULL`.
 
 ### WeeklyReport (`weekly_reports`)
 Registro semanal anclado al lunes; consolida por lectura los diarios del proceso.
@@ -352,6 +370,8 @@ dejó de contarlas. El borrado físico queda en `docs/BACKLOG.md` (BL-050).
 Reunión (estado inicial `BORRADOR`); participantes N:M con `User`.
 - Campos clave: `processId`, `title`, `state`, `relatedRequestId?`,
   `responsibleUserId?`, `meetingDate`, `meetingTime?` (texto `HH:mm`),
+  `durationMinutes?` (entero; CHECK nulo o entre 15 y 1440 y múltiplo de 15; obligatorio al
+  cerrar el acta; las reuniones anteriores quedan en NULL),
   `relatedProjectRequestId?`, `agenda?`, `decisions?`, `notes?`.
 - Índices: por `processId`, `state`, `meetingDate`.
 
@@ -363,9 +383,11 @@ Puente N:M `Meeting ↔ User` (append-only).
 Compromiso (vencimiento requerido; reunión fuente opcional).
 - Campos clave: `processId`, `title`, `state` (default `EN_CURSO`), `relatedRequestId?`,
   `responsibleUserId?`, `assignedUserId?`, `dueDate`, `relatedProjectRequestId?`,
-  `sourceMeetingId?`, `expectedResult?`, `result?`, `blockers?`.
+  `sourceMeetingId?`, `expectedResult?`, `result?`, `blockers?`, y las marcas de
+  idempotencia de los avisos de vencimiento `dueSoonNotifiedAt?`, `dueTodayNotifiedAt?`,
+  `overdueNotifiedAt?` (se reinician al cambiar el vencimiento o el destinatario, o al reabrir).
 - Índices: por `processId`, `state`, `assignedUserId`, `responsibleUserId`,
-  `sourceMeetingId`, `dueDate`.
+  `sourceMeetingId`, `dueDate` y `(dueDate, state)`.
 
 ## Activos y documentos
 
@@ -532,7 +554,9 @@ metadato (mismo patrón que `TaskEvidence`).
   VENCIDA, COMPLETADA, COMPLETADA_TARDE, CANCELADA) es derivado y no se persiste.
 
 Varios atributos se almacenan como **código de maestra** (`CatalogItem`) y se validan en
-el service, por ejemplo: `ACTIVITY_CLASS`, `ISSUE_TYPE`, `RECORD_STATE`,
+el service, por ejemplo: `ACTIVITY_CLASS` (incluye `REUNION` y `RECURRENTE`, sembradas por
+migración), `WORKLOG_PARAM` (`CLOSED_PROJECT_GRACE_DAYS` y `WORKDAY_HOURS`, jornada diaria
+en horas; 9 por defecto), `ISSUE_TYPE`, `RECORD_STATE`,
 `GOVERNANCE_ROUTE`, `RECURRING_ACTIVITY_TYPE` y los tipos/tecnologías/fuentes/frecuencias
 de los activos.
 (Las familias de activos antes consumidas por el triage ya no tienen consumidores
@@ -610,3 +634,14 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
 45. `20261115130000_recurring_occurrence_evidence` (aditiva: crea
     `recurring_occurrence_evidences` con FK a `recurring_activity_occurrences`
     —`ON DELETE CASCADE`— y a `users`, `storage_key` único e índice por ocurrencia.)
+46. `20261116120000_meeting_duration` (aditiva: `meetings.duration_minutes` nullable con
+    CHECK 15–1440 y múltiplo de 15; sin backfill.)
+47. `20261116130000_worklog_hours_decimal` (convierte `daily_log_activities.hours` de
+    INTEGER a DECIMAL(4,2) conservando los valores y agrega el CHECK de 0–24 en pasos de 0,25.
+    Verificación previa recomendada: `SELECT count(*) FROM daily_log_activities WHERE hours > 24`.)
+48. `20261116140000_worklog_suggestion_links` (aditiva: crea `daily_log_suggestion_links`
+    con sus únicos, CHECKs y FKs.)
+49. `20261116150000_worklog_catalog_seed` (datos: `ACTIVITY_CLASS` `REUNION` y `RECURRENTE`,
+    `WORKLOG_PARAM` `WORKDAY_HOURS = 9`; `ON CONFLICT DO NOTHING`, no pisa ediciones de Maestras.)
+50. `20261116160000_commitment_notice_marks` (aditiva: marcas de aviso en `commitments` e
+    índice `(due_date, state)`.)

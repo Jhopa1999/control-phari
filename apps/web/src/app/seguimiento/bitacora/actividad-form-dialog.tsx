@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Info } from 'lucide-react';
+import { Info, Lock } from 'lucide-react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Field, FormError, RequiredHint, type FieldControlProps } from '@/components/field';
 import { InlineNotice } from '@/components/inline-notice';
@@ -41,6 +41,12 @@ import type {
   WorklogTaskOption,
 } from '@/lib/api-client';
 import { formatDate } from '@/lib/format';
+import { CLASSIFICATION_META, classificationLabel } from './clasificaciones';
+import {
+  HOURS_RANGE_MESSAGE,
+  HoursInput,
+  isValidHoursText,
+} from './hours-input';
 import { getWorklogOptions, WorklogError } from '@/lib/worklog';
 
 export interface ActividadFormValues {
@@ -67,6 +73,8 @@ interface ActividadFormDialogProps {
   date: string;
   /** Jefe de área: puede alternar «Mis proyectos / Todos del área». */
   isJefe: boolean;
+  /** Cierra el diálogo y abre el panel «Revisar sugerencias del día». */
+  onGoToSuggestions?: () => void;
   submitting: boolean;
   /** Error del backend; se conserva ante fallo (AC-031). */
   errorMessage: string | null;
@@ -169,11 +177,9 @@ function validate(values: ActividadFormValues): Validation {
       if (noJustification) result.combined.justification = true;
     }
   }
-  if (values.hours.trim() !== '') {
-    const h = Number(values.hours);
-    if (!Number.isInteger(h) || h < 0) {
-      result.fieldErrors.hours = 'Las horas deben ser un entero mayor o igual a 0.';
-    }
+  // Solo formato: la regla (0,25 a 24 en pasos de 0,25) es de la API.
+  if (values.hours.trim() !== '' && !isValidHoursText(values.hours)) {
+    result.fieldErrors.hours = HOURS_RANGE_MESSAGE;
   }
   return result;
 }
@@ -257,6 +263,7 @@ export function ActividadFormDialog({
   processId,
   date,
   isJefe,
+  onGoToSuggestions,
   submitting,
   errorMessage,
   onSubmit,
@@ -305,7 +312,8 @@ export function ActividadFormDialog({
     if (editing) {
       setValues({
         classificationCode: (editing.classificationCode as ActivityClass) ?? 'PLANIFICADA',
-        hours: String(editing.hours ?? 0),
+        // Las horas históricas en 0 se muestran como «sin horas».
+        hours: editing.hours ? String(editing.hours) : '',
         projectRequestId: editing.projectRequestId ?? '',
         taskId: editing.taskId ?? '',
         assetRef: editing.assetRef ?? '',
@@ -325,7 +333,11 @@ export function ActividadFormDialog({
   });
 
   const cls = values.classificationCode;
-  const wantsOptions = open && cls === 'PLANIFICADA';
+  // Una actividad que viene de una reunión o recurrente conserva clasificación y origen;
+  // la de una tarea sugerida conserva su tarea (sí admite cambiar horas y textos).
+  const sourceLocked = Boolean(editing?.locked);
+  const taskLocked = editing?.source?.kind === 'TASK';
+  const wantsOptions = open && cls === 'PLANIFICADA' && !taskLocked;
   const effectiveScope = isJefe ? scope : 'mine';
   const requestKey = [processId, date, includeTerminated, effectiveScope, serverQ, retry].join('|');
 
@@ -526,7 +538,7 @@ export function ActividadFormDialog({
     onSubmit(values);
   }
 
-  const lockFields = Boolean(loadFailure);
+  const lockFields = Boolean(loadFailure) || taskLocked;
   const projectEmpty = isJefe && effectiveScope === 'mine' ? (
     <>
       <p>No tienes proyectos propios activos.</p>
@@ -561,8 +573,8 @@ export function ActividadFormDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Editar actividad' : 'Agregar actividad'}</DialogTitle>
           <DialogDescription>
-            Los campos obligatorios cambian según la clasificación. Las horas son dedicación y no
-            cambian el avance de la tarea.
+            Los campos obligatorios cambian según la clasificación. Las horas son dedicación (pasos
+            de 0,25) y no cambian el avance de la tarea.
           </DialogDescription>
         </DialogHeader>
 
@@ -576,9 +588,14 @@ export function ActividadFormDialog({
                 id="act-class"
                 label="Clasificación"
                 required
-                help={CLASSIFICATIONS.find((c) => c.value === cls)?.hint}
+                help={sourceLocked ? undefined : CLASSIFICATIONS.find((c) => c.value === cls)?.hint}
               >
-                {(control) => (
+                {(control) => sourceLocked || taskLocked ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input {...control} readOnly value={classificationLabel(cls)} className="w-56" />
+                    <Lock className="size-4 text-muted-foreground" aria-hidden="true" />
+                  </div>
+                ) : (
                   <Select
                     value={cls}
                     onValueChange={(v) => {
@@ -600,10 +617,35 @@ export function ActividadFormDialog({
                           {c.label}
                         </SelectItem>
                       ))}
+                      {(['REUNION', 'RECURRENTE'] as const).map((code) => (
+                        <SelectItem key={code} value={code} disabled>
+                          {CLASSIFICATION_META[code].label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
               </Field>
+
+              {sourceLocked || taskLocked ? (
+                <p className="flex items-start gap-1.5 text-meta text-muted-foreground">
+                  <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                  <span>
+                    {editing?.source?.kind === 'MEETING'
+                      ? `Viene de la reunión «${editing.source.label}»; solo puedes cambiar horas y descripción.`
+                      : editing?.source?.kind === 'OCCURRENCE'
+                        ? `Viene de la actividad recurrente «${editing.source.label}»; solo puedes cambiar horas y descripción.`
+                        : `Viene de la tarea ${editing?.source?.label ?? ''}; la tarea no se puede cambiar, sí las horas y los textos.`}
+                  </span>
+                </p>
+              ) : onGoToSuggestions ? (
+                <p className="flex flex-wrap items-center gap-x-2 text-meta text-muted-foreground">
+                  <span>Reunión y Actividad recurrente se agregan desde «Revisar sugerencias del día».</span>
+                  <Button type="button" variant="link" size="sm" onClick={onGoToSuggestions}>
+                    Ir a las sugerencias
+                  </Button>
+                </p>
+              ) : null}
 
               {/* Campos condicionados por la clasificación (UX; la validación
                   autoritativa es el 400 del backend). */}
@@ -782,17 +824,14 @@ export function ActividadFormDialog({
               <Field
                 id="act-hours"
                 label="Horas (dedicación)"
+                required={cls === 'REUNION' || cls === 'RECURRENTE'}
                 error={fieldErrors.hours}
-                help="Entero mayor o igual a 0. Es dedicación del día; no cambia el avance de la tarea."
+                help="Las horas son dedicación en pasos de 0,25 (15 min). No cambian el estimado ni el avance de la tarea."
               >
-                <Input
+                <HoursInput
                   ref={hoursRef}
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="numeric"
                   value={values.hours}
-                  placeholder="0"
+                  placeholder="0,25"
                   onChange={(e) => set('hours', e.target.value)}
                 />
               </Field>

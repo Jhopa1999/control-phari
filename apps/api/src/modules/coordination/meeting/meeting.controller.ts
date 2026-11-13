@@ -23,6 +23,10 @@ import { CreateMeetingDto } from './dto/create-meeting.dto';
 import { UpdateMeetingDto } from './dto/update-meeting.dto';
 import { ListMeetingsDto } from './dto/list-meetings.dto';
 import { MeetingResponseDto } from './dto/meeting-response.dto';
+import {
+  ListMeetingCommitmentsOpenDto,
+  MeetingCommitmentsOpenDto,
+} from './dto/meeting-commitments-open.dto';
 import { CurrentActor } from '../../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../../auth/current-actor';
 import { CurrentUserGuard } from '../../auth/current-user.guard';
@@ -50,6 +54,19 @@ export class MeetingController {
     @Query() filters: ListMeetingsDto,
   ) {
     return this.meetingService.list(actor, filters);
+  }
+
+  @Get('commitments-open')
+  @ApiOperation({
+    summary: 'Compromisos abiertos de mis reuniones (seguimiento con semáforo de vencimiento).',
+  })
+  @ApiResponse({ status: 200, description: 'Compromisos abiertos.', type: MeetingCommitmentsOpenDto })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  commitmentsOpen(
+    @CurrentActor() actor: CurrentActorType,
+    @Query() filters: ListMeetingCommitmentsOpenDto,
+  ) {
+    return this.meetingService.commitmentsOpen(actor, filters);
   }
 
   @Post()
@@ -100,6 +117,8 @@ export class MeetingController {
   @ApiResponse({ status: 200, description: 'Acta cerrada.', type: MeetingResponseDto })
   @ApiResponse({ status: 403, description: 'Sin permiso para cerrar el acta.' })
   @ApiResponse({ status: 404, description: 'Reunion fuera de alcance.' })
+  @ApiResponse({ status: 400, description: 'Falta la duración de la reunión.' })
+  @ApiResponse({ status: 400, description: 'Falta la duración de la reunión.' })
   @ApiResponse({ status: 409, description: 'Acta ya cerrada o sin decisiones ni compromisos.' })
   close(
     @CurrentActor() actor: CurrentActorType,
@@ -129,7 +148,7 @@ export class MeetingController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Reunion borrada.' })
   @ApiResponse({ status: 404, description: 'Reunion fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'Acta cerrada o con compromisos.' })
+  @ApiResponse({ status: 409, description: 'Acta cerrada, con compromisos o con tiempo registrado en una bitácora.' })
   remove(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

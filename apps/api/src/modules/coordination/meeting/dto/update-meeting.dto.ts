@@ -3,13 +3,17 @@ import { Transform } from 'class-transformer';
 import {
   IsArray,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Matches,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { DATE_PATTERN } from '../../date';
+import { IsMultipleOf } from '../../is-multiple-of';
 import { RECORD_STATES } from '../../record-state';
 
 const trim = ({ value }: { value: unknown }): unknown =>
@@ -45,6 +49,22 @@ export class UpdateMeetingDto {
   @IsOptional()
   @Matches(TIME_PATTERN, { message: 'La hora debe tener el formato HH:mm.' })
   meetingTime?: string;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description:
+      'Duración en minutos (múltiplo de 15, entre 15 y 1440). null la borra (solo en borrador). Sobre un acta cerrada se admite como único campo del PATCH.',
+    minimum: 15,
+    maximum: 1440,
+    multipleOf: 15,
+  })
+  @IsOptional()
+  @IsInt({ message: 'La duración debe ser un número entero de minutos.' })
+  @Min(15, { message: 'La duración mínima es de 15 minutos.' })
+  @Max(1440, { message: 'La duración máxima es de 24 horas.' })
+  @IsMultipleOf(15, { message: 'La duración debe ir en pasos de 15 minutos.' })
+  durationMinutes?: number | null;
 
   @ApiPropertyOptional({ type: [String], format: 'uuid', description: 'Reemplaza participantes (en alcance).' })
   @IsOptional()

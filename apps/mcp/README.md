@@ -53,9 +53,12 @@ puede bajar). El test `src/__tests__/coverage.test.ts` **falla** si una
 operación no tiene tool ni exclusión, si una exclusión está obsoleta, si una
 tool no tiene operación en el contrato, si falta una anotación, si una tool GET
 no es de solo lectura, si un `body` es de forma libre o si hay más pendientes
-que el tope. Hoy hay 129 tools sobre 222 operaciones (45 exclusiones permanentes
+que el tope. Hoy hay 135 tools sobre 228 operaciones (45 exclusiones permanentes
 y 48 pendientes, todas de escritura). Ya están expuestas las de coordinación (crear y editar
-reuniones y compromisos, y cambiar el estado de compromisos; los hallazgos se retiraron con el módulo Novedades), las de
+reuniones —con su duración `durationMinutes`— y compromisos, y cambiar el estado de compromisos; los hallazgos se retiraron con el módulo Novedades), las
+sugerencias del día de la Bitácora (`worklog.daily.suggestions` de lectura y `worklog.daily.suggestions.accept`,
+`worklog.daily.suggestions.dismiss` y `worklog.daily.suggestions.restore` de escritura, ninguna destructiva: descartar
+es reversible), los compromisos de Mi trabajo (`commitment.my-work`) y de mis reuniones (`meeting.commitments-open`), las de
 planes (editar el plan; crear, editar y reordenar fases; añadir predecesoras a una tarea) y las de
 activos y documentos (crear y editar activos y documentos, y crear versiones de un documento) y las de
 actividades recurrentes (`recurring.occurrence.start`, `recurring.occurrence.complete`, `recurring.create`,

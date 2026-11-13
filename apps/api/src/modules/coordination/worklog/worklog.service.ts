@@ -18,7 +18,10 @@ import {
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
 import { CoordinationScopeService } from '../coordination-scope.service';
-import { WorklogEligibilityService } from './worklog-eligibility.service';
+import {
+  DEFAULT_WORKDAY_HOURS,
+  WorklogEligibilityService,
+} from './worklog-eligibility.service';
 import {
   addDaysUTC,
   dateStringToDate,
@@ -43,7 +46,12 @@ import {
   DailyLogActionsDto,
   DailyLogResponseDto,
 } from './dto/daily-log-response.dto';
-import { ActivityResponseDto } from './dto/activity-response.dto';
+import {
+  ActivityResponseDto,
+  ActivitySourceDto,
+} from './dto/activity-response.dto';
+import { assertQuarterHours } from './quarter-hours';
+import type { SuggestionKind } from './suggestion-key';
 import {
   WeeklyConsolidationDto,
   WeeklyReportResponseDto,
@@ -57,6 +65,40 @@ type ActivityWithRefs = DailyLogActivityModel & {
     operationalState: string;
   } | null;
   task?: { title: string; code: string } | null;
+  dailyLogSuggestionLink?: {
+    kind: string;
+    meetingId: string | null;
+    occurrenceId: string | null;
+    taskId: string | null;
+    meeting: { title: string } | null;
+    occurrence: { activity: { title: string } } | null;
+    task: { code: string; title: string } | null;
+  } | null;
+};
+
+/**
+ * Origen de una actividad creada desde una sugerencia del día. Lo construye solo
+ * el servidor (WorklogSuggestionService) y se persiste como vínculo único por
+ * autor y origen en la misma transacción que la actividad.
+ */
+export interface ActivitySource {
+  kind: SuggestionKind;
+  sourceKey: string;
+  workDate: Date;
+  meetingId?: string;
+  occurrenceId?: string;
+  taskId?: string;
+}
+
+/** Estado del vínculo de una sugerencia aceptada (con actividad). */
+export const SUGGESTION_ACCEPTED = 'ACEPTADA';
+/** Estado del vínculo de una sugerencia descartada (sin actividad). */
+export const SUGGESTION_DISMISSED = 'DESCARTADA';
+
+/** Clasificaciones que solo se crean desde las sugerencias del día. */
+const SOURCE_ONLY_CLASSES: Readonly<Record<string, SuggestionKind>> = {
+  REUNION: 'MEETING',
+  RECURRENTE: 'OCCURRENCE',
 };
 
 /** Diario con su autor y sus actividades (para el mapeo de respuesta). */
@@ -91,6 +133,17 @@ const ACTIVITY_INCLUDE = {
     select: { title: true, code: true, operationalState: true },
   },
   task: { select: { title: true, code: true } },
+  dailyLogSuggestionLink: {
+    select: {
+      kind: true,
+      meetingId: true,
+      occurrenceId: true,
+      taskId: true,
+      meeting: { select: { title: true } },
+      occurrence: { select: { activity: { select: { title: true } } } },
+      task: { select: { code: true, title: true } },
+    },
+  },
 } satisfies Prisma.DailyLogActivityInclude;
 
 const LOG_INCLUDE = {
@@ -153,7 +206,7 @@ export class WorklogService {
       id: row.id,
       dailyLogId: row.dailyLogId,
       classificationCode: row.classificationCode,
-      hours: row.hours,
+      hours: Number(row.hours),
       projectRequestId: row.projectRequestId,
       taskId: row.taskId,
       assetRef: row.assetRef,
@@ -187,12 +240,36 @@ export class WorklogService {
 
   // --- Mapeo a DTOs --------------------------------------------------------
 
+  /** Origen de la actividad (si vino de una sugerencia) con su etiqueta legible. */
+  private activitySource(row: ActivityWithRefs): ActivitySourceDto | null {
+    const link = row.dailyLogSuggestionLink;
+    if (!link) return null;
+    const label =
+      link.kind === 'MEETING'
+        ? (link.meeting?.title ?? 'Reunión eliminada')
+        : link.kind === 'OCCURRENCE'
+          ? (link.occurrence?.activity.title ?? 'Actividad recurrente eliminada')
+          : link.task
+            ? `${link.task.code} · ${link.task.title}`
+            : 'Tarea eliminada';
+    return {
+      kind: link.kind,
+      meetingId: link.meetingId,
+      occurrenceId: link.occurrenceId,
+      taskId: link.taskId,
+      label,
+    };
+  }
+
   private toActivityResponse(row: ActivityWithRefs): ActivityResponseDto {
+    const source = this.activitySource(row);
     return {
       id: row.id,
       dailyLogId: row.dailyLogId,
       classificationCode: row.classificationCode,
-      hours: row.hours,
+      hours: Number(row.hours),
+      source,
+      locked: source !== null && source.kind !== 'TASK',
       projectRequestId: row.projectRequestId,
       projectRequestTitle: row.projectRequest?.title ?? null,
       projectRequestCode: row.projectRequest?.code ?? null,
@@ -252,11 +329,80 @@ export class WorklogService {
     };
   }
 
-  private toDailyLogResponse(
+  /**
+   * Horas registradas por cada autor en cada fecha, sumando TODOS sus diarios
+   * (cualquier proceso y estado). Clave `autor|YYYY-MM-DD`. Sustenta el aviso de
+   * jornada (no bloquea).
+   */
+  async authorDayTotals(
+    pairs: Array<{ authorUserId: string; date: Date }>,
+  ): Promise<Map<string, number>> {
+    const totals = new Map<string, number>();
+    if (pairs.length === 0) return totals;
+    const unique = new Map<string, { authorUserId: string; date: Date }>();
+    for (const p of pairs) {
+      unique.set(`${p.authorUserId}|${dateToString(p.date)}`, p);
+    }
+    const rows = await this.prisma.dailyLogActivity.findMany({
+      where: {
+        dailyLog: {
+          OR: [...unique.values()].map((p) => ({
+            authorUserId: p.authorUserId,
+            date: p.date,
+          })),
+        },
+      },
+      select: {
+        hours: true,
+        dailyLog: { select: { authorUserId: true, date: true } },
+      },
+    });
+    for (const key of unique.keys()) totals.set(key, 0);
+    for (const row of rows) {
+      const key = `${row.dailyLog.authorUserId}|${dateToString(row.dailyLog.date)}`;
+      totals.set(key, (totals.get(key) ?? 0) + Number(row.hours));
+    }
+    return totals;
+  }
+
+  /** Completa en las respuestas el total del día del autor y la jornada configurada. */
+  private async withDayTotals(
+    dtos: DailyLogResponseDto[],
+  ): Promise<DailyLogResponseDto[]> {
+    if (dtos.length === 0) return dtos;
+    const [totals, workdayHours] = await Promise.all([
+      this.authorDayTotals(
+        dtos.map((d) => ({
+          authorUserId: d.authorUserId,
+          date: dateStringToDate(d.date),
+        })),
+      ),
+      this.eligibility.workdayHours(),
+    ]);
+    for (const dto of dtos) {
+      const total = totals.get(`${dto.authorUserId}|${dto.date}`) ?? dto.totalHours;
+      dto.authorDayTotalHours = total;
+      dto.workdayHours = workdayHours;
+      dto.overWorkday = total > workdayHours;
+    }
+    return dtos;
+  }
+
+  private async toDailyLogResponse(
+    row: DailyLogWithActivities,
+    actor: CurrentActor,
+  ): Promise<DailyLogResponseDto> {
+    const [dto] = await this.withDayTotals([this.mapDailyLog(row, actor)]);
+    return dto;
+  }
+
+  private mapDailyLog(
+
     row: DailyLogWithActivities,
     actor: CurrentActor,
   ): DailyLogResponseDto {
     const activities = row.activities.map((a) => this.toActivityResponse(a));
+    const totalHours = activities.reduce((sum, a) => sum + a.hours, 0);
     return {
       id: row.id,
       authorUserId: row.authorUserId,
@@ -267,7 +413,11 @@ export class WorklogService {
       status: row.status,
       submittedAt: row.submittedAt,
       dayNotes: row.dayNotes,
-      totalHours: activities.reduce((sum, a) => sum + a.hours, 0),
+      totalHours,
+      // Se completan con todos los diarios del autor en withDayTotals.
+      authorDayTotalHours: totalHours,
+      workdayHours: DEFAULT_WORKDAY_HOURS,
+      overWorkday: false,
       reviewedAt: row.reviewedAt,
       reviewedByName: row.reviewer?.name ?? null,
       returnedAt: row.returnedAt,
@@ -340,6 +490,8 @@ export class WorklogService {
    */
   private validateClassification(fields: {
     classificationCode: string;
+    /** Tipo de origen cuando la actividad viene de una sugerencia del día. */
+    sourceKind?: SuggestionKind;
     projectRequestId?: string | null;
     taskId?: string | null;
     assetRef?: string | null;
@@ -372,11 +524,34 @@ export class WorklogService {
       case 'INTERNA':
         // Sin referencias obligatorias.
         break;
+      case 'REUNION':
+      case 'RECURRENTE':
+        // Regla del sistema: exigen su vínculo de origen (reunión u ocurrencia).
+        if (fields.sourceKind !== SOURCE_ONLY_CLASSES[fields.classificationCode]) {
+          throw new BadRequestException(
+            'Las actividades de reunión y recurrentes se agregan desde las sugerencias del día.',
+          );
+        }
+        break;
       default:
         throw new BadRequestException('Clasificacion de actividad invalida.');
     }
   }
   // --- Resolucion de alcance ----------------------------------------------
+
+  /**
+   * Diario del propio actor (sugerencias del día): fuera de alcance -> 404; de
+   * otra persona -> 403.
+   */
+  async requireOwnDailyLog(actor: CurrentActor, id: string): Promise<DailyLogModel> {
+    const row = await this.requireDailyLogReadable(actor, id);
+    if (row.authorUserId !== actor.userId) {
+      throw new ForbiddenException(
+        'Solo el autor del diario puede gestionar sus sugerencias.',
+      );
+    }
+    return row;
+  }
 
   private async requireDailyLogReadable(
     actor: CurrentActor,
@@ -433,7 +608,7 @@ export class WorklogService {
    * (o revisado) queda de solo lectura, tal como lo muestra la pantalla. Antes
    * solo lo impedia la interfaz; ahora lo impone el backend (409).
    */
-  private assertDailyLogEditable(log: { status: string }): void {
+  assertDailyLogEditable(log: { status: string }): void {
     if (log.status === DailyLogStatus.BORRADOR) return;
     throw new ConflictException(
       log.status === DailyLogStatus.REVISADO
@@ -523,7 +698,9 @@ export class WorklogService {
     ]);
 
     return {
-      data: rows.map((row) => this.toDailyLogResponse(row, actor)),
+      data: await this.withDayTotals(
+        rows.map((row) => this.mapDailyLog(row, actor)),
+      ),
       page,
       pageSize,
       total,
@@ -583,14 +760,15 @@ export class WorklogService {
 
       for (const activity of row.activities) {
         activityCount += 1;
-        totalHours += activity.hours;
-        person.hours += activity.hours;
+        const hours = Number(activity.hours);
+        totalHours += hours;
+        person.hours += hours;
         const entry = byClass.get(activity.classificationCode) ?? {
           activityCount: 0,
           hours: 0,
         };
         entry.activityCount += 1;
-        entry.hours += activity.hours;
+        entry.hours += hours;
         byClass.set(activity.classificationCode, entry);
       }
       byPerson.set(row.authorUserId, person);
@@ -795,15 +973,35 @@ export class WorklogService {
   ): Promise<ActivityResponseDto> {
     const log = await this.requireDailyLogWritable(actor, dailyLogId);
     this.assertDailyLogEditable(log);
+    return this.createActivity(actor, log, dto);
+  }
 
+  /**
+   * Ruta ÚNICA de creación de actividades (manual y desde sugerencias): misma
+   * validación de clasificación, horas y elegibilidad. Con `source`, crea además
+   * el vínculo de origen en la MISMA transacción (su unicidad por autor y origen
+   * evita contar dos veces un mismo origen entre los diarios del autor; una
+   * carrera responde P2002, que quien llama traduce). El llamador ya validó que
+   * el diario es escribible y está en BORRADOR.
+   */
+  async createActivity(
+    actor: CurrentActor,
+    log: DailyLogModel,
+    dto: CreateActivityDto,
+    source?: ActivitySource,
+  ): Promise<ActivityResponseDto> {
     this.validateClassification({
       classificationCode: dto.classificationCode,
+      sourceKind: source?.kind,
       projectRequestId: dto.projectRequestId,
       taskId: dto.taskId,
       assetRef: dto.assetRef,
       requesterRef: dto.requesterRef,
       justification: dto.justification,
     });
+    if (dto.hours !== undefined) {
+      assertQuarterHours(dto.hours);
+    }
     // Elegibilidad (alcance, estado, proceso del diario, responsable). Si llega
     // solo la tarea, el proyecto se deriva de ella (D8).
     const refs = await this.eligibility.validateReferences(
@@ -853,6 +1051,22 @@ export class WorklogService {
         include: ACTIVITY_INCLUDE,
       });
 
+      if (source) {
+        await tx.dailyLogSuggestionLink.create({
+          data: {
+            authorUserId: log.authorUserId,
+            sourceKey: source.sourceKey,
+            kind: source.kind,
+            status: SUGGESTION_ACCEPTED,
+            workDate: source.workDate,
+            activityId: row.id,
+            meetingId: source.meetingId ?? null,
+            occurrenceId: source.occurrenceId ?? null,
+            taskId: source.taskId ?? null,
+          },
+        });
+      }
+
       await this.audit.record(tx, {
         actorUserId: actor.userId,
         action: 'CREATE',
@@ -860,13 +1074,26 @@ export class WorklogService {
         objectId: row.id,
         scopeProcessId: log.processId,
         before: null,
-        after: this.activitySnapshot(row),
+        after: source
+          ? ({
+              ...(this.activitySnapshot(row) as Record<string, unknown>),
+              sourceKey: source.sourceKey,
+            } as Prisma.InputJsonValue)
+          : this.activitySnapshot(row),
       });
 
       return row;
     });
 
-    return this.toActivityResponse(created);
+    if (!source) {
+      return this.toActivityResponse(created);
+    }
+    // Recarga con el vínculo recién creado (origen y bloqueo en la respuesta).
+    const withLink = await this.prisma.dailyLogActivity.findFirst({
+      where: { id: created.id },
+      include: ACTIVITY_INCLUDE,
+    });
+    return this.toActivityResponse(withLink ?? created);
   }
 
   async updateActivity(
@@ -879,11 +1106,44 @@ export class WorklogService {
       activityId,
     );
     this.assertDailyLogEditable(log);
+    if (dto.hours !== undefined) {
+      assertQuarterHours(dto.hours);
+    }
+
+    // Origen: una actividad de reunión/recurrente conserva clasificación y
+    // vínculo; una de tarea sugerida conserva su tarea (sí horas y textos).
+    const link = await this.prisma.dailyLogSuggestionLink.findFirst({
+      where: { activityId },
+      select: { kind: true },
+    });
+    const sourceKind = (link?.kind ?? undefined) as SuggestionKind | undefined;
+    if (
+      dto.classificationCode !== undefined &&
+      dto.classificationCode !== activity.classificationCode &&
+      (sourceKind === 'MEETING' ||
+        sourceKind === 'OCCURRENCE' ||
+        SOURCE_ONLY_CLASSES[dto.classificationCode] !== undefined)
+    ) {
+      throw new BadRequestException(
+        'La clasificación de una actividad de reunión o recurrente no se puede cambiar.',
+      );
+    }
+    if (
+      sourceKind !== undefined &&
+      ((dto.taskId !== undefined && dto.taskId !== activity.taskId) ||
+        (dto.projectRequestId !== undefined &&
+          dto.projectRequestId !== activity.projectRequestId))
+    ) {
+      throw new BadRequestException(
+        'Una actividad registrada desde una sugerencia conserva su origen.',
+      );
+    }
 
     // Estado resultante (merge) para revalidar clasificacion/FK (§2.3).
     const merged = {
       classificationCode:
         dto.classificationCode ?? activity.classificationCode,
+      sourceKind,
       projectRequestId:
         dto.projectRequestId !== undefined
           ? dto.projectRequestId
@@ -1080,7 +1340,7 @@ export class WorklogService {
     for (const log of logs) {
       for (const activity of log.activities) {
         activityCount += 1;
-        totalHours += activity.hours;
+        totalHours += Number(activity.hours);
         if (activity.classificationCode === 'EXTRAORDINARIA') {
           extraordinaryCount += 1;
         }

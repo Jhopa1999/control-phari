@@ -20,6 +20,16 @@ import {
 } from '@nestjs/swagger';
 import { WorklogService } from './worklog.service';
 import { WorklogEligibilityService } from './worklog-eligibility.service';
+import { WorklogSuggestionService } from './worklog-suggestion.service';
+import {
+  AcceptSuggestionsDto,
+  AcceptSuggestionsResultDto,
+  DailySuggestionsResponseDto,
+  DismissSuggestionsResultDto,
+  RestoreSuggestionsResultDto,
+  SuggestionKeysDto,
+  SuggestionsQueryDto,
+} from './dto/suggestions.dto';
 import {
   WorklogOptionsQueryDto,
   WorklogOptionsResponseDto,
@@ -66,6 +76,7 @@ export class WorklogController {
     private readonly worklogService: WorklogService,
     private readonly eligibility: WorklogEligibilityService,
     private readonly scopeService: CoordinationScopeService,
+    private readonly suggestions: WorklogSuggestionService,
   ) {}
 
   // --- Personas en alcance (selectores) -----------------------------------
@@ -240,7 +251,89 @@ export class WorklogController {
     return this.worklogService.returnDailyLog(actor, id, dto);
   }
 
+  // --- Sugerencias del día ---------------------------------------------------
+
+  @Get('worklog/daily/:id/suggestions')
+  @ApiOperation({
+    summary:
+      'Sugerencias de tiempo del día del diario (reuniones, actividades recurrentes completadas y tareas con avance), con el total del día y la jornada. Solo el autor.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Sugerencias del día.', type: DailySuggestionsResponseDto })
+  @ApiResponse({ status: 403, description: 'El diario es de otra persona.' })
+  @ApiResponse({ status: 404, description: 'Diario fuera de alcance.' })
+  listSuggestions(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: SuggestionsQueryDto,
+  ) {
+    return this.suggestions.list(actor, id, query.includeDismissed ?? false);
+  }
+
+  @Post('worklog/daily/:id/suggestions/accept')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Acepta una o varias sugerencias del día: crea cada actividad con su categoría y origen. Resultado parcial por sugerencia. Solo en borrador.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ type: AcceptSuggestionsDto })
+  @ApiResponse({ status: 200, description: 'Actividades creadas y sugerencias que no se pudieron aceptar.', type: AcceptSuggestionsResultDto })
+  @ApiResponse({ status: 400, description: 'Cuerpo inválido.' })
+  @ApiResponse({ status: 403, description: 'El diario es de otra persona.' })
+  @ApiResponse({ status: 404, description: 'Diario fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El diario ya fue enviado o revisado.' })
+  acceptSuggestions(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AcceptSuggestionsDto,
+  ) {
+    return this.suggestions.accept(actor, id, dto);
+  }
+
+  @Post('worklog/daily/:id/suggestions/dismiss')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Descarta sugerencias del día (no reaparecen en ningún diario del autor). Idempotente. Solo en borrador.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ type: SuggestionKeysDto })
+  @ApiResponse({ status: 200, description: 'Sugerencias descartadas.', type: DismissSuggestionsResultDto })
+  @ApiResponse({ status: 400, description: 'Cuerpo inválido.' })
+  @ApiResponse({ status: 403, description: 'El diario es de otra persona.' })
+  @ApiResponse({ status: 404, description: 'Diario fuera de alcance o sugerencia no disponible.' })
+  @ApiResponse({ status: 409, description: 'Diario no editable o sugerencia ya registrada.' })
+  dismissSuggestions(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SuggestionKeysDto,
+  ) {
+    return this.suggestions.dismiss(actor, id, dto.keys);
+  }
+
+  @Post('worklog/daily/:id/suggestions/restore')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Restaura sugerencias descartadas (vuelven a proponerse). Idempotente. Solo en borrador.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ type: SuggestionKeysDto })
+  @ApiResponse({ status: 200, description: 'Sugerencias restauradas.', type: RestoreSuggestionsResultDto })
+  @ApiResponse({ status: 400, description: 'Cuerpo inválido.' })
+  @ApiResponse({ status: 403, description: 'El diario es de otra persona.' })
+  @ApiResponse({ status: 404, description: 'Diario fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El diario ya fue enviado o revisado.' })
+  restoreSuggestions(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SuggestionKeysDto,
+  ) {
+    return this.suggestions.restore(actor, id, dto.keys);
+  }
+
   @Post('worklog/daily/:id/activities')
+
   @ApiOperation({
     summary:
       'Agrega una actividad al diario. Valida la clasificacion y, en PLANIFICADA, que el proyecto/tarea sean imputables (estado, proceso del diario, responsable y coherencia).',

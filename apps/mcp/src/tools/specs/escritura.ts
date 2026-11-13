@@ -20,16 +20,34 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   // Hallazgos
 
 
+  // Bitácora: sugerencias del día (solo el autor y solo en borrador)
+  escritura(
+    'worklog.daily.suggestions.accept',
+    'POST /worklog/daily/{id}/suggestions/accept',
+    'Acepta sugerencias del día de un diario propio en borrador (POST /worklog/daily/{id}/suggestions/accept): crea cada actividad con su categoría (Reunión, Actividad recurrente o Trabajo planificado) ' +
+      'y su vínculo de origen. items[].key viene de worklog.daily.suggestions; hours (pasos de 0,25) es obligatorio cuando la sugerencia no trae horas. Devuelve aceptadas y fallidas por ítem.',
+  ),
+  escritura(
+    'worklog.daily.suggestions.dismiss',
+    'POST /worklog/daily/{id}/suggestions/dismiss',
+    'Descarta sugerencias del día de un diario propio en borrador para que no reaparezcan en ningún diario de la persona (POST /worklog/daily/{id}/suggestions/dismiss). Reversible e idempotente.',
+  ),
+  escritura(
+    'worklog.daily.suggestions.restore',
+    'POST /worklog/daily/{id}/suggestions/restore',
+    'Restaura sugerencias descartadas de un diario propio en borrador (POST /worklog/daily/{id}/suggestions/restore). Idempotente.',
+  ),
+
   // Reuniones
   escritura(
     'meeting.create',
     'POST /meetings',
-    'Registra una reunión (POST /meetings). El cuerpo debe cumplir el DTO de creación; el backend valida los datos.',
+    'Registra una reunión (POST /meetings), con duración opcional en minutos (durationMinutes, múltiplo de 15). El cuerpo debe cumplir el DTO de creación; el backend valida los datos.',
   ),
   escritura(
     'meeting.update',
     'PATCH /meetings/{id}',
-    'Actualiza los datos de una reunión (PATCH /meetings/{id}). El backend valida los datos.',
+    'Actualiza los datos de una reunión (PATCH /meetings/{id}), incluida la duración en minutos (durationMinutes, múltiplo de 15; obligatoria para cerrar el acta). Sobre un acta cerrada solo se admite completar la duración. El backend valida los datos.',
   ),
 
   // Compromisos

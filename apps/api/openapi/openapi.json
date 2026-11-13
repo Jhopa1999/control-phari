@@ -6123,6 +6123,216 @@
         ]
       }
     },
+    "/worklog/daily/{id}/suggestions": {
+      "get": {
+        "operationId": "WorklogController_listSuggestions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeDismissed",
+            "required": false,
+            "in": "query",
+            "description": "Incluye también las sugerencias descartadas (para restaurarlas).",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sugerencias del día.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailySuggestionsResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El diario es de otra persona."
+          },
+          "404": {
+            "description": "Diario fuera de alcance."
+          }
+        },
+        "summary": "Sugerencias de tiempo del día del diario (reuniones, actividades recurrentes completadas y tareas con avance), con el total del día y la jornada. Solo el autor.",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/daily/{id}/suggestions/accept": {
+      "post": {
+        "operationId": "WorklogController_acceptSuggestions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptSuggestionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Actividades creadas y sugerencias que no se pudieron aceptar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptSuggestionsResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cuerpo inválido."
+          },
+          "403": {
+            "description": "El diario es de otra persona."
+          },
+          "404": {
+            "description": "Diario fuera de alcance."
+          },
+          "409": {
+            "description": "El diario ya fue enviado o revisado."
+          }
+        },
+        "summary": "Acepta una o varias sugerencias del día: crea cada actividad con su categoría y origen. Resultado parcial por sugerencia. Solo en borrador.",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/daily/{id}/suggestions/dismiss": {
+      "post": {
+        "operationId": "WorklogController_dismissSuggestions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionKeysDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sugerencias descartadas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DismissSuggestionsResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cuerpo inválido."
+          },
+          "403": {
+            "description": "El diario es de otra persona."
+          },
+          "404": {
+            "description": "Diario fuera de alcance o sugerencia no disponible."
+          },
+          "409": {
+            "description": "Diario no editable o sugerencia ya registrada."
+          }
+        },
+        "summary": "Descarta sugerencias del día (no reaparecen en ningún diario del autor). Idempotente. Solo en borrador.",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
+    "/worklog/daily/{id}/suggestions/restore": {
+      "post": {
+        "operationId": "WorklogController_restoreSuggestions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionKeysDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sugerencias restauradas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreSuggestionsResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cuerpo inválido."
+          },
+          "403": {
+            "description": "El diario es de otra persona."
+          },
+          "404": {
+            "description": "Diario fuera de alcance."
+          },
+          "409": {
+            "description": "El diario ya fue enviado o revisado."
+          }
+        },
+        "summary": "Restaura sugerencias descartadas (vuelven a proponerse). Idempotente. Solo en borrador.",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
     "/worklog/daily/{id}/activities": {
       "post": {
         "operationId": "WorklogController_addActivity",
@@ -6669,6 +6879,77 @@
         ]
       }
     },
+    "/meetings/commitments-open": {
+      "get": {
+        "operationId": "MeetingController_commitmentsOpen",
+        "parameters": [
+          {
+            "name": "assignedUserId",
+            "required": false,
+            "in": "query",
+            "description": "Persona asignada.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dueStatus",
+            "required": false,
+            "in": "query",
+            "description": "Semáforo de vencimiento.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "VENCIDO",
+                "VENCE_HOY",
+                "PROXIMO",
+                "A_TIEMPO"
+              ]
+            }
+          },
+          {
+            "name": "meetingId",
+            "required": false,
+            "in": "query",
+            "description": "Reunión concreta.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "description": "Proceso.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compromisos abiertos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingCommitmentsOpenDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Compromisos abiertos de mis reuniones (seguimiento con semáforo de vencimiento).",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
     "/meetings/{id}": {
       "get": {
         "operationId": "MeetingController_get",
@@ -6773,7 +7054,7 @@
             "description": "Reunion fuera de alcance."
           },
           "409": {
-            "description": "Acta cerrada o con compromisos."
+            "description": "Acta cerrada, con compromisos o con tiempo registrado en una bitácora."
           }
         },
         "summary": "Borra un acta abierta sin compromisos (cascade de participantes).",
@@ -6806,6 +7087,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Falta la duración de la reunión.\n\nFalta la duración de la reunión."
           },
           "403": {
             "description": "Sin permiso para cerrar el acta."
@@ -6970,6 +7254,31 @@
           }
         },
         "summary": "Crea un compromiso (vencimiento requerido).",
+        "tags": [
+          "commitments"
+        ]
+      }
+    },
+    "/commitments/my-work": {
+      "get": {
+        "operationId": "CommitmentController_myWork",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Compromisos de Mi trabajo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitmentMyWorkDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Compromisos abiertos de la persona (vencidos y que vencen hoy) para Mi trabajo.",
         "tags": [
           "commitments"
         ]
@@ -15194,6 +15503,45 @@
           "return"
         ]
       },
+      "ActivitySourceDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "MEETING",
+              "OCCURRENCE",
+              "TASK"
+            ]
+          },
+          "meetingId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "occurrenceId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "label": {
+            "type": "string",
+            "description": "Etiqueta legible del origen (título del acta, de la actividad o código de la tarea)."
+          }
+        },
+        "required": [
+          "kind",
+          "meetingId",
+          "occurrenceId",
+          "taskId",
+          "label"
+        ]
+      },
       "ActivityResponseDto": {
         "type": "object",
         "properties": {
@@ -15212,7 +15560,22 @@
           },
           "hours": {
             "type": "number",
-            "description": "Horas de dedicacion (BR-013)."
+            "multipleOf": 0.25,
+            "description": "Horas de dedicacion (pasos de 0,25; 0 = sin horas en registros antiguos). BR-013."
+          },
+          "source": {
+            "nullable": true,
+            "description": "Origen si la actividad vino de una sugerencia del día.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActivitySourceDto"
+              }
+            ]
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "Clasificación y origen no editables (actividad de reunión o recurrente)."
           },
           "projectRequestId": {
             "type": "string",
@@ -15300,6 +15663,8 @@
           "dailyLogId",
           "classificationCode",
           "hours",
+          "source",
+          "locked",
           "projectRequestId",
           "projectRequestTitle",
           "projectRequestCode",
@@ -15367,6 +15732,18 @@
             "type": "number",
             "description": "Suma de horas de las actividades (dedicacion del dia)."
           },
+          "authorDayTotalHours": {
+            "type": "number",
+            "description": "Horas del autor en esa fecha sumando todos sus diarios (cualquier proceso y estado)."
+          },
+          "workdayHours": {
+            "type": "number",
+            "description": "Jornada diaria configurada (maestra WORKLOG_PARAM / WORKDAY_HOURS; 9 por defecto)."
+          },
+          "overWorkday": {
+            "type": "boolean",
+            "description": "El total del día supera la jornada (aviso, no bloquea)."
+          },
           "reviewedAt": {
             "type": "string",
             "format": "date-time",
@@ -15433,6 +15810,9 @@
           "submittedAt",
           "dayNotes",
           "totalHours",
+          "authorDayTotalHours",
+          "workdayHours",
+          "overWorkday",
           "reviewedAt",
           "reviewedByName",
           "returnedAt",
@@ -15643,6 +16023,424 @@
           "reason"
         ]
       },
+      "SuggestionMeetingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hora de inicio HH:mm."
+          },
+          "endTime": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hora de fin HH:mm."
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "minutesOpen": {
+            "type": "boolean",
+            "description": "El acta sigue en borrador (no bloquea la sugerencia)."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "processName": {
+            "type": "string"
+          },
+          "responsible": {
+            "type": "boolean",
+            "description": "El autor es el responsable de la reunión."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "time",
+          "endTime",
+          "durationMinutes",
+          "minutesOpen",
+          "processId",
+          "processName",
+          "responsible"
+        ]
+      },
+      "SuggestionOccurrenceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activityTitle": {
+            "type": "string"
+          },
+          "targetDate": {
+            "type": "string",
+            "description": "Fecha objetivo (YYYY-MM-DD)."
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completionComment": {
+            "type": "string",
+            "nullable": true,
+            "description": "Qué se realizó."
+          }
+        },
+        "required": [
+          "id",
+          "activityTitle",
+          "targetDate",
+          "completedAt",
+          "completionComment"
+        ]
+      },
+      "SuggestionTaskReasonDto": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "enum": [
+              "progress",
+              "status"
+            ]
+          },
+          "from": {
+            "type": "string",
+            "nullable": true
+          },
+          "to": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "field",
+          "from",
+          "to"
+        ]
+      },
+      "SuggestionTaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestCode": {
+            "type": "string"
+          },
+          "projectTitle": {
+            "type": "string"
+          },
+          "reasons": {
+            "description": "Cambios de avance o estado del día.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SuggestionTaskReasonDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "requestId",
+          "requestCode",
+          "projectTitle",
+          "reasons"
+        ]
+      },
+      "SuggestionDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Clave opaca del origen (la construye el servidor)."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "MEETING",
+              "OCCURRENCE",
+              "TASK"
+            ]
+          },
+          "classificationCode": {
+            "type": "string",
+            "enum": [
+              "REUNION",
+              "RECURRENTE",
+              "PLANIFICADA"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "SUGGESTED",
+              "DISMISSED"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Texto propuesto para la actividad."
+          },
+          "suggestedHours": {
+            "type": "number",
+            "nullable": true,
+            "multipleOf": 0.25,
+            "description": "Horas propuestas; null = el usuario debe indicarlas."
+          },
+          "hoursAdjusted": {
+            "type": "boolean",
+            "description": "Las horas se redondearon al 0,25 más cercano."
+          },
+          "originalHours": {
+            "type": "number",
+            "nullable": true,
+            "description": "Horas reales antes de redondear (ocurrencia)."
+          },
+          "requiresHoursInput": {
+            "type": "boolean",
+            "description": "Hay que indicar las horas al aceptar."
+          },
+          "meeting": {
+            "$ref": "#/components/schemas/SuggestionMeetingDto"
+          },
+          "occurrence": {
+            "$ref": "#/components/schemas/SuggestionOccurrenceDto"
+          },
+          "task": {
+            "$ref": "#/components/schemas/SuggestionTaskDto"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "classificationCode",
+          "status",
+          "title",
+          "description",
+          "suggestedHours",
+          "hoursAdjusted",
+          "originalHours",
+          "requiresHoursInput"
+        ]
+      },
+      "DailySuggestionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "dailyLogId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "description": "Fecha del diario (YYYY-MM-DD)."
+          },
+          "editable": {
+            "type": "boolean",
+            "description": "El diario está en borrador (se pueden aceptar sugerencias)."
+          },
+          "pendingCount": {
+            "type": "number",
+            "description": "Sugerencias pendientes (sin las descartadas)."
+          },
+          "dismissedCount": {
+            "type": "number"
+          },
+          "authorDayTotalHours": {
+            "type": "number",
+            "description": "Horas del autor en esa fecha (todos sus diarios)."
+          },
+          "workdayHours": {
+            "type": "number",
+            "description": "Jornada diaria configurada."
+          },
+          "overWorkday": {
+            "type": "boolean",
+            "description": "El total del día supera la jornada (aviso)."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SuggestionDto"
+            }
+          }
+        },
+        "required": [
+          "dailyLogId",
+          "date",
+          "editable",
+          "pendingCount",
+          "dismissedCount",
+          "authorDayTotalHours",
+          "workdayHours",
+          "overWorkday",
+          "items"
+        ]
+      },
+      "AcceptSuggestionItemDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Clave de la sugerencia."
+          },
+          "hours": {
+            "type": "number",
+            "minimum": 0.25,
+            "maximum": 24,
+            "multipleOf": 0.25,
+            "description": "Horas (ajuste). Si se omite se usan las sugeridas."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Descripción (si se omite, la propuesta)."
+          }
+        },
+        "required": [
+          "key"
+        ]
+      },
+      "AcceptSuggestionsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AcceptSuggestionItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "AcceptSuggestionFailureDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "NO_DISPONIBLE",
+              "HORAS_REQUERIDAS",
+              "YA_REGISTRADA",
+              "NO_ELEGIBLE",
+              "HORAS_INVALIDAS"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "code",
+          "message"
+        ]
+      },
+      "AcceptSuggestionsResultDto": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "description": "Actividades creadas.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivityResponseDto"
+            }
+          },
+          "failed": {
+            "description": "Sugerencias que no se pudieron aceptar.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AcceptSuggestionFailureDto"
+            }
+          }
+        },
+        "required": [
+          "accepted",
+          "failed"
+        ]
+      },
+      "SuggestionKeysDto": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ]
+      },
+      "DismissSuggestionsResultDto": {
+        "type": "object",
+        "properties": {
+          "dismissed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "dismissed"
+        ]
+      },
+      "RestoreSuggestionsResultDto": {
+        "type": "object",
+        "properties": {
+          "restored": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "restored"
+        ]
+      },
       "CreateActivityDto": {
         "type": "object",
         "properties": {
@@ -15652,15 +16450,19 @@
               "PLANIFICADA",
               "SOPORTE",
               "INTERNA",
-              "EXTRAORDINARIA"
+              "EXTRAORDINARIA",
+              "REUNION",
+              "RECURRENTE"
             ],
             "description": "Clasificacion de la actividad (maestra ACTIVITY_CLASS).",
             "example": "PLANIFICADA"
           },
           "hours": {
             "type": "number",
-            "description": "Horas de dedicacion (entero >= 0). No afecta el avance de la tarea (BR-013).",
-            "minimum": 0,
+            "description": "Horas de dedicacion (0,25 a 24 en pasos de 0,25). No afecta el avance de la tarea (BR-013).",
+            "minimum": 0.25,
+            "maximum": 24,
+            "multipleOf": 0.25,
             "example": 4
           },
           "projectRequestId": {
@@ -15738,14 +16540,18 @@
               "PLANIFICADA",
               "SOPORTE",
               "INTERNA",
-              "EXTRAORDINARIA"
+              "EXTRAORDINARIA",
+              "REUNION",
+              "RECURRENTE"
             ],
             "description": "Clasificacion de la actividad."
           },
           "hours": {
             "type": "number",
-            "description": "Horas de dedicacion (entero >= 0).",
-            "minimum": 0
+            "description": "Horas de dedicacion (0,25 a 24 en pasos de 0,25).",
+            "minimum": 0.25,
+            "maximum": 24,
+            "multipleOf": 0.25
           },
           "projectRequestId": {
             "type": "string",
@@ -16091,6 +16897,32 @@
           "result": {
             "type": "string",
             "nullable": true
+          },
+          "assignedUserName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre de la persona asignada."
+          },
+          "responsibleUserName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del responsable del compromiso."
+          },
+          "dueStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "VENCIDO",
+              "VENCE_HOY",
+              "PROXIMO",
+              "A_TIEMPO"
+            ],
+            "description": "Semáforo de vencimiento; null si el compromiso ya terminó."
+          },
+          "daysToDue": {
+            "type": "number",
+            "nullable": true,
+            "description": "Días hasta el vencimiento (negativo = vencido)."
           }
         },
         "required": [
@@ -16101,7 +16933,11 @@
           "assignedUserId",
           "responsibleUserId",
           "expectedResult",
-          "result"
+          "result",
+          "assignedUserName",
+          "responsibleUserName",
+          "dueStatus",
+          "daysToDue"
         ]
       },
       "MeetingResponseDto": {
@@ -16132,6 +16968,16 @@
             "type": "string",
             "nullable": true,
             "description": "Hora HH:mm (texto)."
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true,
+            "description": "Duración en minutos (múltiplo de 15); null si no se registró."
+          },
+          "meetingEndTime": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hora de fin HH:mm (hora + duración); null si falta alguna o cruza la medianoche."
           },
           "participantUserIds": {
             "description": "Participantes.",
@@ -16203,6 +17049,8 @@
           "state",
           "meetingDate",
           "meetingTime",
+          "durationMinutes",
+          "meetingEndTime",
           "participantUserIds",
           "responsibleUserId",
           "relatedRequestId",
@@ -16216,6 +17064,147 @@
           "commitments",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "CommitmentFollowUpCountsDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "vencido": {
+            "type": "number"
+          },
+          "venceHoy": {
+            "type": "number"
+          },
+          "proximo": {
+            "type": "number"
+          },
+          "aTiempo": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "vencido",
+          "venceHoy",
+          "proximo",
+          "aTiempo"
+        ]
+      },
+      "CommitmentFollowUpItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "description": "Estado (EN_CURSO o BLOQUEADO)."
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Vencimiento (YYYY-MM-DD)."
+          },
+          "dueStatus": {
+            "type": "string",
+            "enum": [
+              "VENCIDO",
+              "VENCE_HOY",
+              "PROXIMO",
+              "A_TIEMPO"
+            ]
+          },
+          "daysToDue": {
+            "type": "number",
+            "description": "Días hasta el vencimiento (negativo = vencido)."
+          },
+          "assignedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "assignedUserName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Asignado (o responsable si no hay asignado)."
+          },
+          "meetingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "meetingTitle": {
+            "type": "string"
+          },
+          "meetingDate": {
+            "type": "string",
+            "description": "Fecha de la reunión (YYYY-MM-DD)."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "processName": {
+            "type": "string"
+          },
+          "expectedResult": {
+            "type": "string",
+            "nullable": true
+          },
+          "blockers": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "state",
+          "dueDate",
+          "dueStatus",
+          "daysToDue",
+          "assignedUserId",
+          "assignedUserName",
+          "meetingId",
+          "meetingTitle",
+          "meetingDate",
+          "processId",
+          "processName",
+          "expectedResult",
+          "blockers"
+        ]
+      },
+      "MeetingCommitmentsOpenDto": {
+        "type": "object",
+        "properties": {
+          "counts": {
+            "description": "Contadores sobre el conjunto filtrado.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CommitmentFollowUpCountsDto"
+              }
+            ]
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "true si se recortó la lista al tope (500)."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommitmentFollowUpItemDto"
+            }
+          }
+        },
+        "required": [
+          "counts",
+          "truncated",
+          "items"
         ]
       },
       "CreateMeetingDto": {
@@ -16242,6 +17231,14 @@
             "description": "Hora HH:mm (texto).",
             "example": "14:30",
             "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "description": "Duración en minutos (múltiplo de 15, entre 15 y 1440). Opcional en borrador; obligatoria al cerrar el acta.",
+            "minimum": 15,
+            "maximum": 1440,
+            "multipleOf": 15,
+            "example": 60
           },
           "participantUserIds": {
             "description": "Participantes (en alcance).",
@@ -16316,6 +17313,14 @@
             "type": "string",
             "description": "Hora HH:mm.",
             "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "nullable": true,
+            "description": "Duración en minutos (múltiplo de 15, entre 15 y 1440). null la borra (solo en borrador). Sobre un acta cerrada se admite como único campo del PATCH.",
+            "minimum": 15,
+            "maximum": 1440,
+            "multipleOf": 15
           },
           "participantUserIds": {
             "description": "Reemplaza participantes (en alcance).",
@@ -16428,6 +17433,22 @@
             "type": "string",
             "nullable": true
           },
+          "dueStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "VENCIDO",
+              "VENCE_HOY",
+              "PROXIMO",
+              "A_TIEMPO"
+            ],
+            "description": "Semáforo de vencimiento; null si el compromiso ya terminó."
+          },
+          "daysToDue": {
+            "type": "number",
+            "nullable": true,
+            "description": "Días hasta el vencimiento (negativo = vencido)."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -16453,6 +17474,8 @@
           "expectedResult",
           "result",
           "blockers",
+          "dueStatus",
+          "daysToDue",
           "createdAt",
           "updatedAt"
         ]
@@ -16521,6 +17544,114 @@
           "processId",
           "title",
           "dueDate"
+        ]
+      },
+      "CommitmentMyWorkItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "description": "Estado (maestra RECORD_STATE)."
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Vencimiento (YYYY-MM-DD)."
+          },
+          "dueStatus": {
+            "type": "string",
+            "enum": [
+              "VENCIDO",
+              "VENCE_HOY",
+              "PROXIMO",
+              "A_TIEMPO"
+            ]
+          },
+          "daysToDue": {
+            "type": "number",
+            "description": "Días hasta el vencimiento (negativo = vencido)."
+          },
+          "processId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "processName": {
+            "type": "string",
+            "description": "Nombre del proceso."
+          },
+          "sourceMeetingId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "sourceMeetingTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Título del acta de origen."
+          },
+          "expectedResult": {
+            "type": "string",
+            "nullable": true
+          },
+          "canComplete": {
+            "type": "boolean",
+            "description": "La persona puede completarlo desde Mi trabajo (transición COMPLETADO)."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "state",
+          "dueDate",
+          "dueStatus",
+          "daysToDue",
+          "processId",
+          "processName",
+          "sourceMeetingId",
+          "sourceMeetingTitle",
+          "expectedResult",
+          "canComplete"
+        ]
+      },
+      "CommitmentMyWorkDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Compromisos abiertos de la persona (todos)."
+          },
+          "overdueCount": {
+            "type": "number",
+            "description": "Abiertos vencidos."
+          },
+          "dueTodayCount": {
+            "type": "number",
+            "description": "Abiertos que vencen hoy."
+          },
+          "upcomingCount": {
+            "type": "number",
+            "description": "Abiertos con vencimiento posterior a hoy."
+          },
+          "items": {
+            "description": "Vencidos (más antiguos primero) y los que vencen hoy.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommitmentMyWorkItemDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "overdueCount",
+          "dueTodayCount",
+          "upcomingCount",
+          "items"
         ]
       },
       "UpdateCommitmentDto": {
