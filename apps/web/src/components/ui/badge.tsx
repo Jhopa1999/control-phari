@@ -14,6 +14,8 @@ const badgeTones = {
   danger: 'bg-danger/12 text-danger',
   accent: 'bg-primary/12 text-link',
   outline: 'border-border-strong text-foreground',
+  // Azul intenso (mismo par que el botón primario, 4,84:1): «En curso».
+  solid: 'bg-primary text-primary-foreground',
 } as const;
 
 // No es interactivo: sin estilos de foco. El borde transparente se vuelve

@@ -2,10 +2,12 @@
 
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
-import { CalendarClock, Plus, RefreshCw } from 'lucide-react';
+import { CalendarCheck, CalendarClock, CircleCheck, Plus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
@@ -28,82 +30,63 @@ import type {
   CatalogItem,
   CreateRecurringActivity,
   RecurringActivity,
+  RecurringBoard,
   RecurringOccurrence,
   User,
 } from '@/lib/api-client';
 import { listAreas } from '@/lib/areas';
 import { listCatalogItems } from '@/lib/catalog';
-import { formatDateOnly, orDash } from '@/lib/format';
+import { formatDateOnly, formatHours, localDateInputValue, orDash } from '@/lib/format';
 import {
-  ApiError,
-  completeOccurrence,
   createActivity,
   listActivities,
-  listOccurrences,
+  listBoard,
   pauseActivity,
-  startOccurrence,
+  resumeActivity,
   updateActivity,
 } from '@/lib/recurring-activities';
-import { recurrenceLabel, responsibleKindLabel } from '@/lib/status-labels';
+import { activityTypeLabel, cadenceText, responsibleKindLabel } from '@/lib/status-labels';
 import { listUsers } from '@/lib/team';
+import { CalendarTab } from './calendar-tab';
 import { CompleteOccurrenceDialog } from './complete-occurrence-dialog';
 import { CompliancePanel } from './compliance-panel';
 import { DefinitionFormDialog } from './definition-form-dialog';
 import { OccurrenceDetailDialog } from './occurrence-detail-dialog';
+import { OccurrenceGroups } from './occurrence-groups';
+import { messageOf, takeOccurrence } from './occurrence-shared';
+import { WeekHeader } from './week-header';
 
 type LoadState = 'loading' | 'success' | 'error';
 
 const ACTIVITY_TYPE_CATALOG = 'RECURRING_ACTIVITY_TYPE';
 
-function messageOf(err: unknown): string {
-  return err instanceof ApiError ? err.message : 'Ocurrió un error inesperado.';
-}
-
-/** Agrupa ocurrencias por su etiqueta de periodo (periodLabel), conservando el orden. */
-function groupByPeriod(
-  rows: RecurringOccurrence[],
-): Array<{ period: string; items: RecurringOccurrence[] }> {
-  const groups: Array<{ period: string; items: RecurringOccurrence[] }> = [];
-  const index = new Map<string, number>();
-  for (const row of rows) {
-    const key = row.periodLabel ?? 'Sin periodo';
-    let pos = index.get(key);
-    if (pos === undefined) {
-      pos = groups.length;
-      index.set(key, pos);
-      groups.push({ period: key, items: [] });
-    }
-    groups[pos].items.push(row);
-  }
-  return groups;
-}
-
 /**
- * Sección de Actividades recurrentes (FEAT-002). Dos vistas en pestañas:
- * «Qué me toca» (ocurrencias del actor, scope=mine) y «Gestión» (definiciones,
- * solo para jefe de área o admin; el backend es la autoridad del alcance). Solo
- * consume el cliente tipado del contrato OpenAPI: no toca Prisma ni la BD y no
- * duplica reglas de negocio.
+ * Sección de Actividades recurrentes. Pestañas: «Qué me toca» (tablero de la
+ * semana), «Calendario» (mensual) y, solo con permiso, «Gestión» y
+ * «Cumplimiento». El backend es la autoridad del alcance y de los estados
+ * (displayStatus, canStart, canComplete): el web solo presenta. Usa el cliente
+ * tipado del contrato OpenAPI.
  */
 export function ActividadesRecurrentesView(): React.ReactElement {
   const { actorId, permissions } = useActor();
-  const roleCodes = React.useMemo(
-    () => new Set(permissions?.roleCodes ?? []),
-    [permissions],
-  );
+  const roleCodes = React.useMemo(() => new Set(permissions?.roleCodes ?? []), [permissions]);
   const canManage = roleCodes.has('JEFE_AREA') || roleCodes.has('ADMIN');
 
   // --- Qué me toca ---
-  const [occurrences, setOccurrences] = React.useState<RecurringOccurrence[]>([]);
-  const [occState, setOccState] = React.useState<LoadState>('loading');
-  const [occError, setOccError] = React.useState<string | null>(null);
+  const [board, setBoard] = React.useState<RecurringBoard | null>(null);
+  const [boardState, setBoardState] = React.useState<LoadState>('loading');
+  const [boardError, setBoardError] = React.useState<string | null>(null);
+  const [refreshFailed, setRefreshFailed] = React.useState(false);
+  const [completedWeeks, setCompletedWeeks] = React.useState(4);
+  const [announce, setAnnounce] = React.useState('');
+  const [reloadKey, setReloadKey] = React.useState(0);
 
   // --- Gestión ---
   const [activities, setActivities] = React.useState<RecurringActivity[]>([]);
   const [defState, setDefState] = React.useState<LoadState>('loading');
   const [defError, setDefError] = React.useState<string | null>(null);
 
-  // --- Catálogos para el formulario y para resolver nombres ---
+  // --- Catálogos ---
   const [activityTypes, setActivityTypes] = React.useState<CatalogItem[]>([]);
   const [users, setUsers] = React.useState<User[]>([]);
   const [areas, setAreas] = React.useState<Area[]>([]);
@@ -117,32 +100,42 @@ export function ActividadesRecurrentesView(): React.ReactElement {
   // --- Diálogos ---
   const [completeTarget, setCompleteTarget] = React.useState<RecurringOccurrence | null>(null);
   const [completeOpen, setCompleteOpen] = React.useState(false);
-  const [completeSubmitting, setCompleteSubmitting] = React.useState(false);
-  const [completeError, setCompleteError] = React.useState<string | null>(null);
-
   const [detailTarget, setDetailTarget] = React.useState<RecurringOccurrence | null>(null);
   const [detailOpen, setDetailOpen] = React.useState(false);
-
   const [defDialogOpen, setDefDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<RecurringActivity | null>(null);
   const [defSubmitting, setDefSubmitting] = React.useState(false);
   const [defFormError, setDefFormError] = React.useState<string | null>(null);
+  const [pauseTarget, setPauseTarget] = React.useState<RecurringActivity | null>(null);
 
-  const fetchOccurrences = React.useCallback(() => {
-    return listOccurrences({ scope: 'mine', pageSize: 100 })
-      .then((page) => {
-        setOccurrences(page.data);
-        setOccState('success');
-      })
-      .catch((err: unknown) => {
-        setOccError(messageOf(err));
-        setOccState('error');
-      });
-  }, []);
-  const loadOccurrences = React.useCallback(() => {
-    setOccState('loading');
-    return fetchOccurrences();
-  }, [fetchOccurrences]);
+  const fetchBoard = React.useCallback(
+    (weeks: number) => {
+      return listBoard({ completedWeeks: weeks as 0 | 4 | 12 })
+        .then((data) => {
+          setBoard(data);
+          setBoardState('success');
+          setRefreshFailed(false);
+          setAnnounce(
+            `Cargadas ${data.overdue.length + data.thisWeek.length + data.upcoming.length} actividades: ` +
+              `${data.counts.overdue} vencidas, ${data.counts.thisWeek} esta semana.`,
+          );
+        })
+        .catch((err: unknown) => {
+          setBoardError(messageOf(err));
+          // Con datos ya cargados se conserva la última carga y se avisa.
+          setBoardState((current) => (current === 'success' ? 'success' : 'error'));
+          setRefreshFailed(true);
+        });
+    },
+    [],
+  );
+  const loadBoard = React.useCallback(
+    (weeks: number = completedWeeks) => {
+      setReloadKey((n) => n + 1);
+      return fetchBoard(weeks);
+    },
+    [fetchBoard, completedWeeks],
+  );
 
   const fetchActivities = React.useCallback(() => {
     return listActivities()
@@ -176,12 +169,11 @@ export function ActividadesRecurrentesView(): React.ReactElement {
       });
   }, []);
 
-  // Al cambiar de usuario se vuelve a mostrar la carga.
-  useResetOnChange([actorId], () => setOccState('loading'));
+  useResetOnChange([actorId], () => setBoardState('loading'));
   React.useEffect(() => {
-    void fetchOccurrences();
+    void fetchBoard(4);
     void loadReferences();
-  }, [fetchOccurrences, loadReferences, actorId]);
+  }, [fetchBoard, loadReferences, actorId]);
 
   useResetOnChange([canManage, actorId], () => {
     if (canManage) setDefState('loading');
@@ -192,8 +184,8 @@ export function ActividadesRecurrentesView(): React.ReactElement {
 
   // --- Acciones de ocurrencias ---
   function openComplete(occurrence: RecurringOccurrence): void {
+    setDetailOpen(false);
     setCompleteTarget(occurrence);
-    setCompleteError(null);
     setCompleteOpen(true);
   }
 
@@ -202,36 +194,21 @@ export function ActividadesRecurrentesView(): React.ReactElement {
     setDetailOpen(true);
   }
 
-  async function handleComplete(values: {
-    comment: string;
-    actualHours: number;
-  }): Promise<void> {
-    if (!completeTarget) return;
-    setCompleteSubmitting(true);
-    setCompleteError(null);
-    try {
-      await completeOccurrence(completeTarget.id, values);
-      toast.success('Actividad completada.');
-      setCompleteOpen(false);
-      setCompleteTarget(null);
-      await loadOccurrences();
-    } catch (err) {
-      const message = messageOf(err);
-      setCompleteError(message);
-      toast.error(message);
-    } finally {
-      setCompleteSubmitting(false);
-    }
+  async function handleStart(occurrence: RecurringOccurrence): Promise<void> {
+    setDetailOpen(false);
+    if (await takeOccurrence(occurrence)) await loadBoard();
   }
 
-  async function handleStart(occurrence: RecurringOccurrence): Promise<void> {
-    try {
-      await startOccurrence(occurrence.id);
-      toast.success('Actividad tomada.');
-      await loadOccurrences();
-    } catch (err) {
-      toast.error(messageOf(err));
-    }
+  function changeCompletedWeeks(weeks: number): void {
+    setCompletedWeeks(weeks);
+    void fetchBoard(weeks);
+  }
+
+  function jumpTo(group: 'overdue' | 'thisWeek'): void {
+    const target = document.getElementById(`grupo-${group}`);
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.focus({ preventScroll: true });
   }
 
   // --- Acciones de definiciones ---
@@ -247,20 +224,24 @@ export function ActividadesRecurrentesView(): React.ReactElement {
     setDefDialogOpen(true);
   }
 
-  async function handleDefSubmit(values: CreateRecurringActivity): Promise<void> {
+  async function handleDefSubmit(values: CreateRecurringActivity, regenerates: boolean): Promise<void> {
     setDefSubmitting(true);
     setDefFormError(null);
     try {
       if (editing) {
         await updateActivity(editing.id, values);
-        toast.success('Actividad actualizada.');
+        toast.success(
+          regenerates
+            ? 'Actividad actualizada. Se regeneraron las próximas fechas.'
+            : 'Actividad actualizada.',
+        );
       } else {
         await createActivity(values);
         toast.success('Actividad creada.');
       }
       setDefDialogOpen(false);
       setEditing(null);
-      await Promise.all([loadActivities(), loadOccurrences()]);
+      await Promise.all([loadActivities(), loadBoard()]);
     } catch (err) {
       const message = messageOf(err);
       setDefFormError(message);
@@ -274,25 +255,20 @@ export function ActividadesRecurrentesView(): React.ReactElement {
     try {
       await pauseActivity(activity.id);
       toast.success('Actividad pausada.');
-      await loadActivities();
+      await Promise.all([loadActivities(), loadBoard()]);
     } catch (err) {
       toast.error(messageOf(err));
     }
   }
 
-  function occurrenceActions(occurrence: RecurringOccurrence): RowAction[] {
-    if (occurrence.status === 'COMPLETADA') {
-      return [
-        { key: 'detail', label: 'Ver detalle', onSelect: () => openDetail(occurrence), placement: 'inline' },
-      ];
+  async function handleResume(activity: RecurringActivity): Promise<void> {
+    try {
+      await resumeActivity(activity.id);
+      toast.success('Actividad reanudada. Se programaron las próximas fechas.');
+      await Promise.all([loadActivities(), loadBoard()]);
+    } catch (err) {
+      toast.error(messageOf(err));
     }
-    const actions: RowAction[] = [
-      { key: 'complete', label: 'Completar', onSelect: () => openComplete(occurrence), placement: 'inline' },
-    ];
-    if (occurrence.status === 'PENDIENTE') {
-      actions.push({ key: 'start', label: 'Tomar', onSelect: () => void handleStart(occurrence) });
-    }
-    return actions;
   }
 
   function definitionActions(activity: RecurringActivity): RowAction[] {
@@ -300,81 +276,89 @@ export function ActividadesRecurrentesView(): React.ReactElement {
       { key: 'edit', label: 'Editar', onSelect: () => openEdit(activity), placement: 'inline' },
     ];
     if (activity.active) {
-      actions.push({ key: 'pause', label: 'Pausar', onSelect: () => void handlePause(activity) });
+      actions.push({ key: 'pause', label: 'Pausar', onSelect: () => setPauseTarget(activity) });
+    } else {
+      actions.push({
+        key: 'resume',
+        label: 'Reanudar',
+        onSelect: () => void handleResume(activity),
+        placement: 'inline',
+      });
     }
     return actions;
   }
 
   // --- Render de «Qué me toca» ---
+  const handlers = {
+    onStart: (occurrence: RecurringOccurrence) => void handleStart(occurrence),
+    onComplete: openComplete,
+    onDetail: openDetail,
+  };
+
   let misActividades: React.ReactNode;
-  if (occState === 'loading') {
+  if (boardState === 'loading') {
     misActividades = (
       <div aria-busy="true" className="flex flex-col gap-4">
-        <Skeleton className="h-48 rounded-lg" />
+        <Skeleton className="h-20 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
       </div>
     );
-  } else if (occState === 'error') {
+  } else if (boardState === 'error' || board === null) {
     misActividades = (
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-xl bg-card shadow-card">
         <ErrorState
           title="No fue posible cargar tus actividades."
-          message={occError}
-          onRetry={() => void loadOccurrences()}
-        />
-      </div>
-    );
-  } else if (occurrences.length === 0) {
-    misActividades = (
-      <div className="overflow-hidden rounded-lg border bg-card">
-        <EmptyState
-          icon={CalendarClock}
-          title="No tienes actividades recurrentes pendientes."
-          description="Cuando se te asigne una actividad recurrente, aparecerá aquí agrupada por periodo."
+          message={boardError}
+          onRetry={() => {
+            setBoardState('loading');
+            void loadBoard();
+          }}
         />
       </div>
     );
   } else {
+    const total = board.overdue.length + board.thisWeek.length + board.upcoming.length + board.completed.length;
+    const nothingToDo = board.overdue.length === 0 && board.thisWeek.length === 0;
     misActividades = (
       <div className="flex flex-col gap-6">
-        {groupByPeriod(occurrences).map((group) => (
-          <Section key={group.period} title={group.period} count={group.items.length}>
-            <div className="overflow-hidden rounded-lg border bg-card">
-              <Table scrollLabel={`Actividades del periodo ${group.period}`}>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Actividad</TableHead>
-                    <TableHead>Cadencia</TableHead>
-                    <TableHead>Fecha objetivo</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {group.items.map((occurrence) => (
-                    <TableRow key={occurrence.id}>
-                      <TableCell className="min-w-48 font-medium">{occurrence.activityTitle}</TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {recurrenceLabel(occurrence.cadence)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">
-                        {formatDateOnly(occurrence.targetDate)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <StatusBadge kind="occurrence" value={occurrence.status} />
-                      </TableCell>
-                      <RowActionsCell>
-                        <RowActions
-                          rowLabel={occurrence.activityTitle}
-                          actions={occurrenceActions(occurrence)}
-                        />
-                      </RowActionsCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </Section>
-        ))}
+        {refreshFailed ? (
+          <InlineNotice
+            tone="warning"
+            action={
+              <Button type="button" size="sm" variant="outline" onClick={() => void loadBoard()}>
+                Reintentar
+              </Button>
+            }
+          >
+            No se pudo actualizar. Mostrando la última carga.
+          </InlineNotice>
+        ) : null}
+        <WeekHeader board={board} onJump={jumpTo} />
+        {total === 0 ? (
+          <div className="overflow-hidden rounded-xl bg-card shadow-card">
+            <EmptyState
+              icon={CalendarCheck}
+              title="No tienes actividades recurrentes por ahora."
+              description="Cuando se te asigne una, aparecerá aquí y se habilitará unos días antes de su fecha."
+            />
+          </div>
+        ) : (
+          <>
+            {nothingToDo ? (
+              <div className="rounded-xl bg-card shadow-card">
+                <EmptyState icon={CircleCheck} size="compact" title="Estás al día esta semana." />
+              </div>
+            ) : null}
+            <OccurrenceGroups
+              board={board}
+              activityTypes={activityTypes}
+              completedWeeks={completedWeeks}
+              onCompletedWeeksChange={changeCompletedWeeks}
+              {...handlers}
+            />
+          </>
+        )}
       </div>
     );
   }
@@ -391,12 +375,12 @@ export function ActividadesRecurrentesView(): React.ReactElement {
   if (defState === 'loading') {
     gestion = (
       <div aria-busy="true" className="flex flex-col gap-4">
-        <Skeleton className="h-48 rounded-lg" />
+        <Skeleton className="h-48 rounded-xl" />
       </div>
     );
   } else if (defState === 'error') {
     gestion = (
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-xl bg-card shadow-card">
         <ErrorState
           title="No fue posible cargar las definiciones."
           message={defError}
@@ -407,7 +391,7 @@ export function ActividadesRecurrentesView(): React.ReactElement {
   } else {
     gestion = (
       <Section title="Definiciones" count={activities.length} actions={newButton}>
-        <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-hidden rounded-xl bg-card shadow-card">
           {activities.length === 0 ? (
             <EmptyState
               icon={CalendarClock}
@@ -421,7 +405,8 @@ export function ActividadesRecurrentesView(): React.ReactElement {
                 <TableRow>
                   <TableHead>Actividad</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Cadencia</TableHead>
+                  <TableHead>Se repite</TableHead>
+                  <TableHead>Esfuerzo</TableHead>
                   <TableHead>Responsable</TableHead>
                   <TableHead>Inicio</TableHead>
                   <TableHead>Estado</TableHead>
@@ -433,21 +418,19 @@ export function ActividadesRecurrentesView(): React.ReactElement {
                   <TableRow key={activity.id}>
                     <TableCell className="min-w-48 font-medium">{activity.title}</TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {activity.activityType}
+                      {activityTypeLabel(activity.activityType, activityTypes)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {recurrenceLabel(activity.cadence)}
-                      {activity.intervalCount > 1 ? ` ×${activity.intervalCount}` : ''}
+                      {cadenceText(activity.cadence, activity.intervalCount)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums">
+                      {formatHours(activity.estimatedHours)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
                       {responsibleKindLabel(activity.responsibleKind)}
                       {': '}
                       {activity.responsibleKind === 'USER'
-                        ? orDash(
-                            activity.responsibleUserId
-                              ? userNameById.get(activity.responsibleUserId)
-                              : null,
-                          )
+                        ? orDash(activity.responsibleUserId ? userNameById.get(activity.responsibleUserId) : null)
                         : orDash(
                             activity.responsibleAreaId
                               ? areas.find((a) => a.id === activity.responsibleAreaId)?.name
@@ -458,7 +441,7 @@ export function ActividadesRecurrentesView(): React.ReactElement {
                       {formatDateOnly(activity.startDate)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      <StatusBadge kind="active" value={String(activity.active)} />
+                      <StatusBadge kind="recurringDefinition" value={String(activity.active)} />
                     </TableCell>
                     <RowActionsCell>
                       <RowActions rowLabel={activity.title} actions={definitionActions(activity)} />
@@ -473,59 +456,71 @@ export function ActividadesRecurrentesView(): React.ReactElement {
     );
   }
 
+  const calendar = (
+    <CalendarTab
+      canManage={canManage}
+      users={users}
+      areas={areas}
+      today={board?.today ?? localDateInputValue()}
+      onOpenDetail={openDetail}
+      reloadKey={reloadKey}
+    />
+  );
+
   return (
     <PageLayout>
       <PageHeader
         title="Actividades recurrentes"
-        description="Tareas que se repiten (reportes, validaciones, revisiones). Revisa qué te toca y márcalas como completadas."
+        description="Lo que te toca hacer y cuándo. Las actividades programadas se habilitan unos días antes de su fecha."
         actions={
-          <Button type="button" variant="outline" onClick={() => void loadOccurrences()}>
+          <Button type="button" variant="outline" onClick={() => void loadBoard()}>
             <RefreshCw aria-hidden="true" />
             Actualizar
           </Button>
         }
       />
+      <p className="sr-only" role="status" aria-live="polite">
+        {announce}
+      </p>
 
-      {canManage ? (
-        <Tabs defaultValue="mine">
-          <TabsList>
-            <TabsTrigger value="mine">Qué me toca</TabsTrigger>
-            <TabsTrigger value="manage">Gestión</TabsTrigger>
-            <TabsTrigger value="compliance">Cumplimiento</TabsTrigger>
-          </TabsList>
-          <TabsContent value="mine">{misActividades}</TabsContent>
-          <TabsContent value="manage">{gestion}</TabsContent>
+      <Tabs defaultValue="mine">
+        <TabsList>
+          <TabsTrigger value="mine">Qué me toca</TabsTrigger>
+          <TabsTrigger value="calendar">Calendario</TabsTrigger>
+          {canManage ? <TabsTrigger value="manage">Gestión</TabsTrigger> : null}
+          {canManage ? <TabsTrigger value="compliance">Cumplimiento</TabsTrigger> : null}
+        </TabsList>
+        <TabsContent value="mine">{misActividades}</TabsContent>
+        <TabsContent value="calendar">{calendar}</TabsContent>
+        {canManage ? <TabsContent value="manage">{gestion}</TabsContent> : null}
+        {canManage ? (
           <TabsContent value="compliance">
             <CompliancePanel users={users} areas={areas} />
           </TabsContent>
-        </Tabs>
-      ) : (
-        misActividades
-      )}
+        ) : null}
+      </Tabs>
 
       <CompleteOccurrenceDialog
         open={completeOpen}
         onOpenChange={(open) => {
           setCompleteOpen(open);
-          if (!open) {
-            setCompleteTarget(null);
-            setCompleteError(null);
-          }
+          if (!open) setCompleteTarget(null);
         }}
         occurrence={completeTarget}
-        submitting={completeSubmitting}
-        errorMessage={completeError}
-        onSubmit={(comment) => void handleComplete(comment)}
+        onCompleted={() => loadBoard()}
       />
 
       <OccurrenceDetailDialog
+        key={detailTarget?.id ?? 'none'}
         open={detailOpen}
         onOpenChange={(open) => {
           setDetailOpen(open);
           if (!open) setDetailTarget(null);
         }}
         occurrence={detailTarget}
-        userNameById={userNameById}
+        activityTypes={activityTypes}
+        onStart={handlers.onStart}
+        onComplete={openComplete}
       />
 
       {canManage ? (
@@ -544,9 +539,21 @@ export function ActividadesRecurrentesView(): React.ReactElement {
           activityTypes={activityTypes}
           users={users}
           areas={areas}
-          onSubmit={(values) => void handleDefSubmit(values)}
+          onSubmit={(values, regenerates) => void handleDefSubmit(values, regenerates)}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={pauseTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setPauseTarget(null);
+        }}
+        title={pauseTarget ? `¿Pausar «${pauseTarget.title}»?` : '¿Pausar la actividad?'}
+        description="No se programan nuevas fechas y se cancelan las pendientes que aún no empiezan. Podrás reanudarla cuando quieras."
+        confirmLabel="Pausar actividad"
+        tone="default"
+        onConfirm={() => (pauseTarget ? handlePause(pauseTarget) : undefined)}
+      />
     </PageLayout>
   );
 }

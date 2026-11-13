@@ -65,6 +65,37 @@ export function recurrenceLabel(cadence: string): string {
   return RECURRENCE_LABELS[cadence] ?? cadence;
 }
 
+/** Unidad de la cadencia en singular y plural («semana/semanas»). */
+export const RECURRENCE_UNITS: Record<string, { one: string; many: string }> = {
+  SEMANAL: { one: 'semana', many: 'semanas' },
+  MENSUAL: { one: 'mes', many: 'meses' },
+  TRIMESTRAL: { one: 'trimestre', many: 'trimestres' },
+  SEMESTRAL: { one: 'semestre', many: 'semestres' },
+  ANUAL: { one: 'año', many: 'años' },
+};
+
+/** Unidad con el plural según n: (SEMANAL, 2) -> «semanas». */
+export function recurrenceUnit(cadence: string, count: number): string {
+  const unit = RECURRENCE_UNITS[cadence];
+  if (!unit) return cadence;
+  return count === 1 ? unit.one : unit.many;
+}
+
+/** «Cada semana», «Cada 2 semanas»: nunca «×2». */
+export function cadenceText(cadence: string, count: number): string {
+  const unit = RECURRENCE_UNITS[cadence];
+  if (!unit) return recurrenceLabel(cadence);
+  return count <= 1 ? `Cada ${unit.one}` : `Cada ${count} ${unit.many}`;
+}
+
+/** Etiqueta del tipo de actividad según el catálogo; si no está, el código. */
+export function activityTypeLabel(
+  code: string,
+  catalog: ReadonlyArray<{ code: string; label: string }>,
+): string {
+  return catalog.find((item) => item.code === code)?.label ?? code;
+}
+
 /** Etiquetas del tipo de responsable (ResponsibleKind). */
 export const RESPONSIBLE_KIND_LABELS: Record<string, string> = {
   USER: 'Persona',

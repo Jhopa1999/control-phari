@@ -342,3 +342,32 @@ api.use({
     return request;
   },
 });
+
+// --- Actividades recurrentes: tablero, calendario, evidencias y vista previa ---
+/** Estado de presentación de una ocurrencia (displayStatus de la API). */
+export type OccurrenceDisplayStatus =
+  components['schemas']['OccurrenceDisplayStatus'];
+export type RecurringBoard = components['schemas']['OccurrenceBoardResponseDto'];
+export type RecurringBoardWeek = components['schemas']['BoardWeekDto'];
+export type RecurringMyWork =
+  components['schemas']['MyWorkOccurrencesResponseDto'];
+export type RecurringOccurrenceEvidence =
+  components['schemas']['OccurrenceEvidenceResponseDto'];
+export type RecurringEvidenceDownload =
+  components['schemas']['EvidenceDownloadDto'];
+export type RecurrencePreview =
+  components['schemas']['RecurrencePreviewResponseDto'];
+export type RecurringComplianceByPerson =
+  components['schemas']['ComplianceByPersonDto'];
+/** Query de GET /recurring-activities/occurrences/calendar del contrato. */
+export type RecurringCalendarQuery = NonNullable<
+  paths['/recurring-activities/occurrences/calendar']['get']['parameters']['query']
+>;
+/** Query de GET /recurring-activities/preview del contrato. */
+export type RecurrencePreviewQuery = NonNullable<
+  paths['/recurring-activities/preview']['get']['parameters']['query']
+>;
+/** Query de GET /recurring-activities/occurrences/board del contrato. */
+export type RecurringBoardQuery = NonNullable<
+  paths['/recurring-activities/occurrences/board']['get']['parameters']['query']
+>;
