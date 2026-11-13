@@ -26,7 +26,7 @@ export class RecurringActivityResponseDto {
   @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Fin opcional (inclusive).' })
   endDate!: Date | null;
 
-  @ApiProperty({ type: Number, nullable: true, description: 'Dias de anticipacion propios (null = default ENV).' })
+  @ApiProperty({ type: Number, nullable: true, description: 'Horizonte tecnico de generacion en dias (null = default ENV). No editable desde el portal.', deprecated: true })
   anticipationDays!: number | null;
 
   @ApiProperty({ type: String, description: 'Tipo de responsable (ResponsibleKind): USER o AREA.' })
@@ -40,6 +40,15 @@ export class RecurringActivityResponseDto {
 
   @ApiProperty({ type: Boolean, description: 'Si false, el motor no genera nuevas ocurrencias.' })
   active!: boolean;
+
+  @ApiProperty({ type: Number, description: 'Esfuerzo estimado en horas por ocurrencia.' })
+  estimatedHours!: number;
+
+  @ApiProperty({ type: Number, description: 'Dias antes del dia objetivo en que la ocurrencia se habilita.' })
+  prepDays!: number;
+
+  @ApiProperty({ type: Boolean, description: 'Si true, completar exige al menos un adjunto.' })
+  requiresEvidence!: boolean;
 
   @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de creacion.' })
   createdAt!: Date;

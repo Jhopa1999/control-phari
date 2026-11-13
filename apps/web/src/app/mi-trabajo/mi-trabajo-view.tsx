@@ -58,6 +58,7 @@ import {
 import { findControl, focusControl, restoreFocus, type FocusTarget } from './mi-trabajo-focus';
 import { boardHeadingId, boardTabId, columnLabel, MyWorkBoard } from './my-work-board';
 import { PendingReviewSection } from './pending-review-section';
+import { RecurringSection } from './recurring-section';
 
 type LoadState = 'loading' | 'success' | 'error';
 
@@ -153,6 +154,8 @@ export function MiTrabajoView(): React.ReactElement {
   const [expandedGroups, setExpandedGroups] = React.useState<ReadonlySet<MyWorkGroupKey>>(new Set());
   const [keepVisibleId, setKeepVisibleId] = React.useState<string | null>(null);
   const [announcement, setAnnouncement] = React.useState('');
+  // Total de actividades recurrentes con ventana abierta (null: cargando o con error).
+  const [recurringTotal, setRecurringTotal] = React.useState<number | null>(null);
   // Panel lateral: la URL (?taskId=) manda; estos estados solo recuerdan cómo se abrió.
   const [openedFromList, setOpenedFromList] = React.useState(false);
   const [returnFocusId, setReturnFocusId] = React.useState<string | null>(null);
@@ -525,7 +528,11 @@ export function MiTrabajoView(): React.ReactElement {
         <EmptyState
           icon={ListChecks}
           title="No tienes tareas asignadas."
-          description="Las tareas de las que seas responsable aparecerán aquí."
+          description={
+            recurringTotal !== null && recurringTotal > 0
+              ? 'Tus actividades recurrentes pendientes aparecen arriba.'
+              : 'Las tareas de las que seas responsable aparecerán aquí.'
+          }
         />
       </div>
     );
@@ -724,6 +731,7 @@ export function MiTrabajoView(): React.ReactElement {
             announce={announce}
           />
         ) : null}
+        <RecurringSection onTotalChange={setRecurringTotal} announce={announce} />
         {body}
       </div>
       <Sheet open={panelTaskId !== null} onOpenChange={(open) => !open && closePanel()}>

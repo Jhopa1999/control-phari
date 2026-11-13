@@ -7,10 +7,11 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
+import { NotificationService } from '../notification/notification.service';
 import { RecurringActivityService } from './recurring-activity.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
-import { Recurrence } from './recurrence';
+import { Recurrence, toLocalDate, toUtcDate } from './recurrence';
 import { OccurrenceStatus } from './occurrence-status';
 import { ResponsibleKind } from './responsible-kind';
 
@@ -37,6 +38,8 @@ interface PrismaMock {
     count: jest.Mock;
     findUnique: jest.Mock;
     update: jest.Mock;
+    updateMany: jest.Mock;
+    findUniqueOrThrow: jest.Mock;
     createMany: jest.Mock;
   };
   $transaction: jest.Mock;
@@ -58,6 +61,8 @@ function createPrismaMock(): PrismaService & PrismaMock {
       count: jest.fn().mockResolvedValue(0),
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findUniqueOrThrow: jest.fn(),
       createMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     // $transaction: ejecuta el callback con el mismo cliente (tx = prisma) o
@@ -115,21 +120,42 @@ function definition(overrides: Record<string, unknown> = {}) {
     responsibleUserId: 'actor-1',
     responsibleAreaId: null as string | null,
     active: true,
+    estimatedHours: 2,
+    prepDays: 2,
+    requiresEvidence: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
   };
 }
 
+/** Dia local de hoy (America/Lima) a medianoche UTC, como el service. */
+function todayUtc(): Date {
+  return toUtcDate(toLocalDate(new Date(), 'America/Lima'));
+}
+
+/** Hoy + days dias (medianoche UTC). */
+function inDays(days: number): Date {
+  const d = todayUtc();
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
+}
+
 function occurrence(overrides: Record<string, unknown> = {}) {
   return {
     id: 'occ-1',
     activityId: 'act-1',
-    targetDate: new Date(Date.UTC(2024, 1, 10)),
+    targetDate: inDays(1),
     status: OccurrenceStatus.PENDIENTE as string,
     completedAt: null as Date | null,
     completedByUserId: null as string | null,
     completionComment: null as string | null,
+    estimatedHours: 2,
+    actualHours: null as number | null,
+    startedAt: null as Date | null,
+    startedByUserId: null as string | null,
+    cancelledAt: null as Date | null,
+    cancelReason: null as string | null,
     periodLabel: '2024-02',
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -149,7 +175,12 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
     withConfigEnv();
     prisma = createPrismaMock();
     audit = createAuditMock();
-    service = new RecurringActivityService(prisma, audit, createMailMock());
+    service = new RecurringActivityService(
+      prisma,
+      audit,
+      createMailMock(),
+      { notify: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationService,
+    );
   });
 
   describe('createActivity (validaciones + gestion por area)', () => {
@@ -413,7 +444,8 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
   describe('completeOccurrence / startOccurrence (transiciones + alcance)', () => {
     it('PENDIENTE -> EN_CURSO (start) actualiza y audita', async () => {
       prisma.recurringActivityOccurrence.findUnique.mockResolvedValue(occurrence());
-      prisma.recurringActivityOccurrence.update.mockResolvedValue(
+      prisma.recurringActivityOccurrence.updateMany.mockResolvedValue({ count: 1 });
+      prisma.recurringActivityOccurrence.findUniqueOrThrow.mockResolvedValue(
         occurrence({ status: OccurrenceStatus.EN_CURSO }),
       );
       const result = await service.startOccurrence(actor(), 'occ-1');
@@ -433,18 +465,23 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('VENCIDA -> COMPLETADA se permite (cierre tardio), con comentario opcional', async () => {
+    it('VENCIDA -> COMPLETADA se permite (cierre tardio) y guarda texto y horas reales', async () => {
       prisma.recurringActivityOccurrence.findUnique.mockResolvedValue(
-        occurrence({ status: OccurrenceStatus.VENCIDA }),
+        occurrence({ status: OccurrenceStatus.VENCIDA, targetDate: inDays(-3) }),
       );
-      prisma.recurringActivityOccurrence.update.mockResolvedValue(
+      prisma.recurringActivityOccurrence.updateMany.mockResolvedValue({ count: 1 });
+      prisma.recurringActivityOccurrence.findUniqueOrThrow.mockResolvedValue(
         occurrence({ status: OccurrenceStatus.COMPLETADA }),
       );
-      const result = await service.completeOccurrence(actor(), 'occ-1', {});
+      const result = await service.completeOccurrence(actor(), 'occ-1', {
+        comment: 'Se envio el reporte',
+        actualHours: 1.5,
+      });
       expect(result.status).toBe(OccurrenceStatus.COMPLETADA);
-      const data = prisma.recurringActivityOccurrence.update.mock.calls[0][0].data;
-      expect(data.completionComment).toBeNull();
-      expect(data.completedBy).toEqual({ connect: { id: 'actor-1' } });
+      const data = prisma.recurringActivityOccurrence.updateMany.mock.calls[0][0].data;
+      expect(data.completionComment).toBe('Se envio el reporte');
+      expect(data.actualHours).toBe(1.5);
+      expect(data.completedByUserId).toBe('actor-1');
     });
 
     it('ocurrencia ajena (otro usuario, otra area) -> 404', async () => {
@@ -457,7 +494,7 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
         }),
       );
       await expect(
-        service.completeOccurrence(actor(), 'occ-1', {}),
+        service.completeOccurrence(actor(), 'occ-1', { comment: 'x', actualHours: 1 }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 

@@ -11,10 +11,11 @@ import { RecurringActivityService } from './recurring-activity.service';
 const GENERATION_JOB = 'recurring-activity:generation';
 const OVERDUE_JOB = 'recurring-activity:overdue';
 const REMINDER_JOB = 'recurring-activity:reminder';
+const NOTICES_JOB = 'recurring-activity:notices';
 
 /**
- * Motor de tiempo in-process del modulo (FEAT-001, design §2). Registra dos
- * cron jobs cuyas expresiones vienen de la config por ENV (no decoradores
+ * Motor de tiempo in-process del modulo (FEAT-001, design §2). Registra cuatro
+ * cron jobs (generacion, vencidas, recordatorios y avisos internos) cuyas expresiones vienen de la config por ENV (no decoradores
  * estaticos, porque el cron es configurable). Respeta el interruptor
  * SCHEDULER_ENABLED: si esta desactivado no registra ningun job. Cada tarea
  * delega 100% en RecurringActivityService y nunca deja escapar un error (el
@@ -50,9 +51,10 @@ export class RecurringActivitySchedulerService
     this.registerJob(REMINDER_JOB, config.reminderCron, () =>
       this.runReminders(),
     );
+    this.registerJob(NOTICES_JOB, config.noticesCron, () => this.runNotices());
 
     this.logger.log(
-      `Scheduler de actividades recurrentes activo (generacion="${config.generationCron}", vencidas="${config.overdueCron}", recordatorios="${config.reminderCron}", tz="${config.timezone}").`,
+      `Scheduler de actividades recurrentes activo (generacion="${config.generationCron}", vencidas="${config.overdueCron}", recordatorios="${config.reminderCron}", avisos="${config.noticesCron}", tz="${config.timezone}").`,
     );
   }
 
@@ -65,7 +67,7 @@ export class RecurringActivitySchedulerService
       return;
     }
     // Detener los jobs en el apagado limpio para no dejar timers colgando.
-    for (const name of [GENERATION_JOB, OVERDUE_JOB, REMINDER_JOB]) {
+    for (const name of [GENERATION_JOB, OVERDUE_JOB, REMINDER_JOB, NOTICES_JOB]) {
       if (this.schedulerRegistry.doesExist('cron', name)) {
         this.schedulerRegistry.getCronJob(name).stop();
         this.schedulerRegistry.deleteCronJob(name);
@@ -121,6 +123,24 @@ export class RecurringActivitySchedulerService
     } catch (error) {
       this.logger.error(
         'Fallo el envio de recordatorios de actividades recurrentes.',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
+
+  /**
+   * Ejecuta los avisos internos (ventana abierta / vence hoy). Son idempotentes
+   * por marca en la ocurrencia; un fallo se registra y no tumba el cron.
+   */
+  async runNotices(): Promise<void> {
+    try {
+      const result = await this.service.sendLifecycleNotices();
+      this.logger.log(
+        `Avisos internos: ${result.windowNotices} de ventana abierta, ${result.dueNotices} de vence hoy.`,
+      );
+    } catch (error) {
+      this.logger.error(
+        'Fallo el envio de avisos internos de actividades recurrentes.',
         error instanceof Error ? error.stack : String(error),
       );
     }

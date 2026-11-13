@@ -1,8 +1,15 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  AlarmClock,
+  Ban,
+  CalendarClock,
   CircleCheck,
   CircleDashed,
+  CircleDot,
   CircleMinus,
+  CirclePlay,
+  Pause,
+  Play,
   TriangleAlert,
 } from 'lucide-react';
 import { RECORD_STATE_LABEL } from './record-state';
@@ -28,7 +35,8 @@ export type Tone =
   | 'success'
   | 'warning'
   | 'danger'
-  | 'outline';
+  | 'outline'
+  | 'solid';
 
 export type StatusKind =
   | 'request'
@@ -45,6 +53,7 @@ export type StatusKind =
   | 'capacity'
   | 'band'
   | 'active'
+  | 'recurringDefinition'
   | 'grant'
   | 'permission'
   | 'blocking'
@@ -54,10 +63,12 @@ export interface StatusPresentation {
   label: string;
   tone: Tone;
   icon?: LucideIcon;
+  /** Clases extra del badge (borde discontinuo, marca ámbar). */
+  className?: string;
 }
 
 /** Tono de un valor, con icono opcional. */
-type ToneSpec = Tone | { tone: Tone; icon: LucideIcon };
+type ToneSpec = Tone | { tone: Tone; icon: LucideIcon; className?: string };
 
 // Etiquetas nuevas de esta tabla. Las de solicitud, triage, plan, tarea y
 // registro salen de sus mapas (request-state, status-labels y record-state).
@@ -68,12 +79,21 @@ const LOG_LABELS: Record<string, string> = {
   /** Presentacional: borrador con una devolución vigente (no es un estado persistido). */
   DEVUELTO: 'Devuelto',
 };
-/** Estados de una ocurrencia de actividad recurrente (OccurrenceStatus). */
+/** Estados de presentación de una ocurrencia (displayStatus de la API). */
 const OCCURRENCE_LABELS: Record<string, string> = {
+  PROGRAMADA: 'Programada',
   PENDIENTE: 'Pendiente',
   EN_CURSO: 'En curso',
-  COMPLETADA: 'Completada',
+  VENCE_HOY: 'Vence hoy',
   VENCIDA: 'Vencida',
+  COMPLETADA: 'Completada',
+  COMPLETADA_TARDE: 'Completada tarde',
+  CANCELADA: 'Cancelada',
+};
+/** Definición de actividad recurrente: Activa / Pausada. */
+const RECURRING_DEFINITION_LABELS: Record<string, string> = {
+  true: 'Activa',
+  false: 'Pausada',
 };
 const ASSET_LABELS: Record<string, string> = {
   BORRADOR: 'Borrador',
@@ -144,7 +164,7 @@ function statusTable(
       value,
       typeof spec === 'string'
         ? { label, tone: spec }
-        : { label, tone: spec.tone, icon: spec.icon },
+        : { label, tone: spec.tone, icon: spec.icon, className: spec.className },
     );
   }
   return table;
@@ -191,11 +211,30 @@ const STATUS_TABLES: Record<
     EN_REVISION: 'info',
     TERMINADA: 'success',
   }),
+  // Cada estado lleva etiqueta + icono (nunca solo color). Programada se
+  // distingue de Cancelada por el borde discontinuo; Completada tarde, por el
+  // borde ámbar.
   occurrence: statusTable(OCCURRENCE_LABELS, {
-    PENDIENTE: { tone: 'neutral', icon: CircleDashed },
-    EN_CURSO: 'info',
-    COMPLETADA: { tone: 'success', icon: CircleCheck },
+    PROGRAMADA: {
+      tone: 'neutral',
+      icon: CalendarClock,
+      className: 'border-dashed border-border-strong',
+    },
+    PENDIENTE: { tone: 'info', icon: CircleDot },
+    EN_CURSO: { tone: 'solid', icon: CirclePlay },
+    VENCE_HOY: { tone: 'warning', icon: AlarmClock },
     VENCIDA: { tone: 'danger', icon: TriangleAlert },
+    COMPLETADA: { tone: 'success', icon: CircleCheck },
+    COMPLETADA_TARDE: {
+      tone: 'success',
+      icon: CircleCheck,
+      className: 'border-warning',
+    },
+    CANCELADA: { tone: 'neutral', icon: Ban },
+  }),
+  recurringDefinition: statusTable(RECURRING_DEFINITION_LABELS, {
+    true: { tone: 'success', icon: Play },
+    false: { tone: 'neutral', icon: Pause },
   }),
   record: statusTable(RECORD_STATE_LABEL, {
     BORRADOR: 'neutral',

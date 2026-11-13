@@ -749,9 +749,17 @@ Helpers lógicos puros del dominio (mismo patrón que `task-status.ts`):
   día de semana de `startDate`; la familia mensual avanza por meses anclando al día de
   `startDate` y, si el mes destino no tiene ese día (p. ej. 31 o 29 de febrero), lo ancla
   al último día del mes. Las fechas son días de calendario (`@db.Date`, medianoche UTC).
+  `nextNTargetDates(cadence, intervalCount, startDate, from, n, endDate?)` devuelve las `n`
+  próximas fechas objetivo (base de la vista previa del formulario).
 - `occurrence-status.ts`: enum `OccurrenceStatus` (PENDIENTE, EN_CURSO, COMPLETADA,
-  VENCIDA) y sus transiciones permitidas; COMPLETADA es terminal, VENCIDA puede cerrarse
-  tarde a COMPLETADA.
+  VENCIDA, CANCELADA) y sus transiciones permitidas; COMPLETADA es terminal, VENCIDA puede
+  cerrarse tarde a COMPLETADA y PENDIENTE ↔ CANCELADA es la única arista reversible.
+- `occurrence-display.ts`: estado de presentación derivado (`displayStatus`) y acciones
+  permitidas. La ventana abre el día `targetDate − prepDays` (`opensOn`): antes es
+  PROGRAMADA (sin acciones); con la ventana abierta es PENDIENTE (tomar y completar);
+  `targetDate = hoy` es VENCE_HOY; PENDIENTE/EN_CURSO con `targetDate < hoy` se muestra
+  VENCIDA aunque el cron aún no la marque y **solo se completa** (no se toma); COMPLETADA
+  después del día objetivo (día local de `completedAt`) es COMPLETADA_TARDE.
 - `responsible-kind.ts`: enum `ResponsibleKind` (USER, AREA) y la validación "exactamente
   un responsable" (persona o área, nunca ambos ni ninguno), espejo del CHECK de BD.
 
@@ -759,13 +767,17 @@ Motor (`recurring-activity.service.ts` + `recurring-activity.scheduler.service.t
 operaciones idempotentes que corren como crons in-process (`@nestjs/schedule`,
 `ScheduleModule.forRoot()` en `app.module.ts`):
 
-- Generación: por cada definición activa inserta las ocurrencias futuras dentro de su
-  ventana de anticipación con `createMany` + `skipDuplicates` sobre el par único
-  `(activityId, targetDate)`; correrla dos veces no duplica. La misma generación se
-  ejecuta también al crear o editar una definición activa (`POST` / `PATCH
-  /recurring-activities`), para que la persona responsable vea sus ocurrencias en
-  «Qué me toca» sin esperar al cron; si esa generación inmediata falla, la definición
-  queda guardada y el cron diario la recupera.
+- Generación y reconciliación (`reconcileOccurrences`): por cada definición activa
+  inserta las ocurrencias futuras dentro del horizonte `max(anticipationDays o ENV,
+  prepDays)` con `createMany` + `skipDuplicates` sobre el par único
+  `(activityId, targetDate)` y con el snapshot de `estimatedHours`; correrla dos veces
+  no duplica. El cron solo genera. Al crear, al editar campos que mueven ocurrencias
+  (cadencia, intervalo, inicio, fin, horas, días de preparación o `active`), al pausar y
+  al reanudar se reconcilia además: se **cancelan** las PENDIENTE futuras que ya no
+  corresponden (`cancelledAt`/`cancelReason`), se **reactivan** (mismo registro) las
+  CANCELADA cuya fecha vuelve a coincidir y se actualizan las horas estimadas de las
+  PENDIENTE. EN_CURSO, COMPLETADA y VENCIDA nunca se tocan. Si esa reconciliación falla,
+  la definición queda guardada y el cron diario recupera la generación.
 - Marcado de vencidas: pasa a VENCIDA las ocurrencias PENDIENTE/EN_CURSO cuyo
   `targetDate` ya quedó en el pasado (`updateMany` filtrado por estado, idempotente).
 - Recordatorios por correo: un tercer cron busca ocurrencias PENDIENTE/EN_CURSO cuyo día
@@ -793,12 +805,41 @@ La API REST se reparte en dos controllers delgados que delegan en el service:
 | GET | `/recurring-activities` | Lista las definiciones gestionables por el actor (JEFE_AREA/ADMIN). |
 | GET | `/recurring-activities/compliance` | Panel de cumplimiento: agregados a tiempo/destiempo/vencidas por actividad y por responsable en un rango de fechas (JEFE_AREA/ADMIN). |
 | GET | `/recurring-activities/:id` | Detalle de una definición dentro de alcance. |
-| PATCH | `/recurring-activities/:id` | Edita una definición (datos, responsable, pausa). |
-| DELETE | `/recurring-activities/:id` | Pausa la definición (soft-delete `active=false`; no borra ni elimina ocurrencias). |
-| GET | `/recurring-activities/occurrences` | Lista ocurrencias por alcance (`scope=mine` por defecto; `all` solo JEFE_AREA/ADMIN). Filtros por estado, cadencia, tipo, rango de fechas y responsable; paginación `page/pageSize` (≤100). |
+| PATCH | `/recurring-activities/:id` | Edita una definición (datos, responsable, horas, días de preparación, evidencia exigida, pausa). Si cambian las fechas reconcilia las ocurrencias. |
+| POST | `/recurring-activities/:id/resume` | Reanuda una definición pausada (`active=true`) y regenera sus ocurrencias (reactiva las canceladas que coinciden). Idempotente; auditada. |
+| DELETE | `/recurring-activities/:id` | Pausa la definición (soft-delete `active=false`): no borra la definición ni su historial, pero cancela sus ocurrencias PENDIENTE futuras. |
+| GET | `/recurring-activities/occurrences` | Lista ocurrencias por alcance (`scope=mine` por defecto; `all` solo JEFE_AREA/ADMIN). Filtros por estado, cadencia, tipo, rango de fechas y responsable; paginación `page/pageSize` (≤100). Las CANCELADA solo aparecen con `status=CANCELADA`. Cada ocurrencia trae `displayStatus`, `canStart`, `canComplete`, `opensOn`, horas estimadas/reales, quién la tomó/completó y el nombre del responsable. |
 | GET | `/recurring-activities/occurrences/:id` | Detalle de una ocurrencia dentro de alcance. |
-| POST | `/recurring-activities/occurrences/:id/start` | Toma una ocurrencia (PENDIENTE → EN_CURSO). |
-| POST | `/recurring-activities/occurrences/:id/complete` | Completa una ocurrencia; comentario/evidencia opcional. |
+| POST | `/recurring-activities/occurrences/:id/start` | Toma una ocurrencia (PENDIENTE → EN_CURSO) y registra `startedAt`/`startedByUserId`. `409` si la ventana aún no abre (el mensaje incluye la fecha de apertura) o si ya está vencida. |
+| POST | `/recurring-activities/occurrences/:id/complete` | Completa una ocurrencia con `comment` («Qué se realizó», obligatorio, ≤2000) y `actualHours` (obligatorio, > 0). `409` si la ventana aún no abre o si la definición exige adjunto (`requiresEvidence`) y la ocurrencia no tiene ninguno. |
+| GET | `/recurring-activities/preview` | Vista previa del formulario (JEFE_AREA/ADMIN): las 3 próximas fechas desde hoy de una recurrencia (`cadence`, `intervalCount`, `startDate`, `endDate?`, `prepDays?`) con el día en que se habilita cada una (`{ dates: [{ targetDate, opensOn }] }`). |
+| GET | `/recurring-activities/occurrences/board` | Tablero «Qué me toca» (solo alcance `mine`): `today`, semana ISO en curso (`isoYear`, `number`, `startDate`, `endDate`, en la zona configurada), contadores (`overdue`, `dueToday`, `thisWeek`), `plannedHoursThisWeek` y los grupos `overdue`, `thisWeek` (abiertas con día objetivo hasta el domingo), `upcoming` (posteriores, incluidas las programadas) y `completed` (últimas `completedWeeks` semanas: 4 por defecto, 12 o 0 = todas). |
+| GET | `/recurring-activities/occurrences/calendar` | Ocurrencias de un rango `from`–`to` (obligatorios, máximo 62 días; `400` si se excede) para la vista de calendario. Mismo alcance y filtros de responsable que el listado; sin canceladas; tope 500 filas. |
+| GET | `/recurring-activities/occurrences/my-work` | Ocurrencias del actor que ya se pueden trabajar, para «Mi trabajo»: `{ items, total }` con las de estado de presentación VENCIDA, VENCE_HOY, EN_CURSO y PENDIENTE (ventana abierta), en ese orden. Excluye programadas, completadas y canceladas. |
+| GET | `/recurring-activities/occurrences/:id/evidence` | Lista los adjuntos de la ocurrencia (metadatos). |
+| POST | `/recurring-activities/occurrences/:id/evidence` | Adjunta un archivo (multipart `file`, uno por petición). Mismas reglas de tipo y tamaño que las evidencias de tareas (`EVIDENCE_MAX_BYTES`). `409` si la ocurrencia no está abierta (programada, completada o cancelada). |
+| GET | `/recurring-activities/occurrences/:id/evidence/:evidenceId/download` | URL temporal (prefirmada) de descarga del adjunto. |
+| DELETE | `/recurring-activities/occurrences/:id/evidence/:evidenceId` | Quita un adjunto; solo mientras la ocurrencia está abierta (`409` si no). |
+
+Adjuntos de ocurrencias (`occurrence-evidence.service.ts`): se suben **antes** de
+completar; `complete` solo comprueba que exista al menos uno cuando la definición lo
+exige. Ver y descargar: cualquiera con la ocurrencia en alcance; subir y quitar: el mismo
+alcance, y solo con la ocurrencia abierta (ventana abierta, en curso o vencida). El objeto
+vive en S3 con la clave `actividades-recurrentes/{activityId}/{occurrenceId}/{uuid}-{nombre}`;
+si falla el registro en BD se borra el objeto. Las reglas de archivo (tipos permitidos,
+tamaño máximo, nombre seguro) son compartidas con las evidencias de tareas
+(`storage/evidence-file.ts`). Cada alta o baja se audita sobre
+`RECURRING_ACTIVITY_OCCURRENCE`. Cada ocurrencia expone `evidenceCount`.
+
+Avisos internos (centro de notificaciones): el cron `recurring-activity:notices`
+(`RECURRING_ACTIVITY_NOTICES_CRON`, por defecto `0 6 * * *`) emite
+`RECURRING_WINDOW_OPEN` cuando una ocurrencia PENDIENTE entra en su ventana
+(hoy ≥ día objetivo − `prepDays`) y `RECURRING_DUE_TODAY` cuando vence hoy;
+`markOverdueOccurrences` emite `RECURRING_OVERDUE` al pasarla a VENCIDA. Cada aviso se
+reclama una sola vez con `updateMany` sobre su marca (`windowNotifiedAt`,
+`dueNotifiedAt`, `overdueNotifiedAt` en null), así que correr los crons dos veces no
+duplica notificaciones. Destinatarios: la persona responsable o los usuarios activos del
+área responsable. Un fallo al notificar se registra y no interrumpe el cron.
 
 Autorización por alcance (regla única de pertenencia a área): las áreas del actor se
 derivan de sus procesos con grant activo (`Process.areaId`), ya que el actor no expone
@@ -812,8 +853,10 @@ VALIDACION, REVISION) y se valida contra `CatalogItem`. Las mutaciones de defini
 ocurrencias se auditan como `RECURRING_ACTIVITY` y `RECURRING_ACTIVITY_OCCURRENCE`.
 
 El panel de cumplimiento (`GET /recurring-activities/compliance`) calcula en el backend,
-por cada ocurrencia del rango, su clasificación: completada **a tiempo** (`completedAt`
-dentro del día objetivo), **a destiempo** (`completedAt` posterior), **vencida** (estado
-VENCIDA) o **pendiente** (PENDIENTE/EN_CURSO). Devuelve los totales de la ventana y los
-desgloses por actividad y por responsable. El alcance lo acota el service: ADMIN sin
+por cada ocurrencia del rango (sin las CANCELADA), su clasificación: completada **a
+tiempo** (día local de `completedAt` ≤ día objetivo), **a destiempo** (posterior),
+**vencida** (VENCIDA persistida o derivada) o **pendiente**. Cada grupo suma además
+`estimatedHours` y `actualHours` de sus ocurrencias completadas. Devuelve los totales
+de la ventana y los desgloses por actividad, por responsable y por persona que completó
+(`byPerson`). El alcance lo acota el service: ADMIN sin
 restricción; JEFE_AREA solo sus áreas.

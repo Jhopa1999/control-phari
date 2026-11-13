@@ -3,14 +3,22 @@ import {
   type CompleteRecurringOccurrence,
   type CreateRecurringActivity,
   type PaginatedRecurringOccurrences,
+  type RecurrencePreview,
+  type RecurrencePreviewQuery,
   type RecurringActivity,
+  type RecurringBoard,
+  type RecurringBoardQuery,
+  type RecurringCalendarQuery,
+  type RecurringEvidenceDownload,
+  type RecurringMyWork,
+  type RecurringOccurrenceEvidence,
   type RecurringCompliance,
   type RecurringComplianceQuery,
   type RecurringOccurrence,
   type RecurringOccurrencesQuery,
   type UpdateRecurringActivity,
 } from './api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, apiErrorFrom, toApiError } from './api-error';
 
 export { ApiError };
 
@@ -32,7 +40,7 @@ export async function listOccurrences(
       { params: { query } },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -49,7 +57,7 @@ export async function getOccurrence(id: string): Promise<RecurringOccurrence> {
       { params: { path: { id } } },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -68,7 +76,7 @@ export async function startOccurrence(
       { params: { path: { id } } },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -77,10 +85,10 @@ export async function startOccurrence(
   }
 }
 
-/** Completa una ocurrencia (POST .../:id/complete), comentario opcional. */
+/** Completa una ocurrencia (POST .../:id/complete): qué se realizó y horas reales. */
 export async function completeOccurrence(
   id: string,
-  body: CompleteRecurringOccurrence = {},
+  body: CompleteRecurringOccurrence,
 ): Promise<RecurringOccurrence> {
   try {
     const { data, error, response } = await api.POST(
@@ -88,7 +96,7 @@ export async function completeOccurrence(
       { params: { path: { id } }, body },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -102,7 +110,7 @@ export async function listActivities(): Promise<RecurringActivity[]> {
   try {
     const { data, error, response } = await api.GET('/recurring-activities');
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -120,7 +128,7 @@ export async function createActivity(
       body: input,
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -140,7 +148,7 @@ export async function updateActivity(
       { params: { path: { id } }, body: input },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -159,7 +167,7 @@ export async function getCompliance(
       { params: { query } },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -175,10 +183,134 @@ export async function pauseActivity(id: string): Promise<void> {
       params: { path: { id } },
     });
     if (error) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
   } catch (err) {
     if (err instanceof ApiError) throw err;
     throw toApiError(undefined);
   }
+}
+
+/** Reanuda una definicion pausada (POST /recurring-activities/:id/resume). */
+export async function resumeActivity(id: string): Promise<RecurringActivity> {
+  try {
+    const { data, error, response } = await api.POST(
+      '/recurring-activities/{id}/resume',
+      { params: { path: { id } } },
+    );
+    if (error || !data) {
+      throw apiErrorFrom(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/** Ejecuta una llamada del cliente tipado y normaliza el fallo a ApiError. */
+async function call<T>(
+  run: () => Promise<{ data?: T; error?: unknown; response: Response }>,
+): Promise<T> {
+  try {
+    const { data, error, response } = await run();
+    if (error || data === undefined) {
+      throw apiErrorFrom(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/** Tablero "Que me toca" (GET .../occurrences/board). completedWeeks: 4, 12 o 0 (todas). */
+export function listBoard(query: RecurringBoardQuery = {}): Promise<RecurringBoard> {
+  return call(() =>
+    api.GET('/recurring-activities/occurrences/board', { params: { query } }),
+  );
+}
+
+/** Ocurrencias de un rango (GET .../occurrences/calendar), maximo 62 dias. */
+export function listCalendar(
+  query: RecurringCalendarQuery,
+): Promise<RecurringOccurrence[]> {
+  return call(() =>
+    api.GET('/recurring-activities/occurrences/calendar', { params: { query } }),
+  );
+}
+
+/** Ocurrencias trabajables del actor para "Mi trabajo" (GET .../occurrences/my-work). */
+export function listMyWorkOccurrences(): Promise<RecurringMyWork> {
+  return call(() => api.GET('/recurring-activities/occurrences/my-work'));
+}
+
+/** Proximas 3 fechas de una cadencia (GET /recurring-activities/preview). */
+export function previewDates(
+  query: RecurrencePreviewQuery,
+): Promise<RecurrencePreview> {
+  return call(() =>
+    api.GET('/recurring-activities/preview', { params: { query } }),
+  );
+}
+
+/** Adjuntos de una ocurrencia (GET .../occurrences/:id/evidence). */
+export function listEvidence(
+  id: string,
+): Promise<RecurringOccurrenceEvidence[]> {
+  return call(() =>
+    api.GET('/recurring-activities/occurrences/{id}/evidence', {
+      params: { path: { id } },
+    }),
+  );
+}
+
+/** Sube UN archivo (multipart, campo file) antes de completar. */
+export function uploadEvidence(
+  id: string,
+  file: File,
+): Promise<RecurringOccurrenceEvidence> {
+  return call(() =>
+    api.POST('/recurring-activities/occurrences/{id}/evidence', {
+      params: { path: { id } },
+      // El contrato tipa el binario como string; el serializador lo envia como File.
+      body: { file: file as unknown as string },
+      bodySerializer: (body) => {
+        const form = new FormData();
+        form.append('file', body.file as unknown as File);
+        return form;
+      },
+    }),
+  );
+}
+
+/** Quita un adjunto (DELETE .../evidence/:evidenceId). */
+export async function deleteEvidence(
+  id: string,
+  evidenceId: string,
+): Promise<void> {
+  try {
+    const { error, response } = await api.DELETE(
+      '/recurring-activities/occurrences/{id}/evidence/{evidenceId}',
+      { params: { path: { id, evidenceId } } },
+    );
+    if (error) throw apiErrorFrom(response.status, error);
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/** Pide la URL firmada y abre la descarga en una pestana nueva. */
+export async function downloadEvidence(
+  id: string,
+  evidenceId: string,
+): Promise<void> {
+  const link: RecurringEvidenceDownload = await call(() =>
+    api.GET(
+      '/recurring-activities/occurrences/{id}/evidence/{evidenceId}/download',
+      { params: { path: { id, evidenceId } } },
+    ),
+  );
+  window.open(link.url, '_blank', 'noopener,noreferrer');
 }

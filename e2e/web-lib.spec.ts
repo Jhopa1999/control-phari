@@ -1680,3 +1680,94 @@ test.describe('searchable-filter (selector con buscador)', () => {
     expect(initialActiveIndex(mixed, 'cualquier cosa')).toBe(0);
   });
 });
+// --- Actividades recurrentes: helpers puros de presentacion ---
+import {
+  addDays as recAddDays,
+  dayDiff,
+  hoursDifferenceText,
+  isoWeekNumber,
+  monthGrid,
+  relativeDayText,
+  signedHours,
+  weekRangeLabel,
+} from '../apps/web/src/lib/recurring-format';
+import { activityTypeLabel, cadenceText } from '../apps/web/src/lib/status-labels';
+
+test.describe('recurring-format', () => {
+  test('weekRangeLabel: dentro de un mes y cruzando meses', () => {
+    expect(
+      weekRangeLabel({ number: 46, startDate: '2026-11-09', endDate: '2026-11-15' }),
+    ).toBe('Semana 46 · 9 al 15 de nov 2026');
+    expect(
+      weekRangeLabel({ number: 5, startDate: '2027-01-25', endDate: '2027-01-31T00:00:00.000Z' }),
+    ).toBe('Semana 5 · 25 al 31 de ene 2027');
+    expect(
+      weekRangeLabel({ number: 5, startDate: '2027-01-26', endDate: '2027-02-01' }),
+    ).toBe('Semana 5 · 26 ene al 1 feb 2027');
+  });
+
+  test('cadenceText: singular, plural y sin signo ×', () => {
+    expect(cadenceText('SEMANAL', 1)).toBe('Cada semana');
+    expect(cadenceText('SEMANAL', 2)).toBe('Cada 2 semanas');
+    expect(cadenceText('MENSUAL', 3)).toBe('Cada 3 meses');
+    expect(cadenceText('ANUAL', 2)).toBe('Cada 2 años');
+    expect(cadenceText('SEMANAL', 2)).not.toContain('×');
+  });
+
+  test('activityTypeLabel: etiqueta del catalogo o el codigo', () => {
+    const catalog = [{ code: 'REPORTE', label: 'Reporte' }];
+    expect(activityTypeLabel('REPORTE', catalog)).toBe('Reporte');
+    expect(activityTypeLabel('OTRO', catalog)).toBe('OTRO');
+  });
+
+  test('signedHours y hoursDifferenceText llevan signo explicito', () => {
+    expect(signedHours(1.5)).toBe('+1,5\u00a0h');
+    expect(signedHours(-0.5)).toBe('\u22120,5\u00a0h');
+    expect(signedHours(0)).toBe('0\u00a0h');
+    expect(hoursDifferenceText(2.5, 2)).toBe('+0,5\u00a0h vs. estimado');
+  });
+
+  test('relativeDayText y dayDiff', () => {
+    expect(dayDiff('2026-11-10', '2026-11-13')).toBe(3);
+    expect(relativeDayText('2026-11-10', '2026-11-10')).toBe('Hoy');
+    expect(relativeDayText('2026-11-11', '2026-11-10')).toBe('Mañana');
+    expect(relativeDayText('2026-11-07', '2026-11-10')).toBe('Hace 3 días');
+    expect(relativeDayText('2026-11-15', '2026-11-10')).toBe('En 5 días');
+  });
+
+  test('monthGrid: semanas de lunes a domingo que cubren el mes', () => {
+    const weeks = monthGrid(2026, 10); // noviembre 2026 (1 nov = domingo)
+    expect(weeks[0][0]).toBe('2026-10-26');
+    expect(weeks[0][6]).toBe('2026-11-01');
+    expect(weeks[weeks.length - 1][6]).toBe('2026-12-06'); // 30 nov = lunes
+    for (const week of weeks) expect(week).toHaveLength(7);
+    expect(recAddDays('2026-11-30', 1)).toBe('2026-12-01');
+    expect(isoWeekNumber('2026-11-09')).toBe(46);
+  });
+});
+
+test.describe('estado de ocurrencia (displayStatus)', () => {
+  test('los 8 estados tienen etiqueta, icono y tono', () => {
+    const expected: Array<[string, string, string]> = [
+      ['PROGRAMADA', 'Programada', 'neutral'],
+      ['PENDIENTE', 'Pendiente', 'info'],
+      ['EN_CURSO', 'En curso', 'solid'],
+      ['VENCE_HOY', 'Vence hoy', 'warning'],
+      ['VENCIDA', 'Vencida', 'danger'],
+      ['COMPLETADA', 'Completada', 'success'],
+      ['COMPLETADA_TARDE', 'Completada tarde', 'success'],
+      ['CANCELADA', 'Cancelada', 'neutral'],
+    ];
+    for (const [value, label, tone] of expected) {
+      const presentation = getStatus('occurrence', value);
+      expect(presentation.label).toBe(label);
+      expect(presentation.tone).toBe(tone);
+      expect(presentation.icon).toBeDefined();
+    }
+  });
+
+  test('definicion: Activa / Pausada', () => {
+    expect(getStatus('recurringDefinition', 'true').label).toBe('Activa');
+    expect(getStatus('recurringDefinition', 'false').label).toBe('Pausada');
+  });
+});

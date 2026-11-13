@@ -18,6 +18,8 @@ export interface RecurringActivityConfig {
   readonly reminderDays: number;
   /** Cron del envio de recordatorios por correo. */
   readonly reminderCron: string;
+  /** Cron de los avisos internos del ciclo de vida (ventana abierta / vence hoy). */
+  readonly noticesCron: string;
   /** Si false, los crons del scheduler NO ejecutan trabajo (in-process). */
   readonly schedulerEnabled: boolean;
 }
@@ -29,6 +31,7 @@ const DEFAULTS = {
   overdueCron: '0 2 * * *',
   reminderDays: 3,
   reminderCron: '0 3 * * *',
+  noticesCron: '0 6 * * *',
   schedulerEnabled: true,
 } as const;
 
@@ -64,6 +67,9 @@ export function loadRecurringActivityConfig(): RecurringActivityConfig {
   const reminderCron =
     nonEmpty(process.env.RECURRING_ACTIVITY_REMINDER_CRON) ?? DEFAULTS.reminderCron;
 
+  const noticesCron =
+    nonEmpty(process.env.RECURRING_ACTIVITY_NOTICES_CRON) ?? DEFAULTS.noticesCron;
+
   const enabledRaw = nonEmpty(process.env.RECURRING_ACTIVITY_SCHEDULER_ENABLED);
   const schedulerEnabled = enabledRaw
     ? enabledRaw.toLowerCase() !== 'false'
@@ -76,6 +82,7 @@ export function loadRecurringActivityConfig(): RecurringActivityConfig {
     overdueCron,
     reminderDays,
     reminderCron,
+    noticesCron,
     schedulerEnabled,
   };
 }

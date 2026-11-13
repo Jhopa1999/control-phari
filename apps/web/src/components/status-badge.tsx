@@ -37,7 +37,7 @@ export function StatusBadge({
   const status = getStatus(kind, value);
   const Icon = status.icon;
   const badge = (
-    <Badge variant={status.tone} className={className}>
+    <Badge variant={status.tone} className={cn(status.className, className)}>
       {Icon ? <Icon aria-hidden="true" /> : null}
       {status.label}
     </Badge>

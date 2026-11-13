@@ -1,6 +1,7 @@
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
+import { NotificationService } from '../notification/notification.service';
 import { RecurringActivityService } from './recurring-activity.service';
 import { OccurrenceStatus } from './occurrence-status';
 import { Recurrence } from './recurrence';
@@ -66,6 +67,9 @@ function monthlyActivity() {
     anticipationDays: 40,
     responsibleKind: 'USER',
     responsibleUserId: 'u1',
+    estimatedHours: 1,
+    prepDays: 5,
+    requiresEvidence: false,
     responsibleAreaId: null,
     active: true,
     createdAt: new Date(),
@@ -80,7 +84,12 @@ describe('RecurringActivityService', () => {
   beforeEach(() => {
     withConfigEnv();
     prisma = createPrismaMock();
-    service = new RecurringActivityService(prisma, createAuditMock(), createMailMock());
+    service = new RecurringActivityService(
+      prisma,
+      createAuditMock(),
+      createMailMock(),
+      { notify: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationService,
+    );
   });
 
   describe('generateDueOccurrences (idempotencia por createMany skipDuplicates)', () => {

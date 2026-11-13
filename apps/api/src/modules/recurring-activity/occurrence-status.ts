@@ -1,5 +1,5 @@
 /**
- * Enum logico de los 4 estados de una OCURRENCIA de actividad recurrente
+ * Enum logico de los 5 estados de una OCURRENCIA de actividad recurrente
  * (design §2, D6). Conjunto cerrado y tipado, como TaskStatus: la columna
  * `RecurringActivityOccurrence.status` guarda el `code` (texto) y solo el helper
  * del modulo lo escribe. NUNCA es editable por campo libre.
@@ -9,6 +9,8 @@ export enum OccurrenceStatus {
   EN_CURSO = 'EN_CURSO',
   COMPLETADA = 'COMPLETADA',
   VENCIDA = 'VENCIDA',
+  /** Cancelada por cambio de la definicion o pausa (reversible mientras sea futura). */
+  CANCELADA = 'CANCELADA',
 }
 
 /** Todos los estados validos, util para validaciones y pruebas. */
@@ -33,6 +35,10 @@ export const OCCURRENCE_TRANSITIONS: ReadonlyArray<
   [OccurrenceStatus.EN_CURSO, OccurrenceStatus.VENCIDA],
   // Completar una ocurrencia vencida (cierre tardio).
   [OccurrenceStatus.VENCIDA, OccurrenceStatus.COMPLETADA],
+  // Cancelar (edicion de fechas o pausa) una futura no tomada y reactivarla si
+  // la fecha vuelve a coincidir con la recurrencia.
+  [OccurrenceStatus.PENDIENTE, OccurrenceStatus.CANCELADA],
+  [OccurrenceStatus.CANCELADA, OccurrenceStatus.PENDIENTE],
 ];
 
 /**

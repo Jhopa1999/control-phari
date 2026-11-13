@@ -38,7 +38,7 @@ test('Mi trabajo muestra la fecha de vencimiento guardada, sin correrla un día'
 }) => {
   // Solo se sustituye el cuerpo del GET: la petición llega a la API real, así
   // que la autenticación, los permisos y CORS siguen siendo reales.
-  await page.route('**/my-work', async (route) => {
+  await page.route((url) => url.pathname === '/my-work', async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
     const response = await route.fetch();
     await route.fulfill({ response, json: [DATE_ITEM] });

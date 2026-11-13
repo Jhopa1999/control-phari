@@ -23,8 +23,14 @@ export class ComplianceMetricsDto {
   @ApiProperty({ type: Number, description: 'Pendientes o en curso dentro de plazo.' })
   pending!: number;
 
-  @ApiProperty({ type: Number, description: 'Total de ocurrencias del grupo en la ventana.' })
+  @ApiProperty({ type: Number, description: 'Total de ocurrencias del grupo en la ventana (sin canceladas).' })
   total!: number;
+
+  @ApiProperty({ type: Number, description: 'Suma de horas estimadas de las ocurrencias COMPLETADAS.' })
+  estimatedHours!: number;
+
+  @ApiProperty({ type: Number, description: 'Suma de horas reales de las ocurrencias COMPLETADAS.' })
+  actualHours!: number;
 }
 
 /** Fila de cumplimiento agregada por ACTIVIDAD (definicion). */
@@ -66,6 +72,18 @@ export class ComplianceByResponsibleDto {
   metrics!: ComplianceMetricsDto;
 }
 
+/** Fila de cumplimiento agregada por PERSONA que completo (completedBy). */
+export class ComplianceByPersonDto {
+  @ApiProperty({ type: String, format: 'uuid', description: 'Usuario que completo.' })
+  userId!: string;
+
+  @ApiProperty({ type: String, description: 'Nombre de quien completo.' })
+  userName!: string;
+
+  @ApiProperty({ type: ComplianceMetricsDto, description: 'Metricas de lo que completo esa persona.' })
+  metrics!: ComplianceMetricsDto;
+}
+
 /**
  * Respuesta del panel de cumplimiento (FEAT-003): totales de la ventana y los
  * desgloses por actividad y por responsable. Todo lo calcula el backend; el
@@ -86,4 +104,7 @@ export class ComplianceResponseDto {
 
   @ApiProperty({ type: [ComplianceByResponsibleDto], description: 'Desglose por responsable.' })
   byResponsible!: ComplianceByResponsibleDto[];
+
+  @ApiProperty({ type: [ComplianceByPersonDto], description: 'Desglose por quien completo (solo ocurrencias completadas).' })
+  byPerson!: ComplianceByPersonDto[];
 }

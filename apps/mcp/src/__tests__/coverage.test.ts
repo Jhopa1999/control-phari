@@ -120,8 +120,8 @@ describe('catálogo de tools', () => {
     );
   });
 
-  it('expone 118 tools: las 47 originales, 53 de lectura (incluye la cola task.pending-review, worklog.options y la resolución por ID visible: code.resolve, request.get_by_code y phase.get_by_code), help.search y 16 de escritura (coordinación, planes, activos y documentos)', () => {
-    assert.equal(ALL_SPECS.length, 118);
+  it('expone 129 tools: las 47 originales, 58 de lectura (incluye la cola task.pending-review, worklog.options, la resolución por ID visible: code.resolve, request.get_by_code y phase.get_by_code, y las vistas de actividades recurrentes: tablero, calendario, mi trabajo, adjuntos y vista previa), help.search y 22 de escritura (coordinación, planes, activos, documentos y actividades recurrentes)', () => {
+    assert.equal(ALL_SPECS.length, 129);
   });
 });
 
@@ -172,7 +172,12 @@ describe('tools/list (servidor real en memoria)', () => {
       .filter((t) => t.annotations?.destructiveHint === true)
       .map((t) => t.name)
       .sort();
-    assert.deepEqual(destructive, ['grant.delete', 'plan.import', 'plan.participants.update']);
+    assert.deepEqual(destructive, [
+      'grant.delete',
+      'plan.import',
+      'plan.participants.update',
+      'recurring.pause',
+    ]);
   });
 
   it('ningún cuerpo es de forma libre: todo objeto del body declara propiedades', async () => {

@@ -25,6 +25,7 @@ import { UpdateRecurringActivityDto } from './dto/update-recurring-activity.dto'
 import { RecurringActivityResponseDto } from './dto/recurring-activity-response.dto';
 import { ComplianceQueryDto } from './dto/compliance-query.dto';
 import { ComplianceResponseDto } from './dto/compliance-response.dto';
+import { PreviewQueryDto, RecurrencePreviewResponseDto } from './dto/occurrence-views.dto';
 import { CurrentActor } from '../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../auth/current-actor';
 import { CurrentUserGuard } from '../auth/current-user.guard';
@@ -93,6 +94,19 @@ export class RecurringActivityController {
     return this.service.getCompliance(actor, query);
   }
 
+  @Get('preview')
+  @Roles(RoleCode.JEFE_AREA, RoleCode.ADMIN)
+  @ApiOperation({
+    summary:
+      'Vista previa de las 3 proximas fechas de una recurrencia y el dia en que se habilita cada una (jefe/admin).',
+  })
+  @ApiResponse({ status: 200, description: 'Hasta 3 proximas fechas desde hoy.', type: RecurrencePreviewResponseDto })
+  @ApiResponse({ status: 400, description: 'Parametros invalidos.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  preview(@Query() query: PreviewQueryDto) {
+    return this.service.previewRecurrence(query);
+  }
+
   @Get()
   @Roles(RoleCode.JEFE_AREA, RoleCode.ADMIN)
   @ApiOperation({ summary: 'Lista las definiciones gestionables por el actor.' })
@@ -132,6 +146,24 @@ export class RecurringActivityController {
     @Body() dto: UpdateRecurringActivityDto,
   ) {
     return this.service.updateActivity(actor, id, dto);
+  }
+
+  @Post(':id/resume')
+  @HttpCode(200)
+  @Roles(RoleCode.JEFE_AREA, RoleCode.ADMIN)
+  @ApiOperation({
+    summary:
+      'Reanuda una definicion pausada y regenera sus ocurrencias futuras (reactiva las canceladas que coinciden).',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Definicion reanudada (idempotente si ya estaba activa).', type: RecurringActivityResponseDto })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente o fuera de area.' })
+  @ApiResponse({ status: 404, description: 'No existe o fuera de alcance.' })
+  resume(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.resumeActivity(actor, id);
   }
 
   @Delete(':id')

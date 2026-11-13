@@ -65,7 +65,7 @@ async function mockPendingReview(
 async function openMyWork(page: Page): Promise<void> {
   await mockPendingReview(page);
   await page.clock.setFixedTime(NOW);
-  await page.route('**/my-work', async (route) => {
+  await page.route((url) => url.pathname === '/my-work', async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
     const response = await route.fetch();
     await route.fulfill({ response, json: FIXTURE });
@@ -203,7 +203,7 @@ async function openWith(
   if (asMember) await actAsMember(page);
   await mockPendingReview(page, pending);
   await page.clock.setFixedTime(NOW);
-  await page.route('**/my-work', async (route) => {
+  await page.route((url) => url.pathname === '/my-work', async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
     const response = await route.fetch();
     await route.fulfill({ response, json: fixture });
@@ -686,7 +686,7 @@ test.describe('«Por aprobar» (jefe de área y líderes)', () => {
       }
     });
     await page.clock.setFixedTime(NOW);
-    await page.route('**/my-work', async (route) => {
+    await page.route((url) => url.pathname === '/my-work', async (route) => {
       if (route.request().method() !== 'GET') return route.continue();
       const response = await route.fetch();
       await route.fulfill({ response, json: [OVERDUE] });
@@ -712,7 +712,7 @@ test.describe('«Por aprobar» (jefe de área y líderes)', () => {
   test('se pinta aunque el líder no tenga tareas propias', async ({ page }) => {
     await mockPendingReview(page, [A]);
     await page.clock.setFixedTime(NOW);
-    await page.route('**/my-work', async (route) => {
+    await page.route((url) => url.pathname === '/my-work', async (route) => {
       if (route.request().method() !== 'GET') return route.continue();
       const response = await route.fetch();
       await route.fulfill({ response, json: [] });

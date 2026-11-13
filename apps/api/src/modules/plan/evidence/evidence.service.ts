@@ -9,62 +9,26 @@ import { PrismaService } from '../../../database/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
+import {
+  ALLOWED_EVIDENCE_TYPES,
+  DEFAULT_EVIDENCE_MAX_BYTES,
+  evidenceMaxBytes,
+  extensionOf,
+  sanitizeFileName,
+  type UploadedEvidenceFile,
+} from '../../storage/evidence-file';
 import { StorageService } from '../../storage/storage.service';
 import { PlanStateService } from '../plan-state.service';
 import { EvidenceDownloadDto, EvidenceResponseDto } from './dto/evidence-response.dto';
 
-/** Archivo recibido por multipart (subconjunto de lo que entrega multer). */
-export interface UploadedEvidenceFile {
-  originalname: string;
-  mimetype: string;
-  size: number;
-  buffer: Buffer;
-}
-
-/** Tamano maximo por defecto de una evidencia (8 MB; nginx admite 10 MB). */
-export const DEFAULT_EVIDENCE_MAX_BYTES = 8 * 1024 * 1024;
-
-/** Tipos permitidos: documentos de oficina, PDF, imagenes, texto y comprimidos. */
-export const ALLOWED_EVIDENCE_TYPES: Readonly<Record<string, readonly string[]>> = {
-  'application/pdf': ['pdf'],
-  'image/png': ['png'],
-  'image/jpeg': ['jpg', 'jpeg'],
-  'image/gif': ['gif'],
-  'image/webp': ['webp'],
-  'text/plain': ['txt', 'log'],
-  'text/csv': ['csv'],
-  'text/markdown': ['md'],
-  'application/msword': ['doc'],
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx'],
-  'application/vnd.ms-excel': ['xls'],
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['xlsx'],
-  'application/vnd.ms-powerpoint': ['ppt'],
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['pptx'],
-  'application/zip': ['zip'],
+/** Reglas de archivo compartidas (ver storage/evidence-file.ts); re-exportadas por compatibilidad. */
+export {
+  ALLOWED_EVIDENCE_TYPES,
+  DEFAULT_EVIDENCE_MAX_BYTES,
+  evidenceMaxBytes,
+  sanitizeFileName,
 };
-
-/** Lee `EVIDENCE_MAX_BYTES` (entero > 0); si no es valido, el default. */
-export function evidenceMaxBytes(raw: string | undefined): number {
-  const parsed = raw?.trim() ? Number(raw) : NaN;
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_EVIDENCE_MAX_BYTES;
-}
-
-/** Nombre seguro para la clave del objeto (sin rutas ni caracteres raros). */
-export function sanitizeFileName(name: string): string {
-  const base = name.split(/[\\/]/).pop() ?? 'archivo';
-  const cleaned = base
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^A-Za-z0-9._-]+/g, '_')
-    .replace(/^[._]+/, '')
-    .slice(-120);
-  return cleaned || 'archivo';
-}
-
-function extensionOf(name: string): string {
-  const index = name.lastIndexOf('.');
-  return index < 0 ? '' : name.slice(index + 1).toLowerCase();
-}
+export type { UploadedEvidenceFile };
 
 /**
  * Evidencias de una tarea (archivos en el bucket maestro S3). Ver: cualquiera
