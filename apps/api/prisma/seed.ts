@@ -199,6 +199,8 @@ const CATALOG_ITEMS: Array<{ catalog: string; code: string; label: string; sortO
     { catalog: 'ACTIVITY_CLASS', code: 'SOPORTE', label: 'Operación/soporte', sortOrder: 2 },
     { catalog: 'ACTIVITY_CLASS', code: 'INTERNA', label: 'Gestión interna', sortOrder: 3 },
     { catalog: 'ACTIVITY_CLASS', code: 'EXTRAORDINARIA', label: 'Extraordinaria', sortOrder: 4 },
+    { catalog: 'ACTIVITY_CLASS', code: 'REUNION', label: 'Reunión', sortOrder: 5 },
+    { catalog: 'ACTIVITY_CLASS', code: 'RECURRENTE', label: 'Actividad recurrente', sortOrder: 6 },
     // ISSUE_TYPE (Fase 5) - BLOQUEO confirmado por `29`; el resto es seed P
     // reversible (`20` lista la familia pero no enumera estos codigos, §1.7/NIT-2).
     { catalog: 'ISSUE_TYPE', code: 'BLOQUEO', label: 'Bloqueo', sortOrder: 1 },
@@ -449,6 +451,21 @@ async function main(): Promise<void> {
     });
   }
 
+  // Parametro gestionable de la Bitacora: jornada diaria en horas. Por encima de
+  // este total el dia muestra un aviso (no bloquea). Solo se crea si no existe.
+  const workdayParam = { catalog: 'WORKLOG_PARAM', code: 'WORKDAY_HOURS' };
+  const existingWorkday = await prisma.catalogItem.findFirst({ where: workdayParam });
+  if (!existingWorkday) {
+    await prisma.catalogItem.create({
+      data: {
+        ...workdayParam,
+        label: '9',
+        sortOrder: 2,
+        description:
+          'Jornada diaria en horas; el total del día por encima de este valor muestra un aviso.',
+      },
+    });
+  }
   // Grants (upsert por la combinacion unica userId+roleId+processId).
   // Se resuelven los ids a partir de las claves naturales ya sembradas.
   const [roleByCode, processByCode, userByIdentifier] = await Promise.all([
