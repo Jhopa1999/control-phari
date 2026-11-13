@@ -149,6 +149,27 @@ export type CreateWeeklyReport =
   components['schemas']['CreateWeeklyReportDto'];
 export type UpdateWeeklyReport =
   components['schemas']['UpdateWeeklyReportDto'];
+// --- Integración Bitácora ↔ Reuniones ↔ Compromisos ↔ Recurrentes ---
+/** Sugerencias de tiempo del día de un diario (GET /worklog/daily/:id/suggestions). */
+export type DailySuggestions = components['schemas']['DailySuggestionsResponseDto'];
+export type Suggestion = components['schemas']['SuggestionDto'];
+export type AcceptSuggestionItem = components['schemas']['AcceptSuggestionItemDto'];
+export type AcceptSuggestionsResult = components['schemas']['AcceptSuggestionsResultDto'];
+export type AcceptSuggestionFailure = components['schemas']['AcceptSuggestionFailureDto'];
+/** Origen de una actividad aceptada desde una sugerencia. */
+export type ActivitySource = components['schemas']['ActivitySourceDto'];
+/** Semáforo de vencimiento de un compromiso (lo calcula la API). */
+export type DueStatus = components['schemas']['CommitmentMyWorkItemDto']['dueStatus'];
+export type MeetingCommitment = components['schemas']['MeetingCommitmentDto'];
+/** «Compromisos abiertos de mis reuniones» (GET /meetings/commitments-open). */
+export type MeetingCommitmentsOpen = components['schemas']['MeetingCommitmentsOpenDto'];
+export type CommitmentFollowUpItem = components['schemas']['CommitmentFollowUpItemDto'];
+export type MeetingCommitmentsOpenQuery = NonNullable<
+  paths['/meetings/commitments-open']['get']['parameters']['query']
+>;
+/** Compromisos del actor en Mi trabajo (GET /commitments/my-work). */
+export type CommitmentMyWork = components['schemas']['CommitmentMyWorkDto'];
+export type CommitmentMyWorkItem = components['schemas']['CommitmentMyWorkItemDto'];
 export type Meeting = components['schemas']['MeetingResponseDto'];
 export type CreateMeeting = components['schemas']['CreateMeetingDto'];
 export type UpdateMeeting = components['schemas']['UpdateMeetingDto'];

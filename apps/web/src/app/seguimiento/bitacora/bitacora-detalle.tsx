@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CheckCircle2, Plus, Send, Trash2, Undo2 } from 'lucide-react';
+import { CheckCircle2, Link2, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
@@ -12,7 +12,6 @@ import { ReasonDialog } from '@/components/reason-dialog';
 import { IdChip } from '@/components/id-chip';
 import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -42,7 +41,10 @@ import {
   updateActivity,
   updateDailyLog,
 } from '@/lib/worklog';
-import { ActividadFormDialog, CLASSIFICATIONS, type ActividadFormValues } from './actividad-form-dialog';
+import { ActividadFormDialog, type ActividadFormValues } from './actividad-form-dialog';
+import { ClassificationBadge } from './clasificaciones';
+import { hoursFromText } from './hours-input';
+import { SugerenciasPanel } from './sugerencias-panel';
 import { DiarioFormDialog, type DiarioFormValues } from './diario-form-dialog';
 
 type LoadState = 'loading' | 'success' | 'error';
@@ -62,7 +64,7 @@ function trimOrUndefined(value: string): string | undefined {
 function activityBody(values: ActividadFormValues) {
   return {
     classificationCode: values.classificationCode,
-    hours: values.hours.trim() === '' ? undefined : Number(values.hours),
+    hours: values.hours.trim() === '' ? undefined : hoursFromText(values.hours),
     projectRequestId: trimOrUndefined(values.projectRequestId),
     taskId: trimOrUndefined(values.taskId),
     assetRef: trimOrUndefined(values.assetRef),
@@ -74,8 +76,16 @@ function activityBody(values: ActividadFormValues) {
   };
 }
 
-function classLabel(code: string): string {
-  return CLASSIFICATIONS.find((c) => c.value === code)?.label ?? code;
+/** Id DOM del resumen de una actividad: destino del foco tras aceptar una sugerencia. */
+function activitySummaryId(activityId: string): string {
+  return `act-sum-${activityId}`;
+}
+
+/** Texto del origen de una actividad aceptada desde una sugerencia. */
+function sourceText(source: NonNullable<DailyLogActivity['source']>): string {
+  if (source.kind === 'MEETING') return `Desde la reunión «${source.label}»`;
+  if (source.kind === 'OCCURRENCE') return `Desde la actividad recurrente «${source.label}»`;
+  return `Desde la tarea ${source.label}`;
 }
 
 /** Id DOM del botón «Editar» de una actividad: destino del foco tras eliminar otra. */
@@ -171,6 +181,11 @@ export function BitacoraDetalle({
   const [actToDelete, setActToDelete] = React.useState<DailyLogActivity | null>(null);
   const [deleteActOpen, setDeleteActOpen] = React.useState(false);
 
+  // Sugerencias del día: versión del diario cargado (para volver a pedirlas) y señal para abrir el panel.
+  const [version, setVersion] = React.useState(0);
+  const [expandSignal, setExpandSignal] = React.useState(0);
+  const focusAfterLoadRef = React.useRef<string | null>(null);
+
   const [busy, setBusy] = React.useState(false);
   const [sendOpen, setSendOpen] = React.useState(false);
   const [recallOpen, setRecallOpen] = React.useState(false);
@@ -187,6 +202,7 @@ export function BitacoraDetalle({
       getDailyLog(logId)
         .then((d) => {
           setDetail(d);
+          setVersion((v) => v + 1);
           setLoadError(null);
           setState('success');
         })
@@ -201,6 +217,14 @@ export function BitacoraDetalle({
     void fetchDetail();
   }, [fetchDetail]);
 
+  // Tras aceptar una sugerencia, el foco va a la actividad que acaba de aparecer.
+  React.useEffect(() => {
+    const id = focusAfterLoadRef.current;
+    if (!id || !detail) return;
+    focusAfterLoadRef.current = null;
+    requestAnimationFrame(() => document.getElementById(id)?.focus());
+  }, [detail]);
+
   /** Recarga el detalle sin pasar por el estado de carga y avisa a la lista. */
   const refresh = React.useCallback(async () => {
     await fetchDetail();
@@ -213,6 +237,7 @@ export function BitacoraDetalle({
     : '';
   const { permissions } = useActor();
   const isJefe = (permissions?.grants ?? []).some((g) => g.roleCode === 'JEFE_AREA');
+  const isAuthor = Boolean(detail && permissions?.userId === detail.authorUserId);
 
   // --- Acciones del diario ---
   async function run(action: () => Promise<unknown>, success: string): Promise<boolean> {
@@ -295,11 +320,22 @@ export function BitacoraDetalle({
     setActError(null);
     try {
       if (actEditing) {
-        await updateActivity(actEditing.id, {
-          ...activityBody(values),
-          // Al editar, una tarea vaciada se envía como null: omitirla la conservaría.
-          ...(actEditing.taskId && !values.taskId.trim() ? { taskId: null } : {}),
-        });
+        const body = activityBody(values);
+        await updateActivity(actEditing.id,
+          actEditing.source
+            ? // Con origen (reunión, recurrente o tarea sugerida) se conservan clasificación y referencias.
+              {
+                hours: body.hours,
+                description: body.description,
+                result: body.result,
+                evidenceUrl: body.evidenceUrl,
+              }
+            : {
+                ...body,
+                // Al editar, una tarea vaciada se envía como null: omitirla la conservaría.
+                ...(actEditing.taskId && !values.taskId.trim() ? { taskId: null } : {}),
+              },
+        );
         toast.success('Actividad actualizada.');
       } else {
         await createActivity(detail.id, activityBody(values));
@@ -445,20 +481,26 @@ export function BitacoraDetalle({
           <ul aria-label="Actividades del diario" className="flex flex-col gap-2">
             {d.activities.map((act) => {
               const rows = activityRows(act);
-              const label = classLabel(act.classificationCode);
               return (
                 <li key={act.id} className="rounded-lg border bg-card">
                   <details className="group">
-                    <summary className="flex cursor-pointer list-none items-start gap-3 rounded-lg p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-                      <Badge variant="outline" className="shrink-0">
-                        {label}
-                      </Badge>
+                    <summary
+                      id={activitySummaryId(act.id)}
+                      className="flex cursor-pointer list-none items-start gap-3 rounded-lg p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      <ClassificationBadge code={act.classificationCode} className="shrink-0" />
                       <span className="min-w-0 flex-1 text-sm wrap-break-word group-open:whitespace-pre-wrap">
                         {act.description ? (
                           <span className="line-clamp-2 group-open:line-clamp-none">{act.description}</span>
                         ) : (
                           <span className="text-muted-foreground">Sin descripción</span>
                         )}
+                        {act.source ? (
+                          <span className="mt-1 flex items-center gap-1 text-meta text-muted-foreground">
+                            <Link2 aria-hidden="true" className="size-3.5 shrink-0" />
+                            {sourceText(act.source)}
+                          </span>
+                        ) : null}
                         {act.projectRequestTitle || act.taskTitle ? (
                           <span className="mt-1 flex flex-col gap-1 text-xs text-muted-foreground">
                             {act.projectRequestTitle || act.projectRequestCode ? (
@@ -582,7 +624,34 @@ export function BitacoraDetalle({
           <p className="text-meta text-muted-foreground">
             Es la suma de las horas de las actividades y no cambia el avance de las tareas.
           </p>
+          {detail.authorDayTotalHours > detail.totalHours ? (
+            <p className="text-sm tabular-nums">
+              Total de este diario: {formatHours(detail.totalHours)} · Total del día:{' '}
+              {formatHours(detail.authorDayTotalHours)}
+            </p>
+          ) : null}
         </div>
+
+        {isAuthor ? (
+          <SugerenciasPanel
+            dailyLog={detail}
+            version={version}
+            expandSignal={expandSignal}
+            onAccepted={async (ids) => {
+              focusAfterLoadRef.current = ids[0] ? activitySummaryId(ids[0]) : null;
+              await refresh();
+            }}
+            onRecall={detail.actions.recall ? () => setRecallOpen(true) : undefined}
+          />
+        ) : null}
+
+        {detail.overWorkday ? (
+          <InlineNotice tone="warning" role="status">
+            {isAuthor ? 'Llevas' : `${detail.authorName} lleva`} {formatHours(detail.authorDayTotalHours)}{' '}
+            registradas este día en todos sus diarios; la jornada es de{' '}
+            {formatHours(detail.workdayHours)}. Revisa que sea correcto.
+          </InlineNotice>
+        ) : null}
 
         {renderActivities(detail)}
         {renderTimeline(detail)}
@@ -708,6 +777,15 @@ export function BitacoraDetalle({
         processId={detail?.processId ?? ''}
         date={detail?.date ?? ''}
         isJefe={isJefe}
+        onGoToSuggestions={
+          isAuthor && detail?.actions.edit
+            ? () => {
+                setActOpen(false);
+                setActEditing(null);
+                setExpandSignal((n) => n + 1);
+              }
+            : undefined
+        }
         submitting={actSubmitting}
         errorMessage={actError}
         onSubmit={handleActSubmit}

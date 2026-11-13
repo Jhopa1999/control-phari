@@ -1,5 +1,6 @@
 import {
   api,
+  type AcceptSuggestionsResult,
   type CoordinationPerson,
   type CreateActivity,
   type CreateDailyLog,
@@ -8,6 +9,7 @@ import {
   type DailyLogActivity,
   type DailyLogsQuery,
   type DailyLogSummary,
+  type DailySuggestions,
   type PaginatedDailyLogs,
   type UpdateActivity,
   type UpdateDailyLog,
@@ -301,7 +303,7 @@ export async function createActivity(
       },
     );
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -324,7 +326,7 @@ export async function updateActivity(
       },
     );
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -348,6 +350,93 @@ export async function deleteActivity(id: string): Promise<void> {
   }
 }
 
+// --- Sugerencias de tiempo del día (reuniones, recurrentes, tareas) ---
+
+/**
+ * Sugerencias de tiempo del día de un diario (GET /worklog/daily/:id/suggestions).
+ * Las calcula la API; con `includeDismissed` incluye las descartadas.
+ */
+export async function getDailySuggestions(
+  dailyLogId: string,
+  includeDismissed = false,
+): Promise<DailySuggestions> {
+  try {
+    const { data, error, response } = await api.GET('/worklog/daily/{id}/suggestions', {
+      params: {
+        path: { id: dailyLogId },
+        ...(includeDismissed ? { query: { includeDismissed: true } } : {}),
+      },
+    });
+    if (error || !data) {
+      throw toWorklogError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof WorklogError) throw err;
+    throw toWorklogError(undefined);
+  }
+}
+
+/**
+ * Acepta una o varias sugerencias (POST .../suggestions/accept). El resultado es
+ * parcial: `accepted` trae las actividades creadas y `failed` las que no.
+ */
+export async function acceptSuggestions(
+  dailyLogId: string,
+  items: { key: string; hours?: number; description?: string }[],
+): Promise<AcceptSuggestionsResult> {
+  try {
+    const { data, error, response } = await api.POST(
+      '/worklog/daily/{id}/suggestions/accept',
+      { params: { path: { id: dailyLogId } }, body: { items } },
+    );
+    if (error || !data) {
+      throw toWorklogError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof WorklogError) throw err;
+    throw toWorklogError(undefined);
+  }
+}
+
+/** Descarta sugerencias (no reaparecen en ningún diario del autor). */
+export async function dismissSuggestions(
+  dailyLogId: string,
+  keys: string[],
+): Promise<void> {
+  try {
+    const { error, response } = await api.POST('/worklog/daily/{id}/suggestions/dismiss', {
+      params: { path: { id: dailyLogId } },
+      body: { keys },
+    });
+    if (error) {
+      throw toWorklogError(response.status, error);
+    }
+  } catch (err) {
+    if (err instanceof WorklogError) throw err;
+    throw toWorklogError(undefined);
+  }
+}
+
+/** Restaura sugerencias descartadas. */
+export async function restoreSuggestions(
+  dailyLogId: string,
+  keys: string[],
+): Promise<void> {
+  try {
+    const { error, response } = await api.POST('/worklog/daily/{id}/suggestions/restore', {
+      params: { path: { id: dailyLogId } },
+      body: { keys },
+    });
+    if (error) {
+      throw toWorklogError(response.status, error);
+    }
+  } catch (err) {
+    if (err instanceof WorklogError) throw err;
+    throw toWorklogError(undefined);
+  }
+}
 // --- Semanales (WeeklyReport) ---
 
 /** Semanales en alcance (GET /weekly-reports). consolidation=null en listados. */

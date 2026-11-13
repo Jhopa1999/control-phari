@@ -5,11 +5,11 @@ import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { DescriptionList } from '@/components/description-list';
+import { DueBadge } from '@/components/due-badge';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { MasterDetail, SelectableList } from '@/components/master-detail';
 import { StatusBadge } from '@/components/status-badge';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -28,7 +28,7 @@ import {
   transitionCommitment,
   updateCommitment,
 } from '@/lib/commitments';
-import { formatDateOnly, localDateInputValue } from '@/lib/format';
+import { formatDateOnly } from '@/lib/format';
 import { nextStates, stateLabel } from '@/lib/record-state';
 import { CompromisoFormDialog, type CompromisoFormValues } from './compromiso-form-dialog';
 import type { CoordinationData } from './reuniones-view';
@@ -75,12 +75,8 @@ export function CompromisosPanel({
   const [formError, setFormError] = React.useState<string | null>(null);
   const [transitioningTo, setTransitioningTo] = React.useState<RecordState | null>(null);
   const detailHeadingRef = React.useRef<HTMLHeadingElement>(null);
-  const today = localDateInputValue();
-
-  const isOverdue = React.useCallback(
-    (c: Commitment) => !DONE.has(c.state) && c.dueDate < today,
-    [today],
-  );
+  // El semáforo de vencimiento lo calcula la API (dueStatus).
+  const isOverdue = React.useCallback((c: Commitment) => c.dueStatus === 'VENCIDO', []);
 
   const filtered = React.useMemo(
     () =>
@@ -205,7 +201,11 @@ export function CompromisosPanel({
                 {selected.title}
               </h2>
               <StatusBadge kind="record" value={selected.state} />
-              {isOverdue(selected) ? <Badge variant="danger">Vencido</Badge> : null}
+              <DueBadge
+                status={selected.dueStatus}
+                daysToDue={selected.daysToDue}
+                dueDate={selected.dueDate}
+              />
             </div>
             <p className="text-meta text-muted-foreground">
               {`Vence ${formatDateOnly(selected.dueDate)} · ${processName(selected.processId)}`}
@@ -373,7 +373,7 @@ export function CompromisosPanel({
               title: c.title,
               meta: meta(c),
               badge: isOverdue(c) ? (
-                <Badge variant="danger">Vencido</Badge>
+                <DueBadge status={c.dueStatus} daysToDue={c.daysToDue} dueDate={c.dueDate} />
               ) : (
                 <StatusBadge kind="record" value={c.state} />
               ),

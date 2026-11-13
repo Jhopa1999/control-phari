@@ -26,12 +26,21 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import type { CoordinationPerson, Meeting, Process } from '@/lib/api-client';
 import { localDateInputValue } from '@/lib/format';
+import {
+  DuracionField,
+  EMPTY_DURATION,
+  durationToParts,
+  partsToMinutes,
+  type DuracionParts,
+} from './duracion-field';
 
 export interface ReunionFormValues {
   processId: string;
   title: string;
   meetingDate: string;
   meetingTime: string;
+  /** Duración en minutos (múltiplo de 15); null si no se indicó. */
+  durationMinutes: number | null;
   participantUserIds: string[];
   responsibleUserId: string;
   agenda: string;
@@ -45,6 +54,8 @@ interface ReunionFormDialogProps {
   editing?: Meeting | null;
   processes: Process[];
   people: CoordinationPerson[];
+  /** Al abrir, el foco va al campo de duración (p. ej. tras un cierre sin duración). */
+  focusDuration?: boolean;
   submitting: boolean;
   /** Error del backend; se conserva ante fallo (AC-031). */
   errorMessage: string | null;
@@ -53,7 +64,7 @@ interface ReunionFormDialogProps {
 
 const SIN_VALOR = '__none__';
 
-type FieldKey = 'processId' | 'title' | 'meetingDate' | 'meetingTime';
+type FieldKey = 'processId' | 'title' | 'meetingDate' | 'meetingTime' | 'duration';
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 /** Id del formulario: el FormError lleva `reu-form-error`. */
@@ -64,7 +75,9 @@ const FORM_ID = 'reu-form';
  * hora HH:mm), evaluadas todas a la vez (design §9).
  */
 function validate(
-  values: Pick<ReunionFormValues, FieldKey>,
+  values: Pick<ReunionFormValues, 'processId' | 'title' | 'meetingDate' | 'meetingTime'> & {
+    durationMinutes: number | null;
+  },
   isEdit: boolean,
 ): FieldErrors {
   const errors: FieldErrors = {};
@@ -73,6 +86,10 @@ function validate(
   if (!values.meetingDate) errors.meetingDate = 'La fecha es obligatoria.';
   if (values.meetingTime && !/^\d{2}:\d{2}$/.test(values.meetingTime)) {
     errors.meetingTime = 'La hora debe tener formato HH:mm.';
+  }
+  // La regla de fondo (15 a 1440 en pasos de 15) es de la API; aquí solo se evita enviar 0.
+  if (values.durationMinutes !== null && values.durationMinutes < 15) {
+    errors.duration = 'La duración debe ser de 15 minutos o más, en pasos de 15.';
   }
   return errors;
 }
@@ -83,6 +100,7 @@ export function ReunionFormDialog({
   editing,
   processes,
   people,
+  focusDuration = false,
   submitting,
   errorMessage,
   onSubmit,
@@ -92,6 +110,7 @@ export function ReunionFormDialog({
   const [title, setTitle] = React.useState('');
   const [meetingDate, setMeetingDate] = React.useState('');
   const [meetingTime, setMeetingTime] = React.useState('');
+  const [duration, setDuration] = React.useState<DuracionParts>(EMPTY_DURATION);
   const [participantUserIds, setParticipantUserIds] = React.useState<string[]>([]);
   const [responsibleUserId, setResponsibleUserId] = React.useState('');
   const [agenda, setAgenda] = React.useState('');
@@ -102,9 +121,16 @@ export function ReunionFormDialog({
   const titleRef = React.useRef<HTMLInputElement>(null);
   const dateRef = React.useRef<HTMLInputElement>(null);
   const timeRef = React.useRef<HTMLInputElement>(null);
+  const durationRef = React.useRef<HTMLButtonElement>(null);
   // Sin DialogTrigger, Radix no sabe a dónde devolver el foco al cerrar: vuelve
   // al botón que abrió el diálogo («Nueva reunión» o «Editar»), NIT 4.
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
+
+  React.useEffect(() => {
+    if (!open || !focusDuration) return;
+    const id = window.setTimeout(() => durationRef.current?.focus(), 50);
+    return () => window.clearTimeout(id);
+  }, [open, focusDuration]);
 
   // Inicializa al abrir. El reset solo ocurre aquí; ante fallo del POST/PATCH
   // el padre mantiene el diálogo abierto con los valores (AC-031).
@@ -116,6 +142,7 @@ export function ReunionFormDialog({
       setTitle(editing.title);
       setMeetingDate(editing.meetingDate);
       setMeetingTime(editing.meetingTime ?? '');
+      setDuration(durationToParts(editing.durationMinutes));
       setParticipantUserIds(editing.participantUserIds ?? []);
       setResponsibleUserId(editing.responsibleUserId ?? '');
       setAgenda(editing.agenda ?? '');
@@ -127,6 +154,7 @@ export function ReunionFormDialog({
       // Hoy en el calendario local del usuario (design §7.9, regla 2).
       setMeetingDate(localDateInputValue());
       setMeetingTime('');
+      setDuration(EMPTY_DURATION);
       setParticipantUserIds([]);
       setResponsibleUserId('');
       setAgenda('');
@@ -147,14 +175,16 @@ export function ReunionFormDialog({
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const errors = validate({ processId, title, meetingDate, meetingTime }, isEdit);
+    const durationMinutes = partsToMinutes(duration);
+    const errors = validate({ processId, title, meetingDate, meetingTime, durationMinutes }, isEdit);
     setFieldErrors(errors);
-    if (errors.processId || errors.title || errors.meetingDate || errors.meetingTime) {
+    if (errors.processId || errors.title || errors.meetingDate || errors.meetingTime || errors.duration) {
       // Foco al primer campo con error, en orden del DOM.
       if (errors.processId) processRef.current?.focus();
       else if (errors.title) titleRef.current?.focus();
       else if (errors.meetingDate) dateRef.current?.focus();
-      else timeRef.current?.focus();
+      else if (errors.meetingTime) timeRef.current?.focus();
+      else durationRef.current?.focus();
       return;
     }
     onSubmit({
@@ -162,6 +192,7 @@ export function ReunionFormDialog({
       title,
       meetingDate,
       meetingTime,
+      durationMinutes,
       participantUserIds,
       responsibleUserId,
       agenda,
@@ -255,6 +286,18 @@ export function ReunionFormDialog({
                 />
               </Field>
             </div>
+
+            <DuracionField
+              id="reu-duration"
+              value={duration}
+              onChange={(next) => {
+                setDuration(next);
+                clearError('duration');
+              }}
+              meetingTime={meetingTime}
+              error={fieldErrors.duration}
+              hoursRef={durationRef}
+            />
 
             <Field id="reu-responsible" label="Responsable">
               {(control) => (

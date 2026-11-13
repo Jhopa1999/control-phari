@@ -58,6 +58,7 @@ import {
 import { findControl, focusControl, restoreFocus, type FocusTarget } from './mi-trabajo-focus';
 import { boardHeadingId, boardTabId, columnLabel, MyWorkBoard } from './my-work-board';
 import { PendingReviewSection } from './pending-review-section';
+import { CommitmentsSection } from './commitments-section';
 import { RecurringSection } from './recurring-section';
 
 type LoadState = 'loading' | 'success' | 'error';
@@ -156,6 +157,8 @@ export function MiTrabajoView(): React.ReactElement {
   const [announcement, setAnnouncement] = React.useState('');
   // Total de actividades recurrentes con ventana abierta (null: cargando o con error).
   const [recurringTotal, setRecurringTotal] = React.useState<number | null>(null);
+  // Total de compromisos abiertos de la persona (null: cargando o con error).
+  const [commitmentsTotal, setCommitmentsTotal] = React.useState<number | null>(null);
   // Panel lateral: la URL (?taskId=) manda; estos estados solo recuerdan cómo se abrió.
   const [openedFromList, setOpenedFromList] = React.useState(false);
   const [returnFocusId, setReturnFocusId] = React.useState<string | null>(null);
@@ -529,8 +532,8 @@ export function MiTrabajoView(): React.ReactElement {
           icon={ListChecks}
           title="No tienes tareas asignadas."
           description={
-            recurringTotal !== null && recurringTotal > 0
-              ? 'Tus actividades recurrentes pendientes aparecen arriba.'
+            (recurringTotal ?? 0) > 0 || (commitmentsTotal ?? 0) > 0
+              ? 'Tus actividades recurrentes y compromisos pendientes aparecen arriba.'
               : 'Las tareas de las que seas responsable aparecerán aquí.'
           }
         />
@@ -732,6 +735,7 @@ export function MiTrabajoView(): React.ReactElement {
           />
         ) : null}
         <RecurringSection onTotalChange={setRecurringTotal} announce={announce} />
+        <CommitmentsSection onTotalChange={setCommitmentsTotal} announce={announce} />
         {body}
       </div>
       <Sheet open={panelTaskId !== null} onOpenChange={(open) => !open && closePanel()}>

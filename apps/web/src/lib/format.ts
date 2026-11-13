@@ -34,7 +34,7 @@ const MONTH_FORMAT = new Intl.DateTimeFormat('es', {
   year: 'numeric',
   timeZone: 'UTC',
 });
-const HOURS_FORMAT = new Intl.NumberFormat('es', { maximumFractionDigits: 1 });
+const HOURS_FORMAT = new Intl.NumberFormat('es', { maximumFractionDigits: 2 });
 const COUNT_FORMAT = new Intl.NumberFormat('es');
 
 type DateValue = string | null | undefined;
@@ -152,6 +152,31 @@ export function formatHours(n: number): string {
   return `${sign}${digits}${NBSP}h`;
 }
 
+/**
+ * Duración en minutos como «1 h 30 min», «45 min» o «2 h». Para el horario de
+ * reuniones y las sugerencias de la bitácora.
+ */
+export function formatDuration(minutes: number): string {
+  const total = Math.max(0, Math.round(minutes));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m}${NBSP}min`;
+  if (m === 0) return `${h}${NBSP}h`;
+  return `${h}${NBSP}h ${m}${NBSP}min`;
+}
+
+/**
+ * Horario «10:00 – 11:00» (raya corta con espacios finos no separables). Solo
+ * la hora de inicio si no hay fin; null si no hay hora. El fin lo calcula la API.
+ */
+export function formatTimeRange(
+  start: string | null | undefined,
+  end: string | null | undefined,
+): string | null {
+  if (!start) return null;
+  if (!end) return start;
+  return `${start}\u202F\u2013\u202F${end}`;
+}
 /** Porcentaje ya expresado en 0–100: "45 %". */
 export function formatPercent(n: number): string {
   return `${Math.round(n)}${NBSP}%`;

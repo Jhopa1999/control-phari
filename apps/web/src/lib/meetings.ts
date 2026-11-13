@@ -2,6 +2,8 @@ import {
   api,
   type CreateMeeting,
   type Meeting,
+  type MeetingCommitmentsOpen,
+  type MeetingCommitmentsOpenQuery,
   type UpdateMeeting,
 } from './api-client';
 
@@ -150,6 +152,26 @@ export async function reopenMeeting(id: string): Promise<Meeting> {
   try {
     const { data, error, response } = await api.POST('/meetings/{id}/reopen', {
       params: { path: { id } },
+    });
+    if (error || !data) throw toMeetingError(response.status, error);
+    return data;
+  } catch (err) {
+    if (err instanceof MeetingError) throw err;
+    throw toMeetingError(undefined);
+  }
+}
+
+/**
+ * «Compromisos abiertos de mis reuniones» (GET /meetings/commitments-open):
+ * abiertos de las reuniones donde el actor es responsable, con semáforo de
+ * vencimiento. Los filtros los aplica la API.
+ */
+export async function listOpenCommitmentsOfMyMeetings(
+  query: MeetingCommitmentsOpenQuery = {},
+): Promise<MeetingCommitmentsOpen> {
+  try {
+    const { data, error, response } = await api.GET('/meetings/commitments-open', {
+      params: { query },
     });
     if (error || !data) throw toMeetingError(response.status, error);
     return data;
