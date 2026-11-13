@@ -786,6 +786,16 @@
         "apps/mcp/README.md"
       ],
       "summary": "Actividades recurrentes (rediseño, núcleo backend): horas estimadas obligatorias, días de preparación (ventana), evidencia exigible, estado CANCELADA y displayStatus derivado (PROGRAMADA, VENCE_HOY, COMPLETADA_TARDE…); tomar registra quién y cuándo; completar exige qué se realizó y horas reales; editar fechas, pausar y reanudar (POST /recurring-activities/:id/resume) reconcilian las ocurrencias sin duplicar; cumplimiento con horas y desglose por persona. Migración 20261115120000 segura sobre datos existentes. MCP: 6 tools de escritura nuevas (recurring.pause destructiva) y run-generation pasa a exclusión permanente."
+    },
+    {
+      "timestamp": "2026-11-15T13:00:00Z",
+      "trigger_file": "apps/api/src/modules/recurring-activity/occurrence.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "apps/mcp/README.md"
+      ],
+      "summary": "Actividades recurrentes (rediseño, adjuntos y vistas): adjuntos por ocurrencia (tabla recurring_occurrence_evidences, migración 20261115130000; mismas reglas de archivo que las evidencias de tareas) y exigencia de requiresEvidence al completar; endpoints de lectura board (semana en curso y grupos), calendar (rango ≤ 62 días), my-work y preview (3 próximas fechas); avisos internos idempotentes (ventana abierta, vence hoy, vencida) con el cron RECURRING_ACTIVITY_NOTICES_CRON. MCP: 5 tools de lectura nuevas; subir, quitar y descargar adjuntos quedan como exclusiones permanentes."
     }
   ]
 }

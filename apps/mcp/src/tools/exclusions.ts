@@ -97,12 +97,20 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
       'GET /requests/{requestId}/plan/export-excel',
       'GET /requests/{requestId}/plan/template-excel',
       'GET /tasks/{taskId}/evidence/{evidenceId}/download',
+      'GET /recurring-activities/occurrences/{id}/evidence/{evidenceId}/download',
     ],
   ),
   ...permanente(
     'Subida multipart/form-data de un archivo: una tool MCP no transporta binarios.',
     [
       'POST /tasks/{taskId}/evidence',
+      'POST /recurring-activities/occurrences/{id}/evidence',
+    ],
+  ),
+  ...permanente(
+    'Quitar un adjunto de una actividad recurrente acompaña a la subida multipart (que no se expone): el agente no gestiona archivos que no puede subir.',
+    [
+      'DELETE /recurring-activities/occurrences/{id}/evidence/{evidenceId}',
     ],
   ),
   ...permanente(

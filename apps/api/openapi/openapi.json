@@ -9202,6 +9202,154 @@
         ]
       }
     },
+    "/recurring-activities/occurrences/board": {
+      "get": {
+        "operationId": "OccurrenceController_board",
+        "parameters": [
+          {
+            "name": "completedWeeks",
+            "required": false,
+            "in": "query",
+            "description": "Semanas de completadas a incluir: 4 (por defecto), 12 o 0 (todas).",
+            "schema": {
+              "enum": [
+                0,
+                4,
+                12
+              ],
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tablero agrupado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceBoardResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros invalidos."
+          }
+        },
+        "summary": "Tablero de \"Que me toca\": semana en curso y ocurrencias del actor agrupadas en vencidas, esta semana, proximas y completadas.",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences/calendar": {
+      "get": {
+        "operationId": "OccurrenceController_calendar",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Dia objetivo desde (inclusive).",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Dia objetivo hasta (inclusive). El rango admite 62 dias como maximo.",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "description": "Alcance: \"mine\" (por defecto) o \"all\" (solo jefe/admin).",
+            "schema": {
+              "default": "mine",
+              "type": "string",
+              "enum": [
+                "mine",
+                "all"
+              ]
+            }
+          },
+          {
+            "name": "responsibleUserId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por usuario responsable de la definicion.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "responsibleAreaId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por area responsable de la definicion.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ocurrencias del rango (sin canceladas, hasta 500).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OccurrenceResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rango invalido o mayor a 62 dias."
+          },
+          "403": {
+            "description": "scope=all sin permiso."
+          }
+        },
+        "summary": "Ocurrencias de un rango de fechas (maximo 62 dias) para la vista de calendario.",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences/my-work": {
+      "get": {
+        "operationId": "OccurrenceController_myWork",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Ocurrencias trabajables del actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyWorkOccurrencesResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ocurrencias del actor que ya se pueden trabajar (ventana abierta, vence hoy, en curso y vencidas) para \"Mi trabajo\".",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
     "/recurring-activities/occurrences/{id}": {
       "get": {
         "operationId": "OccurrenceController_findOne",
@@ -9321,6 +9469,177 @@
           }
         },
         "summary": "Completa una ocurrencia indicando que se realizo y las horas reales.",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences/{id}/evidence": {
+      "get": {
+        "operationId": "OccurrenceController_listEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Adjuntos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OccurrenceEvidenceResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          }
+        },
+        "summary": "Lista los adjuntos de una ocurrencia.",
+        "tags": [
+          "recurring-activity"
+        ]
+      },
+      "post": {
+        "operationId": "OccurrenceController_uploadEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadEvidenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Adjunto creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceEvidenceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Archivo vacio, muy grande o de tipo no permitido."
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          },
+          "409": {
+            "description": "La ocurrencia no esta abierta (programada, completada o cancelada)."
+          }
+        },
+        "summary": "Adjunta un archivo (informe, reporte) a una ocurrencia abierta (multipart, un archivo por peticion).",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences/{id}/evidence/{evidenceId}/download": {
+      "get": {
+        "operationId": "OccurrenceController_downloadEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "evidenceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "URL prefirmada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceDownloadDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          }
+        },
+        "summary": "URL temporal para descargar un adjunto de una ocurrencia.",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/occurrences/{id}/evidence/{evidenceId}": {
+      "delete": {
+        "operationId": "OccurrenceController_removeEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "evidenceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Adjunto eliminado."
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          },
+          "409": {
+            "description": "La ocurrencia no esta abierta."
+          }
+        },
+        "summary": "Quita un adjunto de una ocurrencia abierta.",
         "tags": [
           "recurring-activity"
         ]
@@ -9472,6 +9791,93 @@
           }
         },
         "summary": "Panel de cumplimiento: agregados a tiempo/destiempo/vencidas por actividad y responsable (jefe/admin).",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/preview": {
+      "get": {
+        "operationId": "RecurringActivityController_preview",
+        "parameters": [
+          {
+            "name": "cadence",
+            "required": true,
+            "in": "query",
+            "description": "Cadencia de la recurrencia.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SEMANAL",
+                "MENSUAL",
+                "TRIMESTRAL",
+                "SEMESTRAL",
+                "ANUAL"
+              ]
+            }
+          },
+          {
+            "name": "intervalCount",
+            "required": false,
+            "in": "query",
+            "description": "Cada cuantos periodos se repite (>= 1). Por defecto 1.",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": true,
+            "in": "query",
+            "description": "Primer dia objetivo / ancla de la cadencia.",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "Fin opcional de la recurrencia (inclusive).",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "prepDays",
+            "required": false,
+            "in": "query",
+            "description": "Dias de preparacion. Por defecto 2 (SEMANAL) o 5 (resto).",
+            "schema": {
+              "minimum": 0,
+              "maximum": 365,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hasta 3 proximas fechas desde hoy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurrencePreviewResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parametros invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Vista previa de las 3 proximas fechas de una recurrencia y el dia en que se habilita cada una (jefe/admin).",
         "tags": [
           "recurring-activity"
         ]
@@ -18792,6 +19198,10 @@
             "nullable": true,
             "description": "Motivo de cancelacion (si CANCELADA)."
           },
+          "evidenceCount": {
+            "type": "number",
+            "description": "Cantidad de adjuntos de la ocurrencia."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -18834,6 +19244,7 @@
           "prepDays",
           "cancelledAt",
           "cancelReason",
+          "evidenceCount",
           "createdAt",
           "updatedAt"
         ]
@@ -18875,6 +19286,140 @@
           "hasMore"
         ]
       },
+      "BoardWeekDto": {
+        "type": "object",
+        "properties": {
+          "isoYear": {
+            "type": "number",
+            "description": "Anio ISO de la semana."
+          },
+          "number": {
+            "type": "number",
+            "description": "Numero de semana ISO (1-53)."
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Lunes de la semana (dia de calendario)."
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Domingo de la semana (dia de calendario)."
+          }
+        },
+        "required": [
+          "isoYear",
+          "number",
+          "startDate",
+          "endDate"
+        ]
+      },
+      "BoardCountsDto": {
+        "type": "object",
+        "properties": {
+          "overdue": {
+            "type": "number",
+            "description": "Ocurrencias vencidas."
+          },
+          "dueToday": {
+            "type": "number",
+            "description": "Ocurrencias que vencen hoy."
+          },
+          "thisWeek": {
+            "type": "number",
+            "description": "Ocurrencias de la semana en curso (abiertas)."
+          }
+        },
+        "required": [
+          "overdue",
+          "dueToday",
+          "thisWeek"
+        ]
+      },
+      "OccurrenceBoardResponseDto": {
+        "type": "object",
+        "properties": {
+          "today": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Dia de hoy (zona del config)."
+          },
+          "week": {
+            "description": "Semana ISO en curso.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BoardWeekDto"
+              }
+            ]
+          },
+          "counts": {
+            "$ref": "#/components/schemas/BoardCountsDto"
+          },
+          "plannedHoursThisWeek": {
+            "type": "number",
+            "description": "Suma de horas estimadas de las ocurrencias abiertas de la semana."
+          },
+          "overdue": {
+            "description": "Vencidas (de la mas antigua a la mas reciente).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceResponseDto"
+            }
+          },
+          "thisWeek": {
+            "description": "Abiertas con dia objetivo en la semana en curso.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceResponseDto"
+            }
+          },
+          "upcoming": {
+            "description": "Abiertas con dia objetivo posterior a la semana en curso.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceResponseDto"
+            }
+          },
+          "completed": {
+            "description": "Completadas dentro de las semanas pedidas (la mas reciente primero).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceResponseDto"
+            }
+          }
+        },
+        "required": [
+          "today",
+          "week",
+          "counts",
+          "plannedHoursThisWeek",
+          "overdue",
+          "thisWeek",
+          "upcoming",
+          "completed"
+        ]
+      },
+      "MyWorkOccurrencesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Vencidas, vence hoy, en curso y pendientes con ventana abierta.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Cantidad de elementos."
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
       "CompleteOccurrenceDto": {
         "type": "object",
         "properties": {
@@ -18894,6 +19439,57 @@
         "required": [
           "comment",
           "actualHours"
+        ]
+      },
+      "OccurrenceEvidenceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador del adjunto."
+          },
+          "occurrenceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ocurrencia a la que pertenece."
+          },
+          "fileName": {
+            "type": "string",
+            "description": "Nombre original del archivo."
+          },
+          "contentType": {
+            "type": "string",
+            "description": "Tipo MIME."
+          },
+          "sizeBytes": {
+            "type": "number",
+            "description": "Tamano en bytes."
+          },
+          "uploadedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Usuario que subio el archivo."
+          },
+          "uploadedByName": {
+            "type": "string",
+            "description": "Nombre de quien subio el archivo."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de subida."
+          }
+        },
+        "required": [
+          "id",
+          "occurrenceId",
+          "fileName",
+          "contentType",
+          "sizeBytes",
+          "uploadedByUserId",
+          "uploadedByName",
+          "createdAt"
         ]
       },
       "CreateRecurringActivityDto": {
@@ -19313,6 +19909,40 @@
           "byActivity",
           "byResponsible",
           "byPerson"
+        ]
+      },
+      "PreviewDateDto": {
+        "type": "object",
+        "properties": {
+          "targetDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Dia objetivo."
+          },
+          "opensOn": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Dia desde el que se habilita (targetDate - prepDays)."
+          }
+        },
+        "required": [
+          "targetDate",
+          "opensOn"
+        ]
+      },
+      "RecurrencePreviewResponseDto": {
+        "type": "object",
+        "properties": {
+          "dates": {
+            "description": "Hasta 3 proximas fechas desde hoy.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewDateDto"
+            }
+          }
+        },
+        "required": [
+          "dates"
         ]
       },
       "UpdateRecurringActivityDto": {

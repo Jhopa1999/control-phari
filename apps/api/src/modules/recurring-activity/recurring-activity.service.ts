@@ -10,10 +10,15 @@ import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
+import {
+  NotificationService,
+  NotificationType,
+} from '../notification/notification.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import {
   isRecurrence,
+  nextNTargetDates,
   nextTargetDatesFrom,
   Recurrence,
   toLocalDate,
@@ -21,7 +26,9 @@ import {
 } from './recurrence';
 import {
   computeOccurrenceDisplay,
+  isWindowOpen,
   OccurrenceDisplayStatus,
+  opensOnFor,
 } from './occurrence-display';
 // `toLocalDate` se usa SOLO para proyectar el reloj ("ahora") al dia local de
 // la zona configurada. Las fechas de calendario ya persistidas (@db.Date,
@@ -48,6 +55,14 @@ import { PaginatedOccurrencesResponseDto } from './dto/paginated-occurrences-res
 import { CompleteOccurrenceDto } from './dto/complete-occurrence.dto';
 import { ComplianceQueryDto } from './dto/compliance-query.dto';
 import {
+  BoardQueryDto,
+  CalendarQueryDto,
+  MyWorkOccurrencesResponseDto,
+  OccurrenceBoardResponseDto,
+  PreviewQueryDto,
+  RecurrencePreviewResponseDto,
+} from './dto/occurrence-views.dto';
+import {
   ComplianceByActivityDto,
   ComplianceByPersonDto,
   ComplianceByResponsibleDto,
@@ -66,7 +81,7 @@ const MAX_PAGE_SIZE = 100;
 type ActivityRow = Prisma.RecurringActivityGetPayload<Record<string, never>>;
 
 /** Relaciones que necesita la proyeccion HTTP de una ocurrencia. */
-const OCCURRENCE_INCLUDE = {
+export const OCCURRENCE_INCLUDE = {
   activity: {
     include: {
       responsibleUser: { select: { name: true } },
@@ -75,9 +90,10 @@ const OCCURRENCE_INCLUDE = {
   },
   startedBy: { select: { name: true } },
   completedBy: { select: { name: true } },
+  _count: { select: { evidence: true } },
 } satisfies Prisma.RecurringActivityOccurrenceInclude;
 
-type OccurrenceWithActivity = Prisma.RecurringActivityOccurrenceGetPayload<{
+export type OccurrenceWithActivity = Prisma.RecurringActivityOccurrenceGetPayload<{
   include: typeof OCCURRENCE_INCLUDE;
 }>;
 
@@ -102,6 +118,34 @@ interface ReconcileResult {
   readonly created: number;
   readonly cancelled: number;
   readonly reactivated: number;
+}
+
+/** Tope de filas que cargan el tablero y "Mi trabajo" (acota la consulta). */
+const BOARD_MAX_ROWS = 1000;
+
+/** Limites del calendario: rango maximo en dias y tope de filas devueltas. */
+const CALENDAR_MAX_DAYS = 62;
+const CALENDAR_MAX_ROWS = 500;
+
+/** Cantidad de fechas de la vista previa de una recurrencia. */
+const PREVIEW_DATES = 3;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Marcas de idempotencia de los avisos internos de una ocurrencia. */
+type NoticeColumn = 'windowNotifiedAt' | 'dueNotifiedAt' | 'overdueNotifiedAt';
+
+/** Ocurrencia con su definicion, lo que necesita un aviso interno. */
+type NoticeRow = Prisma.RecurringActivityOccurrenceGetPayload<{
+  include: { activity: true };
+}>;
+
+/** Resultado de una pasada de avisos internos. */
+export interface NoticeResult {
+  /** Avisos de "ventana abierta" emitidos. */
+  readonly windowNotices: number;
+  /** Avisos de "vence hoy" emitidos. */
+  readonly dueNotices: number;
 }
 
 /** Resultado de una pasada de generacion (para logs y el endpoint manual). */
@@ -150,6 +194,7 @@ export class RecurringActivityService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly mail: MailService,
+    private readonly notifications: NotificationService,
   ) {
     this.config = loadRecurringActivityConfig();
   }
@@ -479,14 +524,14 @@ export class RecurringActivityService {
    */
   private async resolveRecipients(
     activity: ActivityRow,
-  ): Promise<Array<{ identifier: string; name: string }>> {
+  ): Promise<Array<{ id: string; identifier: string; name: string }>> {
     if (
       activity.responsibleKind === ResponsibleKind.USER &&
       activity.responsibleUserId !== null
     ) {
       const user = await this.prisma.user.findFirst({
         where: { id: activity.responsibleUserId, active: true },
-        select: { identifier: true, name: true },
+        select: { id: true, identifier: true, name: true },
       });
       return user ? [user] : [];
     }
@@ -502,9 +547,10 @@ export class RecurringActivityService {
         },
         select: { user: { select: { id: true, identifier: true, name: true } } },
       });
-      const byId = new Map<string, { identifier: string; name: string }>();
+      const byId = new Map<string, { id: string; identifier: string; name: string }>();
       for (const grant of grants) {
         byId.set(grant.user.id, {
+          id: grant.user.id,
           identifier: grant.user.identifier,
           name: grant.user.name,
         });
@@ -528,6 +574,9 @@ export class RecurringActivityService {
   async markOverdueOccurrences(now: Date = new Date()): Promise<OverdueResult> {
     const todayUtc = this.today(now);
 
+    // Las que van a pasar a VENCIDA ahora son las que se avisan (una sola vez).
+    const toNotify = await this.findNewlyOverdue(todayUtc);
+
     const result = await this.prisma.recurringActivityOccurrence.updateMany({
       where: {
         status: { in: [OccurrenceStatus.PENDIENTE, OccurrenceStatus.EN_CURSO] },
@@ -535,6 +584,8 @@ export class RecurringActivityService {
       },
       data: { status: OccurrenceStatus.VENCIDA },
     });
+
+    await this.noticeOccurrences(toNotify, 'overdueNotifiedAt', now);
 
     return { occurrencesMarkedOverdue: result.count };
   }
@@ -647,6 +698,7 @@ export class RecurringActivityService {
       prepDays: row.activity.prepDays,
       cancelledAt: row.cancelledAt,
       cancelReason: row.cancelReason,
+      evidenceCount: row._count?.evidence ?? 0,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -1301,7 +1353,7 @@ export class RecurringActivityService {
     }
     if (row.activity.requiresEvidence) {
       const evidenceCount = await this.countEvidence(id);
-      if (evidenceCount !== null && evidenceCount === 0) {
+      if (evidenceCount === 0) {
         throw new ConflictException(
           'Esta actividad exige al menos un adjunto antes de completarla.',
         );
@@ -1335,7 +1387,7 @@ export class RecurringActivityService {
   }
 
   /** Estado de presentacion y acciones permitidas de una ocurrencia (hoy local). */
-  private displayOf(row: OccurrenceWithActivity) {
+  displayOf(row: OccurrenceWithActivity) {
     return computeOccurrenceDisplay(
       row,
       row.activity,
@@ -1344,14 +1396,325 @@ export class RecurringActivityService {
     );
   }
 
+  /** Cantidad de adjuntos de una ocurrencia (exigencia de requiresEvidence). */
+  private async countEvidence(occurrenceId: string): Promise<number> {
+    return this.prisma.recurringOccurrenceEvidence.count({ where: { occurrenceId } });
+  }
+
+  // ----- Vistas de lectura (FEAT-002): tablero, calendario, mi trabajo ------
+
   /**
-   * Cantidad de adjuntos de una ocurrencia. Devuelve null mientras no exista la
-   * tabla de evidencias (FEAT-002 la implementa): null = no se puede verificar y
-   * el chequeo de 
-equiresEvidence no se aplica.
+   * Tablero "Que me toca" del actor (alcance mine). El agrupamiento es regla
+   * de backend: vencidas / abiertas de la semana en curso / proximas /
+   * completadas en las ultimas N semanas (0 = todas).
    */
-  private async countEvidence(_occurrenceId: string): Promise<number | null> {
-    return null;
+  async getBoard(
+    actor: CurrentActor,
+    query: BoardQueryDto,
+    now: Date = new Date(),
+  ): Promise<OccurrenceBoardResponseDto> {
+    const completedWeeks = query.completedWeeks ?? 4;
+    const today = this.today(now);
+    const week = isoWeekOf(today);
+    const areaIds = Array.from(await this.actorAreaIds(actor));
+    const scopeFilter = await this.buildOccurrenceScopeFilter(actor, 'mine', areaIds);
+
+    const completedOr: Prisma.RecurringActivityOccurrenceWhereInput =
+      completedWeeks === 0
+        ? { status: OccurrenceStatus.COMPLETADA }
+        : {
+            status: OccurrenceStatus.COMPLETADA,
+            completedAt: { gte: addDaysUtc(today, -completedWeeks * 7) },
+          };
+    const rows = await this.prisma.recurringActivityOccurrence.findMany({
+      where: {
+        activity: scopeFilter,
+        OR: [
+          {
+            status: {
+              in: [
+                OccurrenceStatus.PENDIENTE,
+                OccurrenceStatus.EN_CURSO,
+                OccurrenceStatus.VENCIDA,
+              ],
+            },
+          },
+          completedOr,
+        ],
+      },
+      include: OCCURRENCE_INCLUDE,
+      orderBy: [{ targetDate: 'asc' }, { createdAt: 'asc' }],
+      take: BOARD_MAX_ROWS,
+    });
+
+    const overdue: OccurrenceResponseDto[] = [];
+    const thisWeek: OccurrenceResponseDto[] = [];
+    const upcoming: OccurrenceResponseDto[] = [];
+    const completed: OccurrenceResponseDto[] = [];
+    let dueToday = 0;
+    let plannedHours = 0;
+
+    for (const row of rows) {
+      const dto = this.toOccurrenceResponse(row);
+      switch (dto.displayStatus) {
+        case OccurrenceDisplayStatus.VENCIDA:
+          overdue.push(dto);
+          break;
+        case OccurrenceDisplayStatus.COMPLETADA:
+        case OccurrenceDisplayStatus.COMPLETADA_TARDE:
+          completed.push(dto);
+          break;
+        case OccurrenceDisplayStatus.CANCELADA:
+          break;
+        default:
+          if (row.targetDate.getTime() <= week.endDate.getTime()) {
+            thisWeek.push(dto);
+            plannedHours = round2(plannedHours + dto.estimatedHours);
+          } else {
+            upcoming.push(dto);
+          }
+          if (dto.displayStatus === OccurrenceDisplayStatus.VENCE_HOY) {
+            dueToday += 1;
+          }
+      }
+    }
+    completed.sort(
+      (a, b) =>
+        (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0),
+    );
+
+    return {
+      today,
+      week,
+      counts: { overdue: overdue.length, dueToday, thisWeek: thisWeek.length },
+      plannedHoursThisWeek: plannedHours,
+      overdue,
+      thisWeek,
+      upcoming,
+      completed,
+    };
+  }
+
+  /**
+   * Ocurrencias de un rango de dias (maximo 62) para la vista de calendario.
+   * Mismo alcance y filtros que el listado; excluye canceladas; tope 500.
+   */
+  async getCalendar(
+    actor: CurrentActor,
+    query: CalendarQueryDto,
+  ): Promise<OccurrenceResponseDto[]> {
+    const scope = query.scope ?? 'mine';
+    if (scope === 'all' && !this.isManager(actor)) {
+      throw new ForbiddenException(
+        'Solo jefe de area o admin pueden ver todas las actividades.',
+      );
+    }
+    const from = this.toCalendarDate(query.from);
+    const to = this.toCalendarDate(query.to);
+    if (to.getTime() < from.getTime()) {
+      throw new BadRequestException('Revisa los datos ingresados.');
+    }
+    const spanDays = Math.round((to.getTime() - from.getTime()) / DAY_MS) + 1;
+    if (spanDays > CALENDAR_MAX_DAYS) {
+      throw new BadRequestException(
+        `El rango del calendario admite como maximo ${CALENDAR_MAX_DAYS} dias.`,
+      );
+    }
+
+    const areaIds = Array.from(await this.actorAreaIds(actor));
+    const activityConditions: Prisma.RecurringActivityWhereInput[] = [
+      await this.buildOccurrenceScopeFilter(actor, scope, areaIds),
+    ];
+    if (query.responsibleUserId !== undefined) {
+      activityConditions.push({ responsibleUserId: query.responsibleUserId });
+    }
+    if (query.responsibleAreaId !== undefined) {
+      activityConditions.push({ responsibleAreaId: query.responsibleAreaId });
+    }
+
+    const rows = await this.prisma.recurringActivityOccurrence.findMany({
+      where: {
+        activity: { AND: activityConditions },
+        status: { not: OccurrenceStatus.CANCELADA },
+        targetDate: { gte: from, lte: to },
+      },
+      include: OCCURRENCE_INCLUDE,
+      orderBy: [{ targetDate: 'asc' }, { createdAt: 'asc' }],
+      take: CALENDAR_MAX_ROWS,
+    });
+    return rows.map((row) => this.toOccurrenceResponse(row));
+  }
+
+  /**
+   * Ocurrencias del actor que ya se pueden trabajar (alimenta "Mi trabajo"):
+   * pendientes con ventana abierta, en curso, vencen hoy y vencidas. Sin
+   * programadas, completadas ni canceladas. Orden: vencidas, vence hoy, en
+   * curso, resto por fecha.
+   */
+  async getMyWork(actor: CurrentActor): Promise<MyWorkOccurrencesResponseDto> {
+    const areaIds = Array.from(await this.actorAreaIds(actor));
+    const scopeFilter = await this.buildOccurrenceScopeFilter(actor, 'mine', areaIds);
+    const rows = await this.prisma.recurringActivityOccurrence.findMany({
+      where: {
+        activity: scopeFilter,
+        status: {
+          in: [
+            OccurrenceStatus.PENDIENTE,
+            OccurrenceStatus.EN_CURSO,
+            OccurrenceStatus.VENCIDA,
+          ],
+        },
+      },
+      include: OCCURRENCE_INCLUDE,
+      orderBy: [{ targetDate: 'asc' }, { createdAt: 'asc' }],
+      take: BOARD_MAX_ROWS,
+    });
+    const rank: Partial<Record<OccurrenceDisplayStatus, number>> = {
+      [OccurrenceDisplayStatus.VENCIDA]: 0,
+      [OccurrenceDisplayStatus.VENCE_HOY]: 1,
+      [OccurrenceDisplayStatus.EN_CURSO]: 2,
+      [OccurrenceDisplayStatus.PENDIENTE]: 3,
+    };
+    const items = rows
+      .map((row) => this.toOccurrenceResponse(row))
+      .filter((dto) => rank[dto.displayStatus] !== undefined)
+      .sort(
+        (a, b) =>
+          (rank[a.displayStatus] ?? 9) - (rank[b.displayStatus] ?? 9) ||
+          a.targetDate.getTime() - b.targetDate.getTime(),
+      );
+    return { items, total: items.length };
+  }
+
+  /**
+   * Vista previa de las 3 proximas fechas de una recurrencia (desde hoy) con el
+   * dia en que cada una se habilita. Solo jefe/admin (lo aplica el controller).
+   */
+  previewRecurrence(query: PreviewQueryDto): RecurrencePreviewResponseDto {
+    const startDate = this.toCalendarDate(query.startDate);
+    const endDate = query.endDate !== undefined ? this.toCalendarDate(query.endDate) : null;
+    const prepDays =
+      query.prepDays ??
+      (query.cadence === Recurrence.SEMANAL
+        ? DEFAULT_PREP_DAYS_WEEKLY
+        : DEFAULT_PREP_DAYS_OTHER);
+    const dates = nextNTargetDates(
+      query.cadence,
+      query.intervalCount ?? 1,
+      startDate,
+      this.today(),
+      PREVIEW_DATES,
+      endDate,
+    );
+    return {
+      dates: dates.map((targetDate) => ({
+        targetDate,
+        opensOn: opensOnFor(targetDate, prepDays),
+      })),
+    };
+  }
+
+  // ----- Avisos internos del ciclo de vida (FEAT-002) -----------------------
+
+  /**
+   * Avisos internos idempotentes: "ventana abierta" (hoy >= targetDate -
+   * prepDays) y "vence hoy". Cada aviso se reclama con updateMany donde la
+   * marca es null: solo notifica quien gana el reclamo, asi que correr dos
+   * veces no duplica. El de "vencida" lo emite markOverdueOccurrences.
+   */
+  async sendLifecycleNotices(now: Date = new Date()): Promise<NoticeResult> {
+    const today = this.today(now);
+
+    const windowCandidates = await this.prisma.recurringActivityOccurrence.findMany({
+      where: {
+        status: OccurrenceStatus.PENDIENTE,
+        windowNotifiedAt: null,
+        targetDate: { gte: today },
+        activity: { active: true },
+      },
+      include: { activity: true },
+    });
+    const windowOpen = windowCandidates.filter((o) =>
+      isWindowOpen(o.targetDate, o.activity.prepDays, today),
+    );
+    const windowNotices = await this.noticeOccurrences(windowOpen, 'windowNotifiedAt', now);
+
+    const dueRows = await this.prisma.recurringActivityOccurrence.findMany({
+      where: {
+        status: { in: [OccurrenceStatus.PENDIENTE, OccurrenceStatus.EN_CURSO] },
+        dueNotifiedAt: null,
+        targetDate: today,
+        activity: { active: true },
+      },
+      include: { activity: true },
+    });
+    const dueNotices = await this.noticeOccurrences(dueRows, 'dueNotifiedAt', now);
+
+    return { windowNotices, dueNotices };
+  }
+
+  /** Ocurrencias que estan por pasar a VENCIDA y aun no se avisaron. */
+  private async findNewlyOverdue(todayUtc: Date): Promise<NoticeRow[]> {
+    try {
+      return await this.prisma.recurringActivityOccurrence.findMany({
+        where: {
+          status: { in: [OccurrenceStatus.PENDIENTE, OccurrenceStatus.EN_CURSO] },
+          targetDate: { lt: todayUtc },
+          overdueNotifiedAt: null,
+        },
+        include: { activity: true },
+      });
+    } catch (error) {
+      this.logger.warn(
+        `No se pudieron consultar las vencidas por avisar: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Reclama la marca de idempotencia de cada ocurrencia y notifica a los
+   * destinatarios de su definicion solo si el reclamo es nuestro. Nunca lanza:
+   * un fallo de notificacion no debe romper el cron ni la accion de negocio.
+   * Devuelve cuantas ocurrencias se notificaron.
+   */
+  private async noticeOccurrences(
+    rows: NoticeRow[],
+    column: NoticeColumn,
+    now: Date,
+  ): Promise<number> {
+    let sent = 0;
+    for (const row of rows) {
+      try {
+        const claim = await this.prisma.recurringActivityOccurrence.updateMany({
+          where: { id: row.id, [column]: null },
+          data: { [column]: now },
+        });
+        if (claim.count !== 1) {
+          continue;
+        }
+        const recipients = await this.resolveRecipients(row.activity);
+        const dayLabel = formatDayEs(row.targetDate);
+        const content = noticeContent(column, row.activity.title, dayLabel);
+        await this.notifications.notify({
+          userIds: recipients.map((r) => r.id),
+          type: content.type,
+          title: content.title,
+          message: content.message,
+          link: '/actividades-recurrentes',
+        });
+        sent += 1;
+      } catch (error) {
+        this.logger.warn(
+          `No se pudo emitir el aviso ${column} de la ocurrencia ${row.id}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+    return sent;
   }
 
   // ----- Panel de cumplimiento (FEAT-003, JEFE_AREA/ADMIN) -----------------
@@ -1502,7 +1865,7 @@ equiresEvidence no se aplica.
    * suya: responsable USER o AREA de su area). ADMIN/JEFE_AREA tambien pueden
    * sobre su area. 404 si no existe o esta fuera de alcance.
    */
-  private async requireOccurrenceInScope(
+  async requireOccurrenceInScope(
     actor: CurrentActor,
     id: string,
   ): Promise<OccurrenceWithActivity> {
@@ -1622,7 +1985,52 @@ function formatDayEs(date: Date): string {
   return `${pad2(date.getUTCDate())}/${pad2(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
 }
 
-/** Suma `days` dias a un Date
+/** Tipo y texto de cada aviso interno. */
+function noticeContent(
+  column: NoticeColumn,
+  title: string,
+  dayLabel: string,
+): { type: NotificationType; title: string; message: string } {
+  switch (column) {
+    case 'windowNotifiedAt':
+      return {
+        type: NotificationType.RECURRING_WINDOW_OPEN,
+        title: 'Actividad recurrente disponible',
+        message: `«${title}» ya se puede trabajar. Vence el ${dayLabel}.`,
+      };
+    case 'dueNotifiedAt':
+      return {
+        type: NotificationType.RECURRING_DUE_TODAY,
+        title: 'Actividad recurrente vence hoy',
+        message: `«${title}» vence hoy (${dayLabel}).`,
+      };
+    case 'overdueNotifiedAt':
+      return {
+        type: NotificationType.RECURRING_OVERDUE,
+        title: 'Actividad recurrente vencida',
+        message: `«${title}» venció el ${dayLabel} y sigue sin completarse.`,
+      };
+  }
+}
+
+/** Semana ISO (lunes a domingo) que contiene un dia de calendario (medianoche UTC). */
+function isoWeekOf(day: Date): {
+  isoYear: number;
+  number: number;
+  startDate: Date;
+  endDate: Date;
+} {
+  const [yearPart, weekPart] = isoYearWeek(day).split('-W');
+  const dow = (day.getUTCDay() + 6) % 7; // lunes=0..domingo=6
+  const startDate = addDaysUtc(day, -dow);
+  return {
+    isoYear: Number(yearPart),
+    number: Number(weekPart),
+    startDate,
+    endDate: addDaysUtc(startDate, 6),
+  };
+}
+
 /** Suma `days` dias a un Date de calendario (medianoche UTC) sin tocar la zona. */
 function addDaysUtc(date: Date, days: number): Date {
   const next = new Date(date.getTime());

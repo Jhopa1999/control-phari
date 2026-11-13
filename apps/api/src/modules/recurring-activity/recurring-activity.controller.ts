@@ -25,6 +25,7 @@ import { UpdateRecurringActivityDto } from './dto/update-recurring-activity.dto'
 import { RecurringActivityResponseDto } from './dto/recurring-activity-response.dto';
 import { ComplianceQueryDto } from './dto/compliance-query.dto';
 import { ComplianceResponseDto } from './dto/compliance-response.dto';
+import { PreviewQueryDto, RecurrencePreviewResponseDto } from './dto/occurrence-views.dto';
 import { CurrentActor } from '../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../auth/current-actor';
 import { CurrentUserGuard } from '../auth/current-user.guard';
@@ -91,6 +92,19 @@ export class RecurringActivityController {
     @Query() query: ComplianceQueryDto,
   ) {
     return this.service.getCompliance(actor, query);
+  }
+
+  @Get('preview')
+  @Roles(RoleCode.JEFE_AREA, RoleCode.ADMIN)
+  @ApiOperation({
+    summary:
+      'Vista previa de las 3 proximas fechas de una recurrencia y el dia en que se habilita cada una (jefe/admin).',
+  })
+  @ApiResponse({ status: 200, description: 'Hasta 3 proximas fechas desde hoy.', type: RecurrencePreviewResponseDto })
+  @ApiResponse({ status: 400, description: 'Parametros invalidos.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  preview(@Query() query: PreviewQueryDto) {
+    return this.service.previewRecurrence(query);
   }
 
   @Get()

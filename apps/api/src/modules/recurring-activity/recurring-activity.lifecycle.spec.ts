@@ -8,6 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
+import { NotificationService } from '../notification/notification.service';
 import { RecurringActivityService } from './recurring-activity.service';
 import { Recurrence, toLocalDate, toUtcDate } from './recurrence';
 import { OccurrenceStatus } from './occurrence-status';
@@ -191,7 +192,12 @@ describe('RecurringActivityService: ciclo de vida de ocurrencias', () => {
     process.env.RECURRING_ACTIVITY_ANTICIPATION_DAYS = '14';
     prisma = createPrismaMock();
     audit = createAudit();
-    service = new RecurringActivityService(prisma, audit, createMail());
+    service = new RecurringActivityService(
+      prisma,
+      audit,
+      createMail(),
+      { notify: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationService,
+    );
   });
 
   describe('ventana de preparacion (prepDays)', () => {

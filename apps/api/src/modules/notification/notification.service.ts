@@ -38,6 +38,12 @@ export enum NotificationType {
   WORKLOG_REVIEWED = 'WORKLOG_REVIEWED',
   /** Una bitácora o reporte semanal fue devuelto a borrador con un motivo (al autor). */
   WORKLOG_RETURNED = 'WORKLOG_RETURNED',
+  /** Una actividad recurrente ya entro en su ventana de preparacion. */
+  RECURRING_WINDOW_OPEN = 'RECURRING_WINDOW_OPEN',
+  /** Una actividad recurrente vence hoy. */
+  RECURRING_DUE_TODAY = 'RECURRING_DUE_TODAY',
+  /** Una actividad recurrente paso a vencida sin completarse. */
+  RECURRING_OVERDUE = 'RECURRING_OVERDUE',
 }
 
 export interface NotifyInput {

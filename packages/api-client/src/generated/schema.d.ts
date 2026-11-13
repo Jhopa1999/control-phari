@@ -2594,6 +2594,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/recurring-activities/occurrences/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tablero de "Que me toca": semana en curso y ocurrencias del actor agrupadas en vencidas, esta semana, proximas y completadas. */
+        get: operations["OccurrenceController_board"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/occurrences/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ocurrencias de un rango de fechas (maximo 62 dias) para la vista de calendario. */
+        get: operations["OccurrenceController_calendar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/occurrences/my-work": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ocurrencias del actor que ya se pueden trabajar (ventana abierta, vence hoy, en curso y vencidas) para "Mi trabajo". */
+        get: operations["OccurrenceController_myWork"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recurring-activities/occurrences/{id}": {
         parameters: {
             query?: never;
@@ -2645,6 +2696,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/recurring-activities/occurrences/{id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista los adjuntos de una ocurrencia. */
+        get: operations["OccurrenceController_listEvidence"];
+        put?: never;
+        /** Adjunta un archivo (informe, reporte) a una ocurrencia abierta (multipart, un archivo por peticion). */
+        post: operations["OccurrenceController_uploadEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/occurrences/{id}/evidence/{evidenceId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** URL temporal para descargar un adjunto de una ocurrencia. */
+        get: operations["OccurrenceController_downloadEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/occurrences/{id}/evidence/{evidenceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Quita un adjunto de una ocurrencia abierta. */
+        delete: operations["OccurrenceController_removeEvidence"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recurring-activities/run-generation": {
         parameters: {
             query?: never;
@@ -2689,6 +2792,23 @@ export interface paths {
         };
         /** Panel de cumplimiento: agregados a tiempo/destiempo/vencidas por actividad y responsable (jefe/admin). */
         get: operations["RecurringActivityController_compliance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recurring-activities/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vista previa de las 3 proximas fechas de una recurrencia y el dia en que se habilita cada una (jefe/admin). */
+        get: operations["RecurringActivityController_preview"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7059,6 +7179,8 @@ export interface components {
             cancelledAt: string | null;
             /** @description Motivo de cancelacion (si CANCELADA). */
             cancelReason: string | null;
+            /** @description Cantidad de adjuntos de la ocurrencia. */
+            evidenceCount: number;
             /**
              * Format: date-time
              * @description Fecha de creacion.
@@ -7088,11 +7210,91 @@ export interface components {
             /** @description Hay al menos una pagina mas despues de esta. */
             hasMore: boolean;
         };
+        BoardWeekDto: {
+            /** @description Anio ISO de la semana. */
+            isoYear: number;
+            /** @description Numero de semana ISO (1-53). */
+            number: number;
+            /**
+             * Format: date-time
+             * @description Lunes de la semana (dia de calendario).
+             */
+            startDate: string;
+            /**
+             * Format: date-time
+             * @description Domingo de la semana (dia de calendario).
+             */
+            endDate: string;
+        };
+        BoardCountsDto: {
+            /** @description Ocurrencias vencidas. */
+            overdue: number;
+            /** @description Ocurrencias que vencen hoy. */
+            dueToday: number;
+            /** @description Ocurrencias de la semana en curso (abiertas). */
+            thisWeek: number;
+        };
+        OccurrenceBoardResponseDto: {
+            /**
+             * Format: date-time
+             * @description Dia de hoy (zona del config).
+             */
+            today: string;
+            /** @description Semana ISO en curso. */
+            week: components["schemas"]["BoardWeekDto"];
+            counts: components["schemas"]["BoardCountsDto"];
+            /** @description Suma de horas estimadas de las ocurrencias abiertas de la semana. */
+            plannedHoursThisWeek: number;
+            /** @description Vencidas (de la mas antigua a la mas reciente). */
+            overdue: components["schemas"]["OccurrenceResponseDto"][];
+            /** @description Abiertas con dia objetivo en la semana en curso. */
+            thisWeek: components["schemas"]["OccurrenceResponseDto"][];
+            /** @description Abiertas con dia objetivo posterior a la semana en curso. */
+            upcoming: components["schemas"]["OccurrenceResponseDto"][];
+            /** @description Completadas dentro de las semanas pedidas (la mas reciente primero). */
+            completed: components["schemas"]["OccurrenceResponseDto"][];
+        };
+        MyWorkOccurrencesResponseDto: {
+            /** @description Vencidas, vence hoy, en curso y pendientes con ventana abierta. */
+            items: components["schemas"]["OccurrenceResponseDto"][];
+            /** @description Cantidad de elementos. */
+            total: number;
+        };
         CompleteOccurrenceDto: {
             /** @description Que se realizo (obligatorio, 1 a 2000 caracteres). */
             comment: string;
             /** @description Horas reales dedicadas (> 0, hasta 2 decimales). */
             actualHours: number;
+        };
+        OccurrenceEvidenceResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador del adjunto.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Ocurrencia a la que pertenece.
+             */
+            occurrenceId: string;
+            /** @description Nombre original del archivo. */
+            fileName: string;
+            /** @description Tipo MIME. */
+            contentType: string;
+            /** @description Tamano en bytes. */
+            sizeBytes: number;
+            /**
+             * Format: uuid
+             * @description Usuario que subio el archivo.
+             */
+            uploadedByUserId: string;
+            /** @description Nombre de quien subio el archivo. */
+            uploadedByName: string;
+            /**
+             * Format: date-time
+             * @description Fecha de subida.
+             */
+            createdAt: string;
         };
         CreateRecurringActivityDto: {
             /** @description Titulo de la actividad. */
@@ -7299,6 +7501,22 @@ export interface components {
             byResponsible: components["schemas"]["ComplianceByResponsibleDto"][];
             /** @description Desglose por quien completo (solo ocurrencias completadas). */
             byPerson: components["schemas"]["ComplianceByPersonDto"][];
+        };
+        PreviewDateDto: {
+            /**
+             * Format: date-time
+             * @description Dia objetivo.
+             */
+            targetDate: string;
+            /**
+             * Format: date-time
+             * @description Dia desde el que se habilita (targetDate - prepDays).
+             */
+            opensOn: string;
+        };
+        RecurrencePreviewResponseDto: {
+            /** @description Hasta 3 proximas fechas desde hoy. */
+            dates: components["schemas"]["PreviewDateDto"][];
         };
         UpdateRecurringActivityDto: {
             /** @description Titulo de la actividad. */
@@ -15365,6 +15583,101 @@ export interface operations {
             };
         };
     };
+    OccurrenceController_board: {
+        parameters: {
+            query?: {
+                /** @description Semanas de completadas a incluir: 4 (por defecto), 12 o 0 (todas). */
+                completedWeeks?: 0 | 4 | 12;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tablero agrupado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceBoardResponseDto"];
+                };
+            };
+            /** @description Filtros invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_calendar: {
+        parameters: {
+            query: {
+                /** @description Dia objetivo desde (inclusive). */
+                from: string;
+                /** @description Dia objetivo hasta (inclusive). El rango admite 62 dias como maximo. */
+                to: string;
+                /** @description Alcance: "mine" (por defecto) o "all" (solo jefe/admin). */
+                scope?: "mine" | "all";
+                /** @description Filtra por usuario responsable de la definicion. */
+                responsibleUserId?: string;
+                /** @description Filtra por area responsable de la definicion. */
+                responsibleAreaId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ocurrencias del rango (sin canceladas, hasta 500). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceResponseDto"][];
+                };
+            };
+            /** @description Rango invalido o mayor a 62 dias. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description scope=all sin permiso. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_myWork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ocurrencias trabajables del actor. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyWorkOccurrencesResponseDto"];
+                };
+            };
+        };
+    };
     OccurrenceController_findOne: {
         parameters: {
             query?: never;
@@ -15469,6 +15782,147 @@ export interface operations {
                 content?: never;
             };
             /** @description Transicion no permitida, ventana aun cerrada (con fecha de apertura) o falta el adjunto exigido por la definicion. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_listEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Adjuntos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceEvidenceResponseDto"][];
+                };
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_uploadEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["UploadEvidenceDto"];
+            };
+        };
+        responses: {
+            /** @description Adjunto creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceEvidenceResponseDto"];
+                };
+            };
+            /** @description Archivo vacio, muy grande o de tipo no permitido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La ocurrencia no esta abierta (programada, completada o cancelada). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_downloadEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                evidenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description URL prefirmada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceDownloadDto"];
+                };
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OccurrenceController_removeEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                evidenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Adjunto eliminado. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La ocurrencia no esta abierta. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -15600,6 +16054,51 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ComplianceResponseDto"];
                 };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecurringActivityController_preview: {
+        parameters: {
+            query: {
+                /** @description Cadencia de la recurrencia. */
+                cadence: "SEMANAL" | "MENSUAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
+                /** @description Cada cuantos periodos se repite (>= 1). Por defecto 1. */
+                intervalCount?: number;
+                /** @description Primer dia objetivo / ancla de la cadencia. */
+                startDate: string;
+                /** @description Fin opcional de la recurrencia (inclusive). */
+                endDate?: string;
+                /** @description Dias de preparacion. Por defecto 2 (SEMANAL) o 5 (resto). */
+                prepDays?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hasta 3 proximas fechas desde hoy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecurrencePreviewResponseDto"];
+                };
+            };
+            /** @description Parametros invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Rol insuficiente. */
             403: {

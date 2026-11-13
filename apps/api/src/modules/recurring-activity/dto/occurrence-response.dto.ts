@@ -98,6 +98,9 @@ export class OccurrenceResponseDto {
   @ApiProperty({ type: String, nullable: true, description: 'Motivo de cancelacion (si CANCELADA).' })
   cancelReason!: string | null;
 
+  @ApiProperty({ type: Number, description: 'Cantidad de adjuntos de la ocurrencia.' })
+  evidenceCount!: number;
+
   @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de creacion.' })
   createdAt!: Date;
 

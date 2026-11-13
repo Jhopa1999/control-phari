@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
+import { NotificationService } from '../notification/notification.service';
 import { RecurringActivityService } from './recurring-activity.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
@@ -172,7 +173,12 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
     withConfigEnv();
     prisma = createPrismaMock();
     audit = createAuditMock();
-    service = new RecurringActivityService(prisma, audit, createMailMock());
+    service = new RecurringActivityService(
+      prisma,
+      audit,
+      createMailMock(),
+      { notify: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationService,
+    );
   });
 
   describe('createActivity (validaciones + gestion por area)', () => {

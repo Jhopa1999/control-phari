@@ -1,6 +1,7 @@
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
+import { NotificationService } from '../notification/notification.service';
 import { RecurringActivityService } from './recurring-activity.service';
 import { OccurrenceStatus } from './occurrence-status';
 import { Recurrence } from './recurrence';
@@ -113,7 +114,12 @@ describe('RecurringActivityService.sendDueReminders (FEAT-003)', () => {
     withConfigEnv();
     prisma = createPrismaMock();
     mail = createMailMock();
-    service = new RecurringActivityService(prisma, createAuditMock(), mail);
+    service = new RecurringActivityService(
+      prisma,
+      createAuditMock(),
+      mail,
+      { notify: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationService,
+    );
   });
 
   it('envia el recordatorio y marca reminderSentAt para las ocurrencias dentro de la ventana', async () => {
@@ -170,7 +176,12 @@ describe('RecurringActivityService.generateDueOccurrences (FEAT-003: aviso al na
     withConfigEnv();
     prisma = createPrismaMock();
     mail = createMailMock();
-    service = new RecurringActivityService(prisma, createAuditMock(), mail);
+    service = new RecurringActivityService(
+      prisma,
+      createAuditMock(),
+      mail,
+      { notify: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationService,
+    );
   });
 
   it('avisa "nueva" solo por las ocurrencias recien creadas (no por las ya existentes)', async () => {

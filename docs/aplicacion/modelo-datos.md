@@ -495,6 +495,15 @@ y marca como completada.
 - Índices: por `status`, `targetDate`, `(status, targetDate)`, `completedByUserId`,
   `startedByUserId`, `activityId`.
 
+### RecurringOccurrenceEvidence (`recurring_occurrence_evidences`)
+
+Archivo adjunto (informe, reporte) de una ocurrencia. El binario vive en S3; aquí solo el
+metadato (mismo patrón que `TaskEvidence`).
+- Campos clave: `occurrenceId`, `fileName`, `contentType`, `sizeBytes`, `storageKey`
+  (único), `uploadedByUserId`, `createdAt`.
+- Relaciones: `occurrence` (`onDelete: Cascade`), `uploadedBy` (`onDelete: Restrict`).
+- Índice: por `occurrenceId`.
+
 ## Enums y estados (valores lógicos, no enums de Prisma)
 
 - **Roles** (`Role.code`, enum TypeScript `RoleCode`): `JEFE_AREA`, `LIDER_PROCESO`,
@@ -598,3 +607,6 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     `started_by_user_id` (FK a `users`), `cancelled_at`, `cancel_reason` y las tres
     marcas de aviso. Luego quita los `DEFAULT` temporales y agrega los `CHECK`. No borra
     filas ni cambia el estado de ninguna ocurrencia.)
+45. `20261115130000_recurring_occurrence_evidence` (aditiva: crea
+    `recurring_occurrence_evidences` con FK a `recurring_activity_occurrences`
+    —`ON DELETE CASCADE`— y a `users`, `storage_key` único e índice por ocurrencia.)

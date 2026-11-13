@@ -247,6 +247,31 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
 
   // Actividades recurrentes
   lectura(
+    'recurring.occurrences.board',
+    'GET /recurring-activities/occurrences/board',
+    'Tablero de "Qué me toca" del usuario: semana en curso y sus ocurrencias agrupadas en vencidas, esta semana, próximas y completadas (GET /recurring-activities/occurrences/board).',
+  ),
+  lectura(
+    'recurring.occurrences.calendar',
+    'GET /recurring-activities/occurrences/calendar',
+    'Ocurrencias de actividades recurrentes en un rango de fechas de hasta 62 días, para vista de calendario (GET /recurring-activities/occurrences/calendar).',
+  ),
+  lectura(
+    'recurring.occurrences.my-work',
+    'GET /recurring-activities/occurrences/my-work',
+    'Ocurrencias recurrentes del usuario que ya se pueden trabajar: ventana abierta, vencen hoy, en curso o vencidas (GET /recurring-activities/occurrences/my-work).',
+  ),
+  lectura(
+    'recurring.occurrences.evidence.list',
+    'GET /recurring-activities/occurrences/{id}/evidence',
+    'Lista los adjuntos (metadatos) de una ocurrencia de actividad recurrente (GET /recurring-activities/occurrences/{id}/evidence).',
+  ),
+  lectura(
+    'recurring.preview',
+    'GET /recurring-activities/preview',
+    'Vista previa de las 3 próximas fechas de una recurrencia y el día en que se habilita cada una (GET /recurring-activities/preview). Solo jefe de área o admin.',
+  ),
+  lectura(
     'recurring.occurrences.list',
     'GET /recurring-activities/occurrences',
     'Lista las ocurrencias de actividades recurrentes (GET /recurring-activities/occurrences).',

@@ -222,6 +222,7 @@ model User {
   recurringActivitiesResponsible RecurringActivity[]           @relation("RecurringActivityResponsibleUser")
   recurringOccurrencesCompleted  RecurringActivityOccurrence[] @relation("RecurringOccurrenceCompletedBy")
   recurringOccurrencesStarted    RecurringActivityOccurrence[] @relation("RecurringOccurrenceStartedBy")
+  recurringOccurrenceEvidences   RecurringOccurrenceEvidence[] @relation("RecurringOccurrenceEvidenceUploadedBy")
 
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
@@ -1513,9 +1514,10 @@ model RecurringActivityOccurrence {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  activity    RecurringActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  completedBy User?             @relation("RecurringOccurrenceCompletedBy", fields: [completedByUserId], references: [id], onDelete: Restrict)
-  startedBy   User?             @relation("RecurringOccurrenceStartedBy", fields: [startedByUserId], references: [id], onDelete: Restrict)
+  activity    RecurringActivity             @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  completedBy User?                         @relation("RecurringOccurrenceCompletedBy", fields: [completedByUserId], references: [id], onDelete: Restrict)
+  startedBy   User?                         @relation("RecurringOccurrenceStartedBy", fields: [startedByUserId], references: [id], onDelete: Restrict)
+  evidence    RecurringOccurrenceEvidence[]
 
   @@unique([activityId, targetDate], name: "recurring_occurrence_activity_target_unique")
   @@index([status])
@@ -1525,6 +1527,25 @@ model RecurringActivityOccurrence {
   @@index([startedByUserId])
   @@index([activityId])
   @@map("recurring_activity_occurrences")
+}
+
+/// Archivo adjunto de una OCURRENCIA recurrente (informes, reportes). El binario
+/// vive en S3 (storage_key); aqui solo el metadato. Mismo patron que TaskEvidence.
+model RecurringOccurrenceEvidence {
+  id               String   @id @default(uuid()) @db.Uuid
+  occurrenceId     String   @map("occurrence_id") @db.Uuid
+  fileName         String   @map("file_name")
+  contentType      String   @map("content_type")
+  sizeBytes        Int      @map("size_bytes")
+  storageKey       String   @unique @map("storage_key")
+  uploadedByUserId String   @map("uploaded_by_user_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  occurrence RecurringActivityOccurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+  uploadedBy User                        @relation("RecurringOccurrenceEvidenceUploadedBy", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([occurrenceId])
+  @@map("recurring_occurrence_evidences")
 }
 
 /// Notificacion por usuario (centro de notificaciones). Se genera por eventos reales

@@ -811,7 +811,35 @@ La API REST se reparte en dos controllers delgados que delegan en el service:
 | GET | `/recurring-activities/occurrences` | Lista ocurrencias por alcance (`scope=mine` por defecto; `all` solo JEFE_AREA/ADMIN). Filtros por estado, cadencia, tipo, rango de fechas y responsable; paginación `page/pageSize` (≤100). Las CANCELADA solo aparecen con `status=CANCELADA`. Cada ocurrencia trae `displayStatus`, `canStart`, `canComplete`, `opensOn`, horas estimadas/reales, quién la tomó/completó y el nombre del responsable. |
 | GET | `/recurring-activities/occurrences/:id` | Detalle de una ocurrencia dentro de alcance. |
 | POST | `/recurring-activities/occurrences/:id/start` | Toma una ocurrencia (PENDIENTE → EN_CURSO) y registra `startedAt`/`startedByUserId`. `409` si la ventana aún no abre (el mensaje incluye la fecha de apertura) o si ya está vencida. |
-| POST | `/recurring-activities/occurrences/:id/complete` | Completa una ocurrencia con `comment` («Qué se realizó», obligatorio, ≤2000) y `actualHours` (obligatorio, > 0). `409` si la ventana aún no abre o si la definición exige adjunto y no lo hay (la verificación de adjuntos se activa con la tabla de evidencias). |
+| POST | `/recurring-activities/occurrences/:id/complete` | Completa una ocurrencia con `comment` («Qué se realizó», obligatorio, ≤2000) y `actualHours` (obligatorio, > 0). `409` si la ventana aún no abre o si la definición exige adjunto (`requiresEvidence`) y la ocurrencia no tiene ninguno. |
+| GET | `/recurring-activities/preview` | Vista previa del formulario (JEFE_AREA/ADMIN): las 3 próximas fechas desde hoy de una recurrencia (`cadence`, `intervalCount`, `startDate`, `endDate?`, `prepDays?`) con el día en que se habilita cada una (`{ dates: [{ targetDate, opensOn }] }`). |
+| GET | `/recurring-activities/occurrences/board` | Tablero «Qué me toca» (solo alcance `mine`): `today`, semana ISO en curso (`isoYear`, `number`, `startDate`, `endDate`, en la zona configurada), contadores (`overdue`, `dueToday`, `thisWeek`), `plannedHoursThisWeek` y los grupos `overdue`, `thisWeek` (abiertas con día objetivo hasta el domingo), `upcoming` (posteriores, incluidas las programadas) y `completed` (últimas `completedWeeks` semanas: 4 por defecto, 12 o 0 = todas). |
+| GET | `/recurring-activities/occurrences/calendar` | Ocurrencias de un rango `from`–`to` (obligatorios, máximo 62 días; `400` si se excede) para la vista de calendario. Mismo alcance y filtros de responsable que el listado; sin canceladas; tope 500 filas. |
+| GET | `/recurring-activities/occurrences/my-work` | Ocurrencias del actor que ya se pueden trabajar, para «Mi trabajo»: `{ items, total }` con las de estado de presentación VENCIDA, VENCE_HOY, EN_CURSO y PENDIENTE (ventana abierta), en ese orden. Excluye programadas, completadas y canceladas. |
+| GET | `/recurring-activities/occurrences/:id/evidence` | Lista los adjuntos de la ocurrencia (metadatos). |
+| POST | `/recurring-activities/occurrences/:id/evidence` | Adjunta un archivo (multipart `file`, uno por petición). Mismas reglas de tipo y tamaño que las evidencias de tareas (`EVIDENCE_MAX_BYTES`). `409` si la ocurrencia no está abierta (programada, completada o cancelada). |
+| GET | `/recurring-activities/occurrences/:id/evidence/:evidenceId/download` | URL temporal (prefirmada) de descarga del adjunto. |
+| DELETE | `/recurring-activities/occurrences/:id/evidence/:evidenceId` | Quita un adjunto; solo mientras la ocurrencia está abierta (`409` si no). |
+
+Adjuntos de ocurrencias (`occurrence-evidence.service.ts`): se suben **antes** de
+completar; `complete` solo comprueba que exista al menos uno cuando la definición lo
+exige. Ver y descargar: cualquiera con la ocurrencia en alcance; subir y quitar: el mismo
+alcance, y solo con la ocurrencia abierta (ventana abierta, en curso o vencida). El objeto
+vive en S3 con la clave `actividades-recurrentes/{activityId}/{occurrenceId}/{uuid}-{nombre}`;
+si falla el registro en BD se borra el objeto. Las reglas de archivo (tipos permitidos,
+tamaño máximo, nombre seguro) son compartidas con las evidencias de tareas
+(`storage/evidence-file.ts`). Cada alta o baja se audita sobre
+`RECURRING_ACTIVITY_OCCURRENCE`. Cada ocurrencia expone `evidenceCount`.
+
+Avisos internos (centro de notificaciones): el cron `recurring-activity:notices`
+(`RECURRING_ACTIVITY_NOTICES_CRON`, por defecto `0 6 * * *`) emite
+`RECURRING_WINDOW_OPEN` cuando una ocurrencia PENDIENTE entra en su ventana
+(hoy ≥ día objetivo − `prepDays`) y `RECURRING_DUE_TODAY` cuando vence hoy;
+`markOverdueOccurrences` emite `RECURRING_OVERDUE` al pasarla a VENCIDA. Cada aviso se
+reclama una sola vez con `updateMany` sobre su marca (`windowNotifiedAt`,
+`dueNotifiedAt`, `overdueNotifiedAt` en null), así que correr los crons dos veces no
+duplica notificaciones. Destinatarios: la persona responsable o los usuarios activos del
+área responsable. Un fallo al notificar se registra y no interrumpe el cron.
 
 Autorización por alcance (regla única de pertenencia a área): las áreas del actor se
 derivan de sus procesos con grant activo (`Process.areaId`), ya que el actor no expone
