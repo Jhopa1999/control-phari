@@ -24,6 +24,7 @@ import { UpdateCommitmentDto } from './dto/update-commitment.dto';
 import { ListCommitmentsDto } from './dto/list-commitments.dto';
 import { TransitionDto } from '../dto/transition.dto';
 import { CommitmentResponseDto } from './dto/commitment-response.dto';
+import { CommitmentMyWorkDto } from './dto/commitment-my-work.dto';
 import { CurrentActor } from '../../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../../auth/current-actor';
 import { CurrentUserGuard } from '../../auth/current-user.guard';
@@ -65,6 +66,17 @@ export class CommitmentController {
     @Body() dto: CreateCommitmentDto,
   ) {
     return this.commitmentService.create(actor, dto);
+  }
+
+  @Get('my-work')
+  @ApiOperation({
+    summary:
+      'Compromisos abiertos de la persona (vencidos y que vencen hoy) para Mi trabajo.',
+  })
+  @ApiResponse({ status: 200, description: 'Compromisos de Mi trabajo.', type: CommitmentMyWorkDto })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  myWork(@CurrentActor() actor: CurrentActorType) {
+    return this.commitmentService.myWork(actor);
   }
 
   @Get(':id')

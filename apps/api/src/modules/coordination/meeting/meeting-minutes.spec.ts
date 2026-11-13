@@ -31,6 +31,7 @@ function row(overrides: Record<string, unknown> = {}) {
     responsibleUserId: 'resp',
     meetingDate: new Date(Date.UTC(2026, 2, 10)),
     meetingTime: null,
+    durationMinutes: 60,
     relatedProjectRequestId: null,
     agenda: 'Temas',
     decisions: null,
@@ -51,6 +52,7 @@ function build(current: ReturnType<typeof row>) {
       delete: jest.fn(),
     },
     meetingParticipant: { deleteMany: jest.fn(), createMany: jest.fn() },
+    dailyLogSuggestionLink: { count: jest.fn().mockResolvedValue(0) },
     user: { findMany: jest.fn().mockResolvedValue([]) },
     grant: { findMany: jest.fn().mockResolvedValue([]) },
   };
@@ -117,5 +119,70 @@ describe('MeetingService · acta', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
     const res = await build(row({ state: 'COMPLETADO' })).service.reopen(actor(RoleCode.LIDER_PROCESO), 'mt1');
     expect(res.state).toBe('BORRADOR');
+  });
+});
+
+describe('MeetingService · duración (integración Bitácora)', () => {
+  it('no se cierra el acta sin duración: 400 con mensaje claro', async () => {
+    const { service } = build(row({ durationMinutes: null, decisions: 'Acordado' }));
+    await expect(service.close(actor(RoleCode.LIDER_PROCESO), 'mt1')).rejects.toThrow(
+      'Indica la duración de la reunión antes de cerrar el acta.',
+    );
+  });
+
+  it('con duración y decisiones el acta se cierra', async () => {
+    const { service } = build(row({ durationMinutes: 90, decisions: 'Acordado' }));
+    const res = await service.close(actor(RoleCode.LIDER_PROCESO), 'mt1');
+    expect(res.closed).toBe(true);
+    expect(res.durationMinutes).toBe(90);
+  });
+
+  it('expone la hora de fin calculada (10:00 + 60 = 11:00) y null sin hora', async () => {
+    const withTime = await build(row({ meetingTime: '10:00', durationMinutes: 60 })).service.get(
+      actor(RoleCode.LIDER_PROCESO),
+      'mt1',
+    );
+    expect(withTime.meetingEndTime).toBe('11:00');
+    const noTime = await build(row()).service.get(actor(RoleCode.LIDER_PROCESO), 'mt1');
+    expect(noTime.meetingEndTime).toBeNull();
+  });
+
+  it('en acta cerrada admite un PATCH solo de duración del responsable o líder', async () => {
+    const closed = row({ state: 'COMPLETADO', decisions: 'x', durationMinutes: null });
+    const { service, prismaObj } = build(closed);
+    await service.update(actor(RoleCode.INTEGRANTE, 'resp'), 'mt1', { durationMinutes: 45 });
+    expect(prismaObj.meeting.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { durationMinutes: 45 } }),
+    );
+    await expect(
+      build(closed).service.update(actor(RoleCode.INTEGRANTE, 'otro'), 'mt1', { durationMinutes: 45 }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      build(closed).service.update(actor(RoleCode.JEFE_AREA), 'mt1', { durationMinutes: 45, title: 'x' }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      build(closed).service.update(actor(RoleCode.JEFE_AREA), 'mt1', { durationMinutes: null }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('no se elimina una reunión con tiempo registrado en una bitácora', async () => {
+    const { service, prismaObj } = build(row());
+    prismaObj.dailyLogSuggestionLink.count.mockResolvedValue(1);
+    await expect(service.remove(actor(RoleCode.JEFE_AREA), 'mt1')).rejects.toThrow(
+      'La reunión tiene tiempo registrado en una bitácora.',
+    );
+    expect(prismaObj.meeting.delete).not.toHaveBeenCalled();
+  });
+
+  it('los compromisos del acta traen nombres y semáforo de vencimiento', async () => {
+    const { service } = build(
+      row({
+        commitments: [
+          { ...commitment, dueDate: new Date(Date.UTC(2020, 0, 1)), assigned: { name: 'Ana' }, responsible: null },
+        ],
+      }),
+    );
+    const res = await service.get(actor(RoleCode.LIDER_PROCESO), 'mt1');
+    expect(res.commitments[0]).toMatchObject({ assignedUserName: 'Ana', dueStatus: 'VENCIDO' });
   });
 });

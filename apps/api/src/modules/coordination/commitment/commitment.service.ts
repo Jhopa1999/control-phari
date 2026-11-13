@@ -17,11 +17,22 @@ import { CoordinationScopeService } from '../coordination-scope.service';
 import { WorkflowStateService } from '../workflow-state.service';
 import { dateStringToDate, dateToString } from '../date';
 import { isMinutesClosed } from '../meeting/minutes';
+import { localToday } from '../local-day';
+import { OPEN_COMMITMENT_STATES, dueStatusOf } from './commitment-due';
+import { CommitmentMyWorkDto } from './dto/commitment-my-work.dto';
+import { RecordState } from '../record-state';
 import { CreateCommitmentDto } from './dto/create-commitment.dto';
 import { UpdateCommitmentDto } from './dto/update-commitment.dto';
 import { ListCommitmentsDto } from './dto/list-commitments.dto';
 import { TransitionDto } from '../dto/transition.dto';
 import { CommitmentResponseDto } from './dto/commitment-response.dto';
+
+/** Reinicia las marcas de los avisos de vencimiento (permite un aviso nuevo). */
+const CLEAR_NOTICE_MARKS = {
+  dueSoonNotifiedAt: null,
+  dueTodayNotifiedAt: null,
+  overdueNotifiedAt: null,
+} as const;
 
 const MEETING_REF = { sourceMeeting: { select: { title: true, meetingDate: true } } } as const;
 
@@ -66,6 +77,7 @@ export class CommitmentService {
   }
 
   private toResponse(row: CommitmentWithMeeting): CommitmentResponseDto {
+    const due = dueStatusOf(row.dueDate, row.state, localToday());
     return {
       id: row.id,
       processId: row.processId,
@@ -82,9 +94,32 @@ export class CommitmentService {
       expectedResult: row.expectedResult,
       result: row.result,
       blockers: row.blockers,
+      dueStatus: due.status,
+      daysToDue: due.daysToDue,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
+  }
+
+  /**
+   * Cambia el contexto de los avisos: otra fecha de vencimiento u otra persona
+   * destinataria (asignado, o responsable cuando no hay asignado).
+   */
+  private noticeContextChanged(
+    existing: CommitmentModel,
+    dto: UpdateCommitmentDto,
+    dueDate: Date | undefined,
+  ): boolean {
+    if (dueDate !== undefined && dueDate.getTime() !== existing.dueDate.getTime()) {
+      return true;
+    }
+    const recipient = (assigned: string | null, responsible: string | null) =>
+      assigned ?? responsible;
+    const next = recipient(
+      dto.assignedUserId !== undefined ? dto.assignedUserId : existing.assignedUserId,
+      dto.responsibleUserId !== undefined ? dto.responsibleUserId : existing.responsibleUserId,
+    );
+    return next !== recipient(existing.assignedUserId, existing.responsibleUserId);
   }
 
   /** Request relacionada por visibilidad real de Fase 2 (404 fuera). */
@@ -195,6 +230,68 @@ export class CommitmentService {
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
     });
     return rows.map((row) => this.toResponse(row));
+  }
+
+  /**
+   * Compromisos abiertos de la persona (asignada; si no hay asignado, la
+   * responsable) para Mi trabajo: vencidos y que vencen hoy, con contadores.
+   */
+  async myWork(actor: CurrentActor): Promise<CommitmentMyWorkDto> {
+    const rows = await this.prisma.commitment.findMany({
+      where: {
+        AND: [
+          this.scope.commitmentWhere(actor),
+          { state: { in: [...OPEN_COMMITMENT_STATES] } },
+          {
+            OR: [
+              { assignedUserId: actor.userId },
+              { assignedUserId: null, responsibleUserId: actor.userId },
+            ],
+          },
+        ],
+      },
+      include: {
+        ...MEETING_REF,
+        process: { select: { name: true } },
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    const today = localToday();
+    let overdueCount = 0;
+    let dueTodayCount = 0;
+    let upcomingCount = 0;
+    const items: CommitmentMyWorkDto['items'] = [];
+    for (const row of rows) {
+      const due = dueStatusOf(row.dueDate, row.state, today);
+      if (due.status === 'VENCIDO' || due.status === 'VENCE_HOY') {
+        if (due.status === 'VENCIDO') overdueCount += 1;
+        else dueTodayCount += 1;
+        items.push({
+          id: row.id,
+          title: row.title,
+          state: row.state,
+          dueDate: dateToString(row.dueDate),
+          dueStatus: due.status,
+          daysToDue: due.daysToDue as number,
+          processId: row.processId,
+          processName: row.process.name,
+          sourceMeetingId: row.sourceMeetingId,
+          sourceMeetingTitle: row.sourceMeeting?.title ?? null,
+          expectedResult: row.expectedResult,
+          canComplete: true,
+        });
+      } else {
+        upcomingCount += 1;
+      }
+    }
+    return {
+      total: rows.length,
+      overdueCount,
+      dueTodayCount,
+      upcomingCount,
+      items,
+    };
   }
 
   async get(actor: CurrentActor, id: string): Promise<CommitmentResponseDto> {
@@ -310,6 +407,7 @@ export class CommitmentService {
             : {}),
           ...(dto.result !== undefined ? { result: dto.result } : {}),
           ...(dto.blockers !== undefined ? { blockers: dto.blockers } : {}),
+          ...(this.noticeContextChanged(existing, dto, dueDate) ? CLEAR_NOTICE_MARKS : {}),
         },
         include: MEETING_REF,
       });
@@ -346,7 +444,15 @@ export class CommitmentService {
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.commitment.update({
         where: { id },
-        data: { state: toState },
+        data: {
+          state: toState,
+          // Reabrir permite un nuevo aviso con la nueva realidad.
+          ...(toState === RecordState.EN_CURSO &&
+          (existing.state === RecordState.COMPLETADO ||
+            existing.state === RecordState.ARCHIVADO)
+            ? CLEAR_NOTICE_MARKS
+            : {}),
+        },
         include: MEETING_REF,
       });
 

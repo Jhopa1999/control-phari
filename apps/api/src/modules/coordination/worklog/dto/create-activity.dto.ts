@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsIn,
-  IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -14,6 +14,8 @@ import {
 import { DATE_PATTERN } from '../../date';
 import { ACTIVITY_CLASS_CODES } from '../../catalog-codes';
 import { RECORD_STATES } from '../../record-state';
+import { IsMultipleOf } from '../../is-multiple-of';
+import { QUARTER_HOURS_MESSAGE } from '../quarter-hours';
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -24,7 +26,8 @@ const trim = ({ value }: { value: unknown }): unknown =>
  * reglas condicionales por clasificacion (AC-014/015/016) y la visibilidad de
  * la elegibilidad de projectRequestId/taskId (alcance 404; estado, proceso del
  * diario, responsable y coherencia 400) se validan en el service (§2.3), no solo aqui.
- * elatedIssueId ya no existe: el ValidationPipe global (forbidNonWhitelisted)
+ * 
+elatedIssueId ya no existe: el ValidationPipe global (forbidNonWhitelisted)
  * lo rechaza con 400. `evidenceUrl` es texto libre `<= 2000` SIN
  * `@IsUrl` (MEDIUM-3/§11 D3).
  */
@@ -39,14 +42,17 @@ export class CreateActivityDto {
 
   @ApiPropertyOptional({
     type: Number,
-    description: 'Horas de dedicacion (entero >= 0). No afecta el avance de la tarea (BR-013).',
-    minimum: 0,
+    description: 'Horas de dedicacion (0,25 a 24 en pasos de 0,25). No afecta el avance de la tarea (BR-013).',
+    minimum: 0.25,
+    maximum: 24,
+    multipleOf: 0.25,
     example: 4,
   })
   @IsOptional()
-  @IsInt({ message: 'Las horas deben ser un numero entero.' })
-  @Min(0, { message: 'Las horas no pueden ser negativas.' })
-  @Max(24, { message: 'Las horas de una actividad no pueden pasar de 24.' })
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: QUARTER_HOURS_MESSAGE })
+  @Min(0.25, { message: QUARTER_HOURS_MESSAGE })
+  @Max(24, { message: QUARTER_HOURS_MESSAGE })
+  @IsMultipleOf(0.25, { message: QUARTER_HOURS_MESSAGE })
   hours?: number;
 
   @ApiPropertyOptional({ type: String, format: 'uuid', description: '"Proyecto" (Request) planificado.' })

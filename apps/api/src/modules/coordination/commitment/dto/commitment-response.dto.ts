@@ -47,6 +47,17 @@ export class CommitmentResponseDto {
   @ApiProperty({ type: String, nullable: true })
   blockers!: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    enum: ['VENCIDO', 'VENCE_HOY', 'PROXIMO', 'A_TIEMPO'],
+    description: 'Semáforo de vencimiento; null si el compromiso ya terminó.',
+  })
+  dueStatus!: string | null;
+
+  @ApiProperty({ type: Number, nullable: true, description: 'Días hasta el vencimiento (negativo = vencido).' })
+  daysToDue!: number | null;
+
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt!: Date;
 

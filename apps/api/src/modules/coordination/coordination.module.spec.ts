@@ -1,5 +1,11 @@
 import 'reflect-metadata';
 import { MODULE_METADATA } from '@nestjs/common/constants';
+// El scheduler de avisos de compromisos importa `@nestjs/schedule` (ESM): se
+// mockea como en recurring-activity.module.spec.ts (solo se inspecciona metadata).
+jest.mock('@nestjs/schedule', () => ({
+  SchedulerRegistry: class {},
+  ScheduleModule: { forRoot: () => ({}) },
+}));
 import { CoordinationModule } from './coordination.module';
 import { WorklogController } from './worklog/worklog.controller';
 import { MeetingController } from './meeting/meeting.controller';
@@ -9,6 +15,8 @@ import { WorkflowStateService } from './workflow-state.service';
 import { WorklogService } from './worklog/worklog.service';
 import { MeetingService } from './meeting/meeting.service';
 import { CommitmentService } from './commitment/commitment.service';
+import { WorklogSuggestionService } from './worklog/worklog-suggestion.service';
+import { CommitmentNoticeService } from './commitment/commitment-notice.service';
 
 /**
  * Contrato de registro del modulo coordination (patron capacity.module.spec.ts):
@@ -38,5 +46,7 @@ describe('CoordinationModule', () => {
     expect(providers).toContain(WorklogService);
     expect(providers).toContain(MeetingService);
     expect(providers).toContain(CommitmentService);
+    expect(providers).toContain(WorklogSuggestionService);
+    expect(providers).toContain(CommitmentNoticeService);
   });
 });

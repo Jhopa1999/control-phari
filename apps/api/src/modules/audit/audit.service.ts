@@ -39,6 +39,7 @@ export type AuditObjectType =
   | 'ASSIGNMENT'
   | 'DAILY_LOG'
   | 'DAILY_LOG_ACTIVITY'
+  | 'DAILY_LOG_SUGGESTION'
   | 'WEEKLY_REPORT'
   | 'ISSUE'
   | 'MEETING'

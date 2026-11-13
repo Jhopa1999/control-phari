@@ -25,6 +25,23 @@ export class MeetingCommitmentDto {
 
   @ApiProperty({ type: String, nullable: true })
   result!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Nombre de la persona asignada.' })
+  assignedUserName!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Nombre del responsable del compromiso.' })
+  responsibleUserName!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    enum: ['VENCIDO', 'VENCE_HOY', 'PROXIMO', 'A_TIEMPO'],
+    description: 'Semáforo de vencimiento; null si el compromiso ya terminó.',
+  })
+  dueStatus!: string | null;
+
+  @ApiProperty({ type: Number, nullable: true, description: 'Días hasta el vencimiento (negativo = vencido).' })
+  daysToDue!: number | null;
 }
 
 /** Contrato HTTP de una reunion (design §3.4). Incluye los ids de participantes. */
@@ -46,6 +63,12 @@ export class MeetingResponseDto {
 
   @ApiProperty({ type: String, nullable: true, description: 'Hora HH:mm (texto).' })
   meetingTime!: string | null;
+
+  @ApiProperty({ type: Number, nullable: true, description: 'Duración en minutos (múltiplo de 15); null si no se registró.' })
+  durationMinutes!: number | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Hora de fin HH:mm (hora + duración); null si falta alguna o cruza la medianoche.' })
+  meetingEndTime!: string | null;
 
   @ApiProperty({ type: [String], format: 'uuid', description: 'Participantes.' })
   participantUserIds!: string[];

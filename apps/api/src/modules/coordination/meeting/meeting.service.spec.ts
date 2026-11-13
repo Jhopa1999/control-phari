@@ -19,6 +19,7 @@ function createMocks() {
       deleteMany: jest.fn(),
       createMany: jest.fn(),
     },
+    dailyLogSuggestionLink: { count: jest.fn().mockResolvedValue(0) },
     user: { findMany: jest.fn() },
     grant: { findMany: jest.fn() },
   };

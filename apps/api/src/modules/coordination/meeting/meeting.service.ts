@@ -13,12 +13,19 @@ import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
 import { CoordinationScopeService } from '../coordination-scope.service';
 import { dateStringToDate, dateToString } from '../date';
+import { localToday } from '../local-day';
+import { OPEN_COMMITMENT_STATES, dueStatusOf } from '../commitment/commitment-due';
+import {
+  CommitmentFollowUpItemDto,
+  ListMeetingCommitmentsOpenDto,
+  MeetingCommitmentsOpenDto,
+} from './dto/meeting-commitments-open.dto';
 import { RecordState } from '../record-state';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
 import { UpdateMeetingDto } from './dto/update-meeting.dto';
 import { ListMeetingsDto } from './dto/list-meetings.dto';
 import { MeetingResponseDto } from './dto/meeting-response.dto';
-import { DONE_COMMITMENT_STATES, isMinutesClosed } from './minutes';
+import { DONE_COMMITMENT_STATES, isMinutesClosed, meetingEndTimeOf } from './minutes';
 
 const COMMITMENT_SELECT = {
   id: true,
@@ -29,7 +36,12 @@ const COMMITMENT_SELECT = {
   responsibleUserId: true,
   expectedResult: true,
   result: true,
+  assigned: { select: { name: true } },
+  responsible: { select: { name: true } },
 } as const;
+
+/** Tope de compromisos devueltos por el seguimiento de mis reuniones. */
+const COMMITMENTS_OPEN_LIMIT = 500;
 
 const MEETING_INCLUDE = {
   participants: { select: { userId: true } },
@@ -69,6 +81,7 @@ export class MeetingService {
       state: row.state,
       meetingDate: dateToString(row.meetingDate),
       meetingTime: row.meetingTime,
+      durationMinutes: row.durationMinutes,
       responsibleUserId: row.responsibleUserId,
       relatedRequestId: row.relatedRequestId,
       relatedProjectRequestId: row.relatedProjectRequestId,
@@ -80,6 +93,7 @@ export class MeetingService {
   }
 
   private toResponse(row: MeetingWithRelations): MeetingResponseDto {
+    const today = localToday();
     return {
       id: row.id,
       processId: row.processId,
@@ -87,6 +101,8 @@ export class MeetingService {
       state: row.state,
       meetingDate: dateToString(row.meetingDate),
       meetingTime: row.meetingTime,
+      durationMinutes: row.durationMinutes,
+      meetingEndTime: meetingEndTimeOf(row.meetingTime, row.durationMinutes),
       participantUserIds: row.participants.map((p) => p.userId),
       responsibleUserId: row.responsibleUserId,
       relatedRequestId: row.relatedRequestId,
@@ -97,16 +113,23 @@ export class MeetingService {
       closed: isMinutesClosed(row.state),
       commitmentsTotal: row.commitments.length,
       commitmentsOpen: row.commitments.filter((c) => !DONE_COMMITMENT_STATES.has(c.state)).length,
-      commitments: row.commitments.map((c) => ({
-        id: c.id,
-        title: c.title,
-        state: c.state,
-        dueDate: dateToString(c.dueDate),
-        assignedUserId: c.assignedUserId,
-        responsibleUserId: c.responsibleUserId,
-        expectedResult: c.expectedResult,
-        result: c.result,
-      })),
+      commitments: row.commitments.map((c) => {
+        const due = dueStatusOf(c.dueDate, c.state, today);
+        return {
+          id: c.id,
+          title: c.title,
+          state: c.state,
+          dueDate: dateToString(c.dueDate),
+          assignedUserId: c.assignedUserId,
+          responsibleUserId: c.responsibleUserId,
+          expectedResult: c.expectedResult,
+          result: c.result,
+          assignedUserName: c.assigned?.name ?? null,
+          responsibleUserName: c.responsible?.name ?? null,
+          dueStatus: due.status,
+          daysToDue: due.daysToDue,
+        };
+      }),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -198,6 +221,71 @@ export class MeetingService {
     return rows.map((row) => this.toResponse(row));
   }
 
+  /**
+   * «Compromisos abiertos de mis reuniones»: compromisos EN_CURSO/BLOQUEADO cuya
+   * reunión de origen tiene al actor como responsable. No amplía la visibilidad:
+   * cada persona ve el seguimiento de sus propias reuniones.
+   */
+  async commitmentsOpen(
+    actor: CurrentActor,
+    filters: ListMeetingCommitmentsOpenDto,
+  ): Promise<MeetingCommitmentsOpenDto> {
+    const and: Prisma.CommitmentWhereInput[] = [
+      { state: { in: [...OPEN_COMMITMENT_STATES] } },
+      { sourceMeeting: { is: { responsibleUserId: actor.userId } } },
+    ];
+    if (filters.assignedUserId !== undefined) and.push({ assignedUserId: filters.assignedUserId });
+    if (filters.meetingId !== undefined) and.push({ sourceMeetingId: filters.meetingId });
+    if (filters.processId !== undefined) and.push({ processId: filters.processId });
+
+    const rows = await this.prisma.commitment.findMany({
+      where: { AND: and },
+      include: {
+        sourceMeeting: { select: { id: true, title: true, meetingDate: true } },
+        assigned: { select: { name: true } },
+        responsible: { select: { name: true } },
+        process: { select: { name: true } },
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    const today = localToday();
+    const counts = { total: 0, vencido: 0, venceHoy: 0, proximo: 0, aTiempo: 0 };
+    const items: CommitmentFollowUpItemDto[] = [];
+    for (const row of rows) {
+      const due = dueStatusOf(row.dueDate, row.state, today);
+      if (!due.status || !row.sourceMeeting) continue;
+      if (filters.dueStatus !== undefined && filters.dueStatus !== due.status) continue;
+      counts.total += 1;
+      if (due.status === 'VENCIDO') counts.vencido += 1;
+      else if (due.status === 'VENCE_HOY') counts.venceHoy += 1;
+      else if (due.status === 'PROXIMO') counts.proximo += 1;
+      else counts.aTiempo += 1;
+      items.push({
+        id: row.id,
+        title: row.title,
+        state: row.state,
+        dueDate: dateToString(row.dueDate),
+        dueStatus: due.status,
+        daysToDue: due.daysToDue as number,
+        assignedUserId: row.assignedUserId,
+        assignedUserName: row.assigned?.name ?? row.responsible?.name ?? null,
+        meetingId: row.sourceMeeting.id,
+        meetingTitle: row.sourceMeeting.title,
+        meetingDate: dateToString(row.sourceMeeting.meetingDate),
+        processId: row.processId,
+        processName: row.process.name,
+        expectedResult: row.expectedResult,
+        blockers: row.blockers,
+      });
+    }
+    return {
+      counts,
+      truncated: items.length > COMMITMENTS_OPEN_LIMIT,
+      items: items.slice(0, COMMITMENTS_OPEN_LIMIT),
+    };
+  }
+
   async get(actor: CurrentActor, id: string): Promise<MeetingResponseDto> {
     const row = await this.requireInScope(actor, id);
     return this.toResponse(row);
@@ -221,6 +309,9 @@ export class MeetingService {
           meetingDate,
           ...(dto.meetingTime !== undefined
             ? { meetingTime: dto.meetingTime }
+            : {}),
+          ...(dto.durationMinutes !== undefined
+            ? { durationMinutes: dto.durationMinutes }
             : {}),
           ...(dto.responsibleUserId !== undefined
             ? { responsibleUserId: dto.responsibleUserId }
@@ -271,7 +362,28 @@ export class MeetingService {
   ): Promise<MeetingResponseDto> {
     const existing = await this.requireInScope(actor, id);
     // El acta cerrada es un registro: se reabre explícitamente (POST /reopen).
-    this.assertOpen(existing);
+    // Única excepción: completar la duración (actas cerradas antes de que existiera).
+    if (isMinutesClosed(existing.state)) {
+      const changed = Object.entries(dto).filter(([, v]) => v !== undefined);
+      const onlyDuration =
+        changed.length === 1 && changed[0][0] === 'durationMinutes';
+      if (!onlyDuration) {
+        this.assertOpen(existing);
+      }
+      if (dto.durationMinutes === null) {
+        throw new BadRequestException(
+          'No se puede quitar la duración de un acta cerrada.',
+        );
+      }
+      if (
+        existing.responsibleUserId !== actor.userId &&
+        !this.isManager(actor, existing.processId)
+      ) {
+        throw new ForbiddenException(
+          'Solo el responsable de la reunión, el líder del proceso o el jefe de área pueden ajustar la duración de un acta cerrada.',
+        );
+      }
+    }
     if (dto.state !== undefined && isMinutesClosed(dto.state)) {
       throw new BadRequestException(
         'Para cerrar el acta usa la acción «Cerrar acta».',
@@ -307,6 +419,9 @@ export class MeetingService {
           ...(meetingDate !== undefined ? { meetingDate } : {}),
           ...(dto.meetingTime !== undefined
             ? { meetingTime: dto.meetingTime }
+            : {}),
+          ...(dto.durationMinutes !== undefined
+            ? { durationMinutes: dto.durationMinutes }
             : {}),
           ...(dto.responsibleUserId !== undefined
             ? { responsibleUserId: dto.responsibleUserId }
@@ -362,6 +477,11 @@ export class MeetingService {
         'Solo el responsable de la reunión, el líder del proceso o el jefe de área pueden cerrar el acta.',
       );
     }
+    if (existing.durationMinutes === null || existing.durationMinutes === undefined) {
+      throw new BadRequestException(
+        'Indica la duración de la reunión antes de cerrar el acta.',
+      );
+    }
     if (!existing.decisions?.trim() && existing.commitments.length === 0) {
       throw new ConflictException(
         'Registra las decisiones o al menos un compromiso antes de cerrar el acta.',
@@ -415,6 +535,15 @@ export class MeetingService {
     if (existing.commitments.length > 0) {
       throw new ConflictException(
         'No se puede eliminar un acta con compromisos registrados; elimina o reasigna primero sus compromisos.',
+      );
+    }
+
+    const registered = await this.prisma.dailyLogSuggestionLink.count({
+      where: { meetingId: id },
+    });
+    if (registered > 0) {
+      throw new ConflictException(
+        'La reunión tiene tiempo registrado en una bitácora.',
       );
     }
 

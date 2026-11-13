@@ -2,13 +2,17 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsArray,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Matches,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { DATE_PATTERN } from '../../date';
+import { IsMultipleOf } from '../../is-multiple-of';
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -44,6 +48,22 @@ export class CreateMeetingDto {
   @IsOptional()
   @Matches(TIME_PATTERN, { message: 'La hora debe tener el formato HH:mm.' })
   meetingTime?: string;
+
+  @ApiPropertyOptional({
+    type: Number,
+    description:
+      'Duración en minutos (múltiplo de 15, entre 15 y 1440). Opcional en borrador; obligatoria al cerrar el acta.',
+    minimum: 15,
+    maximum: 1440,
+    multipleOf: 15,
+    example: 60,
+  })
+  @IsOptional()
+  @IsInt({ message: 'La duración debe ser un número entero de minutos.' })
+  @Min(15, { message: 'La duración mínima es de 15 minutos.' })
+  @Max(1440, { message: 'La duración máxima es de 24 horas.' })
+  @IsMultipleOf(15, { message: 'La duración debe ir en pasos de 15 minutos.' })
+  durationMinutes?: number;
 
   @ApiPropertyOptional({ type: [String], format: 'uuid', description: 'Participantes (en alcance).' })
   @IsOptional()
