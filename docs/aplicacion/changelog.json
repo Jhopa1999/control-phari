@@ -796,6 +796,14 @@
         "apps/mcp/README.md"
       ],
       "summary": "Actividades recurrentes (rediseño, adjuntos y vistas): adjuntos por ocurrencia (tabla recurring_occurrence_evidences, migración 20261115130000; mismas reglas de archivo que las evidencias de tareas) y exigencia de requiresEvidence al completar; endpoints de lectura board (semana en curso y grupos), calendar (rango ≤ 62 días), my-work y preview (3 próximas fechas); avisos internos idempotentes (ventana abierta, vence hoy, vencida) con el cron RECURRING_ACTIVITY_NOTICES_CRON. MCP: 5 tools de lectura nuevas; subir, quitar y descargar adjuntos quedan como exclusiones permanentes."
+    },
+    {
+      "timestamp": "2026-11-15T14:00:00Z",
+      "trigger_file": "apps/web/src/app/mi-trabajo/recurring-section.tsx",
+      "updated_docs": [
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Actividades recurrentes (rediseño, web): Mi trabajo muestra la sección Actividades recurrentes (ocurrencias con ventana abierta, que vencen hoy o vencidas) con Tomar y Completar en línea; /actividades-recurrentes pasa a semana en curso con grupos, calendario mensual, completar con texto, horas y adjuntos, detalle, formulario con vista previa de fechas, Reanudar y cumplimiento con horas. Sin cambios de roles ni permisos."
     }
   ]
 }

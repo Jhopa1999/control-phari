@@ -1,4 +1,4 @@
-﻿-- Adjuntos de ocurrencias de actividades recurrentes (FEAT-002). Solo CREATE TABLE.
+-- Adjuntos de ocurrencias de actividades recurrentes (FEAT-002). Solo CREATE TABLE.
 CREATE TABLE "recurring_occurrence_evidences" (
     "id" UUID NOT NULL,
     "occurrence_id" UUID NOT NULL,

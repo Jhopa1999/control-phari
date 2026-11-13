@@ -1,4 +1,4 @@
-﻿# @plantilla-portales/mcp
+# @plantilla-portales/mcp
 
 Servidor **Model Context Protocol** de la plantilla de portales. Soporta dos
 transportes: **stdio** (local, por defecto) y **HTTP** (por red, ver más abajo).
