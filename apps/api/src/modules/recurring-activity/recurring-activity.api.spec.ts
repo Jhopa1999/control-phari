@@ -39,6 +39,7 @@ interface PrismaMock {
     findUnique: jest.Mock;
     update: jest.Mock;
     updateMany: jest.Mock;
+    findUniqueOrThrow: jest.Mock;
     createMany: jest.Mock;
   };
   $transaction: jest.Mock;
@@ -61,6 +62,7 @@ function createPrismaMock(): PrismaService & PrismaMock {
       findUnique: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findUniqueOrThrow: jest.fn(),
       createMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     // $transaction: ejecuta el callback con el mismo cliente (tx = prisma) o
@@ -442,7 +444,8 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
   describe('completeOccurrence / startOccurrence (transiciones + alcance)', () => {
     it('PENDIENTE -> EN_CURSO (start) actualiza y audita', async () => {
       prisma.recurringActivityOccurrence.findUnique.mockResolvedValue(occurrence());
-      prisma.recurringActivityOccurrence.update.mockResolvedValue(
+      prisma.recurringActivityOccurrence.updateMany.mockResolvedValue({ count: 1 });
+      prisma.recurringActivityOccurrence.findUniqueOrThrow.mockResolvedValue(
         occurrence({ status: OccurrenceStatus.EN_CURSO }),
       );
       const result = await service.startOccurrence(actor(), 'occ-1');
@@ -466,7 +469,8 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
       prisma.recurringActivityOccurrence.findUnique.mockResolvedValue(
         occurrence({ status: OccurrenceStatus.VENCIDA, targetDate: inDays(-3) }),
       );
-      prisma.recurringActivityOccurrence.update.mockResolvedValue(
+      prisma.recurringActivityOccurrence.updateMany.mockResolvedValue({ count: 1 });
+      prisma.recurringActivityOccurrence.findUniqueOrThrow.mockResolvedValue(
         occurrence({ status: OccurrenceStatus.COMPLETADA }),
       );
       const result = await service.completeOccurrence(actor(), 'occ-1', {
@@ -474,10 +478,10 @@ describe('RecurringActivityService (FEAT-002: API + autorizacion)', () => {
         actualHours: 1.5,
       });
       expect(result.status).toBe(OccurrenceStatus.COMPLETADA);
-      const data = prisma.recurringActivityOccurrence.update.mock.calls[0][0].data;
+      const data = prisma.recurringActivityOccurrence.updateMany.mock.calls[0][0].data;
       expect(data.completionComment).toBe('Se envio el reporte');
       expect(data.actualHours).toBe(1.5);
-      expect(data.completedBy).toEqual({ connect: { id: 'actor-1' } });
+      expect(data.completedByUserId).toBe('actor-1');
     });
 
     it('ocurrencia ajena (otro usuario, otra area) -> 404', async () => {

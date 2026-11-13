@@ -59,6 +59,7 @@ interface PrismaMock {
     findUnique: jest.Mock;
     update: jest.Mock;
     updateMany: jest.Mock;
+    findUniqueOrThrow: jest.Mock;
     createMany: jest.Mock;
   };
   $transaction: jest.Mock;
@@ -81,6 +82,7 @@ function createPrismaMock(): PrismaService & PrismaMock {
       findUnique: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findUniqueOrThrow: jest.fn(),
       createMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     $transaction: jest.fn(),
@@ -208,7 +210,7 @@ describe('RecurringActivityService: ciclo de vida de ocurrencias', () => {
       const call = service.startOccurrence(actor(), 'occ-1');
       await expect(call).rejects.toBeInstanceOf(ConflictException);
       await expect(call).rejects.toThrow(dayEs(inDays(8)));
-      expect(prisma.recurringActivityOccurrence.update).not.toHaveBeenCalled();
+      expect(prisma.recurringActivityOccurrence.updateMany).not.toHaveBeenCalled();
     });
 
     it('complete antes de abrir la ventana -> 409 con la fecha de apertura', async () => {
@@ -227,7 +229,8 @@ describe('RecurringActivityService: ciclo de vida de ocurrencias', () => {
       prisma.recurringActivityOccurrence.findUnique.mockResolvedValue(
         occurrence({ targetDate: inDays(2) }),
       );
-      prisma.recurringActivityOccurrence.update.mockResolvedValue(
+      prisma.recurringActivityOccurrence.updateMany.mockResolvedValue({ count: 1 });
+      prisma.recurringActivityOccurrence.findUniqueOrThrow.mockResolvedValue(
         occurrence({ targetDate: inDays(2), status: OccurrenceStatus.EN_CURSO }),
       );
       await expect(service.startOccurrence(actor(), 'occ-1')).resolves.toMatchObject({
@@ -271,33 +274,58 @@ describe('RecurringActivityService: ciclo de vida de ocurrencias', () => {
   describe('tomar y completar', () => {
     it('start registra quien y cuando la tomo', async () => {
       prisma.recurringActivityOccurrence.findUnique.mockResolvedValue(occurrence());
-      prisma.recurringActivityOccurrence.update.mockResolvedValue(
+      prisma.recurringActivityOccurrence.updateMany.mockResolvedValue({ count: 1 });
+      prisma.recurringActivityOccurrence.findUniqueOrThrow.mockResolvedValue(
         occurrence({ status: OccurrenceStatus.EN_CURSO }),
       );
       await service.startOccurrence(actor(), 'occ-1');
-      const data = prisma.recurringActivityOccurrence.update.mock.calls[0][0].data;
+      const data = prisma.recurringActivityOccurrence.updateMany.mock.calls[0][0].data;
       expect(data.status).toBe(OccurrenceStatus.EN_CURSO);
       expect(data.startedAt).toBeInstanceOf(Date);
-      expect(data.startedBy).toEqual({ connect: { id: 'actor-1' } });
+      expect(data.startedByUserId).toBe('actor-1');
+    });
+
+    it('start concurrente: si otra peticion ya cambio el estado -> 409 sin pisar a quien la tomo', async () => {
+      prisma.recurringActivityOccurrence.findUnique.mockResolvedValue(occurrence());
+      prisma.recurringActivityOccurrence.updateMany.mockResolvedValue({ count: 0 });
+      await expect(service.startOccurrence(actor(), 'occ-1')).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      const where = prisma.recurringActivityOccurrence.updateMany.mock.calls[0][0].where;
+      expect(where).toEqual({ id: 'occ-1', status: OccurrenceStatus.PENDIENTE });
+      expect(prisma.recurringActivityOccurrence.findUniqueOrThrow).not.toHaveBeenCalled();
+    });
+
+    it('complete concurrente (doble clic): el segundo -> 409 y no sobrescribe', async () => {
+      prisma.recurringActivityOccurrence.findUnique.mockResolvedValue(
+        occurrence({ status: OccurrenceStatus.EN_CURSO }),
+      );
+      prisma.recurringActivityOccurrence.updateMany.mockResolvedValue({ count: 0 });
+      await expect(
+        service.completeOccurrence(actor(), 'occ-1', { comment: 'x', actualHours: 1 }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      const where = prisma.recurringActivityOccurrence.updateMany.mock.calls[0][0].where;
+      expect(where).toEqual({ id: 'occ-1', status: OccurrenceStatus.EN_CURSO });
     });
 
     it('complete guarda el texto, las horas reales y quien completo', async () => {
       prisma.recurringActivityOccurrence.findUnique.mockResolvedValue(
         occurrence({ status: OccurrenceStatus.EN_CURSO }),
       );
-      prisma.recurringActivityOccurrence.update.mockResolvedValue(
+      prisma.recurringActivityOccurrence.updateMany.mockResolvedValue({ count: 1 });
+      prisma.recurringActivityOccurrence.findUniqueOrThrow.mockResolvedValue(
         occurrence({ status: OccurrenceStatus.COMPLETADA, actualHours: 3.25 }),
       );
       const res = await service.completeOccurrence(actor(), 'occ-1', {
         comment: 'Reporte enviado',
         actualHours: 3.25,
       });
-      const data = prisma.recurringActivityOccurrence.update.mock.calls[0][0].data;
+      const data = prisma.recurringActivityOccurrence.updateMany.mock.calls[0][0].data;
       expect(data).toMatchObject({
         status: OccurrenceStatus.COMPLETADA,
         completionComment: 'Reporte enviado',
         actualHours: 3.25,
-        completedBy: { connect: { id: 'actor-1' } },
+        completedByUserId: 'actor-1',
       });
       expect(res.actualHours).toBe(3.25);
     });

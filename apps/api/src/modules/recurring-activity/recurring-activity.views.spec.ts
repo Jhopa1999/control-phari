@@ -50,6 +50,7 @@ function createPrismaMock() {
       findUnique: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findUniqueOrThrow: jest.fn(),
     },
     recurringOccurrenceEvidence: {
       count: jest.fn().mockResolvedValue(0),
@@ -257,14 +258,15 @@ describe('FEAT-002: adjuntos, vistas y avisos de actividades recurrentes', () =>
       await expect(service.completeOccurrence(actor(), 'occ-1', dto)).rejects.toThrow(
         'Esta actividad exige al menos un adjunto antes de completarla.',
       );
-      expect(prisma.recurringActivityOccurrence.update).not.toHaveBeenCalled();
+      expect(prisma.recurringActivityOccurrence.updateMany).not.toHaveBeenCalled();
     });
 
     it('con un adjunto -> completa', async () => {
       const row = occurrence({ activity: definition({ requiresEvidence: true }) });
       prisma.recurringActivityOccurrence.findUnique.mockResolvedValue(row);
       prisma.recurringOccurrenceEvidence.count.mockResolvedValue(1);
-      prisma.recurringActivityOccurrence.update.mockResolvedValue({
+      prisma.recurringActivityOccurrence.updateMany.mockResolvedValue({ count: 1 });
+      prisma.recurringActivityOccurrence.findUniqueOrThrow.mockResolvedValue({
         ...row,
         status: OccurrenceStatus.COMPLETADA,
         completedAt: new Date(),

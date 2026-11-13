@@ -1308,13 +1308,23 @@ export class RecurringActivityService {
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      const next = await tx.recurringActivityOccurrence.update({
-        where: { id },
+      // Guarda optimista: solo transiciona si el estado sigue siendo el leido.
+      // Evita que dos "tomar" concurrentes se pisen (startedBy/startedAt).
+      const claimed = await tx.recurringActivityOccurrence.updateMany({
+        where: { id, status: row.status },
         data: {
           status: OccurrenceStatus.EN_CURSO,
           startedAt: new Date(),
-          startedBy: { connect: { id: actor.userId } },
+          startedByUserId: actor.userId,
         },
+      });
+      if (claimed.count === 0) {
+        throw new ConflictException(
+          'La actividad cambio de estado mientras la tomabas. Actualiza la vista e intenta de nuevo.',
+        );
+      }
+      const next = await tx.recurringActivityOccurrence.findUniqueOrThrow({
+        where: { id },
         include: OCCURRENCE_INCLUDE,
       });
       await this.audit.record(tx, {
@@ -1351,25 +1361,38 @@ export class RecurringActivityService {
         `Aun no se puede completar: se habilita el ${formatDayEs(display.opensOn)}.`,
       );
     }
-    if (row.activity.requiresEvidence) {
-      const evidenceCount = await this.countEvidence(id);
-      if (evidenceCount === 0) {
-        throw new ConflictException(
-          'Esta actividad exige al menos un adjunto antes de completarla.',
-        );
-      }
-    }
-
     const updated = await this.prisma.$transaction(async (tx) => {
-      const next = await tx.recurringActivityOccurrence.update({
-        where: { id },
+      // La exigencia de evidencia se valida DENTRO de la transaccion, junto al
+      // cambio de estado, para no completar si se quito el ultimo adjunto.
+      if (row.activity.requiresEvidence) {
+        const evidenceCount = await tx.recurringOccurrenceEvidence.count({
+          where: { occurrenceId: id },
+        });
+        if (evidenceCount === 0) {
+          throw new ConflictException(
+            'Esta actividad exige al menos un adjunto antes de completarla.',
+          );
+        }
+      }
+      // Guarda optimista: solo completa si el estado sigue siendo el leido.
+      // Evita que dos completados concurrentes (doble clic) se pisen.
+      const claimed = await tx.recurringActivityOccurrence.updateMany({
+        where: { id, status: row.status },
         data: {
           status: OccurrenceStatus.COMPLETADA,
           completedAt: new Date(),
-          completedBy: { connect: { id: actor.userId } },
+          completedByUserId: actor.userId,
           completionComment: dto.comment,
           actualHours: dto.actualHours,
         },
+      });
+      if (claimed.count === 0) {
+        throw new ConflictException(
+          'La actividad ya fue completada o cambio de estado. Actualiza la vista.',
+        );
+      }
+      const next = await tx.recurringActivityOccurrence.findUniqueOrThrow({
+        where: { id },
         include: OCCURRENCE_INCLUDE,
       });
       await this.audit.record(tx, {
@@ -1394,11 +1417,6 @@ export class RecurringActivityService {
       this.today(),
       this.config.timezone,
     );
-  }
-
-  /** Cantidad de adjuntos de una ocurrencia (exigencia de requiresEvidence). */
-  private async countEvidence(occurrenceId: string): Promise<number> {
-    return this.prisma.recurringOccurrenceEvidence.count({ where: { occurrenceId } });
   }
 
   // ----- Vistas de lectura (FEAT-002): tablero, calendario, mi trabajo ------
