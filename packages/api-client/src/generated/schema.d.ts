@@ -2620,7 +2620,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Toma una ocurrencia (PENDIENTE -> EN_CURSO). */
+        /** Toma una ocurrencia (PENDIENTE -> EN_CURSO) y registra quien y cuando. */
         post: operations["OccurrenceController_start"];
         delete?: never;
         options?: never;
@@ -2637,7 +2637,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Completa una ocurrencia (comentario opcional). */
+        /** Completa una ocurrencia indicando que se realizo y las horas reales. */
         post: operations["OccurrenceController_complete"];
         delete?: never;
         options?: never;
@@ -2714,6 +2714,23 @@ export interface paths {
         head?: never;
         /** Edita una definicion (datos, responsable, pausa). */
         patch: operations["RecurringActivityController_update"];
+        trace?: never;
+    };
+    "/recurring-activities/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reanuda una definicion pausada y regenera sus ocurrencias futuras (reactiva las canceladas que coinciden). */
+        post: operations["RecurringActivityController_resume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -6943,6 +6960,11 @@ export interface components {
             /** @description Secciones más relevantes, de mayor a menor; vacío si nada coincide. */
             results: components["schemas"]["HelpMatchDto"][];
         };
+        /**
+         * @description Estado de presentacion derivado (PROGRAMADA, PENDIENTE, EN_CURSO, VENCE_HOY, VENCIDA, COMPLETADA, COMPLETADA_TARDE, CANCELADA).
+         * @enum {string}
+         */
+        OccurrenceDisplayStatus: "PROGRAMADA" | "PENDIENTE" | "EN_CURSO" | "VENCE_HOY" | "VENCIDA" | "COMPLETADA" | "COMPLETADA_TARDE" | "CANCELADA";
         OccurrenceResponseDto: {
             /**
              * Format: uuid
@@ -6991,8 +7013,52 @@ export interface components {
              * @description Usuario que completo.
              */
             completedByUserId: string | null;
-            /** @description Comentario/evidencia de completado (opcional). */
+            /** @description Que se realizo (texto de completado). */
             completionComment: string | null;
+            /** @description Estado de presentacion derivado (PROGRAMADA, PENDIENTE, EN_CURSO, VENCE_HOY, VENCIDA, COMPLETADA, COMPLETADA_TARDE, CANCELADA). */
+            displayStatus: components["schemas"]["OccurrenceDisplayStatus"];
+            /** @description Se puede tomar ahora (ventana abierta y pendiente). */
+            canStart: boolean;
+            /** @description Se puede completar ahora (ventana abierta y no terminal). */
+            canComplete: boolean;
+            /**
+             * Format: date-time
+             * @description Dia desde el que se habilita (targetDate - prepDays).
+             */
+            opensOn: string;
+            /** @description Horas estimadas (snapshot de la definicion al generarse). */
+            estimatedHours: number;
+            /** @description Horas reales declaradas al completar. */
+            actualHours: number | null;
+            /**
+             * Format: date-time
+             * @description Cuando se tomo la ocurrencia.
+             */
+            startedAt: string | null;
+            /**
+             * Format: uuid
+             * @description Quien tomo la ocurrencia.
+             */
+            startedByUserId: string | null;
+            /** @description Nombre de quien tomo la ocurrencia. */
+            startedByName: string | null;
+            /** @description Nombre de quien completo la ocurrencia. */
+            completedByName: string | null;
+            /** @description Nombre de la persona o area responsable. */
+            responsibleName: string | null;
+            /** @description La definicion exige al menos un adjunto para completar. */
+            requiresEvidence: boolean;
+            /** @description Cada cuantos periodos se repite la definicion. */
+            intervalCount: number;
+            /** @description Dias de preparacion de la definicion. */
+            prepDays: number;
+            /**
+             * Format: date-time
+             * @description Cuando se cancelo (si CANCELADA).
+             */
+            cancelledAt: string | null;
+            /** @description Motivo de cancelacion (si CANCELADA). */
+            cancelReason: string | null;
             /**
              * Format: date-time
              * @description Fecha de creacion.
@@ -7023,8 +7089,10 @@ export interface components {
             hasMore: boolean;
         };
         CompleteOccurrenceDto: {
-            /** @description Comentario o evidencia del completado (opcional). */
-            comment?: string;
+            /** @description Que se realizo (obligatorio, 1 a 2000 caracteres). */
+            comment: string;
+            /** @description Horas reales dedicadas (> 0, hasta 2 decimales). */
+            actualHours: number;
         };
         CreateRecurringActivityDto: {
             /** @description Titulo de la actividad. */
@@ -7053,8 +7121,17 @@ export interface components {
              * @description Fin opcional de la recurrencia (inclusive). Null/omitido = sin fin.
              */
             endDate?: string;
-            /** @description Dias de anticipacion propios; si se omite, el motor usa el default de ENV. */
+            /**
+             * @deprecated
+             * @description Horizonte tecnico de generacion en dias (no editable desde el portal). El motor usa max(anticipationDays o ENV, prepDays).
+             */
             anticipationDays?: number;
+            /** @description Esfuerzo estimado en horas por ocurrencia (> 0, hasta 2 decimales). */
+            estimatedHours: number;
+            /** @description Dias antes del dia objetivo en que la ocurrencia se habilita para tomarla o completarla. Por defecto 2 (SEMANAL) o 5 (resto). */
+            prepDays?: number;
+            /** @description Si true, completar una ocurrencia exige al menos un adjunto. Por defecto false. */
+            requiresEvidence?: boolean;
             /**
              * @description Tipo de responsable: USER o AREA.
              * @enum {string}
@@ -7099,7 +7176,10 @@ export interface components {
              * @description Fin opcional (inclusive).
              */
             endDate: string | null;
-            /** @description Dias de anticipacion propios (null = default ENV). */
+            /**
+             * @deprecated
+             * @description Horizonte tecnico de generacion en dias (null = default ENV). No editable desde el portal.
+             */
             anticipationDays: number | null;
             /** @description Tipo de responsable (ResponsibleKind): USER o AREA. */
             responsibleKind: string;
@@ -7115,6 +7195,12 @@ export interface components {
             responsibleAreaId: string | null;
             /** @description Si false, el motor no genera nuevas ocurrencias. */
             active: boolean;
+            /** @description Esfuerzo estimado en horas por ocurrencia. */
+            estimatedHours: number;
+            /** @description Dias antes del dia objetivo en que la ocurrencia se habilita. */
+            prepDays: number;
+            /** @description Si true, completar exige al menos un adjunto. */
+            requiresEvidence: boolean;
             /**
              * Format: date-time
              * @description Fecha de creacion.
@@ -7135,8 +7221,12 @@ export interface components {
             overdue: number;
             /** @description Pendientes o en curso dentro de plazo. */
             pending: number;
-            /** @description Total de ocurrencias del grupo en la ventana. */
+            /** @description Total de ocurrencias del grupo en la ventana (sin canceladas). */
             total: number;
+            /** @description Suma de horas estimadas de las ocurrencias COMPLETADAS. */
+            estimatedHours: number;
+            /** @description Suma de horas reales de las ocurrencias COMPLETADAS. */
+            actualHours: number;
         };
         ComplianceByActivityDto: {
             /**
@@ -7179,6 +7269,17 @@ export interface components {
             /** @description Metricas agregadas del responsable. */
             metrics: components["schemas"]["ComplianceMetricsDto"];
         };
+        ComplianceByPersonDto: {
+            /**
+             * Format: uuid
+             * @description Usuario que completo.
+             */
+            userId: string;
+            /** @description Nombre de quien completo. */
+            userName: string;
+            /** @description Metricas de lo que completo esa persona. */
+            metrics: components["schemas"]["ComplianceMetricsDto"];
+        };
         ComplianceResponseDto: {
             /**
              * Format: date-time
@@ -7196,6 +7297,8 @@ export interface components {
             byActivity: components["schemas"]["ComplianceByActivityDto"][];
             /** @description Desglose por responsable. */
             byResponsible: components["schemas"]["ComplianceByResponsibleDto"][];
+            /** @description Desglose por quien completo (solo ocurrencias completadas). */
+            byPerson: components["schemas"]["ComplianceByPersonDto"][];
         };
         UpdateRecurringActivityDto: {
             /** @description Titulo de la actividad. */
@@ -7224,8 +7327,17 @@ export interface components {
              * @description Fin opcional de la recurrencia (inclusive). Null/omitido = sin fin.
              */
             endDate?: string;
-            /** @description Dias de anticipacion propios; si se omite, el motor usa el default de ENV. */
+            /**
+             * @deprecated
+             * @description Horizonte tecnico de generacion en dias (no editable desde el portal). El motor usa max(anticipationDays o ENV, prepDays).
+             */
             anticipationDays?: number;
+            /** @description Esfuerzo estimado en horas por ocurrencia (> 0, hasta 2 decimales). */
+            estimatedHours?: number;
+            /** @description Dias antes del dia objetivo en que la ocurrencia se habilita para tomarla o completarla. Por defecto 2 (SEMANAL) o 5 (resto). */
+            prepDays?: number;
+            /** @description Si true, completar una ocurrencia exige al menos un adjunto. Por defecto false. */
+            requiresEvidence?: boolean;
             /**
              * @description Tipo de responsable: USER o AREA.
              * @enum {string}
@@ -15204,7 +15316,7 @@ export interface operations {
                 /** @description Alcance: "mine" (por defecto) o "all" (solo jefe/admin). */
                 scope?: "mine" | "all";
                 /** @description Filtra por estado de la ocurrencia. */
-                status?: "PENDIENTE" | "EN_CURSO" | "COMPLETADA" | "VENCIDA";
+                status?: "PENDIENTE" | "EN_CURSO" | "COMPLETADA" | "VENCIDA" | "CANCELADA";
                 /** @description Filtra por cadencia de la definicion. */
                 cadence?: "SEMANAL" | "MENSUAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
                 /** @description Filtra por tipo de actividad (catalogo). */
@@ -15309,7 +15421,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Transicion no permitida. */
+            /** @description Transicion no permitida, ventana aun cerrada (el mensaje incluye la fecha de apertura) o ocurrencia vencida. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -15356,7 +15468,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Transicion no permitida. */
+            /** @description Transicion no permitida, ventana aun cerrada (con fecha de apertura) o falta el adjunto exigido por la definicion. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -15615,6 +15727,42 @@ export interface operations {
             };
             /** @description Responsable incoherente o fechas invalidas. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecurringActivityController_resume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Definicion reanudada (idempotente si ya estaba activa). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecurringActivityResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente o fuera de area. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o fuera de alcance. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

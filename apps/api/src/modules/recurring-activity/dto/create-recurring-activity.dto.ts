@@ -5,6 +5,7 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -84,15 +85,49 @@ export class CreateRecurringActivityDto {
 
   @ApiPropertyOptional({
     type: Number,
-    description: 'Dias de anticipacion propios; si se omite, el motor usa el default de ENV.',
+    description:
+      'Horizonte tecnico de generacion en dias (no editable desde el portal). El motor usa max(anticipationDays o ENV, prepDays).',
     minimum: 0,
     maximum: 3650,
+    deprecated: true,
   })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(3650)
   anticipationDays?: number;
+
+  @ApiProperty({
+    type: Number,
+    description: 'Esfuerzo estimado en horas por ocurrencia (> 0, hasta 2 decimales).',
+    minimum: 0.01,
+    maximum: 999.99,
+  })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  @Max(999.99)
+  estimatedHours!: number;
+
+  @ApiPropertyOptional({
+    type: Number,
+    description:
+      'Dias antes del dia objetivo en que la ocurrencia se habilita para tomarla o completarla. Por defecto 2 (SEMANAL) o 5 (resto).',
+    minimum: 0,
+    maximum: 365,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(365)
+  prepDays?: number;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Si true, completar una ocurrencia exige al menos un adjunto. Por defecto false.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  requiresEvidence?: boolean;
 
   @ApiProperty({ enum: ResponsibleKind, description: 'Tipo de responsable: USER o AREA.' })
   @IsEnum(ResponsibleKind)

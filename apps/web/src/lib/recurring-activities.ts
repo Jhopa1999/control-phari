@@ -77,10 +77,10 @@ export async function startOccurrence(
   }
 }
 
-/** Completa una ocurrencia (POST .../:id/complete), comentario opcional. */
+/** Completa una ocurrencia (POST .../:id/complete): qué se realizó y horas reales. */
 export async function completeOccurrence(
   id: string,
-  body: CompleteRecurringOccurrence = {},
+  body: CompleteRecurringOccurrence,
 ): Promise<RecurringOccurrence> {
   try {
     const { data, error, response } = await api.POST(
@@ -177,6 +177,23 @@ export async function pauseActivity(id: string): Promise<void> {
     if (error) {
       throw toApiError(response.status);
     }
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/** Reanuda una definicion pausada (POST /recurring-activities/:id/resume). */
+export async function resumeActivity(id: string): Promise<RecurringActivity> {
+  try {
+    const { data, error, response } = await api.POST(
+      '/recurring-activities/{id}/resume',
+      { params: { path: { id } } },
+    );
+    if (error || !data) {
+      throw toApiError(response.status);
+    }
+    return data;
   } catch (err) {
     if (err instanceof ApiError) throw err;
     throw toApiError(undefined);

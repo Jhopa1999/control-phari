@@ -1,5 +1,6 @@
 import {
   isRecurrence,
+  nextNTargetDates,
   nextTargetDatesFrom,
   Recurrence,
   toLocalDate,
@@ -221,5 +222,58 @@ describe('nextTargetDatesFrom - casos borde de ventana e intervalCount invalido'
         utc(2024, 12, 31),
       ),
     ).toThrow();
+  });
+});
+
+describe('nextNTargetDates', () => {
+  it('devuelve las n proximas semanales desde una fecha, respetando el ancla', () => {
+    const dates = nextNTargetDates(
+      Recurrence.SEMANAL,
+      1,
+      utc(2026, 1, 5),
+      utc(2026, 11, 10),
+      3,
+    );
+    expect(dates.map(iso)).toEqual(['2026-11-16', '2026-11-23', '2026-11-30']);
+  });
+
+  it('usa startDate como inicio cuando es posterior a from', () => {
+    const dates = nextNTargetDates(
+      Recurrence.MENSUAL,
+      1,
+      utc(2027, 1, 31),
+      utc(2026, 11, 10),
+      3,
+    );
+    expect(dates.map(iso)).toEqual(['2027-01-31', '2027-02-28', '2027-03-31']);
+  });
+
+  it('busca mas alla de la ventana inicial en cadencias largas', () => {
+    const dates = nextNTargetDates(
+      Recurrence.ANUAL,
+      1,
+      utc(2020, 3, 1),
+      utc(2026, 11, 10),
+      2,
+    );
+    expect(dates.map(iso)).toEqual(['2027-03-01', '2028-03-01']);
+  });
+
+  it('devuelve menos de n si la recurrencia termina (endDate inclusive)', () => {
+    const dates = nextNTargetDates(
+      Recurrence.SEMANAL,
+      1,
+      utc(2026, 1, 5),
+      utc(2026, 11, 10),
+      5,
+      utc(2026, 11, 23),
+    );
+    expect(dates.map(iso)).toEqual(['2026-11-16', '2026-11-23']);
+  });
+
+  it('n invalido devuelve vacio', () => {
+    expect(
+      nextNTargetDates(Recurrence.SEMANAL, 1, utc(2026, 1, 5), utc(2026, 1, 5), 0),
+    ).toEqual([]);
   });
 });

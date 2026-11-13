@@ -461,8 +461,13 @@ Definición de una actividad que se repite con una cadencia (qué se repite y ca
   (cada cuántos períodos; por defecto 1), `startDate` (`@db.Date`, ancla de la cadencia),
   `endDate?` (`@db.Date`), `anticipationDays?` (si es nulo, usa el default del entorno),
   responsable (`responsibleKind` USER/AREA con `responsibleUserId?`/`responsibleAreaId?`),
-  `active`.
+  `active`, `estimatedHours` (`Decimal(6,2)`, esfuerzo por ocurrencia, obligatorio al
+  crear), `prepDays` (días antes del día objetivo en que la ocurrencia se habilita; si el
+  alta no lo informa, 2 para SEMANAL y 5 para el resto) y `requiresEvidence` (por defecto
+  `false`; si es `true` completar exige al menos un adjunto). `anticipationDays` queda
+  como horizonte técnico de generación y no se edita desde el portal.
 - Relaciones: `responsibleUser`/`responsibleArea` (`onDelete: Restrict`), `occurrences`.
+- CHECK: `estimated_hours > 0` y `prep_days >= 0`.
 - Regla de integridad: un `CHECK` garantiza **exactamente un responsable** (USER con
   `responsibleUserId` y sin área, o AREA con `responsibleAreaId` y sin usuario).
 - Índices: por `active`, `responsibleUserId`, `responsibleAreaId`, `activityType`,
@@ -476,12 +481,19 @@ y marca como completada.
   `OccurrenceStatus`, inicial `PENDIENTE`), `completedAt?`, `completedByUserId?`,
   `completionComment?`, `periodLabel?` (etiqueta legible del período, p. ej. `2024-W03`),
   `reminderSentAt?` (marca de envío del recordatorio por correo; si está puesta, el cron
-  de recordatorio no reenvía).
-- Relaciones: `activity` (`onDelete: Cascade`), `completedBy` (`onDelete: Restrict`).
+  de recordatorio no reenvía), `estimatedHours` (snapshot de las horas de la definición
+  al generarse; se actualiza mientras siga PENDIENTE), `actualHours?` (horas reales al
+  completar), `startedAt?`/`startedByUserId?` (quién y cuándo la tomó),
+  `cancelledAt?`/`cancelReason?` (si se canceló por un cambio de fechas o una pausa) y
+  `windowNotifiedAt?`/`dueNotifiedAt?`/`overdueNotifiedAt?` (marcas de idempotencia de
+  los avisos internos).
+- Relaciones: `activity` (`onDelete: Cascade`), `completedBy` y `startedBy`
+  (`onDelete: Restrict`).
+- CHECK: `estimated_hours > 0` y `actual_hours` nulo o `> 0`.
 - Unicidad: `(activityId, targetDate)` único — el motor genera con `skipDuplicates`, así
   que es idempotente y no duplica la ocurrencia de un mismo día.
 - Índices: por `status`, `targetDate`, `(status, targetDate)`, `completedByUserId`,
-  `activityId`.
+  `startedByUserId`, `activityId`.
 
 ## Enums y estados (valores lógicos, no enums de Prisma)
 
@@ -504,8 +516,11 @@ y marca como completada.
 - **Tipo de responsable** (`RecurringActivity.responsibleKind`, enum `ResponsibleKind`):
   `USER`, `AREA`.
 - **Estado de ocurrencia recurrente** (`RecurringActivityOccurrence.status`, enum
-  `OccurrenceStatus`): `PENDIENTE` inicial; `EN_CURSO`, `COMPLETADA` (terminal) y
-  `VENCIDA` (puede cerrarse tarde a `COMPLETADA`).
+  `OccurrenceStatus`): `PENDIENTE` inicial; `EN_CURSO`, `COMPLETADA` (terminal),
+  `VENCIDA` (puede cerrarse tarde a `COMPLETADA`) y `CANCELADA` (solo desde
+  `PENDIENTE`; vuelve a `PENDIENTE` si la fecha coincide otra vez con la recurrencia). El
+  estado que ve el usuario (`displayStatus`: PROGRAMADA, PENDIENTE, EN_CURSO, VENCE_HOY,
+  VENCIDA, COMPLETADA, COMPLETADA_TARDE, CANCELADA) es derivado y no se persiste.
 
 Varios atributos se almacenan como **código de maestra** (`CatalogItem`) y se validan en
 el service, por ejemplo: `ACTIVITY_CLASS`, `ISSUE_TYPE`, `RECORD_STATE`,
@@ -574,3 +589,12 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     `ALTER TABLE plan_phases DROP COLUMN code;` `ALTER TABLE tasks DROP COLUMN code;` y quitar la
     fila de `_prisma_migrations`; el código anterior sigue funcionando sin las columnas. Antes
     de desplegar, respaldar con `pg_dump`.)
+    (las migraciones intermedias hasta `20261114130000_recurring_activity_types` no se detallan aquí)
+44. `20261115120000_recurring_activity_redesign` (aditiva y segura sobre datos existentes:
+    añade a `recurring_activities` `estimated_hours` (backfill 1 h), `prep_days`
+    (backfill 2 si `cadence='SEMANAL'`, 5 en el resto) y `requires_evidence` (`false`);
+    añade a `recurring_activity_occurrences` `estimated_hours` (heredada de su
+    definición con `UPDATE … FROM`), `actual_hours`, `started_at`,
+    `started_by_user_id` (FK a `users`), `cancelled_at`, `cancel_reason` y las tres
+    marcas de aviso. Luego quita los `DEFAULT` temporales y agrega los `CHECK`. No borra
+    filas ni cambia el estado de ninguna ocurrencia.)

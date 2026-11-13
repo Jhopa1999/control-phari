@@ -77,6 +77,9 @@ function activity(overrides: Record<string, unknown> = {}) {
     responsibleUserId: 'u1',
     responsibleAreaId: null as string | null,
     active: true,
+    estimatedHours: 1,
+    prepDays: 2,
+    requiresEvidence: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -174,14 +177,15 @@ describe('RecurringActivityService.generateDueOccurrences (FEAT-003: aviso al na
     prisma.recurringActivity.findMany.mockResolvedValue([
       activity({ cadence: Recurrence.SEMANAL, startDate: new Date(Date.UTC(2024, 0, 1)) }),
     ]);
-    // De las fechas objetivo calculadas, la primera ya existe: no debe avisar
-    // por ella. Devolvemos un targetDate existente arbitrario de la ventana.
-    prisma.recurringActivityOccurrence.findMany.mockImplementation(
-      ({ where }: { where: { targetDate: { in: Date[] } } }) => {
-        const first = where.targetDate.in[0];
-        return Promise.resolve(first ? [{ targetDate: first }] : []);
+    // El lunes 2024-02-19 ya existe: no debe avisar por esa fecha.
+    prisma.recurringActivityOccurrence.findMany.mockResolvedValue([
+      {
+        id: 'occ-existing',
+        targetDate: new Date(Date.UTC(2024, 1, 19)),
+        status: OccurrenceStatus.PENDIENTE,
+        estimatedHours: 1,
       },
-    );
+    ]);
     prisma.recurringActivityOccurrence.createMany.mockResolvedValue({ count: 1 });
 
     await service.generateDueOccurrences(new Date('2024-02-15T12:00:00Z'));
@@ -191,7 +195,8 @@ describe('RecurringActivityService.generateDueOccurrences (FEAT-003: aviso al na
       (c) => (c[0] as { targetDateLabel: string }).targetDateLabel,
     );
     expect(mail.sendRecurringActivityNotice).toHaveBeenCalled();
-    expect(notifiedDates.every((d) => typeof d === 'string')).toBe(true);
+    expect(notifiedDates).not.toContain('2024-02-19');
+    expect(notifiedDates).toContain('2024-02-26');
   });
 
   it('la generacion no se rompe si el correo falla', async () => {

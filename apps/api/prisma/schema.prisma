@@ -221,6 +221,7 @@ model User {
   // Cada relacion usa `name` propio porque hay mas de una FK User por modelo.
   recurringActivitiesResponsible RecurringActivity[]           @relation("RecurringActivityResponsibleUser")
   recurringOccurrencesCompleted  RecurringActivityOccurrence[] @relation("RecurringOccurrenceCompletedBy")
+  recurringOccurrencesStarted    RecurringActivityOccurrence[] @relation("RecurringOccurrenceStartedBy")
 
   @@unique([identifier], name: "user_identifier_unique")
   @@index([active])
@@ -1457,6 +1458,12 @@ model RecurringActivity {
   responsibleAreaId String?   @map("responsible_area_id") @db.Uuid
   /// Si false, el motor no genera nuevas ocurrencias (pausa sin borrar).
   active            Boolean   @default(true)
+  /// Esfuerzo estimado en horas por ocurrencia (> 0, CHECK en la migracion).
+  estimatedHours    Decimal   @map("estimated_hours") @db.Decimal(6, 2)
+  /// Dias antes del dia objetivo en que la ocurrencia se habilita (>= 0).
+  prepDays          Int       @map("prep_days")
+  /// Si true, completar exige al menos un adjunto.
+  requiresEvidence  Boolean   @default(false) @map("requires_evidence")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -1491,17 +1498,31 @@ model RecurringActivityOccurrence {
   /// Marca de envio del recordatorio por correo (FEAT-003). Null = aun no se
   /// envio; una vez puesto, el cron de recordatorio no reenvia (idempotencia).
   reminderSentAt    DateTime? @map("reminder_sent_at")
+  /// Snapshot de las horas estimadas de la definicion al generarse (> 0).
+  estimatedHours    Decimal   @map("estimated_hours") @db.Decimal(6, 2)
+  /// Horas reales declaradas al completar.
+  actualHours       Decimal?  @map("actual_hours") @db.Decimal(6, 2)
+  startedAt         DateTime? @map("started_at")
+  startedByUserId   String?   @map("started_by_user_id") @db.Uuid
+  cancelledAt       DateTime? @map("cancelled_at")
+  cancelReason      String?   @map("cancel_reason")
+  /// Marcas de idempotencia de los avisos internos (FEAT-002).
+  windowNotifiedAt  DateTime? @map("window_notified_at")
+  dueNotifiedAt     DateTime? @map("due_notified_at")
+  overdueNotifiedAt DateTime? @map("overdue_notified_at")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   activity    RecurringActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   completedBy User?             @relation("RecurringOccurrenceCompletedBy", fields: [completedByUserId], references: [id], onDelete: Restrict)
+  startedBy   User?             @relation("RecurringOccurrenceStartedBy", fields: [startedByUserId], references: [id], onDelete: Restrict)
 
   @@unique([activityId, targetDate], name: "recurring_occurrence_activity_target_unique")
   @@index([status])
   @@index([targetDate])
   @@index([status, targetDate])
   @@index([completedByUserId])
+  @@index([startedByUserId])
   @@index([activityId])
   @@map("recurring_activity_occurrences")
 }

@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { OccurrenceDisplayStatus } from '../occurrence-display';
 
 /** Contrato HTTP de una OCURRENCIA de actividad recurrente (FEAT-002, design §2). */
 export class OccurrenceResponseDto {
@@ -41,8 +42,61 @@ export class OccurrenceResponseDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Usuario que completo.' })
   completedByUserId!: string | null;
 
-  @ApiProperty({ type: String, nullable: true, description: 'Comentario/evidencia de completado (opcional).' })
+  @ApiProperty({ type: String, nullable: true, description: 'Que se realizo (texto de completado).' })
   completionComment!: string | null;
+
+  @ApiProperty({
+    enum: OccurrenceDisplayStatus,
+    enumName: 'OccurrenceDisplayStatus',
+    description:
+      'Estado de presentacion derivado (PROGRAMADA, PENDIENTE, EN_CURSO, VENCE_HOY, VENCIDA, COMPLETADA, COMPLETADA_TARDE, CANCELADA).',
+  })
+  displayStatus!: OccurrenceDisplayStatus;
+
+  @ApiProperty({ type: Boolean, description: 'Se puede tomar ahora (ventana abierta y pendiente).' })
+  canStart!: boolean;
+
+  @ApiProperty({ type: Boolean, description: 'Se puede completar ahora (ventana abierta y no terminal).' })
+  canComplete!: boolean;
+
+  @ApiProperty({ type: String, format: 'date-time', description: 'Dia desde el que se habilita (targetDate - prepDays).' })
+  opensOn!: Date;
+
+  @ApiProperty({ type: Number, description: 'Horas estimadas (snapshot de la definicion al generarse).' })
+  estimatedHours!: number;
+
+  @ApiProperty({ type: Number, nullable: true, description: 'Horas reales declaradas al completar.' })
+  actualHours!: number | null;
+
+  @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Cuando se tomo la ocurrencia.' })
+  startedAt!: Date | null;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Quien tomo la ocurrencia.' })
+  startedByUserId!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Nombre de quien tomo la ocurrencia.' })
+  startedByName!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Nombre de quien completo la ocurrencia.' })
+  completedByName!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Nombre de la persona o area responsable.' })
+  responsibleName!: string | null;
+
+  @ApiProperty({ type: Boolean, description: 'La definicion exige al menos un adjunto para completar.' })
+  requiresEvidence!: boolean;
+
+  @ApiProperty({ type: Number, description: 'Cada cuantos periodos se repite la definicion.' })
+  intervalCount!: number;
+
+  @ApiProperty({ type: Number, description: 'Dias de preparacion de la definicion.' })
+  prepDays!: number;
+
+  @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Cuando se cancelo (si CANCELADA).' })
+  cancelledAt!: Date | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Motivo de cancelacion (si CANCELADA).' })
+  cancelReason!: string | null;
 
   @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de creacion.' })
   createdAt!: Date;

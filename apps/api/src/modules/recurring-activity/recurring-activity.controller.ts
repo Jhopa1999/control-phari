@@ -134,6 +134,24 @@ export class RecurringActivityController {
     return this.service.updateActivity(actor, id, dto);
   }
 
+  @Post(':id/resume')
+  @HttpCode(200)
+  @Roles(RoleCode.JEFE_AREA, RoleCode.ADMIN)
+  @ApiOperation({
+    summary:
+      'Reanuda una definicion pausada y regenera sus ocurrencias futuras (reactiva las canceladas que coinciden).',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Definicion reanudada (idempotente si ya estaba activa).', type: RecurringActivityResponseDto })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente o fuera de area.' })
+  @ApiResponse({ status: 404, description: 'No existe o fuera de alcance.' })
+  resume(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.resumeActivity(actor, id);
+  }
+
   @Delete(':id')
   @HttpCode(204)
   @Roles(RoleCode.JEFE_AREA, RoleCode.ADMIN)

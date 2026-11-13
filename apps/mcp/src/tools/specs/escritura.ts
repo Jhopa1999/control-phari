@@ -102,4 +102,38 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
     'POST /documents/{id}/versions',
     'Crea una nueva versión del documento con contenido Markdown (POST /documents/{id}/versions). Editar el contenido siempre genera una versión nueva.',
   ),
+
+  // Actividades recurrentes
+  escritura(
+    'recurring.occurrence.start',
+    'POST /recurring-activities/occurrences/{id}/start',
+    'Toma una ocurrencia de actividad recurrente: pasa a EN_CURSO y registra quién y cuándo (POST /recurring-activities/occurrences/{id}/start). El backend rechaza (409) si su ventana aún no abre o si ya está vencida.',
+  ),
+  escritura(
+    'recurring.occurrence.complete',
+    'POST /recurring-activities/occurrences/{id}/complete',
+    'Completa una ocurrencia indicando qué se realizó (comment) y las horas reales (actualHours) (POST /recurring-activities/occurrences/{id}/complete). El backend valida la ventana y, si la actividad lo exige, que haya adjuntos.',
+  ),
+  escritura(
+    'recurring.create',
+    'POST /recurring-activities',
+    'Crea una definición de actividad recurrente con su cadencia, responsable y esfuerzo estimado en horas (POST /recurring-activities). Solo jefe de área o admin; el backend valida los datos y genera las ocurrencias.',
+  ),
+  escritura(
+    'recurring.update',
+    'PATCH /recurring-activities/{id}',
+    'Edita una definición de actividad recurrente (PATCH /recurring-activities/{id}). Si cambian las fechas o la cadencia, el backend cancela las ocurrencias futuras no tomadas que ya no corresponden y genera las nuevas.',
+  ),
+  {
+    name: 'recurring.pause',
+    operation: 'DELETE /recurring-activities/{id}',
+    access: 'destructive',
+    description:
+      'Pausa una definición de actividad recurrente (DELETE /recurring-activities/{id}): no borra la definición ni su historial, pero cancela sus ocurrencias futuras pendientes.',
+  },
+  escritura(
+    'recurring.resume',
+    'POST /recurring-activities/{id}/resume',
+    'Reanuda una definición pausada y regenera sus ocurrencias futuras (POST /recurring-activities/{id}/resume). Idempotente si ya estaba activa.',
+  ),
 ];

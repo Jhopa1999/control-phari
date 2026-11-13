@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { RecurringOccurrence } from '@/lib/api-client';
 
@@ -23,14 +24,17 @@ interface CompleteOccurrenceDialogProps {
   occurrence: RecurringOccurrence | null;
   submitting: boolean;
   errorMessage: string | null;
-  onSubmit: (comment: string) => void;
+  onSubmit: (values: { comment: string; actualHours: number }) => void;
 }
+
+const COMMENT_MAX = 2000;
 
 const FORM_ID = 'complete-occurrence-form';
 
 /**
- * Marca una ocurrencia como completada. El comentario/evidencia es OPCIONAL:
- * se puede completar sin texto. La transición de estado la valida el backend.
+ * Marca una ocurrencia como completada. Pide qué se realizó y las horas reales
+ * (ambos obligatorios). La ventana, la transición y la evidencia exigida las
+ * valida el backend.
  */
 export function CompleteOccurrenceDialog({
   open,
@@ -41,15 +45,34 @@ export function CompleteOccurrenceDialog({
   onSubmit,
 }: CompleteOccurrenceDialogProps): React.ReactElement {
   const [comment, setComment] = React.useState('');
+  const [hours, setHours] = React.useState('');
+  const [errors, setErrors] = React.useState<{ comment: string | null; hours: string | null }>({
+    comment: null,
+    hours: null,
+  });
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
   useResetOnChange([open], () => {
-    if (open) setComment('');
+    if (!open) return;
+    setComment('');
+    setHours(occurrence ? String(occurrence.estimatedHours) : '');
+    setErrors({ comment: null, hours: null });
   });
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    onSubmit(comment.trim());
+    const text = comment.trim();
+    const actualHours = Number.parseFloat(hours.replace(',', '.'));
+    const next = {
+      comment: text === '' ? 'Describe qué se realizó.' : null,
+      hours:
+        Number.isFinite(actualHours) && actualHours > 0 && actualHours <= 999.99
+          ? null
+          : 'Indica las horas reales (mayor que 0).',
+    };
+    setErrors(next);
+    if (next.comment || next.hours) return;
+    onSubmit({ comment: text, actualHours });
   }
 
   return (
@@ -72,13 +95,37 @@ export function CompleteOccurrenceDialog({
           <DialogBody className="grid gap-4">
             <Field
               id="complete-comment"
-              label="Comentario o evidencia (opcional)"
-              help="Puedes dejarlo vacío."
+              label="Qué se realizó"
+              required
+              error={errors.comment}
             >
               <Textarea
                 value={comment}
                 rows={3}
-                onChange={(e) => setComment(e.target.value)}
+                maxLength={COMMENT_MAX}
+                onChange={(e) => {
+                  setComment(e.target.value);
+                  setErrors((p) => (p.comment ? { ...p, comment: null } : p));
+                }}
+              />
+            </Field>
+            <Field
+              id="complete-hours"
+              label="Horas reales"
+              required
+              help={occurrence ? `Estimadas: ${occurrence.estimatedHours} h.` : undefined}
+              error={errors.hours}
+            >
+              <Input
+                type="number"
+                inputMode="decimal"
+                min={0.25}
+                step={0.25}
+                value={hours}
+                onChange={(e) => {
+                  setHours(e.target.value);
+                  setErrors((p) => (p.hours ? { ...p, hours: null } : p));
+                }}
               />
             </Field>
             <FormError id={FORM_ID} message={errorMessage} />

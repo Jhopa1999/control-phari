@@ -239,3 +239,49 @@ export function nextTargetDatesFrom(
   }
   return results;
 }
+
+/**
+ * Las `n` proximas fechas objetivo (dias de calendario) a partir de `from`
+ * (inclusive), respetando `startDate` como ancla y `endDate` (inclusive) como
+ * fin opcional. Pura y determinista; la usan el reconcile del service y la
+ * vista previa del formulario. Devuelve menos de `n` si la recurrencia termina.
+ */
+export function nextNTargetDates(
+  cadence: Recurrence,
+  intervalCount: number,
+  startDate: Date,
+  from: Date,
+  n: number,
+  endDate?: Date | null,
+): Date[] {
+  if (!Number.isInteger(n) || n < 1) {
+    return [];
+  }
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  // Tope de busqueda: ~100 anios.
+  const MAX_SPAN_DAYS = 366 * 100;
+  const effectiveFrom =
+    startDate.getTime() > from.getTime() ? startDate : from;
+  let spanDays = 62;
+  for (;;) {
+    let windowEnd = new Date(effectiveFrom.getTime() + spanDays * DAY_MS);
+    const capped = endDate != null && endDate.getTime() <= windowEnd.getTime();
+    if (capped && endDate != null) {
+      windowEnd = endDate;
+    }
+    const dates = nextTargetDatesFrom(
+      cadence,
+      intervalCount,
+      startDate,
+      effectiveFrom,
+      windowEnd,
+    );
+    if (dates.length >= n) {
+      return dates.slice(0, n);
+    }
+    if (capped || spanDays >= MAX_SPAN_DAYS) {
+      return dates;
+    }
+    spanDays *= 2;
+  }
+}

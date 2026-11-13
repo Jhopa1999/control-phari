@@ -53,11 +53,13 @@ puede bajar). El test `src/__tests__/coverage.test.ts` **falla** si una
 operación no tiene tool ni exclusión, si una exclusión está obsoleta, si una
 tool no tiene operación en el contrato, si falta una anotación, si una tool GET
 no es de solo lectura, si un `body` es de forma libre o si hay más pendientes
-que el tope. Hoy hay 118 tools sobre 212 operaciones (37 exclusiones permanentes
-y 54 pendientes, todas de escritura). Ya están expuestas las de coordinación (crear y editar
+que el tope. Hoy hay 124 tools sobre 214 operaciones (42 exclusiones permanentes
+y 48 pendientes, todas de escritura). Ya están expuestas las de coordinación (crear y editar
 reuniones y compromisos, y cambiar el estado de compromisos; los hallazgos se retiraron con el módulo Novedades), las de
 planes (editar el plan; crear, editar y reordenar fases; añadir predecesoras a una tarea) y las de
-activos y documentos (crear y editar activos y documentos, y crear versiones de un documento). Todas las lecturas (GET) del contrato
+activos y documentos (crear y editar activos y documentos, y crear versiones de un documento) y las de
+actividades recurrentes (`recurring.occurrence.start`, `recurring.occurrence.complete`, `recurring.create`,
+`recurring.update`, `recurring.pause` —destructiva— y `recurring.resume`; `run-generation` es una exclusión permanente de mantenimiento). Todas las lecturas (GET) del contrato
 están expuestas salvo las descargas binarias.
 
 > IDs visibles: las solicitudes, fases y tareas devuelven `code` (`PRY-0012`,

@@ -776,6 +776,16 @@
         "docs/aplicacion/modulos-backend.md"
       ],
       "summary": "Actividades recurrentes: crear o editar una definición activa genera de inmediato sus ocurrencias (misma lógica idempotente del cron, ahora en un método por definición), de modo que el responsable la ve en «Qué me toca» sin esperar al cron de las 01:00. Sin cambios de contrato, MCP ni esquema."
+    },
+    {
+      "timestamp": "2026-11-15T12:00:00Z",
+      "trigger_file": "apps/api/src/modules/recurring-activity/recurring-activity.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "apps/mcp/README.md"
+      ],
+      "summary": "Actividades recurrentes (rediseño, núcleo backend): horas estimadas obligatorias, días de preparación (ventana), evidencia exigible, estado CANCELADA y displayStatus derivado (PROGRAMADA, VENCE_HOY, COMPLETADA_TARDE…); tomar registra quién y cuándo; completar exige qué se realizó y horas reales; editar fechas, pausar y reanudar (POST /recurring-activities/:id/resume) reconcilian las ocurrencias sin duplicar; cumplimiento con horas y desglose por persona. Migración 20261115120000 segura sobre datos existentes. MCP: 6 tools de escritura nuevas (recurring.pause destructiva) y run-generation pasa a exclusión permanente."
     }
   ]
 }

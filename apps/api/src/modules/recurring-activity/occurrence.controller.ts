@@ -87,11 +87,11 @@ export class OccurrenceController {
   @Post(':id/start')
   @HttpCode(200)
   @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE, RoleCode.ADMIN)
-  @ApiOperation({ summary: 'Toma una ocurrencia (PENDIENTE -> EN_CURSO).' })
+  @ApiOperation({ summary: 'Toma una ocurrencia (PENDIENTE -> EN_CURSO) y registra quien y cuando.' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Ocurrencia actualizada.', type: OccurrenceResponseDto })
   @ApiResponse({ status: 404, description: 'No existe o fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'Transicion no permitida.' })
+  @ApiResponse({ status: 409, description: 'Transicion no permitida, ventana aun cerrada (el mensaje incluye la fecha de apertura) o ocurrencia vencida.' })
   start(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -102,13 +102,13 @@ export class OccurrenceController {
   @Post(':id/complete')
   @HttpCode(200)
   @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE, RoleCode.ADMIN)
-  @ApiOperation({ summary: 'Completa una ocurrencia (comentario opcional).' })
+  @ApiOperation({ summary: 'Completa una ocurrencia indicando que se realizo y las horas reales.' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: CompleteOccurrenceDto })
   @ApiResponse({ status: 200, description: 'Ocurrencia completada.', type: OccurrenceResponseDto })
   @ApiResponse({ status: 400, description: 'Datos invalidos.' })
   @ApiResponse({ status: 404, description: 'No existe o fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'Transicion no permitida.' })
+  @ApiResponse({ status: 409, description: 'Transicion no permitida, ventana aun cerrada (con fecha de apertura) o falta el adjunto exigido por la definicion.' })
   complete(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

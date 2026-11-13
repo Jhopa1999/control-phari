@@ -202,12 +202,15 @@ export function ActividadesRecurrentesView(): React.ReactElement {
     setDetailOpen(true);
   }
 
-  async function handleComplete(comment: string): Promise<void> {
+  async function handleComplete(values: {
+    comment: string;
+    actualHours: number;
+  }): Promise<void> {
     if (!completeTarget) return;
     setCompleteSubmitting(true);
     setCompleteError(null);
     try {
-      await completeOccurrence(completeTarget.id, comment !== '' ? { comment } : {});
+      await completeOccurrence(completeTarget.id, values);
       toast.success('Actividad completada.');
       setCompleteOpen(false);
       setCompleteTarget(null);

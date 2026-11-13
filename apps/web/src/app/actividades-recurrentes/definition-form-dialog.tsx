@@ -58,6 +58,11 @@ export interface DefinitionFormValues {
   responsibleUserId: string;
   responsibleAreaId: string;
   active: boolean;
+  /** Horas estimadas por ocurrencia (texto del input; se valida > 0). */
+  estimatedHours: string;
+  /** Dias de preparacion (texto; vacio = default del backend). */
+  prepDays: string;
+  requiresEvidence: boolean;
 }
 
 interface DefinitionFormDialogProps {
@@ -87,7 +92,15 @@ function emptyValues(): DefinitionFormValues {
     responsibleUserId: '',
     responsibleAreaId: '',
     active: true,
+    estimatedHours: '1',
+    prepDays: '',
+    requiresEvidence: false,
   };
+}
+
+/** Convierte el texto del input a numero (acepta coma decimal). */
+function parseDecimal(value: string): number {
+  return Number.parseFloat(value.replace(',', '.'));
 }
 
 interface Validation {
@@ -95,6 +108,8 @@ interface Validation {
   activityType: string | null;
   startDate: string | null;
   responsible: string | null;
+  estimatedHours: string | null;
+  prepDays: string | null;
 }
 
 const NO_ERRORS: Validation = {
@@ -102,6 +117,8 @@ const NO_ERRORS: Validation = {
   activityType: null,
   startDate: null,
   responsible: null,
+  estimatedHours: null,
+  prepDays: null,
 };
 
 /** Reglas minimas en cliente; el backend es la autoridad. */
@@ -117,6 +134,19 @@ function validate(values: DefinitionFormValues): Validation {
     responsible: responsibleOk
       ? null
       : 'Elige el responsable (una persona o un área).',
+    estimatedHours: (() => {
+      const hours = parseDecimal(values.estimatedHours);
+      return Number.isFinite(hours) && hours > 0 && hours <= 999.99
+        ? null
+        : 'Indica las horas estimadas (mayor que 0).';
+    })(),
+    prepDays: (() => {
+      if (values.prepDays.trim() === '') return null;
+      const days = Number(values.prepDays);
+      return Number.isInteger(days) && days >= 0 && days <= 365
+        ? null
+        : 'Indica un número de días entre 0 y 365.';
+    })(),
   };
 }
 
@@ -160,6 +190,9 @@ export function DefinitionFormDialog({
         responsibleUserId: editing.responsibleUserId ?? '',
         responsibleAreaId: editing.responsibleAreaId ?? '',
         active: editing.active,
+        estimatedHours: String(editing.estimatedHours),
+        prepDays: String(editing.prepDays),
+        requiresEvidence: editing.requiresEvidence,
       });
     } else {
       setValues(emptyValues());
@@ -170,7 +203,14 @@ export function DefinitionFormDialog({
     event.preventDefault();
     const result = validate(values);
     setErrors(result);
-    if (result.title || result.activityType || result.startDate || result.responsible) {
+    if (
+      result.title ||
+      result.activityType ||
+      result.startDate ||
+      result.responsible ||
+      result.estimatedHours ||
+      result.prepDays
+    ) {
       if (result.title) titleRef.current?.focus();
       return;
     }
@@ -182,6 +222,9 @@ export function DefinitionFormDialog({
       startDate: values.startDate,
       responsibleKind: values.responsibleKind,
       active: values.active,
+      estimatedHours: parseDecimal(values.estimatedHours),
+      requiresEvidence: values.requiresEvidence,
+      ...(values.prepDays.trim() !== '' ? { prepDays: Number(values.prepDays) } : {}),
       ...(values.description.trim() !== '' ? { description: values.description.trim() } : {}),
       ...(values.endDate !== '' ? { endDate: values.endDate } : {}),
       ...(values.responsibleKind === 'USER'
@@ -318,6 +361,48 @@ export function DefinitionFormDialog({
               </Field>
             </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                id="def-hours"
+                label="Horas estimadas"
+                required
+                help="Esfuerzo de cada ocurrencia."
+                error={errors.estimatedHours}
+              >
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min={0.25}
+                  step={0.25}
+                  value={values.estimatedHours}
+                  onChange={(e) => {
+                    const estimatedHours = e.target.value;
+                    setValues((v) => ({ ...v, estimatedHours }));
+                    setErrors((p) => (p.estimatedHours ? { ...p, estimatedHours: null } : p));
+                  }}
+                />
+              </Field>
+
+              <Field
+                id="def-prep"
+                label="Días de preparación"
+                help="Cuántos días antes se habilita. Vacío: 2 (semanal) o 5 (resto)."
+                error={errors.prepDays}
+              >
+                <Input
+                  type="number"
+                  min={0}
+                  max={365}
+                  value={values.prepDays}
+                  onChange={(e) => {
+                    const prepDays = e.target.value;
+                    setValues((v) => ({ ...v, prepDays }));
+                    setErrors((p) => (p.prepDays ? { ...p, prepDays: null } : p));
+                  }}
+                />
+              </Field>
+            </div>
+
             <Field id="def-responsible-kind" label="Tipo de responsable" required>
               {(control) => (
                 <Select
@@ -387,6 +472,17 @@ export function DefinitionFormDialog({
                 )}
               </Field>
             )}
+
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="def-evidence">Exige adjunto al completar</Label>
+              <Switch
+                id="def-evidence"
+                checked={values.requiresEvidence}
+                onCheckedChange={(checked) =>
+                  setValues((v) => ({ ...v, requiresEvidence: checked }))
+                }
+              />
+            </div>
 
             <div className="flex items-center justify-between gap-4">
               <Label htmlFor="def-active">Activa (genera ocurrencias)</Label>

@@ -13,6 +13,8 @@ describe('isOccurrenceTransitionAllowed (design §2, D6)', () => {
       [OccurrenceStatus.PENDIENTE, OccurrenceStatus.VENCIDA],
       [OccurrenceStatus.EN_CURSO, OccurrenceStatus.VENCIDA],
       [OccurrenceStatus.VENCIDA, OccurrenceStatus.COMPLETADA],
+      [OccurrenceStatus.PENDIENTE, OccurrenceStatus.CANCELADA],
+      [OccurrenceStatus.CANCELADA, OccurrenceStatus.PENDIENTE],
     ];
     for (const [from, to] of allowed) {
       expect(isOccurrenceTransitionAllowed(from, to)).toBe(true);
@@ -27,6 +29,10 @@ describe('isOccurrenceTransitionAllowed (design §2, D6)', () => {
       [OccurrenceStatus.VENCIDA, OccurrenceStatus.EN_CURSO],
       [OccurrenceStatus.VENCIDA, OccurrenceStatus.PENDIENTE],
       [OccurrenceStatus.EN_CURSO, OccurrenceStatus.PENDIENTE],
+      [OccurrenceStatus.EN_CURSO, OccurrenceStatus.CANCELADA],
+      [OccurrenceStatus.COMPLETADA, OccurrenceStatus.CANCELADA],
+      [OccurrenceStatus.VENCIDA, OccurrenceStatus.CANCELADA],
+      [OccurrenceStatus.CANCELADA, OccurrenceStatus.COMPLETADA],
     ];
     for (const [from, to] of forbidden) {
       expect(isOccurrenceTransitionAllowed(from, to)).toBe(false);
@@ -38,6 +44,7 @@ describe('isOccurrenceStatus', () => {
   it('reconoce estados validos y rechaza basura', () => {
     expect(isOccurrenceStatus('PENDIENTE')).toBe(true);
     expect(isOccurrenceStatus('VENCIDA')).toBe(true);
-    expect(isOccurrenceStatus('CANCELADA')).toBe(false);
+    expect(isOccurrenceStatus('CANCELADA')).toBe(true);
+    expect(isOccurrenceStatus('ARCHIVADA')).toBe(false);
   });
 });

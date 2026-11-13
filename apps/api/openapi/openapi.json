@@ -9083,7 +9083,8 @@
                 "PENDIENTE",
                 "EN_CURSO",
                 "COMPLETADA",
-                "VENCIDA"
+                "VENCIDA",
+                "CANCELADA"
               ],
               "type": "string"
             }
@@ -9265,10 +9266,10 @@
             "description": "No existe o fuera de alcance."
           },
           "409": {
-            "description": "Transicion no permitida."
+            "description": "Transicion no permitida, ventana aun cerrada (el mensaje incluye la fecha de apertura) o ocurrencia vencida."
           }
         },
-        "summary": "Toma una ocurrencia (PENDIENTE -> EN_CURSO).",
+        "summary": "Toma una ocurrencia (PENDIENTE -> EN_CURSO) y registra quien y cuando.",
         "tags": [
           "recurring-activity"
         ]
@@ -9316,10 +9317,10 @@
             "description": "No existe o fuera de alcance."
           },
           "409": {
-            "description": "Transicion no permitida."
+            "description": "Transicion no permitida, ventana aun cerrada (con fecha de apertura) o falta el adjunto exigido por la definicion."
           }
         },
-        "summary": "Completa una ocurrencia (comentario opcional).",
+        "summary": "Completa una ocurrencia indicando que se realizo y las horas reales.",
         "tags": [
           "recurring-activity"
         ]
@@ -9590,6 +9591,44 @@
           }
         },
         "summary": "Pausa una definicion (soft-delete active=false; no borra).",
+        "tags": [
+          "recurring-activity"
+        ]
+      }
+    },
+    "/recurring-activities/{id}/resume": {
+      "post": {
+        "operationId": "RecurringActivityController_resume",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Definicion reanudada (idempotente si ya estaba activa).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurringActivityResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente o fuera de area."
+          },
+          "404": {
+            "description": "No existe o fuera de alcance."
+          }
+        },
+        "summary": "Reanuda una definicion pausada y regenera sus ocurrencias futuras (reactiva las canceladas que coinciden).",
         "tags": [
           "recurring-activity"
         ]
@@ -18587,6 +18626,20 @@
           "results"
         ]
       },
+      "OccurrenceDisplayStatus": {
+        "type": "string",
+        "enum": [
+          "PROGRAMADA",
+          "PENDIENTE",
+          "EN_CURSO",
+          "VENCE_HOY",
+          "VENCIDA",
+          "COMPLETADA",
+          "COMPLETADA_TARDE",
+          "CANCELADA"
+        ],
+        "description": "Estado de presentacion derivado (PROGRAMADA, PENDIENTE, EN_CURSO, VENCE_HOY, VENCIDA, COMPLETADA, COMPLETADA_TARDE, CANCELADA)."
+      },
       "OccurrenceResponseDto": {
         "type": "object",
         "properties": {
@@ -18657,7 +18710,87 @@
           "completionComment": {
             "type": "string",
             "nullable": true,
-            "description": "Comentario/evidencia de completado (opcional)."
+            "description": "Que se realizo (texto de completado)."
+          },
+          "displayStatus": {
+            "description": "Estado de presentacion derivado (PROGRAMADA, PENDIENTE, EN_CURSO, VENCE_HOY, VENCIDA, COMPLETADA, COMPLETADA_TARDE, CANCELADA).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OccurrenceDisplayStatus"
+              }
+            ]
+          },
+          "canStart": {
+            "type": "boolean",
+            "description": "Se puede tomar ahora (ventana abierta y pendiente)."
+          },
+          "canComplete": {
+            "type": "boolean",
+            "description": "Se puede completar ahora (ventana abierta y no terminal)."
+          },
+          "opensOn": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Dia desde el que se habilita (targetDate - prepDays)."
+          },
+          "estimatedHours": {
+            "type": "number",
+            "description": "Horas estimadas (snapshot de la definicion al generarse)."
+          },
+          "actualHours": {
+            "type": "number",
+            "nullable": true,
+            "description": "Horas reales declaradas al completar."
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuando se tomo la ocurrencia."
+          },
+          "startedByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Quien tomo la ocurrencia."
+          },
+          "startedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre de quien tomo la ocurrencia."
+          },
+          "completedByName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre de quien completo la ocurrencia."
+          },
+          "responsibleName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre de la persona o area responsable."
+          },
+          "requiresEvidence": {
+            "type": "boolean",
+            "description": "La definicion exige al menos un adjunto para completar."
+          },
+          "intervalCount": {
+            "type": "number",
+            "description": "Cada cuantos periodos se repite la definicion."
+          },
+          "prepDays": {
+            "type": "number",
+            "description": "Dias de preparacion de la definicion."
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Cuando se cancelo (si CANCELADA)."
+          },
+          "cancelReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo de cancelacion (si CANCELADA)."
           },
           "createdAt": {
             "type": "string",
@@ -18685,6 +18818,22 @@
           "completedAt",
           "completedByUserId",
           "completionComment",
+          "displayStatus",
+          "canStart",
+          "canComplete",
+          "opensOn",
+          "estimatedHours",
+          "actualHours",
+          "startedAt",
+          "startedByUserId",
+          "startedByName",
+          "completedByName",
+          "responsibleName",
+          "requiresEvidence",
+          "intervalCount",
+          "prepDays",
+          "cancelledAt",
+          "cancelReason",
           "createdAt",
           "updatedAt"
         ]
@@ -18731,10 +18880,21 @@
         "properties": {
           "comment": {
             "type": "string",
-            "description": "Comentario o evidencia del completado (opcional).",
-            "maxLength": 4000
+            "description": "Que se realizo (obligatorio, 1 a 2000 caracteres).",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "actualHours": {
+            "type": "number",
+            "description": "Horas reales dedicadas (> 0, hasta 2 decimales).",
+            "minimum": 0.01,
+            "maximum": 999.99
           }
-        }
+        },
+        "required": [
+          "comment",
+          "actualHours"
+        ]
       },
       "CreateRecurringActivityDto": {
         "type": "object",
@@ -18783,9 +18943,26 @@
           },
           "anticipationDays": {
             "type": "number",
-            "description": "Dias de anticipacion propios; si se omite, el motor usa el default de ENV.",
+            "description": "Horizonte tecnico de generacion en dias (no editable desde el portal). El motor usa max(anticipationDays o ENV, prepDays).",
             "minimum": 0,
-            "maximum": 3650
+            "maximum": 3650,
+            "deprecated": true
+          },
+          "estimatedHours": {
+            "type": "number",
+            "description": "Esfuerzo estimado en horas por ocurrencia (> 0, hasta 2 decimales).",
+            "minimum": 0.01,
+            "maximum": 999.99
+          },
+          "prepDays": {
+            "type": "number",
+            "description": "Dias antes del dia objetivo en que la ocurrencia se habilita para tomarla o completarla. Por defecto 2 (SEMANAL) o 5 (resto).",
+            "minimum": 0,
+            "maximum": 365
+          },
+          "requiresEvidence": {
+            "type": "boolean",
+            "description": "Si true, completar una ocurrencia exige al menos un adjunto. Por defecto false."
           },
           "responsibleKind": {
             "type": "string",
@@ -18815,6 +18992,7 @@
           "activityType",
           "cadence",
           "startDate",
+          "estimatedHours",
           "responsibleKind"
         ]
       },
@@ -18861,7 +19039,8 @@
           "anticipationDays": {
             "type": "number",
             "nullable": true,
-            "description": "Dias de anticipacion propios (null = default ENV)."
+            "description": "Horizonte tecnico de generacion en dias (null = default ENV). No editable desde el portal.",
+            "deprecated": true
           },
           "responsibleKind": {
             "type": "string",
@@ -18882,6 +19061,18 @@
           "active": {
             "type": "boolean",
             "description": "Si false, el motor no genera nuevas ocurrencias."
+          },
+          "estimatedHours": {
+            "type": "number",
+            "description": "Esfuerzo estimado en horas por ocurrencia."
+          },
+          "prepDays": {
+            "type": "number",
+            "description": "Dias antes del dia objetivo en que la ocurrencia se habilita."
+          },
+          "requiresEvidence": {
+            "type": "boolean",
+            "description": "Si true, completar exige al menos un adjunto."
           },
           "createdAt": {
             "type": "string",
@@ -18908,6 +19099,9 @@
           "responsibleUserId",
           "responsibleAreaId",
           "active",
+          "estimatedHours",
+          "prepDays",
+          "requiresEvidence",
           "createdAt",
           "updatedAt"
         ]
@@ -18933,7 +19127,15 @@
           },
           "total": {
             "type": "number",
-            "description": "Total de ocurrencias del grupo en la ventana."
+            "description": "Total de ocurrencias del grupo en la ventana (sin canceladas)."
+          },
+          "estimatedHours": {
+            "type": "number",
+            "description": "Suma de horas estimadas de las ocurrencias COMPLETADAS."
+          },
+          "actualHours": {
+            "type": "number",
+            "description": "Suma de horas reales de las ocurrencias COMPLETADAS."
           }
         },
         "required": [
@@ -18941,7 +19143,9 @@
           "late",
           "overdue",
           "pending",
-          "total"
+          "total",
+          "estimatedHours",
+          "actualHours"
         ]
       },
       "ComplianceByActivityDto": {
@@ -19030,6 +19234,33 @@
           "metrics"
         ]
       },
+      "ComplianceByPersonDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Usuario que completo."
+          },
+          "userName": {
+            "type": "string",
+            "description": "Nombre de quien completo."
+          },
+          "metrics": {
+            "description": "Metricas de lo que completo esa persona.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ComplianceMetricsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "userId",
+          "userName",
+          "metrics"
+        ]
+      },
       "ComplianceResponseDto": {
         "type": "object",
         "properties": {
@@ -19066,6 +19297,13 @@
             "items": {
               "$ref": "#/components/schemas/ComplianceByResponsibleDto"
             }
+          },
+          "byPerson": {
+            "description": "Desglose por quien completo (solo ocurrencias completadas).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplianceByPersonDto"
+            }
           }
         },
         "required": [
@@ -19073,7 +19311,8 @@
           "to",
           "totals",
           "byActivity",
-          "byResponsible"
+          "byResponsible",
+          "byPerson"
         ]
       },
       "UpdateRecurringActivityDto": {
@@ -19123,9 +19362,26 @@
           },
           "anticipationDays": {
             "type": "number",
-            "description": "Dias de anticipacion propios; si se omite, el motor usa el default de ENV.",
+            "description": "Horizonte tecnico de generacion en dias (no editable desde el portal). El motor usa max(anticipationDays o ENV, prepDays).",
             "minimum": 0,
-            "maximum": 3650
+            "maximum": 3650,
+            "deprecated": true
+          },
+          "estimatedHours": {
+            "type": "number",
+            "description": "Esfuerzo estimado en horas por ocurrencia (> 0, hasta 2 decimales).",
+            "minimum": 0.01,
+            "maximum": 999.99
+          },
+          "prepDays": {
+            "type": "number",
+            "description": "Dias antes del dia objetivo en que la ocurrencia se habilita para tomarla o completarla. Por defecto 2 (SEMANAL) o 5 (resto).",
+            "minimum": 0,
+            "maximum": 365
+          },
+          "requiresEvidence": {
+            "type": "boolean",
+            "description": "Si true, completar una ocurrencia exige al menos un adjunto. Por defecto false."
           },
           "responsibleKind": {
             "type": "string",
