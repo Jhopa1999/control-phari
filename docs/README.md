@@ -17,6 +17,9 @@ Documentacion y decisiones tecnicas de la plantilla de portales.
   IDs de infraestructura, como se abrio a internet (IGW), HTTPS con sslip.io,
   operacion por SSM, seed y re-despliegue. Especifico de esta instalacion, no de
   la plantilla.
+- **[despliegue/README.md](despliegue/README.md)** — Procedimiento y scripts
+  versionados de despliegue (`scripts/deploy/`): stack por red, produccion por
+  SSM, ensayo de migraciones, verificacion, rollback y trampas conocidas.
 - Este archivo (`README.md`) — decisiones tecnicas registradas durante la
   construccion de la plantilla.
 
