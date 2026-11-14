@@ -68,6 +68,6 @@ tildes, en UTF-8 sin BOM.
   `[IO.File]::WriteAllText(ruta, texto, (New-Object Text.UTF8Encoding $false))`.
 - Para commits con tildes, escribe el mensaje en un archivo UTF-8 y usa
   `git commit -F archivo`.
-- Antes de commitear, comprueba que no aparezcan secuencias como `Ã`, `â€` o
+- Antes de commitear, comprueba que no aparezcan secuencias como `Ã`, `â€` o <!-- check-encoding:ignore -->
   `├` en el texto (salvo los caracteres de dibujo de árboles en bloques de
-  código). La CI lo verifica en `docs/` y `e2e/`.
+  código). La CI lo verifica con `npm run check:encoding` (`scripts/check-encoding.mjs`) en `docs/`, `e2e/`, `apps/*/src/`, `.kiro/` y los `*.md` de la raíz, y también rechaza un BOM al inicio. Una línea que cita esas secuencias a propósito lleva `check-encoding:ignore` en un comentario.

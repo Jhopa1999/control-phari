@@ -66,6 +66,10 @@ jobs:
       - name: Construir API Client
         run: npm run build:api-client
 
+      - name: Verificar codificacion del texto (sin mojibake ni BOM)
+        run: npm run check:encoding
+      - name: Pruebas de los scripts
+        run: npm run test:scripts
       - name: Pruebas unitarias (Jest)
         run: npm run test:unit
 

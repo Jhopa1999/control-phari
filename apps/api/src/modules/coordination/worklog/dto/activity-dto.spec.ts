@@ -1,4 +1,4 @@
-﻿import 'reflect-metadata';
+import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CreateActivityDto } from './create-activity.dto';
@@ -8,7 +8,7 @@ import { WorklogOptionsQueryDto } from './worklog-options.dto';
 // Mismas opciones que el ValidationPipe global (app.config.ts).
 const opts = { whitelist: true, forbidNonWhitelisted: true } as const;
 
-describe('DTO de actividad de la bitÃ¡cora', () => {
+describe('DTO de actividad de la bitácora', () => {
   it('relatedIssueId ya no se acepta al crear: se rechaza (400 por el ValidationPipe)', async () => {
     const dto = plainToInstance(CreateActivityDto, {
       classificationCode: 'INTERNA',
@@ -26,7 +26,7 @@ describe('DTO de actividad de la bitÃ¡cora', () => {
     expect(errors.map((e) => e.property)).toContain('relatedIssueId');
   });
 
-  it('una actividad vÃ¡lida sin relatedIssueId no tiene errores', async () => {
+  it('una actividad válida sin relatedIssueId no tiene errores', async () => {
     const dto = plainToInstance(CreateActivityDto, {
       classificationCode: 'PLANIFICADA',
       taskId: '3f2b8c1e-1d2a-4b3c-8d4e-5f6a7b8c9d0e',
@@ -54,7 +54,7 @@ describe('WorklogOptionsQueryDto', () => {
     expect(dto.q).toBe('T07');
   });
 
-  it('rechaza scope y fecha invÃ¡lidos', async () => {
+  it('rechaza scope y fecha inválidos', async () => {
     const dto = plainToInstance(WorklogOptionsQueryDto, {
       processId: '2b66a8ae-3722-439a-8bf7-b7a86d48a9e7',
       scope: 'todos',

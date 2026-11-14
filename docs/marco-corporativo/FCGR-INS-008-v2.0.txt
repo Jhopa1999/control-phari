@@ -1,4 +1,4 @@
-﻿
+
 
 Marco corporativo de gestión de requerimientos y soluciones tecnológicas
 Este marco establece las reglas comunes para recibir, evaluar, priorizar, ejecutar, entregar y operar los requerimientos tecnológicos de Pharitech. Su aplicación permite a los líderes tomar decisiones con información suficiente, coordinar capacidades y asegurar resultados aceptados y sostenibles.

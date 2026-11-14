@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PortfolioService } from './portfolio.service';
 import { ListPortfolioDto } from './dto/list-portfolio.dto';
