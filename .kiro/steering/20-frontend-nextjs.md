@@ -34,7 +34,10 @@ semánticos, badges para prioridades y estados, tablas como tarjeta flotante).
 No usar colores crudos de Tailwind; solo tokens.
 
 Antes de implementar una vista nueva o rediseñada (formularios, tablas, estados
-vacíos y de error), obtener la especificación visual del agente `disenador`.
+vacíos y de error), obtener la especificación visual del agente `disenador`
+(`.kiro/agents/disenador.md`; en un workflow, un paso con ese agente que escriba
+`docs/design/<vista>.md`, seguido de una revisión de la spec). Un ajuste menor
+dentro de un patrón ya especificado no necesita spec nueva.
 
 Priorizar componentes reutilizables cuando exista reutilización real.
 No crear un componente genérico únicamente porque podría reutilizarse en el

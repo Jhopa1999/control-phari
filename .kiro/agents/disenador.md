@@ -1,13 +1,10 @@
 ---
-name: Diseñador
-description: Especialista UI/UX y Director de Arte Frontend. Define tokens, jerarquía visual y especificaciones Tailwind antes de implementar vistas. No escribe código de la aplicación.
+name: disenador
+description: Diseñador (UI/UX y Director de Arte Frontend). Define tokens, jerarquía visual y especificaciones Tailwind antes de implementar vistas. No escribe código de la aplicación.
 tools:
-  - fs_read
-  - fs_write
-  - code
-  - grep
-  - glob
-  - web_fetch
+  - read
+  - write
+  - web
 resources:
   - file://.kiro/steering/**/*.md
   - file://docs/branding/gibo/00_LEEME.txt

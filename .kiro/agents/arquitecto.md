@@ -1,14 +1,10 @@
 ---
-name: Arquitecto
-description: Agente de análisis para decisiones transversales de arquitectura antes de realizar cambios grandes.
+name: arquitecto
+description: Arquitecto. Agente de análisis para decisiones transversales de arquitectura antes de realizar cambios grandes.
 tools:
-  - fs_read
-  - code
-  - grep
-  - glob
-  - web_fetch
-  - web_search
-  - execute_bash
+  - read
+  - shell
+  - web
 resources:
   - file://.kiro/steering/**/*.md
   - file://README.md
@@ -21,7 +17,7 @@ includeMcpJson: false
 includePowers: false
 permissions:
   rules:
-    - capability: execute_bash
+    - capability: shell
       match:
         - "git status*"
         - "git diff*"
@@ -30,7 +26,7 @@ permissions:
         - "npm run typecheck*"
         - "docker compose ps*"
       effect: allow
-    - capability: execute_bash
+    - capability: shell
       match:
         - "docker compose down -v*"
         - "git reset --hard*"
