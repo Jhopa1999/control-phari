@@ -583,6 +583,7 @@ defecto de la plantilla.
   etiqueta con el campo del dialog. Esperas por condicion (`waitForResponse`,
   `toBeVisible`), sin `waitForTimeout`.
 - Scripts raiz: `test:unit`, `test:e2e`, `test:all`. El `build` NO ejecuta E2E.
+  Además: `check:encoding` (falla ante texto corrupto/mojibake o BOM en archivos versionados; patrones en `scripts/check-encoding.mjs`) y `test:scripts` (pruebas de los scripts de `scripts/`).
   Artefactos ignorados: `test-results/`, `playwright-report/`, `coverage/`,
   `.playwright/`, `blob-report/`.
 

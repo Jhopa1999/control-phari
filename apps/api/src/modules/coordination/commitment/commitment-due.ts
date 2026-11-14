@@ -9,7 +9,7 @@ export const COMMITMENT_DUE_STATUSES = [
 ] as const;
 export type CommitmentDueStatus = (typeof COMMITMENT_DUE_STATUSES)[number];
 
-/** Dias de anticipacion hasta los que un vencimiento se considera Â«proximoÂ». */
+/** Dias de anticipacion hasta los que un vencimiento se considera «proximo». */
 export const UPCOMING_DAYS = 7;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
