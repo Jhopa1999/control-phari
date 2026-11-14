@@ -12,14 +12,23 @@ import { Client } from 'pg';
  * (/inicio), sin pasar por /login. Aplica igual a la activación de cuenta
  * (mismo endpoint, token con purpose USER_INVITATION).
  *
+ * Aislamiento: el flujo cambia la contraseña, así que NO opera sobre los
+ * usuarios demo del seed. La prueba crea su propio usuario (`e2e.reset.<ts>`)
+ * con un grant INTEGRANTE, y lo elimina al final con filtro estricto por su
+ * identificador (ver `30-pruebas.md`).
+ *
  * Estrategia de token (design §Testabilidad): `auth_tokens` solo persiste el
  * sha256 del token en claro; el valor nunca se guarda, así que no se puede
  * «capturar» el emitido por forgot-password. En su lugar el test SIEMBRA la
  * fila: genera un valor en claro conocido, inserta en `auth_tokens` el
- * sha256(valor) para el usuario del seed con el purpose y expiración
+ * sha256(valor) para el usuario de prueba con el purpose y expiración
  * correspondientes, y abre la pantalla con ?token=<valor>. Reutiliza el mismo
  * sha256 que el backend (apps/api/.../auth-token.util.ts) y DATABASE_URL del
  * entorno, sin añadir mock SMTP ni hooks de test nuevos.
+ *
+ * Fechas: las columnas son `timestamp` sin zona. Se siembran como texto ISO en
+ * UTC; un `Date` lo serializa `pg` en hora local (UTC-5 en Windows) y el token
+ * caducaría antes de tiempo.
  *
  * Solo corre con E2E_AUTH_MODE=jwt y con la API (AUTH_MODE=jwt), la web
  * (NEXT_PUBLIC_AUTH_MODE=jwt) y PostgreSQL levantados y accesibles vía
@@ -36,8 +45,12 @@ test.skip(
   'Requiere DATABASE_URL para sembrar auth_tokens',
 );
 
-/** Usuario del seed (apps/api/prisma/seed.ts) sobre el que se opera. */
-const IDENTIFIER = process.env.E2E_JWT_IDENTIFIER ?? 'jefe@demo.local';
+/** Prefijo que identifica (y acota la limpieza de) los usuarios de este spec. */
+const IDENTIFIER_PREFIX = 'e2e.reset.';
+/** Usuario de prueba propio, con identificador único por ejecución. */
+const IDENTIFIER = `${IDENTIFIER_PREFIX}${Date.now()}@demo.local`;
+/** Proceso del seed sobre el que el usuario de prueba es INTEGRANTE. */
+const GRANT_PROCESS_CODE = 'FIBI';
 /** Contraseña nueva que define el formulario; cumple el mínimo del backend. */
 const NEW_PASSWORD = 'nueva-contrasena-e2e';
 
@@ -60,14 +73,68 @@ async function withDb<T>(fn: (client: Client) => Promise<T>): Promise<T> {
   }
 }
 
-/** Resuelve el id del usuario del seed por su identifier. */
+/** Crea el usuario de prueba (sin contraseña) con un grant INTEGRANTE. */
+async function createTestUser(): Promise<void> {
+  await withDb(async (client) => {
+    const now = new Date().toISOString();
+    const user = await client.query<{ id: string }>(
+      `INSERT INTO users (id, identifier, name, active, is_admin, created_at, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, true, false, $3::timestamp, $3::timestamp)
+       RETURNING id`,
+      [IDENTIFIER, 'E2E Restablecer contraseña', now],
+    );
+    const role = await client.query<{ id: string }>(
+      'SELECT id FROM roles WHERE code = $1 LIMIT 1',
+      ['INTEGRANTE'],
+    );
+    const process = await client.query<{ id: string }>(
+      'SELECT id FROM processes WHERE code = $1 LIMIT 1',
+      [GRANT_PROCESS_CODE],
+    );
+    expect(role.rows[0], 'El seed debe tener el rol INTEGRANTE').toBeTruthy();
+    expect(
+      process.rows[0],
+      `El seed debe tener el proceso ${GRANT_PROCESS_CODE}`,
+    ).toBeTruthy();
+    await client.query(
+      `INSERT INTO grants (id, user_id, role_id, process_id, active, created_at, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, true, $4::timestamp, $4::timestamp)`,
+      [user.rows[0].id, role.rows[0].id, process.rows[0].id, now],
+    );
+  });
+}
+
+/** Elimina el usuario de prueba y lo que colgaba de él (filtro estricto). */
+async function deleteTestUser(): Promise<void> {
+  await withDb(async (client) => {
+    const result = await client.query<{ id: string }>(
+      'SELECT id FROM users WHERE identifier = $1 AND identifier LIKE $2',
+      [IDENTIFIER, `${IDENTIFIER_PREFIX}%`],
+    );
+    const id = result.rows[0]?.id;
+    if (!id) return;
+    await client.query('DELETE FROM auth_tokens WHERE user_id = $1', [id]);
+    await client.query('DELETE FROM notifications WHERE user_id = $1', [id]);
+    await client.query(
+      'DELETE FROM audit_events WHERE actor_user_id = $1 OR (object_type = $2 AND object_id = $3)',
+      [id, 'User', id],
+    );
+    await client.query('DELETE FROM grants WHERE user_id = $1', [id]);
+    await client.query('DELETE FROM users WHERE id = $1', [id]);
+  });
+}
+
+test.beforeAll(createTestUser);
+test.afterAll(deleteTestUser);
+
+/** Resuelve el id del usuario de prueba por su identifier. */
 async function userIdByIdentifier(client: Client): Promise<string> {
   const result = await client.query<{ id: string }>(
     'SELECT id FROM users WHERE identifier = $1 LIMIT 1',
     [IDENTIFIER],
   );
   const id = result.rows[0]?.id;
-  expect(id, `El seed debe tener el usuario ${IDENTIFIER}`).toBeTruthy();
+  expect(id, `Debe existir el usuario de prueba ${IDENTIFIER}`).toBeTruthy();
   return id as string;
 }
 
@@ -80,9 +147,9 @@ interface SeedTokenOptions {
 }
 
 /**
- * Siembra una fila en `auth_tokens` para el usuario del seed y devuelve el
- * token en claro para usarlo en la URL. Limpia tokens previos del mismo
- * usuario+purpose para que la fila sembrada sea la única vigente.
+ * Siembra una fila en `auth_tokens` para el usuario de prueba. Limpia tokens
+ * previos del mismo usuario+purpose para que la fila sembrada sea la única
+ * vigente. Las fechas van como texto ISO (UTC) casteado a `timestamp`.
  */
 async function seedToken(
   token: string,
@@ -96,11 +163,11 @@ async function seedToken(
     );
     const expiresAt = new Date(
       Date.now() + options.expiresInMinutes * 60 * 1000,
-    );
-    const usedAt = options.used ? new Date() : null;
+    ).toISOString();
+    const usedAt = options.used ? new Date().toISOString() : null;
     await client.query(
       `INSERT INTO auth_tokens (id, user_id, purpose, token_hash, expires_at, used_at, created_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, now())`,
+       VALUES (gen_random_uuid(), $1, $2, $3, $4::timestamp, $5::timestamp, (now() at time zone 'utc'))`,
       [userId, options.purpose, hashToken(token), expiresAt, usedAt],
     );
   });
