@@ -1,12 +1,9 @@
 ---
-name: Revisor
-description: Revisión técnica y arquitectónica de cambios sin modificar código.
+name: revisor
+description: Revisor. Revisión técnica y arquitectónica de cambios sin modificar código.
 tools:
-  - fs_read
-  - code
-  - grep
-  - glob
-  - execute_bash
+  - read
+  - shell
 resources:
   - file://.kiro/steering/**/*.md
   - file://README.md
@@ -16,7 +13,7 @@ includeMcpJson: false
 includePowers: false
 permissions:
   rules:
-    - capability: execute_bash
+    - capability: shell
       match:
         - "git status*"
         - "git diff*"
@@ -29,7 +26,7 @@ permissions:
         - "docker compose ps*"
         - "docker compose logs*"
       effect: allow
-    - capability: execute_bash
+    - capability: shell
       match:
         - "docker compose down -v*"
         - "git reset --hard*"

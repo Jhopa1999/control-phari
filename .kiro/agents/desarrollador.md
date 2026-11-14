@@ -1,15 +1,11 @@
 ---
-name: Desarrollador
-description: Agente principal para implementar funcionalidades completas respetando la arquitectura estándar del portal.
+name: desarrollador
+description: Desarrollador. Agente principal para implementar funcionalidades completas respetando la arquitectura estándar del portal.
 tools:
-  - fs_read
-  - fs_write
-  - execute_bash
-  - code
-  - grep
-  - glob
-  - web_fetch
-  - web_search
+  - read
+  - write
+  - shell
+  - web
 resources:
   - file://.kiro/steering/**/*.md
   - file://README.md
@@ -24,7 +20,7 @@ includeMcpJson: false
 includePowers: false
 permissions:
   rules:
-    - capability: execute_bash
+    - capability: shell
       match:
         - "npm run *"
         - "git status*"
@@ -34,7 +30,7 @@ permissions:
         - "docker compose ps*"
         - "docker compose logs*"
       effect: allow
-    - capability: execute_bash
+    - capability: shell
       match:
         - "docker compose down -v*"
         - "git reset --hard*"

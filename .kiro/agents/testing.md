@@ -1,13 +1,10 @@
 ---
-name: Testing
-description: Agente especializado en reproducir bugs y crear o mantener pruebas Jest y Playwright.
+name: testing
+description: Testing. Agente especializado en reproducir bugs y crear o mantener pruebas Jest y Playwright.
 tools:
-  - fs_read
-  - fs_write
-  - execute_bash
-  - code
-  - grep
-  - glob
+  - read
+  - write
+  - shell
 resources:
   - file://.kiro/steering/**/*.md
   - file://README.md
@@ -21,7 +18,7 @@ includeMcpJson: false
 includePowers: false
 permissions:
   rules:
-    - capability: execute_bash
+    - capability: shell
       match:
         - "npm run test*"
         - "npm run typecheck*"
@@ -34,7 +31,7 @@ permissions:
         - "docker compose ps*"
         - "docker compose logs*"
       effect: allow
-    - capability: execute_bash
+    - capability: shell
       match:
         - "docker compose down -v*"
         - "git reset --hard*"
