@@ -26,7 +26,7 @@ param(
   [string]$Ref = 'main',
   # Bucket S3 temporal para el paquete (se borra el objeto al terminar).
   [string]$Bucket = $env:PORTAL_DEPLOY_BUCKET,
-  [string]$Prefijo = 'deploy-tmp',
+  [string]$Prefijo = '_deploy',
   [string]$Region = $(if ($env:PORTAL_AWS_REGION) { $env:PORTAL_AWS_REGION } else { 'us-east-2' }),
   [string]$InstanceId = $(if ($env:PORTAL_SSM_INSTANCE) { $env:PORTAL_SSM_INSTANCE } else { 'i-0879c4806eab55546' }),
   # Por defecto se ensayan las migraciones sobre una copia de la BD. Este
