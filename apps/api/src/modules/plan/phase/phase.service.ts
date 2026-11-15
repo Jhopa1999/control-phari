@@ -6,6 +6,12 @@ import type { PlanPhaseModel } from '../../../generated/prisma/models/PlanPhase'
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { PlanStateService } from '../plan-state.service';
+import {
+  assertOnlyAdjustableChanges,
+  assertPlanAdjustable,
+  assertPlanStructureEditable,
+  isAuthorizedPlan,
+} from '../plan-edit-lock';
 import { formatPhaseCode, reservePlanSequence } from '../visible-code';
 import { CreatePhaseDto } from './dto/create-phase.dto';
 import { UpdatePhaseDto } from './dto/update-phase.dto';
@@ -67,11 +73,12 @@ export class PhaseService {
     planId: string,
     dto: CreatePhaseDto,
   ): Promise<PlanPhaseResponseDto> {
-    const { mainProcessId, requestState } = await this.planState.requirePlanByIdInScope(
+    const { plan, mainProcessId, requestState } = await this.planState.requirePlanByIdInScope(
       actor,
       planId,
     );
     this.planState.assertProjectOpen(requestState);
+    assertPlanStructureEditable(plan.status);
 
     assertValidRange(
       dto.startDate !== undefined ? new Date(dto.startDate) : null,
@@ -124,12 +131,22 @@ export class PhaseService {
     phaseId: string,
     dto: UpdatePhaseDto,
   ): Promise<PlanPhaseResponseDto> {
-    const { mainProcessId, requestState } = await this.planState.requirePlanByIdInScope(
+    const { plan, mainProcessId, requestState } = await this.planState.requirePlanByIdInScope(
       actor,
       planId,
     );
     this.planState.assertProjectOpen(requestState);
+    assertPlanAdjustable(plan.status);
     const phase = await this.requirePhase(planId, phaseId);
+    if (isAuthorizedPlan(plan.status)) {
+      // Plan autorizado (D5): solo se ajustan las fechas de la fase.
+      const changed: string[] = [];
+      if (dto.name !== undefined && dto.name !== phase.name) changed.push('nombre');
+      if (dto.deliverable !== undefined && (dto.deliverable ?? null) !== (phase.deliverable ?? null)) {
+        changed.push('entregable');
+      }
+      assertOnlyAdjustableChanges(changed);
+    }
 
     const nextStart =
       dto.startDate !== undefined ? new Date(dto.startDate) : phase.startDate;
@@ -190,6 +207,7 @@ export class PhaseService {
       planId,
     );
     this.planState.assertProjectOpen(requestState);
+    assertPlanStructureEditable(plan.status);
 
     const phases = await this.prisma.planPhase.findMany({
       where: { planId },
@@ -264,11 +282,12 @@ export class PhaseService {
     planId: string,
     phaseId: string,
   ): Promise<void> {
-    const { mainProcessId, requestState } = await this.planState.requirePlanByIdInScope(
+    const { plan, mainProcessId, requestState } = await this.planState.requirePlanByIdInScope(
       actor,
       planId,
     );
     this.planState.assertProjectOpen(requestState);
+    assertPlanStructureEditable(plan.status);
     const phase = await this.requirePhase(planId, phaseId);
 
     const taskCount = await this.prisma.task.count({ where: { phaseId } });

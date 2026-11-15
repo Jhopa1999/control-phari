@@ -144,6 +144,8 @@ export class WorklogController {
   @ApiBody({ type: CreateDailyLogDto })
   @ApiResponse({ status: 201, description: 'Diario creado.', type: DailyLogResponseDto })
   @ApiResponse({ status: 400, description: 'Datos invalidos.' })
+  @ApiResponse({ status: 400, description: 'El proceso indicado no existe (jefe de área).' })
+  @ApiResponse({ status: 403, description: 'El actor no pertenece al proceso indicado.' })
   @ApiResponse({ status: 404, description: 'Proceso fuera de alcance.' })
   @ApiResponse({ status: 409, description: 'Ya existe un diario para persona/proceso/fecha.' })
   createDailyLog(
@@ -400,6 +402,8 @@ export class WorklogController {
   @ApiBody({ type: CreateWeeklyReportDto })
   @ApiResponse({ status: 201, description: 'Semanal creado.', type: WeeklyReportResponseDto })
   @ApiResponse({ status: 400, description: 'Datos invalidos.' })
+  @ApiResponse({ status: 400, description: 'El proceso indicado no existe (jefe de área).' })
+  @ApiResponse({ status: 403, description: 'El actor no pertenece al proceso indicado.' })
   @ApiResponse({ status: 404, description: 'Proceso fuera de alcance.' })
   @ApiResponse({ status: 409, description: 'Ya existe un semanal para persona/proceso/semana.' })
   createWeeklyReport(

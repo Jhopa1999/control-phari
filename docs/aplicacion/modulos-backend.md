@@ -237,6 +237,14 @@ estado de tareas lo tienen los 3 roles; "mi trabajo" usa la capacidad `assigned`
 IDs visibles en la importación/exportación: el documento JSON exporta `code` en cada fase y tarea y el Excel añade la columna «Código (informativo)» al final de las hojas Fases y Tareas. Es solo informativo: **la importación lo ignora** (un archivo antiguo sin la columna sigue funcionando; `ref`/«Referencia» no cambia). Importar **reemplaza** el plan, así que las fases y tareas nuevas reciben códigos **nuevos que continúan el contador** del plan (los anteriores no se reutilizan).
 Validaciones de fechas (backend y formularios): la fecha de fin de una fase o tarea no puede ser anterior a la de inicio; las fechas de cada tarea deben estar dentro del rango de su fase; al cambiar las fechas de una fase se comprueba que sus tareas sigan dentro. Aplican al crear, editar e importar (JSON o Excel). El formulario de tarea ya no ofrece la opción *Es un hito* (el campo se conserva en datos históricos).
 
+**Bloqueo de edición del plan según su estado (D5, BL-065; `plan-edit-lock.ts`).** La API es el control real; la web solo oculta o deshabilita. Alcanza al plan (`PATCH`), las fases (crear, editar, reordenar, borrar), las tareas (crear, editar, borrar), las dependencias (añadir, quitar), la importación (JSON y Excel) y los procesos que intervienen. Las acciones del propio flujo (enviar, autorizar, devolver) y el trabajo de ejecución de las tareas (estado, avance, aceptación, evidencia) no se bloquean.
+
+| Estado del plan | Qué admite |
+| --- | --- |
+| *Borrador* / *Devuelto* | Edición completa. |
+| *En autorización* | Nada: `409` «El plan está en autorización y no admite cambios…» en todo lo anterior, incluido cambiar responsable, fechas u horas. |
+| *Autorizado* | Solo `PATCH /tasks/:id` con **responsable, fechas y horas** (y `PATCH` de una fase con sus **fechas**); cada cambio queda auditado como `UPDATE` de la tarea o la fase. Cambiar otro campo de la ficha (título, descripción, criterios, evidencia, proceso, hito, nombre o entregable de la fase) responde `409` con la lista de campos; reenviar el mismo valor no cuenta como cambio. Crear, borrar, reordenar, dependencias, importar y editar los datos del plan responden `409`. Se mantiene así hasta que exista el control de cambios del plan autorizado (BL-052). Los procesos que intervienen siguen siendo corregibles (es lo que permite reasignar responsables de otro proceso). |
+
 ### Fases (`phase/phase.controller.ts`)
 
 | Método | Ruta | Descripción |
@@ -347,7 +355,7 @@ Agrupa tres submódulos: bitácora/semanal (worklog), reuniones
 | GET | `/worklog/daily` | Lista **paginada** (`{ data, page, pageSize, total, hasMore }`, 25 por defecto, máx. 100) de diarios en alcance. Filtros: `from`, `to`, `date`, `processId`, `authorUserId`, `status`, `classificationCode` (contiene al menos una actividad), `q` (notas, descripción, resultado, activo, solicitante y nombre del autor), `sort` y `page`/`pageSize`. Cada diario trae `authorName`, `processName`, `returned` y `actions` (qué puede hacer quien consulta). |
 | GET | `/worklog/daily/summary` | Resumen con los mismos filtros: diarios, horas, totales por estado, por clasificación y por persona. |
 | GET | `/worklog/options` | Proyectos y tareas que quien consulta puede **imputar** en el diario de un proceso y una fecha (misma regla que aplica al guardar). Query: `processId` (obligatorio), `date` (AAAA-MM-DD; referencia de la ventana de gracia, por defecto hoy), `q`, `includeTerminated`, `scope` (`mine` por defecto o `all`). Devuelve `projects` (`id, code, title, state, closedAt, hasMyTasks`), `tasks` (`id, code, title, status, phaseName, requestId, requestCode, requestTitle, isMine, responsibleName`) y `projectsTruncated`/`tasksTruncated` (tope de 200 por lista). |
-| POST | `/worklog/daily` | Crea la cabecera de un diario (autor = actor). |
+| POST | `/worklog/daily` | Crea la cabecera de un diario (autor = actor). El `processId` debe ser uno de los procesos del actor: `403` si no pertenece a él; el jefe de área puede usar cualquiera, pero uno inexistente da `400` (antes `500`). |
 | GET | `/worklog/daily/:id` | Detalle de un diario con sus actividades. |
 | PATCH | `/worklog/daily/:id` | Edita la cabecera (notas) de un diario propio. |
 | DELETE | `/worklog/daily/:id` | Borra un diario propio (cascade de actividades). |
@@ -363,7 +371,7 @@ Agrupa tres submódulos: bitácora/semanal (worklog), reuniones
 | PATCH | `/worklog/activities/:id` | Edita una actividad del diario. Solo se revalida la referencia (proyecto/tarea) que **cambia**: si no cambia se conserva aunque el proyecto ya no sea imputable. `taskId: null` quita la tarea (omitirlo la conserva); al cambiar de proyecto, una tarea conservada debe pertenecer al nuevo (`400` si no), por eso el formulario envía `taskId: null` al vaciarla. |
 | DELETE | `/worklog/activities/:id` | Borra una actividad del diario. |
 | GET | `/weekly-reports` | Lista semanales en alcance (filtros: `weekStart`, `processId`, `authorUserId`, `status`); incluye `authorName` y datos de revisión. |
-| POST | `/weekly-reports` | Crea un semanal (se ancla al lunes ISO). |
+| POST | `/weekly-reports` | Crea un semanal (se ancla al lunes ISO). Misma validación de proceso que el diario (`403` si no pertenece al proceso; `400` si el jefe indica uno inexistente). |
 | GET | `/weekly-reports/:id` | Detalle de un semanal con conteos de consolidación. |
 | PATCH | `/weekly-reports/:id` | Edita las secciones de texto de un semanal propio. |
 | POST | `/weekly-reports/:id/submit` | Envía un semanal a revisión (`BORRADOR → ENVIADO`). |
@@ -405,7 +413,7 @@ Reglas: la **escritura** de diarios y semanales es solo del autor (el jefe y el 
 | --- | --- | --- |
 | GET | `/meetings` | Lista reuniones en alcance (filtros opcionales: `processId`, `state`, `requestId` = solicitud relacionada o proyecto relacionado). |
 | GET | `/meetings/commitments-open` | **Compromisos abiertos de mis reuniones**: compromisos `EN_CURSO`/`BLOQUEADO` cuya reunión de origen tiene al actor como responsable (no amplía la visibilidad). Filtros: `assignedUserId`, `dueStatus`, `meetingId`, `processId`. Devuelve `counts` (`total`, `vencido`, `venceHoy`, `proximo`, `aTiempo`), `truncated` (tope 500) e `items` con asignado (o responsable), reunión, proceso y semáforo. |
-| POST | `/meetings` | Crea una reunión (estado inicial BORRADOR); `durationMinutes` opcional. |
+| POST | `/meetings` | Crea una reunión (estado inicial BORRADOR); `durationMinutes` opcional. El `processId` debe ser un proceso del actor (`403` si no; `400` si el jefe indica uno inexistente). |
 | GET | `/meetings/:id` | Detalle del acta: participantes y sus compromisos (`commitments` con `assignedUserName`, `responsibleUserName`, `dueStatus`, `daysToDue`; `commitmentsTotal`, `commitmentsOpen`, `closed`), `durationMinutes` y `meetingEndTime`. |
 | PATCH | `/meetings/:id` | Edita un acta abierta (incluye el set de participantes y `durationMinutes`; `null` la borra); `409` si está cerrada, salvo un PATCH **solo de duración** del responsable, líder del proceso o jefe (para actas cerradas sin duración; 403 a otros, 400 si intenta quitarla). |
 | POST | `/meetings/:id/close` | Cierra el acta (responsable, líder del proceso o jefe); exige la **duración** (400 «Indica la duración de la reunión antes de cerrar el acta.») y decisiones o al menos un compromiso (409). |
@@ -419,7 +427,7 @@ Duración de la reunión: `durationMinutes` entero, múltiplo de 15, entre 15 y 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/commitments` | Lista compromisos en alcance (filtros opcionales: `state`, `processId`, `assignedUserId`, `requestId` = solicitud relacionada o proyecto relacionado). |
-| POST | `/commitments` | Crea un compromiso (vencimiento requerido). |
+| POST | `/commitments` | Crea un compromiso (vencimiento requerido). El `processId` debe ser un proceso del actor (`403` si no; `400` si el jefe indica uno inexistente). |
 | GET | `/commitments/my-work` | Compromisos de Mi trabajo: abiertos (`EN_CURSO`/`BLOQUEADO`) del actor (asignado; si no hay asignado, responsable) que están **vencidos o vencen hoy** (vencidos primero), con `total`, `overdueCount`, `dueTodayCount`, `upcomingCount` y `canComplete`. Completar usa la transición existente (`POST /commitments/:id/transition` con `COMPLETADO`). |
 | GET | `/commitments/:id` | Detalle de un compromiso. |
 | PATCH | `/commitments/:id` | Edita un compromiso. |

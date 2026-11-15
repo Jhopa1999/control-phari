@@ -296,6 +296,7 @@ export class MeetingService {
     dto: CreateMeetingDto,
   ): Promise<MeetingResponseDto> {
     const meetingDate = dateStringToDate(dto.meetingDate);
+    await this.scope.assertActorInProcess(actor, dto.processId);
     const participantIds = dto.participantUserIds ?? [];
     await this.assertParticipantsInScope(actor, participantIds);
     // De-duplicar por si el cliente repite.

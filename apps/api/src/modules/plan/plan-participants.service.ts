@@ -8,6 +8,7 @@ import { RequestState } from '../request/request-state';
 import { PlanParticipantsResponseDto } from './dto/plan-participants-response.dto';
 import { UpdatePlanParticipantsDto } from './dto/update-plan-participants.dto';
 import { PlanStateService } from './plan-state.service';
+import { assertPlanAdjustable } from './plan-edit-lock';
 
 /**
  * Estados de la solicitud en los que existe un plan y la solicitud sigue viva,
@@ -207,6 +208,9 @@ export class PlanParticipantsService {
     const { plan, mainProcessId, requestState } =
       await this.planState.requirePlanInScope(actor, requestId);
     this.assertEditableState(requestState);
+    // D5: con el plan en autorización no se toca nada. Con el plan autorizado se
+    // permite: es la corrección que habilita reasignar responsables (ver PR).
+    assertPlanAdjustable(plan.status);
     if (mainProcessId === null) {
       throw new ConflictException(
         'La solicitud no tiene proceso principal; defínelo en el triage antes de gestionar los procesos que intervienen.',

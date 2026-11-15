@@ -73,7 +73,8 @@ export class MeetingController {
   @ApiOperation({ summary: 'Crea una reunion (estado inicial BORRADOR).' })
   @ApiBody({ type: CreateMeetingDto })
   @ApiResponse({ status: 201, description: 'Reunion creada.', type: MeetingResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos invalidos o participante fuera de alcance.' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos, participante fuera de alcance o proceso inexistente (jefe de área).' })
+  @ApiResponse({ status: 403, description: 'El actor no pertenece al proceso indicado.' })
   @ApiResponse({ status: 404, description: 'Referencia fuera de alcance.' })
   create(
     @CurrentActor() actor: CurrentActorType,

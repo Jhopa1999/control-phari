@@ -9,6 +9,7 @@ import type { TaskDependencyModel } from '../../../generated/prisma/models/TaskD
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { PlanStateService } from '../plan-state.service';
+import { assertPlanStructureEditable } from '../plan-edit-lock';
 import { AddDependencyDto } from './dto/add-dependency.dto';
 import { TaskDependencyResponseDto } from './dto/task-dependency-response.dto';
 import { reaches } from './cycle';
@@ -74,11 +75,12 @@ export class DependencyService {
     dependentTaskId: string,
     dto: AddDependencyDto,
   ): Promise<TaskDependencyResponseDto> {
-    const { mainProcessId, requestState } = await this.planState.requireTaskInScope(
+    const { mainProcessId, requestState, planStatus } = await this.planState.requireTaskInScope(
       actor,
       dependentTaskId,
     );
     this.planState.assertProjectOpen(requestState);
+    assertPlanStructureEditable(planStatus);
     const predecessorTaskId = dto.predecessorTaskId;
 
     // Auto-dependencia -> 400.
@@ -155,11 +157,12 @@ export class DependencyService {
     dependentTaskId: string,
     predecessorTaskId: string,
   ): Promise<void> {
-    const { mainProcessId, requestState } = await this.planState.requireTaskInScope(
+    const { mainProcessId, requestState, planStatus } = await this.planState.requireTaskInScope(
       actor,
       dependentTaskId,
     );
     this.planState.assertProjectOpen(requestState);
+    assertPlanStructureEditable(planStatus);
 
     const dep = await this.prisma.taskDependency.findUnique({
       where: {

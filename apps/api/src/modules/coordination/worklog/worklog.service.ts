@@ -804,6 +804,7 @@ export class WorklogService {
     dto: CreateDailyLogDto,
   ): Promise<DailyLogResponseDto> {
     const date = dateStringToDate(dto.date);
+    await this.scope.assertActorInProcess(actor, dto.processId);
 
     try {
       const created = await this.prisma.$transaction(async (tx) => {
@@ -1362,6 +1363,7 @@ export class WorklogService {
   ): Promise<WeeklyReportResponseDto> {
     // Normaliza SIEMPRE al lunes ISO (nunca 400 por no-lunes, Finding 3).
     const weekStart = mondayOf(dateStringToDate(dto.weekStart));
+    await this.scope.assertActorInProcess(actor, dto.processId);
 
     try {
       const created = await this.prisma.$transaction(async (tx) => {

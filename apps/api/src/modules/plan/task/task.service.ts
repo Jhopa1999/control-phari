@@ -14,6 +14,12 @@ import { entityRef, withCode } from '../../notification/notification-text';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
 import { PlanStateService } from '../plan-state.service';
+import {
+  assertOnlyAdjustableChanges,
+  assertPlanAdjustable,
+  assertPlanStructureEditable,
+  isAuthorizedPlan,
+} from '../plan-edit-lock';
 import { TaskStatus } from '../task-status';
 import { applyMilestoneRule } from './milestone';
 import {
@@ -289,9 +295,10 @@ export class TaskService {
     if (!phase) {
       throw new NotFoundException(`Fase "${phaseId}" no encontrada.`);
     }
-    const { mainProcessId, requestState, requestId } =
+    const { plan, mainProcessId, requestState, requestId } =
       await this.planState.requirePlanByIdInScope(actor, phase.planId);
     this.planState.assertProjectOpen(requestState);
+    assertPlanStructureEditable(plan.status);
 
     // Condición dura: el responsable debe pertenecer a un proceso interviniente
     // de la solicitud (RequestParticipant). Fuente de verdad en el backend.
@@ -422,9 +429,29 @@ export class TaskService {
     taskId: string,
     dto: UpdateTaskDto,
   ): Promise<TaskResponseDto> {
-    const { task, mainProcessId, requestState, requestId } =
+    const { task, mainProcessId, requestState, requestId, planStatus } =
       await this.planState.requireTaskInScope(actor, taskId);
     this.planState.assertProjectOpen(requestState);
+    assertPlanAdjustable(planStatus);
+    if (isAuthorizedPlan(planStatus)) {
+      // Plan autorizado (D5): solo responsable, fechas y horas; el resto de la
+      // ficha debe permanecer igual (reenviar el mismo valor no cuenta).
+      const changed: string[] = [];
+      const differs = (next: unknown, current: unknown): boolean =>
+        next !== undefined && (next ?? null) !== (current ?? null);
+      if (differs(dto.title, task.title)) changed.push('título');
+      if (differs(dto.description, task.description)) changed.push('descripción');
+      if (differs(dto.acceptanceCriteria, task.acceptanceCriteria)) {
+        changed.push('criterios de aceptación');
+      }
+      if (differs(dto.frameworkPhaseRequired, task.frameworkPhaseRequired)) {
+        changed.push('fase del marco');
+      }
+      if (differs(dto.evidenceUrl, task.evidenceUrl)) changed.push('evidencia');
+      if (differs(dto.processId, task.processId)) changed.push('proceso');
+      if (differs(dto.isMilestone, task.isMilestone)) changed.push('hito');
+      assertOnlyAdjustableChanges(changed);
+    }
 
     // Condición dura: si se reasigna responsable, debe pertenecer a un proceso
     // interviniente de la solicitud (RequestParticipant). Fuente de verdad.
@@ -514,9 +541,10 @@ export class TaskService {
   }
 
   async remove(actor: CurrentActor, taskId: string): Promise<void> {
-    const { task, mainProcessId, requestState } =
+    const { task, mainProcessId, requestState, planStatus } =
       await this.planState.requireTaskInScope(actor, taskId);
     this.planState.assertProjectOpen(requestState);
+    assertPlanStructureEditable(planStatus);
 
     const asPredecessor = await this.prisma.taskDependency.count({
       where: { predecessorTaskId: task.id },

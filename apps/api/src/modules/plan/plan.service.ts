@@ -25,6 +25,7 @@ import { ImportPlanResultDto } from './dto/import-plan-result.dto';
 import { PlanGuideService } from './plan-guide.service';
 import { PlanStateService } from './plan-state.service';
 import { PlanStatus } from './plan-status';
+import { assertPlanStructureEditable } from './plan-edit-lock';
 import { formatPhaseCode, formatTaskCode, reservePlanSequence } from './visible-code';
 import { hasCycle } from './dependency/cycle';
 import { assertTaskWithinPhase, assertValidRange } from './date-range';
@@ -207,6 +208,7 @@ export class PlanService {
     const { plan, mainProcessId, requestState } =
       await this.planState.requirePlanInScope(actor, requestId);
     this.planState.assertProjectOpen(requestState);
+    assertPlanStructureEditable(plan.status);
 
     const data: Prisma.PlanUpdateInput = {};
     if (dto.periodStart !== undefined) data.periodStart = new Date(dto.periodStart);
@@ -569,7 +571,8 @@ export class PlanService {
       requestId,
     );
 
-    // Gate de estado editable (§5.5.2).
+    // Gate de estado editable (§5.5.2, D5): en autorización o autorizado, 409.
+    assertPlanStructureEditable(plan.status);
     if (
       plan.status !== PlanStatus.BORRADOR &&
       plan.status !== PlanStatus.DEVUELTO

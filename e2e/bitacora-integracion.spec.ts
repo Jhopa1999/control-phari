@@ -158,7 +158,9 @@ test.describe('Bitácora con sugerencias del día', () => {
     // 1) Crear la reunión con hora, duración y un participante.
     await page.getByRole('button', { name: 'Nueva acta' }).first().click();
     const form = page.getByRole('dialog', { name: 'Nueva acta de reunión' });
-    await form.getByLabel('Proceso').click();
+    // Por rol: con personas cuyo nombre contiene «proceso», getByLabel('Proceso')
+    // también casaba con sus casillas de participante.
+    await form.getByRole('combobox', { name: 'Proceso', exact: true }).click();
     await page.getByRole('option', { name: ids.fibiName, exact: true }).click();
     await form.getByLabel('Título').fill(title);
     await form.getByLabel('Fecha').fill(DATE_MAIN);

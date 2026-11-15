@@ -304,6 +304,7 @@ export class CommitmentService {
     dto: CreateCommitmentDto,
   ): Promise<CommitmentResponseDto> {
     const dueDate = dateStringToDate(dto.dueDate);
+    await this.scope.assertActorInProcess(actor, dto.processId);
     if (dto.sourceMeetingId) {
       await this.requireOpenMeeting(actor, dto.sourceMeetingId, dto.processId);
     }
