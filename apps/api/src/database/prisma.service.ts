@@ -7,6 +7,12 @@ import {
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client';
 
+/** Campos de credenciales que Prisma no devuelve salvo petición explícita. */
+export const SENSITIVE_PRISMA_OMIT = {
+  user: { passwordHash: true },
+  authToken: { tokenHash: true },
+} as const;
+
 /**
  * PrismaService para Prisma ORM v7.
  *
@@ -37,7 +43,10 @@ export class PrismaService
 
     // DATABASE_URL -> PrismaPg -> PrismaClient
     const adapter = new PrismaPg({ connectionString });
-    super({ adapter });
+    // Raíz del hotfix de seguridad: las credenciales quedan fuera de TODA
+    // consulta (incluidas las relaciones anidadas como `include: { user }`).
+    // Quien necesite el hash (login) lo pide con `omit: { passwordHash: false }`.
+    super({ adapter, omit: SENSITIVE_PRISMA_OMIT });
   }
 
   async onModuleInit(): Promise<void> {

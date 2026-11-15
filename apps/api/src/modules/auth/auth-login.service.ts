@@ -31,6 +31,8 @@ export class AuthLoginService {
     // findUnique con Prisma 7.
     const user = await this.prisma.user.findFirst({
       where: { identifier: dto.identifier },
+      // Único punto que necesita el hash: el cliente lo omite por defecto.
+      omit: { passwordHash: false },
     });
 
     if (

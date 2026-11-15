@@ -822,6 +822,15 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Integración Bitácora ↔ Reuniones ↔ Compromisos ↔ Recurrentes (web): la Bitácora muestra el contador y «Revisar sugerencias del día» con Aceptar, Ajustar horas y aceptar y Descartar; categorías Reunión y Actividad recurrente, horas de 0,25, aviso de jornada y aviso en diarios enviados o revisados; Reuniones con duración, horario «10:00 – 11:00», registro de duración en actas cerradas y pestaña «Mis compromisos abiertos»; Mi trabajo con la sección Compromisos y completar en línea. Sin cambios de roles ni permisos."
+    },
+    {
+      "timestamp": "2026-11-15T12:00:00Z",
+      "trigger_file": "apps/api/src/modules/user/user.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/modulos-backend.md"
+      ],
+      "summary": "Hotfix de seguridad: GET /users ya no devuelve passwordHash. Cliente Prisma con omit de credenciales, mapeador explícito de User, interceptor global que elimina y registra campos sensibles, y pruebas de contrato y de MCP. Sin cambios de contrato OpenAPI ni de tools."
     }
   ]
 }
