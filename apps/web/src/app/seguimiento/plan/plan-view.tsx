@@ -1301,6 +1301,8 @@ export function PlanView(): React.ReactElement {
 
   /** Acceso del jefe de área al diálogo de procesos que intervienen. */
   function renderParticipantsAction(): React.ReactElement {
+    // D5: con el plan en autorización la API rechaza (409) cualquier cambio.
+    const inAuthorization = plan?.status === 'EN_AUTORIZACION';
     return (
       <section
         aria-label="Procesos que intervienen"
@@ -1321,10 +1323,24 @@ export function PlanView(): React.ReactElement {
             </p>
           </div>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => setParticipantsOpen(true)}>
-          <Users aria-hidden="true" />
-          Gestionar procesos que intervienen
-        </Button>
+        <div className="flex flex-col items-start gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            unavailable={inAuthorization}
+            aria-describedby={inAuthorization ? 'plan-participants-reason' : undefined}
+            onClick={() => setParticipantsOpen(true)}
+          >
+            <Users aria-hidden="true" />
+            Gestionar procesos que intervienen
+          </Button>
+          {inAuthorization ? (
+            <DisabledReason id="plan-participants-reason" className="max-w-md text-left">
+              El plan está en autorización; los procesos no se pueden cambiar hasta que se decida.
+            </DisabledReason>
+          ) : null}
+        </div>
       </section>
     );
   }

@@ -42,7 +42,7 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   escritura(
     'meeting.create',
     'POST /meetings',
-    'Registra una reunión (POST /meetings), con duración opcional en minutos (durationMinutes, múltiplo de 15). El cuerpo debe cumplir el DTO de creación; el backend valida los datos.',
+    'Registra una reunión (POST /meetings), con duración opcional en minutos (durationMinutes, múltiplo de 15). El cuerpo debe cumplir el DTO de creación; el backend valida los datos. El processId debe ser uno de tus procesos (403 si no perteneces a él; 400 si el jefe de área indica un proceso inexistente).',
   ),
   escritura(
     'meeting.update',
@@ -54,7 +54,7 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   escritura(
     'commitment.create',
     'POST /commitments',
-    'Registra un compromiso (POST /commitments). El cuerpo debe cumplir el DTO de creación; el backend valida los datos.',
+    'Registra un compromiso (POST /commitments). El cuerpo debe cumplir el DTO de creación; el backend valida los datos. El processId debe ser uno de tus procesos (403 si no perteneces a él; 400 si el jefe de área indica un proceso inexistente).',
   ),
   escritura(
     'commitment.update',
@@ -71,27 +71,27 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   escritura(
     'plan.update',
     'PATCH /requests/{requestId}/plan',
-    'Edita los datos del plan de una solicitud (PATCH /requests/{requestId}/plan). No cambia el estado del plan; el backend valida los datos.',
+    'Edita los datos del plan de una solicitud (PATCH /requests/{requestId}/plan). No cambia el estado del plan; el backend valida los datos. Responde 409 si el plan está en autorización o autorizado (solo se edita en borrador o devuelto).',
   ),
   escritura(
     'phase.create',
     'POST /plans/{planId}/phases',
-    'Crea una fase en un plan (POST /plans/{planId}/phases). Sin order, se agrega al final; el backend valida los datos.',
+    'Crea una fase en un plan (POST /plans/{planId}/phases). Sin order, se agrega al final; el backend valida los datos. Responde 409 si el plan está en autorización o autorizado.',
   ),
   escritura(
     'phase.update',
     'PATCH /plans/{planId}/phases/{phaseId}',
-    'Edita nombre, fechas o entregable de una fase (PATCH /plans/{planId}/phases/{phaseId}). El backend valida los datos.',
+    'Edita nombre, fechas o entregable de una fase (PATCH /plans/{planId}/phases/{phaseId}). El backend valida los datos. Con el plan en autorización responde 409; con el plan autorizado solo admite cambiar las fechas de la fase.',
   ),
   escritura(
     'phase.reorder',
     'PATCH /plans/{planId}/phases/reorder',
-    'Reordena las fases de un plan (PATCH /plans/{planId}/phases/reorder). El backend protege la fase inicial con tareas.',
+    'Reordena las fases de un plan (PATCH /plans/{planId}/phases/reorder). El backend protege la fase inicial con tareas y responde 409 si el plan está en autorización o autorizado.',
   ),
   escritura(
     'task.dependency.add',
     'POST /tasks/{id}/dependencies',
-    'Añade una tarea predecesora a una tarea (POST /tasks/{id}/dependencies). El backend valida que no sea la misma tarea, que sea del mismo plan y que no cree ciclos ni duplicados.',
+    'Añade una tarea predecesora a una tarea (POST /tasks/{id}/dependencies). El backend valida que no sea la misma tarea, que sea del mismo plan y que no cree ciclos ni duplicados. Responde 409 si el plan está en autorización o autorizado.',
   ),
 
   // Activos y documentos (en borrador)

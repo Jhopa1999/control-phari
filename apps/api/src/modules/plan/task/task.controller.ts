@@ -113,6 +113,7 @@ export class TaskController {
   @ApiResponse({ status: 400, description: 'Datos inválidos, regla hito o responsable que no pertenece a un proceso interviniente de la solicitud (el principal o los marcados en el triage).' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Fase/plan fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El plan está en autorización o autorizado, o el proyecto cerrado: no admite tareas nuevas.' })
   create(
     @CurrentActor() actor: CurrentActorType,
     @Param('phaseId', ParseUUIDPipe) phaseId: string,
@@ -175,6 +176,7 @@ export class TaskController {
   @ApiResponse({ status: 400, description: 'Datos inválidos, regla hito o responsable que no pertenece a un proceso interviniente de la solicitud (el principal o los marcados en el triage).' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Tarea fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El plan está en autorización (no admite cambios) o autorizado y se intenta cambiar algo distinto del responsable, las fechas o las horas.' })
   update(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -191,7 +193,7 @@ export class TaskController {
   @ApiResponse({ status: 204, description: 'Tarea borrada.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Tarea fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'La tarea es predecesora de otra.' })
+  @ApiResponse({ status: 409, description: 'La tarea es predecesora de otra, o el plan está en autorización o autorizado.' })
   remove(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

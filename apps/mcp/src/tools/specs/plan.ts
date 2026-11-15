@@ -32,7 +32,7 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
     description:
       'Importa (reemplaza) el contenido del plan de una solicitud desde un ' +
       'documento (POST /requests/{requestId}/plan/import). Solo opera sobre ' +
-      'planes en BORRADOR o DEVUELTO. El cuerpo debe cumplir PlanDocumentDto: ' +
+      'planes en BORRADOR o DEVUELTO (409 en autorización o autorizado). El cuerpo debe cumplir PlanDocumentDto: ' +
       '{ kind: "control-phari-plan", formatVersion: "1.0", plan: {periodStart, ' +
       'periodEnd, commitmentDate, risks, mitigations}, phases: [{ order, name, ' +
       'startDate, endDate, deliverable, tasks: [{ ref, title, isMilestone, ' +
@@ -101,7 +101,7 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
       'los procesos participantes ADEMÁS del principal (que no se quita). ' +
       'Agregar habilita al instante a su gente como responsables; quitar se ' +
       'rechaza (409) si hay tareas asignadas a personas que dejarían de ser ' +
-      'elegibles. No reabre el triage. Exclusivo del jefe de área; se audita.',
+      'elegibles. No reabre el triage. Responde 409 si el plan está en autorización. Exclusivo del jefe de área; se audita.',
   },
   {
     name: 'plan.responsible-candidates',
@@ -123,7 +123,8 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
       'debe cumplir CreateTaskDto { title (requerido), responsibleUserId, ' +
       'processId, startDate, endDate, estimateHours, isMilestone (hito => ' +
       'estimateHours 0), description, acceptanceCriteria, frameworkPhaseRequired, ' +
-      'evidenceUrl }; el backend valida los datos.',
+      'evidenceUrl }; el backend valida los datos. ' +
+      'Responde 409 si el plan está en autorización o autorizado.',
   },
   {
     name: 'task.get',
@@ -176,7 +177,10 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
       'aceptacion. El cuerpo debe cumplir UpdateTaskDto (campos parciales de ' +
       'CreateTaskDto: title, responsibleUserId, processId, startDate, endDate, ' +
       'estimateHours, isMilestone, description, acceptanceCriteria, ' +
-      'frameworkPhaseRequired, evidenceUrl); el backend valida los datos.',
+      'frameworkPhaseRequired, evidenceUrl); el backend valida los datos. ' +
+      'Con el plan en autorización responde 409 (no admite cambios); con el plan ' +
+      'autorizado solo admite cambiar responsable, fechas y horas (409 si se ' +
+      'cambia otro campo de la ficha); los cambios quedan auditados.',
   },
   {
     name: 'task.status.update',

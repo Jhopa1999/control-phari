@@ -58,7 +58,7 @@ export class DependencyController {
   @ApiResponse({ status: 400, description: 'Auto-dependencia, planes distintos o ciclo.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Tarea fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'La dependencia ya existe.' })
+  @ApiResponse({ status: 409, description: 'La dependencia ya existe, o el plan está en autorización o autorizado.' })
   add(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -75,7 +75,7 @@ export class DependencyController {
   @ApiResponse({ status: 204, description: 'Dependencia quitada.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Tarea fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'La dependencia no existe.' })
+  @ApiResponse({ status: 409, description: 'La dependencia no existe, o el plan está en autorización o autorizado.' })
   remove(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

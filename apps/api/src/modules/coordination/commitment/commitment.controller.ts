@@ -59,7 +59,8 @@ export class CommitmentController {
   @ApiOperation({ summary: 'Crea un compromiso (vencimiento requerido).' })
   @ApiBody({ type: CreateCommitmentDto })
   @ApiResponse({ status: 201, description: 'Compromiso creado.', type: CommitmentResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos invalidos.' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o proceso inexistente (jefe de área).' })
+  @ApiResponse({ status: 403, description: 'El actor no pertenece al proceso indicado.' })
   @ApiResponse({ status: 404, description: 'Proceso o referencia fuera de alcance.' })
   create(
     @CurrentActor() actor: CurrentActorType,

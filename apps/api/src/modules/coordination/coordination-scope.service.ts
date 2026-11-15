@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { CurrentActor } from '../auth/current-actor';
@@ -144,6 +148,36 @@ export class CoordinationScopeService {
       return { deletedAt: null };
     }
     return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+  }
+
+  // --- Proceso del actor en las altas (BL-068) -----------------------------
+
+  /**
+   * Exige que el proceso de un alta de Seguimiento (diario, reporte semanal,
+   * reunión, compromiso) sea uno en el que el actor participa. El jefe de área
+   * actúa sobre todos los procesos, pero el proceso debe existir. Quien no
+   * pertenece recibe 403 sin confirmar si el proceso existe; un id inexistente
+   * del jefe da 400 (antes caía en un 500 por la llave foránea).
+   */
+  async assertActorInProcess(
+    actor: CurrentActor,
+    processId: string,
+  ): Promise<void> {
+    if (actor.isJefeArea) {
+      const process = await this.prisma.process.findFirst({
+        where: { id: processId },
+        select: { id: true },
+      });
+      if (!process) {
+        throw new BadRequestException('El proceso indicado no existe.');
+      }
+      return;
+    }
+    if (!actor.scopedProcessIds.has(processId)) {
+      throw new ForbiddenException(
+        'No perteneces al proceso indicado; elige uno de tus procesos.',
+      );
+    }
   }
 
   // --- Personas en alcance (selectores) -----------------------------------

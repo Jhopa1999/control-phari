@@ -3389,6 +3389,9 @@
           },
           "404": {
             "description": "Fase/plan fuera de alcance."
+          },
+          "409": {
+            "description": "El plan está en autorización o autorizado, o el proyecto cerrado: no admite tareas nuevas."
           }
         },
         "summary": "Crea una tarea en una fase (regla hito).",
@@ -3512,6 +3515,9 @@
           },
           "404": {
             "description": "Tarea fuera de alcance."
+          },
+          "409": {
+            "description": "El plan está en autorización (no admite cambios) o autorizado y se intenta cambiar algo distinto del responsable, las fechas o las horas."
           }
         },
         "summary": "Edita una tarea (no estado/aceptacion; regla hito).",
@@ -3543,7 +3549,7 @@
             "description": "Tarea fuera de alcance."
           },
           "409": {
-            "description": "La tarea es predecesora de otra."
+            "description": "La tarea es predecesora de otra, o el plan está en autorización o autorizado."
           }
         },
         "summary": "Borra una tarea (409 si es predecesora de otra).",
@@ -3877,6 +3883,9 @@
           },
           "404": {
             "description": "Plan inexistente o fuera de alcance."
+          },
+          "409": {
+            "description": "El plan está en autorización o autorizado, o el proyecto cerrado: no admite cambios en sus datos."
           }
         },
         "summary": "Edita datos del plan (no cambia el estado).",
@@ -4068,7 +4077,7 @@
             "description": "Plan inexistente o fuera de alcance."
           },
           "409": {
-            "description": "El plan no esta en borrador ni devuelto."
+            "description": "El plan no está en borrador ni devuelto: en autorización o autorizado no admite importar."
           }
         },
         "summary": "Importa el plan desde un Excel (.xlsx); reemplaza el contenido actual.",
@@ -4122,7 +4131,7 @@
             "description": "Plan inexistente o fuera de alcance."
           },
           "409": {
-            "description": "El plan no esta en borrador ni devuelto."
+            "description": "El plan no está en borrador ni devuelto: en autorización o autorizado no admite importar."
           }
         },
         "summary": "Importa un plan desde un documento (reemplaza el contenido actual).",
@@ -4212,7 +4221,7 @@
             "description": "Plan inexistente o fuera de alcance."
           },
           "409": {
-            "description": "Estado de la solicitud no admitido o tareas asignadas impiden quitar un proceso."
+            "description": "Estado de la solicitud no admitido, plan en autorización (no admite cambios) o tareas asignadas que impiden quitar un proceso."
           }
         },
         "summary": "Corrige los procesos que intervienen en la solicitud del plan: agrega o quita procesos participantes (solo jefe de área). No reabre el triage.",
@@ -4456,6 +4465,9 @@
           },
           "404": {
             "description": "Plan fuera de alcance."
+          },
+          "409": {
+            "description": "El plan está en autorización o autorizado, o el proyecto cerrado: no admite fases nuevas."
           }
         },
         "summary": "Crea una fase (order al final si falta).",
@@ -4509,7 +4521,7 @@
             "description": "Plan fuera de alcance."
           },
           "409": {
-            "description": "Lista invalida o mueve la fase inicial con tareas."
+            "description": "Lista inválida, mueve la fase inicial con tareas, o el plan está en autorización o autorizado."
           }
         },
         "summary": "Reordena las fases (protege la inicial con tareas).",
@@ -4569,7 +4581,7 @@
             "description": "Plan fuera de alcance."
           },
           "409": {
-            "description": "La fase no pertenece al plan."
+            "description": "La fase no pertenece al plan; el plan está en autorización; o está autorizado y se intenta cambiar algo distinto de las fechas de la fase."
           }
         },
         "summary": "Edita nombre/fechas/entregable de una fase.",
@@ -4610,7 +4622,7 @@
             "description": "Plan fuera de alcance."
           },
           "409": {
-            "description": "La fase tiene tareas o no pertenece al plan."
+            "description": "La fase tiene tareas, no pertenece al plan, o el plan está en autorización o autorizado."
           }
         },
         "summary": "Borra una fase (409 si tiene tareas).",
@@ -4703,7 +4715,7 @@
             "description": "Tarea fuera de alcance."
           },
           "409": {
-            "description": "La dependencia ya existe."
+            "description": "La dependencia ya existe, o el plan está en autorización o autorizado."
           }
         },
         "summary": "Anade una predecesora (valida auto/mismo-plan/ciclo/duplicado).",
@@ -4746,7 +4758,7 @@
             "description": "Tarea fuera de alcance."
           },
           "409": {
-            "description": "La dependencia no existe."
+            "description": "La dependencia no existe, o el plan está en autorización o autorizado."
           }
         },
         "summary": "Quita una predecesora de la tarea.",
@@ -5694,7 +5706,10 @@
             }
           },
           "400": {
-            "description": "Datos invalidos."
+            "description": "El proceso indicado no existe (jefe de área).\n\nDatos invalidos."
+          },
+          "403": {
+            "description": "El actor no pertenece al proceso indicado."
           },
           "404": {
             "description": "Proceso fuera de alcance."
@@ -6565,7 +6580,10 @@
             }
           },
           "400": {
-            "description": "Datos invalidos."
+            "description": "El proceso indicado no existe (jefe de área).\n\nDatos invalidos."
+          },
+          "403": {
+            "description": "El actor no pertenece al proceso indicado."
           },
           "404": {
             "description": "Proceso fuera de alcance."
@@ -6880,7 +6898,10 @@
             }
           },
           "400": {
-            "description": "Datos invalidos o participante fuera de alcance."
+            "description": "Datos inválidos, participante fuera de alcance o proceso inexistente (jefe de área)."
+          },
+          "403": {
+            "description": "El actor no pertenece al proceso indicado."
           },
           "404": {
             "description": "Referencia fuera de alcance."
@@ -7260,7 +7281,10 @@
             }
           },
           "400": {
-            "description": "Datos invalidos."
+            "description": "Datos inválidos o proceso inexistente (jefe de área)."
+          },
+          "403": {
+            "description": "El actor no pertenece al proceso indicado."
           },
           "404": {
             "description": "Proceso o referencia fuera de alcance."

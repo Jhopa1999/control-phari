@@ -10894,6 +10894,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description El plan está en autorización o autorizado, o el proyecto cerrado: no admite tareas nuevas. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     TaskController_findByCode: {
@@ -10994,7 +11001,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La tarea es predecesora de otra. */
+            /** @description La tarea es predecesora de otra, o el plan está en autorización o autorizado. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -11043,6 +11050,13 @@ export interface operations {
             };
             /** @description Tarea fuera de alcance. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El plan está en autorización (no admite cambios) o autorizado y se intenta cambiar algo distinto del responsable, las fechas o las horas. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11362,6 +11376,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description El plan está en autorización o autorizado, o el proyecto cerrado: no admite cambios en sus datos. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     PlanController_getGuide: {
@@ -11549,7 +11570,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description El plan no esta en borrador ni devuelto. */
+            /** @description El plan no está en borrador ni devuelto: en autorización o autorizado no admite importar. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -11603,7 +11624,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description El plan no esta en borrador ni devuelto. */
+            /** @description El plan no está en borrador ni devuelto: en autorización o autorizado no admite importar. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -11693,7 +11714,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Estado de la solicitud no admitido o tareas asignadas impiden quitar un proceso. */
+            /** @description Estado de la solicitud no admitido, plan en autorización (no admite cambios) o tareas asignadas que impiden quitar un proceso. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -11924,6 +11945,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description El plan está en autorización o autorizado, o el proyecto cerrado: no admite fases nuevas. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     PhaseController_reorder: {
@@ -11964,7 +11992,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Lista invalida o mueve la fase inicial con tareas. */
+            /** @description Lista inválida, mueve la fase inicial con tareas, o el plan está en autorización o autorizado. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -12006,7 +12034,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La fase tiene tareas o no pertenece al plan. */
+            /** @description La fase tiene tareas, no pertenece al plan, o el plan está en autorización o autorizado. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -12054,7 +12082,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La fase no pertenece al plan. */
+            /** @description La fase no pertenece al plan; el plan está en autorización; o está autorizado y se intenta cambiar algo distinto de las fechas de la fase. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -12144,7 +12172,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La dependencia ya existe. */
+            /** @description La dependencia ya existe, o el plan está en autorización o autorizado. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -12186,7 +12214,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La dependencia no existe. */
+            /** @description La dependencia no existe, o el plan está en autorización o autorizado. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -12941,8 +12969,19 @@ export interface operations {
                     "application/json": components["schemas"]["DailyLogResponseDto"];
                 };
             };
-            /** @description Datos invalidos. */
+            /**
+             * @description El proceso indicado no existe (jefe de área).
+             *
+             *     Datos invalidos.
+             */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El actor no pertenece al proceso indicado. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13645,8 +13684,19 @@ export interface operations {
                     "application/json": components["schemas"]["WeeklyReportResponseDto"];
                 };
             };
-            /** @description Datos invalidos. */
+            /**
+             * @description El proceso indicado no existe (jefe de área).
+             *
+             *     Datos invalidos.
+             */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El actor no pertenece al proceso indicado. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13919,8 +13969,15 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingResponseDto"];
                 };
             };
-            /** @description Datos invalidos o participante fuera de alcance. */
+            /** @description Datos inválidos, participante fuera de alcance o proceso inexistente (jefe de área). */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El actor no pertenece al proceso indicado. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14236,8 +14293,15 @@ export interface operations {
                     "application/json": components["schemas"]["CommitmentResponseDto"];
                 };
             };
-            /** @description Datos invalidos. */
+            /** @description Datos inválidos o proceso inexistente (jefe de área). */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El actor no pertenece al proceso indicado. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

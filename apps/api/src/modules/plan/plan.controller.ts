@@ -95,6 +95,7 @@ export class PlanController {
   @ApiResponse({ status: 200, description: 'Plan actualizado.', type: PlanResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Plan inexistente o fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El plan está en autorización o autorizado, o el proyecto cerrado: no admite cambios en sus datos.' })
   update(
     @CurrentActor() actor: CurrentActorType,
     @Param('requestId', ParseUUIDPipe) requestId: string,
@@ -171,7 +172,7 @@ export class PlanController {
   @ApiResponse({ status: 400, description: 'Archivo inválido; el cuerpo incluye la lista de errores (errors).' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Plan inexistente o fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'El plan no esta en borrador ni devuelto.' })
+  @ApiResponse({ status: 409, description: 'El plan no está en borrador ni devuelto: en autorización o autorizado no admite importar.' })
   @HttpCode(200)
   importExcel(
     @CurrentActor() actor: CurrentActorType,
@@ -189,7 +190,7 @@ export class PlanController {
   @ApiResponse({ status: 400, description: 'Documento invalido (kind/version/ref/ciclo/hito).' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Plan inexistente o fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'El plan no esta en borrador ni devuelto.' })
+  @ApiResponse({ status: 409, description: 'El plan no está en borrador ni devuelto: en autorización o autorizado no admite importar.' })
   @HttpCode(200)
   importPlan(
     @CurrentActor() actor: CurrentActorType,
@@ -228,7 +229,7 @@ export class PlanController {
   @ApiResponse({ status: 400, description: 'Algún proceso no existe o no está activo.' })
   @ApiResponse({ status: 403, description: 'Solo el jefe de área puede gestionar los procesos que intervienen.' })
   @ApiResponse({ status: 404, description: 'Plan inexistente o fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'Estado de la solicitud no admitido o tareas asignadas impiden quitar un proceso.' })
+  @ApiResponse({ status: 409, description: 'Estado de la solicitud no admitido, plan en autorización (no admite cambios) o tareas asignadas que impiden quitar un proceso.' })
   updateParticipants(
     @CurrentActor() actor: CurrentActorType,
     @Param('requestId', ParseUUIDPipe) requestId: string,

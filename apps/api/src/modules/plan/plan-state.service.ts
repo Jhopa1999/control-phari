@@ -35,6 +35,8 @@ export interface PlanInScope {
 export interface TaskInScope {
   task: TaskModel;
   planId: string;
+  /** Estado del plan de la tarea (gobierna el bloqueo de edición, D5). */
+  planStatus: string;
   requestId: string;
   mainProcessId: string | null;
   requestState: string;
@@ -283,7 +285,7 @@ equest-scope.service.ts). */
     const planId = task.phase.planId;
     const plan = await this.prisma.plan.findFirst({
       where: { id: planId },
-      select: { requestId: true },
+      select: { requestId: true, status: true },
     });
     if (!plan) {
       throw new NotFoundException(`Tarea "${taskId}" no encontrada.`);
@@ -301,6 +303,7 @@ equest-scope.service.ts). */
     return {
       task: plainTask as unknown as TaskModel,
       planId,
+      planStatus: plan.status,
       requestId: request.id,
       mainProcessId: request.mainProcessId,
       requestState: request.operationalState,

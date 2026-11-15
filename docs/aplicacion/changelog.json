@@ -851,6 +851,16 @@
         "docs/aplicacion/modelo-datos.md",
         "docs/aplicacion/frontend-pantallas.md"
       ],
-      "summary": "Oleada 1 · Demanda: el triage exige motivo (mínimo 10 caracteres) al devolver y rechazar, lo guarda en triages.decision_reason, lo muestra en la ficha y avisa al solicitante; la priorización ya no preselecciona valores y la API exige los ocho criterios; Aprobar pide confirmación con resumen. Sin cambios de roles ni permisos."    }
+      "summary": "Oleada 1 · Demanda: el triage exige motivo (mínimo 10 caracteres) al devolver y rechazar, lo guarda en triages.decision_reason, lo muestra en la ficha y avisa al solicitante; la priorización ya no preselecciona valores y la API exige los ocho criterios; Aprobar pide confirmación con resumen. Sin cambios de roles ni permisos."    },
+    {
+      "timestamp": "2026-11-15T16:00:00Z",
+      "trigger_file": "apps/api/src/modules/plan/plan-edit-lock.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md"
+      ],
+      "summary": "Oleada 1, PR-C (BL-065 y BL-068): la API bloquea la edición del plan (fases, tareas, dependencias, importación, datos y procesos) con 409 si está en autorización y, si está autorizado, solo admite responsable, fechas y horas con auditoría (D5); las altas de diario, semanal, reunión y compromiso exigen que el actor pertenezca al proceso (403) y un proceso inexistente da 400 en vez de 500. Planificación deshabilita Gestionar procesos con motivo. MCP: descripciones de 10 tools con las nuevas respuestas 409/403; sin tools nuevas. Sin cambios de roles."
+    }
   ]
 }

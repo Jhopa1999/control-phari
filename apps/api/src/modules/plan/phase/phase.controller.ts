@@ -62,6 +62,7 @@ export class PhaseController {
   @ApiResponse({ status: 201, description: 'Fase creada.', type: PlanPhaseResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Plan fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El plan está en autorización o autorizado, o el proyecto cerrado: no admite fases nuevas.' })
   create(
     @CurrentActor() actor: CurrentActorType,
     @Param('planId', ParseUUIDPipe) planId: string,
@@ -78,7 +79,7 @@ export class PhaseController {
   @ApiResponse({ status: 200, description: 'Fases reordenadas.', type: [PlanPhaseResponseDto] })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Plan fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'Lista invalida o mueve la fase inicial con tareas.' })
+  @ApiResponse({ status: 409, description: 'Lista inválida, mueve la fase inicial con tareas, o el plan está en autorización o autorizado.' })
   reorder(
     @CurrentActor() actor: CurrentActorType,
     @Param('planId', ParseUUIDPipe) planId: string,
@@ -95,7 +96,7 @@ export class PhaseController {
   @ApiResponse({ status: 200, description: 'Fase actualizada.', type: PlanPhaseResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Plan fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'La fase no pertenece al plan.' })
+  @ApiResponse({ status: 409, description: 'La fase no pertenece al plan; el plan está en autorización; o está autorizado y se intenta cambiar algo distinto de las fechas de la fase.' })
   update(
     @CurrentActor() actor: CurrentActorType,
     @Param('planId', ParseUUIDPipe) planId: string,
@@ -113,7 +114,7 @@ export class PhaseController {
   @ApiResponse({ status: 204, description: 'Fase borrada.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Plan fuera de alcance.' })
-  @ApiResponse({ status: 409, description: 'La fase tiene tareas o no pertenece al plan.' })
+  @ApiResponse({ status: 409, description: 'La fase tiene tareas, no pertenece al plan, o el plan está en autorización o autorizado.' })
   remove(
     @CurrentActor() actor: CurrentActorType,
     @Param('planId', ParseUUIDPipe) planId: string,
