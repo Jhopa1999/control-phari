@@ -54,6 +54,10 @@ export default defineConfig({
     {
       command: 'npm run dev:api',
       url: API_HEALTH,
+      // La suite corre en modo dev-header. La CI no trae .env: sin AUTH_MODE la
+      // API resuelve el actor por X-Actor-Id pero GET /dev/actors responde 404 y
+      // el selector del menú muestra «No fue posible cargar los usuarios.».
+      env: { AUTH_MODE: process.env.AUTH_MODE ?? 'dev-header' },
       reuseExistingServer: !isCI,
       timeout: 120_000,
     },
