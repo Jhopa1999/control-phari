@@ -49,7 +49,10 @@ export class PriorityController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Guarda una evaluacion (requiere triage=Continuar y estado valido).' })
+  @ApiOperation({
+    summary:
+      'Guarda una evaluacion (requiere triage=Continuar y estado valido). Los ocho criterios son obligatorios (1 a 5), sin valores por defecto.',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: CreatePriorityEvaluationDto })
   @ApiResponse({ status: 201, description: 'Evaluacion guardada.', type: PriorityEvaluationResponseDto })

@@ -31,6 +31,8 @@ export interface RowAction {
   /** «Eliminando…» */
   busyLabel?: string;
   tone?: 'default' | 'danger';
+  /** Aspecto del botón en línea. Por defecto «ghost» (o «ghost-destructive» si el tono es danger). */
+  variant?: 'ghost' | 'default' | 'outline';
   /** Por defecto: las 2 primeras en línea y el resto en el menú. */
   placement?: 'inline' | 'menu';
   /** En línea como botón solo icono (icon-sm) con aria-label y LabelTooltip. */
@@ -73,7 +75,8 @@ function splitActions(actions: RowAction[]): { inline: RowAction[]; menu: RowAct
 function InlineAction({ action }: { action: RowAction }): React.ReactElement {
   const Icon = action.icon;
   const iconOnly = action.iconOnly === true;
-  const variant = action.tone === 'danger' ? 'ghost-destructive' : 'ghost';
+  const variant =
+    action.tone === 'danger' ? 'ghost-destructive' : (action.variant ?? 'ghost');
   const size = iconOnly ? 'icon-sm' : 'sm';
   const className = iconOnly ? COMPACT_ICON : COMPACT_TEXT;
   const iconNode = Icon ? <Icon aria-hidden="true" /> : null;

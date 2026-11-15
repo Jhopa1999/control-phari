@@ -220,7 +220,9 @@ Clasificación y decisión del triage.
 - `routeCode?` está **DEPRECADO** (dato histórico): la «Ruta» (maestra `TRIAGE_ROUTE`) era redundante con el proceso principal y ya no se captura; la columna y la maestra se conservan para triages antiguos y se muestran como «Ruta (histórica)». «Multiproceso» es una etiqueta derivada de tener más de un `RequestParticipant`.
 - Campos clave: `routeCode?` (deprecado), `demandTypeCode?`, `criticalityCode?`, `sizeCode?`,
   `dataAvailabilityCode?`, `totalEffortHours?`, `mainResponsibleUserId?`, `decision`,
-  `decidedAt`, `decidedByUserId`, `dependencies?`, `notes?`.
+  `decidedAt`, `decidedByUserId`, `dependencies?`, `notes?`, `decisionReason?` (columna `decision_reason`:
+  motivo de la decisión; obligatorio, mínimo 10 caracteres, con `DEVOLVER` y `RECHAZAR`; `null` con
+  `CONTINUAR` y en los triages anteriores).
 - Índices: por `requestId`, `decidedByUserId`, `mainResponsibleUserId`.
 
 ### PriorityEvaluation (`priority_evaluations`)
@@ -654,3 +656,4 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     límite de intentos: `LOGIN_MAX_ATTEMPTS = 5`, `LOGIN_WINDOW_MINUTES = 15`, `LOGIN_MAX_PER_IP = 30`,
     `FORGOT_MAX_ATTEMPTS = 3`, `FORGOT_WINDOW_MINUTES = 60`; `ON CONFLICT DO NOTHING`, no pisa ediciones
     de Maestras.)
+52. `20261117100000_triage_decision_reason` (aditiva e idempotente: `ALTER TABLE triages ADD COLUMN IF NOT EXISTS decision_reason TEXT`; sin backfill.)

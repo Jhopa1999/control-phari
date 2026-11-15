@@ -1,4 +1,8 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { AssetService } from '../../knowledge/asset/asset.service';
 import { AuditService } from '../../audit/audit.service';
@@ -31,6 +35,7 @@ function createMocks() {
     get: jest.fn(),
   } as unknown as AssetService;
   const assetGet = assetService.get as unknown as jest.Mock;
+  const notifications = { notify: jest.fn() };
   return {
     prisma,
     prismaObj,
@@ -39,8 +44,11 @@ function createMocks() {
     state,
     assetService,
     assetGet,
+    notifications,
   };
 }
+
+const REASON = 'Falta definir el alcance y el resultado esperado.';
 
 function lider(scoped: string[] = ['p1']): CurrentActor {
   return {
@@ -71,7 +79,7 @@ describe('TriageService', () => {
 
   beforeEach(() => {
     m = createMocks();
-    service = new TriageService(m.prisma, m.audit, m.state, m.assetService);
+    service = new TriageService(m.prisma, m.audit, m.state, m.assetService, m.notifications as never);
   });
 
   it('CONTINUAR deja EN_TRIAGE, crea Triage y audita (CREATE + UPDATE)', async () => {
@@ -135,7 +143,7 @@ describe('TriageService', () => {
       makeRequest(RequestState.DEVUELTA),
     );
 
-    await service.create(lider(), 'r1', { decision: 'DEVOLVER' });
+    await service.create(lider(), 'r1', { decision: 'DEVOLVER', reason: REASON });
     expect((m.prismaObj.request as any).update.mock.calls[0][0].data).toEqual({
       operationalState: RequestState.DEVUELTA,
     });
@@ -157,9 +165,119 @@ describe('TriageService', () => {
       makeRequest(RequestState.RECHAZADA),
     );
 
-    await service.create(lider(), 'r1', { decision: 'RECHAZAR' });
+    await service.create(lider(), 'r1', { decision: 'RECHAZAR', reason: REASON });
     expect((m.prismaObj.request as any).update.mock.calls[0][0].data).toEqual({
       operationalState: RequestState.RECHAZADA,
+    });
+  });
+
+  describe('motivo obligatorio al devolver o rechazar', () => {
+    const triageRow = (decision: string, decisionReason: string | null) => ({
+      id: 't1',
+      requestId: 'r1',
+      decision,
+      decisionReason,
+      decidedAt: new Date(),
+      decidedByUserId: 'ul',
+      createdAt: new Date(),
+    });
+
+    it.each(['DEVOLVER', 'RECHAZAR'] as const)(
+      '%s sin motivo -> 400 y no muta nada',
+      async (decision) => {
+        (m.prismaObj.request as any).findFirst.mockResolvedValue(
+          makeRequest(RequestState.REGISTRADA, { createdByUserId: 'u-sol' }),
+        );
+        await expect(
+          service.create(lider(), 'r1', { decision }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+        expect((m.prismaObj.triage as any).create).not.toHaveBeenCalled();
+        expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
+        expect(m.notifications.notify).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(['DEVOLVER', 'RECHAZAR'] as const)(
+      '%s con motivo de solo espacios o menor de 10 caracteres -> 400',
+      async (decision) => {
+        (m.prismaObj.request as any).findFirst.mockResolvedValue(
+          makeRequest(RequestState.REGISTRADA),
+        );
+        await expect(
+          service.create(lider(), 'r1', { decision, reason: '   ' }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+        await expect(
+          service.create(lider(), 'r1', { decision, reason: 'corto' }),
+        ).rejects.toThrow('al menos 10 caracteres');
+        expect((m.prismaObj.triage as any).create).not.toHaveBeenCalled();
+      },
+    );
+
+    it('DEVOLVER con motivo lo guarda y avisa al solicitante', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.REGISTRADA, {
+          createdByUserId: 'u-sol',
+          code: 'PRY-0012',
+          title: 'Tablero de ventas',
+        }),
+      );
+      (m.prismaObj.triage as any).create.mockResolvedValue(
+        triageRow('DEVOLVER', REASON),
+      );
+      (m.prismaObj.request as any).update.mockResolvedValue(
+        makeRequest(RequestState.DEVUELTA),
+      );
+
+      const result = await service.create(lider(), 'r1', {
+        decision: 'DEVOLVER',
+        reason: `  ${REASON}  `,
+      });
+
+      expect(
+        (m.prismaObj.triage as any).create.mock.calls[0][0].data.decisionReason,
+      ).toBe(REASON);
+      expect(result.reason).toBe(REASON);
+      expect(m.notifications.notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userIds: ['u-sol'],
+          type: 'REQUEST_RETURNED',
+          requestId: 'r1',
+          message: expect.stringContaining(REASON),
+        }),
+      );
+    });
+
+    it('RECHAZAR con motivo notifica un rechazo', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.REGISTRADA, { createdByUserId: 'u-sol' }),
+      );
+      (m.prismaObj.triage as any).create.mockResolvedValue(
+        triageRow('RECHAZAR', REASON),
+      );
+      (m.prismaObj.request as any).update.mockResolvedValue(
+        makeRequest(RequestState.RECHAZADA),
+      );
+      await service.create(lider(), 'r1', { decision: 'RECHAZAR', reason: REASON });
+      expect(m.notifications.notify).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'REQUEST_REJECTED' }),
+      );
+    });
+
+    it('CONTINUAR no exige motivo, no lo guarda y no notifica', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.REGISTRADA),
+      );
+      (m.prismaObj.triage as any).create.mockResolvedValue(
+        triageRow('CONTINUAR', null),
+      );
+      (m.prismaObj.request as any).update.mockResolvedValue(
+        makeRequest(RequestState.EN_TRIAGE),
+      );
+      await service.create(lider(), 'r1', { decision: 'CONTINUAR', reason: REASON });
+      expect(
+        (m.prismaObj.triage as any).create.mock.calls[0][0].data,
+      ).not.toHaveProperty('decisionReason');
+      expect(m.notifications.notify).not.toHaveBeenCalled();
     });
   });
 
@@ -293,7 +411,7 @@ describe('TriageService', () => {
       makeRequest(RequestState.DEVUELTA, { mainProcessId: null }),
     );
 
-    await service.create(lider(), 'r1', { decision: 'DEVOLVER' });
+    await service.create(lider(), 'r1', { decision: 'DEVOLVER', reason: REASON });
 
     // No se fija proceso ni se tocan participantes.
     expect((m.prismaObj.request as any).update.mock.calls[0][0].data).toEqual({

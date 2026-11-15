@@ -113,4 +113,17 @@ export class CreateTriageDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      'Motivo de la decisión. Obligatorio con DEVOLVER y RECHAZAR (mínimo 10 caracteres tras recortar espacios); con CONTINUAR se ignora. Lo ve el solicitante en la ficha y en una notificación.',
+    minLength: 10,
+    maxLength: 2000,
+  })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(2000)
+  reason?: string;
 }

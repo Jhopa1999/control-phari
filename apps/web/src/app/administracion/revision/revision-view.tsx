@@ -2,10 +2,12 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { BadgeCheck, RefreshCw } from 'lucide-react';
+import { BadgeCheck, Check, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CellTitle } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
+import { DescriptionList } from '@/components/description-list';
 import { IdChip } from '@/components/id-chip';
 import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
@@ -62,6 +64,8 @@ export function RevisionView(): React.ReactElement {
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [actingId, setActingId] = React.useState<string | null>(null);
   const [approvingId, setApprovingId] = React.useState<string | null>(null);
+  // Solicitud cuya aprobación espera confirmación (diálogo con resumen).
+  const [approveTarget, setApproveTarget] = React.useState<{ request: Request; index: number } | null>(null);
   // Cambiar la clave remonta las secciones de planes y de documentación/cierres,
   // que cargan sus datos al montarse: un único «Actualizar» en la cabecera.
   const [refreshKey, setRefreshKey] = React.useState(0);
@@ -210,7 +214,7 @@ export function RevisionView(): React.ReactElement {
       >
         <InlineNotice tone="info" className="py-2">
           {canDecide
-            ? 'Aprobar lleva la solicitud a Comprometida; devolver la regresa a triage con un motivo.'
+            ? 'Aprobar pide confirmación y lleva la solicitud a Comprometida; devolver la regresa a triage con un motivo.'
             : 'Solo el jefe de área puede aprobar o devolver. Aquí puedes consultar las solicitudes priorizadas pendientes de decisión.'}
         </InlineNotice>
         <PriorityLegend />
@@ -262,7 +266,12 @@ export function RevisionView(): React.ReactElement {
                             {
                               key: 'approve',
                               label: 'Aprobar',
-                              onSelect: () => void handleApprove(req, index),
+                              icon: Check,
+                              variant: 'default',
+                              onSelect: () => {
+                                rowIndexRef.current = index;
+                                setApproveTarget({ request: req, index });
+                              },
                               busy: approvingId === req.id,
                               busyLabel: 'Aprobando…',
                               disabled: acting,
@@ -271,6 +280,7 @@ export function RevisionView(): React.ReactElement {
                             {
                               key: 'return',
                               label: 'Devolver',
+                              variant: 'outline',
                               onSelect: () => {
                                 rowIndexRef.current = index;
                                 setDevolverError(null);
@@ -299,6 +309,51 @@ export function RevisionView(): React.ReactElement {
 
       {/* Documentación y cierres de proyecto por aprobar (APR-01 / CIE-01). */}
       <PendingReviewsSections key={`reviews-${refreshKey}`} />
+
+      <ConfirmDialog
+        open={approveTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setApproveTarget(null);
+        }}
+        title="¿Aprobar el compromiso?"
+        description="La solicitud pasará a Comprometida."
+        confirmLabel="Aprobar compromiso"
+        tone="default"
+        onConfirm={() =>
+          approveTarget ? handleApprove(approveTarget.request, approveTarget.index) : undefined
+        }
+        returnFocusTo={returnFocusTo}
+      >
+        {approveTarget ? (
+          <div className="grid min-w-0 gap-2 rounded-lg bg-muted/50 p-3" data-testid="approve-summary">
+            <div className="flex flex-wrap items-center gap-2">
+              <IdChip code={approveTarget.request.code} />
+              <PriorityBadge
+                variant="full"
+                score={approveTarget.request.currentScore}
+                label={approveTarget.request.priorityLabel}
+              />
+            </div>
+            <p className="line-clamp-3 break-words text-sm font-medium">
+              {approveTarget.request.title}
+            </p>
+            <DescriptionList
+              columns={1}
+              items={[
+                {
+                  term: 'Score',
+                  value:
+                    approveTarget.request.currentScore !== null &&
+                    approveTarget.request.currentScore !== undefined
+                      ? `${approveTarget.request.currentScore}${approveTarget.request.priorityLabel ? ` · ${approveTarget.request.priorityLabel}` : ''}`
+                      : null,
+                },
+                { term: 'Registrada', value: formatDate(approveTarget.request.registeredAt) },
+              ]}
+            />
+          </div>
+        ) : null}
+      </ConfirmDialog>
 
       <DevolverDialog
         kind="solicitud"

@@ -484,7 +484,7 @@ export interface paths {
         /** Triage de la solicitud (0 o 1 fila en Fase 2) y responsables elegibles; admite previsualizar los de un proceso candidato. */
         get: operations["TriageController_findForRequest"];
         put?: never;
-        /** Registra el triage (solo desde REGISTRADA; 2o POST -> 409). */
+        /** Registra el triage (solo desde REGISTRADA; 2o POST -> 409). DEVOLVER y RECHAZAR exigen un motivo de al menos 10 caracteres. */
         post: operations["TriageController_create"];
         delete?: never;
         options?: never;
@@ -522,7 +522,7 @@ export interface paths {
         /** Historico de evaluaciones (vigente = la ultima). */
         get: operations["PriorityController_findForRequest"];
         put?: never;
-        /** Guarda una evaluacion (requiere triage=Continuar y estado valido). */
+        /** Guarda una evaluacion (requiere triage=Continuar y estado valido). Los ocho criterios son obligatorios (1 a 5), sin valores por defecto. */
         post: operations["PriorityController_create"];
         delete?: never;
         options?: never;
@@ -3743,6 +3743,8 @@ export interface components {
             dependencies: string | null;
             /** @description Observaciones. */
             notes: string | null;
+            /** @description Motivo de la decisión (solo con DEVOLVER o RECHAZAR; null con CONTINUAR y en triages anteriores a esta regla). */
+            reason: string | null;
             /**
              * Format: date-time
              * @description Fecha de decision.
@@ -3810,6 +3812,8 @@ export interface components {
             dependencies?: string;
             /** @description Observaciones. */
             notes?: string;
+            /** @description Motivo de la decisión. Obligatorio con DEVOLVER y RECHAZAR (mínimo 10 caracteres tras recortar espacios); con CONTINUAR se ignora. Lo ve el solicitante en la ficha y en una notificación. */
+            reason?: string;
         };
         AssociateAssetDto: {
             /**
@@ -9307,7 +9311,7 @@ export interface operations {
                     "application/json": components["schemas"]["TriageResponseDto"];
                 };
             };
-            /** @description Datos invalidos o code maestro inexistente. */
+            /** @description Datos invalidos, code maestro inexistente o motivo ausente o menor de 10 caracteres al devolver o rechazar. */
             400: {
                 headers: {
                     [name: string]: unknown;

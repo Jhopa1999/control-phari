@@ -13,6 +13,8 @@ export interface SegmentedRadioProps {
   /** Id de la etiqueta visible del grupo (p. ej. el criterio en su fila). */
   labelledBy: string;
   describedBy?: string;
+  /** Falta una valoración: borde de error y aria-invalid en el grupo. */
+  invalid?: boolean;
   disabled?: boolean;
   /** Clases extra de cada opción (p. ej. objetivo táctil de 44 px). */
   optionClassName?: string;
@@ -34,6 +36,7 @@ function SegmentedRadio({
   onValueChange,
   labelledBy,
   describedBy,
+  invalid = false,
   disabled = false,
   optionClassName,
   className,
@@ -44,8 +47,10 @@ function SegmentedRadio({
       role="radiogroup"
       aria-labelledby={labelledBy}
       aria-describedby={describedBy}
+      aria-invalid={invalid ? true : undefined}
       className={cn(
-        'inline-flex gap-0.5 rounded-md border border-border-strong bg-background p-0.5',
+        'inline-flex gap-0.5 rounded-md border bg-background p-0.5',
+        invalid ? 'border-danger' : 'border-border-strong',
         className,
       )}
     >

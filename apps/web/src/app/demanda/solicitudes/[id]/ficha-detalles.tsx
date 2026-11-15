@@ -87,6 +87,15 @@ export function TriageDetalle({
     { term: 'Responsable principal', value: triage.mainResponsibleName },
     { term: 'Fecha', value: formatDateTime(triage.decidedAt) },
     { term: 'Dependencias', value: triage.dependencies, span: 2 },
+    ...(triage.reason
+      ? [
+          {
+            term: triage.decision === 'RECHAZAR' ? 'Motivo del rechazo' : 'Motivo de la devolución',
+            value: triage.reason,
+            span: 2 as const,
+          },
+        ]
+      : []),
     { term: 'Observaciones', value: triage.notes, span: 2 },
   ];
   return <DescriptionList items={items} columns={2} />;

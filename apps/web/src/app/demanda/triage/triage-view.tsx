@@ -90,12 +90,17 @@ interface TriageFormValues {
   participantProcessIds: string[];
   dependencies: string;
   notes: string;
+  /** Motivo de la decisión: obligatorio al devolver o rechazar (mínimo 10). */
+  reason: string;
   /** Activo base elegido en el formulario (obligatorio para Continuar). */
   assetId: string;
   decision: Decision | '';
 }
 
-type FieldKey = 'totalEffortHours' | 'decision' | 'assetId' | 'mainProcessId';
+type FieldKey = 'totalEffortHours' | 'decision' | 'assetId' | 'mainProcessId' | 'reason';
+
+/** Mínimo de caracteres del motivo (la API lo valida igual). */
+const REASON_MIN_LENGTH = 10;
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 const EMPTY_FORM: TriageFormValues = {
@@ -109,6 +114,7 @@ const EMPTY_FORM: TriageFormValues = {
   participantProcessIds: [],
   dependencies: '',
   notes: '',
+  reason: '',
   assetId: '',
   decision: '',
 };
@@ -172,6 +178,15 @@ function validate(
   }
   if (form.decision === 'CONTINUAR' && !hasAsset && !form.assetId) {
     errors.assetId = 'Elige el activo base para continuar: sin él la solicitud no se puede priorizar.';
+  }
+  if (form.decision === 'DEVOLVER' || form.decision === 'RECHAZAR') {
+    const noun = form.decision === 'DEVOLVER' ? 'de la devolución' : 'del rechazo';
+    const reason = form.reason.trim();
+    if (reason.length === 0) {
+      errors.reason = `Escribe el motivo ${noun}.`;
+    } else if (reason.length < REASON_MIN_LENGTH) {
+      errors.reason = `El motivo debe tener al menos ${REASON_MIN_LENGTH} caracteres.`;
+    }
   }
   return errors;
 }
@@ -464,12 +479,13 @@ export function TriageView(): React.ReactElement {
     if (!selected || submitting) return;
     const errors = validate(form, selected.assetId !== null, effectiveMainProcessId);
     setFieldErrors(errors);
-    if (errors.totalEffortHours || errors.decision || errors.assetId || errors.mainProcessId) {
+    if (errors.totalEffortHours || errors.decision || errors.assetId || errors.mainProcessId || errors.reason) {
       // Foco al primer campo con error, en orden del DOM.
       if (errors.mainProcessId) document.getElementById('triage-main-process')?.focus();
       else if (errors.assetId) document.getElementById('triage-asset')?.focus();
       else if (errors.totalEffortHours) effortRef.current?.focus();
-      else document.getElementById('triage-decision-CONTINUAR')?.focus();
+      else if (errors.decision) document.getElementById('triage-decision-CONTINUAR')?.focus();
+      else document.getElementById('triage-reason')?.focus();
       return;
     }
     const decision = form.decision as Decision;
@@ -495,6 +511,8 @@ export function TriageView(): React.ReactElement {
         ),
         dependencies: trimOrUndefined(form.dependencies),
         notes: trimOrUndefined(form.notes),
+        reason:
+          decision === 'CONTINUAR' ? undefined : trimOrUndefined(form.reason),
       });
       // El activo se asocia tras registrar el triage (el backend solo lo admite desde EN_TRIAGE).
       if (decision === 'CONTINUAR' && form.assetId && selected.assetId === null) {
@@ -843,6 +861,15 @@ export function TriageView(): React.ReactElement {
       { term: 'Responsable principal', value: triage.mainResponsibleName },
       { term: 'Fecha de decisión', value: formatDateTime(triage.decidedAt) },
       { term: 'Dependencias', value: triage.dependencies, span: 2 },
+      ...(triage.reason
+        ? [
+            {
+              term: triage.decision === 'RECHAZAR' ? 'Motivo del rechazo' : 'Motivo de la devolución',
+              value: triage.reason,
+              span: 2 as const,
+            },
+          ]
+        : []),
       { term: 'Observaciones', value: triage.notes, span: 2 },
     ];
     return (
@@ -1189,11 +1216,50 @@ export function TriageView(): React.ReactElement {
           </FieldSet>
         </div>
 
+        {form.decision === 'DEVOLVER' || form.decision === 'RECHAZAR' ? (
+          <div className="grid gap-3 motion-safe:animate-in motion-safe:fade-in-0">
+            <InlineNotice tone={form.decision === 'DEVOLVER' ? 'warning' : 'danger'} className="py-2 text-meta">
+              {form.decision === 'DEVOLVER'
+                ? 'Devolver pide al solicitante que complete la información. Verá este motivo en la ficha y en una notificación.'
+                : 'Rechazar cierra la solicitud. El solicitante verá este motivo en la ficha y en una notificación.'}
+            </InlineNotice>
+            <Field
+              id="triage-reason"
+              label={form.decision === 'DEVOLVER' ? 'Motivo de la devolución' : 'Motivo del rechazo'}
+              required
+              help={`Mínimo ${REASON_MIN_LENGTH} caracteres. Explica qué falta o por qué no procede.`}
+              error={fieldErrors.reason}
+            >
+              <Textarea
+                rows={4}
+                maxLength={2000}
+                value={form.reason}
+                onChange={(e) => update('reason', e.target.value)}
+              />
+            </Field>
+            <p className="text-right text-meta tabular-nums text-muted-foreground">
+              {form.reason.trim().length >= REASON_MIN_LENGTH
+                ? `${form.reason.trim().length} caracteres`
+                : `${form.reason.trim().length} / ${REASON_MIN_LENGTH}`}
+            </p>
+          </div>
+        ) : null}
+
         <FormError id={FORM_ID} message={formError} />
 
         <div className="flex justify-end border-t pt-4">
-          <Button type="submit" loading={submitting}>
-            {submitting ? 'Guardando…' : 'Guardar triage'}
+          <Button
+            type="submit"
+            loading={submitting}
+            variant={form.decision === 'RECHAZAR' ? 'destructive' : 'default'}
+          >
+            {submitting
+              ? 'Guardando…'
+              : form.decision === 'RECHAZAR'
+                ? 'Rechazar solicitud'
+                : form.decision === 'DEVOLVER'
+                  ? 'Devolver solicitud'
+                  : 'Guardar triage'}
           </Button>
         </div>
       </form>
