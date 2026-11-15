@@ -55,6 +55,13 @@ export class TriageResponseDto {
 
   @ApiProperty({ type: String, nullable: true, description: 'Observaciones.' })
   notes!: string | null;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Motivo de la decisión (solo con DEVOLVER o RECHAZAR; null con CONTINUAR y en triages anteriores a esta regla).',
+  })
+  reason!: string | null;
 
   @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de decision.' })
   decidedAt!: Date;

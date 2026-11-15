@@ -74,7 +74,10 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
     access: 'write',
     description:
       'Registra el triage de una solicitud (POST /requests/{id}/triage). El ' +
-      'cuerpo debe cumplir CreateTriageDto; el backend valida los datos.',
+      'cuerpo debe cumplir CreateTriageDto; el backend valida los datos. ' +
+      'Con decision DEVOLVER o RECHAZAR el campo reason (motivo, mínimo 10 ' +
+      'caracteres) es obligatorio: el solicitante lo ve en la ficha y en una ' +
+      'notificación; con CONTINUAR no se envía.',
   },
   {
     name: 'request.priority.create',
@@ -83,7 +86,11 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
     description:
       'Registra la evaluación de prioridad de una solicitud ' +
       '(POST /requests/{id}/priority). El cuerpo debe cumplir ' +
-      'CreatePriorityEvaluationDto; el backend valida los datos.',
+      'CreatePriorityEvaluationDto; el backend valida los datos. Los ocho ' +
+      'criterios (impact, alignment, riskControl, urgency, scope, ' +
+      'dataAvailability, feasibility, reuse) son obligatorios, enteros de 1 a ' +
+      '5, sin valores por defecto: si falta alguno responde 400. Evalúa cada ' +
+      'criterio con el usuario antes de guardar.',
   },
   {
     name: 'request.approval.get',

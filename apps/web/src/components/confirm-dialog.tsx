@@ -73,6 +73,8 @@ export interface ConfirmDialogProps {
   /** Por defecto 'danger' (botón destructive). */
   tone?: 'danger' | 'default';
   busy?: boolean;
+  /** Contenido entre la descripción y los botones (p. ej. un resumen de datos). */
+  children?: React.ReactNode;
   /** El handler existente de la vista, sin cambios (toast incluido). */
   onConfirm: () => void | Promise<void>;
   /** Destino del foco si el disparador ya no está en el DOM al cerrar (NIT 4). */
@@ -94,6 +96,7 @@ export function ConfirmDialog({
   cancelLabel = 'Cancelar',
   tone = 'danger',
   busy = false,
+  children,
   onConfirm,
   returnFocusTo,
 }: ConfirmDialogProps): React.ReactElement {
@@ -139,6 +142,7 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        {children}
         <DialogFooter>
           <Button
             ref={cancelRef}

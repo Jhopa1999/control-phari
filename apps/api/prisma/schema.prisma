@@ -459,6 +459,9 @@ model Triage {
   decidedByUserId       String   @map("decided_by_user_id") @db.Uuid
   dependencies          String?
   notes                 String?
+  /// Motivo de la decisión: obligatorio (mínimo 10 caracteres) al DEVOLVER o
+  /// RECHAZAR; null con CONTINUAR y en los triages anteriores a esta regla.
+  decisionReason        String?  @map("decision_reason")
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 

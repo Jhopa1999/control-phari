@@ -1621,7 +1621,7 @@
             }
           },
           "400": {
-            "description": "Datos invalidos o code maestro inexistente."
+            "description": "Datos invalidos, code maestro inexistente o motivo ausente o menor de 10 caracteres al devolver o rechazar."
           },
           "403": {
             "description": "Rol insuficiente."
@@ -1633,7 +1633,7 @@
             "description": "La solicitud no esta en REGISTRADA."
           }
         },
-        "summary": "Registra el triage (solo desde REGISTRADA; 2o POST -> 409).",
+        "summary": "Registra el triage (solo desde REGISTRADA; 2o POST -> 409). DEVOLVER y RECHAZAR exigen un motivo de al menos 10 caracteres.",
         "tags": [
           "triage"
         ]
@@ -1781,7 +1781,7 @@
             "description": "Sin triage=Continuar o estado no admite priorizar."
           }
         },
-        "summary": "Guarda una evaluacion (requiere triage=Continuar y estado valido).",
+        "summary": "Guarda una evaluacion (requiere triage=Continuar y estado valido). Los ocho criterios son obligatorios (1 a 5), sin valores por defecto.",
         "tags": [
           "priority"
         ]
@@ -11967,6 +11967,11 @@
             "nullable": true,
             "description": "Observaciones."
           },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo de la decisión (solo con DEVOLVER o RECHAZAR; null con CONTINUAR y en triages anteriores a esta regla)."
+          },
           "decidedAt": {
             "type": "string",
             "format": "date-time",
@@ -11997,6 +12002,7 @@
           "mainResponsibleName",
           "dependencies",
           "notes",
+          "reason",
           "decidedAt",
           "decidedByUserId",
           "createdAt"
@@ -12106,6 +12112,12 @@
           "notes": {
             "type": "string",
             "description": "Observaciones.",
+            "maxLength": 2000
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo de la decisión. Obligatorio con DEVOLVER y RECHAZAR (mínimo 10 caracteres tras recortar espacios); con CONTINUAR se ignora. Lo ve el solicitante en la ficha y en una notificación.",
+            "minLength": 10,
             "maxLength": 2000
           }
         },

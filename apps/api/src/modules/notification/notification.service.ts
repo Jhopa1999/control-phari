@@ -30,6 +30,10 @@ export enum NotificationType {
   CLOSURE_REJECTED = 'CLOSURE_REJECTED',
   PROJECT_REOPENED = 'PROJECT_REOPENED',
   COMMITMENT_ASSIGNED = 'COMMITMENT_ASSIGNED',
+  /** Una solicitud fue devuelta en triage con un motivo (a quien la registró). */
+  REQUEST_RETURNED = 'REQUEST_RETURNED',
+  /** Una solicitud fue rechazada en triage con un motivo (a quien la registró). */
+  REQUEST_REJECTED = 'REQUEST_REJECTED',
   /** El gasto de IA del mes alcanzó el umbral de alerta (solo administradores). */
   AI_BUDGET_ALERT = 'AI_BUDGET_ALERT',
   /** Se agotó el presupuesto mensual de IA (solo administradores). */

@@ -63,11 +63,18 @@ export class TriageController {
   }
 
   @Post('triage')
-  @ApiOperation({ summary: 'Registra el triage (solo desde REGISTRADA; 2o POST -> 409).' })
+  @ApiOperation({
+    summary:
+      'Registra el triage (solo desde REGISTRADA; 2o POST -> 409). DEVOLVER y RECHAZAR exigen un motivo de al menos 10 caracteres.',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: CreateTriageDto })
   @ApiResponse({ status: 201, description: 'Triage registrado.', type: TriageResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos invalidos o code maestro inexistente.' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Datos invalidos, code maestro inexistente o motivo ausente o menor de 10 caracteres al devolver o rechazar.',
+  })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Solicitud fuera de alcance.' })
   @ApiResponse({ status: 409, description: 'La solicitud no esta en REGISTRADA.' })

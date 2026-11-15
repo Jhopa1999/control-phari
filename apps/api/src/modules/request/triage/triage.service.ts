@@ -9,6 +9,11 @@ import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
 import { AssetService } from '../../knowledge/asset/asset.service';
+import { entityRef, withCode } from '../../notification/notification-text';
+import {
+  NotificationService,
+  NotificationType,
+} from '../../notification/notification.service';
 import { RequestResponseDto } from '../dto/request-response.dto';
 import { resolveParticipantProcessIds } from '../request-participants';
 import { RequestState } from '../request-state';
@@ -52,6 +57,8 @@ const RESPONSIBLE_INCLUDE = {
   mainResponsible: { select: { id: true, name: true } },
 } as const;
 
+/** Mínimo de caracteres del motivo al devolver o rechazar. */
+export const TRIAGE_REASON_MIN_LENGTH = 10;
 /** Mapa decision de triage -> estado resultante de la Request (design §2.2). */
 const DECISION_TO_STATE: Record<string, RequestState> = {
   DEVOLVER: RequestState.DEVUELTA,
@@ -72,6 +79,7 @@ export class TriageService {
     private readonly audit: AuditService,
     private readonly state: RequestStateService,
     private readonly assetService: AssetService,
+    private readonly notifications: NotificationService,
   ) {}
 
   private snapshot(triage: TriageWithResponsible): Prisma.InputJsonValue {
@@ -86,6 +94,7 @@ export class TriageService {
       dataAvailabilityCode: triage.dataAvailabilityCode,
       totalEffortHours: triage.totalEffortHours,
       mainResponsibleUserId: triage.mainResponsibleUserId,
+      decisionReason: triage.decisionReason,
       decidedByUserId: triage.decidedByUserId,
     };
   }
@@ -105,6 +114,7 @@ export class TriageService {
       mainResponsibleName: triage.mainResponsible?.name ?? null,
       dependencies: triage.dependencies,
       notes: triage.notes,
+      reason: triage.decisionReason,
       decidedAt: triage.decidedAt,
       decidedByUserId: triage.decidedByUserId,
       createdAt: triage.createdAt,
@@ -219,6 +229,17 @@ export class TriageService {
       );
     }
 
+    // Motivo obligatorio al devolver o rechazar (mínimo 10 caracteres, DTO ya
+    // recortado). Con CONTINUAR no se guarda. 400 antes de tocar nada.
+    const needsReason = dto.decision === 'DEVOLVER' || dto.decision === 'RECHAZAR';
+    const reason = dto.reason?.trim() ?? '';
+    if (needsReason && reason.length < TRIAGE_REASON_MIN_LENGTH) {
+      throw new BadRequestException(
+        reason.length === 0
+          ? `El motivo es obligatorio para ${dto.decision === 'DEVOLVER' ? 'devolver' : 'rechazar'} la solicitud.`
+          : `El motivo debe tener al menos ${TRIAGE_REASON_MIN_LENGTH} caracteres.`,
+      );
+    }
     // Validacion de codes maestros contra CatalogItem activo (400 si no existe).
     await this.state.assertCatalogCode('TRIAGE_ROUTE', dto.routeCode);
     await this.state.assertCatalogCode('DEMAND_TYPE', dto.demandTypeCode);
@@ -333,6 +354,7 @@ export class TriageService {
             ? { dependencies: dto.dependencies }
             : {}),
           ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+          ...(needsReason ? { decisionReason: reason } : {}),
         },
         include: RESPONSIBLE_INCLUDE,
       });
@@ -388,6 +410,25 @@ export class TriageService {
       return triage;
     });
 
+    // Aviso al solicitante (quien registró la solicitud) con el motivo. Efecto
+    // secundario: un fallo se registra en el log y no revierte el triage.
+    if (needsReason) {
+      const returned = dto.decision === 'DEVOLVER';
+      await this.notifications.notify({
+        userIds: [request.createdByUserId],
+        excludeUserId: actor.userId,
+        type: returned
+          ? NotificationType.REQUEST_RETURNED
+          : NotificationType.REQUEST_REJECTED,
+        title: withCode(
+          returned ? 'Solicitud devuelta en triage' : 'Solicitud rechazada en triage',
+          request.code,
+        ),
+        message: `${entityRef(request.code, request.title)} fue ${returned ? 'devuelta' : 'rechazada'} en triage. Motivo: ${reason}`,
+        link: `/demanda/solicitudes/${requestId}`,
+        requestId,
+      });
+    }
     return this.toResponse(created);
   }
 

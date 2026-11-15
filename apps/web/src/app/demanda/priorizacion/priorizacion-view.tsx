@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChartColumn } from 'lucide-react';
+import { ChartColumn, CircleAlert, CircleDashed } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -36,6 +36,7 @@ import { listRequests } from '@/lib/requests';
 import { isPrioritizable, isTriageable } from '@/lib/request-state';
 import { parseBand, PRIORITY_BAND_COPY } from '@/lib/status-presentation';
 import { listProcesses } from '@/lib/team';
+import { cn } from '@/lib/utils';
 import { useRequestIdParam } from '@/lib/use-request-param';
 
 type LoadState = 'loading' | 'success' | 'error';
@@ -75,21 +76,24 @@ const READY_NOUN = { one: 'lista para priorizar', other: 'listas para priorizar'
 const GROUPS: RequestPickerGroup[] = [{ label: 'Listas para priorizar', match: isPrioritizable }];
 const NBSP = '\u00a0';
 
-type Scores = Record<CriterionKey, number>;
+/** Un criterio sin valorar es null: no hay valores por defecto. */
+type Scores = Record<CriterionKey, number | null>;
+type CriterionErrors = Partial<Record<CriterionKey, string>>;
+
+const CRITERION_REQUIRED = 'Elige una valoración de 1 a 5.';
 
 function emptyScores(): Scores {
   return {
-    impact: 3,
-    alignment: 3,
-    riskControl: 3,
-    urgency: 3,
-    scope: 3,
-    dataAvailability: 3,
-    feasibility: 3,
-    reuse: 3,
+    impact: null,
+    alignment: null,
+    riskControl: null,
+    urgency: null,
+    scope: null,
+    dataAvailability: null,
+    feasibility: null,
+    reuse: null,
   };
 }
-
 /** «score 84 (P1 · Primera consideración para compromiso)», o el label de la API tal cual. */
 function savedMessage(score: number, thresholdLabel: string): string {
   const band = parseBand(thresholdLabel);
@@ -120,6 +124,7 @@ export function PriorizacionView(): React.ReactElement {
     selectedRef.current = selectedId;
   });
   const [scores, setScores] = React.useState<Scores>(emptyScores());
+  const [criterionErrors, setCriterionErrors] = React.useState<CriterionErrors>({});
   const [justification, setJustification] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -147,6 +152,7 @@ export function PriorizacionView(): React.ReactElement {
     (id: string) => {
       setSelectedId(id);
       setScores(emptyScores());
+    setCriterionErrors({});
       setJustification('');
       setFormError(null);
       setCurrentEvaluation(null);
@@ -218,19 +224,33 @@ export function PriorizacionView(): React.ReactElement {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (!selected || submitting) return;
+    // Los ocho criterios se evalúan a mano: sin valores por defecto, la API
+    // rechaza si falta alguno y aquí se avisa antes, todos a la vez.
+    const missing = CRITERIA.filter((c) => scores[c.key] === null);
+    if (missing.length > 0) {
+      setCriterionErrors(
+        Object.fromEntries(missing.map((c) => [c.key, CRITERION_REQUIRED])) as CriterionErrors,
+      );
+      setFormError(
+        `Faltan ${missing.length} ${missing.length === 1 ? 'criterio' : 'criterios'} por evaluar: ${missing.map((c) => c.label).join(', ')}.`,
+      );
+      document.getElementById(`priority-${missing[0].key}-1`)?.focus();
+      return;
+    }
+    setCriterionErrors({});
     setSubmitting(true);
     setFormError(null);
     try {
       // El score lo calcula el backend; el cliente no lo envía.
       const saved = await createPriorityEvaluation(selected.id, {
-        impact: scores.impact,
-        alignment: scores.alignment,
-        riskControl: scores.riskControl,
-        urgency: scores.urgency,
-        scope: scores.scope,
-        dataAvailability: scores.dataAvailability,
-        feasibility: scores.feasibility,
-        reuse: scores.reuse,
+        impact: scores.impact as number,
+        alignment: scores.alignment as number,
+        riskControl: scores.riskControl as number,
+        urgency: scores.urgency as number,
+        scope: scores.scope as number,
+        dataAvailability: scores.dataAvailability as number,
+        feasibility: scores.feasibility as number,
+        reuse: scores.reuse as number,
         justification: justification.trim() ? justification.trim() : undefined,
       });
       toast.success(
@@ -344,6 +364,7 @@ export function PriorizacionView(): React.ReactElement {
   }
 
   function renderForm(): React.ReactElement {
+    const evaluatedCount = CRITERIA.filter((c) => scores[c.key] !== null).length;
     return (
       <form
         id={FORM_ID}
@@ -352,9 +373,22 @@ export function PriorizacionView(): React.ReactElement {
         aria-labelledby="priority-form-title"
         className="flex flex-col gap-5 rounded-lg border bg-card p-4"
       >
-        <h2 id="priority-form-title" className="text-base font-semibold">
-          Evaluación de prioridad
-        </h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 id="priority-form-title" className="text-base font-semibold">
+            Evaluación de prioridad
+          </h2>
+          <p
+            role="status"
+            aria-live="polite"
+            data-testid="priority-progress"
+            className="text-meta text-muted-foreground tabular-nums"
+          >
+            {evaluatedCount === CRITERIA.length
+              ? `Los ${CRITERIA.length} criterios están evaluados.`
+              : `${evaluatedCount} de ${CRITERIA.length} criterios evaluados`}
+          </p>
+        </div>
+        <p className="-mt-3 text-meta text-muted-foreground">1 = más bajo · 5 = más alto</p>
 
         <div className="overflow-hidden rounded-lg border">
           {/* Encabezados visuales desde sm; cada grupo ya tiene su etiqueta. */}
@@ -366,30 +400,64 @@ export function PriorizacionView(): React.ReactElement {
             <span>Valoración</span>
           </div>
           <div className="divide-y">
-            {CRITERIA.map((c) => (
-              <div
-                key={c.key}
-                className="grid gap-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-              >
-                <span id={`priority-${c.key}-label`} className="flex flex-col">
-                  <span className="text-sm font-medium">{c.label}</span>
-                  <span className="text-meta text-muted-foreground">{`Peso ${c.weight}${NBSP}%`}</span>
-                </span>
-                {/* El contenedor evita que la celda de la rejilla estire el control al apilarse. */}
-                <div className="justify-self-start">
-                  <SegmentedRadio
-                    id={`priority-${c.key}`}
-                    name={`priority-${c.key}`}
-                    labelledBy={`priority-${c.key}-label`}
-                    options={RATING_OPTIONS}
-                    value={String(scores[c.key])}
-                    onValueChange={(value) =>
-                      setScores((s) => ({ ...s, [c.key]: Number.parseInt(value, 10) }))
-                    }
-                  />
+            {CRITERIA.map((c) => {
+              const error = criterionErrors[c.key];
+              const unset = scores[c.key] === null;
+              return (
+                <div
+                  key={c.key}
+                  className={cn(
+                    'grid gap-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center',
+                    error && 'border-l-2 border-danger bg-danger-subtle/40',
+                  )}
+                >
+                  <span id={`priority-${c.key}-label`} className="flex flex-col">
+                    <span className="text-sm font-medium">{c.label}</span>
+                    <span className="text-meta text-muted-foreground">{`Peso ${c.weight}${NBSP}%`}</span>
+                  </span>
+                  {/* El contenedor evita que la celda de la rejilla estire el control al apilarse. */}
+                  <div className="flex flex-col gap-1 justify-self-start sm:items-end sm:justify-self-end">
+                    <SegmentedRadio
+                      id={`priority-${c.key}`}
+                      name={`priority-${c.key}`}
+                      labelledBy={`priority-${c.key}-label`}
+                      describedBy={
+                        [unset ? `priority-${c.key}-state` : null, error ? `priority-${c.key}-error` : null]
+                          .filter(Boolean)
+                          .join(' ') || undefined
+                      }
+                      invalid={Boolean(error)}
+                      options={RATING_OPTIONS}
+                      value={scores[c.key] === null ? '' : String(scores[c.key])}
+                      onValueChange={(value) => {
+                        setScores((s) => ({ ...s, [c.key]: Number.parseInt(value, 10) }));
+                        setCriterionErrors((prev) =>
+                          c.key in prev ? { ...prev, [c.key]: undefined } : prev,
+                        );
+                      }}
+                    />
+                    {unset ? (
+                      <span
+                        id={`priority-${c.key}-state`}
+                        className="inline-flex items-center gap-1 text-meta text-muted-foreground"
+                      >
+                        <CircleDashed className="size-3.5" aria-hidden="true" />
+                        Sin evaluar
+                      </span>
+                    ) : null}
+                    {error ? (
+                      <span
+                        id={`priority-${c.key}-error`}
+                        className="inline-flex items-center gap-1 text-meta text-danger"
+                      >
+                        <CircleAlert className="size-3.5" aria-hidden="true" />
+                        {error}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
