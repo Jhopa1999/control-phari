@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { SensitiveFieldsInterceptor } from './security/sensitive-fields.interceptor';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule } from 'nestjs-pino';
 import { buildLoggerModuleOptions } from './observability/logger.config';
@@ -56,6 +58,10 @@ import { RecurringActivityModule } from './modules/recurring-activity/recurring-
     AssistantModule,
     HelpModule,
     RecurringActivityModule,
+  ],
+  providers: [
+    // Defensa en profundidad: ninguna respuesta lleva credenciales.
+    { provide: APP_INTERCEPTOR, useClass: SensitiveFieldsInterceptor },
   ],
 })
 export class AppModule {}

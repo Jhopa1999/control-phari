@@ -56,8 +56,8 @@ Administra las identidades funcionales de las personas del área. Solo `JEFE_ARE
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/users` | Lista todos los usuarios (solo JEFE_AREA). |
-| GET | `/users/:id` | Obtiene un usuario con sus grants (solo JEFE_AREA). |
+| GET | `/users` | Lista todos los usuarios (ADMIN, JEFE_AREA y LIDER_PROCESO). Devuelve solo `id`, `identifier`, `name`, `active`, `createdAt` y `updatedAt` (`UserResponseDto`); nunca credenciales. |
+| GET | `/users/:id` | Obtiene un usuario con sus grants (mismos campos que el listado más `grants`). |
 | POST | `/users` | Crea una identidad funcional (solo JEFE_AREA). |
 | PATCH | `/users/:id` | Edita `name`/`active` (solo JEFE_AREA). |
 | POST | `/users/:id/invite` | Emite y envía la invitación de activación; el reenvío invalida el enlace previo (solo JEFE_AREA; `204`, `404` si no existe). |

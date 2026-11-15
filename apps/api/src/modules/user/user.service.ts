@@ -10,6 +10,8 @@ import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import type { UserResponseDto } from './dto/user-response.dto';
+import { toUserResponse } from './user-response.mapper';
 
 @Injectable()
 export class UserService {
@@ -27,9 +29,10 @@ export class UserService {
     };
   }
 
-  async findMany(): Promise<UserModel[]> {
+  async findMany(): Promise<UserResponseDto[]> {
     // Plano B: no se filtra por proceso. El jefe gestiona todo el equipo.
-    return this.prisma.user.findMany({ orderBy: { name: 'asc' } });
+    const users = await this.prisma.user.findMany({ orderBy: { name: 'asc' } });
+    return users.map(toUserResponse);
   }
 
   async findOne(id: string) {
@@ -40,10 +43,13 @@ export class UserService {
     if (!user) {
       throw new NotFoundException(`Usuario "${id}" no encontrado.`);
     }
-    return user;
+    return { ...toUserResponse(user), grants: user.grants };
   }
 
-  async create(actor: CurrentActor, dto: CreateUserDto): Promise<UserModel> {
+  async create(
+    actor: CurrentActor,
+    dto: CreateUserDto,
+  ): Promise<UserResponseDto> {
     try {
       return await this.prisma.$transaction(async (tx) => {
         const created = await tx.user.create({
@@ -60,7 +66,7 @@ export class UserService {
           after: this.snapshot(created),
         });
 
-        return created;
+        return toUserResponse(created);
       });
     } catch (error) {
       if (
@@ -79,7 +85,7 @@ export class UserService {
     actor: CurrentActor,
     id: string,
     dto: UpdateUserDto,
-  ): Promise<UserModel> {
+  ): Promise<UserResponseDto> {
     const existing = await this.prisma.user.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException(`Usuario "${id}" no encontrado.`);
@@ -104,7 +110,7 @@ export class UserService {
         after: this.snapshot(updated),
       });
 
-      return updated;
+      return toUserResponse(updated);
     });
   }
 }

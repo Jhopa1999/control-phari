@@ -89,7 +89,7 @@ describe('UserService', () => {
 
       const res = await service.findOne('u1');
 
-      expect(res).toBe(withGrants);
+      expect(res).toMatchObject({ id: 'u1', grants: [] });
       const arg = mocks.user.findUnique.mock.calls[0][0];
       expect(arg.where).toEqual({ id: 'u1' });
       expect(arg.include).toMatchObject({ grants: expect.any(Object) });
@@ -158,6 +158,39 @@ describe('UserService', () => {
 
       expect(mocks.auditRecord).toHaveBeenCalledTimes(1);
       expect(mocks.auditRecord.mock.calls[0][1].action).toBe('UPDATE');
+    });
+  });
+
+  describe('no filtra credenciales (hotfix passwordHash)', () => {
+    const secret = { passwordHash: '$2b$10$hash-bcrypt-secreto' };
+
+    it('findMany no incluye passwordHash aunque Prisma lo devuelva', async () => {
+      mocks.user.findMany.mockResolvedValue([makeUser(secret)]);
+      const res = await service.findMany();
+      expect(JSON.stringify(res)).not.toContain('passwordHash');
+      expect(JSON.stringify(res)).not.toContain('bcrypt');
+    });
+
+    it('findOne no incluye passwordHash', async () => {
+      mocks.user.findUnique.mockResolvedValue(
+        makeUser({ ...secret, grants: [] }),
+      );
+      const res = await service.findOne('u1');
+      expect(JSON.stringify(res)).not.toContain('passwordHash');
+    });
+
+    it('create y update no incluyen passwordHash', async () => {
+      mocks.user.create.mockResolvedValue(makeUser(secret));
+      const created = await service.create(jefe(), {
+        identifier: 'persona@demo.local',
+        name: 'Persona',
+      });
+      expect(JSON.stringify(created)).not.toContain('passwordHash');
+
+      mocks.user.findUnique.mockResolvedValue(makeUser(secret));
+      mocks.user.update.mockResolvedValue(makeUser(secret));
+      const updated = await service.update(jefe(), 'u1', { name: 'Otro' });
+      expect(JSON.stringify(updated)).not.toContain('passwordHash');
     });
   });
 });

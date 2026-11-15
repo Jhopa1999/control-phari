@@ -115,6 +115,16 @@ transacción. Vigencias y mínimo configurables por entorno: `PASSWORD_RESET_TTL
 (default `1h`), `USER_INVITATION_TTL` (default `72h`), `PASSWORD_MIN_LENGTH` (default
 `8`).
 
+## Campos de credenciales: nunca salen por la API
+
+Ninguna respuesta HTTP, ni la del MCP que la reenvía, contiene `passwordHash`, `tokenHash`, `password`, `resetToken`, `passwordCiphertext` ni `awsSecretAccessKeyCipher`. Tres capas, de la raíz a la red:
+
+1. **Cliente Prisma** (`PrismaService`): `omit` global de `User.passwordHash` y `AuthToken.tokenHash`. Ninguna consulta los trae, tampoco las relaciones anidadas (`include: { user }`). Solo el login los pide con `omit: { passwordHash: false }`.
+2. **Mapeador explícito** (`user-response.mapper.ts`): `/users` devuelve una lista blanca de campos.
+3. **Interceptor global** (`SensitiveFieldsInterceptor`): elimina esas claves de cualquier respuesta JSON y registra un `WARN` con la ruta (sin el valor) si encontrara alguna. No toca `Date`, `Buffer` ni descargas.
+
+Una prueba de Jest recorre `openapi.json` y falla si algún schema de respuesta declara esas propiedades; una prueba del MCP comprueba que ninguna tool las menciona.
+
 ## El actor (`CurrentActor`)
 
 Resuelto por petición y adjuntado a `request.actor`, se inyecta en los controllers con

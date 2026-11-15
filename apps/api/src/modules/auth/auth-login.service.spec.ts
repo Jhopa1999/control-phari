@@ -47,6 +47,11 @@ describe('AuthLoginService', () => {
       name: 'Ana Jefa',
       identifier: 'jefe@demo.local',
     });
+    // El hash solo se lee aquí: el cliente Prisma lo omite por defecto.
+    expect(mocks.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ omit: { passwordHash: false } }),
+    );
+    expect(JSON.stringify(result)).not.toContain('passwordHash');
     expect(typeof result.expiresIn).toBe('string');
     // El token se firma con sub = identifier del usuario.
     expect(mocks.signAsync).toHaveBeenCalledWith(
