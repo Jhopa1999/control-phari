@@ -76,8 +76,7 @@ const READY_NOUN = { one: 'lista para priorizar', other: 'listas para priorizar'
 const GROUPS: RequestPickerGroup[] = [{ label: 'Listas para priorizar', match: isPrioritizable }];
 const NBSP = '\u00a0';
 
-/** Un criterio sin valorar es 
-ull: no hay valores por defecto. */
+/** Un criterio sin valorar es null: no hay valores por defecto. */
 type Scores = Record<CriterionKey, number | null>;
 type CriterionErrors = Partial<Record<CriterionKey, string>>;
 
