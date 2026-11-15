@@ -1,5 +1,6 @@
 import { AuthLoginController } from './auth-login.controller';
 import { AuthLoginService } from './auth-login.service';
+import { TooManyAttemptsException } from './too-many-attempts.exception';
 import { SessionCookieService } from './session-cookie.service';
 
 describe('AuthLoginController (delegacion)', () => {
@@ -22,8 +23,29 @@ describe('AuthLoginController (delegacion)', () => {
   it('login delega el dto y emite la cookie con el accessToken', async () => {
     const dto = { identifier: 'u@demo.local', password: 'x' } as never;
     await expect(controller.login(dto, req, res)).resolves.toBe(session);
-    expect(svc.login).toHaveBeenCalledWith(dto);
+    expect(svc.login).toHaveBeenCalledWith(dto, undefined);
     expect(cookies.issue).toHaveBeenCalledWith(req, res, 'jwt');
+  });
+
+  it('pasa la IP del cliente al servicio', async () => {
+    const dto = { identifier: 'u@demo.local', password: 'x' } as never;
+    await controller.login(dto, { secure: true, ip: '203.0.113.7' }, res);
+    expect(svc.login).toHaveBeenLastCalledWith(dto, '203.0.113.7');
+  });
+
+  it('ante el límite de intentos responde 429 y emite Retry-After sin crear sesión', async () => {
+    const limited = {
+      login: jest.fn().mockRejectedValue(new TooManyAttemptsException(125)),
+    } as unknown as AuthLoginService;
+    const issue = jest.fn();
+    const ctrl = new AuthLoginController(limited, { issue, clear: jest.fn() } as unknown as SessionCookieService);
+    const setHeader = jest.fn();
+    const dto = { identifier: 'u@demo.local', password: 'x' } as never;
+    await expect(
+      ctrl.login(dto, req, { ...res, setHeader }),
+    ).rejects.toMatchObject({ status: 429 });
+    expect(setHeader).toHaveBeenCalledWith('Retry-After', '125');
+    expect(issue).not.toHaveBeenCalled();
   });
 
   it('logout sin cookie borra la cookie', () => {

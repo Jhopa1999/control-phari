@@ -43,7 +43,14 @@ export const OBJECT_TYPES = [
 ] as const;
 
 /** Verbos de mutacion filtrables (design 1.2 / 4.2.1). */
-export const AUDIT_ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'REVOKE'] as const;
+export const AUDIT_ACTIONS = [
+  'CREATE',
+  'UPDATE',
+  'DELETE',
+  'REVOKE',
+  'LOGIN_FAILED',
+  'PASSWORD_RESET_THROTTLED',
+] as const;
 
 /**
  * Filtros y paginacion de GET /audit-events. Estilo page/pageSize 1-based; el

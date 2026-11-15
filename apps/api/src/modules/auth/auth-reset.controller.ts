@@ -29,7 +29,7 @@ export class AuthResetController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary:
-      'Solicita el reestablecimiento de contrasena. Responde 204 exista o no el usuario (no revela existencia).',
+      'Solicita el reestablecimiento de contrasena. Responde 204 exista o no el usuario y también al superar el límite (3 por hora por identificador); no revela existencia.',
   })
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({ status: 204, description: 'Solicitud recibida (respuesta identica exista o no el usuario).' })

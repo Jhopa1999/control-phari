@@ -64,7 +64,11 @@ Asignación de un usuario a un rol dentro de un proceso (corazón del alcance). 
 - Relaciones: `User`, `Role`, `Process` (todas `onDelete: Restrict`).
 
 ### AuditEvent (`audit_events`)
-Registro append-only de cada mutación (inmutable, sin `updatedAt`).
+Registro append-only de cada mutación (inmutable, sin `updatedAt`). Además de los verbos
+de mutación (`CREATE`, `UPDATE`, `DELETE`, `REVOKE`) registra eventos de seguridad del
+acceso: `LOGIN_FAILED` (fallo de inicio de sesión) y `PASSWORD_RESET_THROTTLED`
+(solicitud de recuperación bloqueada por el límite). Con identificador inexistente,
+`objectId` es `identificador:<huella>` (no es un UUID de usuario).
 - Campos clave: `actorUserId?`, `action`, `objectType`, `objectId`, `scopeProcessId?`,
   `before?` (JSON), `after?` (JSON), `createdAt`.
 - Restricciones/índices: por `(objectType, objectId)`, `actorUserId`, `scopeProcessId`,
@@ -556,7 +560,8 @@ metadato (mismo patrón que `TaskEvidence`).
 Varios atributos se almacenan como **código de maestra** (`CatalogItem`) y se validan en
 el service, por ejemplo: `ACTIVITY_CLASS` (incluye `REUNION` y `RECURRENTE`, sembradas por
 migración), `WORKLOG_PARAM` (`CLOSED_PROJECT_GRACE_DAYS` y `WORKDAY_HOURS`, jornada diaria
-en horas; 9 por defecto), `ISSUE_TYPE`, `RECORD_STATE`,
+en horas; 9 por defecto), `AUTH_PARAM` (umbrales del límite de intentos de login y de
+recuperación de contraseña), `ISSUE_TYPE`, `RECORD_STATE`,
 `GOVERNANCE_ROUTE`, `RECURRING_ACTIVITY_TYPE` y los tipos/tecnologías/fuentes/frecuencias
 de los activos.
 (Las familias de activos antes consumidas por el triage ya no tienen consumidores
@@ -645,3 +650,7 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     `WORKLOG_PARAM` `WORKDAY_HOURS = 9`; `ON CONFLICT DO NOTHING`, no pisa ediciones de Maestras.)
 50. `20261116160000_commitment_notice_marks` (aditiva: marcas de aviso en `commitments` e
     índice `(due_date, state)`.)
+51. `20261117090000_auth_param_catalog_seed` (datos: maestra `AUTH_PARAM` con los umbrales del
+    límite de intentos: `LOGIN_MAX_ATTEMPTS = 5`, `LOGIN_WINDOW_MINUTES = 15`, `LOGIN_MAX_PER_IP = 30`,
+    `FORGOT_MAX_ATTEMPTS = 3`, `FORGOT_WINDOW_MINUTES = 60`; `ON CONFLICT DO NOTHING`, no pisa ediciones
+    de Maestras.)

@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
 import { AuthLoginService } from './auth-login.service';
+import { AuthThrottleService } from './auth-throttle.service';
 import { AuthResetService } from './auth-reset.service';
 import { AuthTokenPurpose } from './auth-token-purpose';
 import { AuthTokenService } from './auth-token.service';
@@ -18,7 +19,10 @@ function createMocks() {
     findFirst: jest.fn(),
     update: jest.fn(),
   };
-  const prismaObj: Record<string, unknown> = { user };
+  const prismaObj: Record<string, unknown> = {
+    user,
+    catalogItem: { findMany: jest.fn().mockResolvedValue([]) },
+  };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
     cb(prismaObj),
   );
@@ -58,6 +62,7 @@ function createMocks() {
     consume,
     authLoginService,
     issueSessionForUser,
+    throttle: new AuthThrottleService(prisma),
   };
 }
 
@@ -84,6 +89,7 @@ describe('AuthResetService', () => {
       mocks.mail,
       mocks.authTokenService,
       mocks.authLoginService,
+      mocks.throttle,
     );
     process.env.APP_WEB_URL = 'http://localhost:3000';
     delete process.env.PASSWORD_RESET_TTL;
@@ -95,6 +101,44 @@ describe('AuthResetService', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  describe('forgotPassword: límite de solicitudes (D1)', () => {
+    it('la 4.ª solicitud en una hora no envía correo, responde igual y audita una sola vez', async () => {
+      mocks.user.findFirst.mockResolvedValue(makeUser());
+      mocks.issue.mockResolvedValue({
+        authToken: { id: 't1', userId: 'u1' },
+        token: 'plain-token',
+      });
+      for (let i = 0; i < 3; i += 1) {
+        await service.forgotPassword({ identifier: 'persona@demo.local' });
+      }
+      expect(mocks.sendPasswordReset).toHaveBeenCalledTimes(3);
+      mocks.auditRecord.mockClear();
+      await expect(
+        service.forgotPassword({ identifier: 'Persona@demo.local' }),
+      ).resolves.toBeUndefined();
+      await expect(
+        service.forgotPassword({ identifier: 'persona@demo.local' }),
+      ).resolves.toBeUndefined();
+      expect(mocks.sendPasswordReset).toHaveBeenCalledTimes(3);
+      expect(mocks.issue).toHaveBeenCalledTimes(3);
+      expect(mocks.auditRecord).toHaveBeenCalledTimes(1);
+      expect(mocks.auditRecord.mock.calls[0][1]).toMatchObject({
+        action: 'PASSWORD_RESET_THROTTLED',
+        actorUserId: null,
+      });
+    });
+
+    it('cuenta también los identificadores inexistentes (respuesta uniforme)', async () => {
+      mocks.user.findFirst.mockResolvedValue(null);
+      for (let i = 0; i < 5; i += 1) {
+        await expect(
+          service.forgotPassword({ identifier: 'nadie@demo.local' }),
+        ).resolves.toBeUndefined();
+      }
+      expect(mocks.auditRecord).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('forgotPassword', () => {

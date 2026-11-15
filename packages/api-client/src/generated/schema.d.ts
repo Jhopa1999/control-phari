@@ -115,7 +115,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Solicita el reestablecimiento de contrasena. Responde 204 exista o no el usuario (no revela existencia). */
+        /** Solicita el reestablecimiento de contrasena. Responde 204 exista o no el usuario y también al superar el límite (3 por hora por identificador); no revela existencia. */
         post: operations["AuthResetController_forgotPassword"];
         delete?: never;
         options?: never;
@@ -2289,7 +2289,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Panorama de demanda en alcance (3 roles). */
+        /** Panorama de demanda en alcance, con corte a hoy (3 roles). El periodo no filtra: los conteos son del alcance completo; las series por periodo están en indicators. */
         get: operations["AreaControlController_demandSummary"];
         put?: never;
         post?: never;
@@ -8067,6 +8067,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Demasiados intentos fallidos (por defecto 5 en 15 minutos por identificador y 30 por IP; gestionable en la maestra AUTH_PARAM). La cabecera Retry-After indica los segundos de espera. */
+            429: {
+                headers: {
+                    /** @description Segundos hasta poder reintentar. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     AuthLoginController_logout: {
@@ -8172,7 +8181,7 @@ export interface operations {
                 /** @description Filtra por tipo de objeto. */
                 objectType?: "PROCESS" | "AREA" | "REQUESTER" | "PROJECT_CLOSURE" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD" | "RECURRING_ACTIVITY" | "RECURRING_ACTIVITY_OCCURRENCE";
                 /** @description Filtra por verbo de la mutacion. */
-                action?: "CREATE" | "UPDATE" | "DELETE" | "REVOKE";
+                action?: "CREATE" | "UPDATE" | "DELETE" | "REVOKE" | "LOGIN_FAILED" | "PASSWORD_RESET_THROTTLED";
                 /** @description Pagina (1-based). Por defecto 1. */
                 page?: number;
                 /** @description Tamano de pagina (acotado a 100). Por defecto 25. */
@@ -15013,9 +15022,9 @@ export interface operations {
     AreaControlController_demandSummary: {
         parameters: {
             query?: {
-                /** @description Inicio del periodo (inclusivo), YYYY-MM-DD. */
+                /** @description Sin efecto en los conteos; solo se valida el rango (compatibilidad). */
                 from?: string;
-                /** @description Fin del periodo (exclusivo), YYYY-MM-DD. */
+                /** @description Sin efecto en los conteos; solo se valida el rango (compatibilidad). */
                 to?: string;
             };
             header?: never;

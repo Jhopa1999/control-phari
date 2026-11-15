@@ -104,6 +104,9 @@ export function configureApp(app: INestApplication): void {
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
       allowedHeaders: CORS_ALLOWED_HEADERS,
+      // El 429 del login informa la espera en Retry-After; sin exponerla, la web
+      // (otro origen en desarrollo) no puede leerla.
+      exposedHeaders: ['Retry-After'],
     });
   }
 }

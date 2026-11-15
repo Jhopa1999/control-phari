@@ -15,7 +15,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { useActor } from '@/lib/actor-context';
 import { ApiError, login as loginRequest } from '@/lib/auth';
-import { postLoginPath } from '@/lib/safe-redirect';
+import { resolvePostLoginHref } from '@/lib/post-login';
+import { countdownLabel, waitLabel } from '@/lib/wait-label';
 interface FieldErrors {
   identifier?: string;
   password?: string;
@@ -42,8 +43,33 @@ export function LoginForm(): React.ReactElement {
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const [formError, setFormError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  // Bloqueo por demasiados intentos (429): texto de espera fijo y, si la API
+  // informó Retry-After, instante en que termina para la cuenta regresiva.
+  const [lock, setLock] = React.useState<{ text: string; until: number | null } | null>(null);
+  const [remaining, setRemaining] = React.useState(0);
+  const [unlockedNotice, setUnlockedNotice] = React.useState(false);
   const identifierRef = React.useRef<HTMLInputElement>(null);
   const passwordRef = React.useRef<HTMLInputElement>(null);
+  const lockUntil = lock?.until ?? null;
+  React.useEffect(() => {
+    if (lockUntil === null) return;
+    const tick = (): void => {
+      const left = Math.ceil((lockUntil - Date.now()) / 1000);
+      if (left <= 0) {
+        setRemaining(0);
+        setLock(null);
+        setUnlockedNotice(true);
+      } else {
+        setRemaining(left);
+      }
+    };
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [lockUntil]);
+
+  const countingDown = lock !== null && lock.until !== null && remaining > 0;
+
   function validate(): FieldErrors {
     const errors: FieldErrors = {};
     if (identifier.trim().length === 0) {
@@ -58,7 +84,10 @@ export function LoginForm(): React.ReactElement {
     event: React.FormEvent<HTMLFormElement>,
   ): Promise<void> {
     event.preventDefault();
+    if (countingDown) return;
     setFormError(null);
+    setLock(null);
+    setUnlockedNotice(false);
     const errors = validate();
     setFieldErrors(errors);
     if (errors.identifier || errors.password) {
@@ -75,10 +104,21 @@ export function LoginForm(): React.ReactElement {
       // La API ya dejó la sesión en la cookie HttpOnly; el accessToken del cuerpo se descarta.
       login(result.user);
       // Vuelve a la ruta de origen (`next`) si es interna y segura; si no, /inicio.
-      router.replace(postLoginPath(searchParams));
+      // Con `next` válido va ahí; si no, a la pantalla de inicio que corresponde al rol.
+      router.replace(await resolvePostLoginHref(searchParams));
     } catch (err) {
-      // 401 -> mensaje generico, sin filtrar si el usuario existe.
-      if (err instanceof ApiError && err.status === 401) {
+      if (err instanceof ApiError && err.status === 429) {
+        // Un solo aviso a la vez: el 429 sustituye al de credenciales.
+        setFormError(null);
+        setLock({
+          text: waitLabel(err.retryAfterSeconds),
+          until:
+            err.retryAfterSeconds !== undefined
+              ? Date.now() + err.retryAfterSeconds * 1000
+              : null,
+        });
+      } else if (err instanceof ApiError && err.status === 401) {
+        // 401 -> mensaje generico, sin filtrar si el usuario existe.
         setFormError('Usuario o contraseña incorrectos.');
       } else if (err instanceof ApiError) {
         setFormError(err.message);
@@ -154,8 +194,47 @@ export function LoginForm(): React.ReactElement {
             </Link>
           </div>
           <FormError id={FORM_ID} message={formError} />
-          <Button type="submit" size="lg" loading={submitting} className="w-full">
-            {submitting ? 'Ingresando…' : 'Ingresar'}
+          {lock ? (
+            <InlineNotice
+              tone="warning"
+              role="alert"
+              id={`${FORM_ID}-error`}
+              title="Demasiados intentos fallidos."
+            >
+              <p>
+                Por seguridad, el acceso está bloqueado un momento. Inténtalo de nuevo en{' '}
+                {lock.text}.
+              </p>
+              <p className="mt-1">
+                ¿No recuerdas tu contraseña?{' '}
+                <Link
+                  href="/olvide-contrasena"
+                  className="text-link underline underline-offset-4 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+                >
+                  Recupérala aquí
+                </Link>
+              </p>
+            </InlineNotice>
+          ) : null}
+          <p role="status" className="sr-only">
+            {unlockedNotice ? 'Ya puedes intentar iniciar sesión de nuevo.' : ''}
+          </p>
+          <Button
+            type="submit"
+            size="lg"
+            loading={submitting}
+            disabled={countingDown}
+            className="w-full"
+          >
+            {submitting ? (
+              'Ingresando…'
+            ) : countingDown ? (
+              <>
+                Reintenta en <span className="tabular-nums">{countdownLabel(remaining)}</span>
+              </>
+            ) : (
+              'Ingresar'
+            )}
           </Button>
         </form>
       </CardContent>

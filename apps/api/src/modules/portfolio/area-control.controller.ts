@@ -43,9 +43,12 @@ export class AreaControlController {
 
   @Get('demand-summary')
   @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE)
-  @ApiOperation({ summary: 'Panorama de demanda en alcance (3 roles).' })
-  @ApiQuery({ name: 'from', required: false, example: '2025-03-01' })
-  @ApiQuery({ name: 'to', required: false, example: '2025-04-01' })
+  @ApiOperation({
+    summary:
+      'Panorama de demanda en alcance, con corte a hoy (3 roles). El periodo no filtra: los conteos son del alcance completo; las series por periodo están en indicators.',
+  })
+  @ApiQuery({ name: 'from', required: false, example: '2025-03-01', description: 'Sin efecto en los conteos; solo se valida el rango (compatibilidad).' })
+  @ApiQuery({ name: 'to', required: false, example: '2025-04-01', description: 'Sin efecto en los conteos; solo se valida el rango (compatibilidad).' })
   @ApiResponse({ status: 200, description: 'Panorama de demanda.', type: DemandSummaryResponseDto })
   @ApiResponse({ status: 400, description: 'Rango de fechas invalido.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })

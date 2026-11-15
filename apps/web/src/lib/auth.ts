@@ -1,5 +1,5 @@
 import { api, type LoginResponse } from './api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, parseRetryAfter, toApiError } from './api-error';
 export { ApiError };
 export type { LoginResponse };
 /**
@@ -42,7 +42,12 @@ export async function login(
       body: credentials,
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw toApiError(
+        response.status,
+        response.status === 429
+          ? parseRetryAfter(response.headers.get('Retry-After'))
+          : undefined,
+      );
     }
     return data;
   } catch (err) {

@@ -12,6 +12,7 @@ import { MeController } from './me.controller';
 import { DevActorsController } from './dev-actors.controller';
 import { AuthLoginController } from './auth-login.controller';
 import { AuthLoginService } from './auth-login.service';
+import { AuthThrottleService } from './auth-throttle.service';
 import { AuthResetController } from './auth-reset.controller';
 import { AuthResetService } from './auth-reset.service';
 import { AuthTokenService } from './auth-token.service';
@@ -66,6 +67,7 @@ function resolveJwtSecret(): string | undefined {
     DevActorResolver,
     JwtActorResolver,
     AuthLoginService,
+    AuthThrottleService,
     AuthTokenService,
     AuthResetService,
     SessionCookieService,

@@ -364,6 +364,18 @@ export function getAppHomeHref(app: NavApp, allowed: ReadonlySet<string>): strin
   return first?.href ?? app.homeHref;
 }
 
+/**
+ * Destino por defecto tras iniciar sesión según los módulos permitidos: el
+ * Panel del área si el rol lo tiene; si no, la primera pantalla visible del
+ * menú (así el administrador no aterriza en un Panel sin acceso). Sin ningún
+ * módulo, el selector de aplicaciones.
+ */
+export function getDefaultHomeHref(allowed: ReadonlySet<string>): string {
+  if (allowed.has('dashboard')) return '/inicio';
+  const first = getVisibleNavGroups(allowed)[0]?.items[0];
+  return first?.href ?? '/aplicaciones';
+}
+
 /** App dueña de la ruta (por el ítem activo de sus grupos); null si es transversal u otra. */
 export function findAppForPath(
   pathname: string,

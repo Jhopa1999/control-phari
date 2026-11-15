@@ -5,7 +5,8 @@ import { LoaderCircle } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { BrandMark } from '@/components/brand';
 import { useActor } from '@/lib/actor-context';
-import { postLoginPath } from '@/lib/safe-redirect';
+import { getDefaultHomeHref } from '@/lib/navigation';
+import { safeInternalPath } from '@/lib/safe-redirect';
 /** Ruta publica de login. */
 const LOGIN_ROUTE = '/login';
 /**
@@ -75,6 +76,7 @@ export function RouteGuard({
     sessionExpired,
     signedOut,
     state,
+    allowedModules,
   } = useActor();
   const isLoginRoute = pathname === LOGIN_ROUTE;
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
@@ -84,8 +86,9 @@ export function RouteGuard({
     if (isLoginRoute) {
       // Sesion guardada y aceptada por el backend: fuera de /login.
       if (isAuthenticated && state === 'success') {
+        const search = new URLSearchParams(window.location.search);
         router.replace(
-          postLoginPath(new URLSearchParams(window.location.search)),
+          safeInternalPath(search.get('next')) ?? getDefaultHomeHref(allowedModules),
         );
       }
       return;
@@ -114,6 +117,7 @@ export function RouteGuard({
     isPublicRoute,
     isAuthenticated,
     state,
+    allowedModules,
     pathname,
     signedOut,
     sessionExpired,

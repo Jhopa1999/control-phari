@@ -1,8 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { createHash } from 'node:crypto';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../mail/mail.service';
 import { AuthLoginService } from './auth-login.service';
+import { AuthThrottleService, normalizeIdentifier } from './auth-throttle.service';
 import { AuthTokenPurpose } from './auth-token-purpose';
 import { AuthTokenService } from './auth-token.service';
 import { parseTtlMs } from './auth-token.util';
@@ -36,12 +38,15 @@ const RESET_ALLOWED_PURPOSES: readonly AuthTokenPurpose[] = [
  */
 @Injectable()
 export class AuthResetService {
+  private readonly logger = new Logger(AuthResetService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly mail: MailService,
     private readonly authTokenService: AuthTokenService,
     private readonly authLoginService: AuthLoginService,
+    private readonly throttle: AuthThrottleService,
   ) {}
 
   /** Vigencia configurada del token de reset, en milisegundos. */
@@ -64,6 +69,14 @@ export class AuthResetService {
    * void para no revelar la existencia del usuario (el controller responde 204).
    */
   async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
+    // Límite D1: superado, se responde igual (204) sin emitir token ni correo.
+    const gate = await this.throttle.registerForgotRequest(dto.identifier);
+    if (!gate.allowed) {
+      if (gate.firstExcess) {
+        await this.auditThrottled(dto.identifier);
+      }
+      return;
+    }
     const user = await this.prisma.user.findFirst({
       where: { identifier: dto.identifier },
     });
@@ -100,6 +113,29 @@ export class AuthResetService {
       resetUrl: this.buildUrl('restablecer-contrasena', token),
       expiresLabel: this.labelFromMs(this.passwordResetTtlMs()),
     });
+  }
+
+  /** Audita (una vez por ventana) que se superó el límite de solicitudes de reset. */
+  private async auditThrottled(identifier: string): Promise<void> {
+    try {
+      const fingerprint = createHash('sha256')
+        .update(normalizeIdentifier(identifier))
+        .digest('hex')
+        .slice(0, 12);
+      await this.prisma.$transaction((tx) =>
+        this.audit.record(tx, {
+          actorUserId: null,
+          action: 'PASSWORD_RESET_THROTTLED',
+          objectType: 'USER',
+          objectId: `identificador:${fingerprint}`,
+          scopeProcessId: null,
+          before: null,
+          after: null,
+        }),
+      );
+    } catch (err) {
+      this.logger.warn(`No se pudo auditar el límite de reset: ${String(err)}`);
+    }
   }
 
   /**
