@@ -259,7 +259,7 @@ export function CatalogsView(): React.ReactElement {
             ) : undefined
           }
         >
-          Administrar las maestras corresponde al administrador del sistema. Puedes consultarlas.
+          Administrar las maestras corresponde al jefe de área. Puedes consultarlas.
         </InlineNotice>
       ) : null}
 

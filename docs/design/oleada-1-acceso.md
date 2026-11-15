@@ -102,7 +102,7 @@ Quien no administra no ve acciones que le darán 403 y entiende por qué.
 2. Un solo aviso bajo el `PageHeader`, sobre el contenido:
    `InlineNotice tone="neutral" role="note"`
    - Título: **Solo lectura.**
-   - Cuerpo (`text-muted-foreground`): **Administrar las maestras corresponde al administrador del sistema. Puedes consultarlas.**
+   - Cuerpo (`text-muted-foreground`): **Administrar las maestras corresponde al jefe de área. Puedes consultarlas.**
    - Acción: «Ir a Mis permisos» (solo si `allowedModules.has('permissions')`), igual que Equipo y Áreas.
 3. Si la columna de acciones queda vacía, se elimina la columna (cabecera incluida) en lugar de dejar una celda vacía; en la lista móvil de tarjetas no se reserva el espacio de acciones.
 4. Los botones de acción (cuando sí hay permiso) y la tabla no cambian.
