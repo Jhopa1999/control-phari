@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthLoginService } from './auth-login.service';
+import { TooManyAttemptsException } from './too-many-attempts.exception';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import {
@@ -58,14 +59,29 @@ export class AuthLoginController {
     headers: { 'Set-Cookie': { description: SET_COOKIE_DESCRIPTION, schema: { type: 'string' } } },
   })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas.' })
+  @ApiResponse({
+    status: 429,
+    description:
+      'Demasiados intentos fallidos (por defecto 5 en 15 minutos por identificador y 30 por IP; gestionable en la maestra AUTH_PARAM). La cabecera Retry-After indica los segundos de espera.',
+    headers: {
+      'Retry-After': { description: 'Segundos hasta poder reintentar.', schema: { type: 'integer' } },
+    },
+  })
   async login(
     @Body() dto: LoginRequestDto,
     @Req() req: CookieRequest,
     @Res({ passthrough: true }) res: CookieResponse,
   ): Promise<LoginResponseDto> {
-    const session = await this.authLoginService.login(dto);
-    this.sessionCookie.issue(req, res, session.accessToken);
-    return session;
+    try {
+      const session = await this.authLoginService.login(dto, req.ip);
+      this.sessionCookie.issue(req, res, session.accessToken);
+      return session;
+    } catch (err) {
+      if (err instanceof TooManyAttemptsException) {
+        res.setHeader('Retry-After', String(err.retryAfterSeconds));
+      }
+      throw err;
+    }
   }
 
   @Post('logout')

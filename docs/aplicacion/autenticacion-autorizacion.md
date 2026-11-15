@@ -18,6 +18,36 @@ dev-actor.resolver.ts`):
   `POST /auth/login` (identifier + contraseña, verificada contra `User.passwordHash`
   con bcrypt). El token viaja en el header `Authorization: Bearer <token>`.
 
+### Límite de intentos y auditoría de fallos (decisión D1)
+
+- **Login:** con 5 fallos en 15 minutos para un mismo identificador, o 30 desde una
+  misma IP, `POST /auth/login` responde `429` («Demasiados intentos fallidos.
+  Inténtalo de nuevo en N minutos.») con `Retry-After` en segundos, **antes** de
+  comprobar la contraseña: no revela si el usuario existe ni si la contraseña era
+  correcta. Un login correcto borra los fallos del identificador.
+- **Recuperar contraseña:** 3 solicitudes por hora por identificador (ver abajo).
+- **Gestionable desde Maestras:** maestra `AUTH_PARAM` (`LOGIN_MAX_ATTEMPTS`,
+  `LOGIN_WINDOW_MINUTES`, `LOGIN_MAX_PER_IP`, `FORGOT_MAX_ATTEMPTS`,
+  `FORGOT_WINDOW_MINUTES`; valor en la etiqueta), sembrada por la migración
+  `20261117090000_auth_param_catalog_seed`. Valores ausentes o inválidos usan los de
+  D1, definidos en el código.
+- **Auditoría:** cada fallo de login deja un `AuditEvent` `LOGIN_FAILED` sobre `USER`
+  con `after = { reason, ip, blocked }` (`reason`: `USUARIO_INEXISTENTE`,
+  `USUARIO_INACTIVO`, `SIN_CONTRASENA` o `CONTRASENA_INCORRECTA`). Con usuario
+  conocido, `actorUserId` y `objectId` son el usuario; con identificador inexistente,
+  `objectId = identificador:<huella>` y nunca el texto escrito.
+- **Contadores en memoria** de la única instancia `api` de `compose.prod.yaml`: se
+  reinician con la API y no se comparten entre réplicas (ver `modulos-backend.md`).
+- La web expone `Retry-After` por CORS (`exposedHeaders`) y muestra el aviso
+  «Demasiados intentos fallidos.» con cuenta regresiva en el botón.
+
+### Destino tras iniciar sesión
+
+Sin un `next` seguro en la URL, el login y el autologin de reset o activación llevan a
+la pantalla de inicio que corresponde al rol (`getDefaultHomeHref` en
+`apps/web/src/lib/navigation.ts`): el Panel del área si el rol tiene `dashboard` y, si
+no (por ejemplo, el administrador), la primera pantalla visible de su menú.
+
 El `CurrentUserGuard` es el único punto que conoce el request HTTP: según el modo lee
 `Authorization` (jwt) o `X-Actor-Id` (resto) y pasa el valor crudo al *resolver*. La
 carga del actor y sus grants (`load-actor.ts`) es **común a ambos modos**, de modo que
@@ -95,7 +125,9 @@ claro viaja solo en el correo y en BD se guarda únicamente su SHA-256
 - `POST /auth/forgot-password` (`204`): solicita el reestablecimiento. Responde **igual
   exista o no el usuario** (no revela existencia, mismo criterio que el login). Si el
   usuario existe y está activo, emite un token `PASSWORD_RESET` y envía el correo con el
-  enlace `APP_WEB_URL/restablecer-contrasena?token=...`.
+  enlace `APP_WEB_URL/restablecer-contrasena?token=...`. Admite 3 solicitudes por hora
+  por identificador; las siguientes no emiten token ni correo, siguen respondiendo `204`
+  y dejan un evento `PASSWORD_RESET_THROTTLED` (uno por ventana).
 - `POST /auth/reset-password` (`200`): define una nueva contraseña consumiendo un token.
   Acepta tokens `PASSWORD_RESET` **y** `USER_INVITATION`, por lo que también completa la
   activación de cuenta invitada. En caso de éxito devuelve la **misma sesión que el login**
@@ -283,6 +315,13 @@ superior).
 se muestra si alguno de sus roles lo permite. `GET /me/permissions` devuelve rol,
 alcance y módulos permitidos; el frontend usa `allowedModules` para esconder ítems del
 menú, pero el servidor sigue validando cada operación.
+
+Uso directo de la matriz en la API: `POST /catalog-items` y `PATCH /catalog-items/:id`
+declaran `@Roles(...MODULE_MATRIX.admin)`, de modo que la escritura de Maestras sigue a
+la fila `admin` (hoy solo `JEFE_AREA`; integrante, líder y administrador reciben `403`).
+La lectura (`GET`) queda abierta a cualquier actor porque los formularios usan las
+maestras. La web lo refleja: sin el módulo `admin`, `/catalogs` se muestra en solo
+lectura.
 
 ## Resumen de cómo se decide el acceso
 

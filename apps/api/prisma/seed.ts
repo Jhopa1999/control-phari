@@ -466,6 +466,25 @@ async function main(): Promise<void> {
       },
     });
   }
+  // Parametros del limite de intentos de login y «olvide mi contrasena» (D1). El
+  // valor es la etiqueta. Tambien los siembra la migracion
+  // 20261117090000_auth_param_catalog_seed (seed.ts no corre en produccion). Solo
+  // se crean si no existen: no pisan lo que se cambie desde Maestras.
+  const authParams = [
+    { code: 'LOGIN_MAX_ATTEMPTS', label: '5', description: 'Intentos fallidos de inicio de sesión permitidos por identificador dentro de la ventana; al superarlos responde 429.' },
+    { code: 'LOGIN_WINDOW_MINUTES', label: '15', description: 'Ventana, en minutos, del límite de intentos de inicio de sesión.' },
+    { code: 'LOGIN_MAX_PER_IP', label: '30', description: 'Intentos fallidos de inicio de sesión permitidos por IP dentro de la ventana.' },
+    { code: 'FORGOT_MAX_ATTEMPTS', label: '3', description: 'Solicitudes de «olvidé mi contraseña» permitidas por identificador dentro de la ventana; las demás se ignoran sin avisar.' },
+    { code: 'FORGOT_WINDOW_MINUTES', label: '60', description: 'Ventana, en minutos, del límite de «olvidé mi contraseña».' },
+  ];
+  for (const [index, param] of authParams.entries()) {
+    const where = { catalog: 'AUTH_PARAM', code: param.code };
+    if (!(await prisma.catalogItem.findFirst({ where }))) {
+      await prisma.catalogItem.create({
+        data: { ...where, label: param.label, description: param.description, sortOrder: index + 1 },
+      });
+    }
+  }
   // Grants (upsert por la combinacion unica userId+roleId+processId).
   // Se resuelven los ids a partir de las claves naturales ya sembradas.
   const [roleByCode, processByCode, userByIdentifier] = await Promise.all([

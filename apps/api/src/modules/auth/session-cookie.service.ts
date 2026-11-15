@@ -9,6 +9,8 @@ import {
 /** Parte de la peticion Express que necesita el servicio. */
 export interface CookieRequest {
   secure?: boolean;
+  /** IP del cliente (Express, con `trust proxy` detrás de nginx). */
+  ip?: string;
 }
 
 /** Parte de la respuesta Express que necesita el servicio. */

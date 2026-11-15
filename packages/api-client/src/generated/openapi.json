@@ -143,6 +143,17 @@
           },
           "401": {
             "description": "Credenciales inválidas."
+          },
+          "429": {
+            "description": "Demasiados intentos fallidos (por defecto 5 en 15 minutos por identificador y 30 por IP; gestionable en la maestra AUTH_PARAM). La cabecera Retry-After indica los segundos de espera.",
+            "headers": {
+              "Retry-After": {
+                "description": "Segundos hasta poder reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
           }
         },
         "summary": "Autentica por identifier y contraseña, devuelve un JWT y emite la cookie de sesión HttpOnly.",
@@ -201,7 +212,7 @@
             "description": "Datos de entrada invalidos."
           }
         },
-        "summary": "Solicita el reestablecimiento de contrasena. Responde 204 exista o no el usuario (no revela existencia).",
+        "summary": "Solicita el reestablecimiento de contrasena. Responde 204 exista o no el usuario y también al superar el límite (3 por hora por identificador); no revela existencia.",
         "tags": [
           "auth"
         ]
@@ -309,7 +320,9 @@
                 "CREATE",
                 "UPDATE",
                 "DELETE",
-                "REVOKE"
+                "REVOKE",
+                "LOGIN_FAILED",
+                "PASSWORD_RESET_THROTTLED"
               ],
               "type": "string"
             }
@@ -8214,7 +8227,7 @@
             "name": "from",
             "required": false,
             "in": "query",
-            "description": "Inicio del periodo (inclusivo), YYYY-MM-DD.",
+            "description": "Sin efecto en los conteos; solo se valida el rango (compatibilidad).",
             "schema": {
               "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
               "example": "2025-03-01",
@@ -8225,7 +8238,7 @@
             "name": "to",
             "required": false,
             "in": "query",
-            "description": "Fin del periodo (exclusivo), YYYY-MM-DD.",
+            "description": "Sin efecto en los conteos; solo se valida el rango (compatibilidad).",
             "schema": {
               "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
               "example": "2025-04-01",
@@ -8251,7 +8264,7 @@
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Panorama de demanda en alcance (3 roles).",
+        "summary": "Panorama de demanda en alcance, con corte a hoy (3 roles). El periodo no filtra: los conteos son del alcance completo; las series por periodo están en indicators.",
         "tags": [
           "area-control"
         ]

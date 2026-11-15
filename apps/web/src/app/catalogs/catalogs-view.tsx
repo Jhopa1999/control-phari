@@ -9,12 +9,14 @@ import {
   SortableTableHead,
 } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
+import Link from 'next/link';
+import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { StatusBadge } from '@/components/status-badge';
 import { Toolbar } from '@/components/toolbar';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -40,6 +42,7 @@ import {
   updateCatalogItem,
   type CatalogFilters,
 } from '@/lib/catalog';
+import { useActor } from '@/lib/actor-context';
 import { formatDateTime } from '@/lib/format';
 import { compareNumber, compareText, type Comparator } from '@/lib/table-sort';
 import { useClientTable } from '@/lib/use-client-table';
@@ -73,6 +76,13 @@ function isActiveFilter(value: string): value is ActiveFilter {
  * «Aplicar» (o Enter); orden y paginación en cliente sobre lo recibido.
  */
 export function CatalogsView(): React.ReactElement {
+  // La escritura es del módulo «admin» de la matriz (solo el jefe de área); la
+  // lectura sigue abierta porque los formularios usan las maestras. Mientras
+  // los permisos cargan no se decide nada: ni botones ni aviso.
+  const { allowedModules, state: permissionsState } = useActor();
+  const permissionsLoaded = permissionsState === 'success';
+  const canWrite = permissionsLoaded && allowedModules.has('admin');
+  const readOnly = permissionsLoaded && !allowedModules.has('admin');
   const [items, setItems] = React.useState<CatalogItem[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -195,6 +205,7 @@ export function CatalogsView(): React.ReactElement {
   }
 
   function rowActions(item: CatalogItem): RowAction[] {
+    if (!canWrite) return [];
     const toggleLabel = item.active ? 'Desactivar' : 'Activar';
     return [
       { key: 'edit', label: 'Editar', onSelect: () => openEdit(item), placement: 'inline' },
@@ -217,12 +228,12 @@ export function CatalogsView(): React.ReactElement {
   else if (table.total === 0) viewState = 'empty';
   else viewState = 'ready';
 
-  const newButton = (
+  const newButton = canWrite ? (
     <Button type="button" onClick={openCreate}>
       <Plus aria-hidden="true" />
       Nuevo elemento
     </Button>
-  );
+  ) : undefined;
 
   return (
     <PageLayout>
@@ -231,6 +242,26 @@ export function CatalogsView(): React.ReactElement {
         description="Valores reutilizables que usan los formularios del portal."
         actions={newButton}
       />
+
+      {readOnly ? (
+        <InlineNotice
+          tone="neutral"
+          role="note"
+          title="Solo lectura."
+          action={
+            allowedModules.has('permissions') ? (
+              <Link
+                href="/gobierno/mis-permisos"
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                Ir a Mis permisos
+              </Link>
+            ) : undefined
+          }
+        >
+          Administrar las maestras corresponde al administrador del sistema. Puedes consultarlas.
+        </InlineNotice>
+      ) : null}
 
       <form onSubmit={handleApplyFilters}>
         <Toolbar
@@ -291,7 +322,9 @@ export function CatalogsView(): React.ReactElement {
         empty={{
           icon: ListTree,
           title: 'No hay elementos todavía.',
-          description: 'Crea el primer valor de una maestra o ajusta los filtros.',
+          description: canWrite
+            ? 'Crea el primer valor de una maestra o ajusta los filtros.'
+            : 'Ajusta los filtros para ver otros valores.',
           action: newButton,
         }}
       >
@@ -325,7 +358,7 @@ export function CatalogsView(): React.ReactElement {
                 align="right"
               />
               <TableHead>Actualizado</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+              {readOnly ? null : <TableHead className="text-right">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -341,9 +374,11 @@ export function CatalogsView(): React.ReactElement {
                 <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
                   {formatDateTime(item.updatedAt)}
                 </TableCell>
-                <RowActionsCell>
-                  <RowActions rowLabel={item.label} actions={rowActions(item)} />
-                </RowActionsCell>
+                {readOnly ? null : (
+                  <RowActionsCell>
+                    <RowActions rowLabel={item.label} actions={rowActions(item)} />
+                  </RowActionsCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

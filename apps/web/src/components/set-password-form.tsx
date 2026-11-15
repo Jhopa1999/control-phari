@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { useActor } from '@/lib/actor-context';
 import { getAuthMode } from '@/lib/auth-mode';
 import { ApiError, setPasswordWithToken } from '@/lib/password-reset';
-import { postLoginPath } from '@/lib/safe-redirect';
+import { resolvePostLoginHref } from '@/lib/post-login';
 
 /**
  * Longitud minima de contrasena validada en el cliente. Coincide con el minimo
@@ -111,7 +111,7 @@ export function SetPasswordForm({ copy }: { copy: SetPasswordCopy }): React.Reac
         // solo se registra el usuario y se cargan permisos (accessToken descartado).
         login(result.user);
         // `replace` para que el back no vuelva a la pantalla del token consumido.
-        router.replace(postLoginPath(searchParams));
+        router.replace(await resolvePostLoginHref(searchParams));
       } else {
         // dev-header no requiere login jwt (identidad por X-Actor-Id); se ignora
         // cualquier `next` a proposito y se va directo al modulo de entrada.

@@ -831,6 +831,17 @@
         "docs/aplicacion/modulos-backend.md"
       ],
       "summary": "Hotfix de seguridad: GET /users ya no devuelve passwordHash. Cliente Prisma con omit de credenciales, mapeador explícito de User, interceptor global que elimina y registra campos sensibles, y pruebas de contrato y de MCP. Sin cambios de contrato OpenAPI ni de tools."
+    },
+    {
+      "timestamp": "2026-11-15T09:54:46Z",
+      "trigger_file": "apps/api/src/modules/auth/auth-throttle.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/modelo-datos.md"
+      ],
+      "summary": "Oleada 1 · Acceso: límite de intentos en login (5 en 15 min por identificador, 30 por IP; 429 con Retry-After) y en forgot-password (3 por hora, 204 uniforme), parámetros en la maestra AUTH_PARAM sembrada por migración, auditoría LOGIN_FAILED y PASSWORD_RESET_THROTTLED; escritura de Maestras según el módulo admin de la matriz y pantalla en solo lectura para el resto; destino tras el login según el rol; Panel con estado actual a hoy, sin selector de periodo y con aviso «No tienes acceso a este panel.» ante 403. MCP: descripciones de catalog.create/update, audit.events.list y area-control.demand-summary actualizadas; sin tools nuevas."
     }
   ]
 }

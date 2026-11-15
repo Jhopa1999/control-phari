@@ -27,7 +27,7 @@ import { CurrentActor as CurrentActorType } from '../auth/current-actor';
 import { CurrentUserGuard } from '../auth/current-user.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { RoleCode } from '../auth/role-code';
+import { MODULE_MATRIX } from '../auth/module-matrix';
 
 /**
  * API REST de la maestra generica CatalogItem.
@@ -42,7 +42,7 @@ export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 
   @Post()
-  @Roles(RoleCode.JEFE_AREA)
+  @Roles(...MODULE_MATRIX.admin)
   @ApiOperation({ summary: 'Crea un elemento de catalogo (solo JEFE_AREA).' })
   @ApiBody({ type: CreateCatalogItemDto })
   @ApiResponse({ status: 201, description: 'Elemento creado.', type: CatalogItemResponseDto })
@@ -77,7 +77,7 @@ export class CatalogController {
   }
 
   @Patch(':id')
-  @Roles(RoleCode.JEFE_AREA)
+  @Roles(...MODULE_MATRIX.admin)
   @ApiOperation({ summary: 'Actualiza label, active o sortOrder (solo JEFE_AREA).' })
   @ApiBody({ type: UpdateCatalogItemDto })
   @ApiParam({ name: 'id', format: 'uuid', description: 'Identificador UUID del elemento.' })

@@ -1,3 +1,8 @@
+import { ForbiddenException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { MODULE_MATRIX } from '../auth/module-matrix';
+import { ROLES_KEY } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { CatalogController } from './catalog.controller';
 import { CatalogService } from './catalog.service';
 import { CurrentActor } from '../auth/current-actor';
@@ -16,6 +21,43 @@ function actor(): CurrentActor {
     isAdmin: false,
   };
 }
+
+describe('CatalogController: escritura solo para el módulo «admin» de la matriz', () => {
+  const guard = new RolesGuard(new Reflector());
+  const context = (handler: (...args: never[]) => unknown, roles: RoleCode[]) =>
+    ({
+      getHandler: () => handler,
+      getClass: () => CatalogController,
+      switchToHttp: () => ({
+        getRequest: () => ({
+          actor: { roleCodes: new Set(roles) },
+        }),
+      }),
+    }) as never;
+  const writes = [
+    ['POST', CatalogController.prototype.create],
+    ['PATCH', CatalogController.prototype.update],
+  ] as const;
+
+  it.each(writes)('%s declara exactamente los roles de MODULE_MATRIX.admin', (_name, handler) => {
+    expect(Reflect.getMetadata(ROLES_KEY, handler)).toEqual([...MODULE_MATRIX.admin]);
+  });
+
+  it.each(writes)('%s rechaza con 403 a integrante, líder y administrador', (_name, handler) => {
+    for (const role of [RoleCode.INTEGRANTE, RoleCode.LIDER_PROCESO, RoleCode.ADMIN]) {
+      expect(() => guard.canActivate(context(handler, [role]))).toThrow(ForbiddenException);
+    }
+  });
+
+  it.each(writes)('%s deja pasar al jefe de área', (_name, handler) => {
+    expect(guard.canActivate(context(handler, [RoleCode.JEFE_AREA]))).toBe(true);
+  });
+
+  it('la lectura sigue abierta a cualquier rol (los formularios usan las maestras)', () => {
+    expect(Reflect.getMetadata(ROLES_KEY, CatalogController.prototype.findMany)).toBeUndefined();
+    expect(Reflect.getMetadata(ROLES_KEY, CatalogController.prototype.findOne)).toBeUndefined();
+  });
+});
 
 describe('CatalogController (delegacion)', () => {
   const svc = {

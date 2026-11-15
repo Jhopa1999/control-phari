@@ -27,9 +27,9 @@ por `AUTH_MODE`: `dev-header` (header `X-Actor-Id`) y `jwt` (login real).
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| POST | `/auth/login` | Autentica por `identifier` y contraseña, devuelve un JWT y emite la cookie de sesión `portal_session` (`HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` según `COOKIE_SECURE`, `Cache-Control: no-store`) (ruta pública). |
+| POST | `/auth/login` | Autentica por `identifier` y contraseña, devuelve un JWT y emite la cookie de sesión `portal_session` (`HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` según `COOKIE_SECURE`, `Cache-Control: no-store`) (ruta pública). Límite de intentos (D1): con 5 fallos en 15 minutos por identificador o 30 por IP responde `429` con mensaje en español y cabecera `Retry-After` (segundos), aunque la contraseña sea correcta; cada fallo se audita como `LOGIN_FAILED`. |
 | POST | `/auth/logout` | Cierra la sesión del navegador borrando la cookie; `204`, idempotente; con la cookie presente exige la cabecera `X-Portal-Csrf: 1` (`403` si falta). No revoca Bearer (ruta pública; excluido del MCP). |
-| POST | `/auth/forgot-password` | Solicita el reestablecimiento de contraseña; responde `204` exista o no el usuario (ruta pública). |
+| POST | `/auth/forgot-password` | Solicita el reestablecimiento de contraseña; responde `204` exista o no el usuario (ruta pública). Desde la 4.ª solicitud en una hora por identificador no emite token ni correo, sigue respondiendo `204` y audita una vez por ventana `PASSWORD_RESET_THROTTLED`. |
 | POST | `/auth/reset-password` | Define una nueva contraseña consumiendo un token de reset o de activación y devuelve la sesión del login para entrar directo y emite también la cookie de sesión (`200` con `LoginResponseDto`; `400` token/contraseña inválidos, `410` token caducado/usado). |
 | GET | `/dev/actors` | Lista usuarios activos para el selector de desarrollo (solo con `AUTH_MODE=dev-header`; si no, `404`). |
 | GET | `/me/permissions` | Permisos del usuario actual: rol, alcance y módulos permitidos. |
@@ -49,6 +49,20 @@ en modo `dev-header`. La lógica de carga del actor y sus grants es común a amb
 solo uso (`AuthToken`): el valor en claro solo viaja en el correo y en BD se guarda su
 SHA-256; el envío del correo ocurre fuera de la transacción (ver
 `autenticacion-autorizacion.md`).
+
+Límite de intentos (`auth/auth-throttle.service.ts`, `auth/auth-attempt-window.ts`):
+ventana deslizante **en memoria del proceso** de la API, contada por identificador
+normalizado (minúsculas, sin espacios) y por IP (`req.ip`, con `trust proxy` detrás de
+nginx). Los umbrales se leen de la maestra `AUTH_PARAM` (valor en la etiqueta, caché de
+30 s): `LOGIN_MAX_ATTEMPTS` (5), `LOGIN_WINDOW_MINUTES` (15), `LOGIN_MAX_PER_IP` (30),
+`FORGOT_MAX_ATTEMPTS` (3) y `FORGOT_WINDOW_MINUTES` (60); un valor ausente, inactivo o
+inválido usa el de entre paréntesis. Un login correcto borra los fallos del
+identificador, no los de la IP. Límite conocido: los contadores se pierden al reiniciar
+la API y no se comparten entre réplicas; `compose.prod.yaml` corre un único contenedor
+`api`, así que hoy el conteo es exacto. Si se escala a varias réplicas habrá que mover
+el conteo a la BD. Los fallos de un identificador inexistente se auditan con una
+huella (`identificador:<12 hex de SHA-256>`), nunca con el texto escrito; si la
+auditoría falla, el login responde igual.
 
 ## user — Identidades funcionales
 
@@ -127,10 +141,10 @@ sus flujos. Lectura con actor; escritura solo `JEFE_AREA`.
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| POST | `/catalog-items` | Crea un elemento de catálogo (solo JEFE_AREA). |
+| POST | `/catalog-items` | Crea un elemento de catálogo (solo los roles del módulo `admin` de `MODULE_MATRIX`, hoy JEFE_AREA; integrante, líder y administrador → `403`). |
 | GET | `/catalog-items` | Lista elementos, con filtros opcionales (`catalog`, `active`). |
 | GET | `/catalog-items/:id` | Obtiene un elemento por id. |
-| PATCH | `/catalog-items/:id` | Actualiza `label`/`description`/`active`/`sortOrder` (solo JEFE_AREA). `description` (máx. 500, opcional; vacío la borra) también se acepta al crear. |
+| PATCH | `/catalog-items/:id` | Actualiza `label`/`description`/`active`/`sortOrder` (mismos roles que el alta: módulo `admin`, hoy JEFE_AREA). `description` (máx. 500, opcional; vacío la borra) también se acepta al crear. |
 
 ## request — Solicitud y flujo de demanda
 
@@ -297,7 +311,7 @@ conmutador *Incluir pendientes de decisión* los añade.
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/area-control/indicators` | Indicadores del área para el periodo (jefe/líder; integrante → `403`). |
-| GET | `/area-control/demand-summary` | Panorama de demanda en alcance (los 3 roles). Incluye `noProcess` (solicitudes sin proceso principal asignado) junto a `total`, `blockedActive`, `byState` y `byPriorityBand`. |
+| GET | `/area-control/demand-summary` | Panorama de demanda en alcance (los 3 roles), con **corte a hoy**: `from`/`to` solo se validan por compatibilidad y no filtran los conteos (las series por periodo están en `indicators`). Incluye `noProcess` (solicitudes sin proceso principal asignado) junto a `total`, `blockedActive`, `byState` y `byPriorityBand`. |
 | GET | `/area-control/attention` | Conteos «Requiere tu atención» a hoy y en alcance (los 3 roles): solicitudes `REGISTRADA` (triage), `REGISTRADA` sin proceso principal (`pendingNoProcess`, cola de entrada por triar cuyo responsable operativo es el Jefe de Área), `EN_TRIAGE` con triage `CONTINUAR` vigente (priorizar), `BACKLOG_PRIORIZADO` (aprobar) y tareas no terminadas con `endDate` anterior a hoy de solicitudes no cerradas, retiradas ni rechazadas, y `pendingTaskReviews` (tareas por aprobar: la misma cláusula que `GET /tasks/pending-review`; `0` para el integrante). |
 
 ## capacity — Capacidad (disponibilidad y asignaciones)
@@ -570,7 +584,7 @@ service.
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/audit-events` | Lista paginada de eventos con alcance por rol. Filtros `objectType` y `action`; paginación `page`/`pageSize` (pageSize ≤ 100, por defecto 25). Devuelve `{ data, page, pageSize, total, hasMore }`; el alcance por rol se aplica antes de paginar. |
+| GET | `/audit-events` | Lista paginada de eventos con alcance por rol. Filtros `objectType` y `action` (`CREATE`, `UPDATE`, `DELETE`, `REVOKE`, `LOGIN_FAILED`, `PASSWORD_RESET_THROTTLED`); paginación `page`/`pageSize` (pageSize ≤ 100, por defecto 25). Devuelve `{ data, page, pageSize, total, hasMore }`; el alcance por rol se aplica antes de paginar. |
 
 ## system-settings — Administración de sistema (rol ADMIN)
 

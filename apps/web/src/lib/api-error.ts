@@ -8,10 +8,19 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    /** Segundos de espera que informó la API en `Retry-After` (solo en el 429). */
+    readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+/** Lee `Retry-After` en segundos; ignora fechas HTTP y valores no válidos. */
+export function parseRetryAfter(value: string | null | undefined): number | undefined {
+  if (!value || !/^\d+$/.test(value.trim())) return undefined;
+  const seconds = Number(value.trim());
+  return seconds > 0 ? seconds : undefined;
 }
 
 /**
@@ -31,6 +40,8 @@ export function messageForStatus(status: number): string {
       return 'No existe o fue removido.';
     case 409:
       return 'Ya existe un registro con esos datos.';
+    case 429:
+      return 'Demasiados intentos. Inténtalo de nuevo en unos minutos.';
     default:
       return 'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
   }
@@ -39,13 +50,16 @@ export function messageForStatus(status: number): string {
 /**
  * Normaliza cualquier fallo (HTTP o de red) a un ApiError entendible.
  */
-export function toApiError(status: number | undefined): ApiError {
+export function toApiError(
+  status: number | undefined,
+  retryAfterSeconds?: number,
+): ApiError {
   if (status === undefined) {
     return new ApiError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new ApiError(messageForStatus(status), status);
+  return new ApiError(messageForStatus(status), status, retryAfterSeconds);
 }
 
 /**

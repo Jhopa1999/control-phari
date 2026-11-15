@@ -56,7 +56,13 @@ export type AuditObjectType =
   | 'RECURRING_ACTIVITY_OCCURRENCE';
 
 /** Verbos de mutacion registrados (design 1.2 / 4.2.1). */
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'REVOKE';
+export type AuditAction =
+  | 'CREATE'
+  | 'UPDATE'
+  | 'DELETE'
+  | 'REVOKE'
+  | 'LOGIN_FAILED'
+  | 'PASSWORD_RESET_THROTTLED';
 
 /** Datos de un evento de auditoria a registrar dentro de una transaccion. */
 export interface AuditRecordInput {

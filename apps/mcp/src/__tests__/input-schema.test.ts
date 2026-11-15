@@ -50,7 +50,14 @@ describe('tools/list expone inputSchema', () => {
     const audit = tools.find((t) => t.name === 'audit.events.list');
     const props = audit?.inputSchema.properties as Record<string, { enum?: string[]; description?: string }>;
     assert.ok(props.objectType.enum?.includes('REQUEST'));
-    assert.deepEqual(props.action.enum, ['CREATE', 'UPDATE', 'DELETE', 'REVOKE']);
+    assert.deepEqual(props.action.enum, [
+    'CREATE',
+    'UPDATE',
+    'DELETE',
+    'REVOKE',
+    'LOGIN_FAILED',
+    'PASSWORD_RESET_THROTTLED',
+  ]);
     assert.ok(props.objectType.description);
 
     const process = tools.find((t) => t.name === 'process.list');

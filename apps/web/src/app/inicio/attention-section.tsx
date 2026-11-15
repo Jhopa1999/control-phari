@@ -184,7 +184,7 @@ export function AttentionSection(): React.ReactElement {
   return (
     <Section
       title="Requiere tu atención"
-      description="Pendientes de hoy en tu alcance, sin importar el periodo elegido."
+      description="Pendientes de hoy en tu alcance."
     >
       {content}
     </Section>

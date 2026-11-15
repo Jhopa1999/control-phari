@@ -21,15 +21,17 @@ export const CATALOG_SPECS: ReadonlyArray<ToolSpec> = [
     operation: 'POST /catalog-items',
     access: 'write',
     description:
-      'Crea un elemento de catálogo (POST /catalog-items). El cuerpo debe ' +
-      'cumplir CreateCatalogItemDto; el backend valida los datos.',
+      'Crea un elemento de catálogo (POST /catalog-items). Solo el jefe de ' +
+      'área (módulo admin): integrante, líder y administrador reciben 403. El ' +
+      'cuerpo debe cumplir CreateCatalogItemDto; el backend valida los datos.',
   },
   {
     name: 'catalog.update',
     operation: 'PATCH /catalog-items/{id}',
     access: 'write',
     description:
-      'Actualiza un elemento de catálogo (PATCH /catalog-items/{id}). El ' +
-      'cuerpo debe cumplir UpdateCatalogItemDto; el backend valida los datos.',
+      'Actualiza un elemento de catálogo (PATCH /catalog-items/{id}). Solo el ' +
+      'jefe de área (módulo admin): integrante, líder y administrador reciben ' +
+      '403. El cuerpo debe cumplir UpdateCatalogItemDto; el backend valida los datos.',
   },
 ];

@@ -254,7 +254,7 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   lectura(
     'area-control.demand-summary',
     'GET /area-control/demand-summary',
-    'Obtiene el resumen de demanda del área (GET /area-control/demand-summary).',
+    'Obtiene el resumen de demanda del área, un corte a hoy del alcance completo (GET /area-control/demand-summary). El periodo from/to no filtra; para series por periodo usa area-control.indicators.',
   ),
   lectura(
     'area-control.attention',
