@@ -70,7 +70,9 @@ if ($DryRun) {
   Info "[DRY-RUN] existe $(Join-Path $RepoDir $EnvFile) y compose.prod.yaml"
 }
 else {
-  docker info *> $null
+  # Windows PowerShell 5.1 convierte en error cualquier linea de stderr de un comando nativo
+  # redirigido (docker escribe avisos y progreso ahi): se valida por codigo de salida.
+  & { $ErrorActionPreference = 'Continue'; docker info *> $null }
   if ($LASTEXITCODE -ne 0) { throw 'Docker Desktop no responde (docker info).' }
   foreach ($f in @('compose.prod.yaml', $EnvFile)) {
     if (-not (Test-Path (Join-Path $RepoDir $f))) { throw "Falta $f en $RepoDir" }
@@ -109,12 +111,15 @@ if ($DryRun) {
 else {
   $p = Start-Process -FilePath docker -ArgumentList ($compose + 'build') -WorkingDirectory $RepoDir `
     -RedirectStandardOutput $logBuild -RedirectStandardError "$logBuild.err" -NoNewWindow -PassThru
+  # Sin leer Handle ahora, Windows PowerShell 5.1 deja ExitCode vacio al terminar.
+  $null = $p.Handle
   $limite = (Get-Date).AddMinutes($MaxMinutosBuild)
   while (-not $p.HasExited -and (Get-Date) -lt $limite) {
     Start-Sleep -Seconds $SondeoSegundos
-    $ultima = @(Get-Content $logBuild, "$logBuild.err" -Tail 1 -ErrorAction SilentlyContinue | Where-Object { $_ })[-1]
+    $ultima = @(Get-Content $logBuild -Tail 1 -ErrorAction SilentlyContinue | Where-Object { $_ })[-1]
     Info "build en curso: $ultima"
   }
+  if ($p.HasExited) { $p.WaitForExit() }
   if (-not $p.HasExited) { $p.Kill(); throw "El build supero $MaxMinutosBuild min y se detuvo. Revisa $logBuild" }
   if ($p.ExitCode -ne 0) {
     $err = Get-Content $logBuild, "$logBuild.err" -ErrorAction SilentlyContinue | Select-String 'failed to resolve source metadata|docker.io|ERROR' | Select-Object -First 5
@@ -127,6 +132,7 @@ else {
 # 5. Migraciones --------------------------------------------------------------
 Paso '5/7 prisma migrate deploy'
 Ejecutar "docker $($compose -join ' ') run --rm api npm run prisma:migrate:deploy --workspace apps/api  (-> $logMigrate)" {
+  $ErrorActionPreference = 'Continue'
   & docker @compose run --rm api npm run prisma:migrate:deploy --workspace apps/api *>&1 | Tee-Object -FilePath $logMigrate | Select-Object -Last 8
   if ($LASTEXITCODE -ne 0) { throw "migrate deploy fallo. Restaura con el dump $dump solo tras hablarlo con el usuario." }
 }
@@ -134,6 +140,7 @@ Ejecutar "docker $($compose -join ' ') run --rm api npm run prisma:migrate:deplo
 # 6. Recrear servicios ---------------------------------------------------------
 Paso '6/7 up -d --force-recreate'
 Ejecutar "docker $($compose -join ' ') up -d --force-recreate api web mcp nginx  (-> $logUp)" {
+  $ErrorActionPreference = 'Continue'
   & docker @compose up -d --force-recreate api web mcp nginx *>&1 | Tee-Object -FilePath $logUp | Select-Object -Last 6
   if ($LASTEXITCODE -ne 0) { throw 'up -d fallo.' }
 }

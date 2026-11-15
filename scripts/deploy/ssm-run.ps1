@@ -46,7 +46,7 @@ try {
   $limite = [DateTime]::UtcNow.AddSeconds($MaxEsperaSegundos)
   while ([DateTime]::UtcNow -lt $limite) {
     Start-Sleep -Seconds 5
-    $inv = aws ssm get-command-invocation --region $Region --command-id $id --instance-id $InstanceId --output json 2>$null | ConvertFrom-Json
+    $inv = & { $ErrorActionPreference = 'Continue'; aws ssm get-command-invocation --region $Region --command-id $id --instance-id $InstanceId --output json 2>$null } | ConvertFrom-Json
     if ($inv -and $inv.Status -notin @('InProgress', 'Pending', 'Delayed')) { $status = $inv.Status; break }
   }
   $out = "STATUS: $status`n--- STDOUT ---`n$($inv.StandardOutputContent)`n--- STDERR ---`n$($inv.StandardErrorContent)"
