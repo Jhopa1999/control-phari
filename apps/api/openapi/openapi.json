@@ -1701,7 +1701,7 @@
     },
     "/requests/{id}/asset": {
       "post": {
-        "description": "Orden obligatorio triage -> activo: el activo se habilita contra el proceso principal de la solicitud, por lo que primero hay que fijar el proceso principal en el triage y luego asociar el activo. Si la solicitud aun no tiene proceso principal, responde 409 con el mensaje \"Fija el proceso principal en el triage antes de asociar el activo.\" (sin llegar a consultar el activo). El triage no crea activos: solo asocia uno ya existente y visible para el actor.",
+        "description": "Orden obligatorio triage -> activo: el activo se habilita contra el proceso principal de la solicitud, por lo que primero hay que fijar el proceso principal en el triage y luego asociar el activo. Si la solicitud aun no tiene proceso principal, responde 409 con el mensaje \"Fija el proceso principal en el triage antes de asociar el activo.\" (sin llegar a consultar el activo). El triage no crea activos: solo asocia uno ya existente y visible para el actor. Solo un activo en estado ACTIVO admite asociaciones nuevas: uno en BORRADOR o RETIRADO responde 409 (pide al jefe de area que lo active); la asociacion ya hecha a ese mismo activo se conserva y reenviarla no falla.",
         "operationId": "TriageController_associateAsset",
         "parameters": [
           {
@@ -1745,7 +1745,7 @@
             "description": "Solicitud o activo fuera de alcance."
           },
           "409": {
-            "description": "La solicitud no admite asociar activo en su estado; o la solicitud aun no tiene proceso principal fijado en el triage (hay que fijarlo antes de asociar el activo); o el activo no esta habilitado para el proceso principal de la solicitud."
+            "description": "La solicitud no admite asociar activo en su estado; o la solicitud aun no tiene proceso principal fijado en el triage (hay que fijarlo antes de asociar el activo); o el activo no esta habilitado para el proceso principal de la solicitud; o el activo esta en borrador o retirado (solo un activo ACTIVO admite asociaciones nuevas; la asociacion ya hecha a ese mismo activo se conserva)."
           }
         },
         "summary": "Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos.",
@@ -2272,7 +2272,7 @@
             }
           },
           "400": {
-            "description": "Datos invalidos."
+            "description": "Datos inválidos o categoría que no existe o está inactiva en la maestra DOC_CATEGORY."
           },
           "403": {
             "description": "Rol insuficiente."
@@ -2390,7 +2390,7 @@
             }
           },
           "400": {
-            "description": "Datos invalidos."
+            "description": "Datos inválidos o categoría que no existe o está inactiva en la maestra DOC_CATEGORY."
           },
           "403": {
             "description": "Rol insuficiente."
@@ -2399,7 +2399,7 @@
             "description": "Documento fuera de alcance."
           }
         },
-        "summary": "Edita metadatos del documento (titulo/categoria; no estado ni contenido).",
+        "summary": "Edita metadatos del documento (título/categoría; no estado ni contenido).",
         "tags": [
           "documents"
         ]
@@ -2453,7 +2453,7 @@
             "description": "Conflicto de concurrencia."
           }
         },
-        "summary": "Editar contenido = crear una nueva version (AC-020).",
+        "summary": "Editar contenido = crear una nueva versión (AC-020). Un documento Vigente vuelve a Borrador y necesita aprobación.",
         "tags": [
           "documents"
         ]
@@ -2680,6 +2680,7 @@
     },
     "/documents/{id}/status": {
       "post": {
+        "description": "Un documento queda Vigente por aprobación (POST /documents/:id/review, jefe) o por publicación directa del jefe de área; el líder lo envía a aprobación. Reactivar un archivado a Vigente también es solo del jefe. Versionar un documento Vigente lo devuelve a Borrador.",
         "operationId": "DocumentController_changeStatus",
         "parameters": [
           {
@@ -2717,13 +2718,13 @@
             "description": "Transicion no permitida."
           },
           "403": {
-            "description": "Rol insuficiente."
+            "description": "Rol insuficiente; un líder no publica directo (solo el jefe de área)."
           },
           "404": {
             "description": "Documento fuera de alcance."
           }
         },
-        "summary": "Cambia el estado del documento (transicion valida; lider/jefe).",
+        "summary": "Cambia el estado del documento (transición válida; líder/jefe). Publicar directo (a Vigente) es solo del jefe.",
         "tags": [
           "documents"
         ]

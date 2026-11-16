@@ -10,12 +10,16 @@ import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
 import type { Asset, Request } from '@/lib/api-client';
+import { useActor } from '@/lib/actor-context';
 import { associateAsset, TriageError } from '@/lib/triage';
+import { DisabledReason } from '@/components/disabled-reason';
 import { AssetError, listAssets } from '@/lib/assets';
 
 /** Id de la sección y del formulario; el FormError lleva `${PANEL_ID}-error`. */
@@ -47,6 +51,7 @@ export function AssetBasePanel({
   onAssociated,
 }: AssetBasePanelProps): React.ReactElement {
   const [assets, setAssets] = React.useState<Asset[]>([]);
+  const [assetsLoaded, setAssetsLoaded] = React.useState(false);
   const [editing, setEditing] = React.useState(request.assetId === null);
   const [assetId, setAssetId] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
@@ -66,13 +71,26 @@ export function AssetBasePanel({
   React.useEffect(() => {
     void listAssets()
       .then(setAssets)
-      .catch(() => setAssets([]));
+      .catch(() => setAssets([]))
+      .finally(() => setAssetsLoaded(true));
   }, []);
+
+  const { permissions } = useActor();
+  const isJefe = (permissions?.grants ?? []).some((g) => g.roleCode === 'JEFE_AREA');
 
   const associatedAsset = React.useMemo(
     () => assets.find((a) => a.id === request.assetId) ?? null,
     [assets, request.assetId],
   );
+
+  // D8: solo los ACTIVO se asocian (la API decide). El jefe, que es quien los
+  // activa, ve además los no asociables, deshabilitados y con el motivo en texto.
+  const associable = React.useMemo(() => assets.filter((a) => a.status === 'ACTIVO'), [assets]);
+  const notAssociable = React.useMemo(
+    () => (isJefe ? assets.filter((a) => a.status !== 'ACTIVO') : []),
+    [assets, isJefe],
+  );
+  const noAssociable = assetsLoaded && associable.length === 0;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -124,6 +142,12 @@ export function AssetBasePanel({
           {associatedAsset ? (
             <StatusBadge kind="asset" value={associatedAsset.status} className="w-fit" />
           ) : null}
+          {associatedAsset && associatedAsset.status !== 'ACTIVO' ? (
+            <p className="text-meta text-muted-foreground">
+              Este activo no está activo; la asociación se conserva, pero no podrás elegirlo de
+              nuevo si lo cambias.
+            </p>
+          ) : null}
         </div>
         <div className="flex justify-end border-t pt-3">
           <Button
@@ -174,23 +198,44 @@ export function AssetBasePanel({
         <Field
           id={`${PANEL_ID}-existing`}
           label="Activo existente"
-          help="Solo se listan activos habilitados para tus procesos. ¿No aparece? Debe crearlo el jefe de área en el módulo de Activos."
+          help={
+            'Solo se pueden asociar activos en estado Activo y habilitados para tus procesos. Un activo en borrador lo activa el jefe de área en el módulo de Activos. ¿No aparece? Debe crearlo el jefe de área.' +
+            (isJefe ? ' Los de la lista «No asociables» están en borrador o retirados.' : '')
+          }
         >
           {(control) => (
             <Select value={assetId} onValueChange={setAssetId} disabled={disabled}>
               <SelectTrigger ref={triggerRef} {...control} aria-label="Activo existente">
-                <SelectValue placeholder="Elige un activo" />
+                <SelectValue
+                  placeholder={noAssociable ? 'No hay activos en estado Activo' : 'Elige un activo'}
+                />
               </SelectTrigger>
               <SelectContent>
-                {assets.map((asset) => (
+                {associable.map((asset) => (
                   <SelectItem key={asset.id} value={asset.id}>
                     {asset.name}
                   </SelectItem>
                 ))}
+                {notAssociable.length > 0 ? (
+                  <SelectGroup>
+                    <SelectLabel>No asociables</SelectLabel>
+                    {notAssociable.map((asset) => (
+                      <SelectItem key={asset.id} value={asset.id} disabled>
+                        {asset.name} · {asset.status === 'RETIRADO' ? 'retirado' : 'en borrador'}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ) : null}
               </SelectContent>
             </Select>
           )}
         </Field>
+
+        {noAssociable ? (
+          <DisabledReason id={`${PANEL_ID}-sin-activos`}>
+            Pide al jefe de área que active un activo para asociarlo.
+          </DisabledReason>
+        ) : null}
 
         <FormError id={PANEL_ID} message={formError} />
 
@@ -212,7 +257,12 @@ export function AssetBasePanel({
                 Cancelar
               </Button>
             ) : null}
-            <Button type="submit" loading={submitting} disabled={disabled}>
+            <Button
+              type="submit"
+              loading={submitting}
+              disabled={disabled || noAssociable}
+              aria-describedby={noAssociable ? `${PANEL_ID}-sin-activos` : undefined}
+            >
               {submitting ? 'Asociando…' : 'Asociar activo'}
             </Button>
           </div>

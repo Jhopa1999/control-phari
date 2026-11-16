@@ -50,6 +50,8 @@ test.beforeAll(async ({ request }) => {
   requestId = req.id as string;
   await send(request, 'post', `/requests/${requestId}/triage`, { decision: 'CONTINUAR' });
   const asset = await send(request, 'post', '/assets', { processId: mainProcessId, name: `Activo selector ${ts}` });
+  // D8: solo un activo ACTIVO admite asociaciones nuevas; el jefe lo activa antes.
+  await send(request, 'post', `/assets/${asset.id}/status`, { targetStatus: 'ACTIVO' });
   await send(request, 'post', `/requests/${requestId}/asset`, { assetId: asset.id as string });
   await send(request, 'post', `/requests/${requestId}/priority`, {
     impact: 3, alignment: 3, riskControl: 3, urgency: 3, scope: 3, dataAvailability: 3, feasibility: 3, reuse: 3,

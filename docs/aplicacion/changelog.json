@@ -881,6 +881,17 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Oleada 2, PR-B (BL-065 y BL-066): el compromiso del plan es obligatorio para enviarlo (pendiente NO_COMMITMENT en la guía, 409 en español) y la guía sugiere como valor editable la fecha fin de la última tarea (suggestedCommitmentDate); la tarjeta «Datos del plan» lo precarga sin guardarlo; la API rechaza periodo invertido y nombre de fase vacío (400). Capacidad: «planificado» cuenta solo planes autorizados en solicitudes vivas, el resumen lista a todas las personas con asignación activa (filtro por defecto «Solo con carga o sin disponibilidad registrada») y la disponibilidad se limita a 0-744 h y la asignación a mínimo 1 h. MCP: descripciones de plan.create, plan.update, plan.submit, plan.guide y capacity.summary; sin tools nuevas. Sin cambios de esquema ni de roles."
+    },
+    {
+      "timestamp": "2026-11-16T18:00:00Z",
+      "trigger_file": "apps/api/src/modules/knowledge/document/document.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/design/oleada-2-activos-documentos.md"
+      ],
+      "summary": "Oleada 2, PR-C (BL-071 y BL-072): solo un activo ACTIVO admite asociaciones nuevas en el triage (409 si está en borrador o retirado; la asociación ya hecha se conserva) y «Vigente» exige aprobación: versionar un vigente lo devuelve a borrador en toda categoría, publicar directo es solo del jefe de área (403 al líder) y la categoría del documento se valida contra DOC_CATEGORY (400). Web: selector del triage con no asociables deshabilitados, Publicar y Reactivar solo para el jefe y aviso al editar un vigente. MCP: descripciones de document.create, document.update y document.version.create; sin tools nuevas."
     }
   ]
 }

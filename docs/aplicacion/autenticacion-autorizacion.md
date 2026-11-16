@@ -246,7 +246,11 @@ está reservada al jefe de área: los handlers `POST/PATCH/POST :id/status` llev
 líder/integrante/admin). El activo es genérico y compartido; el jefe define qué procesos
 pueden verlo/usarlo (tabla puente `AssetProcessVisibility`), y el líder solo **asocia**
 activos visibles a sus solicitudes y gestiona los documentos vinculados
-(`requireAssetWritable`/`requireProcessManager`, sin cambios).
+(`requireAssetWritable`/`requireProcessManager`, sin cambios). Oleada 2: **publicar
+directo** un documento (`POST /documents/:id/status` hacia `VIGENTE` desde `BORRADOR` o
+`ARCHIVADA`) es solo del jefe de área (`403` para el líder, que envía a aprobación), y
+solo un activo `ACTIVO` admite asociaciones nuevas a solicitudes (`409` si está en
+borrador o retirado; la asociación ya hecha se conserva).
 
 **Cierre de tareas (BL-036 E3, cambio de reglas).** En `PATCH /tasks/:id/status` el
 permiso sobre el estado depende además de la transición: **terminar** una tarea

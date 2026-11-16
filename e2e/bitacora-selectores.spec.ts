@@ -57,6 +57,8 @@ test.beforeAll(async ({ request }) => {
   requestCode = req.code as string;
   await send(request, JEFE, 'post', `/requests/${requestId}/triage`, { decision: 'CONTINUAR' });
   const asset = await send(request, JEFE, 'post', '/assets', { processId, name: `Activo selectores ${ts}` });
+  // D8: solo un activo ACTIVO admite asociaciones nuevas; el jefe lo activa antes.
+  await send(request, JEFE, 'post', `/assets/${asset.id}/status`, { targetStatus: 'ACTIVO' });
   await send(request, JEFE, 'post', `/requests/${requestId}/asset`, { assetId: asset.id as string });
   await send(request, JEFE, 'post', `/requests/${requestId}/priority`, {
     impact: 3, alignment: 3, riskControl: 3, urgency: 3, scope: 3, dataAvailability: 3, feasibility: 3, reuse: 3,
@@ -265,6 +267,8 @@ test.describe('integrante', () => {
     const request2Code = req2.code as string;
     await send(request, JEFE, 'post', `/requests/${request2Id}/triage`, { decision: 'CONTINUAR' });
     const asset2 = await send(request, JEFE, 'post', '/assets', { processId, name: `Activo selectores B ${ts}` });
+    // D8: solo un activo ACTIVO admite asociaciones nuevas; el jefe lo activa antes.
+    await send(request, JEFE, 'post', `/assets/${asset2.id}/status`, { targetStatus: 'ACTIVO' });
     await send(request, JEFE, 'post', `/requests/${request2Id}/asset`, { assetId: asset2.id as string });
     await send(request, JEFE, 'post', `/requests/${request2Id}/priority`, {
       impact: 3, alignment: 3, riskControl: 3, urgency: 3, scope: 3, dataAvailability: 3, feasibility: 3, reuse: 3,

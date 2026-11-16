@@ -85,6 +85,8 @@ test.beforeAll(async ({ request }) => {
     processId: processIds.FIBI,
     name: `Activo bloqueo ${ts}`,
   });
+  // D8: solo un activo ACTIVO admite asociaciones nuevas; el jefe lo activa antes.
+  await ok(request, 'post', `/assets/${asset.id}/status`, { targetStatus: 'ACTIVO' });
   await ok(request, 'post', `/requests/${requestId}/asset`, { assetId: asset.id });
   await ok(request, 'post', `/requests/${requestId}/priority`, {
     impact: 3,

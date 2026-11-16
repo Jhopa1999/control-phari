@@ -102,6 +102,30 @@ describe('DocumentService · aprobación documental', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('D9: un documento general ya no lo publica el líder directamente; el jefe sí, y la aprobación desde pendiente sigue igual', async () => {
+    await expect(
+      build({ status: 'BORRADOR', categoryCode: 'TECNICA' }).service.changeStatus(
+        actor(RoleCode.LIDER_PROCESO),
+        'd1',
+        { targetStatus: 'VIGENTE' },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    const directo = build({ status: 'BORRADOR', categoryCode: 'TECNICA' });
+    await directo.service.changeStatus(actor(RoleCode.JEFE_AREA), 'd1', {
+      targetStatus: 'VIGENTE',
+    });
+    expect(directo.tx.document.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: 'VIGENTE' } }),
+    );
+    const aprobado = build({ status: 'PENDIENTE_APROBACION', categoryCode: 'TECNICA' });
+    await aprobado.service.review(actor(RoleCode.JEFE_AREA), 'd1', { decision: 'APROBAR' });
+    expect(aprobado.tx.document.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'VIGENTE', reviewedByUserId: 'jefe' }),
+      }),
+    );
+  });
+
   it('un proyecto cerrado bloquea los cambios de su documentación', async () => {
     const { service } = build({ status: 'BORRADOR' }, 'CERRADA');
     await expect(

@@ -520,7 +520,7 @@ export interface paths {
         put?: never;
         /**
          * Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos.
-         * @description Orden obligatorio triage -> activo: el activo se habilita contra el proceso principal de la solicitud, por lo que primero hay que fijar el proceso principal en el triage y luego asociar el activo. Si la solicitud aun no tiene proceso principal, responde 409 con el mensaje "Fija el proceso principal en el triage antes de asociar el activo." (sin llegar a consultar el activo). El triage no crea activos: solo asocia uno ya existente y visible para el actor.
+         * @description Orden obligatorio triage -> activo: el activo se habilita contra el proceso principal de la solicitud, por lo que primero hay que fijar el proceso principal en el triage y luego asociar el activo. Si la solicitud aun no tiene proceso principal, responde 409 con el mensaje "Fija el proceso principal en el triage antes de asociar el activo." (sin llegar a consultar el activo). El triage no crea activos: solo asocia uno ya existente y visible para el actor. Solo un activo en estado ACTIVO admite asociaciones nuevas: uno en BORRADOR o RETIRADO responde 409 (pide al jefe de area que lo active); la asociacion ya hecha a ese mismo activo se conserva y reenviarla no falla.
          */
         post: operations["TriageController_associateAsset"];
         delete?: never;
@@ -666,7 +666,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Edita metadatos del documento (titulo/categoria; no estado ni contenido). */
+        /** Edita metadatos del documento (título/categoría; no estado ni contenido). */
         patch: operations["DocumentController_update"];
         trace?: never;
     };
@@ -680,7 +680,7 @@ export interface paths {
         /** Historial de versiones (sin contenido). */
         get: operations["DocumentController_listVersions"];
         put?: never;
-        /** Editar contenido = crear una nueva version (AC-020). */
+        /** Editar contenido = crear una nueva versión (AC-020). Un documento Vigente vuelve a Borrador y necesita aprobación. */
         post: operations["DocumentController_createVersion"];
         delete?: never;
         options?: never;
@@ -765,7 +765,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Cambia el estado del documento (transicion valida; lider/jefe). */
+        /**
+         * Cambia el estado del documento (transición válida; líder/jefe). Publicar directo (a Vigente) es solo del jefe.
+         * @description Un documento queda Vigente por aprobación (POST /documents/:id/review, jefe) o por publicación directa del jefe de área; el líder lo envía a aprobación. Reactivar un archivado a Vigente también es solo del jefe. Versionar un documento Vigente lo devuelve a Borrador.
+         */
         post: operations["DocumentController_changeStatus"];
         delete?: never;
         options?: never;
@@ -9509,7 +9512,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La solicitud no admite asociar activo en su estado; o la solicitud aun no tiene proceso principal fijado en el triage (hay que fijarlo antes de asociar el activo); o el activo no esta habilitado para el proceso principal de la solicitud. */
+            /** @description La solicitud no admite asociar activo en su estado; o la solicitud aun no tiene proceso principal fijado en el triage (hay que fijarlo antes de asociar el activo); o el activo no esta habilitado para el proceso principal de la solicitud; o el activo esta en borrador o retirado (solo un activo ACTIVO admite asociaciones nuevas; la asociacion ya hecha a ese mismo activo se conserva). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -9926,7 +9929,7 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentResponseDto"];
                 };
             };
-            /** @description Datos invalidos. */
+            /** @description Datos inválidos o categoría que no existe o está inactiva en la maestra DOC_CATEGORY. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -10043,7 +10046,7 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentResponseDto"];
                 };
             };
-            /** @description Datos invalidos. */
+            /** @description Datos inválidos o categoría que no existe o está inactiva en la maestra DOC_CATEGORY. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -10357,7 +10360,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Rol insuficiente. */
+            /** @description Rol insuficiente; un líder no publica directo (solo el jefe de área). */
             403: {
                 headers: {
                     [name: string]: unknown;

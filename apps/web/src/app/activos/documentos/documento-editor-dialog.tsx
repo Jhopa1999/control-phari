@@ -5,6 +5,7 @@ import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { CircleAlert } from 'lucide-react';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
 import { Field, FormError, RequiredHint } from '@/components/field';
+import { InlineNotice } from '@/components/inline-notice';
 import { MarkdownView } from '@/components/markdown-view';
 import { Button } from '@/components/ui/button';
 import {
@@ -204,6 +205,13 @@ export function DocumentoEditorDialog({
         <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <DialogBody className="grid gap-4">
             <RequiredHint />
+
+            {editing?.status === 'VIGENTE' ? (
+              <InlineNotice tone="warning" title="Este documento está vigente">
+                Al guardar se crea una versión nueva y el documento vuelve a Borrador:
+                necesitará aprobación para ser vigente otra vez.
+              </InlineNotice>
+            ) : null}
 
             <Field
               id="doc-asset"

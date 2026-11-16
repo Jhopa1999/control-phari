@@ -23,6 +23,7 @@ function p2002(): Prisma.PrismaClientKnownRequestError {
 function createMocks() {
   const prismaObj: Record<string, any> = {
     asset: { findFirst: jest.fn() },
+    catalogItem: { findFirst: jest.fn().mockResolvedValue({ id: 'c1' }) },
     document: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
@@ -63,6 +64,20 @@ function lider(scoped: string[] = ['p1']): CurrentActor {
     roleCodes: new Set([RoleCode.LIDER_PROCESO]),
     scopedProcessIds: new Set(scoped),
     isJefeArea: false,
+    isLiderProceso: false,
+    isAdmin: false,
+  };
+}
+
+function jefe(): CurrentActor {
+  return {
+    userId: 'uj',
+    name: 'Jefe',
+    identifier: 'jefe@demo.local',
+    grants: [],
+    roleCodes: new Set([RoleCode.JEFE_AREA]),
+    scopedProcessIds: new Set(),
+    isJefeArea: true,
     isLiderProceso: false,
     isAdmin: false,
   };
@@ -224,7 +239,7 @@ describe('DocumentService', () => {
       m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
     });
 
-    it('incrementa versionNumber, mueve solo el puntero y NO cambia Document.status', async () => {
+    it('incrementa versionNumber, mueve el puntero y devuelve a BORRADOR un VIGENTE de cualquier categoría (D9)', async () => {
       m.prismaObj.documentVersion.aggregate.mockResolvedValue({
         _max: { versionNumber: 1 },
       });
@@ -253,13 +268,52 @@ describe('DocumentService', () => {
           data: expect.objectContaining({ versionNumber: 2 }),
         }),
       );
-      // Solo se mueve el puntero; el status NO se escribe en el update.
+      // D9: versionar un VIGENTE lo devuelve a BORRADOR en toda categoría.
       const updateArg = m.prismaObj.document.update.mock.calls[0][0];
-      expect(updateArg.data).toEqual({ currentVersionId: 'v2' });
-      expect(updateArg.data.status).toBeUndefined();
-      // La respuesta conserva el estado VIGENTE (no se movio).
-      expect(res.status).toBe('VIGENTE');
+      expect(updateArg.data).toEqual({
+        currentVersionId: 'v2',
+        status: 'BORRADOR',
+      });
       expect(res.currentVersion?.versionNumber).toBe(2);
+    });
+
+    it.each(['BORRADOR', 'RECHAZADO', 'ARCHIVADA', 'PENDIENTE_APROBACION'])(
+      'versionar un documento %s (categoría que no es de cierre) conserva su estado',
+      async (status) => {
+        m.prismaObj.document.findFirst.mockResolvedValue(
+          docRow({ status, categoryCode: 'TECNICA', currentVersionId: 'v1' }),
+        );
+        m.prismaObj.documentVersion.aggregate.mockResolvedValue({
+          _max: { versionNumber: 1 },
+        });
+        m.prismaObj.documentVersion.create.mockResolvedValue(
+          versionRow({ id: 'v2', versionNumber: 2 }),
+        );
+        m.prismaObj.document.update.mockResolvedValue(
+          docRow({ status, currentVersionId: 'v2' }),
+        );
+        await m.service.createVersion(lider(), 'd1', { content: 'nuevo' });
+        const data = m.prismaObj.document.update.mock.calls[0][0].data;
+        expect(data).toEqual({ currentVersionId: 'v2' });
+      },
+    );
+
+    it('la documentación de cierre pendiente de aprobación vuelve a BORRADOR al versionar', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(
+        docRow({ status: 'PENDIENTE_APROBACION', categoryCode: 'CIERRE' }),
+      );
+      m.prismaObj.documentVersion.aggregate.mockResolvedValue({
+        _max: { versionNumber: 1 },
+      });
+      m.prismaObj.documentVersion.create.mockResolvedValue(
+        versionRow({ id: 'v2', versionNumber: 2 }),
+      );
+      m.prismaObj.document.update.mockResolvedValue(docRow({ currentVersionId: 'v2' }));
+      await m.service.createVersion(lider(), 'd1', { content: 'nuevo' });
+      expect(m.prismaObj.document.update.mock.calls[0][0].data).toEqual({
+        currentVersionId: 'v2',
+        status: 'BORRADOR',
+      });
     });
 
     it('concurrencia: un reintento tras P2002 y luego exito', async () => {
@@ -309,13 +363,54 @@ describe('DocumentService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('lider publica BORRADOR -> VIGENTE y audita UPDATE', async () => {
+    it.each(['BORRADOR', 'ARCHIVADA'])(
+      'líder no publica directo %s -> VIGENTE: 403 en español y sin mutación (D9)',
+      async (status) => {
+        m.prismaObj.document.findFirst.mockResolvedValue(docRow({ status }));
+        m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+        await expect(
+          m.service.changeStatus(lider(), 'd1', { targetStatus: 'VIGENTE' }),
+        ).rejects.toThrow(
+          'Solo el jefe de área puede publicar directamente; envía el documento a aprobación.',
+        );
+        expect(m.prismaObj.document.update).not.toHaveBeenCalled();
+      },
+    );
+
+    it('líder sigue enviando a aprobación y retirando un vigente a borrador', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.document.findFirst.mockResolvedValue(docRow());
+      m.prismaObj.document.update.mockResolvedValue(
+        docRow({ status: 'PENDIENTE_APROBACION' }),
+      );
+      await expect(
+        m.service.changeStatus(lider(), 'd1', {
+          targetStatus: 'PENDIENTE_APROBACION',
+        }),
+      ).resolves.toMatchObject({ status: 'PENDIENTE_APROBACION' });
+      m.prismaObj.document.findFirst.mockResolvedValue(docRow({ status: 'VIGENTE' }));
+      m.prismaObj.document.update.mockResolvedValue(docRow({ status: 'BORRADOR' }));
+      await expect(
+        m.service.changeStatus(lider(), 'd1', { targetStatus: 'BORRADOR' }),
+      ).resolves.toMatchObject({ status: 'BORRADOR' });
+    });
+
+    it('jefe reactiva ARCHIVADA -> VIGENTE', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(docRow({ status: 'ARCHIVADA' }));
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.document.update.mockResolvedValue(docRow({ status: 'VIGENTE' }));
+      await expect(
+        m.service.changeStatus(jefe(), 'd1', { targetStatus: 'VIGENTE' }),
+      ).resolves.toMatchObject({ status: 'VIGENTE' });
+    });
+
+    it('jefe publica BORRADOR -> VIGENTE y audita UPDATE', async () => {
       m.prismaObj.document.findFirst.mockResolvedValue(docRow());
       m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
       m.prismaObj.document.update.mockResolvedValue(
         docRow({ status: 'VIGENTE' }),
       );
-      const res = await m.service.changeStatus(lider(), 'd1', {
+      const res = await m.service.changeStatus(jefe(), 'd1', {
         targetStatus: 'VIGENTE',
       });
       expect(res.status).toBe('VIGENTE');
@@ -324,6 +419,62 @@ describe('DocumentService', () => {
         objectType: 'DOCUMENT',
         scopeProcessId: 'p1',
       });
+    });
+  });
+
+  describe('categoría del documento (maestra DOC_CATEGORY)', () => {
+    it('createDocument con categoría inexistente o inactiva -> 400 sin crear', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.catalogItem.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.createDocument(lider(), {
+          assetId: 'a1',
+          title: 'Doc',
+          content: 'c',
+          categoryCode: 'NO_EXISTE',
+        }),
+      ).rejects.toThrow('La categoría del documento no existe o está inactiva.');
+      expect(m.prismaObj.catalogItem.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { catalog: 'DOC_CATEGORY', code: 'NO_EXISTE', active: true },
+        }),
+      );
+      expect(m.prismaObj.document.create).not.toHaveBeenCalled();
+    });
+
+    it('updateDocument con categoría inexistente -> 400 sin actualizar', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(docRow());
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.catalogItem.findFirst.mockResolvedValue(null);
+      await expect(
+        m.service.updateDocument(lider(), 'd1', { categoryCode: 'NO_EXISTE' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(m.prismaObj.document.update).not.toHaveBeenCalled();
+    });
+
+    it('updateDocument que solo cambia el título no consulta la maestra (categoría ya guardada se conserva)', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(
+        docRow({ categoryCode: 'LEGADA' }),
+      );
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.document.update.mockResolvedValue(docRow({ title: 'Nuevo' }));
+      await m.service.updateDocument(lider(), 'd1', { title: 'Nuevo' });
+      expect(m.prismaObj.catalogItem.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('categoría válida y activa se acepta', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.document.create.mockResolvedValue(docRow());
+      m.prismaObj.documentVersion.create.mockResolvedValue(versionRow());
+      m.prismaObj.document.update.mockResolvedValue(docRow({ currentVersionId: 'v1' }));
+      await expect(
+        m.service.createDocument(lider(), {
+          assetId: 'a1',
+          title: 'Doc',
+          content: 'c',
+          categoryCode: 'TECNICA',
+        }),
+      ).resolves.toBeDefined();
     });
   });
 
