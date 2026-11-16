@@ -3,6 +3,7 @@ import { PlanGuideService } from './plan-guide.service';
 
 function createPrismaMock() {
   const prisma = {
+    plan: { findUnique: jest.fn() },
     planPhase: { findMany: jest.fn() },
     task: { findMany: jest.fn() },
   };
@@ -17,6 +18,10 @@ describe('PlanGuideService (design §2.1)', () => {
 
   beforeEach(() => {
     prisma = createPrismaMock();
+    // Por defecto el plan ya tiene compromiso; las pruebas de D6 lo sobrescriben.
+    (prisma.plan.findUnique as unknown as jest.Mock).mockResolvedValue({
+      commitmentDate: d('2025-01-31'),
+    });
     service = new PlanGuideService(prisma);
   });
 
@@ -125,5 +130,69 @@ describe('PlanGuideService (design §2.1)', () => {
     const guide = await service.compute('plan1');
     expect(guide.canSubmit).toBe(true);
     expect(guide.pendings).toEqual([]);
+  });
+
+  describe('compromiso obligatorio (D6)', () => {
+    const phase = { id: 'ph1', name: 'F', startDate: d('2025-01-01'), endDate: d('2025-01-31') };
+    const task = (id: string, end: string) => ({
+      id,
+      title: `Tarea ${id}`,
+      responsibleUserId: 'u1',
+      startDate: d('2025-01-02'),
+      endDate: d(end),
+      isMilestone: false,
+      estimateHours: 4,
+    });
+
+    it('plan completo sin compromiso -> pendiente NO_COMMITMENT y canSubmit=false', async () => {
+      (prisma.plan.findUnique as unknown as jest.Mock).mockResolvedValue({ commitmentDate: null });
+      prisma.planPhase.findMany.mockResolvedValue([phase]);
+      prisma.task.findMany.mockResolvedValue([task('t1', '2025-01-05')]);
+
+      const guide = await service.compute('plan1');
+
+      expect(guide.canSubmit).toBe(false);
+      const pending = guide.pendings.find((p) => p.code === 'NO_COMMITMENT');
+      expect(pending).toEqual({
+        category: 'commitment',
+        code: 'NO_COMMITMENT',
+        message: 'El plan necesita la fecha de compromiso.',
+      });
+    });
+
+    it('con compromiso guardado no hay pendiente de compromiso', async () => {
+      prisma.planPhase.findMany.mockResolvedValue([phase]);
+      prisma.task.findMany.mockResolvedValue([task('t1', '2025-01-05')]);
+
+      const guide = await service.compute('plan1');
+
+      expect(guide.pendings.some((p) => p.code === 'NO_COMMITMENT')).toBe(false);
+      expect(guide.canSubmit).toBe(true);
+    });
+
+    it('sugiere la fecha fin mas tardia de las tareas', async () => {
+      (prisma.plan.findUnique as unknown as jest.Mock).mockResolvedValue({ commitmentDate: null });
+      prisma.planPhase.findMany.mockResolvedValue([phase]);
+      prisma.task.findMany.mockResolvedValue([
+        task('t1', '2025-01-05'),
+        task('t2', '2025-01-20'),
+        task('t3', '2025-01-10'),
+      ]);
+
+      const guide = await service.compute('plan1');
+
+      expect(guide.suggestedCommitmentDate).toEqual(d('2025-01-20'));
+    });
+
+    it('sin tareas con fecha fin la sugerencia es null', async () => {
+      (prisma.plan.findUnique as unknown as jest.Mock).mockResolvedValue({ commitmentDate: null });
+      prisma.planPhase.findMany.mockResolvedValue([phase]);
+      prisma.task.findMany.mockResolvedValue([]);
+
+      const guide = await service.compute('plan1');
+
+      expect(guide.suggestedCommitmentDate).toBeNull();
+      expect(guide.pendings.some((p) => p.code === 'NO_COMMITMENT')).toBe(true);
+    });
   });
 });

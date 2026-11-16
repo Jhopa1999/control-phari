@@ -57,12 +57,12 @@ export class CreateAssignmentDto {
 
   @ApiProperty({
     type: Number,
-    description: 'Horas comprometidas en el mes (entero >= 0).',
-    minimum: 0,
+    description: 'Horas comprometidas en el mes (entero >= 1).',
+    minimum: 1,
     example: 40,
   })
   @IsInt({ message: 'Las horas deben ser un numero entero.' })
-  @Min(0, { message: 'Las horas no pueden ser negativas.' })
+  @Min(1, { message: 'La asignación debe ser de al menos 1 hora.' })
   committedHours!: number;
 
   @ApiPropertyOptional({

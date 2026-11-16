@@ -127,7 +127,7 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   lectura(
     'plan.guide',
     'GET /requests/{requestId}/plan/guide',
-    'Obtiene la guía del plan de una solicitud (GET /requests/{requestId}/plan/guide).',
+    'Obtiene la guía del plan de una solicitud (GET /requests/{requestId}/plan/guide): pendientes para enviarlo (incluido NO_COMMITMENT, falta la fecha de compromiso) y suggestedCommitmentDate, la fecha fin de la última tarea, como valor sugerido y editable.',
   ),
   lectura(
     'plan.phases.list',
@@ -144,7 +144,7 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   lectura(
     'capacity.summary',
     'GET /capacity/summary',
-    'Obtiene el resumen de capacidad del equipo (GET /capacity/summary).',
+    'Obtiene el resumen de capacidad del equipo (GET /capacity/summary). Lista a todas las personas del alcance con asignación activa, también sin registros ese mes (estado SIN_DISPONIBILIDAD). planificado = horas de tareas de planes autorizados en solicitudes vivas (no eliminadas, rechazadas, retiradas ni cerradas).',
   ),
   lectura(
     'capacity.people',

@@ -222,8 +222,8 @@ estado de tareas lo tienen los 3 roles; "mi trabajo" usa la capacidad `assigned`
 | --- | --- | --- |
 | POST | `/requests/:requestId/plan` | Crea el plan de una solicitud comprometida (→ *En planificación*). |
 | GET | `/requests/:requestId/plan` | Devuelve el plan de una solicitud. |
-| PATCH | `/requests/:requestId/plan` | Edita datos del plan (no el estado). |
-| GET | `/requests/:requestId/plan/guide` | Guía de pendientes del plan (gate de envío). |
+| PATCH | `/requests/:requestId/plan` | Edita datos del plan (no el estado). Oleada 2 (BL-065): `400` en español si el fin del periodo es anterior al inicio, comparando con el valor ya guardado cuando solo llega uno de los dos (el alta `POST /requests/:requestId/plan` aplica la misma regla). Solo en `BORRADOR`/`DEVUELTO` (`409` en autorización o autorizado). |
+| GET | `/requests/:requestId/plan/guide` | Guía de pendientes del plan (gate de envío). D6 (oleada 2): suma la categoría `commitment` con el pendiente `NO_COMMITMENT` («El plan necesita la fecha de compromiso.») mientras el plan no tenga `commitmentDate`, y el campo `suggestedCommitmentDate` (la fecha fin más tardía de las tareas, o `null`), que la web precarga como valor editable sin guardarlo. |
 | GET | `/requests/:requestId/plan/export` | Exporta el plan a un documento JSON portable (solo lectura; cualquier estado). |
 | GET | `/requests/:requestId/plan/export-excel` | Exporta fases, tareas, responsables, fechas y dependencias a un archivo Excel (.xlsx). |
 | GET | `/requests/:requestId/plan/template-excel` | Descarga la plantilla Excel con la misma estructura y un ejemplo. |
@@ -231,7 +231,7 @@ estado de tareas lo tienen los 3 roles; "mi trabajo" usa la capacidad `assigned`
 | POST | `/requests/:requestId/plan/import` | Importa un plan desde un documento y reemplaza su contenido (`409` si no está en borrador/devuelto; `400` si el documento es inválido o si algún responsable no pertenece a un proceso interviniente de la solicitud, salvo quienes ya eran responsables de tareas del plan). |
 | GET | `/requests/:requestId/plan/participants` | Procesos que intervienen en la solicitud del plan: procesos activos y participantes (el principal primero) con `isMain`, `isParticipant`, `canRemove` y `removalBlockedBy` (tareas que impedirían quitarlo). **Exclusivo de `JEFE_AREA`** (`@Roles(JEFE_AREA)` por handler; líder, integrante y `ADMIN` reciben `403`). |
 | PUT | `/requests/:requestId/plan/participants` | **Corrige los procesos que intervienen después del triage** (que se registra una sola vez). Cuerpo `{ participantProcessIds: uuid[] }` = procesos participantes además del principal (que participa siempre y no se quita); reutiliza la validación del triage (`resolveParticipantProcessIds`: existen y están activos, `400` si no). **Agregar** habilita al instante a los líderes y miembros con grant activo de ese proceso como candidatos y responsables. **Quitar** responde `409` en español nombrando las tareas si alguna tarea del plan está asignada a una persona con grant activo en ese proceso que no seguiría siendo elegible por otro proceso participante. Solo con la solicitud en `EN_PLANIFICACION`, `EN_EJECUCION`, `EN_VALIDACION`, `LISTA_PARA_LIBERAR`, `EN_ESTABILIZACION` u `OPERATIVA` (`409` en las demás: no hay plan o ya no está viva); `404` sin plan o fuera de alcance. No reabre el triage ni cambia decisión, proceso principal, aprobaciones, estado ni tareas. Audita `UPDATE` `REQUEST` (`before`/`after` con `participantProcessIds`, `addedProcessIds`, `removedProcessIds` y `reason: GESTION_PROCESOS_PLAN`; quién y cuándo van en el evento); sin cambios no escribe ni audita. **No amplía la lectura**: el alcance de solicitudes se resuelve por `mainProcessId` y no por participantes, así que agregar un proceso no hace que sus integrantes vean la solicitud. Exclusivo de `JEFE_AREA` (`403` al resto, incluido `ADMIN`). |
-| POST | `/requests/:requestId/plan/submit` | Envía el plan a autorización (`409` si hay pendientes). |
+| POST | `/requests/:requestId/plan/submit` | Envía el plan a autorización (`409` si hay pendientes). Desde D6 el compromiso es obligatorio: sin `commitmentDate` responde `409` con «El plan necesita la fecha de compromiso.» (es la misma guía que recomputa el envío; no hay validación aparte). Los planes que ya estaban en autorización o autorizados sin compromiso no se tocan; solo se exige al enviar o reenviar. No cambia la línea base (BL-051) ni añade `rebaseline` (BL-052). |
 | POST | `/requests/:requestId/plan/authorize` | Autoriza el plan (→ *Autorizado*; Request → *En ejecución*). Congela la **línea base de entrega** `baselineDate` (`commitmentDate ?? periodEnd ?? última fecha fin de las tareas`), que expone `PlanResponseDto` y usa el portafolio para medir el vencimiento. |
 | POST | `/requests/:requestId/plan/return` | Devuelve el plan con motivo (→ *Devuelto*). |
 
@@ -251,7 +251,7 @@ Validaciones de fechas (backend y formularios): la fecha de fin de una fase o ta
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/plans/:planId/phases` | Lista las fases del plan ordenadas. Cada fase trae `code`, su ID visible (`PRY-0012-F2`, solo lectura, no cambia al reordenar). `POST`/`PATCH` no aceptan `code`. |
-| POST | `/plans/:planId/phases` | Crea una fase (`order` al final si falta). |
+| POST | `/plans/:planId/phases` | Crea una fase (`order` al final si falta). `400` «El nombre de la fase es obligatorio.» si el nombre queda vacío tras recortar espacios (el `PATCH` aplica lo mismo cuando envía `name`). |
 | PATCH | `/plans/:planId/phases/reorder` | Reordena las fases (protege la fase inicial con tareas). |
 | PATCH | `/plans/:planId/phases/:phaseId` | Edita nombre/fechas/entregable de una fase. |
 | DELETE | `/plans/:planId/phases/:phaseId` | Borra una fase (`409` si tiene tareas). |
@@ -329,14 +329,14 @@ Reparto de horas por persona y mes. Los 3 roles con alcance por proceso.
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/capacity/summary` | Resumen de carga por persona para un mes (en alcance). |
+| GET | `/capacity/summary` | Resumen de carga por persona para un mes (en alcance). D7 (oleada 2, BL-066): `planificado` suma solo las tareas de planes `AUTORIZADO` en solicitudes vivas (no eliminadas ni `RECHAZADA`, `RETIRADA` o `CERRADA`); un borrador o un plan en autorización ya no cuenta. Lista a todas las personas del alcance con asignación (grant) activa y usuario activo, también sin registros ese mes (`disponible: null`, `estado: SIN_DISPONIBILIDAD`, `comprometido`/`planificado` 0). No cambia el estado derivado ni `comprometido`. |
 | GET | `/capacity/people` | Personas en alcance para los selectores. |
 | GET | `/capacity/availability` | Disponibilidades del mes en alcance. |
-| POST | `/capacity/availability` | Registra disponibilidad de una persona para un mes. |
-| PATCH | `/capacity/availability/:id` | Edita las horas disponibles. |
+| POST | `/capacity/availability` | Registra disponibilidad de una persona para un mes. Horas enteras de 0 a 744 (un mes completo): `400` «La disponibilidad no puede superar 744 horas al mes.» |
+| PATCH | `/capacity/availability/:id` | Edita las horas disponibles (mismo tope de 744 h). Los registros ya guardados fuera del tope se conservan y se siguen listando; el tope aplica al editarlos. |
 | GET | `/capacity/assignments` | Asignaciones del mes en alcance (filtros opcionales). Cada ítem trae `requestCode` y `requestTitle` (`null` si no hay solicitud ligada). |
-| POST | `/capacity/assignments` | Crea una asignación de horas (proceso requerido). |
-| PATCH | `/capacity/assignments/:id` | Edita una asignación. |
+| POST | `/capacity/assignments` | Crea una asignación de horas (proceso requerido). Mínimo 1 hora: `400` «La asignación debe ser de al menos 1 hora.» |
+| PATCH | `/capacity/assignments/:id` | Edita una asignación (mismo mínimo de 1 h; las ya guardadas con 0 h se conservan hasta editarlas). |
 | DELETE | `/capacity/assignments/:id` | Borra una asignación. |
 
 Reglas: la disponibilidad es por persona/mes (una fila única); las asignaciones se

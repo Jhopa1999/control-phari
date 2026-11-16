@@ -52,6 +52,7 @@ function createMocks() {
 
   const planState = {
     requirePlanInScope: jest.fn(),
+    assertProjectOpen: jest.fn(),
     assertPlanTransition: jest.fn((from: string, to: PlanStatus) =>
       new PlanStateService(prisma).assertPlanTransition(from, to),
     ),
@@ -170,6 +171,76 @@ describe('PlanService', () => {
     });
   });
 
+  describe('periodo del plan (validación en la API)', () => {
+    it('crear con fin del periodo anterior al inicio -> 400 sin mutación', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.COMPROMETIDA),
+      );
+      (m.prismaObj.plan as any).findFirst.mockResolvedValue(null);
+
+      const call = service.create(lider(), 'r1', {
+        periodStart: '2026-12-10T00:00:00.000Z',
+        periodEnd: '2026-12-01T00:00:00.000Z',
+      });
+
+      await expect(call).rejects.toBeInstanceOf(BadRequestException);
+      await expect(call).rejects.toThrow(
+        'La fecha de finalización del periodo (01/12/2026) no puede ser anterior a su fecha de inicio (10/12/2026).',
+      );
+      expect((m.prismaObj.plan as any).create).not.toHaveBeenCalled();
+    });
+
+    it('editar con fin anterior al inicio -> 400 sin mutación', async () => {
+      (m.planState.requirePlanInScope as jest.Mock).mockResolvedValue({
+        plan: makePlan(PlanStatus.BORRADOR),
+        requestId: 'r1',
+        mainProcessId: 'p1',
+        requestState: RequestState.EN_PLANIFICACION,
+      });
+
+      await expect(
+        service.update(lider(), 'r1', {
+          periodStart: '2026-12-10T00:00:00.000Z',
+          periodEnd: '2026-12-01T00:00:00.000Z',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect((m.prismaObj.plan as any).update).not.toHaveBeenCalled();
+    });
+
+    it('editar solo el fin contra el inicio ya guardado -> 400', async () => {
+      (m.planState.requirePlanInScope as jest.Mock).mockResolvedValue({
+        plan: { ...makePlan(PlanStatus.BORRADOR), periodStart: new Date('2026-12-10T00:00:00Z') },
+        requestId: 'r1',
+        mainProcessId: 'p1',
+        requestState: RequestState.EN_PLANIFICACION,
+      });
+
+      await expect(
+        service.update(lider(), 'r1', { periodEnd: '2026-12-01T00:00:00.000Z' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect((m.prismaObj.plan as any).update).not.toHaveBeenCalled();
+    });
+
+    it('un periodo coherente se guarda y audita', async () => {
+      (m.planState.requirePlanInScope as jest.Mock).mockResolvedValue({
+        plan: makePlan(PlanStatus.BORRADOR),
+        requestId: 'r1',
+        mainProcessId: 'p1',
+        requestState: RequestState.EN_PLANIFICACION,
+      });
+      (m.prismaObj.plan as any).update.mockResolvedValue(makePlan(PlanStatus.BORRADOR));
+
+      await service.update(lider(), 'r1', {
+        periodStart: '2026-12-01T00:00:00.000Z',
+        periodEnd: '2026-12-10T00:00:00.000Z',
+        commitmentDate: '2026-12-10T00:00:00.000Z',
+      });
+
+      expect((m.prismaObj.plan as any).update).toHaveBeenCalledTimes(1);
+      expect(m.auditRecord).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('findByRequest', () => {
     it('re-lee el plan con include y resuelve submitted/authorized', async () => {
       (m.planState.requirePlanInScope as jest.Mock).mockResolvedValue({
@@ -231,6 +302,33 @@ describe('PlanService', () => {
 
       await expect(service.submit(lider(), 'r1')).rejects.toBeInstanceOf(
         ConflictException,
+      );
+      expect((m.prismaObj.plan as any).update).not.toHaveBeenCalled();
+    });
+
+    it('D6: sin compromiso -> 409 con el mensaje del pendiente y sin enviar', async () => {
+      (m.planState.requirePlanInScope as jest.Mock).mockResolvedValue({
+        plan: makePlan(PlanStatus.BORRADOR),
+        requestId: 'r1',
+        mainProcessId: 'p1',
+        requestState: RequestState.EN_PLANIFICACION,
+      });
+      (m.guide.compute as jest.Mock).mockResolvedValue({
+        planId: 'plan1',
+        canSubmit: false,
+        pendings: [
+          {
+            category: 'commitment',
+            code: 'NO_COMMITMENT',
+            message: 'El plan necesita la fecha de compromiso.',
+          },
+        ],
+        suggestedCommitmentDate: null,
+        futureCategories: [],
+      });
+
+      await expect(service.submit(lider(), 'r1')).rejects.toThrow(
+        'No se puede enviar el plan: hay pendientes. El plan necesita la fecha de compromiso.',
       );
       expect((m.prismaObj.plan as any).update).not.toHaveBeenCalled();
     });

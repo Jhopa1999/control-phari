@@ -1038,4 +1038,78 @@ describe('CapacityService', () => {
       expect((m.prismaObj.assignment as any).findMany).toHaveBeenCalledTimes(1);
     });
   });
+
+  // --- D7 (oleada 2): solo planes autorizados en solicitudes vivas, y todas ---
+  // --- las personas con asignación activa ------------------------------------
+
+  describe('summary - D7 planes autorizados y personas', () => {
+    function stubEmpty() {
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.assignment as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([]);
+    }
+
+    it('la consulta de tareas solo toma planes AUTORIZADO de solicitudes vivas (no eliminadas ni RECHAZADA/RETIRADA/CERRADA)', async () => {
+      stubEmpty();
+      await service.summary(jefe(), { month: '2025-03' });
+      const where = (m.prismaObj.task as any).findMany.mock.calls[0][0].where;
+      expect(where.phase).toEqual({
+        plan: {
+          status: 'AUTORIZADO',
+          request: {
+            deletedAt: null,
+            operationalState: { notIn: ['RECHAZADA', 'RETIRADA', 'CERRADA'] },
+          },
+        },
+      });
+    });
+
+    it('lista a la persona con asignación activa aunque no tenga registros ese mes', async () => {
+      stubEmpty();
+      (m.prismaObj.grant as any).findMany.mockResolvedValue([{ userId: 'u9' }]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([{ id: 'u9', name: 'Sin Registros' }]);
+
+      const rows = await service.summary(jefe(), { month: '2025-03' });
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        userId: 'u9',
+        userName: 'Sin Registros',
+        disponible: null,
+        comprometido: 0,
+        planificado: 0,
+        utilizacion: null,
+        libre: null,
+        estado: 'SIN_DISPONIBILIDAD',
+        sobrecargado: false,
+        cargaParcial: false,
+      });
+      const grantWhere = (m.prismaObj.grant as any).findMany.mock.calls[0][0].where;
+      expect(grantWhere.active).toBe(true);
+      expect(grantWhere.user).toEqual({ active: true });
+      expect(grantWhere.userId).toBeUndefined();
+    });
+
+    it('no duplica a quien ya tiene datos y tiene asignación activa', async () => {
+      stubEmpty();
+      (m.prismaObj.grant as any).findMany.mockResolvedValue([{ userId: 'ui' }]);
+      (m.prismaObj.monthlyAvailability as any).findMany.mockResolvedValue([
+        availabilityRow({ userId: 'ui', availableHours: 100 }),
+      ]);
+      (m.prismaObj.user as any).findMany.mockResolvedValue([{ id: 'ui', name: 'Integrante' }]);
+
+      const rows = await service.summary(jefe(), { month: '2025-03' });
+
+      expect(rows.map((r) => r.userId)).toEqual(['ui']);
+      expect(rows[0].estado).toBe('OK');
+    });
+
+    it('para el integrante las personas se acotan a su propio alcance', async () => {
+      stubEmpty();
+      await service.summary(integrante(), { month: '2025-03' });
+      const grantWhere = (m.prismaObj.grant as any).findMany.mock.calls[0][0].where;
+      expect(grantWhere.userId).toEqual({ in: ['ui'] });
+    });
+  });
 });

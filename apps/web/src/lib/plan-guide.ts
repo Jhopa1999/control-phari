@@ -11,7 +11,7 @@ import type { PlanGuidePending } from './api-client';
  * e2e/web-lib.spec.ts lo cargue en Node.
  */
 
-export type GuideActionKind = 'newPhase' | 'editPhase' | 'newTask' | 'editTask';
+export type GuideActionKind = 'newPhase' | 'editPhase' | 'newTask' | 'editTask' | 'commitment';
 
 export interface GuideItemPresentation {
   /** `${code}:${targetId ?? ''}` */
@@ -32,6 +32,7 @@ export interface GuideItemPresentation {
 export const GUIDE_CATEGORY_LABELS: Record<string, string> = {
   datesPhases: 'Fases y fechas',
   tasksResponsibles: 'Tareas y responsables',
+  commitment: 'Datos del plan',
   capacity: 'Capacidad',
   evidenceGates: 'Evidencias de controles',
   frameworkControls: 'Controles del marco',
@@ -92,6 +93,11 @@ const GUIDE_CODES: Record<string, GuideCodeCopy> = {
     target: 'task',
     text: (name) => `La tarea «${name}» empieza después de terminar.`,
     action: EDIT_TASK,
+  },
+  NO_COMMITMENT: {
+    target: null,
+    text: () => 'Falta la fecha de compromiso.',
+    action: { kind: 'commitment', label: 'Ir al compromiso' },
   },
   MILESTONE_WITH_HOURS: {
     target: 'task',

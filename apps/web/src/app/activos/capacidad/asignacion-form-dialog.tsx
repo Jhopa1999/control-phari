@@ -80,8 +80,8 @@ function validate(values: AsignacionFormValues): FieldErrors {
     errors.committedHours = 'Las horas comprometidas son obligatorias.';
   } else {
     const hours = Number(trimmed);
-    if (!Number.isInteger(hours) || hours < 0) {
-      errors.committedHours = 'Las horas comprometidas deben ser un entero mayor o igual a 0.';
+    if (!Number.isInteger(hours) || hours < 1) {
+      errors.committedHours = 'La asignación debe ser de al menos 1 hora.';
     }
   }
   return errors;
@@ -250,12 +250,12 @@ export function AsignacionFormDialog({
               label="Horas comprometidas"
               required
               error={fieldErrors.committedHours}
-              help="Entero mayor o igual a 0."
+              help="Mínimo 1 hora."
             >
               <Input
                 ref={hoursRef}
                 type="number"
-                min={0}
+                min={1}
                 step={1}
                 inputMode="numeric"
                 value={values.committedHours}

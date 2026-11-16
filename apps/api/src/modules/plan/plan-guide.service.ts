@@ -7,6 +7,8 @@ import { PlanGuideDto, PlanGuidePendingDto } from './dto/plan-guide.dto';
  */
 const CATEGORY_DATES_PHASES = 'datesPhases';
 const CATEGORY_TASKS_RESPONSIBLES = 'tasksResponsibles';
+/** D6 (oleada 2): el compromiso es obligatorio para enviar el plan. */
+const CATEGORY_COMMITMENT = 'commitment';
 
 /**
  * Categorias gancho de fases futuras (design §2.2, D5). Existen en el contrato
@@ -119,10 +121,31 @@ export class PlanGuideService {
       }
     }
 
+    // D6: la fecha de compromiso es obligatoria para enviar. La sugerencia (fin de
+    // la ultima tarea) la calcula el servidor para que la web solo la precargue.
+    const plan = await this.prisma.plan.findUnique({
+      where: { id: planId },
+      select: { commitmentDate: true },
+    });
+    if (!plan?.commitmentDate) {
+      pendings.push({
+        category: CATEGORY_COMMITMENT,
+        code: 'NO_COMMITMENT',
+        message: 'El plan necesita la fecha de compromiso.',
+      });
+    }
+    let suggestedCommitmentDate: Date | null = null;
+    for (const task of tasks) {
+      if (task.endDate && (!suggestedCommitmentDate || task.endDate > suggestedCommitmentDate)) {
+        suggestedCommitmentDate = task.endDate;
+      }
+    }
+
     return {
       planId,
       canSubmit: pendings.length === 0,
       pendings,
+      suggestedCommitmentDate,
       futureCategories: [...FUTURE_CATEGORIES],
     };
   }
