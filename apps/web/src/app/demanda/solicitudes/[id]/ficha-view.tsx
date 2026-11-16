@@ -2,14 +2,19 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { Send } from 'lucide-react';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DisabledReason } from '@/components/disabled-reason';
 import { ErrorState } from '@/components/error-state';
 import { IdChip } from '@/components/id-chip';
+import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RequestFacts } from '@/components/request-context-bar';
 import { Section } from '@/components/section';
 import { PriorityBadge, StatusBadge } from '@/components/status-badge';
-import { buttonVariants } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActor } from '@/lib/actor-context';
 import type {
@@ -19,6 +24,7 @@ import type {
   PriorityEvaluation,
   Process,
   Request,
+  Requester,
   Triage,
 } from '@/lib/api-client';
 import { listApprovals } from '@/lib/approval';
@@ -32,11 +38,15 @@ import {
 } from '@/lib/governance';
 import { getPlan } from '@/lib/plan';
 import { listPriorityEvaluations } from '@/lib/priority';
-import { RequestError, getRequest } from '@/lib/requests';
+import { listRequesters } from '@/lib/requesters';
+import { RequestError, getRequest, resubmitRequest, updateRequest } from '@/lib/requests';
 import {
+  editPolicy,
   isPlannable,
   isPrioritizable,
   isTriageable,
+  requestActorFrom,
+  resubmitPolicy,
 } from '@/lib/request-state';
 import { listProcesses } from '@/lib/team';
 import { listTriage } from '@/lib/triage';
@@ -47,9 +57,13 @@ import {
   PlanDetalle,
   PrioridadDetalle,
   TriageDetalle,
+  TriageHistorial,
+  TriageResumen,
   type TriageCatalogs,
 } from './ficha-detalles';
 import { FichaStep } from './ficha-step';
+import { SolicitudFormDialog, type SolicitudFormValues } from '../solicitud-form-dialog';
+import { solicitudUpdatePayload } from '../solicitud-payload';
 import { ClosurePanel } from './closure-panel';
 import {
   approvalStepState,
@@ -123,7 +137,13 @@ export function FichaView({
     from === 'portafolio'
       ? { label: 'Portafolio', href: '/seguimiento/portafolio' }
       : { label: 'Solicitudes', href: '/demanda/solicitudes' };
-  const { allowedModules } = useActor();
+  const { allowedModules, permissions } = useActor();
+  const requestActor = React.useMemo(() => requestActorFrom(permissions), [permissions]);
+  const [requesters, setRequesters] = React.useState<Requester[]>([]);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const [resubmitOpen, setResubmitOpen] = React.useState(false);
   const [state, setState] = React.useState<LoadState>('loading');
   const [request, setRequest] = React.useState<Request | null>(null);
   const [data, setData] = React.useState<StageData>(EMPTY_STAGE);
@@ -136,6 +156,7 @@ export function FichaView({
         // Las demás lecturas toleran fallo/404 por etapa y se degradan a vacío.
         Promise.all([
           listProcesses().catch(() => [] as Process[]),
+          listRequesters().catch(() => [] as Requester[]),
           listTriageSafe(id),
           listPriorityEvaluations(id).catch(() => [] as PriorityEvaluation[]),
           listApprovals(id).catch(() => [] as Approval[]),
@@ -153,6 +174,7 @@ export function FichaView({
         ]).then(
           ([
             processes,
+            requestersList,
             triageContext,
             evaluations,
             approvals,
@@ -169,6 +191,7 @@ export function FichaView({
             validationResult,
           ]) => {
             setRequest(req);
+            setRequesters(requestersList);
             setData({
               processes,
               triages: triageContext,
@@ -245,6 +268,39 @@ export function FichaView({
     );
   }
 
+  const edit = editPolicy(requestActor, request);
+  const resubmit = resubmitPolicy(requestActor, request);
+
+  async function handleEdit(values: SolicitudFormValues): Promise<void> {
+    if (!request) return;
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await updateRequest(request.id, solicitudUpdatePayload(values));
+      toast.success('Solicitud actualizada.');
+      setEditOpen(false);
+      await load();
+    } catch (err) {
+      // Fallo: el diálogo sigue abierto con lo escrito (AC-031).
+      const message = err instanceof RequestError ? err.message : 'Ocurrió un error inesperado.';
+      setFormError(message);
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResubmit(): Promise<void> {
+    if (!request) return;
+    try {
+      await resubmitRequest(request.id);
+      toast.success('Solicitud reenviada a triage.');
+      await load();
+    } catch (err) {
+      toast.error(err instanceof RequestError ? err.message : 'Ocurrió un error inesperado.');
+    }
+  }
+
   const processName =
     request.mainProcessId === null
       ? 'Sin proceso aún'
@@ -274,6 +330,56 @@ export function FichaView({
         }
       />
 
+      {request.operationalState === 'DEVUELTA' ? (
+        <InlineNotice tone="warning" title="Solicitud devuelta">
+          <div className="flex min-w-0 flex-col gap-3">
+            <div className="min-w-0">
+              <p className="text-meta font-medium text-muted-foreground">Motivo del triage</p>
+              <p className="mt-1 whitespace-pre-wrap wrap-break-word text-sm text-foreground">
+                {request.currentTriageReason ?? 'El motivo está en el historial de la solicitud.'}
+              </p>
+              {request.currentTriageDecidedAt ? (
+                <p className="mt-1 text-meta tabular-nums text-muted-foreground">
+                  {`Devuelta el ${formatDate(request.currentTriageDecidedAt)}`}
+                </p>
+              ) : null}
+            </div>
+            {resubmit.allowed ? (
+              <>
+                <p className="text-sm">Corrige la ficha y reenvía la solicitud a triage.</p>
+                <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
+                  <Button
+                    type="button"
+                    className="order-first h-11 w-full sm:order-last sm:h-9 sm:w-auto"
+                    onClick={() => setResubmitOpen(true)}
+                  >
+                    <Send aria-hidden="true" />
+                    Reenviar a triage
+                  </Button>
+                  {edit.allowed ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 w-full sm:h-9 sm:w-auto"
+                      onClick={() => {
+                        setFormError(null);
+                        setEditOpen(true);
+                      }}
+                    >
+                      Editar ficha
+                    </Button>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <DisabledReason id="ficha-resubmit-reason">
+                {resubmit.reason ?? 'No puedes reenviar esta solicitud.'}
+              </DisabledReason>
+            )}
+          </div>
+        </InlineNotice>
+      ) : null}
+
       <Section title="Ficha de la solicitud">
         <div className="rounded-lg border bg-card p-4">
           <RequestFacts request={request} processName={processName} />
@@ -287,6 +393,40 @@ export function FichaView({
       />
 
       <ClosurePanel request={request} onChanged={() => void load()} />
+
+      <SolicitudFormDialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) setFormError(null);
+        }}
+        editing={request}
+        requesters={requesters}
+        onRequesterCreated={(r) => setRequesters((prev) => [...prev, r])}
+        submitting={submitting}
+        errorMessage={formError}
+        onSubmit={(values) => void handleEdit(values)}
+      />
+
+      <ConfirmDialog
+        open={resubmitOpen}
+        onOpenChange={setResubmitOpen}
+        tone="default"
+        title="¿Reenviar a triage?"
+        description="La solicitud volverá a Registrada y aparecerá en «Pendientes de triage». El jefe de área recibirá un aviso."
+        confirmLabel="Reenviar a triage"
+        onConfirm={handleResubmit}
+      >
+        <div className="mx-4 grid min-w-0 gap-2 break-words rounded-lg bg-muted/50 p-3 sm:mx-0">
+          <p className="flex min-w-0 items-start gap-2 text-sm font-medium">
+            <IdChip code={request.code} />
+            <span className="line-clamp-3">{request.title}</span>
+          </p>
+          <p className="text-meta text-muted-foreground">
+            {`Motivo de la devolución: ${request.currentTriageReason ?? 'sin motivo registrado'}`}
+          </p>
+        </div>
+      </ConfirmDialog>
     </PageLayout>
   );
 }
@@ -331,8 +471,9 @@ function Stepper({
   allowedModules: Set<string>;
 }): React.ReactElement {
   const id = encodeURIComponent(request.id);
-  // Vigente = el último registro (triage: 0 o 1 fila; prioridad: última evaluación).
-  const triage = data.triages.length > 0 ? data.triages[data.triages.length - 1] : null;
+  // Vigente = el último registro. El triage llega de la API de más reciente a más
+  // antiguo (tras un reenvío hay varias decisiones); la prioridad, al revés.
+  const triage = data.triages.length > 0 ? data.triages[0] : null;
   const evaluation =
     data.evaluations.length > 0 ? data.evaluations[data.evaluations.length - 1] : null;
   const hasPlan = data.plan !== null;
@@ -387,12 +528,18 @@ function Stepper({
         }
       >
         {triage ? (
-          <TriageDetalle
-            triage={triage}
-            catalogs={data.triageCatalogs}
-            request={request}
-            processes={data.processes}
-          />
+          <div className="flex flex-col gap-4">
+            <TriageDetalle
+              triage={triage}
+              catalogs={data.triageCatalogs}
+              request={request}
+              processes={data.processes}
+            />
+            <TriageHistorial triages={data.triages} />
+          </div>
+        ) : request.currentTriageDecision ? (
+          // Sin acceso al triage completo (p. ej. el solicitante): solo decisión y motivo.
+          <TriageResumen request={request} />
         ) : (
           <SinRegistro>Esta etapa aún no se ha registrado.</SinRegistro>
         )}

@@ -1527,13 +1527,73 @@
             }
           },
           "400": {
-            "description": "Datos de entrada invalidos o id no UUID."
+            "description": "Datos de entrada inválidos, id no UUID o justificación ausente o corta desde Comprometida."
+          },
+          "403": {
+            "description": "El actor no puede editar la solicitud en su estado actual."
           },
           "404": {
             "description": "Solicitud no encontrada."
+          },
+          "409": {
+            "description": "La solicitud está cerrada."
           }
         },
-        "summary": "Edita la ficha (no el estado); conserva fechas iniciales (BR-017).",
+        "summary": "Edita la ficha (no el estado); conserva fechas iniciales (BR-017). Registrada y Devuelta: quien la registró, el líder del proceso o el jefe; estados siguientes: solo líder o jefe; desde Comprometida exige justificación del cambio (mínimo 10 caracteres). Una solicitud Devuelta no cambia de estado al editarse: se reenvía con «Reenviar a triage».",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/requests/{id}/resubmit": {
+      "post": {
+        "operationId": "RequestController_resubmit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResubmitRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud reenviada; queda Registrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos."
+          },
+          "403": {
+            "description": "Solo quien la registró, el líder del proceso o el jefe de área."
+          },
+          "404": {
+            "description": "Solicitud no encontrada o fuera de alcance."
+          },
+          "409": {
+            "description": "La solicitud no está devuelta."
+          }
+        },
+        "summary": "Reenvía a triage una solicitud devuelta (DEVUELTA → REGISTRADA). Lo hace quien la registró, el líder del proceso o el jefe de área; acepta correcciones de la ficha en el mismo paso, conserva el historial de triages y avisa a los jefes.",
         "tags": [
           "requests"
         ]
@@ -11674,6 +11734,17 @@
             "nullable": true,
             "description": "Decision del triage vigente (CONTINUAR/DEVOLVER/RECHAZAR) o null."
           },
+          "currentTriageReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo de la decision de triage vigente cuando fue DEVOLVER o RECHAZAR; null en otro caso. Es lo unico del triage que ve el solicitante: nunca incluye notas ni dependencias internas."
+          },
+          "currentTriageDecidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Fecha de la decision de triage vigente o null si aun no hay triage."
+          },
           "currentScore": {
             "type": "number",
             "nullable": true,
@@ -11721,6 +11792,8 @@
           "initialCommitmentDate",
           "changeJustification",
           "currentTriageDecision",
+          "currentTriageReason",
+          "currentTriageDecidedAt",
           "currentScore",
           "priorityLabel",
           "participants",
@@ -11873,6 +11946,56 @@
         ]
       },
       "UpdateRequestDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titulo de la solicitud.",
+            "maxLength": 255
+          },
+          "requesterId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solicitante del maestro de solicitantes. El área y el nombre se toman de su registro."
+          },
+          "requesterArea": {
+            "type": "string",
+            "description": "Area solicitante.",
+            "maxLength": 255
+          },
+          "requesterName": {
+            "type": "string",
+            "description": "Nombre del solicitante.",
+            "maxLength": 255
+          },
+          "functionalOwner": {
+            "type": "string",
+            "description": "Dueno funcional.",
+            "maxLength": 255
+          },
+          "expectedResult": {
+            "type": "string",
+            "description": "Resultado esperado.",
+            "maxLength": 2000
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha objetivo."
+          },
+          "referenceUrl": {
+            "type": "string",
+            "description": "Ficha/enlace de referencia.",
+            "maxLength": 2048
+          },
+          "changeJustification": {
+            "type": "string",
+            "description": "Justificacion del cambio (BR-017).",
+            "maxLength": 2000
+          }
+        }
+      },
+      "ResubmitRequestDto": {
         "type": "object",
         "properties": {
           "title": {

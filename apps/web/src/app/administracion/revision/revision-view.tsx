@@ -133,7 +133,7 @@ export function RevisionView(): React.ReactElement {
     setDevolverError(null);
     try {
       await createApproval(devolver.id, { decision: 'DEVOLVER', reason });
-      toast.success('Solicitud devuelta a triage.');
+      toast.success('Solicitud devuelta a Priorización.');
       // Se recarga antes de cerrar: al cerrarse, la fila ya no está y el foco
       // va a returnFocusTo. Reset solo en éxito (AC-031).
       await load();
@@ -214,7 +214,7 @@ export function RevisionView(): React.ReactElement {
       >
         <InlineNotice tone="info" className="py-2">
           {canDecide
-            ? 'Aprobar pide confirmación y lleva la solicitud a Comprometida; devolver la regresa a triage con un motivo.'
+            ? 'Aprobar pide confirmación y lleva la solicitud a Comprometida; devolver la regresa a Priorización con un motivo (el triage ya registrado se conserva).'
             : 'Solo el jefe de área puede aprobar o devolver. Aquí puedes consultar las solicitudes priorizadas pendientes de decisión.'}
         </InlineNotice>
         <PriorityLegend />

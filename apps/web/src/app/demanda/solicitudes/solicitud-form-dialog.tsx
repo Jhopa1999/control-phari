@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Lock, UserPlus } from 'lucide-react';
 import { Field, FormError, RequiredHint } from '@/components/field';
+import { InlineNotice } from '@/components/inline-notice';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ import { listApprovals } from '@/lib/approval';
 import { listAreas } from '@/lib/areas';
 import { createRequester } from '@/lib/requesters';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { EDIT_JUSTIFICATION_MIN_LENGTH, JUSTIFIED_EDIT_STATES } from '@/lib/request-state';
 import { cn } from '@/lib/utils';
 
 export interface SolicitudFormValues {
@@ -68,7 +70,7 @@ interface SolicitudFormDialogProps {
 /** Id del formulario: el FormError lleva `sol-form-error`. */
 const FORM_ID = 'sol-form';
 
-type FieldKey = 'title';
+type FieldKey = 'title' | 'changeJustification';
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
 /** Fases del flujo, para explicar las precondiciones (UI-04). */
@@ -98,9 +100,18 @@ function toDateInput(iso: string | null | undefined): string {
 }
 
 /** Reglas del cliente (las de siempre), evaluadas todas a la vez (design §9). */
-function validate(values: SolicitudFormValues): FieldErrors {
+function validate(values: SolicitudFormValues, needsJustification: boolean): FieldErrors {
   const errors: FieldErrors = {};
   if (!values.title.trim()) errors.title = 'El título es obligatorio.';
+  // Desde «Comprometida» la API exige justificación (D4); se anticipa el mensaje.
+  if (needsJustification) {
+    const justification = values.changeJustification.trim();
+    if (justification.length === 0) {
+      errors.changeJustification = 'Escribe la justificación del cambio.';
+    } else if (justification.length < EDIT_JUSTIFICATION_MIN_LENGTH) {
+      errors.changeJustification = `La justificación debe tener al menos ${EDIT_JUSTIFICATION_MIN_LENGTH} caracteres.`;
+    }
+  }
   return errors;
 }
 
@@ -180,6 +191,8 @@ export function SolicitudFormDialog({
   onRequesterCreated,
 }: SolicitudFormDialogProps): React.ReactElement {
   const isEdit = Boolean(editing);
+  // Desde «Comprometida» hasta antes del cierre editar exige justificación (D4).
+  const needsJustification = editing ? JUSTIFIED_EDIT_STATES.includes(editing.operationalState) : false;
   const { allowedModules } = useActor();
   const canCreateRequester = allowedModules.has('requesters');
   const [newReqOpen, setNewReqOpen] = React.useState(false);
@@ -192,6 +205,7 @@ export function SolicitudFormDialog({
   // Solo lectura: deja ver lo registrado en la etapa de aprobación.
   const [approvals, setApprovals] = React.useState<Approval[]>([]);
   const titleRef = React.useRef<HTMLInputElement>(null);
+  const justificationRef = React.useRef<HTMLTextAreaElement>(null);
 
   // Inicializa el formulario al abrir (crear o editar). El reset solo ocurre
   // aquí; ante fallo del POST/PATCH el padre mantiene el diálogo abierto con los
@@ -231,10 +245,14 @@ export function SolicitudFormDialog({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    const errors = validate(values);
+    const errors = validate(values, needsJustification);
     setFieldErrors(errors);
     if (errors.title) {
       titleRef.current?.focus();
+      return;
+    }
+    if (errors.changeJustification) {
+      justificationRef.current?.focus();
       return;
     }
     onSubmit({
@@ -456,8 +474,25 @@ export function SolicitudFormDialog({
                     value={formatDate(editing?.initialCommitmentDate)}
                   />
                 </Field>
-                <Field id="sol-justification" label="Justificación del cambio">
+                {needsJustification ? (
+                  <InlineNotice tone="info" className="py-2 text-meta">
+                    Esta solicitud ya está comprometida. Los cambios quedan registrados con tu justificación
+                    y los verá el equipo en el historial.
+                  </InlineNotice>
+                ) : null}
+                <Field
+                  id="sol-justification"
+                  label="Justificación del cambio"
+                  required={needsJustification}
+                  error={fieldErrors.changeJustification}
+                  help={
+                    needsJustification
+                      ? `Mínimo ${EDIT_JUSTIFICATION_MIN_LENGTH} caracteres. Explica qué cambia y por qué.`
+                      : undefined
+                  }
+                >
                   <Textarea
+                    ref={justificationRef}
                     value={values.changeJustification}
                     placeholder="Describe el motivo del cambio."
                     onChange={(e) => update('changeJustification', e.target.value)}

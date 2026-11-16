@@ -58,7 +58,25 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
     access: 'write',
     description:
       'Actualiza una solicitud (PATCH /requests/{id}). El cuerpo debe cumplir ' +
-      'UpdateRequestDto; el backend valida los datos.',
+      'UpdateRequestDto; el backend valida los datos. Quién edita depende del ' +
+      'estado: en Registrada y Devuelta, quien la registró, el líder del proceso ' +
+      'o el jefe; en los estados siguientes solo líder o jefe (403 para los demás); ' +
+      'desde Comprometida hasta antes del cierre exige changeJustification (mínimo ' +
+      '10 caracteres, 400 si falta). Cerrada responde 409. Editar una solicitud ' +
+      'Devuelta no cambia su estado: usa request.resubmit para reenviarla.',
+  },
+  {
+    name: 'request.resubmit',
+    operation: 'POST /requests/{id}/resubmit',
+    access: 'write',
+    description:
+      'Reenvía a triage una solicitud devuelta (POST /requests/{id}/resubmit): ' +
+      'pasa de Devuelta a Registrada, conserva el historial de triages y avisa al ' +
+      'jefe. Lo hace quien registró la solicitud, el líder del proceso o el jefe ' +
+      '(403 para los demás); 409 si no está Devuelta. El cuerpo es opcional y ' +
+      'admite los mismos campos que request.update para corregir la ficha en el ' +
+      'mismo paso. Antes de reenviar, revisa con el usuario el motivo de la ' +
+      'devolución (currentTriageReason en request.get).',
   },
   {
     name: 'request.triage.get',

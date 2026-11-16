@@ -41,6 +41,10 @@ export const IMPLEMENTED_TRANSITIONS: ReadonlyArray<
   [RequestState.REGISTRADA, RequestState.EN_TRIAGE],
   // Decision del triage.
   [RequestState.EN_TRIAGE, RequestState.DEVUELTA],
+  // Oleada 2 (D3): «Reenviar a triage». Es la unica salida de DEVUELTA; el
+  // triage anterior se conserva en el historial y la solicitud vuelve a la
+  // cola de triage como REGISTRADA.
+  [RequestState.DEVUELTA, RequestState.REGISTRADA],
   [RequestState.EN_TRIAGE, RequestState.RECHAZADA],
   // Guardar PriorityEvaluation con triage=CONTINUAR.
   [RequestState.EN_TRIAGE, RequestState.BACKLOG_PRIORIZADO],

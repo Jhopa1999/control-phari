@@ -4,7 +4,7 @@ import * as React from 'react';
 import { ReasonDialog } from '@/components/reason-dialog';
 
 interface DevolverDialogProps {
-  /** 'solicitud' vuelve a triage; 'plan' vuelve a edición (design §13.3). */
+  /** 'solicitud' vuelve a Priorización; 'plan' vuelve a edición (design §13.3). */
   kind: 'solicitud' | 'plan';
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -41,9 +41,10 @@ export function DevolverDialog({
       description={
         isPlan
           ? `El plan de «${requestTitle}» volverá a edición con el motivo que indiques.`
-          : `«${requestTitle}» volverá a triage con el motivo que indiques.`
+          : `«${requestTitle}» vuelve a Priorización con el motivo que indiques. El triage ya registrado se conserva.`
       }
       fieldId="devolver-reason"
+      fieldLabel={isPlan ? 'Motivo' : 'Motivo de la devolución'}
       confirmLabel="Devolver"
       busyLabel="Devolviendo…"
       tone="danger"

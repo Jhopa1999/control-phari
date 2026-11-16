@@ -1,4 +1,9 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
@@ -25,7 +30,12 @@ function createMocks() {
   const audit = { record: jest.fn() } as unknown as AuditService;
   const auditRecord = audit.record as unknown as jest.Mock;
   const state = new RequestStateService(prisma);
-  return { prisma, prismaObj, audit, auditRecord, state };
+  const notifications = {
+    notify: jest.fn(),
+    areaHeadsForProcess: jest.fn().mockResolvedValue(['uj']),
+    allAreaHeads: jest.fn().mockResolvedValue(['uj', 'uj2']),
+  };
+  return { prisma, prismaObj, audit, auditRecord, state, notifications };
 }
 
 function lider(scoped: string[] = ['p1']): CurrentActor {
@@ -120,7 +130,7 @@ describe('RequestService', () => {
 
   beforeEach(() => {
     m = createMocks();
-    service = new RequestService(m.prisma, m.audit, m.state);
+    service = new RequestService(m.prisma, m.audit, m.state, m.notifications as never);
     (m.prismaObj.triage as any).findFirst.mockResolvedValue(null);
     (m.prismaObj.priorityEvaluation as any).findFirst.mockResolvedValue(null);
   });
@@ -284,7 +294,7 @@ describe('RequestService', () => {
         makeRequestRow({ title: 'Nuevo', changeJustification: 'ajuste' }),
       );
 
-      await service.update(lider(), 'r1', {
+      await service.update(jefe(), 'r1', {
         title: 'Nuevo',
         changeJustification: 'ajuste',
       });
@@ -308,7 +318,7 @@ describe('RequestService', () => {
       (m.prismaObj.request as any).findFirst.mockResolvedValue(makeRequestRow());
       (m.prismaObj.request as any).update.mockResolvedValue(makeRequestRow());
 
-      await service.update(lider(), 'r1', { title: 'Nuevo' });
+      await service.update(jefe(), 'r1', { title: 'Nuevo' });
 
       expect((m.prismaObj.requestParticipant as any).deleteMany).not.toHaveBeenCalled();
       expect((m.prismaObj.requestParticipant as any).createMany).not.toHaveBeenCalled();

@@ -470,8 +470,25 @@ export interface paths {
         delete: operations["RequestController_remove"];
         options?: never;
         head?: never;
-        /** Edita la ficha (no el estado); conserva fechas iniciales (BR-017). */
+        /** Edita la ficha (no el estado); conserva fechas iniciales (BR-017). Registrada y Devuelta: quien la registró, el líder del proceso o el jefe; estados siguientes: solo líder o jefe; desde Comprometida exige justificación del cambio (mínimo 10 caracteres). Una solicitud Devuelta no cambia de estado al editarse: se reenvía con «Reenviar a triage». */
         patch: operations["RequestController_update"];
+        trace?: never;
+    };
+    "/requests/{id}/resubmit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reenvía a triage una solicitud devuelta (DEVUELTA → REGISTRADA). Lo hace quien la registró, el líder del proceso o el jefe de área; acepta correcciones de la ficha en el mismo paso, conserva el historial de triages y avisa a los jefes. */
+        post: operations["RequestController_resubmit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/requests/{id}/triage": {
@@ -3578,6 +3595,13 @@ export interface components {
             changeJustification: string | null;
             /** @description Decision del triage vigente (CONTINUAR/DEVOLVER/RECHAZAR) o null. */
             currentTriageDecision: string | null;
+            /** @description Motivo de la decision de triage vigente cuando fue DEVOLVER o RECHAZAR; null en otro caso. Es lo unico del triage que ve el solicitante: nunca incluye notas ni dependencias internas. */
+            currentTriageReason: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de la decision de triage vigente o null si aun no hay triage.
+             */
+            currentTriageDecidedAt: string | null;
             /** @description Score de la ultima evaluacion de prioridad (0-100) o null. */
             currentScore: number | null;
             /** @description Etiqueta de umbral derivada del score vigente o null. */
@@ -3679,6 +3703,32 @@ export interface components {
             referenceUrl?: string;
         };
         UpdateRequestDto: {
+            /** @description Titulo de la solicitud. */
+            title?: string;
+            /**
+             * Format: uuid
+             * @description Solicitante del maestro de solicitantes. El área y el nombre se toman de su registro.
+             */
+            requesterId?: string;
+            /** @description Area solicitante. */
+            requesterArea?: string;
+            /** @description Nombre del solicitante. */
+            requesterName?: string;
+            /** @description Dueno funcional. */
+            functionalOwner?: string;
+            /** @description Resultado esperado. */
+            expectedResult?: string;
+            /**
+             * Format: date-time
+             * @description Fecha objetivo.
+             */
+            targetDate?: string;
+            /** @description Ficha/enlace de referencia. */
+            referenceUrl?: string;
+            /** @description Justificacion del cambio (BR-017). */
+            changeJustification?: string;
+        };
+        ResubmitRequestDto: {
             /** @description Titulo de la solicitud. */
             title?: string;
             /**
@@ -9232,8 +9282,15 @@ export interface operations {
                     "application/json": components["schemas"]["RequestResponseDto"];
                 };
             };
-            /** @description Datos de entrada invalidos o id no UUID. */
+            /** @description Datos de entrada inválidos, id no UUID o justificación ausente o corta desde Comprometida. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El actor no puede editar la solicitud en su estado actual. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9241,6 +9298,67 @@ export interface operations {
             };
             /** @description Solicitud no encontrada. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La solicitud está cerrada. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RequestController_resubmit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ResubmitRequestDto"];
+            };
+        };
+        responses: {
+            /** @description Solicitud reenviada; queda Registrada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestResponseDto"];
+                };
+            };
+            /** @description Datos de entrada inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solo quien la registró, el líder del proceso o el jefe de área. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud no encontrada o fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La solicitud no está devuelta. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

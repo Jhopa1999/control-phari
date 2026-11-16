@@ -120,11 +120,17 @@ test.describe('Flujo feliz de la demanda', () => {
       expect(done.operationalState).toBe('COMPROMETIDA');
     } finally {
       await jefeCtx.close();
-      // Limpieza con filtro estricto: solo la solicitud de esta prueba, mientras se pueda eliminar.
-      const state = await request.get(`${API_URL}/requests/${req.id}`, { headers: JEFE });
-      if (state.ok()) {
-        await request.delete(`${API_URL}/requests/${req.id}`, { headers: JEFE });
-      }
     }
   });
+});
+
+// Limpieza con filtro estricto: solo la solicitud con el título único de esta
+// ejecución. Va en afterEach para cubrir también un fallo durante el registro.
+test.afterEach(async ({ request }) => {
+  const res = await request.get(`${API_URL}/requests`, { headers: JEFE });
+  if (!res.ok()) return;
+  const mine = ((await res.json()) as Array<{ id: string; title: string }>).filter((r) => r.title === TITLE);
+  for (const r of mine) {
+    await request.delete(`${API_URL}/requests/${r.id}`, { headers: JEFE });
+  }
 });

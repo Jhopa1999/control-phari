@@ -120,8 +120,8 @@ describe('catálogo de tools', () => {
     );
   });
 
-  it('expone 135 tools: las 47 originales, 61 de lectura (incluye la cola task.pending-review, worklog.options, la resolución por ID visible: code.resolve, request.get_by_code y phase.get_by_code, las vistas de actividades recurrentes: tablero, calendario, mi trabajo, adjuntos y vista previa, y las sugerencias del día y los compromisos de Mi trabajo y de mis reuniones), help.search y 25 de escritura (coordinación, sugerencias de la bitácora, planes, activos, documentos y actividades recurrentes)', () => {
-    assert.equal(ALL_SPECS.length, 135);
+  it('expone 136 tools: las 47 originales, 61 de lectura (incluye la cola task.pending-review, worklog.options, la resolución por ID visible: code.resolve, request.get_by_code y phase.get_by_code, las vistas de actividades recurrentes: tablero, calendario, mi trabajo, adjuntos y vista previa, y las sugerencias del día y los compromisos de Mi trabajo y de mis reuniones), help.search y 26 de escritura (coordinación, sugerencias de la bitácora, planes, activos, documentos, actividades recurrentes y el reenvío a triage de una solicitud devuelta)', () => {
+    assert.equal(ALL_SPECS.length, 136);
   });
 });
 

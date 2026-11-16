@@ -115,6 +115,13 @@ equest-scope.service.ts). */
       initialCommitmentDate: request.initialCommitmentDate,
       changeJustification: request.changeJustification,
       currentTriageDecision: triage ? triage.decision : null,
+      // Solo el motivo de una devolución o rechazo; las notas y dependencias
+      // del triage son internas y nunca salen por la ficha del solicitante.
+      currentTriageReason:
+        triage && (triage.decision === 'DEVOLVER' || triage.decision === 'RECHAZAR')
+          ? (triage.decisionReason ?? null)
+          : null,
+      currentTriageDecidedAt: triage ? triage.decidedAt : null,
       currentScore: evaluation ? evaluation.score : null,
       priorityLabel: evaluation ? this.priorityLabel(evaluation.score) : null,
       participants: request.participants.map((p) => ({

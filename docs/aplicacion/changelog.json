@@ -861,6 +861,17 @@
         "docs/aplicacion/autenticacion-autorizacion.md"
       ],
       "summary": "Oleada 1, PR-C (BL-065 y BL-068): la API bloquea la edición del plan (fases, tareas, dependencias, importación, datos y procesos) con 409 si está en autorización y, si está autorizado, solo admite responsable, fechas y horas con auditoría (D5); las altas de diario, semanal, reunión y compromiso exigen que el actor pertenezca al proceso (403) y un proceso inexistente da 400 en vez de 500. Planificación deshabilita Gestionar procesos con motivo. MCP: descripciones de 10 tools con las nuevas respuestas 409/403; sin tools nuevas. Sin cambios de roles."
+    },
+    {
+      "timestamp": "2026-11-16T00:37:12Z",
+      "trigger_file": "apps/api/src/modules/request/request.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "apps/mcp/README.md"
+      ],
+      "summary": "Oleada 2, PR-A (BL-061, BL-062 y BL-064): «Reenviar a triage» (POST /requests/:id/resubmit, DEVUELTA → REGISTRADA, aviso REQUEST_RESUBMITTED a los jefes, historial de triages conservado; tool MCP request.resubmit), política de edición por estado (creador solo en Registrada/Devuelta; desde Comprometida, líder o jefe con justificación de 10 caracteres), motivo del triage visible al solicitante (currentTriageReason y currentTriageDecidedAt) y texto de «Devolver» en Aprobaciones (vuelve a Priorización). Sin migraciones."
     }
   ]
 }

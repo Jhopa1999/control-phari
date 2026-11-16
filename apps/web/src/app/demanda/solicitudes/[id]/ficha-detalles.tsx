@@ -403,3 +403,70 @@ export function EstabilizacionDetalle({
     />
   );
 }
+
+/**
+ * Paso 2 · Lo que ve quien no puede consultar el triage completo (p. ej. el
+ * integrante que registró la solicitud): la decisión, su fecha y el motivo de
+ * una devolución o rechazo. Sale de la propia solicitud (`currentTriage*`); las
+ * notas, dependencias y evaluaciones internas no se muestran nunca.
+ */
+export function TriageResumen({
+  request,
+}: {
+  request: Pick<Request, 'currentTriageDecision' | 'currentTriageReason' | 'currentTriageDecidedAt'>;
+}): React.ReactElement {
+  const decision = request.currentTriageDecision ?? '';
+  const items: DescriptionItem[] = [
+    { term: 'Decisión', value: triageDecisionLabel(decision) },
+    {
+      term: 'Fecha de la decisión',
+      value: request.currentTriageDecidedAt ? formatDateTime(request.currentTriageDecidedAt) : null,
+    },
+    ...(request.currentTriageReason
+      ? [
+          {
+            term: decision === 'RECHAZAR' ? 'Motivo del rechazo' : 'Motivo de la devolución',
+            value: request.currentTriageReason,
+            span: 2 as const,
+          },
+        ]
+      : []),
+  ];
+  return (
+    <div className="flex flex-col gap-2">
+      <DescriptionList items={items} columns={2} />
+      <p className="text-meta text-muted-foreground">
+        Verás aquí la decisión y su motivo. Las notas internas del equipo no se muestran.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Paso 2 · Decisiones de triage anteriores (de la más reciente a la más antigua)
+ * cuando la solicitud se devolvió y se reenvió: el historial se conserva.
+ */
+export function TriageHistorial({ triages }: { triages: Triage[] }): React.ReactElement | null {
+  if (triages.length < 2) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 className="text-sm font-semibold">Decisiones anteriores</h4>
+      <ul className="flex flex-col gap-2">
+        {triages.slice(1).map((triage) => (
+          <li key={triage.id} className="flex flex-col gap-1 rounded-md border p-3">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-muted-foreground">
+              <StatusBadge kind="triage" value={triage.decision} />
+              <span className="tabular-nums">{formatDateTime(triage.decidedAt)}</span>
+            </p>
+            {triage.reason ? (
+              <p className="whitespace-pre-wrap wrap-break-word text-sm">
+                <span className="text-muted-foreground">Motivo: </span>
+                {triage.reason}
+              </p>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

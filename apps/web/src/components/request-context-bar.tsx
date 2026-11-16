@@ -5,6 +5,7 @@ import { ExternalLink } from 'lucide-react';
 import { DescriptionList, type DescriptionItem } from '@/components/description-list';
 import { IdChip } from '@/components/id-chip';
 import { PriorityBadge, StatusBadge } from '@/components/status-badge';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -147,7 +148,7 @@ export function RequestContextBar({
   );
 }
 
-export type RequestSummaryItem = 'state' | 'triage' | 'priority' | 'registered';
+export type RequestSummaryItem = 'state' | 'triage' | 'priority' | 'registered' | 'resubmitted';
 
 /** Resumen de la solicitud elegida, en el orden de `show` (por defecto, solo el estado). */
 export function RequestSummary({
@@ -181,6 +182,14 @@ export function RequestSummary({
                 label={request.priorityLabel}
               />
             );
+          case 'resubmitted':
+            // Registrada con una decisión anterior de devolución: se reenvió a triage.
+            return request.operationalState === 'REGISTRADA' &&
+              request.currentTriageDecision === 'DEVOLVER' ? (
+              <Badge key={item} variant="warning">
+                Reenviada
+              </Badge>
+            ) : null;
           case 'registered':
             return (
               <span key={item} className="text-meta text-muted-foreground">

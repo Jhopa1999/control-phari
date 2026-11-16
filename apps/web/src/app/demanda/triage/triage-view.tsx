@@ -914,7 +914,7 @@ export function TriageView(): React.ReactElement {
             id="triage-block"
             title={doneTitle}
             doneTitle={doneTitle}
-            doneDescription="El triage se registra una sola vez, cuando la solicitud está Registrada."
+            doneDescription="La decisión de triage queda registrada. Si la solicitud se devuelve y se reenvía, se vuelve a decidir y se conserva el historial."
             items={[item]}
           />
           {/* El detalle solo aparece cuando ya se cargó el triage de esta
@@ -931,7 +931,7 @@ export function TriageView(): React.ReactElement {
       <RequirementsPanel
         id="triage-block"
         title="No puedes registrar el triage de esta solicitud"
-        description="El triage se registra una sola vez, cuando la solicitud está Registrada. Elige una del grupo «Pendientes de triage»."
+        description="El triage se registra cuando la solicitud está Registrada (también tras reenviarse una solicitud devuelta). Elige una del grupo «Pendientes de triage»."
         items={[
           {
             id: 'state',
@@ -974,6 +974,17 @@ export function TriageView(): React.ReactElement {
           </h2>
           <RequiredHint />
         </div>
+
+        {selected?.operationalState === 'REGISTRADA' && selected.currentTriageDecision === 'DEVOLVER' ? (
+          <InlineNotice tone="warning" title="Decisión anterior: Devuelta">
+            <p className="whitespace-pre-wrap wrap-break-word text-sm">
+              {selected.currentTriageReason ?? 'Sin motivo registrado.'}
+            </p>
+            <p className="text-meta text-muted-foreground">
+              La solicitud se reenvió a triage. Tu nueva decisión se suma al historial.
+            </p>
+          </InlineNotice>
+        ) : null}
 
         <div className="grid gap-3 rounded-lg border-2 border-primary/30 bg-primary-subtle/40 p-4">
           <div className="flex items-start gap-3">
@@ -1311,7 +1322,7 @@ export function TriageView(): React.ReactElement {
           onValueChange={handlePick}
           groups={GROUPS}
           helper={formatCount(pendingCount, PENDING_NOUN)}
-          summary={selected ? <RequestSummary request={selected} show={['state', 'registered']} /> : null}
+          summary={selected ? <RequestSummary request={selected} show={['state', 'resubmitted', 'registered']} /> : null}
           actions={
             selected && allowedModules.has('requests') ? (
               <Link
@@ -1363,7 +1374,7 @@ export function TriageView(): React.ReactElement {
           <RequestInbox
             requests={requests}
             groups={GROUPS}
-            show={['state', 'registered']}
+            show={['state', 'resubmitted', 'registered']}
             onPick={handlePick}
           />
         )}
