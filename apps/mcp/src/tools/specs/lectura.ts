@@ -88,7 +88,16 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   ),
 
   // Activos
-  lectura('asset.list', 'GET /assets', 'Lista los activos (GET /assets), con filtros opcionales.'),
+  lectura(
+    'asset.list',
+    'GET /assets',
+    'Lista los activos (GET /assets), con filtros opcionales por proceso, solicitud y estado; ' +
+      'q busca por nombre; sort (createdAt, name, status) y dir ordenan. ' +
+      'Paginación opcional: page y pageSize (máximo 100); sin ellos devuelve el ' +
+      'listado completo con un tope de 1000 filas. Para recorrer todo, pide ' +
+      'páginas sucesivas hasta recibir menos filas que pageSize. ' +
+      'Cada fila trae processName, processCode, ownerName, requestCode y requestTitle.',
+  ),
   lectura('asset.get', 'GET /assets/{id}', 'Obtiene un activo por id (GET /assets/{id}).'),
   lectura(
     'asset.requests',
@@ -100,7 +109,12 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   lectura(
     'document.list',
     'GET /documents',
-    'Lista los documentos (GET /documents), con filtros opcionales.',
+    'Lista los documentos (GET /documents), sin contenido, con filtros opcionales; q busca ' +
+      'en el título; sort (createdAt, title, status) y dir ordenan. ' +
+      'Paginación opcional: page y pageSize (máximo 100); sin ellos devuelve el ' +
+      'listado completo con un tope de 1000 filas. Para recorrer todo, pide ' +
+      'páginas sucesivas hasta recibir menos filas que pageSize. ' +
+      'Cada fila trae assetName, requestCode y requestTitle.',
   ),
   lectura(
     'document.pending-approval',

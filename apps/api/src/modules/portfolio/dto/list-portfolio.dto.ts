@@ -10,6 +10,8 @@ import {
   ValidatorConstraint,
   type ValidatorConstraintInterface,
 } from 'class-validator';
+import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
+import { REQUEST_SORT_KEYS, type RequestSortKey } from '../../request/request-sort';
 import { RequestState } from '../../request/request-state';
 
 /** Centinela del filtro de proceso para las solicitudes sin proceso principal. */
@@ -57,12 +59,12 @@ export const PORTFOLIO_BANDS = [
  * Parametro de consulta repetido (`?state=A&state=B`): un valor suelto se
  * convierte en arreglo de un elemento, asi un solo valor se comporta como antes.
  */
-const toArray = ({ value }: { value: unknown }): unknown =>
+export const toArray = ({ value }: { value: unknown }): unknown =>
   value === undefined || value === null || Array.isArray(value)
     ? value
     : [value];
 
-const maxMessage = (campo: string): string =>
+export const maxMessage = (campo: string): string =>
   `El filtro ${campo} admite como máximo ${MAX_FILTER_VALUES} valores.`;
 
 /**
@@ -71,7 +73,7 @@ const maxMessage = (campo: string): string =>
  * filtros. INTERSECTAN con el alcance, nunca lo amplian (patron
  * `capacity.listAssignments`).
  */
-export class ListPortfolioDto {
+export class ListPortfolioDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     type: String,
     isArray: true,
@@ -116,4 +118,15 @@ export class ListPortfolioDto {
     message: 'Cada valor de band debe ser P1, P2, P3, P4 o SIN_PRIORIZAR.',
   })
   band?: (typeof PORTFOLIO_BANDS)[number][];
+
+  @ApiPropertyOptional({
+    enum: REQUEST_SORT_KEYS,
+    description:
+      'Columna de orden: registeredAt (por defecto, descendente), code, title, state (orden del flujo), score (prioridad; sin evaluación al final). Empata por id.',
+  })
+  @IsOptional()
+  @IsIn(REQUEST_SORT_KEYS as readonly string[], {
+    message: 'sort debe ser registeredAt, code, title, state o score.',
+  })
+  sort?: RequestSortKey;
 }

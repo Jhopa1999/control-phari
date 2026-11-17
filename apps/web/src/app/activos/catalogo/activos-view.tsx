@@ -45,38 +45,30 @@ import {
   AssetError,
   changeAssetStatus,
   createAsset,
-  listAssets,
+  listAssetsPage,
   updateAsset,
+  type AssetSortKey,
 } from '@/lib/assets';
 import { getStatus } from '@/lib/status-presentation';
-import {
-  compareByOrder,
-  compareText,
-  matchesSearch,
-  type Comparator,
-  type SortState,
-} from '@/lib/table-sort';
+import type { SortState } from '@/lib/table-sort';
 import { listProcesses } from '@/lib/team';
-import { useClientTable } from '@/lib/use-client-table';
+import { useDebouncedValue, useServerTable } from '@/lib/use-server-table';
+import { ServerListBody } from '@/components/server-list';
+import { ProcessRefCell, RefMissing, RequestRefCell } from '@/components/reference-cell';
 import { listCoordinationPeople } from '@/lib/worklog';
 import { listRequests } from '@/lib/requests';
 import { ActivoFormDialog, type ActivoFormValues } from './activo-form-dialog';
 
-type LoadState = 'loading' | 'success' | 'error';
-type SortKey = 'name' | 'process' | 'status';
+/** Columnas ordenables en el servidor (lista blanca); «Proceso» ya no ordena. */
+type SortKey = AssetSortKey;
 
 /** Centinela de «Todos» / «Todas» en los filtros. */
 const ALL = '__all__';
 const NOUN = { one: 'activo', other: 'activos' };
 /** Estados en el orden del ciclo de vida. */
 const ASSET_STATES = ['BORRADOR', 'ACTIVO', 'RETIRADO'] as const;
-const compareStatus = compareByOrder(ASSET_STATES);
 /** Orden por defecto: Nombre ascendente (design §11.16). */
 const DEFAULT_SORT: SortState<SortKey> = { key: 'name', direction: 'asc' };
-// Ids que no vienen en las listas del alcance del actor: nunca un UUID visible (§13.1).
-const OUT_OF_SCOPE_PROCESS = 'Proceso fuera de tu alcance';
-const OUT_OF_SCOPE_REQUEST = 'Solicitud fuera de tu alcance';
-const OUT_OF_SCOPE_PERSON = 'Persona fuera de tu alcance';
 
 function messageOf(err: unknown): string {
   return err instanceof AssetError
@@ -98,8 +90,9 @@ function transitionOf(status: string): { label: string; target: AssetStatus } | 
 }
 
 /**
- * Activos (design §11.16, patrón A): inventario con búsqueda, filtros, orden y
- * paginación en cliente sobre GET /assets. El nombre es texto; las acciones
+ * Activos (design §11.16, patrón A): inventario con búsqueda (nombre), filtros,
+ * orden y paginación EN EL SERVIDOR sobre GET /assets (oleada 3, PR-B); cada
+ * fila trae el nombre del proceso, el responsable y la solicitud de origen. El nombre es texto; las acciones
  * («Editar» y la transición permitida) van en línea.
  */
 export function ActivosView(): React.ReactElement {
@@ -115,14 +108,11 @@ export function ActivosView(): React.ReactElement {
   // control real es del servidor (403); aquí es gating cosmético.
   const canChangeStatus = React.useCallback(() => isJefe, [isJefe]);
 
-  const [assets, setAssets] = React.useState<Asset[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [owners, setOwners] = React.useState<CoordinationPerson[]>([]);
-  const [state, setState] = React.useState<LoadState>('loading');
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  // Búsqueda y filtros en cliente (el contrato no expone parámetros de consulta).
+  // Búsqueda y filtros: se aplican en el servidor.
   const [query, setQuery] = React.useState('');
   const [processFilter, setProcessFilter] = React.useState<string>(ALL);
   const [requestFilter, setRequestFilter] = React.useState<string>(ALL);
@@ -136,77 +126,47 @@ export function ActivosView(): React.ReactElement {
   const [formError, setFormError] = React.useState<string | null>(null);
   const [statusBusyId, setStatusBusyId] = React.useState<string | null>(null);
 
-  const loadData = React.useCallback(() => {
-    return Promise.all([
-      listAssets(),
-      listProcesses().catch(() => [] as Process[]),
-      listRequests().catch(() => [] as Request[]),
-      listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
-    ])
-      .then(([list, procs, reqs, usrs]) => {
-        setAssets(list);
-        setProcesses(procs);
-        setRequests(reqs);
-        setOwners(usrs);
-        setState('success');
-      })
-      .catch((err: unknown) => {
-        setErrorMessage(messageOf(err));
-        setState('error');
-      });
-  }, []);
-  const load = React.useCallback(async () => {
-    setState('loading');
-    await loadData();
-  }, [loadData]);
-
+  // Maestras del formulario y de los filtros; si fallan, se degradan a vacío.
   React.useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    void listProcesses()
+      .then(setProcesses)
+      .catch(() => setProcesses([]));
+    void listRequests()
+      .then(setRequests)
+      .catch(() => setRequests([]));
+    void listCoordinationPeople()
+      .then(setOwners)
+      .catch(() => setOwners([]));
+  }, []);
 
-  const processName = React.useCallback(
-    (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS,
-    [processes],
-  );
-  const requestTitle = React.useCallback(
-    (id: string | null) =>
-      id ? (requests.find((r) => r.id === id)?.title ?? OUT_OF_SCOPE_REQUEST) : '—',
-    [requests],
-  );
-  const ownerName = React.useCallback(
-    (id: string | null) =>
-      id ? (owners.find((u) => u.id === id)?.name ?? OUT_OF_SCOPE_PERSON) : '—',
-    [owners],
-  );
-
-  const comparators = React.useMemo<Record<SortKey, Comparator<Asset>>>(
-    () => ({
-      name: (a, b, direction) => compareText(a.name, b.name, direction),
-      process: (a, b, direction) =>
-        compareText(processName(a.processId), processName(b.processId), direction),
-      status: (a, b, direction) => compareStatus(a.status, b.status, direction),
-    }),
-    [processName],
-  );
-
+  const debouncedQuery = useDebouncedValue(query.trim(), 300);
   const hasFilters =
-    query.trim() !== '' || processFilter !== ALL || requestFilter !== ALL || statusFilter !== ALL;
-  const filter = React.useCallback(
-    (a: Asset) =>
-      matchesSearch(a.name, query) &&
-      (processFilter === ALL || a.processId === processFilter) &&
-      (requestFilter === ALL || a.requestId === requestFilter) &&
-      (statusFilter === ALL || a.status === statusFilter),
-    [query, processFilter, requestFilter, statusFilter],
+    debouncedQuery !== '' || processFilter !== ALL || requestFilter !== ALL || statusFilter !== ALL;
+  const showClear = hasFilters || query.trim() !== '';
+  const fetchPage = React.useCallback(
+    ({ page, pageSize, sort, signal }: { page: number; pageSize: number; sort: SortState<SortKey> | null; signal: AbortSignal }) =>
+      listAssetsPage(
+        {
+          q: debouncedQuery,
+          processId: processFilter === ALL ? undefined : processFilter,
+          requestId: requestFilter === ALL ? undefined : requestFilter,
+          status: statusFilter === ALL ? undefined : statusFilter,
+          sort: sort?.key,
+          dir: sort?.direction,
+          page,
+          pageSize,
+        },
+        signal,
+      ),
+    [debouncedQuery, processFilter, requestFilter, statusFilter],
   );
-  const table = useClientTable({
-    rows: assets,
-    filter,
-    comparators,
+  const table = useServerTable<Asset, SortKey>({
+    fetchPage,
+    filtersKey: JSON.stringify([debouncedQuery, processFilter, requestFilter, statusFilter]),
     defaultSort: DEFAULT_SORT,
-    resetKey: JSON.stringify([query, processFilter, requestFilter, statusFilter]),
-    pageSize: 25,
   });
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const load = table.reload;
 
   function clearFilters(): void {
     setQuery('');
@@ -316,11 +276,11 @@ export function ActivosView(): React.ReactElement {
     return actions;
   }
 
+  // Una recarga con filas visibles sigue en 'ready': la tabla no parpadea a vacío.
   let viewState: DataViewState;
-  if (state === 'loading') viewState = 'loading';
-  else if (state === 'error') viewState = 'error';
-  else if (table.total === 0) viewState = 'empty';
-  else if (table.filtered === 0) viewState = 'no-results';
+  if (table.status === 'loading') viewState = 'loading';
+  else if (table.status === 'error') viewState = 'error';
+  else if (table.total === 0 && table.status === 'ready') viewState = hasFilters ? 'no-results' : 'empty';
   else viewState = 'ready';
 
   return (
@@ -330,7 +290,7 @@ export function ActivosView(): React.ReactElement {
         description="Activos de datos y soluciones de cada proceso."
         actions={
           isJefe ? (
-            <Button type="button" onClick={openCreate} disabled={state === 'loading'}>
+            <Button type="button" onClick={openCreate} disabled={table.status === 'loading'}>
               <Plus aria-hidden="true" />
               Nuevo activo
             </Button>
@@ -343,15 +303,16 @@ export function ActivosView(): React.ReactElement {
         collapseOnMobile
         end={
           <>
-            {state !== 'error' ? (
+            {table.status !== 'error' ? (
               <ResultCount
-                loading={state === 'loading'}
+                loading={table.busy}
+                spinner
                 total={table.total}
-                filtered={table.filtered}
+                filtered={table.total}
                 noun={NOUN}
               />
             ) : null}
-            {hasFilters ? (
+            {showClear ? (
               <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
                 Limpiar filtros
               </Button>
@@ -363,8 +324,14 @@ export function ActivosView(): React.ReactElement {
           ref={searchRef}
           id="filtro-busqueda"
           placeholder="Nombre del activo"
+          maxLength={100}
+          autoComplete="off"
+          enterKeyHint="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && query !== '') setQuery('');
+          }}
         />
         <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="filtro-proceso">Proceso</Label>
@@ -392,7 +359,7 @@ export function ActivosView(): React.ReactElement {
               <SelectItem value={ALL}>Todas</SelectItem>
               {requests.map((r) => (
                 <SelectItem key={r.id} value={r.id}>
-                  {r.title}
+                  {r.code} · {r.title}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -422,8 +389,12 @@ export function ActivosView(): React.ReactElement {
         mobileCards
         error={{
           title: 'No fue posible cargar los activos.',
-          message: errorMessage,
+          message: messageOf(table.error),
           onRetry: () => void load(),
+        }}
+        noResults={{
+          title: 'Sin resultados',
+          description: 'Ningún activo coincide con la búsqueda o los filtros.',
         }}
         empty={{
           icon: Database,
@@ -437,6 +408,13 @@ export function ActivosView(): React.ReactElement {
           ) : undefined,
         }}
       >
+        <ServerListBody
+          containerRef={listRef}
+          reloading={table.status === 'reloading'}
+          reloadFailed={table.status === 'reload-error'}
+          onRetry={table.reload}
+          truncated={table.truncated}
+        >
         <div className="hidden md:block">
         <Table scrollLabel="Tabla de activos">
           <TableHeader>
@@ -447,12 +425,7 @@ export function ActivosView(): React.ReactElement {
                 sort={table.sort}
                 onSort={table.toggleSort}
               />
-              <SortableTableHead
-                label="Proceso"
-                sortKey="process"
-                sort={table.sort}
-                onSort={table.toggleSort}
-              />
+              <TableHead>Proceso</TableHead>
               <TableHead>Solicitud</TableHead>
               <TableHead>Responsable</TableHead>
               <SortableTableHead
@@ -465,21 +438,34 @@ export function ActivosView(): React.ReactElement {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {table.pageRows.map((asset) => (
+            {table.rows.map((asset) => (
               <TableRow key={asset.id}>
                 <TableCell className="min-w-56 max-w-[28rem]">
                   <CellTitle>{asset.name}</CellTitle>
                 </TableCell>
-                <TableCell className="min-w-28 text-muted-foreground">
-                  {processName(asset.processId)}
+                <TableCell className="min-w-40 max-w-[18rem]">
+                  <ProcessRefCell
+                    name={asset.processName}
+                    code={asset.processCode}
+                    missingLabel="Sin proceso"
+                  />
                 </TableCell>
-                <TableCell className="min-w-40 max-w-64">
-                  <span className="line-clamp-2 wrap-break-word text-muted-foreground">
-                    {requestTitle(asset.requestId)}
-                  </span>
+                <TableCell className="min-w-40 max-w-[18rem]">
+                  <RequestRefCell
+                    code={asset.requestCode}
+                    title={asset.requestTitle}
+                    unavailable={asset.requestId !== null}
+                    missingLabel="Sin solicitud de origen"
+                  />
                 </TableCell>
-                <TableCell className="min-w-32 text-muted-foreground">
-                  {ownerName(asset.ownerUserId)}
+                <TableCell className="min-w-32 max-w-[18rem]">
+                  {asset.ownerName ? (
+                    <span className="line-clamp-1" title={asset.ownerName}>
+                      {asset.ownerName}
+                    </span>
+                  ) : (
+                    <RefMissing label="Sin responsable" />
+                  )}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   <StatusBadge kind="asset" value={asset.status} />
@@ -494,24 +480,36 @@ export function ActivosView(): React.ReactElement {
         </div>
         <DataCardList
           label="Activos"
-          rows={table.pageRows}
+          rows={table.rows}
           getKey={(asset) => asset.id}
           sort={{
             value: table.sort,
             onChange: table.setSort,
             options: [
               { key: 'name', label: 'Nombre' },
-              { key: 'process', label: 'Proceso' },
               { key: 'status', label: 'Estado' },
             ],
           }}
           card={(asset) => ({
             title: <CellTitle touch>{asset.name}</CellTitle>,
-            subtitle: processName(asset.processId),
+            subtitle: [asset.processName, asset.processCode].filter(Boolean).join(' · '),
             badges: [<StatusBadge key="status" kind="asset" value={asset.status} />],
             meta: [
-              { label: 'Solicitud', value: requestTitle(asset.requestId) },
-              { label: 'Responsable', value: ownerName(asset.ownerUserId) },
+              {
+                label: 'Solicitud',
+                value: (
+                  <RequestRefCell
+                    code={asset.requestCode}
+                    title={asset.requestTitle}
+                    unavailable={asset.requestId !== null}
+                    missingLabel="Sin solicitud de origen"
+                  />
+                ),
+              },
+              {
+                label: 'Responsable',
+                value: asset.ownerName ?? <RefMissing label="Sin responsable" />,
+              },
             ],
             actions: <RowActions menuOnly rowLabel={asset.name} actions={rowActions(asset)} />,
           })}
@@ -522,12 +520,16 @@ export function ActivosView(): React.ReactElement {
           pageCount={table.pageCount}
           from={table.from}
           to={table.to}
-          filtered={table.filtered}
-          pageSize={table.pageSize ?? 25}
+          filtered={table.total}
+          pageSize={table.pageSize}
           onPageChange={table.setPage}
           onPageSizeChange={table.setPageSize}
           noun={NOUN}
+          showingPrefix
+          busy={table.busy}
+          fallbackFocusRef={listRef}
         />
+        </ServerListBody>
       </DataView>
 
       <ActivoFormDialog

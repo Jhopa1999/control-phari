@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type BrowserContext, type Page } from '@playwright/test';
+import { paginationHeaders, serveRequestList } from './helpers/server-list-mock';
 
 /**
  * Coherencia entre Solicitudes y Portafolio:
@@ -53,14 +54,38 @@ async function removeRequest(request: APIRequestContext, id: string): Promise<vo
   await request.delete(`${API_URL}/requests/${id}`, { headers: JEFE });
 }
 
+/**
+ * Todos los ids del listado. Desde la oleada 3 (PR-B) un GET sin página se
+ * corta en 1000 filas (X-Truncated): se recorren las páginas de 100 hasta el
+ * total de X-Total-Count, así la cifra no depende del volumen de la base.
+ */
 async function ids(
   request: APIRequestContext,
   headers: Record<string, string>,
   path: string,
 ): Promise<string[]> {
-  const response = await request.get(`${API_URL}${path}`, { headers });
+  const all: string[] = [];
+  for (let page = 1; ; page += 1) {
+    const sep = path.includes('?') ? '&' : '?';
+    const response = await request.get(`${API_URL}${path}${sep}page=${page}&pageSize=100`, { headers });
+    expect(response.ok()).toBeTruthy();
+    const rows = (await response.json()) as { id: string }[];
+    all.push(...rows.map((item) => item.id));
+    const total = Number(response.headers()['x-total-count']);
+    if (rows.length === 0 || all.length >= total) return all;
+  }
+}
+
+/** Total del listado según X-Total-Count (una sola fila pedida). */
+async function totalOf(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  path: string,
+): Promise<number> {
+  const sep = path.includes('?') ? '&' : '?';
+  const response = await request.get(`${API_URL}${path}${sep}pageSize=1`, { headers });
   expect(response.ok()).toBeTruthy();
-  return ((await response.json()) as { id: string }[]).map((item) => item.id);
+  return Number(response.headers()['x-total-count']);
 }
 
 test.describe('alcance único de solicitudes', () => {
@@ -80,10 +105,7 @@ test.describe('alcance único de solicitudes', () => {
         expect(((await panel.json()) as { total: number }).total).toBe(solicitudes.length);
 
         // «Pendientes de triage» del Panel = REGISTRADA de la lista que usa Triage.
-        const lista = (await (
-          await request.get(`${API_URL}/requests`, { headers })
-        ).json()) as { operationalState: string }[];
-        const registradas = lista.filter((r) => r.operationalState === 'REGISTRADA').length;
+        const registradas = await totalOf(request, headers, '/requests?state=REGISTRADA');
         expect(((await attention.json()) as { pendingTriage: number }).pendingTriage).toBe(registradas);
       }
       // Jefe y líder ven la solicitud sin proceso; el integrante, no (no la creó).
@@ -123,7 +145,9 @@ test.describe('alcance único de solicitudes', () => {
 
     await page.goto('/inicio');
     const tile = page.getByText('Solicitudes en alcance', { exact: true }).locator('xpath=..');
-    await expect(tile).toContainText(total.toLocaleString('es-CO'));
+    // Con 1000 o más solicitudes el separador de miles depende del formateador
+    // (es: «1218», es-CO: «1.218»): se acepta con y sin separador.
+    await expect(tile).toContainText(new RegExp(total.toLocaleString('es-CO').replace(/\./g, '\\.?')));
   });
 });
 
@@ -254,7 +278,13 @@ test.describe('enlaces cruzados', () => {
       async (route) => {
         if (route.request().method() !== 'GET') return route.continue();
         const response = await route.fetch();
-        await route.fulfill({ response, json: [base(1, 'REGISTRADA'), base(2, 'EN_EJECUCION')] });
+        // El servidor pagina (oleada 3, PR-B): el mock aplica los mismos parámetros.
+        const served = serveRequestList([base(1, 'REGISTRADA'), base(2, 'EN_EJECUCION')], new URL(route.request().url()));
+        await route.fulfill({
+          response,
+          json: served.rows,
+          headers: { ...response.headers(), ...paginationHeaders(served.total) },
+        });
       },
     );
     await page.route(

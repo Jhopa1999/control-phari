@@ -10,14 +10,27 @@ import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import { RequestService } from './request.service';
 import { RequestStateService } from './request-state.service';
+import { withReferenceLookups } from '../../testing/reference-lookups';
+
+/** Filas de un listado paginado (el servicio devuelve PageResult). */
+async function rowsOf<T>(p: Promise<{ rows: T[] }>): Promise<T[]> {
+  return (await p).rows;
+}
 
 function createMocks() {
   const prismaObj: Record<string, unknown> = {
-    request: { findFirst: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
+    request: {
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
     requestParticipant: { deleteMany: jest.fn(), createMany: jest.fn() },
-    process: { findFirst: jest.fn(), findMany: jest.fn() },
-    triage: { findFirst: jest.fn() },
-    priorityEvaluation: { findFirst: jest.fn() },
+    process: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+    asset: { findMany: jest.fn().mockResolvedValue([]) },
+    triage: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+    priorityEvaluation: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
     // Secuencia requests_number_seq (ID visible): devuelve 12, 13, 14...
     $queryRaw: jest.fn(),
   };
@@ -29,7 +42,7 @@ function createMocks() {
   const prisma = prismaObj as unknown as PrismaService;
   const audit = { record: jest.fn() } as unknown as AuditService;
   const auditRecord = audit.record as unknown as jest.Mock;
-  const state = new RequestStateService(prisma);
+  const state = new RequestStateService(withReferenceLookups(prisma));
   const notifications = {
     notify: jest.fn(),
     areaHeadsForProcess: jest.fn().mockResolvedValue(['uj']),
@@ -174,8 +187,12 @@ describe('RequestService', () => {
       const data = (m.prismaObj.request as any).create.mock.calls[0][0].data;
       expect(data.mainProcessId).toBe('p1');
       expect(data.participants.create).toEqual([{ processId: 'p1' }]);
-      // La Solicitud no valida procesos extra: process.findMany no se usa.
-      expect((m.prismaObj.process as any).findMany).not.toHaveBeenCalled();
+      // La Solicitud no valida procesos extra: process.findMany solo se usa para
+      // el nombre y código del proceso en la respuesta (BL-039), nunca con `active`.
+      const calls = (m.prismaObj.process as any).findMany.mock.calls;
+      expect(calls).toEqual([
+        [{ where: { id: { in: ['p1'] } }, select: { id: true, code: true, name: true } }],
+      ]);
     });
 
     it('los códigos de solicitud siguen la secuencia y no se reutilizan', async () => {
@@ -199,29 +216,98 @@ describe('RequestService', () => {
       (m.prismaObj.request as any).findMany.mockResolvedValue([]);
       await service.findMany(jefe(), {});
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
-      expect(where).toEqual({ deletedAt: null });
+      expect(where).toEqual({ AND: [{ deletedAt: null }] });
     });
 
     it('no-jefe: scopeWhere filtra por scopedProcessIds O createdByUserId (A1)', async () => {
       (m.prismaObj.request as any).findMany.mockResolvedValue([]);
       await service.findMany(lider(['p1', 'p2']), {});
-      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
+      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND[0];
       expect(where.OR).toEqual([
         { mainProcessId: { in: ['p1', 'p2'] } },
         { createdByUserId: 'ul' },
       ]);
     });
 
-    it('aplica filtros state y mainProcessId al where', async () => {
+    it('aplica filtros state y mainProcessId al where (intersectan el alcance)', async () => {
       (m.prismaObj.request as any).findMany.mockResolvedValue([makeRequestRow()]);
-      const res = await service.findMany(jefe(), {
-        state: 'EN_EJECUCION' as any,
-        mainProcessId: 'p9',
-      });
+      const res = await rowsOf(service.findMany(jefe(), {
+        state: ['EN_EJECUCION'] as any,
+        mainProcessId: ['p9'],
+      }));
       const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
-      expect(where.operationalState).toBe('EN_EJECUCION');
-      expect(where.mainProcessId).toBe('p9');
+      expect(where.AND[0]).toEqual({ deletedAt: null });
+      expect(where.AND).toContainEqual({ operationalState: { in: ['EN_EJECUCION'] } });
+      expect(where.AND).toContainEqual({ mainProcessId: { in: ['p9'] } });
       expect(res).toHaveLength(1);
+    });
+
+    it('sin parámetros: listado completo con tope de 1000, orden de siempre y total', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([makeRequestRow()]);
+      (m.prismaObj.request as any).count.mockResolvedValue(1);
+      const result = await service.findMany(jefe(), {});
+      const call = (m.prismaObj.request as any).findMany.mock.calls[0][0];
+      expect(call.skip).toBe(0);
+      expect(call.take).toBe(1000);
+      expect(call.orderBy).toEqual([
+        { registeredAt: 'desc' },
+        { createdAt: 'desc' },
+        { id: 'asc' },
+      ]);
+      expect(result.total).toBe(1);
+      expect(result.truncated).toBe(false);
+      expect(result.rows).toHaveLength(1);
+    });
+
+    it('page/pageSize y q (código, título, solicitante); el count usa el mismo where', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([]);
+      (m.prismaObj.request as any).count.mockResolvedValue(3);
+      const result = await service.findMany(integrante(['p2']), {
+        page: 2,
+        pageSize: 2,
+        q: ' tablero ',
+      });
+      const call = (m.prismaObj.request as any).findMany.mock.calls[0][0];
+      expect(call.skip).toBe(2);
+      expect(call.take).toBe(2);
+      const contains = { contains: 'tablero', mode: 'insensitive' };
+      expect(call.where.AND).toContainEqual({
+        OR: [{ code: contains }, { title: contains }, { requesterName: contains }],
+      });
+      // Alcance del integrante: sus procesos más lo que creó (RequestScopeService).
+      expect(call.where.AND[0]).toEqual({
+        deletedAt: null,
+        OR: [{ mainProcessId: { in: ['p2'] } }, { createdByUserId: 'ui' }],
+      });
+      const countWhere = (m.prismaObj.request as any).count.mock.calls[0][0].where;
+      expect(countWhere).toEqual(call.where);
+      expect(result.total).toBe(3);
+      expect(result.window).toMatchObject({ page: 2, pageSize: 2, paginated: true });
+    });
+
+    it('BL-039: la fila trae nombre y código del proceso y nombre del activo (en lote)', async () => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([
+        makeRequestRow({ id: 'r1', mainProcessId: 'p1', assetId: 'a1' }),
+        makeRequestRow({ id: 'r2', mainProcessId: null, assetId: null }),
+      ]);
+      (m.prismaObj.process as any).findMany.mockResolvedValue([
+        { id: 'p1', code: 'BI', name: 'Inteligencia de Negocio' },
+      ]);
+      (m.prismaObj.asset as any).findMany.mockResolvedValue([{ id: 'a1', name: 'Tablero' }]);
+      const [conDatos, sinDatos] = await rowsOf(service.findMany(jefe(), {}));
+      expect(conDatos).toMatchObject({
+        mainProcessCode: 'BI',
+        mainProcessName: 'Inteligencia de Negocio',
+        assetName: 'Tablero',
+      });
+      expect(sinDatos).toMatchObject({
+        mainProcessCode: null,
+        mainProcessName: null,
+        assetName: null,
+      });
+      // Una consulta por tipo de referencia, no una por fila.
+      expect((m.prismaObj.process as any).findMany).toHaveBeenCalledTimes(1);
+      expect((m.prismaObj.asset as any).findMany).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -329,7 +415,7 @@ describe('RequestService', () => {
     it('lider de proceso: ve TODAS las solicitudes (sin filtro de mainProcessId)', async () => {
       (m.prismaObj.request as any).findMany.mockResolvedValue([]);
       await service.findMany(liderProceso(['p1']), {});
-      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
+      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND[0];
       expect(where).toEqual({ deletedAt: null });
       expect(where.mainProcessId).toBeUndefined();
     });
@@ -337,7 +423,7 @@ describe('RequestService', () => {
     it('integrante puro: conserva el filtro por scopedProcessIds (dentro del OR)', async () => {
       (m.prismaObj.request as any).findMany.mockResolvedValue([]);
       await service.findMany(lider(['p1', 'p2']), {});
-      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
+      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND[0];
       expect(where.OR).toEqual([
         { mainProcessId: { in: ['p1', 'p2'] } },
         { createdByUserId: 'ul' },
@@ -365,7 +451,7 @@ describe('RequestService', () => {
     it('findMany del integrante incluye el OR con createdByUserId (ve lo suyo)', async () => {
       (m.prismaObj.request as any).findMany.mockResolvedValue([]);
       await service.findMany(integrante(['p2']), {});
-      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where;
+      const where = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND[0];
       expect(where.deletedAt).toBeNull();
       expect(where.OR).toEqual([
         { mainProcessId: { in: ['p2'] } },

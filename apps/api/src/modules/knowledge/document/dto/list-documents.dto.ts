@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsIn,
   IsInt,
@@ -10,17 +10,21 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { PaginationQueryDto } from '../../../../common/pagination/pagination-query.dto';
 import { DOC_STATUSES } from '../doc-status';
 
-const trim = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' ? value.trim() : value;
+/** Columnas por las que se puede ordenar el listado de documentos. */
+export const DOCUMENT_SORT_KEYS = ['createdAt', 'title', 'status'] as const;
+export type DocumentSortKey = (typeof DOCUMENT_SORT_KEYS)[number];
 
 /**
  * Query de listado de documentos (design §3.3). Filtros opcionales que se
- * intersectan con el alcance (heredado del activo). `q` busca en el titulo. Los
+ * intersectan con el alcance (heredado del activo), `q` en el título, orden y
+ * paginación (`page`/`pageSize`; `take` queda como alias obsoleto). Sin página
+ * ni `take` se devuelve el listado completo con un tope de 1000 filas. Los
  * listados NUNCA incluyen el contenido.
  */
-export class ListDocumentsDto {
+export class ListDocumentsDto extends PaginationQueryDto {
   @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Filtra por activo.' })
   @IsOptional()
   @IsUUID()
@@ -47,14 +51,25 @@ export class ListDocumentsDto {
   @IsIn(DOC_STATUSES as readonly string[], { message: 'Estado invalido.' })
   status?: string;
 
-  @ApiPropertyOptional({ type: String, description: 'Busqueda por texto en el titulo.', maxLength: 200 })
+  @ApiPropertyOptional({
+    enum: DOCUMENT_SORT_KEYS,
+    description:
+      'Columna de orden: createdAt (por defecto, descendente), title o status. Empata por id.',
+  })
   @IsOptional()
-  @Transform(trim)
-  @IsString()
-  @MaxLength(200)
-  q?: string;
+  @IsIn(DOCUMENT_SORT_KEYS as readonly string[], {
+    message: 'sort debe ser createdAt, title o status.',
+  })
+  sort?: DocumentSortKey;
 
-  @ApiPropertyOptional({ type: Number, minimum: 1, maximum: 500, description: 'Maximo de resultados.' })
+  @ApiPropertyOptional({
+    type: Number,
+    minimum: 1,
+    maximum: 500,
+    deprecated: true,
+    description:
+      'Obsoleto: usa pageSize. Máximo de resultados (primera página). Si llegan take y pageSize, gana pageSize.',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

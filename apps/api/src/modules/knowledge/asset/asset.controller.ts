@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -16,6 +17,8 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { HeaderResponse, setPaginationHeaders } from '../../../common/pagination/pagination';
+import { PAGINATION_RESPONSE_HEADERS } from '../../../common/pagination/pagination-openapi';
 import { AssetService } from './asset.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
@@ -47,15 +50,26 @@ export class AssetController {
   constructor(private readonly assetService: AssetService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lista activos en alcance (filtros opcionales).' })
-  @ApiResponse({ status: 200, description: 'Activos.', type: [AssetResponseDto] })
-  @ApiResponse({ status: 400, description: 'Filtros invalidos.' })
+  @ApiOperation({
+    summary:
+      'Lista activos en alcance con filtros opcionales, búsqueda q por nombre, orden sort/dir y paginación page/pageSize (take queda como alias obsoleto). Sin page, pageSize ni take devuelve el listado completo con un tope de 1000 filas. Cada fila trae el nombre y código del proceso, el responsable y la solicitud de origen. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Activos (la página pedida o hasta 1000 filas).',
+    type: [AssetResponseDto],
+    headers: PAGINATION_RESPONSE_HEADERS,
+  })
+  @ApiResponse({ status: 400, description: 'Filtros, orden o paginación inválidos.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  list(
+  async list(
     @CurrentActor() actor: CurrentActorType,
     @Query() filters: ListAssetsDto,
-  ) {
-    return this.assetService.list(actor, filters);
+    @Res({ passthrough: true }) res: HeaderResponse,
+  ): Promise<AssetResponseDto[]> {
+    const result = await this.assetService.list(actor, filters);
+    setPaginationHeaders(res, result);
+    return result.rows;
   }
 
   @Post()

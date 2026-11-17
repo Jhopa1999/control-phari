@@ -920,6 +920,16 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Oleada 3, PR-A (errores y acceso; BL-057, BL-058 y BL-080): filtro global de excepciones de la API (mensajes en español con tildes, sin UUID, rutas ni texto de Prisma; mismos códigos HTTP; 500 genérico) y validación de DTO en español; en la web, componente único NoAccessNotice y ModuleGate para las pantallas sin el módulo, ErrorState que distingue 403, red, servidor, 404 y sesión caducada con el mensaje del servidor, y selector de apps con texto propio para el administrador. Contrato OpenAPI sin cambios. MCP: sin tools nuevas ni exclusiones nuevas; los mensajes nuevos llegan tal cual."
+    },
+    {
+      "timestamp": "2026-11-17T20:00:00Z",
+      "trigger_file": "apps/api/src/modules/request/request.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "apps/mcp/README.md"
+      ],
+      "summary": "Oleada 3, PR-B (ítem 4 y BL-039): patrón único de listado paginado en el servidor para GET /requests, /portfolio, /assets y /documents (page, pageSize hasta 100, q, sort con lista blanca, dir; total en X-Total-Count; sin página, el arreglo completo con tope de 1000 y X-Truncated), filtros múltiples state/mainProcessId/band en /requests, nombre y código de lo referenciado en los DTO (proceso, activo, responsable, solicitud de origen) y las cuatro pantallas con búsqueda, orden y paginación en el servidor sin atenuar la tabla durante la recarga."
     }
   ]
 }

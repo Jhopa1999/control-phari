@@ -10,6 +10,7 @@ import { PriorityService } from './priority/priority.service';
 import { ApprovalService } from './approval/approval.service';
 import { AssetService } from '../knowledge/asset/asset.service';
 import { CreatePriorityEvaluationDto } from './priority/dto/create-priority-evaluation.dto';
+import { withReferenceLookups } from '../../testing/reference-lookups';
 
 /**
  * Prueba de flujo (design §5): approval-devolver -> re-priorizar -> re-aprobar.
@@ -103,7 +104,7 @@ function createFlowMocks(
   );
   const prisma = prismaObj as unknown as PrismaService;
   const audit = { record: jest.fn() } as unknown as AuditService;
-  const state = new RequestStateService(prisma);
+  const state = new RequestStateService(withReferenceLookups(prisma));
   // Activo "existente" para la asociacion. El activo es propietario del proceso
   // principal 'p1', por lo que es visible para la solicitud (refuerzo de
   // visibilidad por mainProcessId en associateAsset).

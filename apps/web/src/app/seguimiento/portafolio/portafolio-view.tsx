@@ -3,7 +3,6 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { FolderKanban } from 'lucide-react';
 import {
   CellTitle,
@@ -43,33 +42,27 @@ import {
 import { formatDateOnly } from '@/lib/format';
 import {
   ApiError,
-  listPortfolio,
-  type PortfolioFilters,
+  listPortfolioPage,
   type PortfolioItem,
+  type PortfolioSortKey,
 } from '@/lib/portfolio';
-import { COMMITTED_STATES, REQUEST_STATE_LABELS } from '@/lib/request-state';
+import { COMMITTED_STATES } from '@/lib/request-state';
 import { routeLabel } from '@/lib/status-presentation';
 import { cn } from '@/lib/utils';
-import {
-  compareByOrder,
-  compareDate,
-  compareText,
-  matchCode,
-  matchesSearch,
-  type Comparator,
-  type SortState,
-} from '@/lib/table-sort';
+import type { SortState } from '@/lib/table-sort';
 import { listProcesses } from '@/lib/team';
-import { useClientTable } from '@/lib/use-client-table';
+import { useDebouncedValue, useServerTable } from '@/lib/use-server-table';
+import { ServerListBody } from '@/components/server-list';
 
-type LoadState = 'loading' | 'success' | 'error';
-type SortKey = 'title' | 'state' | 'band' | 'registered' | 'target';
+/**
+ * Columnas ordenables: solo las de la lista blanca del servidor. «Entrega» se
+ * calcula con el plan y no es ordenable en el servidor: su cabecera es texto.
+ */
+type SortKey = 'title' | 'state' | 'band' | 'registered';
 
 /** Opciones del filtro de estado, agrupadas por fase del flujo. */
 const STATE_FILTER_OPTIONS = stateFilterOptions();
 
-/** Estados operativos en orden del enum RequestState. */
-const STATE_OPTIONS = Object.keys(REQUEST_STATE_LABELS);
 /** Por defecto solo iniciativas (solicitudes ya comprometidas); ver COMMITTED_STATES. */
 const NOUN = { one: 'iniciativa', other: 'iniciativas' };
 /** Con «Incluir pendientes de decisión» el listado mezcla solicitudes e iniciativas. */
@@ -107,16 +100,20 @@ function includesPending(states: readonly string[]): boolean {
 
 /** Registro descendente, igual que Solicitudes (también en móvil). */
 const DEFAULT_SORT: SortState<SortKey> = { key: 'registered', direction: 'desc' };
-const compareState = compareByOrder(STATE_OPTIONS);
-// P1 → P4; sin priorizar (null) al final en las dos direcciones.
-const compareBand = compareByOrder(['P1', 'P2', 'P3', 'P4']);
-const COMPARATORS: Record<SortKey, Comparator<PortfolioItem>> = {
-  title: (a, b, direction) => compareText(a.title, b.title, direction),
-  state: (a, b, direction) => compareState(a.operationalState, b.operationalState, direction),
-  band: (a, b, direction) => compareBand(a.priorityBand, b.priorityBand, direction),
-  registered: (a, b, direction) => compareDate(a.registeredAt, b.registeredAt, direction),
-  target: (a, b, direction) => compareDate(a.referenceDate, b.referenceDate, direction),
+/** Columna de la vista → orden del servidor. */
+const SERVER_SORT: Record<SortKey, PortfolioSortKey> = {
+  title: 'title',
+  state: 'state',
+  // La banda sale del score: «ascendente» por banda (P1 → P4) es score
+  // descendente. Sin priorizar queda al final en las dos direcciones.
+  band: 'score',
+  registered: 'registeredAt',
 };
+
+function serverDirection(sort: SortState<SortKey>): 'asc' | 'desc' {
+  if (sort.key !== 'band') return sort.direction;
+  return sort.direction === 'asc' ? 'desc' : 'asc';
+}
 
 function messageOf(err: unknown): string {
   return err instanceof ApiError
@@ -240,8 +237,9 @@ function DeliveryCell({
  * Portafolio (design §11.12, patrón A): vista de solo lectura de las
  * iniciativas en alcance. Proceso, estado y banda son de selección múltiple y
  * filtran en el servidor (parámetros repetidos; O dentro de cada filtro, Y
- * entre filtros); cada selección se aplica al cerrar su panel. La búsqueda por
- * título, el orden y la paginación son de presentación, en cliente.
+ * entre filtros); cada selección se aplica al cerrar su panel. La búsqueda
+ * (código y título), el orden y la paginación también son del servidor
+ * (oleada 3, PR-B).
  */
 export function PortafolioView(): React.ReactElement {
   // Selección aplicada (la que viaja al servidor) y borrador (lo que el usuario
@@ -255,11 +253,8 @@ export function PortafolioView(): React.ReactElement {
   const [query, setQuery] = React.useState(() => (searchParams.get('q') ?? '').slice(0, 200));
   const searchRef = React.useRef<HTMLInputElement>(null);
 
-  const [items, setItems] = React.useState<PortfolioItem[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [routes, setRoutes] = React.useState<CatalogItem[]>([]);
-  const [state, setState] = React.useState<LoadState>('loading');
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   // Procesos para poblar el filtro (acotados por el alcance del backend) y la
   // maestra de rutas para sus etiquetas; si fallan, se degradan a vacío.
@@ -274,35 +269,6 @@ export function PortafolioView(): React.ReactElement {
 
   const processOptions = React.useMemo(() => processFilterOptions(processes), [processes]);
 
-  const fetchPortfolio = React.useCallback(
-    (filters: PortfolioFilters) => {
-      return listPortfolio(filters)
-        .then((data) => {
-          setItems(data);
-          setState('success');
-        })
-        .catch((err: unknown) => {
-          setErrorMessage(messageOf(err));
-          setState('error');
-        });
-    },
-    [],
-  );
-  const load = React.useCallback(
-    (filters: PortfolioFilters) => {
-      setState('loading');
-      setErrorMessage(null);
-      return fetchPortfolio(filters);
-    },
-    [fetchPortfolio],
-  );
-
-  // Solo cambia cuando cambia la selección aplicada (no la del borrador).
-  const activeFilters = React.useMemo<PortfolioFilters>(
-    () => ({ mainProcessId: applied.process, state: applied.state, band: applied.band }),
-    [applied],
-  );
-
   /** Al cerrar el panel de un filtro, su borrador pasa a aplicarse (solo si cambió). */
   function commit(key: keyof SelectionState, open: boolean): void {
     if (open) return;
@@ -310,32 +276,40 @@ export function PortafolioView(): React.ReactElement {
     setApplied({ ...applied, [key]: draft[key] });
   }
 
-  // Filtros de servidor: recarga automática al cambiar, como hasta ahora.
-  // Al cambiar los filtros se vuelve a mostrar la carga.
-  useResetOnChange([activeFilters], () => {
-    setState('loading');
-    setErrorMessage(null);
-  });
-  React.useEffect(() => {
-    void fetchPortfolio(activeFilters);
-  }, [activeFilters, fetchPortfolio]);
-
+  // La búsqueda (código y título) viaja al servidor 300 ms después de la última tecla.
+  const debouncedQuery = useDebouncedValue(query.trim(), 300);
   // Los filtros «activos» son los que se apartan del conjunto por defecto.
   const hasServerFilters =
     applied.process.length > 0 ||
     applied.band.length > 0 ||
     !sameList(applied.state, DEFAULT_SELECTION.state);
-  const hasFilters = hasServerFilters || query.trim() !== '';
+  const hasFilters = hasServerFilters || debouncedQuery !== '';
+  const showClear = hasServerFilters || query.trim() !== '';
   const pendingIncluded = includesPending(applied.state);
-  const filter = React.useCallback((item: PortfolioItem) => matchesSearch(item.title, query) || matchCode(item.code, query), [query]);
-  const table = useClientTable({
-    rows: items,
-    filter,
-    comparators: COMPARATORS,
+  // Solo cambia cuando cambia la selección APLICADA (no la del borrador).
+  const fetchPage = React.useCallback(
+    ({ page, pageSize, sort, signal }: { page: number; pageSize: number; sort: SortState<SortKey> | null; signal: AbortSignal }) =>
+      listPortfolioPage(
+        {
+          mainProcessId: applied.process,
+          state: applied.state,
+          band: applied.band,
+          q: debouncedQuery,
+          sort: sort ? SERVER_SORT[sort.key] : undefined,
+          dir: sort ? serverDirection(sort) : undefined,
+          page,
+          pageSize,
+        },
+        signal,
+      ),
+    [applied, debouncedQuery],
+  );
+  const table = useServerTable<PortfolioItem, SortKey>({
+    fetchPage,
+    filtersKey: JSON.stringify([debouncedQuery, applied]),
     defaultSort: DEFAULT_SORT,
-    resetKey: JSON.stringify([query, applied]),
-    pageSize: 25,
   });
+  const listRef = React.useRef<HTMLDivElement>(null);
 
   function clearFilters(): void {
     // Restablecer los filtros de servidor dispara la misma recarga que elegirlos;
@@ -347,13 +321,12 @@ export function PortafolioView(): React.ReactElement {
     searchRef.current?.focus();
   }
 
-  // NIT 7: total = lo que devuelve el servidor con sus filtros; filtered = tras
-  // la búsqueda en cliente; los filtros de servidor también cuentan como filtros.
+  // Total = el del servidor tras filtros y búsqueda. Una recarga con filas
+  // visibles sigue en 'ready' (la tabla no parpadea a vacío).
   let viewState: DataViewState;
-  if (state === 'loading') viewState = 'loading';
-  else if (state === 'error') viewState = 'error';
-  else if (table.total === 0 && !hasFilters) viewState = 'empty';
-  else if (table.filtered === 0) viewState = 'no-results';
+  if (table.status === 'loading') viewState = 'loading';
+  else if (table.status === 'error') viewState = 'error';
+  else if (table.total === 0 && table.status === 'ready') viewState = hasFilters ? 'no-results' : 'empty';
   else viewState = 'ready';
 
   /** «Incluir pendientes de decisión»: amplía a todos los estados; apagado vuelve al conjunto por defecto. */
@@ -394,15 +367,16 @@ export function PortafolioView(): React.ReactElement {
         collapseOnMobile
         end={
           <>
-            {state !== 'error' ? (
+            {table.status !== 'error' ? (
               <ResultCount
-                loading={state === 'loading'}
+                loading={table.busy}
+                spinner
                 total={table.total}
-                filtered={table.filtered}
+                filtered={table.total}
                 noun={pendingIncluded ? NOUN_ALL : NOUN}
               />
             ) : null}
-            {hasFilters ? (
+            {showClear ? (
               <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
                 Limpiar filtros
               </Button>
@@ -413,9 +387,15 @@ export function PortafolioView(): React.ReactElement {
         <SearchInput
           ref={searchRef}
           id="portafolio-buscar"
-          placeholder="Título o ID"
+          placeholder="Código o título"
+          maxLength={100}
+          autoComplete="off"
+          enterKeyHint="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && query !== '') setQuery('');
+          }}
         />
         <MultiSelectFilter
           id="portafolio-proceso"
@@ -472,8 +452,12 @@ export function PortafolioView(): React.ReactElement {
         mobileCards
         error={{
           title: 'No fue posible cargar el portafolio.',
-          message: errorMessage,
-          onRetry: () => void load(activeFilters),
+          message: messageOf(table.error),
+          onRetry: table.reload,
+        }}
+        noResults={{
+          title: 'Sin resultados',
+          description: 'Ninguna iniciativa coincide con la búsqueda o los filtros.',
         }}
         empty={{
           icon: FolderKanban,
@@ -490,6 +474,13 @@ export function PortafolioView(): React.ReactElement {
           ) : undefined,
         }}
       >
+        <ServerListBody
+          containerRef={listRef}
+          reloading={table.status === 'reloading'}
+          reloadFailed={table.status === 'reload-error'}
+          onRetry={table.reload}
+          truncated={table.truncated}
+        >
         <div className="hidden md:block">
         <Table scrollLabel="Tabla del portafolio">
           <TableCaption>
@@ -502,7 +493,7 @@ export function PortafolioView(): React.ReactElement {
               <SortableTableHead label="Estado" sortKey="state" sort={table.sort} onSort={table.toggleSort} />
               <SortableTableHead label="Prioridad" sortKey="band" sort={table.sort} onSort={table.toggleSort} />
               <TableHead>Avance</TableHead>
-              <SortableTableHead label="Entrega" sortKey="target" sort={table.sort} onSort={table.toggleSort} />
+              <TableHead>Entrega</TableHead>
               <TableHead>Responsable</TableHead>
               {/* Registro se oculta por debajo de 1280 px para que «Entrega» quepa en tablet. */}
               <SortableTableHead
@@ -515,7 +506,7 @@ export function PortafolioView(): React.ReactElement {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {table.pageRows.map((item) => (
+            {table.rows.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="min-w-56 max-w-[30rem]">
                   <div className="flex items-start gap-2">
@@ -574,7 +565,7 @@ export function PortafolioView(): React.ReactElement {
         </div>
         <DataCardList
           label="Portafolio"
-          rows={table.pageRows}
+          rows={table.rows}
           getKey={(item) => item.id}
           sort={{
             value: table.sort,
@@ -584,7 +575,6 @@ export function PortafolioView(): React.ReactElement {
               { key: 'state', label: 'Estado' },
               { key: 'band', label: 'Prioridad' },
               { key: 'registered', label: 'Registro' },
-              { key: 'target', label: 'Entrega' },
             ],
           }}
           card={(item) => ({
@@ -627,12 +617,16 @@ export function PortafolioView(): React.ReactElement {
           pageCount={table.pageCount}
           from={table.from}
           to={table.to}
-          filtered={table.filtered}
-          pageSize={table.pageSize ?? 25}
+          filtered={table.total}
+          pageSize={table.pageSize}
           onPageChange={table.setPage}
           onPageSizeChange={table.setPageSize}
-          noun={NOUN}
+          noun={pendingIncluded ? NOUN_ALL : NOUN}
+          showingPrefix
+          busy={table.busy}
+          fallbackFocusRef={listRef}
         />
+        </ServerListBody>
       </DataView>
     </PageLayout>
   );

@@ -11,6 +11,7 @@ import { RoleCode } from '../../auth/role-code';
 import { RequestState } from '../request-state';
 import { RequestStateService } from '../request-state.service';
 import { TriageService } from './triage.service';
+import { withReferenceLookups } from '../../../testing/reference-lookups';
 
 function createMocks() {
   const prismaObj: Record<string, unknown> = {
@@ -29,7 +30,7 @@ function createMocks() {
   const prisma = prismaObj as unknown as PrismaService;
   const audit = { record: jest.fn() } as unknown as AuditService;
   const auditRecord = audit.record as unknown as jest.Mock;
-  const state = new RequestStateService(prisma);
+  const state = new RequestStateService(withReferenceLookups(prisma));
   const assetService = {
     // El triage ya no crea activos: solo asocia uno existente via `get`.
     get: jest.fn(),

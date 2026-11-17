@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { paginationHeaders, serveRequestList, type RequestLike } from './helpers/server-list-mock';
 
 /**
  * Filtros de selección múltiple de Solicitudes y Portafolio
@@ -6,7 +7,9 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
  *
  * El seed no crea solicitudes y la CI parte de una base limpia, así que el GET
  * del listado de Solicitudes se intercepta solo para sustituir el cuerpo: la
- * petición llega a la API real (autenticación, permisos y CORS reales). Los
+ * petición llega a la API real (autenticación, permisos y CORS reales). Desde
+ * la oleada 3 (PR-B) el listado filtra en el servidor: el mock aplica los
+ * parámetros recibidos y devuelve el total en X-Total-Count, como la API. Los
  * procesos sí son los reales del seed. Los menús de Radix se renderizan en un
  * portal: se buscan por rol en la página, no dentro del Toolbar.
  */
@@ -60,11 +63,12 @@ const SPECS: FixtureSpec[] = [
   { n: 6, state: 'CERRADA', process: null, band: BAND_P1 },
 ];
 
-function buildFixture(processes: ProcessRef[]): unknown[] {
+function buildFixture(processes: ProcessRef[]): RequestLike[] {
   return SPECS.map(({ n, state, process, band }) => {
     const at = new Date(Date.UTC(2026, 0, n, 12)).toISOString();
     return {
       id: `00000000-0000-4000-8000-0000000001${String(n).padStart(2, '0')}`,
+      code: `PRY-90${String(n).padStart(2, '0')}`,
       title: `Filtro múltiple ${n}`,
       registeredAt: at,
       createdAt: at,
@@ -99,7 +103,12 @@ async function openSolicitudes(
     async (route) => {
       if (route.request().method() !== 'GET') return route.continue();
       const response = await route.fetch();
-      await route.fulfill({ response, json: fixture });
+      const served = serveRequestList(fixture, new URL(route.request().url()));
+      await route.fulfill({
+        response,
+        json: served.rows,
+        headers: { ...response.headers(), ...paginationHeaders(served.total) },
+      });
     },
   );
   await page.goto(path);
@@ -160,7 +169,7 @@ test.describe('Solicitudes: filtros de selección múltiple', () => {
       'true',
     );
     await expectTitles(page, [1, 6]);
-    await expect(countOf(page)).toHaveText('2 de 6 solicitudes');
+    await expect(countOf(page)).toHaveText('2 solicitudes');
     await closePanel(page);
     await expect(trigger).toContainText('2 seleccionados');
 
@@ -195,7 +204,7 @@ test.describe('Solicitudes: filtros de selección múltiple', () => {
     await toggle(page, 'P1');
     await closePanel(page);
     await expectTitles(page, [5]);
-    await expect(countOf(page)).toHaveText('1 de 6 solicitudes');
+    await expect(countOf(page)).toHaveText('1 solicitud');
   });
 
   test('«Sin proceso aún» más un proceso: unión de ambos', async ({ page, request }) => {
@@ -216,7 +225,7 @@ test.describe('Solicitudes: filtros de selección múltiple', () => {
     await openSolicitudes(page, request, '/demanda/solicitudes?proceso=SIN_PROCESO');
     await expect(page.locator('#sol-filtro-proceso')).toContainText('Sin proceso aún');
     await expectTitles(page, [1, 6]);
-    await expect(countOf(page)).toHaveText('2 de 6 solicitudes');
+    await expect(countOf(page)).toHaveText('2 solicitudes');
     await page.locator('#sol-filtro-proceso').click();
     await expect(
       page.getByRole('menuitemcheckbox', { name: 'Sin proceso aún', exact: true }),
@@ -237,7 +246,7 @@ test.describe('Solicitudes: filtros de selección múltiple', () => {
     await page.locator('#sol-filtro-banda').click();
     await toggle(page, 'Sin priorizar');
     await closePanel(page);
-    await expect(countOf(page)).toHaveText('1 de 6 solicitudes');
+    await expect(countOf(page)).toHaveText('1 solicitud');
     await expect(clear).toHaveCount(1);
 
     await clear.click();

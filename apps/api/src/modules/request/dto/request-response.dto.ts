@@ -69,11 +69,33 @@ export class RequestResponseDto {
 
   @ApiProperty({
     type: String,
+    nullable: true,
+    example: 'BI',
+    description: 'Código del proceso principal (null si aún no tiene proceso).',
+  })
+  mainProcessCode!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Nombre del proceso principal (null si aún no tiene proceso).',
+  })
+  mainProcessName!: string | null;
+
+  @ApiProperty({
+    type: String,
     format: 'uuid',
     nullable: true,
     description: 'Activo al que pertenece la solicitud (P1) o null.',
   })
   assetId!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Nombre del activo al que pertenece la solicitud (null si no tiene).',
+  })
+  assetName!: string | null;
 
   @ApiProperty({
     type: String,

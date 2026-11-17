@@ -24,6 +24,12 @@ import {
 export const TRIAGE_DECISIONS = ['CONTINUAR', 'DEVOLVER', 'RECHAZAR'] as const;
 export type TriageDecision = (typeof TRIAGE_DECISIONS)[number];
 
+/** Nombres de lo referenciado por una o varias solicitudes (proceso y activo). */
+interface RequestReferenceNames {
+  processes: Map<string, { id: string; code: string; name: string }>;
+  assets: Map<string, string>;
+}
+
 /** Request con sus participantes (shape de lectura comun del modulo). */
 export type RequestWithParticipants = RequestModel & {
   participants: RequestParticipantModel[];
@@ -95,7 +101,92 @@ equest-scope.service.ts). */
   ): Promise<RequestResponseDto> {
     const triage = await this.currentTriage(request.id);
     const evaluation = await this.currentPriorityEvaluation(request.id);
+    const refs = await this.referenceNames([request]);
+    return this.compose(request, triage, evaluation, refs);
+  }
 
+  /**
+   * Versión por lote de `buildResponse` para los listados: triage vigente,
+   * evaluación vigente y nombres referenciados en consultas únicas (sin 1+N).
+   * Mismo criterio de vigencia que `currentTriage` y
+   * `currentPriorityEvaluation` (la última por fecha).
+   */
+  async buildResponses(
+    requests: RequestWithParticipants[],
+  ): Promise<RequestResponseDto[]> {
+    if (requests.length === 0) {
+      return [];
+    }
+    const ids = requests.map((r) => r.id);
+    const [triages, evaluations, refs] = await Promise.all([
+      this.prisma.triage.findMany({
+        where: { requestId: { in: ids } },
+        orderBy: { decidedAt: 'desc' },
+      }),
+      this.prisma.priorityEvaluation.findMany({
+        where: { requestId: { in: ids } },
+        orderBy: { evaluatedAt: 'desc' },
+      }),
+      this.referenceNames(requests),
+    ]);
+    const triageBy = new Map<string, TriageModel>();
+    for (const triage of triages) {
+      if (!triageBy.has(triage.requestId)) triageBy.set(triage.requestId, triage);
+    }
+    const evaluationBy = new Map<string, PriorityEvaluationModel>();
+    for (const evaluation of evaluations) {
+      if (!evaluationBy.has(evaluation.requestId)) {
+        evaluationBy.set(evaluation.requestId, evaluation);
+      }
+    }
+    return requests.map((r) =>
+      this.compose(r, triageBy.get(r.id) ?? null, evaluationBy.get(r.id) ?? null, refs),
+    );
+  }
+
+  /**
+   * Nombre y código del proceso principal y nombre del activo de varias
+   * solicitudes (BL-039: la persona no debe ver solo UUID). Una consulta por
+   * tipo de referencia, con `select` mínimo.
+   */
+  private async referenceNames(
+    requests: Pick<RequestModel, 'mainProcessId' | 'assetId'>[],
+  ): Promise<RequestReferenceNames> {
+    const processIds = [
+      ...new Set(requests.flatMap((r) => (r.mainProcessId ? [r.mainProcessId] : []))),
+    ];
+    const assetIds = [
+      ...new Set(requests.flatMap((r) => (r.assetId ? [r.assetId] : []))),
+    ];
+    const [processes, assets] = await Promise.all([
+      processIds.length > 0
+        ? this.prisma.process.findMany({
+            where: { id: { in: processIds } },
+            select: { id: true, code: true, name: true },
+          })
+        : Promise.resolve([]),
+      assetIds.length > 0
+        ? this.prisma.asset.findMany({
+            where: { id: { in: assetIds } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([]),
+    ]);
+    return {
+      processes: new Map(processes.map((p) => [p.id, p])),
+      assets: new Map(assets.map((a) => [a.id, a.name])),
+    };
+  }
+
+  private compose(
+    request: RequestWithParticipants,
+    triage: TriageModel | null,
+    evaluation: PriorityEvaluationModel | null,
+    refs: RequestReferenceNames,
+  ): RequestResponseDto {
+    const mainProcess = request.mainProcessId
+      ? refs.processes.get(request.mainProcessId)
+      : undefined;
     return {
       id: request.id,
       code: request.code,
@@ -109,7 +200,10 @@ equest-scope.service.ts). */
       referenceUrl: request.referenceUrl,
       expectedResult: request.expectedResult,
       mainProcessId: request.mainProcessId,
+      mainProcessCode: mainProcess?.code ?? null,
+      mainProcessName: mainProcess?.name ?? null,
       assetId: request.assetId,
+      assetName: request.assetId ? (refs.assets.get(request.assetId) ?? null) : null,
       createdByUserId: request.createdByUserId,
       operationalState: request.operationalState,
       initialCommitmentDate: request.initialCommitmentDate,

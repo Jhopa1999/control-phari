@@ -9,6 +9,7 @@ import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import { RequestService } from './request.service';
 import { RequestStateService } from './request-state.service';
+import { withReferenceLookups } from '../../testing/reference-lookups';
 
 /**
  * Oleada 2 · D3 y D4: quién edita una solicitud según su estado, justificación
@@ -39,7 +40,7 @@ function createMocks() {
     audit,
     auditRecord: audit.record as unknown as jest.Mock,
     notifications,
-    state: new RequestStateService(prisma),
+    state: new RequestStateService(withReferenceLookups(prisma)),
   };
 }
 

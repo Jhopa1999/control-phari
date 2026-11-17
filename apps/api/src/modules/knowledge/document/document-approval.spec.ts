@@ -38,6 +38,8 @@ function build(doc: { status: string; categoryCode?: string | null; requestId?: 
     createdAt: new Date(),
     updatedAt: new Date(),
     currentVersion: null,
+    asset: { name: 'Activo' },
+    request: null,
   };
   const tx = {
     document: { update: jest.fn().mockImplementation(({ data }) => ({ ...row, ...data })) },

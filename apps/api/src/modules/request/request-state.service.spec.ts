@@ -5,6 +5,7 @@ import {
   PriorityCriteria,
   RequestStateService,
 } from './request-state.service';
+import { withReferenceLookups } from '../../testing/reference-lookups';
 
 function createPrismaMock() {
   const prisma = {
@@ -35,7 +36,7 @@ describe('RequestStateService', () => {
 
   beforeEach(() => {
     prisma = createPrismaMock();
-    service = new RequestStateService(prisma);
+    service = new RequestStateService(withReferenceLookups(prisma));
   });
 
   describe('computeScore (design §1.4)', () => {

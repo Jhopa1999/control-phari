@@ -28,12 +28,33 @@ import { ChangeDocumentStatusDto } from './dto/change-document-status.dto';
 import { DocumentResponseDto } from './dto/document-response.dto';
 import { DocumentVersionResponseDto } from './dto/document-version-response.dto';
 import { DocumentContentResponseDto } from './dto/document-content-response.dto';
+import {
+  PageResult,
+  buildPageResult,
+  normalizeSearch,
+  resolveLegacyTakeWindow,
+} from '../../../common/pagination/pagination';
 
-/** Documento con la version vigente embebida (sin contenido). */
+/**
+ * Include estándar de un documento: resumen de la versión vigente (sin
+ * contenido) y, por BL-039, nombre del activo y código/título del proyecto con
+ * `select` mínimo (una sola consulta por lista, sin 1+N).
+ */
+const DOCUMENT_INCLUDE = {
+  currentVersion: {
+    select: { id: true, versionNumber: true, authorUserId: true, createdAt: true },
+  },
+  asset: { select: { name: true } },
+  request: { select: { code: true, title: true, deletedAt: true } },
+} satisfies Prisma.DocumentInclude;
+
+/** Documento con la version vigente embebida (sin contenido) y sus referencias. */
 type DocumentWithCurrent = DocumentModel & {
   currentVersion:
     | Pick<DocumentVersionModel, 'id' | 'versionNumber' | 'authorUserId' | 'createdAt'>
     | null;
+  asset: { name: string };
+  request: { code: string; title: string; deletedAt: Date | null } | null;
 };
 
 /**
@@ -85,10 +106,14 @@ export class DocumentService {
     return {
       id: row.id,
       assetId: row.assetId,
+      assetName: row.asset.name,
       title: row.title,
       categoryCode: row.categoryCode,
       status: row.status,
       requestId: row.requestId,
+      // Un proyecto eliminado no se nombra («No disponible» en la web).
+      requestCode: row.request && row.request.deletedAt === null ? row.request.code : null,
+      requestTitle: row.request && row.request.deletedAt === null ? row.request.title : null,
       submittedAt: row.submittedAt,
       submittedByUserId: row.submittedByUserId,
       reviewedAt: row.reviewedAt,
@@ -160,16 +185,7 @@ export class DocumentService {
       where: {
         AND: [{ id }, { asset: this.scope.assetScopeWhere(actor) }],
       },
-      include: {
-        currentVersion: {
-          select: {
-            id: true,
-            versionNumber: true,
-            authorUserId: true,
-            createdAt: true,
-          },
-        },
-      },
+      include: DOCUMENT_INCLUDE,
     });
     if (!document) {
       throw new NotFoundException('No se encontró el documento.');
@@ -187,7 +203,7 @@ export class DocumentService {
   async list(
     actor: CurrentActor,
     filters: ListDocumentsDto,
-  ): Promise<DocumentResponseDto[]> {
+  ): Promise<PageResult<DocumentResponseDto>> {
     const assetWhere: Prisma.AssetWhereInput = {
       AND: [this.scope.assetScopeWhere(actor)],
     };
@@ -214,26 +230,29 @@ export class DocumentService {
     if (filters.categoryCode !== undefined) {
       and.push({ categoryCode: filters.categoryCode });
     }
-    if (filters.q !== undefined) {
-      and.push({ title: { contains: filters.q, mode: 'insensitive' } });
+    const q = normalizeSearch(filters.q);
+    if (q !== undefined) {
+      and.push({ title: { contains: q, mode: 'insensitive' } });
     }
 
-    const rows = await this.prisma.document.findMany({
-      where,
-      orderBy: [{ createdAt: 'desc' }],
-      include: {
-        currentVersion: {
-          select: {
-            id: true,
-            versionNumber: true,
-            authorUserId: true,
-            createdAt: true,
-          },
-        },
-      },
-      ...(filters.take !== undefined ? { take: filters.take } : {}),
-    });
-    return rows.map((row) => this.toResponse(row));
+    const window = resolveLegacyTakeWindow(filters);
+    const sort = filters.sort ?? 'createdAt';
+    const dir = filters.dir ?? (sort === 'createdAt' ? 'desc' : 'asc');
+    const [rows, total] = await Promise.all([
+      this.prisma.document.findMany({
+        where,
+        orderBy: [{ [sort]: dir }, { id: 'asc' }],
+        include: DOCUMENT_INCLUDE,
+        skip: window.skip,
+        take: window.take,
+      }),
+      this.prisma.document.count({ where }),
+    ]);
+    return buildPageResult(
+      rows.map((row) => this.toResponse(row)),
+      total,
+      window,
+    );
   }
 
   async get(actor: CurrentActor, id: string): Promise<DocumentResponseDto> {
@@ -277,16 +296,7 @@ export class DocumentService {
         const withPointer = await tx.document.update({
           where: { id: document.id },
           data: { currentVersionId: version.id },
-          include: {
-            currentVersion: {
-              select: {
-                id: true,
-                versionNumber: true,
-                authorUserId: true,
-                createdAt: true,
-              },
-            },
-          },
+          include: DOCUMENT_INCLUDE,
         });
 
         await this.audit.record(tx, {
@@ -334,16 +344,7 @@ export class DocumentService {
           ...(dto.title !== undefined ? { title: dto.title } : {}),
           ...(dto.categoryCode !== undefined ? { categoryCode: dto.categoryCode } : {}),
         },
-        include: {
-          currentVersion: {
-            select: {
-              id: true,
-              versionNumber: true,
-              authorUserId: true,
-              createdAt: true,
-            },
-          },
-        },
+        include: DOCUMENT_INCLUDE,
       });
 
       await this.audit.record(tx, {
@@ -431,16 +432,7 @@ export class DocumentService {
           currentVersionId: version.id,
           ...(resetsApproval ? { status: DocStatus.BORRADOR } : {}),
         },
-        include: {
-          currentVersion: {
-            select: {
-              id: true,
-              versionNumber: true,
-              authorUserId: true,
-              createdAt: true,
-            },
-          },
-        },
+        include: DOCUMENT_INCLUDE,
       });
 
       await this.audit.record(tx, {
@@ -587,16 +579,7 @@ export class DocumentService {
       const row = await tx.document.update({
         where: { id },
         data,
-        include: {
-          currentVersion: {
-            select: {
-              id: true,
-              versionNumber: true,
-              authorUserId: true,
-              createdAt: true,
-            },
-          },
-        },
+        include: DOCUMENT_INCLUDE,
       });
 
       await this.audit.record(tx, {
@@ -643,11 +626,7 @@ export class DocumentService {
         ],
       },
       orderBy: [{ submittedAt: 'asc' }, { createdAt: 'asc' }],
-      include: {
-        currentVersion: {
-          select: { id: true, versionNumber: true, authorUserId: true, createdAt: true },
-        },
-      },
+      include: DOCUMENT_INCLUDE,
     });
     return rows.map((row) => this.toResponse(row));
   }

@@ -29,6 +29,9 @@ export class DocumentResponseDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Activo del documento.' })
   assetId!: string;
 
+  @ApiProperty({ type: String, description: 'Nombre del activo del documento.' })
+  assetName!: string;
+
   @ApiProperty({ type: String, description: 'Titulo.' })
   title!: string;
 
@@ -40,6 +43,21 @@ export class DocumentResponseDto {
 
   @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Proyecto (solicitud) vinculado, p. ej. documentación de cierre.' })
   requestId!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'PRY-0012',
+    description: 'ID visible del proyecto (solicitud) vinculado (null si no tiene o fue eliminado).',
+  })
+  requestCode!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Título del proyecto (solicitud) vinculado (null si no tiene o fue eliminado).',
+  })
+  requestTitle!: string | null;
 
   @ApiProperty({ type: String, format: 'date-time', nullable: true, description: 'Envío a aprobación.' })
   submittedAt!: Date | null;

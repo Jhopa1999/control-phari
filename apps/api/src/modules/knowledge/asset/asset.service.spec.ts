@@ -12,11 +12,17 @@ import { KnowledgeScopeService } from '../knowledge-scope.service';
 import { AssetStateService } from './asset-state.service';
 import { AssetService } from './asset.service';
 
+/** Filas de un listado paginado (el servicio devuelve PageResult). */
+async function rowsOf<T>(p: Promise<{ rows: T[] }>): Promise<T[]> {
+  return (await p).rows;
+}
+
 function createMocks() {
   const prismaObj: Record<string, any> = {
     asset: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
       create: jest.fn(),
       update: jest.fn(),
     },
@@ -126,6 +132,9 @@ function assetRow(overrides: Record<string, unknown> = {}) {
     generalDescription: null,
     dependencies: null,
     visibilities: [] as { processId: string }[],
+    process: { code: 'BI', name: 'Inteligencia de Negocio' },
+    owner: null as { name: string } | null,
+    request: null as { code: string; title: string; deletedAt: Date | null } | null,
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -467,28 +476,109 @@ describe('AssetService', () => {
   });
 
   describe('list', () => {
-    it('aplica filtros processId/requestId/status y take', async () => {
+    it('aplica filtros processId/requestId/status y take (alias obsoleto)', async () => {
       m.prismaObj.asset.findMany.mockResolvedValue([assetRow()]);
-      const res = await m.service.list(lider(), {
-        processId: 'p1',
-        requestId: 'r1',
-        status: 'BORRADOR',
-        take: 5,
-      } as any);
+      m.prismaObj.asset.count.mockResolvedValue(1);
+      const res = await rowsOf(
+        m.service.list(lider(), {
+          processId: 'p1',
+          requestId: 'r1',
+          status: 'BORRADOR',
+          take: 5,
+        } as any),
+      );
       expect(res).toHaveLength(1);
       const call = m.prismaObj.asset.findMany.mock.calls[0][0];
       expect(call.where.AND).toContainEqual({ processId: 'p1' });
       expect(call.where.AND).toContainEqual({ requestId: 'r1' });
       expect(call.where.AND).toContainEqual({ status: 'BORRADOR' });
       expect(call.take).toBe(5);
+      expect(call.skip).toBe(0);
     });
 
     it('toResponse expone visibleProcessIds ordenado (solo filas puente)', async () => {
       m.prismaObj.asset.findMany.mockResolvedValue([
         assetRow({ visibilities: [{ processId: 'p3' }, { processId: 'p2' }] }),
       ]);
-      const res = await m.service.list(lider(), {} as any);
+      const res = await rowsOf(m.service.list(lider(), {} as any));
       expect(res[0].visibleProcessIds).toEqual(['p2', 'p3']);
+    });
+
+    it('BL-039: trae nombre y código del proceso, responsable y solicitud de origen', async () => {
+      m.prismaObj.asset.findMany.mockResolvedValue([
+        assetRow({
+          requestId: 'r1',
+          owner: { name: 'Ana Pérez' },
+          request: { code: 'PRY-0012', title: 'Tablero', deletedAt: null },
+        }),
+        assetRow({
+          id: 'a2',
+          requestId: 'r2',
+          request: { code: 'PRY-0013', title: 'Borrada', deletedAt: new Date() },
+        }),
+      ]);
+      const [conOrigen, borrada] = await rowsOf(m.service.list(lider(), {} as any));
+      expect(conOrigen).toMatchObject({
+        processCode: 'BI',
+        processName: 'Inteligencia de Negocio',
+        ownerName: 'Ana Pérez',
+        requestCode: 'PRY-0012',
+        requestTitle: 'Tablero',
+      });
+      // Una solicitud de origen eliminada no se nombra.
+      expect(borrada.requestCode).toBeNull();
+      expect(borrada.requestTitle).toBeNull();
+      expect(borrada.ownerName).toBeNull();
+      // Una sola consulta con include (sin 1+N).
+      expect(m.prismaObj.asset.findMany).toHaveBeenCalledTimes(1);
+      expect(m.prismaObj.asset.findMany.mock.calls[0][0].include).toMatchObject({
+        process: { select: { code: true, name: true } },
+        owner: { select: { name: true } },
+      });
+    });
+
+    it('sin parámetros conserva el listado completo con tope de 1000 y marca el truncado', async () => {
+      m.prismaObj.asset.findMany.mockResolvedValue([assetRow()]);
+      m.prismaObj.asset.count.mockResolvedValue(1200);
+      const result = await m.service.list(lider(), {} as any);
+      const call = m.prismaObj.asset.findMany.mock.calls[0][0];
+      expect(call.skip).toBe(0);
+      expect(call.take).toBe(1000);
+      expect(call.orderBy).toEqual([{ createdAt: 'desc' }, { id: 'asc' }]);
+      expect(result.total).toBe(1200);
+      expect(result.truncated).toBe(true);
+    });
+
+    it('page/pageSize, q por nombre, orden y total del alcance filtrado', async () => {
+      m.prismaObj.asset.findMany.mockResolvedValue([assetRow()]);
+      m.prismaObj.asset.count.mockResolvedValue(42);
+      const result = await m.service.list(lider(['p1']), {
+        page: 3,
+        pageSize: 10,
+        q: '  tablero ',
+        sort: 'name',
+        take: 5,
+      } as any);
+      const call = m.prismaObj.asset.findMany.mock.calls[0][0];
+      // Si llegan take y pageSize, gana pageSize.
+      expect(call.skip).toBe(20);
+      expect(call.take).toBe(10);
+      expect(call.orderBy).toEqual([{ name: 'asc' }, { id: 'asc' }]);
+      expect(call.where.AND).toContainEqual({
+        name: { contains: 'tablero', mode: 'insensitive' },
+      });
+      // El count usa el mismo where (alcance incluido): el total no se sale del alcance.
+      const countWhere = m.prismaObj.asset.count.mock.calls[0][0].where;
+      expect(countWhere).toEqual(call.where);
+      expect(countWhere.AND[0]).toEqual({
+        OR: [
+          { processId: { in: ['p1'] } },
+          { visibilities: { some: { processId: { in: ['p1'] } } } },
+        ],
+      });
+      expect(result.total).toBe(42);
+      expect(result.truncated).toBe(false);
+      expect(result.window).toMatchObject({ page: 3, pageSize: 10 });
     });
   });
 

@@ -12,6 +12,7 @@ import { RequestState } from '../../request/request-state';
 import { RequestStateService } from '../../request/request-state.service';
 import { GovernanceScopeService } from '../governance-scope.service';
 import { ValidationService } from './validation.service';
+import { withReferenceLookups } from '../../../testing/reference-lookups';
 
 const JEFE: CurrentActor = {
   userId: 'u-jefe',
@@ -113,7 +114,7 @@ function setup(): Mocks {
   const audit = { record: jest.fn() } as unknown as AuditService;
   const auditRecord = audit.record as unknown as jest.Mock;
   const scope = new GovernanceScopeService(prisma);
-  const state = new RequestStateService(prisma);
+  const state = new RequestStateService(withReferenceLookups(prisma));
   const service = new ValidationService(prisma, audit, scope, state);
 
   return {

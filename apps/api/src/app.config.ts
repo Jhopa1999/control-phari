@@ -4,6 +4,7 @@ import { DocumentBuilder } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { validationExceptionFactory } from './common/filters/validation-messages-es';
 import { securityHeadersMiddleware } from './security/security-headers.middleware';
+import { PAGINATION_EXPOSED_HEADERS } from './common/pagination/pagination';
 
 /**
  * Limite del cuerpo de la peticion. El contenido de un documento Markdown
@@ -109,9 +110,11 @@ export function configureApp(app: INestApplication): void {
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
       allowedHeaders: CORS_ALLOWED_HEADERS,
-      // El 429 del login informa la espera en Retry-After; sin exponerla, la web
-      // (otro origen en desarrollo) no puede leerla.
-      exposedHeaders: ['Retry-After'],
+      // El 429 del login informa la espera en Retry-After y los listados
+      // paginados el total en X-Total-Count (y X-Page, X-Page-Size,
+      // X-Truncated); sin exponerlas, la web (otro origen en desarrollo) no
+      // puede leerlas.
+      exposedHeaders: ['Retry-After', ...PAGINATION_EXPOSED_HEADERS],
     });
   }
 }

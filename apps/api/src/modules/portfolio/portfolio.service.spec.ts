@@ -6,9 +6,14 @@ import { RequestScopeService } from '../request/request-scope.service';
 import { PortfolioScopeService } from './portfolio-scope.service';
 import { PortfolioService } from './portfolio.service';
 
+/** Filas de un listado paginado (el servicio devuelve PageResult). */
+async function rowsOf<T>(p: Promise<{ rows: T[] }>): Promise<T[]> {
+  return (await p).rows;
+}
+
 function createMocks() {
   const prismaObj: Record<string, unknown> = {
-    request: { findMany: jest.fn() },
+    request: { findMany: jest.fn(), count: jest.fn().mockResolvedValue(0) },
     priorityEvaluation: { findMany: jest.fn() },
     task: { findMany: jest.fn().mockResolvedValue([]) },
     plan: { findMany: jest.fn().mockResolvedValue([]) },
@@ -93,7 +98,7 @@ describe('PortfolioService', () => {
     (m.state.priorityBand as jest.Mock).mockReturnValue('P1');
     (m.state.priorityLabel as jest.Mock).mockReturnValue('P1 · etiqueta');
 
-    const [item] = await service.list(jefe(), {});
+    const [item] = await rowsOf(service.list(jefe(), {}));
     expect(item.priorityBand).toBe('P1');
     expect(item.priorityLabel).toBe('P1 · etiqueta');
     expect(item.currentScore).toBe(85);
@@ -105,7 +110,7 @@ describe('PortfolioService', () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([requestRow()]);
     (m.prismaObj.priorityEvaluation as any).findMany.mockResolvedValue([]);
 
-    const [item] = await service.list(jefe(), {});
+    const [item] = await rowsOf(service.list(jefe(), {}));
     expect(item.priorityBand).toBeNull();
     expect(item.priorityLabel).toBeNull();
     expect(item.currentScore).toBeNull();
@@ -116,7 +121,7 @@ describe('PortfolioService', () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([
       requestRow({ blockedAt: new Date(), blockedResolvedAt: null, blockedReason: 'X' }),
     ]);
-    const [item] = await service.list(jefe(), {});
+    const [item] = await rowsOf(service.list(jefe(), {}));
     expect(item.blocked).toBe(true);
     expect(item.blockedReason).toBe('X');
   });
@@ -163,7 +168,7 @@ describe('PortfolioService', () => {
     (m.state.priorityBand as jest.Mock).mockReturnValue('P1');
     (m.state.priorityLabel as jest.Mock).mockReturnValue('P1');
 
-    const items = await service.list(jefe(), { band: ['SIN_PRIORIZAR'] });
+    const items = await rowsOf(service.list(jefe(), { band: ['SIN_PRIORIZAR'] }));
     expect(items).toHaveLength(1);
     expect(items[0].id).toBe('r1');
   });
@@ -215,7 +220,7 @@ describe('PortfolioService', () => {
       (m.prismaObj.plan as any).findMany.mockResolvedValue([planRow()]);
       (m.prismaObj.task as any).findMany.mockResolvedValue([taskRow(isoDay(10))]);
 
-      const [item] = await service.list(jefe(), {});
+      const [item] = await rowsOf(service.list(jefe(), {}));
       expect(item.dueStatus).toBe('EN_TIEMPO');
       expect(item.daysToTarget).toBe(10);
       expect(item.referenceSource).toBe('PLAN');
@@ -230,7 +235,7 @@ describe('PortfolioService', () => {
       (m.prismaObj.plan as any).findMany.mockResolvedValue([planRow({ baselineDate: isoDay(-2) })]);
       (m.prismaObj.task as any).findMany.mockResolvedValue([taskRow(isoDay(3))]);
 
-      const [item] = await service.list(jefe(), {});
+      const [item] = await rowsOf(service.list(jefe(), {}));
       expect(item.dueStatus).toBe('VENCIDO');
       expect(item.daysToTarget).toBe(-2);
       expect(item.scheduleVarianceDays).toBe(5);
@@ -244,7 +249,7 @@ describe('PortfolioService', () => {
         planRow({ status: 'BORRADOR', baselineDate: null, periodEnd: isoDay(20) }),
       ]);
 
-      const [item] = await service.list(jefe(), {});
+      const [item] = await rowsOf(service.list(jefe(), {}));
       expect(item.dueStatus).toBe('VENCIDO');
       expect(item.referenceSource).toBe('SOLICITUD');
       expect(item.requestedGapDays).toBeNull();
@@ -258,17 +263,42 @@ describe('PortfolioService', () => {
         planRow({ baselineDate: null, commitmentDate: null, periodEnd: isoDay(8) }),
       ]);
 
-      const [item] = await service.list(jefe(), {});
+      const [item] = await rowsOf(service.list(jefe(), {}));
       expect(item.referenceSource).toBe('PLAN');
       expect(item.daysToTarget).toBe(8);
     });
+  });
+
+  it('pagina en servidor: ventana, q en código y título, total del alcance filtrado', async () => {
+    (m.prismaObj.request as any).findMany.mockResolvedValue([requestRow({ id: 'r9' })]);
+    (m.prismaObj.request as any).count.mockResolvedValue(40);
+    const result = await service.list(lider(['p1']), { page: 2, pageSize: 25, q: 'PRY-00' });
+    const first = (m.prismaObj.request as any).findMany.mock.calls[0][0];
+    expect(first.skip).toBe(25);
+    expect(first.take).toBe(25);
+    const contains = { contains: 'PRY-00', mode: 'insensitive' };
+    // El portafolio no busca por solicitante (solo código y título).
+    expect(first.where.AND).toContainEqual({ OR: [{ code: contains }, { title: contains }] });
+    expect((m.prismaObj.request as any).count.mock.calls[0][0].where).toEqual(first.where);
+    expect(result.total).toBe(40);
+    expect(result.rows.map((r) => r.id)).toEqual(['r9']);
+  });
+
+  it('sin parámetros conserva la respuesta completa (tope 1000) y orden por registro', async () => {
+    (m.prismaObj.request as any).findMany.mockResolvedValue([]);
+    const result = await service.list(jefe(), {});
+    const first = (m.prismaObj.request as any).findMany.mock.calls[0][0];
+    expect(first.take).toBe(1000);
+    expect(first.orderBy).toEqual([{ registeredAt: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }]);
+    expect(result.rows).toEqual([]);
+    expect(result.truncated).toBe(false);
   });
 
   it('"comprometida" se refleja por operationalState explicito (no se infiere)', async () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([
       requestRow({ operationalState: 'COMPROMETIDA' }),
     ]);
-    const [item] = await service.list(jefe(), {});
+    const [item] = await rowsOf(service.list(jefe(), {}));
     expect(item.operationalState).toBe('COMPROMETIDA');
   });
 
@@ -331,7 +361,7 @@ describe('PortfolioService', () => {
       );
       (m.state.priorityLabel as jest.Mock).mockReturnValue('x');
 
-      const items = await service.list(jefe(), { band: ['P1', 'SIN_PRIORIZAR'] });
+      const items = await rowsOf(service.list(jefe(), { band: ['P1', 'SIN_PRIORIZAR'] }));
       expect(items.map((i) => i.id).sort()).toEqual(['r1', 'r2']);
     });
   });

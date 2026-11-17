@@ -18,6 +18,31 @@ Convenciones transversales que aplican a casi todos los endpoints:
 Las descripciones de endpoints provienen de los `@ApiOperation({ summary })` de cada
 `*.controller.ts`.
 
+### Listados paginados (oleada 3, PR-B)
+
+Patrón único en `apps/api/src/common/pagination/` (`PaginationQueryDto`,
+`resolvePage`, `setPaginationHeaders`), aplicado a `GET /requests`, `GET /portfolio`,
+`GET /assets` y `GET /documents`:
+
+- Parámetros opcionales: `page` (desde 1), `pageSize` (1 a 100; 25 si solo llega
+  `page`), `q` (búsqueda sin distinguir mayúsculas, máximo 200 caracteres; los
+  campos que cubre se indican en cada listado), `sort` (lista blanca por listado;
+  otro valor → `400`) y `dir` (`asc`/`desc`). El orden desempata siempre por `id`,
+  así las páginas son estables.
+- La respuesta **sigue siendo un arreglo** (compatible con el MCP, el asistente y
+  los clientes existentes). La paginación viaja en cabeceras, expuestas por CORS:
+  `X-Total-Count` (total tras alcance, filtros y `q`), `X-Page`, `X-Page-Size` y
+  `X-Truncated`.
+- **Sin `page` ni `pageSize`** se devuelve el listado completo como antes, con un
+  **tope de 1000 filas** (`LIST_HARD_CAP`); si el alcance filtrado tiene más,
+  `X-Truncated: true`. Los selectores de la web que piden «todo» quedan bajo ese tope.
+- El total se cuenta con el mismo `where` que la página (alcance incluido): un
+  filtro nunca amplía lo que el actor ve. Solicitudes y Portafolio comparten la
+  consulta (`request/request-list-query.ts`) sobre el alcance único
+  `requestScopeWhere` (`RequestScopeService`).
+- Pendientes con el mismo patrón (BL-081): bandeja del Plan, Capacidad, Reporte
+  semanal, Actas/compromisos y Controles.
+
 ---
 
 ## auth — Identidad y acceso
@@ -164,7 +189,7 @@ devolver es exclusiva de `JEFE_AREA`.
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/requests` | Lista solicitudes dentro del alcance del actor (filtros `state`, `mainProcessId`). |
+| GET | `/requests` | Lista solicitudes dentro del alcance del actor con el [patrón de listado paginado](#listados-paginados-oleada-3-pr-b). Filtros `state`, `mainProcessId` (UUID o `SIN_PROCESO`) y `band` (`P1`..`P4`, `SIN_PRIORIZAR`), cada uno con uno o varios valores (`?state=A&state=B`; un valor único se comporta como antes; máximo 50); `q` busca en código, título y nombre del solicitante; `sort` ∈ `registeredAt` (por defecto, descendente), `code` (por número), `title`, `state` (orden del flujo) y `score` (sin evaluación al final). Cada fila añade `mainProcessCode`, `mainProcessName` y `assetName` (BL-039; `null` si no hay), resueltos en lote. |
 | GET | `/requests/:id` | Obtiene una solicitud por id (`404` fuera de alcance). Además de `currentTriageDecision`, expone `currentTriageDecidedAt` y `currentTriageReason` (solo el motivo de la última decisión `DEVOLVER` o `RECHAZAR`; nunca notas ni dependencias del triage): es lo que la ficha muestra al solicitante, que no tiene acceso a `GET /requests/:id/triage`. La respuesta incluye `code`, el **ID visible** automático y de solo lectura (`PRY-0012`; ver «IDs visibles» en `modelo-datos.md`). `POST`/`PATCH` no aceptan `code` ni `number` (`400`). |
 | GET | `/requests/by-code/:code` | Detalle de una solicitud a partir de su ID visible (`PRY-0012`). Mismo alcance y respuesta (`RequestResponseDto`) que `GET /requests/:id`; `400` si el código no es de solicitud, `404` si no existe o está fuera de alcance. Declarado antes de `:id`. Tool MCP `request.get_by_code`. |
 | GET | `/plan-phases/by-code/:code` | Detalle de una fase a partir de su ID visible (`PRY-0012-F2`). Devuelve `PhaseByCodeDto`: los datos de la fase más `planId`, `requestId`, `requestCode`, `requestTitle` y `requestStatus`. Mismo alcance que la solicitud (`400` si el código no es de fase, `404` si no existe o está fuera de alcance). Tool MCP `phase.get_by_code`. |
@@ -313,7 +338,7 @@ conmutador *Incluir pendientes de decisión* los añade.
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/portfolio` | Listado del portafolio en alcance (filtros `mainProcessId`, `state`, `band`). Cada filtro admite uno o varios valores como parámetro repetido (`?state=A&state=B`; un solo valor se comporta como antes), con máximo 50 valores por filtro y 400 en español si algún elemento es inválido. Semántica: O dentro de un filtro, Y entre filtros, siempre intersectando el alcance del actor (nunca lo amplía). `mainProcessId` admite UUID o el literal `SIN_PROCESO` (solicitudes sin proceso principal, aún por triar), que se combina en O con los UUID; `band` admite `P1`..`P4` y `SIN_PRIORIZAR`. Cada ítem incluye `progressPercent` (promedio del avance de las tareas del plan, `TERMINADA` = 100; `null` sin tareas) y la alerta de vencimiento `dueStatus` (`SIN_FECHA`, `EN_TIEMPO`, `PROXIMO_A_VENCER`, `VENCIDO`, `NO_APLICA` en cerradas/rechazadas/retiradas) con `daysToTarget`. El umbral de «próximo a vencer» es `PORTFOLIO_DUE_SOON_DAYS` (7 por defecto). **Fecha de referencia del vencimiento** (`computeSchedule`, `portfolio/progress.ts`): la fecha objetivo de la solicitud es solo una expectativa inicial. Con el plan en `AUTORIZADO` el vencimiento se mide contra su línea base (`Plan.baselineDate`; respaldo para planes antiguos sin ella: `commitmentDate`, luego `periodEnd`) y `referenceSource` = `PLAN`; sin plan autorizado se mide contra la fecha objetivo (`SOLICITUD`; `NINGUNA` si no hay ninguna). Cada ítem añade `referenceDate`, `referenceSource`, `forecastDate` (mayor fecha fin entre las tareas sin terminar), `requestedGapDays` (compromiso menos fecha solicitada; informativo, no es un vencimiento) y `scheduleVarianceDays` (pronóstico menos compromiso; positivo = se corrió). Las dos últimas son `null` sin plan autorizado. |
+| GET | `/portfolio` | Listado del portafolio en alcance con el [patrón de listado paginado](#listados-paginados-oleada-3-pr-b): `q` en código y título; `sort` y `dir` como en `GET /requests`; la banda se resuelve antes de paginar, así el total ya la descuenta. Filtros `mainProcessId`, `state`, `band`. Cada filtro admite uno o varios valores como parámetro repetido (`?state=A&state=B`; un solo valor se comporta como antes), con máximo 50 valores por filtro y 400 en español si algún elemento es inválido. Semántica: O dentro de un filtro, Y entre filtros, siempre intersectando el alcance del actor (nunca lo amplía). `mainProcessId` admite UUID o el literal `SIN_PROCESO` (solicitudes sin proceso principal, aún por triar), que se combina en O con los UUID; `band` admite `P1`..`P4` y `SIN_PRIORIZAR`. Cada ítem incluye `progressPercent` (promedio del avance de las tareas del plan, `TERMINADA` = 100; `null` sin tareas) y la alerta de vencimiento `dueStatus` (`SIN_FECHA`, `EN_TIEMPO`, `PROXIMO_A_VENCER`, `VENCIDO`, `NO_APLICA` en cerradas/rechazadas/retiradas) con `daysToTarget`. El umbral de «próximo a vencer» es `PORTFOLIO_DUE_SOON_DAYS` (7 por defecto). **Fecha de referencia del vencimiento** (`computeSchedule`, `portfolio/progress.ts`): la fecha objetivo de la solicitud es solo una expectativa inicial. Con el plan en `AUTORIZADO` el vencimiento se mide contra su línea base (`Plan.baselineDate`; respaldo para planes antiguos sin ella: `commitmentDate`, luego `periodEnd`) y `referenceSource` = `PLAN`; sin plan autorizado se mide contra la fecha objetivo (`SOLICITUD`; `NINGUNA` si no hay ninguna). Cada ítem añade `referenceDate`, `referenceSource`, `forecastDate` (mayor fecha fin entre las tareas sin terminar), `requestedGapDays` (compromiso menos fecha solicitada; informativo, no es un vencimiento) y `scheduleVarianceDays` (pronóstico menos compromiso; positivo = se corrió). Las dos últimas son `null` sin plan autorizado. |
 
 ### Control del área (`area-control.controller.ts`)
 
@@ -473,7 +498,7 @@ escritura). La máquina de estado se aplica en el service.
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/assets` | Lista activos en alcance (filtros opcionales). Los 3 roles de área. |
+| GET | `/assets` | Lista activos en alcance (filtros `processId`, `requestId`, `status`) con el [patrón de listado paginado](#listados-paginados-oleada-3-pr-b): `q` por nombre; `sort` ∈ `createdAt` (por defecto, descendente), `name`, `status`. `take` queda como alias obsoleto (primeras N filas; si llega con `pageSize`, gana `pageSize`). Cada fila añade `processCode`, `processName`, `ownerName`, `requestCode` y `requestTitle` (BL-039; la solicitud de origen eliminada no se nombra). Los 3 roles de área. |
 | POST | `/assets` | Crea un activo (nace BORRADOR). Solo `JEFE_AREA`. |
 | GET | `/assets/:id` | Detalle de un activo. |
 | GET | `/assets/:id/requests` | Historial de solicitudes que tienen el activo como base (más reciente primero). |
@@ -491,7 +516,7 @@ vinculados.
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/documents` | Lista documentos en alcance (sin contenido). |
+| GET | `/documents` | Lista documentos en alcance (sin contenido; filtros `assetId`, `processId`, `requestId`, `categoryCode`, `status`) con el [patrón de listado paginado](#listados-paginados-oleada-3-pr-b): `q` en el título; `sort` ∈ `createdAt` (por defecto, descendente), `title`, `status`; `take` como alias obsoleto. Cada documento (también en el detalle y en `pending-approval`) añade `assetName`, `requestCode` y `requestTitle` (BL-039; el proyecto eliminado no se nombra). |
 | POST | `/documents` | Crea un documento + versión 1 (contenido Markdown). La `categoryCode`, si llega, debe existir y estar activa en la maestra `DOC_CATEGORY` (`400` «La categoría del documento no existe o está inactiva.»). |
 | GET | `/documents/:id` | Metadatos del documento + versión vigente (sin contenido). |
 | PATCH | `/documents/:id` | Edita metadatos (título/categoría; no estado ni contenido). Una `categoryCode` nueva se valida contra `DOC_CATEGORY` (`400` si no existe o está inactiva; `null` la desliga); la categoría ya guardada no se revalida al cambiar solo el título. |

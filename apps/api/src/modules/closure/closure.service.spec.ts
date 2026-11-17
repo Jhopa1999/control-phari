@@ -6,6 +6,7 @@ import {
 import { ClosureService } from './closure.service';
 import { RequestStateService } from '../request/request-state.service';
 import type { CurrentActor } from '../auth/current-actor';
+import { withReferenceLookups } from '../../testing/reference-lookups';
 
 function actor(jefe: boolean): CurrentActor {
   return {
@@ -100,7 +101,7 @@ function build(s: Setup = {}) {
   const service = new ClosureService(
     prisma as never,
     audit as never,
-    new RequestStateService(prisma as never),
+    new RequestStateService(withReferenceLookups(prisma as never)),
     notifications as never,
   );
   return { service, prisma, tx, audit, notifications };

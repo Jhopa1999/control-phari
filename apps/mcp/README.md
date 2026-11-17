@@ -69,6 +69,16 @@ están expuestas salvo las descargas binarias; entre ellas las vistas de activid
 ocurrencia, y descargarlos, son exclusiones permanentes (archivos binarios, igual que las
 evidencias de tareas).
 
+### Listados paginados (oleada 3, PR-B)
+
+`request.list`, `portfolio.get`, `asset.list` y `document.list` heredan del contrato
+los parámetros opcionales `page`, `pageSize` (máximo 100), `q`, `sort` y `dir`; sus
+descripciones lo explican. Sin `page` ni `pageSize` la API devuelve el listado
+completo con un tope de 1000 filas. El motor no lee cabeceras HTTP: la tool devuelve
+la página pedida (el arreglo) y no el total de `X-Total-Count`; para recorrer todo se
+piden páginas sucesivas hasta recibir menos filas que `pageSize`. No hay tools nuevas
+ni exclusiones nuevas.
+
 > IDs visibles: las solicitudes, fases y tareas devuelven `code` (`PRY-0012`,
 > `PRY-0012-F2`, `PRY-0012-T07`; las tareas además `phaseCode` y `requestCode`).
 > `task.get_by_code` (`GET /tasks/by-code/{code}`, solo lectura) resuelve una

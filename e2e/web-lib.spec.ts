@@ -28,6 +28,12 @@ import {
 } from '../apps/web/src/lib/review-requirements';
 import { waitingInfo } from '../apps/web/src/lib/pending-review-wait';
 import {
+  clampPage,
+  pageCountOf,
+  pageRange,
+  readServerPage,
+} from '../apps/web/src/lib/pagination';
+import {
   filterItems,
   flattenGroups,
   groupFiltered,
@@ -1853,5 +1859,34 @@ test.describe('classifyError y mensajes del servidor (oleada 3)', () => {
     expect(apiErrorFrom(500, {}).message).toBe(
       'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.',
     );
+test.describe('pagination (listados en el servidor, oleada 3 PR-B)', () => {
+  const headers = (values: Record<string, string>) => ({
+    headers: { get: (name: string) => values[name] ?? null },
+  });
+
+  test('readServerPage lee X-Total-Count y X-Truncated', () => {
+    expect(readServerPage([1, 2], headers({ 'X-Total-Count': '40', 'X-Truncated': 'false' }))).toEqual({
+      rows: [1, 2],
+      total: 40,
+      truncated: false,
+    });
+    expect(readServerPage([1], headers({ 'X-Total-Count': '1200', 'X-Truncated': 'true' })).truncated).toBe(true);
+  });
+
+  test('sin cabecera (mocks de e2e) el total es el número de filas', () => {
+    expect(readServerPage([1, 2, 3], headers({})).total).toBe(3);
+    expect(readServerPage([1, 2], headers({ 'X-Total-Count': 'x' })).total).toBe(2);
+    // Un total menor que las filas recibidas no tiene sentido: manda lo recibido.
+    expect(readServerPage([1, 2], headers({ 'X-Total-Count': '1' })).total).toBe(2);
+  });
+
+  test('pageCountOf, pageRange y clampPage', () => {
+    expect(pageCountOf(0, 25)).toBe(1);
+    expect(pageCountOf(30, 25)).toBe(2);
+    expect(pageRange(2, 25, 30, 5)).toEqual({ from: 26, to: 30 });
+    expect(pageRange(1, 25, 0, 0)).toEqual({ from: 0, to: 0 });
+    // Página fuera de rango tras un filtro: la última existente.
+    expect(clampPage(5, 30, 25)).toBe(2);
+    expect(clampPage(0, 30, 25)).toBe(1);
   });
 });
