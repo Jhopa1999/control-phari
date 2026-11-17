@@ -1,6 +1,6 @@
 import { api } from './api-client';
 import type { components } from '@plantilla-portales/api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, apiErrorFrom, toApiError } from './api-error';
 
 export { ApiError };
 
@@ -42,7 +42,7 @@ export async function getGovernanceBoard(
       params: { path: { id: requestId } },
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -61,7 +61,7 @@ export async function listValidations(
       { params: { path: { id: requestId } } },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -84,7 +84,7 @@ export async function createValidation(
       { params: { path: { id: requestId } }, body: input },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -112,7 +112,7 @@ export async function resolveBlocking(
       },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -135,7 +135,7 @@ export async function setGovernanceRoute(
       { params: { path: { id: requestId } }, body: { route } },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -159,7 +159,7 @@ export async function addPendingItem(
       },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -184,7 +184,7 @@ export async function resolvePendingItem(
       },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -208,7 +208,7 @@ export async function approveGate(
       },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -232,7 +232,7 @@ export async function waiveGate(
       },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -255,7 +255,7 @@ export async function requestValidationStage(
       },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -278,7 +278,7 @@ export async function markReadyStage(
       },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -301,7 +301,7 @@ export async function confirmStabilizationStage(
       },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {

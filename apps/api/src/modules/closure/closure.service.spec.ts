@@ -26,6 +26,8 @@ interface Setup {
   tasksDone?: number;
   docs?: Array<{ status: string }>;
   pending?: boolean;
+  /** GC5 existente (null = aun no materializado). */
+  gc5?: { id: string; status: string; waiverReason: string | null } | null;
 }
 
 function build(s: Setup = {}) {
@@ -53,6 +55,10 @@ function build(s: Setup = {}) {
       update: jest.fn().mockImplementation(({ data }) => ({ ...pendingRow, ...data })),
     },
     request: { update: jest.fn().mockResolvedValue({}) },
+    gateCheck: {
+      findUnique: jest.fn().mockResolvedValue(s.gc5 ?? null),
+      upsert: jest.fn().mockImplementation(({ create, update }) => ({ id: 'g5', ...create, ...update })),
+    },
   };
   const prisma = {
     request: { findFirst: jest.fn().mockResolvedValue(request) },
@@ -180,5 +186,53 @@ describe('ClosureService', () => {
       where: { id: 'r1' },
       data: { operationalState: 'EN_EJECUCION', closedAt: null, closedByUserId: null },
     });
+  });
+});
+
+describe('ClosureService · GC5 refleja el cierre formal (D10)', () => {
+  it('aprobar el cierre deja GC5 CUMPLIDO con quién y cuándo, en la misma transacción y auditado', async () => {
+    const { service, tx, audit } = build({ pending: true });
+    await service.decide(actor(true), 'r1', { decision: 'APROBAR' });
+    expect(tx.gateCheck.upsert).toHaveBeenCalledTimes(1);
+    const arg = tx.gateCheck.upsert.mock.calls[0][0];
+    expect(arg.where).toEqual({
+      gate_check_request_gate_unique: { requestId: 'r1', gateCode: 'GC5' },
+    });
+    expect(arg.update).toEqual(
+      expect.objectContaining({
+        status: 'CUMPLIDO',
+        decidedByUserId: 'jefe',
+        decidedAt: expect.any(Date),
+        waiverReason: null,
+      }),
+    );
+    expect(arg.create).toEqual(
+      expect.objectContaining({ requestId: 'r1', gateCode: 'GC5', status: 'CUMPLIDO' }),
+    );
+    expect(audit.record).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ objectType: 'GATE_CHECK', action: 'UPDATE' }),
+    );
+  });
+
+  it('un GC5 marcado «No aplica» pasa a CUMPLIDO al aprobar el cierre', async () => {
+    const { service, tx } = build({
+      pending: true,
+      gc5: { id: 'g5', status: 'NO_APLICA', waiverReason: 'x' },
+    });
+    await service.decide(actor(true), 'r1', { decision: 'APROBAR' });
+    expect(tx.gateCheck.upsert.mock.calls[0][0].update.status).toBe('CUMPLIDO');
+  });
+
+  it('rechazar el cierre no toca GC5', async () => {
+    const { service, tx } = build({ pending: true });
+    await service.decide(actor(true), 'r1', { decision: 'RECHAZAR', reason: 'Falta el acta' });
+    expect(tx.gateCheck.upsert).not.toHaveBeenCalled();
+  });
+
+  it('reabrir no revierte GC5 (queda como historia)', async () => {
+    const { service, tx } = build({ state: 'CERRADA' });
+    await service.reopen(actor(true), 'r1', { reason: 'Ajuste pendiente' });
+    expect(tx.gateCheck.upsert).not.toHaveBeenCalled();
   });
 });

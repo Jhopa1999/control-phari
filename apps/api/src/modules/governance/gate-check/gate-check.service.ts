@@ -16,10 +16,12 @@ import { RequestState } from '../../request/request-state';
 import { RequestStateService } from '../../request/request-state.service';
 import {
   APPROVING_VALIDATION_RESULTS,
+  CLOSED_PROJECT_MESSAGE,
   GATE_DEFINITIONS,
   GATE_ORDER,
   GateCode,
   GateStatus,
+  GC5_VIA_CLOSURE_MESSAGE,
   GOVERNANCE_ROUTE,
   isGateCode,
   MANDATORY_VALIDATION_TYPE,
@@ -151,8 +153,18 @@ export class GateCheckService {
           return GateStatus.NO_APLICA;
         }
         return null;
+      case GateCode.GC5:
+        // Un proyecto CERRADA ya paso por el cierre (formal o historico): GC5 lo refleja.
+        return rank >= STATE_RANK[RequestState.CERRADA] ? GateStatus.CUMPLIDO : null;
       default:
         return null;
+    }
+  }
+
+  /** 409 si la solicitud esta cerrada: sus controles quedan congelados (D11). */
+  private assertNotClosed(request: Pick<RequestModel, 'operationalState'>): void {
+    if (request.operationalState === RequestState.CERRADA) {
+      throw new ConflictException(CLOSED_PROJECT_MESSAGE);
     }
   }
 
@@ -356,6 +368,7 @@ export class GateCheckService {
     const gateCode = this.parseGateCode(gateCodeRaw);
     const request = await this.scope.requireInScope(actor, requestId);
     this.scope.requireRequestManager(actor, request);
+    this.assertNotClosed(request);
     await this.materialize(request);
     const gate = await this.requireGate(requestId, gateCode);
 
@@ -398,6 +411,7 @@ export class GateCheckService {
     const gateCode = this.parseGateCode(gateCodeRaw);
     const request = await this.scope.requireInScope(actor, requestId);
     this.scope.requireRequestManager(actor, request);
+    this.assertNotClosed(request);
     const gate = await this.requireGate(requestId, gateCode);
 
     const item = await this.prisma.gatePendingItem.findFirst({
@@ -451,6 +465,7 @@ export class GateCheckService {
   ): Promise<GovernanceBoardResponseDto> {
     const request = await this.scope.requireInScope(actor, requestId);
     this.scope.requireRequestManager(actor, request);
+    this.assertNotClosed(request);
 
     if (action === 'mark-ready') {
       const validations = await this.prisma.validationRecord.findMany({
@@ -500,8 +515,27 @@ export class GateCheckService {
     const gateCode = this.parseGateCode(gateCodeRaw);
     const request = await this.scope.requireInScope(actor, requestId);
     this.scope.requireRequestManager(actor, request);
+    // Congelado antes de materializar: un proyecto cerrado no escribe nada (GC5 se
+    // trata abajo, porque sobre un proyecto cerrado solo refleja el cierre formal).
+    if (gateCode !== GateCode.GC5) this.assertNotClosed(request);
     await this.materialize(request);
     const gate = await this.requireGate(requestId, gateCode);
+
+    if (gateCode === GateCode.GC5) {
+      // D10: el cierre tiene un solo camino (ClosureService). GC5 solo refleja el
+      // cierre formal aprobado; la aprobacion manual ya no cierra la solicitud.
+      const approvedClosure =
+        request.operationalState === RequestState.CERRADA
+          ? await this.prisma.projectClosure.findFirst({
+              where: { requestId, status: 'APROBADO' },
+              select: { id: true },
+            })
+          : null;
+      if (!approvedClosure) {
+        throw new ConflictException(GC5_VIA_CLOSURE_MESSAGE);
+      }
+      return this.gateToResponse(gate, request);
+    }
 
     // Resuelve el destino (409 si no es GC4/GC5 o el estado no es el origen).
     const nextState = this.governanceState.resolveApproveTransition(
@@ -570,6 +604,7 @@ export class GateCheckService {
     const gateCode = this.parseGateCode(gateCodeRaw);
     const request = await this.scope.requireInScope(actor, requestId);
     this.scope.requireRequestManager(actor, request);
+    this.assertNotClosed(request);
 
     if (
       request.governanceRoute === null ||
@@ -582,6 +617,11 @@ export class GateCheckService {
 
     await this.materialize(request);
     const gate = await this.requireGate(requestId, gateCode);
+    if (gate.status !== GateStatus.PENDIENTE) {
+      throw new ConflictException(
+        'Solo se puede marcar como no aplicable un control pendiente.',
+      );
+    }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const decided = await tx.gateCheck.update({
@@ -619,6 +659,7 @@ export class GateCheckService {
   ): Promise<GovernanceBoardResponseDto> {
     const request = await this.scope.requireInScope(actor, requestId);
     this.scope.requireRequestManager(actor, request);
+    this.assertNotClosed(request);
 
     const isBlocked =
       request.blockedAt != null && request.blockedResolvedAt == null;
@@ -662,6 +703,7 @@ export class GateCheckService {
   ): Promise<GovernanceBoardResponseDto> {
     const request = await this.scope.requireInScope(actor, requestId);
     this.scope.requireRequestManager(actor, request);
+    this.assertNotClosed(request);
 
     const isBlocked =
       request.blockedAt != null && request.blockedResolvedAt == null;
@@ -702,6 +744,7 @@ export class GateCheckService {
   ): Promise<GovernanceBoardResponseDto> {
     const request = await this.scope.requireInScope(actor, requestId);
     this.scope.requireRequestManager(actor, request);
+    this.assertNotClosed(request);
     await this.state.assertCatalogCode('GOVERNANCE_ROUTE', dto.route);
 
     await this.prisma.$transaction(async (tx) => {

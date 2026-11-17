@@ -126,6 +126,14 @@ export const GATE_APPROVE_TO_STATE: Partial<
   },
 };
 
+/** Mensaje de 409 al modificar controles de un proyecto cerrado (oleada 2, D11). */
+export const CLOSED_PROJECT_MESSAGE =
+  'El proyecto está cerrado; reabre el proyecto para modificar sus controles.';
+
+/** Mensaje de 409 al aprobar GC5 a mano: el cierre tiene un solo camino (D10). */
+export const GC5_VIA_CLOSURE_MESSAGE =
+  'El cierre se solicita y se aprueba desde el cierre del proyecto.';
+
 /** Rutas proporcionales (catalogo GOVERNANCE_ROUTE, design §1.4 / §2.7). */
 export const GOVERNANCE_ROUTE = {
   COMPLETA: 'COMPLETA',

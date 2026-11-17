@@ -566,8 +566,8 @@ Ciclo de control proporcional sobre cada solicitud. Lectura con capacidad `frame
 | POST | `/requests/:id/gates/GC4/request-validation` | Preparación GC4: `EN_EJECUCION → EN_VALIDACION`. |
 | POST | `/requests/:id/gates/GC4/mark-ready` | Preparación GC4: `EN_VALIDACION → LISTA_PARA_LIBERAR`. |
 | POST | `/requests/:id/gates/GC5/confirm-stabilization` | Preparación GC5: `EN_ESTABILIZACION → OPERATIVA`. |
-| POST | `/requests/:id/gates/:gateCode/approve` | Aprueba un gate por la autoridad (solo GC4/GC5; GC1–GC3 → `409`). |
-| POST | `/requests/:id/gates/:gateCode/waive` | Marca un gate `NO_APLICA` (requiere motivo y ruta compatible). |
+| POST | `/requests/:id/gates/:gateCode/approve` | Aprueba **GC4** por la autoridad (`LISTA_PARA_LIBERAR → EN_ESTABILIZACION`). **GC5 ya no cierra la solicitud** (D10): sin un cierre formal aprobado responde `409` («El cierre se solicita y se aprueba desde el cierre del proyecto.»); con la solicitud `CERRADA` y un cierre `APROBADO` devuelve el control sin cambios. GC1–GC3 → `409`. |
+| POST | `/requests/:id/gates/:gateCode/waive` | Marca un gate `NO_APLICA` (requiere motivo y ruta compatible). Solo sobre un control `PENDIENTE`: `CUMPLIDO` o `NO_APLICA` → `409`. |
 | POST | `/requests/:id/block` | Bloquea la solicitud (flag transversal; no cambia el estado). |
 | POST | `/requests/:id/unblock` | Desbloquea la solicitud (flag transversal). |
 | PUT | `/requests/:id/governance-route` | Fija/cambia la ruta proporcional (manual, auditada). |
@@ -577,7 +577,7 @@ Ciclo de control proporcional sobre cada solicitud. Lectura con capacidad `frame
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/requests/:id/validations` | Historial de validaciones de la solicitud. |
-| POST | `/requests/:id/validations` | Registra una validación/evidencia (no aprueba el gate). |
+| POST | `/requests/:id/validations` | Registra una validación/evidencia (no aprueba el gate). El ejecutor debe existir y estar activo (`400`) y la fecha no puede ser posterior a hoy (`400`, 5 min de holgura). Quien no es jefe ni líder del proceso principal solo registra las suyas (`403`, D11). |
 | PATCH | `/requests/:id/validations/:validationId/resolve-blocking` | Resuelve un defecto bloqueante (no aprueba el gate). |
 
 Reglas clave: registrar una validación nunca aprueba un gate (son operaciones
@@ -585,6 +585,20 @@ distintas); GC1–GC3 no se aprueban por autoridad; una solicitud bloqueada no s
 liberar; la evidencia puede fijar una versión concreta de documento (evidencia
 inmutable). El estado del gate solo lo escribe el servicio de estado dentro de su
 transacción.
+
+**Un solo camino de cierre (D10).** El cierre del proyecto es el cierre formal (`closure`:
+solicitud del líder, aprobación del jefe). Al aprobarlo, `ClosureService.decide` deja el
+control GC5 en `CUMPLIDO` (con `decidedByUserId`/`decidedAt`, creándolo si no existía,
+en la misma transacción y con auditoría `GATE_CHECK`); GC5 se muestra `CUMPLIDO` en toda
+solicitud `CERRADA`. Reabrir no revierte GC5 (queda como historia). Los proyectos
+ya cerrados no se reescriben, salvo la migración `20261118120000_gc5_refleja_cierre_formal`,
+que solo pasa a `CUMPLIDO` los GC5 `PENDIENTE` de solicitudes cerradas con un cierre
+aprobado (idempotente).
+
+**Controles congelados (D11).** Con la solicitud `CERRADA`, `waive`, ruta, faltantes,
+bloqueo y desbloqueo, avance de etapas, `approve` de GC4, registrar una validación y
+resolver un bloqueo responden `409` («El proyecto está cerrado; reabre el proyecto para
+modificar sus controles.»). La lectura no cambia.
 
 ## audit — Auditoría (registro append-only)
 

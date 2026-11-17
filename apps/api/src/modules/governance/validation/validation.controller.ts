@@ -54,13 +54,14 @@ export class ValidationController {
 
   @Post(':id/validations')
   @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE)
-  @ApiOperation({ summary: 'Registrar una validacion/evidencia (NO aprueba gate, BR-008).' })
+  @ApiOperation({ summary: 'Registrar una validacion/evidencia (NO aprueba gate, BR-008). El integrante solo registra las ejecutadas por el mismo.' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: CreateValidationDto })
   @ApiResponse({ status: 201, type: ValidationResponseDto })
-  @ApiResponse({ status: 400, description: 'Catalogo invalido o evidencia incoherente.' })
+  @ApiResponse({ status: 400, description: 'Catálogo inválido, evidencia incoherente, ejecutor inexistente o inactivo, o fecha de ejecución posterior a hoy.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Solicitud/documento fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El proyecto está cerrado: sus controles quedan congelados.' })
   create(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -79,6 +80,7 @@ export class ValidationController {
   @ApiResponse({ status: 400, description: 'El registro no es un defecto bloqueante.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Validacion no encontrada.' })
+  @ApiResponse({ status: 409, description: 'El proyecto está cerrado: sus controles quedan congelados.' })
   resolveBlocking(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

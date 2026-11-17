@@ -334,7 +334,9 @@ lectura.
 3. El service aplica el alcance por proceso → `404` para filas fuera de alcance.
 4. El service aplica reglas finas por rol/estado → `400`/`409` cuando la operación no
    procede (p. ej. el integrante solo opera su propia tarea; registrar una validación
-   no aprueba un gate).
+   no aprueba un gate; el integrante solo registra las ejecutadas por él mismo, mientras
+   que el jefe y el líder del proceso principal pueden registrarlas a nombre de otra
+   persona; una solicitud cerrada no admite cambios en sus controles).
 
 ## Visibilidad de solicitudes
 

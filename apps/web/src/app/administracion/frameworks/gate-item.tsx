@@ -1,14 +1,16 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { CircleCheck, CircleDashed } from 'lucide-react';
 import { DescriptionList } from '@/components/description-list';
 import { DisabledReason } from '@/components/disabled-reason';
 import { RequirementsPanel, type RequirementItem } from '@/components/requirements-panel';
 import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { formatCount, formatDateOnly } from '@/lib/format';
 import type { GateCheck } from '@/lib/governance';
+import { CLOSED_PROJECT_REASON } from './closed-project';
 
 /** Id del panel de GC4 (el id de siempre); su cabecera lleva `GC4-block-summary`. */
 const GC4_BLOCK_ID = 'GC4-block';
@@ -26,6 +28,10 @@ export function gateHeadingId(gateCode: string): string {
 
 export interface GateItemProps {
   gate: GateCheck;
+  /** Id de la solicitud: destino del enlace al cierre del proyecto (GC5). */
+  requestId: string;
+  /** La solicitud está cerrada (CERRADA): sus controles quedan congelados. */
+  projectClosed: boolean;
   canReview: boolean;
   busy: boolean;
   /** Nombres de las personas en alcance (GET /coordination/people). */
@@ -44,6 +50,8 @@ export interface GateItemProps {
  */
 export function GateItem({
   gate,
+  requestId,
+  projectClosed,
   canReview,
   busy,
   peopleById,
@@ -52,13 +60,17 @@ export function GateItem({
   onShowValidations,
 }: GateItemProps): React.ReactElement {
   const isGc4 = gate.gateCode === 'GC4';
-  const approvableGate = isGc4 || gate.gateCode === 'GC5'; // GC1–GC3 no se aprueban desde gobierno
+  // GC5 no se aprueba aquí: refleja el cierre formal del proyecto (D10). GC1–GC3 se derivan.
+  const isGc5 = gate.gateCode === 'GC5';
+  const closedReasonId = `-closed-reason`;
   const isWaived = gate.status === 'NO_APLICA';
   const summary = gate.validationSummary; // solo GC4 lo trae
   // Panel de bloqueo: para cualquier rol, salvo «No aplica».
   const showGc4Block = isGc4 && summary !== null && !summary.approvable && !isWaived;
   // Fila de acciones: con canReview, solo en GC4/GC5 y fuera de «No aplica».
-  const showActions = canReview && approvableGate && !isWaived;
+  const showActions = canReview && (isGc4 || isGc5) && !isWaived;
+  // «No aplica» solo sobre un control pendiente (la API responde 409 en otro caso).
+  const canWaive = gate.status === 'PENDIENTE';
   // La API ya antepone el código al título («GC1 Admisión»): se quita para no
   // leer «GC1 · GC1 Admisión».
   const title = gate.title.startsWith(`${gate.gateCode} `)
@@ -161,28 +173,62 @@ export function GateItem({
         </div>
       ) : null}
 
-      {showActions ? (
+      {isGc5 ? (
+        <div className="flex flex-col items-start gap-2">
+          <p className="text-sm text-muted-foreground">
+            {gate.status === 'CUMPLIDO' && projectClosed
+              ? 'Cumplido por el cierre formal del proyecto.'
+              : 'El cierre se solicita y se aprueba desde el cierre del proyecto. Cuando el jefe de área lo aprueba, este control queda cumplido.'}
+          </p>
+          <Link
+            href={`/demanda/solicitudes/${encodeURIComponent(requestId)}`}
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            Ir al cierre del proyecto
+          </Link>
+        </div>
+      ) : null}
+
+      {showActions && (isGc4 || (isGc5 && canWaive)) ? (
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap gap-2">
-            {showGc4Block ? (
+            {isGc4 ? (
+              showGc4Block ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  unavailable
+                  aria-describedby={`${GC4_BLOCK_ID}-summary ${GC4_BLOCK_REASON_ID}`}
+                >
+                  Aprobar {gate.gateCode}
+                </Button>
+              ) : projectClosed ? (
+                <Button type="button" size="sm" unavailable aria-describedby={closedReasonId}>
+                  Aprobar {gate.gateCode}
+                </Button>
+              ) : (
+                <Button type="button" size="sm" disabled={busy} onClick={onApprove}>
+                  Aprobar {gate.gateCode}
+                </Button>
+              )
+            ) : null}
+            {canWaive ? (
               <Button
                 type="button"
                 size="sm"
-                unavailable
-                aria-describedby={`${GC4_BLOCK_ID}-summary ${GC4_BLOCK_REASON_ID}`}
+                variant="outline"
+                unavailable={projectClosed}
+                disabled={busy && !projectClosed}
+                aria-describedby={projectClosed ? closedReasonId : undefined}
+                onClick={onWaive}
               >
-                Aprobar {gate.gateCode}
+                Marcar como no aplica
               </Button>
-            ) : (
-              <Button type="button" size="sm" disabled={busy} onClick={onApprove}>
-                Aprobar {gate.gateCode}
-              </Button>
-            )}
-            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onWaive}>
-              Marcar como no aplica
-            </Button>
+            ) : null}
           </div>
-          {showGc4Block ? (
+          {projectClosed ? (
+            <DisabledReason id={closedReasonId}>{CLOSED_PROJECT_REASON}</DisabledReason>
+          ) : showGc4Block ? (
             <DisabledReason id={GC4_BLOCK_REASON_ID}>
               Resuelve los motivos de la lista para aprobar este control.
             </DisabledReason>
@@ -190,11 +236,10 @@ export function GateItem({
         </div>
       ) : null}
 
-      {!approvableGate ? (
+      {!isGc4 && !isGc5 ? (
         <p className="text-meta text-muted-foreground">
           Este control se deriva de fases previas y no se aprueba desde gobierno.
         </p>
-      ) : null}
-    </li>
+      ) : null}    </li>
   );
 }

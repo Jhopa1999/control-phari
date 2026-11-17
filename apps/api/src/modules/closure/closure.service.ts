@@ -16,6 +16,7 @@ import {
   NotificationService,
   NotificationType,
 } from '../notification/notification.service';
+import { GATE_DEFINITIONS, GateCode, GateStatus } from '../governance/gate';
 import { PlanStatus } from '../plan/plan-status';
 import { TaskStatus } from '../plan/task-status';
 import { RequestState } from '../request/request-state';
@@ -325,6 +326,38 @@ export class ClosureService {
         after: { status: decided.status, decisionReason: decided.decisionReason },
       });
       if (nextState) {
+        // D10: GC5 refleja el cierre formal (un solo camino de cierre).
+        const gc5Key = { requestId, gateCode: GateCode.GC5 };
+        const gc5Before = await tx.gateCheck.findUnique({
+          where: { gate_check_request_gate_unique: gc5Key },
+          select: { id: true, status: true, waiverReason: true },
+        });
+        const gc5 = await tx.gateCheck.upsert({
+          where: { gate_check_request_gate_unique: gc5Key },
+          update: {
+            status: GateStatus.CUMPLIDO,
+            waiverReason: null,
+            decidedByUserId: actor.userId,
+            decidedAt: now,
+          },
+          create: {
+            ...gc5Key,
+            conditionText: GATE_DEFINITIONS[GateCode.GC5].conditionText,
+            authorityText: GATE_DEFINITIONS[GateCode.GC5].authorityText,
+            status: GateStatus.CUMPLIDO,
+            decidedByUserId: actor.userId,
+            decidedAt: now,
+          },
+        });
+        await this.audit.record(tx, {
+          actorUserId: actor.userId,
+          action: 'UPDATE',
+          objectType: 'GATE_CHECK',
+          objectId: gc5.id,
+          scopeProcessId: ev.request.mainProcessId,
+          before: gc5Before ? { status: gc5Before.status } : null,
+          after: { gateCode: GateCode.GC5, status: GateStatus.CUMPLIDO, closureId: pending.id },
+        });
         await tx.request.update({
           where: { id: requestId },
           data: { operationalState: nextState, closedAt: now, closedByUserId: actor.userId },

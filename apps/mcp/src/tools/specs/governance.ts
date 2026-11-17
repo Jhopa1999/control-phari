@@ -5,7 +5,7 @@ import type { ToolSpec } from '../spec.js';
  * Secuencia de cierre:
  *   EN_EJECUCION -(request-validation)-> EN_VALIDACION -(mark-ready)->
  *   LISTA_PARA_LIBERAR -(GC4 approve)-> EN_ESTABILIZACION
- *   -(confirm-stabilization)-> OPERATIVA -(GC5 approve)-> CERRADA.
+ *   -(confirm-stabilization)-> OPERATIVA -(cierre formal: solicitud del líder y\n *   aprobación del jefe)-> CERRADA, con GC5 reflejado como CUMPLIDO.
  */
 export const GOVERNANCE_SPECS: ReadonlyArray<ToolSpec> = [
   {
@@ -59,10 +59,14 @@ export const GOVERNANCE_SPECS: ReadonlyArray<ToolSpec> = [
     access: 'write',
     optionalBody: true,
     description:
-      'Aprueba un gate por la autoridad (POST /requests/{id}/gates/{gateCode}/' +
-      'approve). Solo GC4 y GC5 mueven el estado (GC1-GC3 => 409): GC4 ' +
-      'LISTA_PARA_LIBERAR -> EN_ESTABILIZACION; GC5 OPERATIVA -> CERRADA. GC4 ' +
-      'recomputa la aprobabilidad §1.5 (409 si bloqueado). Rol JEFE_AREA/' +
+      'Aprueba el gate GC4 por la autoridad (POST /requests/{id}/gates/{gateCode}/' +
+      'approve): LISTA_PARA_LIBERAR -> EN_ESTABILIZACION. Recomputa la ' +
+      'aprobabilidad §1.5 (409 si hay bloqueo o falta la validación obligatoria). ' +
+      'GC1-GC3 se derivan del estado y responden 409. GC5 ya no cierra la ' +
+      'solicitud: refleja el cierre formal, así que sin un cierre aprobado ' +
+      'responde 409 («El cierre se solicita y se aprueba desde el cierre del ' +
+      'proyecto»); el cierre formal lo solicita el líder y lo aprueba el jefe desde el portal (consulta su estado con closure.get). ' +
+      'Una solicitud CERRADA congela sus controles (409). Rol JEFE_AREA/' +
       'LIDER_PROCESO. gateCode es "GC4" o "GC5". El cuerpo (ApproveGateDto ' +
       '{ authorityNote? }) es opcional.',
   },

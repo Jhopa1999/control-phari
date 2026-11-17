@@ -7624,6 +7624,9 @@
           },
           "404": {
             "description": "Solicitud/gate fuera de alcance."
+          },
+          "409": {
+            "description": "El proyecto está cerrado: sus controles quedan congelados."
           }
         },
         "summary": "Registrar un faltante de un gate (que/quien/fecha).",
@@ -7690,6 +7693,9 @@
           },
           "404": {
             "description": "Faltante no encontrado."
+          },
+          "409": {
+            "description": "El proyecto está cerrado: sus controles quedan congelados."
           }
         },
         "summary": "Resolver/editar un faltante de un gate.",
@@ -7737,7 +7743,7 @@
             "description": "Rol insuficiente."
           },
           "409": {
-            "description": "Estado actual no es el origen esperado."
+            "description": "Estado actual no es el origen esperado. El proyecto cerrado responde 409: sus controles quedan congelados."
           }
         },
         "summary": "Preparacion GC4: EN_EJECUCION -> EN_VALIDACION.",
@@ -7785,7 +7791,7 @@
             "description": "Rol insuficiente."
           },
           "409": {
-            "description": "Validacion bloqueante/obligatoria faltante o estado invalido."
+            "description": "Validacion bloqueante/obligatoria faltante o estado invalido. El proyecto cerrado responde 409: sus controles quedan congelados."
           }
         },
         "summary": "Preparacion GC4: EN_VALIDACION -> LISTA_PARA_LIBERAR (recomputa §1.5).",
@@ -7833,7 +7839,7 @@
             "description": "Rol insuficiente."
           },
           "409": {
-            "description": "Estado actual no es el origen esperado."
+            "description": "Estado actual no es el origen esperado. El proyecto cerrado responde 409: sus controles quedan congelados."
           }
         },
         "summary": "Preparacion GC5: EN_ESTABILIZACION -> OPERATIVA.",
@@ -7890,10 +7896,10 @@
             "description": "Rol insuficiente."
           },
           "409": {
-            "description": "GC1-GC3 no aprobable, bloqueo o estado invalido."
+            "description": "GC1-GC3 no aprobable; GC5 sin cierre formal aprobado (El cierre se solicita y se aprueba desde el cierre del proyecto); GC4 bloqueado, proyecto cerrado o estado inválido."
           }
         },
-        "summary": "Aprobar un gate por la autoridad (solo GC4/GC5; GC1-GC3 => 409).",
+        "summary": "Aprobar GC4 por la autoridad. GC5 refleja el cierre formal del proyecto (no se aprueba a mano); GC1-GC3 se derivan.",
         "tags": [
           "governance-gates"
         ]
@@ -7948,9 +7954,12 @@
           },
           "403": {
             "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "El proyecto está cerrado, o el control no está pendiente (solo se marca NO_APLICA un control pendiente)."
           }
         },
-        "summary": "Marcar un gate NO_APLICA (requiere motivo y ruta compatible).",
+        "summary": "Marcar un gate NO_APLICA (solo un control PENDIENTE; requiere motivo y ruta compatible).",
         "tags": [
           "governance-gates"
         ]
@@ -7998,7 +8007,7 @@
             "description": "Rol insuficiente."
           },
           "409": {
-            "description": "La solicitud ya esta bloqueada."
+            "description": "La solicitud ya esta bloqueada. El proyecto cerrado responde 409: sus controles quedan congelados."
           }
         },
         "summary": "Bloquear la solicitud (flag transversal; NO cambia el estado).",
@@ -8046,7 +8055,7 @@
             "description": "Rol insuficiente."
           },
           "409": {
-            "description": "La solicitud no esta bloqueada."
+            "description": "La solicitud no esta bloqueada. El proyecto cerrado responde 409: sus controles quedan congelados."
           }
         },
         "summary": "Desbloquear la solicitud (flag transversal; NO cambia el estado).",
@@ -8095,6 +8104,9 @@
           },
           "403": {
             "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "El proyecto está cerrado: sus controles quedan congelados."
           }
         },
         "summary": "Fijar/cambiar la ruta proporcional (manual, auditada).",
@@ -8178,16 +8190,19 @@
             }
           },
           "400": {
-            "description": "Catalogo invalido o evidencia incoherente."
+            "description": "Catálogo inválido, evidencia incoherente, ejecutor inexistente o inactivo, o fecha de ejecución posterior a hoy."
           },
           "403": {
             "description": "Rol insuficiente."
           },
           "404": {
             "description": "Solicitud/documento fuera de alcance."
+          },
+          "409": {
+            "description": "El proyecto está cerrado: sus controles quedan congelados."
           }
         },
-        "summary": "Registrar una validacion/evidencia (NO aprueba gate, BR-008).",
+        "summary": "Registrar una validacion/evidencia (NO aprueba gate, BR-008). El integrante solo registra las ejecutadas por el mismo.",
         "tags": [
           "governance-validations"
         ]
@@ -8245,6 +8260,9 @@
           },
           "404": {
             "description": "Validacion no encontrada."
+          },
+          "409": {
+            "description": "El proyecto está cerrado: sus controles quedan congelados."
           }
         },
         "summary": "Resolver un defecto bloqueante (D-C5; NO aprueba gate).",
@@ -18447,12 +18465,12 @@
           "executedByUserId": {
             "type": "string",
             "format": "uuid",
-            "description": "Ejecutor de la prueba."
+            "description": "Ejecutor de la prueba: una persona existente y activa. El integrante solo puede registrar las suyas; el líder del proceso principal o el jefe de área, a nombre de cualquiera."
           },
           "executedAt": {
             "type": "string",
             "format": "date-time",
-            "description": "Fecha de ejecucion (ISO)."
+            "description": "Fecha de ejecución (ISO). No puede ser posterior a hoy."
           },
           "evidenceRef": {
             "type": "string",

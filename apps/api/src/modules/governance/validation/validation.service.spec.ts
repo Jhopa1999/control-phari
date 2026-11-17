@@ -1,4 +1,9 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
@@ -70,6 +75,7 @@ type Mocks = {
   document: { findUnique: jest.Mock };
   catalogItem: { findFirst: jest.Mock };
   request: { findFirst: jest.Mock };
+  user: { findUnique: jest.Mock };
   auditRecord: jest.Mock;
   service: ValidationService;
 };
@@ -86,6 +92,12 @@ function setup(): Mocks {
   // Catalogo: por defecto todo code existe (assertCatalogCode OK).
   const catalogItem = { findFirst: jest.fn().mockResolvedValue({ id: 'c-1' }) };
   const request = { findFirst: jest.fn() };
+  // El ejecutor existe y está activo por defecto.
+  const user = {
+    findUnique: jest.fn().mockImplementation(({ where }: { where: { id: string } }) =>
+      Promise.resolve({ id: where.id, active: true }),
+    ),
+  };
 
   const prismaObj: Record<string, unknown> = {
     validationRecord,
@@ -93,6 +105,7 @@ function setup(): Mocks {
     document,
     catalogItem,
     request,
+    user,
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaObj));
   const prisma = prismaObj as unknown as PrismaService;
@@ -110,6 +123,7 @@ function setup(): Mocks {
     document,
     catalogItem,
     request,
+    user,
     auditRecord,
     service,
   };
@@ -401,5 +415,115 @@ describe('ValidationService', () => {
         m.service.resolveBlocking(JEFE, 'req-1', 'v-x', {}),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
+  });
+});
+
+describe('ValidationService.create · quién registra y cierre (oleada 2, D11)', () => {
+  const OTHER = '22222222-2222-2222-2222-222222222222';
+  const INTEGRANTE: CurrentActor = {
+    userId: BASE_DTO.executedByUserId,
+    name: 'Ines Integrante',
+    identifier: 'integrante@demo.local',
+    grants: [grantFor('proc-1', RoleCode.INTEGRANTE)],
+    roleCodes: new Set([RoleCode.INTEGRANTE]),
+    scopedProcessIds: new Set(['proc-1']),
+    isJefeArea: false,
+    isLiderProceso: false,
+    isAdmin: false,
+  };
+
+  function prepared(m: Mocks): void {
+    m.request.findFirst.mockResolvedValue(makeRequest());
+    m.validationRecord.create.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+      Promise.resolve({
+        id: 'v-1',
+        gateCheckId: null,
+        version: null,
+        environment: null,
+        blockingResolved: false,
+        blockingResolvedAt: null,
+        blockingResolvedByUserId: null,
+        blockingResolvedBy: null,
+        evidenceRef: null,
+        evidenceDocumentId: null,
+        evidenceDocumentVersionId: null,
+        notes: null,
+        executedBy: { id: String(data.executedByUserId), name: 'Eje' },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...data,
+      }),
+    );
+  }
+
+  it('409 si la solicitud está cerrada y no escribe', async () => {
+    const m = setup();
+    m.request.findFirst.mockResolvedValue(makeRequest({ operationalState: RequestState.CERRADA }));
+    const attempt = m.service.create(JEFE, 'req-1', { ...BASE_DTO });
+    await expect(attempt).rejects.toBeInstanceOf(ConflictException);
+    await expect(attempt).rejects.toThrow(
+      'El proyecto está cerrado; reabre el proyecto para modificar sus controles.',
+    );
+    expect(m.validationRecord.create).not.toHaveBeenCalled();
+  });
+
+  it('409 al resolver un bloqueo de una solicitud cerrada', async () => {
+    const m = setup();
+    m.request.findFirst.mockResolvedValue(makeRequest({ operationalState: RequestState.CERRADA }));
+    await expect(m.service.resolveBlocking(JEFE, 'req-1', 'v-1', {})).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(m.validationRecord.update).not.toHaveBeenCalled();
+  });
+
+  it('el integrante no registra una validación a nombre de otra persona (403)', async () => {
+    const m = setup();
+    prepared(m);
+    const attempt = m.service.create(INTEGRANTE, 'req-1', { ...BASE_DTO, executedByUserId: OTHER });
+    await expect(attempt).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(attempt).rejects.toThrow(
+      'Solo puedes registrar validaciones ejecutadas por ti. El líder del proceso o el jefe de área pueden registrarlas a nombre de otra persona.',
+    );
+    expect(m.validationRecord.create).not.toHaveBeenCalled();
+  });
+
+  it('el integrante sí registra las suyas', async () => {
+    const m = setup();
+    prepared(m);
+    const result = await m.service.create(INTEGRANTE, 'req-1', { ...BASE_DTO });
+    expect(result.executedByUserId).toBe(INTEGRANTE.userId);
+  });
+
+  it('el líder del proceso principal y el jefe registran a nombre de otra persona', async () => {
+    for (const actor of [LIDER, JEFE]) {
+      const m = setup();
+      prepared(m);
+      const result = await m.service.create(actor, 'req-1', { ...BASE_DTO, executedByUserId: OTHER });
+      expect(result.executedByUserId).toBe(OTHER);
+    }
+  });
+
+  it('400 en español si el ejecutor no existe o está inactivo (en vez del 500 de la FK)', async () => {
+    const m = setup();
+    prepared(m);
+    m.user.findUnique.mockResolvedValueOnce(null);
+    await expect(m.service.create(JEFE, 'req-1', { ...BASE_DTO })).rejects.toThrow(
+      'La persona que ejecutó la validación no existe o está inactiva.',
+    );
+    m.user.findUnique.mockResolvedValueOnce({ id: OTHER, active: false });
+    await expect(m.service.create(JEFE, 'req-1', { ...BASE_DTO })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(m.validationRecord.create).not.toHaveBeenCalled();
+  });
+
+  it('400 si la fecha de ejecución es posterior a hoy', async () => {
+    const m = setup();
+    prepared(m);
+    const future = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+    const attempt = m.service.create(JEFE, 'req-1', { ...BASE_DTO, executedAt: future });
+    await expect(attempt).rejects.toBeInstanceOf(BadRequestException);
+    await expect(attempt).rejects.toThrow('La fecha de ejecución no puede ser posterior a hoy.');
+    expect(m.validationRecord.create).not.toHaveBeenCalled();
   });
 });
