@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
+import { createActiveAsset } from './helpers/activo-activo';
 
 /**
  * Flujo feliz de la demanda (plan de mejora, dependencia de la oleada 2):
@@ -41,11 +42,8 @@ test.describe('Flujo feliz de la demanda', () => {
     const slow = expect.configure({ timeout: 30_000 });
     const processes = await apiJson<Array<{ id: string; name: string }>>(request, '/processes');
     const process = processes[0];
-    const assetRes = await request.post(`${API_URL}/assets`, {
-      headers: JEFE,
-      data: { processId: process.id, name: ASSET_NAME },
-    });
-    expect(assetRes.ok(), `POST /assets → ${assetRes.status()}`).toBeTruthy();
+    // D8: el activo nace en borrador; el jefe lo activa para poder asociarlo en el triage.
+    await createActiveAsset(request, { processId: process.id, name: ASSET_NAME });
 
     // 1. Registro: el integrante crea la solicitud desde la pantalla.
     const memberCtx = await browser.newContext({ storageState: undefined });
