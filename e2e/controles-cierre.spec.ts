@@ -117,6 +117,8 @@ test.beforeAll(async ({ request }) => {
     name: `E2E activo controles ${ts}`,
   });
   assetId = asset.id;
+  // D8: solo un activo ACTIVO admite asociaciones nuevas; el actor por defecto (jefe) puede activarlo.
+  await ok(request, 'post', `/assets/${assetId}/status`, { targetStatus: 'ACTIVO' });
   await ok(request, 'post', `/requests/${requestId}/asset`, { assetId });
   await ok(request, 'post', `/requests/${requestId}/priority`, {
     impact: 3,
@@ -144,6 +146,8 @@ test.beforeAll(async ({ request }) => {
       estimateHours: 4,
     })
   ).id;
+  // D6: enviar el plan exige la fecha de compromiso.
+  await ok(request, 'patch', `/requests/${requestId}/plan`, { commitmentDate: '2030-02-20' });
   await ok(request, 'post', `/requests/${requestId}/plan/submit`, {});
   await ok(request, 'post', `/requests/${requestId}/plan/authorize`, {});
 });
