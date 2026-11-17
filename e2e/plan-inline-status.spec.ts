@@ -57,6 +57,8 @@ test.beforeAll(async ({ request }) => {
     processId: mainProcessId,
     name: `Activo E2E ${ts}`,
   });
+  // D8: solo un activo ACTIVO admite asociaciones nuevas; el jefe lo activa antes.
+  await post(request, `/assets/${asset.id}/status`, { targetStatus: 'ACTIVO' });
   await post(request, `/requests/${requestId}/asset`, { assetId: asset.id as string });
   // 3) Priorización → BACKLOG_PRIORIZADO
   await post(request, `/requests/${requestId}/priority`, {

@@ -52,6 +52,8 @@ test.beforeAll(async ({ request }) => {
   requestCode = req.code as string;
   await send(request, 'post', `/requests/${requestId}/triage`, { decision: 'CONTINUAR' });
   const asset = await send(request, 'post', '/assets', { processId: mainProcessId, name: `Activo búsqueda ${ts}` });
+  // D8: solo un activo ACTIVO admite asociaciones nuevas; el jefe lo activa antes.
+  await send(request, 'post', `/assets/${asset.id}/status`, { targetStatus: 'ACTIVO' });
   await send(request, 'post', `/requests/${requestId}/asset`, { assetId: asset.id as string });
   await send(request, 'post', `/requests/${requestId}/priority`, PRIORITY);
   await send(request, 'post', `/requests/${requestId}/approval`, { decision: 'APROBAR' });
@@ -68,6 +70,8 @@ test.beforeAll(async ({ request }) => {
   const pendingId = pending.id as string;
   await send(request, 'post', `/requests/${pendingId}/triage`, { decision: 'CONTINUAR' });
   const pendingAsset = await send(request, 'post', '/assets', { processId: mainProcessId, name: `Activo pendiente ${ts}` });
+  // D8: solo un activo ACTIVO admite asociaciones nuevas; el jefe lo activa antes.
+  await send(request, 'post', `/assets/${pendingAsset.id}/status`, { targetStatus: 'ACTIVO' });
   await send(request, 'post', `/requests/${pendingId}/asset`, { assetId: pendingAsset.id as string });
   await send(request, 'post', `/requests/${pendingId}/priority`, PRIORITY);
 

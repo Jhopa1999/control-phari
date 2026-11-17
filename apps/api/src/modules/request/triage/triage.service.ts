@@ -439,7 +439,9 @@ export class TriageService {
    * `AssetService.get` aplica el alcance de visibilidad (404 si no accesible),
    * por lo que un lider nunca asocia un activo no habilitado para sus procesos.
    * Refuerzo adicional: el activo debe estar habilitado para el proceso
-   * principal de la solicitud (propietario O visibilidad), si no -> 409. Solo
+   * principal de la solicitud (propietario O visibilidad), si no -> 409. Un
+   * activo en BORRADOR o RETIRADO no admite asociaciones nuevas (D8, 409), salvo
+   * que ya sea el activo de la solicitud. Solo
    * en estados tempranos (ASSET_ASSOCIABLE_STATES); fuera -> 409. Escribe
    * `Request.assetId` y audita UPDATE REQUEST en una $transaction.
    */
@@ -481,6 +483,18 @@ export class TriageService {
     if (!visibleForMainProcess) {
       throw new ConflictException(
         'El activo no esta habilitado para el proceso de la solicitud.',
+      );
+    }
+
+    // D8: solo un activo ACTIVO acepta asociaciones nuevas. Valor actual
+    // conservado: si la solicitud ya tiene este mismo activo, no se rompe la
+    // asociación hecha ni un reenvío idempotente aunque el activo siga en
+    // borrador o retirado.
+    if (asset.status !== 'ACTIVO' && request.assetId !== asset.id) {
+      throw new ConflictException(
+        asset.status === 'RETIRADO'
+          ? 'El activo está retirado; recupéralo en Activos o elige otro antes de asociarlo.'
+          : 'El activo está en borrador; pide al jefe de área que lo active antes de asociarlo.',
       );
     }
 

@@ -57,6 +57,8 @@ async function crearSolicitud(
     processId: processIds.FIBI,
     name: `Activo gestionar procesos ${titulo}`,
   });
+  // D8: solo un activo ACTIVO admite asociaciones nuevas; el jefe lo activa antes.
+  await send(api, 'post', `/assets/${asset.id}/status`, { targetStatus: 'ACTIVO' });
   await send(api, 'post', `/requests/${requestId}/asset`, { assetId: asset.id });
   await send(api, 'post', `/requests/${requestId}/priority`, {
     impact: 3,

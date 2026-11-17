@@ -53,6 +53,8 @@ async function readyToPrioritize(api: APIRequestContext, title: string): Promise
     processId: await mainProcessId(api),
     name: `E2E demanda activo ${title}`,
   });
+  // D8: solo un activo ACTIVO admite asociaciones nuevas; el jefe lo activa antes.
+  await send(api, 'post', `/assets/${asset.id}/status`, { targetStatus: 'ACTIVO' });
   await send(api, 'post', `/requests/${req.id}/asset`, { assetId: asset.id as string });
   return req;
 }

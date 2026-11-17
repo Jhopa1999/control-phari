@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, test } from '@playwright/test';
+import { createActiveAsset } from './helpers/activo-activo';
 
 /**
  * Oleada 2, PR-B (D7, BL-066).
@@ -83,7 +84,7 @@ async function createPlanned(
     mainProcessId: fibiId,
     participantProcessIds: [fibiId],
   });
-  const asset = await ok<{ id: string }>(api, 'post', '/assets', {
+  const asset = await createActiveAsset(api, {
     processId: fibiId,
     name: `E2E Activo capacidad ${label} ${ts}`,
   });

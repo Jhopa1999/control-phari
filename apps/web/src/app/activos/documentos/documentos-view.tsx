@@ -123,7 +123,8 @@ function transitionsOf(doc: Document, isJefe: boolean): Transition[] {
     const list: Transition[] = [
       { kind: 'status', label: 'Enviar a aprobación', target: 'PENDIENTE_APROBACION' },
     ];
-    if (!isClosure) list.push({ kind: 'status', label: 'Publicar', target: 'VIGENTE' });
+    // D9: publicar directo es solo del jefe; el líder envía a aprobación.
+    if (!isClosure && isJefe) list.push({ kind: 'status', label: 'Publicar', target: 'VIGENTE' });
     return list;
   }
   if (status === 'PENDIENTE_APROBACION') {
@@ -140,7 +141,9 @@ function transitionsOf(doc: Document, isJefe: boolean): Transition[] {
       { kind: 'status', label: 'Pasar a borrador', target: 'BORRADOR' },
     ];
   }
-  return legacyTransitionsOf(status).map((t) => ({ kind: 'status' as const, ...t }));
+  return legacyTransitionsOf(status)
+    .filter((t) => isJefe || t.target !== 'VIGENTE')
+    .map((t) => ({ kind: 'status' as const, ...t }));
 }
 
 /** Transiciones de publicación previas (VIGENTE ↔ ARCHIVADA ↔ BORRADOR). */
@@ -164,8 +167,9 @@ function legacyTransitionsOf(status: string): { label: string; target: DocumentS
 export function DocumentosView(): React.ReactElement {
   const { permissions, allowedModules } = useActor();
 
-  // Gating cosmético: publicar o archivar lo hace el jefe o el líder del proceso
-  // del activo del documento (el control real es del servidor).
+  // Gating cosmético: archivar o enviar a aprobación lo hace el jefe o el líder
+  // del proceso del activo; publicar directo y reactivar, solo el jefe (D9). El
+  // control real es del servidor.
   const isJefe = React.useMemo(
     () => (permissions?.grants ?? []).some((g) => g.roleCode === 'JEFE_AREA'),
     [permissions],
@@ -395,7 +399,11 @@ export function DocumentosView(): React.ReactElement {
           });
         }
         await createDocumentVersion(editing.id, { content: values.content });
-        toast.success('Nueva versión guardada.');
+        toast.success(
+          editing.status === 'VIGENTE'
+            ? 'Nueva versión guardada. El documento volvió a Borrador y necesita aprobación.'
+            : 'Nueva versión guardada.',
+        );
       } else {
         await createDocument({
           assetId: values.assetId,

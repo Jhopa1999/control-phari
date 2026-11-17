@@ -72,7 +72,7 @@ export class DocumentController {
   @ApiOperation({ summary: 'Crea un documento + version 1 (contenido Markdown).' })
   @ApiBody({ type: CreateDocumentDto })
   @ApiResponse({ status: 201, description: 'Documento creado.', type: DocumentResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos invalidos.' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o categoría que no existe o está inactiva en la maestra DOC_CATEGORY.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Activo fuera de alcance.' })
   @ApiResponse({ status: 409, description: 'Conflicto de concurrencia.' })
@@ -97,11 +97,11 @@ export class DocumentController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Edita metadatos del documento (titulo/categoria; no estado ni contenido).' })
+  @ApiOperation({ summary: 'Edita metadatos del documento (título/categoría; no estado ni contenido).' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: UpdateDocumentDto })
   @ApiResponse({ status: 200, description: 'Documento actualizado.', type: DocumentResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos invalidos.' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o categoría que no existe o está inactiva en la maestra DOC_CATEGORY.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Documento fuera de alcance.' })
   update(
@@ -113,7 +113,9 @@ export class DocumentController {
   }
 
   @Post(':id/versions')
-  @ApiOperation({ summary: 'Editar contenido = crear una nueva version (AC-020).' })
+  @ApiOperation({
+    summary: 'Editar contenido = crear una nueva versión (AC-020). Un documento Vigente vuelve a Borrador y necesita aprobación.',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: CreateDocumentVersionDto })
   @ApiResponse({ status: 201, description: 'Version creada.', type: DocumentResponseDto })
@@ -205,12 +207,16 @@ export class DocumentController {
   }
 
   @Post(':id/status')
-  @ApiOperation({ summary: 'Cambia el estado del documento (transicion valida; lider/jefe).' })
+  @ApiOperation({
+    summary: 'Cambia el estado del documento (transición válida; líder/jefe). Publicar directo (a Vigente) es solo del jefe.',
+    description:
+      'Un documento queda Vigente por aprobación (POST /documents/:id/review, jefe) o por publicación directa del jefe de área; el líder lo envía a aprobación. Reactivar un archivado a Vigente también es solo del jefe. Versionar un documento Vigente lo devuelve a Borrador.',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: ChangeDocumentStatusDto })
   @ApiResponse({ status: 200, description: 'Estado actualizado.', type: DocumentResponseDto })
   @ApiResponse({ status: 400, description: 'Transicion no permitida.' })
-  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente; un líder no publica directo (solo el jefe de área).' })
   @ApiResponse({ status: 404, description: 'Documento fuera de alcance.' })
   changeStatus(
     @CurrentActor() actor: CurrentActorType,

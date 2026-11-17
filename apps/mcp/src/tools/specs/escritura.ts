@@ -108,17 +108,17 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   escritura(
     'document.create',
     'POST /documents',
-    'Crea un documento con su versión 1 en Markdown (POST /documents). El backend valida los datos y el alcance.',
+    'Crea un documento con su versión 1 en Markdown (POST /documents). El backend valida los datos y el alcance. La categoría, si se envía, debe existir y estar activa en la maestra DOC_CATEGORY (400 si no).',
   ),
   escritura(
     'document.update',
     'PATCH /documents/{id}',
-    'Edita los metadatos de un documento: título y categoría, no el estado ni el contenido (PATCH /documents/{id}).',
+    'Edita los metadatos de un documento: título y categoría, no el estado ni el contenido (PATCH /documents/{id}). Una categoría nueva debe existir y estar activa en la maestra DOC_CATEGORY (400 si no).',
   ),
   escritura(
     'document.version.create',
     'POST /documents/{id}/versions',
-    'Crea una nueva versión del documento con contenido Markdown (POST /documents/{id}/versions). Editar el contenido siempre genera una versión nueva.',
+    'Crea una nueva versión del documento con contenido Markdown (POST /documents/{id}/versions). Editar el contenido siempre genera una versión nueva. Si el documento está Vigente, vuelve a Borrador y necesita aprobación para volver a ser vigente (en cualquier categoría).',
   ),
 
   // Actividades recurrentes

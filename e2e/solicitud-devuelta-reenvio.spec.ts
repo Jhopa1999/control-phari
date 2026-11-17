@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
+import { createActiveAsset } from './helpers/activo-activo';
 
 /**
  * Oleada 2 · Demanda (PR-A, D3 y D4):
@@ -174,7 +175,7 @@ test.describe('Edición por estado (D4)', () => {
     );
 
     // Comprometida: el jefe necesita justificación.
-    const asset = await send<{ id: string }>(request, 'post', '/assets', JEFE, { processId, name: `E2E reenvío activo ${ts}` });
+    const asset = await createActiveAsset(request, { processId, name: `E2E reenvío activo ${ts}` });
     await send(request, 'post', `/requests/${req.id}/asset`, JEFE, { assetId: asset.id });
     await send(request, 'post', `/requests/${req.id}/priority`, JEFE, FULL);
     await send(request, 'post', `/requests/${req.id}/approval`, JEFE, { decision: 'APROBAR' });

@@ -111,6 +111,7 @@ function createFlowMocks(
     get: jest.fn(async (_actor: unknown, id: string) => ({
       id,
       processId: 'p1',
+      status: 'ACTIVO',
       visibleProcessIds: [] as string[],
     })),
   } as unknown as AssetService;

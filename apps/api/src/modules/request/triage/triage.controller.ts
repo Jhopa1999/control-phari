@@ -92,7 +92,7 @@ export class TriageController {
     summary:
       'Asocia un activo EXISTENTE como base de la solicitud; requisito para priorizar. El triage no crea activos.',
     description:
-      'Orden obligatorio triage -> activo: el activo se habilita contra el proceso principal de la solicitud, por lo que primero hay que fijar el proceso principal en el triage y luego asociar el activo. Si la solicitud aun no tiene proceso principal, responde 409 con el mensaje "Fija el proceso principal en el triage antes de asociar el activo." (sin llegar a consultar el activo). El triage no crea activos: solo asocia uno ya existente y visible para el actor.',
+      'Orden obligatorio triage -> activo: el activo se habilita contra el proceso principal de la solicitud, por lo que primero hay que fijar el proceso principal en el triage y luego asociar el activo. Si la solicitud aun no tiene proceso principal, responde 409 con el mensaje "Fija el proceso principal en el triage antes de asociar el activo." (sin llegar a consultar el activo). El triage no crea activos: solo asocia uno ya existente y visible para el actor. Solo un activo en estado ACTIVO admite asociaciones nuevas: uno en BORRADOR o RETIRADO responde 409 (pide al jefe de area que lo active); la asociacion ya hecha a ese mismo activo se conserva y reenviarla no falla.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: AssociateAssetDto })
@@ -103,7 +103,7 @@ export class TriageController {
   @ApiResponse({
     status: 409,
     description:
-      'La solicitud no admite asociar activo en su estado; o la solicitud aun no tiene proceso principal fijado en el triage (hay que fijarlo antes de asociar el activo); o el activo no esta habilitado para el proceso principal de la solicitud.',
+      'La solicitud no admite asociar activo en su estado; o la solicitud aun no tiene proceso principal fijado en el triage (hay que fijarlo antes de asociar el activo); o el activo no esta habilitado para el proceso principal de la solicitud; o el activo esta en borrador o retirado (solo un activo ACTIVO admite asociaciones nuevas; la asociacion ya hecha a ese mismo activo se conserva).',
   })
   associateAsset(
     @CurrentActor() actor: CurrentActorType,

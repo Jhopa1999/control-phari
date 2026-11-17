@@ -714,6 +714,7 @@ describe('TriageService', () => {
       m.assetGet.mockResolvedValue({
         id: 'a-existente',
         processId: 'p1',
+        status: 'ACTIVO',
         visibleProcessIds: [],
       });
       (m.prismaObj.request as any).update.mockResolvedValue(
@@ -749,6 +750,7 @@ describe('TriageService', () => {
       // Propietario de otro proceso, pero p1 esta en visibleProcessIds.
       m.assetGet.mockResolvedValue({
         id: 'a-visible',
+        status: 'ACTIVO',
         processId: 'p-otro',
         visibleProcessIds: ['p1'],
       });
@@ -773,6 +775,7 @@ describe('TriageService', () => {
       // El actor ve el activo por p-otro, pero p1 (mainProcess) no esta habilitado.
       m.assetGet.mockResolvedValue({
         id: 'a-otro',
+        status: 'ACTIVO',
         processId: 'p-otro',
         visibleProcessIds: ['p-otro-2'],
       });
@@ -780,6 +783,69 @@ describe('TriageService', () => {
         service.associateAsset(lider(), 'r1', { assetId: 'a-otro' }),
       ).rejects.toBeInstanceOf(ConflictException);
       expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['BORRADOR', 'El activo está en borrador; pide al jefe de área que lo active antes de asociarlo.'],
+      ['RETIRADO', 'El activo está retirado; recupéralo en Activos o elige otro antes de asociarlo.'],
+    ])(
+      'D8: activo %s no se asocia (409 en español) y no muta ni audita',
+      async (status, message) => {
+        (m.prismaObj.request as any).findFirst.mockResolvedValue(
+          makeRequest(RequestState.EN_TRIAGE, { assetId: null }),
+        );
+        m.assetGet.mockResolvedValue({
+          id: 'a-nuevo',
+          processId: 'p1',
+          status,
+          visibleProcessIds: [],
+        });
+        await expect(
+          service.associateAsset(lider(), 'r1', { assetId: 'a-nuevo' }),
+        ).rejects.toThrow(message);
+        await expect(
+          service.associateAsset(lider(), 'r1', { assetId: 'a-nuevo' }),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect((m.prismaObj.request as any).update).not.toHaveBeenCalled();
+        expect(m.auditRecord).not.toHaveBeenCalled();
+      },
+    );
+
+    it('D8: la asociación ya hecha a un activo en BORRADOR se conserva (reenvío idempotente)', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.EN_TRIAGE, { assetId: 'a-actual' }),
+      );
+      m.assetGet.mockResolvedValue({
+        id: 'a-actual',
+        processId: 'p1',
+        status: 'BORRADOR',
+        visibleProcessIds: [],
+      });
+      (m.prismaObj.request as any).update.mockResolvedValue(
+        makeRequest(RequestState.EN_TRIAGE, {
+          assetId: 'a-actual',
+          participants: [],
+        }),
+      );
+      const result = await service.associateAsset(lider(), 'r1', {
+        assetId: 'a-actual',
+      });
+      expect(result.assetId).toBe('a-actual');
+    });
+
+    it('D8: cambiar de un activo en borrador a otro activo en borrador sigue rechazado', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.EN_TRIAGE, { assetId: 'a-actual' }),
+      );
+      m.assetGet.mockResolvedValue({
+        id: 'a-otro-borrador',
+        processId: 'p1',
+        status: 'BORRADOR',
+        visibleProcessIds: [],
+      });
+      await expect(
+        service.associateAsset(lider(), 'r1', { assetId: 'a-otro-borrador' }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('estado asociable pero sin proceso principal -> 409 especifico triage->activo, sin consultar el activo', async () => {

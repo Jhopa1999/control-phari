@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, test } from '@playwright/test';
+import { createActiveAsset } from './helpers/activo-activo';
 
 /**
  * Oleada 2, PR-B (D6 y validaciones del plan, BL-065).
@@ -63,7 +64,7 @@ test.beforeAll(async ({ request }) => {
     mainProcessId: fibi!.id,
     participantProcessIds: [fibi!.id],
   });
-  const asset = await ok<{ id: string }>(request, 'post', '/assets', {
+  const asset = await createActiveAsset(request, {
     processId: fibi!.id,
     name: `E2E Activo compromiso ${ts}`,
   });

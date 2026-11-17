@@ -119,6 +119,24 @@ export class DocumentService {
     };
   }
 
+  /**
+   * La categoría, si llega, debe existir y estar activa en la maestra
+   * DOC_CATEGORY (400 si no). Solo se valida lo que llega: la categoría ya
+   * guardada en un documento no se revalida.
+   */
+  private async assertCategory(code: string | null | undefined): Promise<void> {
+    if (code === undefined || code === null) return;
+    const item = await this.prisma.catalogItem.findFirst({
+      where: { catalog: 'DOC_CATEGORY', code, active: true },
+      select: { id: true },
+    });
+    if (!item) {
+      throw new BadRequestException(
+        'La categoría del documento no existe o está inactiva.',
+      );
+    }
+  }
+
   /** Resuelve el activo del documento aplicando el alcance de lectura (404 fuera). */
   private async requireAssetInScope(
     actor: CurrentActor,
@@ -233,6 +251,7 @@ export class DocumentService {
     if (dto.requestId !== undefined) {
       await this.requireOpenProjectInScope(actor, dto.requestId);
     }
+    await this.assertCategory(dto.categoryCode);
 
     try {
       const created = await this.prisma.$transaction(async (tx) => {
@@ -306,6 +325,7 @@ export class DocumentService {
     const { document, asset } = await this.requireDocumentInScope(actor, id);
     this.scope.requireAssetWritable(actor, asset, asset.status);
     await this.assertProjectOpen(document.requestId);
+    await this.assertCategory(dto.categoryCode);
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.document.update({
@@ -398,9 +418,12 @@ export class DocumentService {
       // Solo se mueve el puntero; Document.status NO se toca (D6). Excepcion: la
       // documentacion de cierre ya enviada o aprobada vuelve a BORRADOR, porque
       // el contenido aprobado debe ser exactamente el revisado.
+      // D9: un VIGENTE versionado vuelve a BORRADOR en toda categoría (el
+      // contenido vigente debe ser el aprobado). PENDIENTE_APROBACION conserva
+      // su comportamiento: solo cierre vuelve a borrador.
       const resetsApproval =
-        document.categoryCode === CLOSURE_DOC_CATEGORY &&
-        (document.status === DocStatus.VIGENTE ||
+        document.status === DocStatus.VIGENTE ||
+        (document.categoryCode === CLOSURE_DOC_CATEGORY &&
           document.status === DocStatus.PENDIENTE_APROBACION);
       const withPointer = await tx.document.update({
         where: { id: document.id },
@@ -518,6 +541,19 @@ export class DocumentService {
     if (isDecision && !actor.isJefeArea) {
       throw new ForbiddenException(
         'Solo el jefe de área puede aprobar o rechazar documentación.',
+      );
+    }
+    // D9: «Vigente» exige aprobación. El paso directo a VIGENTE (publicar un
+    // borrador o reactivar un archivado) es solo del jefe; el líder envía a
+    // aprobación. En cierre se mantiene su 409 más específico (abajo).
+    if (
+      nextStatus === DocStatus.VIGENTE &&
+      !fromPending &&
+      !actor.isJefeArea &&
+      document.categoryCode !== CLOSURE_DOC_CATEGORY
+    ) {
+      throw new ForbiddenException(
+        'Solo el jefe de área puede publicar directamente; envía el documento a aprobación.',
       );
     }
     if (nextStatus === DocStatus.RECHAZADO && !dto.reason?.trim()) {
