@@ -106,6 +106,22 @@ export class RequestResponseDto {
   currentTriageDecision!: string | null;
 
   @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Motivo de la decision de triage vigente cuando fue DEVOLVER o RECHAZAR; null en otro caso. Es lo unico del triage que ve el solicitante: nunca incluye notas ni dependencias internas.',
+  })
+  currentTriageReason!: string | null;
+
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    description: 'Fecha de la decision de triage vigente o null si aun no hay triage.',
+  })
+  currentTriageDecidedAt!: Date | null;
+
+  @ApiProperty({
     type: Number,
     nullable: true,
     description: 'Score de la ultima evaluacion de prioridad (0-100) o null.',

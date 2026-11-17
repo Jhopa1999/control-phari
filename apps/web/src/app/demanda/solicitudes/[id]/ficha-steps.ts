@@ -40,6 +40,11 @@ export function triageStepState(
   request: Pick<Request, 'operationalState' | 'currentTriageDecision'>,
   triages: Triage[],
 ): StepState {
+  // Reenviada tras una devolución: la decisión anterior se conserva, pero el
+  // triage vuelve a estar pendiente de decidir.
+  if (request.operationalState === 'REGISTRADA' && request.currentTriageDecision === 'DEVOLVER') {
+    return 'pendiente';
+  }
   if (request.currentTriageDecision !== null || triages.length > 0) {
     return 'completado';
   }

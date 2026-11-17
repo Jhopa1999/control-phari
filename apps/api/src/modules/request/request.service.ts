@@ -1,9 +1,24 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { entityRef, withCode } from '../notification/notification-text';
+import {
+  NotificationService,
+  NotificationType,
+} from '../notification/notification.service';
+import {
+  CREATOR_EDITABLE_STATES,
+  EDIT_JUSTIFICATION_MIN_LENGTH,
+  isRequestCreator,
+  isRequestManager,
+  JUSTIFIED_EDIT_STATES,
+} from './request-edit-policy';
+import { RequestState } from './request-state';
+import { ResubmitRequestDto } from './dto/resubmit-request.dto';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import type { RequestModel } from '../../generated/prisma/models/Request';
@@ -33,6 +48,7 @@ export class RequestService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly state: RequestStateService,
+    private readonly notifications: NotificationService,
   ) {}
 
   /** Alcance de lectura compartido (ver 
@@ -288,6 +304,64 @@ equest-scope.service.ts). */
     return this.state.buildResponse(created);
   }
 
+  /**
+   * Política de edición de la ficha (D4). `REGISTRADA`/`DEVUELTA`: quien la
+   * registró, el líder del proceso o el jefe. Estados siguientes: solo líder o
+   * jefe, y desde `COMPROMETIDA` hasta antes del cierre con justificación
+   * obligatoria. Lanza 403 o 400 en español; no escribe nada.
+   */
+  private assertCanEdit(
+    actor: CurrentActor,
+    request: RequestWithParticipants,
+    justification: string | undefined,
+  ): void {
+    const manager = isRequestManager(actor, request);
+    if (CREATOR_EDITABLE_STATES.includes(request.operationalState)) {
+      if (!manager && !isRequestCreator(actor, request)) {
+        throw new ForbiddenException(
+          'Solo quien la registró, el líder del proceso o el jefe de área pueden editar esta solicitud.',
+        );
+      }
+      return;
+    }
+    if (!manager) {
+      throw new ForbiddenException(
+        'Solo el líder del proceso o el jefe de área pueden editar una solicitud en este estado.',
+      );
+    }
+    if (JUSTIFIED_EDIT_STATES.includes(request.operationalState)) {
+      const text = justification?.trim() ?? '';
+      if (text.length === 0) {
+        throw new BadRequestException(
+          'La justificación del cambio es obligatoria desde que la solicitud está comprometida.',
+        );
+      }
+      if (text.length < EDIT_JUSTIFICATION_MIN_LENGTH) {
+        throw new BadRequestException(
+          `La justificación debe tener al menos ${EDIT_JUSTIFICATION_MIN_LENGTH} caracteres.`,
+        );
+      }
+    }
+  }
+
+  /** Campos de la ficha que escribe una edición (nunca estado, fechas iniciales ni código). */
+  private editData(
+    dto: UpdateRequestDto,
+    requesterData: { requesterId?: string; requesterName?: string; requesterArea?: string },
+  ): Prisma.RequestUpdateInput {
+    return {
+      ...(dto.title !== undefined ? { title: dto.title } : {}),
+      ...requesterData,
+      ...(dto.functionalOwner !== undefined ? { functionalOwner: dto.functionalOwner } : {}),
+      ...(dto.expectedResult !== undefined ? { expectedResult: dto.expectedResult } : {}),
+      ...(dto.referenceUrl !== undefined ? { referenceUrl: dto.referenceUrl } : {}),
+      ...(dto.targetDate !== undefined ? { targetDate: new Date(dto.targetDate) } : {}),
+      ...(dto.changeJustification !== undefined
+        ? { changeJustification: dto.changeJustification }
+        : {}),
+    };
+  }
+
   async update(
     actor: CurrentActor,
     id: string,
@@ -299,10 +373,12 @@ equest-scope.service.ts). */
         'El proyecto está cerrado; no se puede modificar su ficha. Solicita su reapertura si es necesario.',
       );
     }
+    this.assertCanEdit(actor, existing, dto.changeJustification);
 
     // Los participantes ya no se editan desde la Solicitud: los procesos que
     // intervienen se reconcilian en el Triage. La edición de la ficha no toca
-    // RequestParticipant (el principal se conserva intacto).
+    // RequestParticipant (el principal se conserva intacto). El estado nunca
+    // cambia aquí (BR-022): una solicitud devuelta solo avanza con «Reenviar».
     const requesterData = await this.resolveRequesterData(
       dto.requesterId,
       existing.requesterId,
@@ -311,27 +387,7 @@ equest-scope.service.ts). */
     const updated = await this.prisma.$transaction(async (tx) => {
       const request = await tx.request.update({
         where: { id },
-        data: {
-          // registeredAt, initialCommitmentDate y operationalState NO se tocan
-          // (BR-017/BR-022).
-          ...(dto.title !== undefined ? { title: dto.title } : {}),
-          ...requesterData,
-          ...(dto.functionalOwner !== undefined
-            ? { functionalOwner: dto.functionalOwner }
-            : {}),
-          ...(dto.expectedResult !== undefined
-            ? { expectedResult: dto.expectedResult }
-            : {}),
-          ...(dto.referenceUrl !== undefined
-            ? { referenceUrl: dto.referenceUrl }
-            : {}),
-          ...(dto.targetDate !== undefined
-            ? { targetDate: new Date(dto.targetDate) }
-            : {}),
-          ...(dto.changeJustification !== undefined
-            ? { changeJustification: dto.changeJustification }
-            : {}),
-        },
+        data: this.editData(dto, requesterData),
         include: { participants: true },
       });
 
@@ -351,6 +407,73 @@ equest-scope.service.ts). */
     return this.state.buildResponse(updated);
   }
 
+  /**
+   * D3 · «Reenviar a triage»: `DEVUELTA → REGISTRADA`. Lo hace quien registró la
+   * solicitud, el líder del proceso o el jefe; acepta correcciones de la ficha en
+   * el mismo paso. Conserva el historial de triages (no se toca ninguna fila),
+   * audita el cambio de estado y avisa a los jefes de área.
+   */
+  async resubmit(
+    actor: CurrentActor,
+    id: string,
+    dto: ResubmitRequestDto,
+  ): Promise<RequestResponseDto> {
+    const existing = await this.requireInScope(actor, id);
+    if (existing.operationalState !== RequestState.DEVUELTA) {
+      throw new ConflictException('Solo se puede reenviar a triage una solicitud devuelta.');
+    }
+    if (!isRequestManager(actor, existing) && !isRequestCreator(actor, existing)) {
+      throw new ForbiddenException(
+        'Solo quien registró la solicitud, el líder del proceso o el jefe de área pueden reenviarla a triage.',
+      );
+    }
+    const nextState = this.state.assertTransition(
+      existing.operationalState,
+      RequestState.REGISTRADA,
+    );
+    const requesterData = await this.resolveRequesterData(
+      dto.requesterId,
+      existing.requesterId,
+    );
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const request = await tx.request.update({
+        where: { id },
+        data: { ...this.editData(dto, requesterData), operationalState: nextState },
+        include: { participants: true },
+      });
+
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'UPDATE',
+        objectType: 'REQUEST',
+        objectId: request.id,
+        scopeProcessId: request.mainProcessId,
+        before: this.snapshot(existing),
+        after: this.snapshot(request),
+      });
+
+      return request as RequestWithParticipants;
+    });
+
+    // Aviso a los jefes de área (efecto secundario: un fallo no revierte el reenvío).
+    // Sin proceso principal se avisa a todos los jefes para que no quede huérfana.
+    const heads =
+      existing.mainProcessId === null
+        ? await this.notifications.allAreaHeads()
+        : await this.notifications.areaHeadsForProcess(existing.mainProcessId);
+    await this.notifications.notify({
+      userIds: heads,
+      excludeUserId: actor.userId,
+      type: NotificationType.REQUEST_RESUBMITTED,
+      title: withCode('Solicitud reenviada a triage', existing.code),
+      message: `${entityRef(existing.code, existing.title)} fue reenviada a triage por ${actor.name}.`,
+      link: `/demanda/triage?requestId=${id}`,
+      requestId: id,
+    });
+
+    return this.state.buildResponse(updated);
+  }
   /**
    * SOL-01: eliminación lógica. Conserva el registro (y su historial/auditoría)
    * marcándolo con `deletedAt`; deja de aparecer en listados y consultas. No se

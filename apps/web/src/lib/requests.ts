@@ -36,13 +36,29 @@ function messageForStatus(status: number): string {
   }
 }
 
-function toRequestError(status: number | undefined): RequestError {
+/**
+ * Mensaje accionable del cuerpo de error de NestJS ({ message }): permite
+ * mostrar al usuario el motivo exacto de un 400, 403 o 409 de la API (p. ej.
+ * quién puede editar o que falta la justificación) en lugar de un texto genérico.
+ */
+function messageFromBody(body: unknown): string | undefined {
+  if (typeof body !== 'object' || body === null) return undefined;
+  const message = (body as { message?: unknown }).message;
+  if (typeof message === 'string' && message.trim() !== '') return message;
+  if (Array.isArray(message)) {
+    const first = message.find((m) => typeof m === 'string' && m.trim() !== '');
+    if (typeof first === 'string') return first;
+  }
+  return undefined;
+}
+
+function toRequestError(status: number | undefined, body?: unknown): RequestError {
   if (status === undefined) {
     return new RequestError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new RequestError(messageForStatus(status), status);
+  return new RequestError(messageFromBody(body) ?? messageForStatus(status), status);
 }
 
 /** Filtros de GET /requests tal como los publica el contrato. */
@@ -148,7 +164,31 @@ export async function updateRequest(
       body: input,
     });
     if (error || !data) {
-      throw toRequestError(response.status);
+      throw toRequestError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof RequestError) throw err;
+    throw toRequestError(undefined);
+  }
+}
+
+/**
+ * «Reenviar a triage» (POST /requests/:id/resubmit): una solicitud devuelta
+ * vuelve a Registrada. El cuerpo opcional corrige campos de la ficha en el mismo
+ * paso. Los 403 y 409 traen el motivo en español desde la API.
+ */
+export async function resubmitRequest(
+  id: string,
+  input: UpdateRequest = {},
+): Promise<Request> {
+  try {
+    const { data, error, response } = await api.POST('/requests/{id}/resubmit', {
+      params: { path: { id } },
+      body: input,
+    });
+    if (error || !data) {
+      throw toRequestError(response.status, error);
     }
     return data;
   } catch (err) {

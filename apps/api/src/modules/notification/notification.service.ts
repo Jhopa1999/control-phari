@@ -34,6 +34,8 @@ export enum NotificationType {
   REQUEST_RETURNED = 'REQUEST_RETURNED',
   /** Una solicitud fue rechazada en triage con un motivo (a quien la registró). */
   REQUEST_REJECTED = 'REQUEST_REJECTED',
+  /** Una solicitud devuelta fue reenviada a triage (a los jefes de área). */
+  REQUEST_RESUBMITTED = 'REQUEST_RESUBMITTED',
   /** El gasto de IA del mes alcanzó el umbral de alerta (solo administradores). */
   AI_BUDGET_ALERT = 'AI_BUDGET_ALERT',
   /** Se agotó el presupuesto mensual de IA (solo administradores). */
@@ -141,6 +143,22 @@ export class NotificationService {
         inArea.length > 0
           ? inArea
           : await this.prisma.grant.findMany({ where: base, select: { userId: true } });
+      return [...new Set(rows.map((r) => r.userId))];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Todos los jefes de área activos. Se usa cuando el evento no tiene proceso
+   * (p. ej. una solicitud devuelta antes de fijar su proceso principal).
+   */
+  async allAreaHeads(): Promise<string[]> {
+    try {
+      const rows = await this.prisma.grant.findMany({
+        where: { active: true, role: { code: RoleCode.JEFE_AREA }, user: { active: true } },
+        select: { userId: true },
+      });
       return [...new Set(rows.map((r) => r.userId))];
     } catch {
       return [];

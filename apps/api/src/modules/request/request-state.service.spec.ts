@@ -156,6 +156,21 @@ describe('RequestStateService', () => {
       ).toBe(RequestState.EN_EJECUCION);
     });
 
+    it('D3: DEVUELTA -> REGISTRADA es la unica salida de una solicitud devuelta', () => {
+      expect(
+        service.assertTransition(RequestState.DEVUELTA, RequestState.REGISTRADA),
+      ).toBe(RequestState.REGISTRADA);
+      for (const to of [
+        RequestState.BACKLOG_PRIORIZADO,
+        RequestState.COMPROMETIDA,
+        RequestState.RECHAZADA,
+      ]) {
+        expect(() => service.assertTransition(RequestState.DEVUELTA, to)).toThrow(
+          ConflictException,
+        );
+      }
+    });
+
     it('transicion no implementada -> ConflictException', () => {
       expect(() =>
         service.assertTransition(
@@ -163,7 +178,7 @@ describe('RequestStateService', () => {
           RequestState.BACKLOG_PRIORIZADO,
         ),
       ).toThrow(ConflictException);
-      // No existe salida de DEVUELTA (frontera de reapertura).
+      // DEVUELTA solo sale hacia REGISTRADA (reenvio); nunca directo a EN_TRIAGE.
       expect(() =>
         service.assertTransition(RequestState.DEVUELTA, RequestState.EN_TRIAGE),
       ).toThrow(ConflictException);

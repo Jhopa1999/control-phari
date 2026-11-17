@@ -375,6 +375,26 @@ que ahora ve, pero las decisiones con `@Roles` más estrictos (p. ej. aprobar, e
 `JEFE_AREA`) no cambian. `GET /my-work` («mis tareas») no se amplía: sigue mostrando solo
 las tareas del propio usuario.
 
+**Editar y reenviar una solicitud (oleada 2, D3 y D4).** La visibilidad no da permiso de
+edición. `PATCH /requests/:id` y `POST /requests/:id/resubmit` no llevan `@Roles`: la
+política se resuelve en `RequestService` (`request-edit-policy.ts`) según el estado.
+
+| Estado | Editan la ficha | Reenvían a triage |
+| --- | --- | --- |
+| `REGISTRADA` | Quien la registró, líder del proceso principal o jefe | — |
+| `DEVUELTA` | Quien la registró, líder del proceso principal o jefe | Los mismos |
+| `EN_TRIAGE`, `BACKLOG_PRIORIZADO`, `RECHAZADA`, `RETIRADA` | Líder del proceso principal o jefe | — |
+| `COMPROMETIDA` a `OPERATIVA` | Líder del proceso principal o jefe, con justificación obligatoria | — |
+| `CERRADA` | Nadie (`409`) | — |
+
+«Líder» es quien tiene grant `LIDER_PROCESO` en el proceso principal de la solicitud; si aún
+no tiene proceso, cualquier líder. Los demás reciben `403` con el motivo en español.
+**Cambio para el equipo:** antes cualquier persona con la solicitud en su alcance podía
+editar su ficha en cualquier estado salvo `CERRADA`; ahora el integrante solo edita las que
+registró mientras están Registradas o Devueltas. El solicitante ve la decisión del triage y
+su motivo en la propia solicitud (`currentTriageReason`), sin acceso a
+`GET /requests/:id/triage` (sigue restringido a jefe, líder y `ADMIN`).
+
 Las lecturas por ID visible (`GET /codes/:code`, `GET /requests/by-code/:code`, `GET /plan-phases/by-code/:code`, junto con `GET /tasks/by-code/:code`) usan esa misma definición (`requestScopeWhere`) y los roles `JEFE_AREA`, `LIDER_PROCESO` e `INTEGRANTE`: un código inexistente o fuera de alcance responde `404` con el mismo mensaje, sin revelar que existe.
 
 ## Bitácora y reporte semanal: escritura y revisión

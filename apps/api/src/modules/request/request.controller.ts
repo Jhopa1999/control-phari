@@ -24,6 +24,7 @@ import { CreateRequestDto } from './dto/create-request.dto';
 import { ListRequestsDto } from './dto/list-requests.dto';
 import { RequestResponseDto } from './dto/request-response.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
+import { ResubmitRequestDto } from './dto/resubmit-request.dto';
 import { CurrentActor } from '../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../auth/current-actor';
 import { CurrentUserGuard } from '../auth/current-user.guard';
@@ -112,13 +113,39 @@ export class RequestController {
     return this.requestService.remove(actor, id);
   }
 
+  @Post(':id/resubmit')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Reenvía a triage una solicitud devuelta (DEVUELTA → REGISTRADA). Lo hace quien la registró, el líder del proceso o el jefe de área; acepta correcciones de la ficha en el mismo paso, conserva el historial de triages y avisa a los jefes.',
+  })
+  @ApiBody({ type: ResubmitRequestDto, required: false })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Solicitud reenviada; queda Registrada.', type: RequestResponseDto })
+  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
+  @ApiResponse({ status: 403, description: 'Solo quien la registró, el líder del proceso o el jefe de área.' })
+  @ApiResponse({ status: 404, description: 'Solicitud no encontrada o fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'La solicitud no está devuelta.' })
+  resubmit(
+    @CurrentActor() actor: CurrentActorType,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ResubmitRequestDto,
+  ) {
+    return this.requestService.resubmit(actor, id, dto);
+  }
+
   @Patch(':id')
-  @ApiOperation({ summary: 'Edita la ficha (no el estado); conserva fechas iniciales (BR-017).' })
+  @ApiOperation({
+    summary:
+      'Edita la ficha (no el estado); conserva fechas iniciales (BR-017). Registrada y Devuelta: quien la registró, el líder del proceso o el jefe; estados siguientes: solo líder o jefe; desde Comprometida exige justificación del cambio (mínimo 10 caracteres). Una solicitud Devuelta no cambia de estado al editarse: se reenvía con «Reenviar a triage».',
+  })
   @ApiBody({ type: UpdateRequestDto })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Solicitud actualizada.', type: RequestResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos de entrada invalidos o id no UUID.' })
+  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos, id no UUID o justificación ausente o corta desde Comprometida.' })
+  @ApiResponse({ status: 403, description: 'El actor no puede editar la solicitud en su estado actual.' })
   @ApiResponse({ status: 404, description: 'Solicitud no encontrada.' })
+  @ApiResponse({ status: 409, description: 'La solicitud está cerrada.' })
   update(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

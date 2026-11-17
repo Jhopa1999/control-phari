@@ -54,8 +54,10 @@ import {
   REQUEST_STATE_LABELS,
   isCommitted,
   isPlannable,
+  editPolicy,
   isPrioritizable,
   isTriageable,
+  requestActorFrom,
 } from '@/lib/request-state';
 import { parseBand } from '@/lib/status-presentation';
 import {
@@ -74,6 +76,7 @@ import {
   SolicitudFormDialog,
   type SolicitudFormValues,
 } from './solicitud-form-dialog';
+import { solicitudUpdatePayload, toIso, trimOrUndefined } from './solicitud-payload';
 
 type LoadState = 'loading' | 'success' | 'error';
 type SortKey = 'title' | 'state' | 'priority' | 'registered';
@@ -99,20 +102,6 @@ function messageOf(err: unknown): string {
   return err instanceof RequestError ? err.message : 'Ocurrió un error inesperado.';
 }
 
-/** Convierte un valor de fecha (yyyy-mm-dd) a ISO para el backend, u omite. */
-function toIso(value: string): string | undefined {
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-  const date = new Date(trimmed);
-  if (Number.isNaN(date.getTime())) return undefined;
-  return date.toISOString();
-}
-
-function trimOrUndefined(value: string): string | undefined {
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
-}
-
 /** Banda de una solicitud para el filtro: la del prefijo de priorityLabel, o «Sin priorizar». */
 function bandOf(request: Request): string {
   return parseBand(request.priorityLabel) ?? NO_BAND;
@@ -127,7 +116,8 @@ function bandOf(request: Request): string {
 export function SolicitudesView(): React.ReactElement {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { allowedModules } = useActor();
+  const { allowedModules, permissions } = useActor();
+  const requestActor = React.useMemo(() => requestActorFrom(permissions), [permissions]);
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [requesters, setRequesters] = React.useState<Requester[]>([]);
@@ -243,6 +233,12 @@ export function SolicitudesView(): React.ReactElement {
     setDialogOpen(true);
   }
 
+  /** El título abre la edición si el actor puede editar; si no, la ficha de solo lectura. */
+  function openTitle(request: Request): void {
+    if (editPolicy(requestActor, request).allowed) openEdit(request);
+    else router.push(`/demanda/solicitudes/${encodeURIComponent(request.id)}`);
+  }
+
   function rowActions(r: Request): RowAction[] {
     const id = encodeURIComponent(r.id);
     const actions: RowAction[] = [
@@ -252,7 +248,15 @@ export function SolicitudesView(): React.ReactElement {
         href: `/demanda/solicitudes/${id}`,
         placement: 'menu',
       },
-      { key: 'edit', label: 'Editar ficha', onSelect: () => openEdit(r), placement: 'menu' },
+      {
+        key: 'edit',
+        label: 'Editar ficha',
+        onSelect: () => openEdit(r),
+        placement: 'menu',
+        // La API decide (403); aquí solo se anticipa y se explica el motivo.
+        disabled: !editPolicy(requestActor, r).allowed,
+        disabledReason: editPolicy(requestActor, r).reason ?? undefined,
+      },
     ];
     // Una solicitud comprometida ya es una iniciativa: su avance está en Portafolio
     // (se llega con la búsqueda por título precargada).
@@ -327,14 +331,7 @@ export function SolicitudesView(): React.ReactElement {
     setFormError(null);
     try {
       if (editing) {
-        await updateRequest(editing.id, {
-          title: values.title,
-          requesterId: values.requesterId || undefined,
-          functionalOwner: trimOrUndefined(values.functionalOwner),
-          expectedResult: trimOrUndefined(values.expectedResult),
-          targetDate: toIso(values.targetDate),
-          changeJustification: trimOrUndefined(values.changeJustification),
-        });
+        await updateRequest(editing.id, solicitudUpdatePayload(values));
         toast.success('Solicitud actualizada.');
       } else {
         const created = await createRequest({
@@ -522,7 +519,7 @@ export function SolicitudesView(): React.ReactElement {
                   <IdChip code={r.code} />
                 </TableCell>
                 <TableCell className="min-w-56 max-w-[28rem]">
-                  <CellTitle onOpen={() => openEdit(r)}>{r.title}</CellTitle>
+                  <CellTitle onOpen={() => openTitle(r)}>{r.title}</CellTitle>
                 </TableCell>
                 <TableCell className="min-w-32 text-muted-foreground">
                   {processCell(r)}
@@ -567,7 +564,7 @@ export function SolicitudesView(): React.ReactElement {
           }}
           card={(r) => ({
             title: (
-              <CellTitle touch onOpen={() => openEdit(r)}>
+              <CellTitle touch onOpen={() => openTitle(r)}>
                 {r.title}
               </CellTitle>
             ),
