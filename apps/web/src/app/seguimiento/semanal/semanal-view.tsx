@@ -6,6 +6,7 @@ import { CheckCircle2, Plus, Send, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DescriptionList } from '@/components/description-list';
+import { DisabledReason } from '@/components/disabled-reason';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { Field } from '@/components/field';
@@ -237,6 +238,12 @@ export function SemanalView(): React.ReactElement {
   const current = detailReady ? detail : selectedReport;
   const actions = detailReady ? detail.actions : null;
   const isDraft = Boolean(actions?.edit);
+  // D16: la API exige al menos una sección guardada con texto para enviar.
+  const savedSectionsEmpty =
+    detailReady &&
+    [detail.results, detail.proposals, detail.blockers, detail.commitmentsText, detail.decisions].every(
+      (text) => (text ?? '').trim().length === 0,
+    );
 
   async function handleCreate(values: SemanalFormValues) {
     setCreateSubmitting(true);
@@ -504,16 +511,28 @@ export function SemanalView(): React.ReactElement {
             </div>
           ) : null}
           {actions?.submit ? (
-            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setSendOpen(true)}
-                disabled={submitting}
-              >
-                <Send aria-hidden="true" />
-                Enviar reporte
-              </Button>
+            <div className="flex flex-col items-start gap-1 sm:shrink-0 sm:items-end">
+              {savedSectionsEmpty ? (
+                <>
+                  <Button type="button" size="sm" unavailable aria-describedby="semanal-send-reason">
+                    <Send aria-hidden="true" />
+                    Enviar reporte
+                  </Button>
+                  <DisabledReason id="semanal-send-reason" className="max-w-xs">
+                    Escribe y guarda al menos una sección para enviar el reporte.
+                  </DisabledReason>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setSendOpen(true)}
+                  disabled={submitting}
+                >
+                  <Send aria-hidden="true" />
+                  Enviar reporte
+                </Button>
+              )}
             </div>
           ) : null}
         </CardHeader>

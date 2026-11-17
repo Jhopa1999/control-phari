@@ -13098,7 +13098,7 @@ export interface operations {
             /**
              * @description El proceso indicado no existe (jefe de área).
              *
-             *     Datos invalidos.
+             *     Datos inválidos o fecha posterior a hoy («No puedes registrar un diario de una fecha futura.»).
              */
             400: {
                 headers: {
@@ -13294,6 +13294,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DailyLogResponseDto"];
                 };
+            };
+            /** @description El diario no tiene actividades («Agrega al menos una actividad antes de enviar el diario.»). El día libre se registra como actividad «Interna» con nota. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Diario fuera de alcance. */
             404: {
@@ -13813,7 +13820,7 @@ export interface operations {
             /**
              * @description El proceso indicado no existe (jefe de área).
              *
-             *     Datos invalidos.
+             *     Datos inválidos o semana posterior a la actual («No puedes registrar un semanal de una semana futura.»).
              */
             400: {
                 headers: {
@@ -13925,6 +13932,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WeeklyReportResponseDto"];
                 };
+            };
+            /** @description Ninguna sección del semanal tiene texto («Escribe al menos una sección del semanal antes de enviarlo.»). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Semanal fuera de alcance. */
             404: {

@@ -29,7 +29,8 @@ let jefeLogId = '';
 let activityId = '';
 const logDate = (() => {
   // Fecha única por ejecución (el diario es único por persona, proceso y día).
-  const d = new Date(Date.UTC(2041, 0, 1) + (ts % (300 * 24 * 3600 * 1000)));
+  // Pasada: la API rechaza un diario con fecha futura (D16).
+  const d = new Date(Date.UTC(2001, 0, 1) + (ts % (300 * 24 * 3600 * 1000)));
   return d.toISOString().slice(0, 10);
 })();
 

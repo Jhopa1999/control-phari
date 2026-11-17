@@ -143,7 +143,7 @@ export class WorklogController {
   @ApiOperation({ summary: 'Crea la cabecera de un diario (autor = actor).' })
   @ApiBody({ type: CreateDailyLogDto })
   @ApiResponse({ status: 201, description: 'Diario creado.', type: DailyLogResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos invalidos.' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o fecha posterior a hoy («No puedes registrar un diario de una fecha futura.»).' })
   @ApiResponse({ status: 400, description: 'El proceso indicado no existe (jefe de área).' })
   @ApiResponse({ status: 403, description: 'El actor no pertenece al proceso indicado.' })
   @ApiResponse({ status: 404, description: 'Proceso fuera de alcance.' })
@@ -198,6 +198,7 @@ export class WorklogController {
   @ApiOperation({ summary: 'Envia un diario a revision (BORRADOR -> ENVIADO).' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Diario enviado.', type: DailyLogResponseDto })
+  @ApiResponse({ status: 400, description: 'El diario no tiene actividades («Agrega al menos una actividad antes de enviar el diario.»). El día libre se registra como actividad «Interna» con nota.' })
   @ApiResponse({ status: 404, description: 'Diario fuera de alcance.' })
   @ApiResponse({ status: 409, description: 'El diario ya fue enviado.' })
   submitDailyLog(
@@ -401,7 +402,7 @@ export class WorklogController {
   @ApiOperation({ summary: 'Crea un semanal (se ancla al lunes ISO).' })
   @ApiBody({ type: CreateWeeklyReportDto })
   @ApiResponse({ status: 201, description: 'Semanal creado.', type: WeeklyReportResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos invalidos.' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o semana posterior a la actual («No puedes registrar un semanal de una semana futura.»).' })
   @ApiResponse({ status: 400, description: 'El proceso indicado no existe (jefe de área).' })
   @ApiResponse({ status: 403, description: 'El actor no pertenece al proceso indicado.' })
   @ApiResponse({ status: 404, description: 'Proceso fuera de alcance.' })
@@ -443,6 +444,7 @@ export class WorklogController {
   @ApiOperation({ summary: 'Envia un semanal a revision (BORRADOR -> ENVIADO).' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Semanal enviado.', type: WeeklyReportResponseDto })
+  @ApiResponse({ status: 400, description: 'Ninguna sección del semanal tiene texto («Escribe al menos una sección del semanal antes de enviarlo.»).' })
   @ApiResponse({ status: 404, description: 'Semanal fuera de alcance.' })
   @ApiResponse({ status: 409, description: 'El semanal ya fue enviado.' })
   submitWeeklyReport(

@@ -159,6 +159,7 @@ export function DiarioFormDialog({
                 ref={dateRef}
                 type="date"
                 value={date}
+                max={isEdit ? undefined : localDateInputValue()}
                 readOnly={isEdit}
                 disabled={isEdit}
                 onChange={(e) => {

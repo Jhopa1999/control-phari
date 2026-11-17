@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
+import { localDateInputValue } from '@/lib/format';
 import {
   Dialog,
   DialogBody,
@@ -44,6 +45,14 @@ type FieldErrors = Partial<Record<FieldKey, string>>;
 
 /** Id del formulario: el FormError lleva `sem-form-error`. */
 const FORM_ID = 'sem-form';
+
+/** Domingo de la semana en curso (D16: no se registra una semana futura). */
+function endOfCurrentWeekInputValue(now: Date = new Date()): string {
+  const daysToSunday = (7 - now.getDay()) % 7;
+  return localDateInputValue(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysToSunday),
+  );
+}
 
 /** Reglas del cliente, las mismas de siempre, evaluadas todas a la vez (design §9). */
 function validate(values: SemanalFormValues): FieldErrors {
@@ -139,6 +148,7 @@ export function SemanalFormDialog({
                 ref={weekRef}
                 type="date"
                 value={weekStart}
+                max={endOfCurrentWeekInputValue()}
                 onChange={(e) => {
                   setWeekStart(e.target.value);
                   setFieldErrors((prev) => ({ ...prev, weekStart: undefined }));

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { CheckCircle2, Link2, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DisabledReason } from '@/components/disabled-reason';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { useActor } from '@/lib/actor-context';
@@ -709,10 +710,23 @@ export function BitacoraDetalle({
             </Button>
           ) : null}
           {actions.submit ? (
-            <Button type="button" size="sm" onClick={() => setSendOpen(true)} disabled={busy}>
-              <Send aria-hidden="true" />
-              Enviar a revisión
-            </Button>
+            detail.activities.length === 0 ? (
+              <div className="flex flex-col items-start gap-1 sm:items-end">
+                <Button type="button" size="sm" unavailable aria-describedby="diario-send-reason">
+                  <Send aria-hidden="true" />
+                  Enviar a revisión
+                </Button>
+                <DisabledReason id="diario-send-reason" className="max-w-xs">
+                  Agrega al menos una actividad para enviar el diario. Un día libre se registra como
+                  actividad «Interna» con una nota.
+                </DisabledReason>
+              </div>
+            ) : (
+              <Button type="button" size="sm" onClick={() => setSendOpen(true)} disabled={busy}>
+                <Send aria-hidden="true" />
+                Enviar a revisión
+              </Button>
+            )
           ) : null}
         </div>
       </div>
