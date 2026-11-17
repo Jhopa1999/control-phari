@@ -138,7 +138,7 @@ export class PriorityService {
     const triage = await this.state.currentTriage(requestId);
     if (!triage || triage.decision !== CONTINUAR) {
       throw new ConflictException(
-        'La priorizacion requiere un triage con decision Continuar.',
+        'La priorización requiere un triage con decisión Continuar.',
       );
     }
 
@@ -146,7 +146,7 @@ export class PriorityService {
     // COMPROMETIDA/DEVUELTA/RECHAZADA -> 409 sin mutacion (no revierte compromiso).
     if (!PRIORITY_ALLOWED_STATES.includes(request.operationalState)) {
       throw new ConflictException(
-        'La solicitud no admite priorizacion en su estado actual.',
+        'La solicitud no admite priorización en su estado actual.',
       );
     }
 

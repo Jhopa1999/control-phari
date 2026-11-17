@@ -1,5 +1,7 @@
 'use client';
 
+import { ModuleGate } from '@/components/module-gate';
+import { NO_ACCESS_COPY } from '@/components/no-access-notice';
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -107,14 +109,14 @@ function savedMessage(score: number, thresholdLabel: string): string {
  * solicitud no admite priorización, el panel de requisitos explica qué falta.
  * La selección se refleja en ?requestId= (§7.9.1).
  */
-export function PriorizacionView(): React.ReactElement {
+function PriorizacionViewContent(): React.ReactElement {
   const router = useRouter();
   const { allowedModules } = useActor();
   const { requestId: urlId, setRequestId } = useRequestIdParam();
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [loadError, setLoadError] = React.useState<unknown>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
 
   const [selectedId, setSelectedId] = React.useState('');
@@ -177,7 +179,7 @@ export function PriorizacionView(): React.ReactElement {
         }
       })
       .catch((err: unknown) => {
-        setLoadError(err instanceof Error ? err.message : null);
+        setLoadError(err);
         setState('error');
       });
   }, [selectRequest, setRequestId]);
@@ -505,7 +507,7 @@ export function PriorizacionView(): React.ReactElement {
       <div className="rounded-lg border bg-card">
         <ErrorState
           title="No fue posible cargar las solicitudes."
-          message={loadError}
+          error={loadError}
           onRetry={() => void load()}
         />
       </div>
@@ -599,5 +601,18 @@ export function PriorizacionView(): React.ReactElement {
       />
       {content}
     </PageLayout>
+  );
+}
+
+export function PriorizacionView(): React.ReactElement {
+  return (
+    <ModuleGate
+      moduleKey="priority"
+      title="Priorización"
+      description="Evalúa ocho criterios de 1 a 5; el sistema calcula el score y la banda al guardar."
+      copy={NO_ACCESS_COPY.priority}
+    >
+      <PriorizacionViewContent />
+    </ModuleGate>
   );
 }

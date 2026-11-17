@@ -50,7 +50,7 @@ export class AreaService {
   async findOne(id: string): Promise<AreaModel> {
     const area = await this.prisma.area.findUnique({ where: { id } });
     if (!area) {
-      throw new NotFoundException(`Area "${id}" no encontrada.`);
+      throw new NotFoundException('No se encontró el área.');
     }
     return area;
   }
@@ -85,7 +85,7 @@ export class AreaService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new ConflictException(`Ya existe un area con code "${code}".`);
+        throw new ConflictException('Ya existe un área con ese código.');
       }
       throw error;
     }
@@ -98,7 +98,7 @@ export class AreaService {
   ): Promise<AreaModel> {
     const existing = await this.prisma.area.findUnique({ where: { id } });
     if (!existing) {
-      throw new NotFoundException(`Area "${id}" no encontrada.`);
+      throw new NotFoundException('No se encontró el área.');
     }
 
     return this.prisma.$transaction(async (tx) => {

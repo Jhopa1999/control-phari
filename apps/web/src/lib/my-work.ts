@@ -1,5 +1,6 @@
 import { api, type MyWorkItem } from './api-client';
 import { PlanError } from './plan';
+import { messageFromBody } from './api-error';
 
 function messageForStatus(status: number): string {
   switch (status) {
@@ -12,13 +13,13 @@ function messageForStatus(status: number): string {
   }
 }
 
-function toMyWorkError(status: number | undefined): PlanError {
+function toMyWorkError(status: number | undefined, body?: unknown): PlanError {
   if (status === undefined) {
     return new PlanError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new PlanError(messageForStatus(status), status);
+  return new PlanError(messageFromBody(body) ?? messageForStatus(status), status);
 }
 
 /**
@@ -29,7 +30,7 @@ export async function listMyWork(): Promise<MyWorkItem[]> {
   try {
     const { data, error, response } = await api.GET('/my-work');
     if (error || !data) {
-      throw toMyWorkError(response.status);
+      throw toMyWorkError(response.status, error);
     }
     return data;
   } catch (err) {

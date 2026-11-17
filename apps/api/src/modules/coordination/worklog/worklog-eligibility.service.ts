@@ -328,7 +328,7 @@ export class WorklogEligibilityService {
       },
     });
     if (!task) {
-      throw new NotFoundException(`Tarea "${taskId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la tarea.');
     }
     return {
       code: task.code,
@@ -356,7 +356,7 @@ export class WorklogEligibilityService {
       },
     });
     if (!visible) {
-      throw new NotFoundException(`Solicitud "${requestId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la solicitud.');
     }
     const eligible = await this.prisma.request.findFirst({
       where: {

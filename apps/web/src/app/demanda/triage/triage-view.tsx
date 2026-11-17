@@ -1,5 +1,7 @@
 'use client';
 
+import { ModuleGate } from '@/components/module-gate';
+import { NO_ACCESS_COPY } from '@/components/no-access-notice';
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -197,7 +199,7 @@ function validate(
  * triage, el panel de requisitos con el motivo. La selección se refleja en
  * ?requestId= (§7.9.1).
  */
-export function TriageView(): React.ReactElement {
+function TriageViewContent(): React.ReactElement {
   const router = useRouter();
   const { allowedModules } = useActor();
   const { requestId: urlId, setRequestId } = useRequestIdParam();
@@ -206,7 +208,7 @@ export function TriageView(): React.ReactElement {
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [catalogs, setCatalogs] = React.useState<CatalogsByFamily>({});
   const [state, setState] = React.useState<LoadState>('loading');
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [loadError, setLoadError] = React.useState<unknown>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
 
   const [selectedId, setSelectedId] = React.useState('');
@@ -300,7 +302,7 @@ export function TriageView(): React.ReactElement {
         }
       })
       .catch((err: unknown) => {
-        setLoadError(err instanceof Error ? err.message : null);
+        setLoadError(err);
         setState('error');
       });
   }, [selectRequest, setRequestId]);
@@ -1290,7 +1292,7 @@ export function TriageView(): React.ReactElement {
       <div className="rounded-lg border bg-card">
         <ErrorState
           title="No fue posible cargar las solicitudes."
-          message={loadError}
+          error={loadError}
           onRetry={() => void load()}
         />
       </div>
@@ -1387,5 +1389,18 @@ export function TriageView(): React.ReactElement {
       <PageHeader title={TITLE} description={TRIAGE_DESCRIPTION} />
       {content}
     </PageLayout>
+  );
+}
+
+export function TriageView(): React.ReactElement {
+  return (
+    <ModuleGate
+      moduleKey="triage"
+      title={TITLE}
+      description={TRIAGE_DESCRIPTION}
+      copy={NO_ACCESS_COPY.triage}
+    >
+      <TriageViewContent />
+    </ModuleGate>
   );
 }

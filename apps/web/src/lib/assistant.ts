@@ -9,7 +9,7 @@ import {
   type ConversationSummary,
   type Proposal,
 } from './api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, apiErrorFrom, messageFromBody, toApiError } from './api-error';
 import { createSseParser, type AssistantStreamEvent } from './assistant-sse';
 
 export { ApiError };
@@ -26,7 +26,7 @@ export type { AssistantStreamEvent };
 export async function getAssistantStatus(): Promise<AssistantStatus> {
   try {
     const { data, error, response } = await api.GET('/assistant/status');
-    if (error || !data) throw toApiError(response.status);
+    if (error || !data) throw apiErrorFrom(response.status, error);
     return data;
   } catch (err) {
     if (err instanceof ApiError) throw err;
@@ -38,7 +38,7 @@ export async function getAssistantStatus(): Promise<AssistantStatus> {
 export async function listConversations(): Promise<ConversationSummary[]> {
   try {
     const { data, error, response } = await api.GET('/assistant/conversations');
-    if (error || !data) throw toApiError(response.status);
+    if (error || !data) throw apiErrorFrom(response.status, error);
     return data;
   } catch (err) {
     if (err instanceof ApiError) throw err;
@@ -52,7 +52,7 @@ export async function getConversation(id: string): Promise<ConversationDetail> {
     const { data, error, response } = await api.GET('/assistant/conversations/{id}', {
       params: { path: { id } },
     });
-    if (error || !data) throw toApiError(response.status);
+    if (error || !data) throw apiErrorFrom(response.status, error);
     return data;
   } catch (err) {
     if (err instanceof ApiError) throw err;
@@ -66,7 +66,7 @@ export async function deleteConversation(id: string): Promise<void> {
     const { error, response } = await api.DELETE('/assistant/conversations/{id}', {
       params: { path: { id } },
     });
-    if (error) throw toApiError(response.status);
+    if (error) throw apiErrorFrom(response.status, error);
   } catch (err) {
     if (err instanceof ApiError) throw err;
     throw toApiError(undefined);
@@ -103,23 +103,15 @@ export async function discardProposal(id: string): Promise<Proposal> {
 
 /** Error de una propuesta: en 409 el servidor explica por qué (venció, ya resuelta...). */
 function proposalError(response: Response, body: unknown): ApiError {
-  // El cliente tipado ya leyo el cuerpo: el motivo del 409 viene en ody.
-  const serverMessage =
-    response.status === 409 &&
-    body !== null &&
-    typeof body === 'object' &&
-    typeof (body as { message?: unknown }).message === 'string'
-      ? (body as { message: string }).message
-      : undefined;
-  const base = toApiError(response.status);
-  return new ApiError(serverMessage ?? base.message, response.status);
+  // El cliente tipado ya leyó el cuerpo: el motivo (409 venció, 403 sin permiso...) viene en él.
+  return apiErrorFrom(response.status, body);
 }
 
 /** Mensaje del backend ante un 4xx/5xx previo al flujo (p. ej. 409 «desactivado»). */
 async function messageFrom(response: Response): Promise<string | undefined> {
   try {
-    const body = (await response.json()) as { message?: unknown };
-    return typeof body.message === 'string' ? body.message : undefined;
+    const body: unknown = await response.json();
+    return messageFromBody(body);
   } catch {
     return undefined;
   }
@@ -167,9 +159,8 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
   }
 
   if (!response.ok || !response.body) {
-    const serverMessage = response.status === 409 ? await messageFrom(response) : undefined;
-    const base = toApiError(response.status);
-    throw new ApiError(serverMessage ?? base.message, response.status);
+    const serverMessage = await messageFrom(response);
+    throw new ApiError(serverMessage ?? toApiError(response.status).message, response.status);
   }
 
   const reader = response.body.getReader();
@@ -300,7 +291,7 @@ export async function updateAttachmentText(id: string, extractedText: string): P
       body: { extractedText },
     });
     if (error || !data) {
-      throw new ApiError(serverMessage(error) ?? toApiError(response.status).message, response.status);
+      throw new ApiError(serverMessage(error) ?? apiErrorFrom(response.status, error).message, response.status);
     }
     return data;
   } catch (err) {
@@ -315,7 +306,7 @@ export async function deleteAttachment(id: string): Promise<void> {
     const { error, response } = await api.DELETE('/assistant/attachments/{id}', {
       params: { path: { id } },
     });
-    if (error) throw toApiError(response.status);
+    if (error) throw apiErrorFrom(response.status, error);
   } catch (err) {
     if (err instanceof ApiError) throw err;
     throw toApiError(undefined);

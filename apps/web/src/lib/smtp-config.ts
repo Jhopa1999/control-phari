@@ -5,7 +5,7 @@ import {
   type SmtpTestResult,
   type UpdateSmtpConfig,
 } from './api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, toApiError, apiErrorFrom } from './api-error';
 export { ApiError };
 /**
  * Capa de consumo de la administracion de sistema (rol ADMIN): configuracion
@@ -17,7 +17,7 @@ export async function getSmtpConfig(): Promise<SmtpConfig> {
   try {
     const { data, error, response } = await api.GET('/admin/smtp-config');
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -34,7 +34,7 @@ export async function updateSmtpConfig(
       body: input,
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -53,7 +53,7 @@ export async function testSmtp(to: string): Promise<SmtpTestResult> {
       body: { to },
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -66,7 +66,7 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
   try {
     const { data, error, response } = await api.GET('/admin/users');
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -85,7 +85,7 @@ export async function setAdminFlag(id: string, isAdmin: boolean): Promise<void> 
       body: { isAdmin },
     });
     if (error) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
   } catch (err) {
     if (err instanceof ApiError) throw err;

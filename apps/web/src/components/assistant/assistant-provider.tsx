@@ -26,6 +26,7 @@ import {
   type AttachmentLimitsView,
   type AttachmentStatus,
 } from '@/lib/assistant-attachments';
+import { classifyError } from '@/lib/api-error';
 import { MAX_MESSAGE_LENGTH, capitalize, type ToolView } from '@/lib/assistant-format';
 
 /** Mensaje de la persona en el hilo. */
@@ -175,12 +176,26 @@ function turnErrorFor(error: unknown): TurnError {
       canRetry: false,
     };
   }
-  if (status !== undefined && status >= 500) {
+  const { kind, message: serverMessage } = classifyError(error);
+  if (kind === 'forbidden') {
+    return {
+      tone: 'warning',
+      title: 'No tienes permiso para esta acción',
+      message:
+        serverMessage.trim() !== ''
+          ? serverMessage
+          : 'Tu rol no incluye esta acción. Si la necesitas, pídela al jefe de área.',
+      canRetry: false,
+    };
+  }
+  if (kind !== 'network') {
     return {
       tone: 'danger',
       title: 'No se pudo enviar tu mensaje',
       message:
-        'El servicio no respondió. Inténtalo de nuevo en un momento. Si el problema continúa, contacta al administrador del portal.',
+        serverMessage.trim() !== ''
+          ? serverMessage
+          : 'El servicio no respondió. Inténtalo de nuevo en un momento. Si el problema continúa, contacta al administrador del portal.',
       canRetry: true,
     };
   }
@@ -666,13 +681,26 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
           );
         })
         .catch((error: unknown) => {
-          if (error instanceof ApiError && error.status !== undefined) {
-            // El servidor respondió (venció, ya resuelta...): se muestra su motivo.
-            replaceProposal(id, (p) => ({ ...p, status: 'FALLIDA', error: error.message }));
-            announce('La acción no se pudo realizar.');
-          } else {
+          const { kind, message: serverMessage, status } = classifyError(error);
+          const detail = serverMessage.trim();
+          if (kind === 'forbidden') {
+            // Sin permiso: la propuesta sigue pendiente y no se sugiere reintentar.
+            replaceProposal(id, (p) => ({ ...p, status: 'PENDIENTE' }));
+            toast.error(`No tienes permiso para confirmar esto. ${detail}`.trim());
+          } else if (kind === 'network') {
             replaceProposal(id, (p) => ({ ...p, status: 'PENDIENTE' }));
             toast.error('No se pudo confirmar. Revisa tu conexión e inténtalo de nuevo.');
+          } else if (status !== undefined && status >= 500) {
+            replaceProposal(id, (p) => ({ ...p, status: 'PENDIENTE' }));
+            toast.error(
+              detail !== ''
+                ? `No se pudo confirmar. ${detail}`
+                : 'No se pudo confirmar. Inténtalo de nuevo; si continúa, avisa al administrador.',
+            );
+          } else {
+            // El servidor respondió (venció, ya resuelta...): se muestra su motivo.
+            replaceProposal(id, (p) => ({ ...p, status: 'FALLIDA', error: error instanceof Error ? error.message : detail }));
+            announce('La acción no se pudo realizar.');
           }
         });
     },

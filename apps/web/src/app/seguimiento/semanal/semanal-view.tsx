@@ -120,12 +120,12 @@ export function SemanalView(): React.ReactElement {
   const [reports, setReports] = React.useState<WeeklyReport[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [loadError, setLoadError] = React.useState<unknown>(null);
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<WeeklyReport | null>(null);
   const [detailState, setDetailState] = React.useState<LoadState>('loading');
-  const [detailError, setDetailError] = React.useState<string | null>(null);
+  const [detailError, setDetailError] = React.useState<unknown>(null);
   const latestDetailIdRef = React.useRef<string | null>(null);
 
   // Secciones editables (se conservan ante error; se resetean al cargar detalle).
@@ -166,7 +166,7 @@ export function SemanalView(): React.ReactElement {
         });
       })
       .catch((err: unknown) => {
-        setLoadError(err instanceof WorklogError ? err.message : null);
+        setLoadError(err);
         setState('error');
       });
   }, [statusFilter, personFilter]);
@@ -203,7 +203,7 @@ export function SemanalView(): React.ReactElement {
       .catch((err: unknown) => {
         if (latestDetailIdRef.current !== id) return;
         setDetail(null);
-        setDetailError(err instanceof WorklogError ? err.message : null);
+        setDetailError(err);
         setDetailState('error');
       });
   }, []);
@@ -377,7 +377,7 @@ export function SemanalView(): React.ReactElement {
         <ErrorState
           size="compact"
           title="No fue posible cargar el reporte semanal."
-          message={detailError}
+          error={detailError}
           onRetry={() => selectedId && void loadDetail(selectedId)}
         />
       );
@@ -610,7 +610,7 @@ export function SemanalView(): React.ReactElement {
         <div className="rounded-lg border bg-card">
           <ErrorState
             title="No fue posible cargar los reportes semanales."
-            message={loadError}
+            error={loadError}
             onRetry={() => void load()}
           />
         </div>

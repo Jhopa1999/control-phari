@@ -4,6 +4,7 @@ import {
   type CreateCatalogItem,
   type UpdateCatalogItem,
 } from './api-client';
+import { messageFromBody } from './api-error';
 
 /**
  * Error de dominio con un mensaje ya entendible para el usuario.
@@ -35,13 +36,13 @@ function messageForStatus(status: number): string {
 /**
  * Normaliza cualquier fallo (HTTP o de red) a un CatalogError entendible.
  */
-function toCatalogError(status: number | undefined): CatalogError {
+function toCatalogError(status: number | undefined, body?: unknown): CatalogError {
   if (status === undefined) {
     return new CatalogError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new CatalogError(messageForStatus(status), status);
+  return new CatalogError(messageFromBody(body) ?? messageForStatus(status), status);
 }
 
 export interface CatalogFilters {
@@ -62,7 +63,7 @@ export async function listCatalogItems(
       },
     });
     if (error || !data) {
-      throw toCatalogError(response.status);
+      throw toCatalogError(response.status, error);
     }
     return data as CatalogItem[];
   } catch (err) {
@@ -79,7 +80,7 @@ export async function createCatalogItem(
       body: input,
     });
     if (error || !data) {
-      throw toCatalogError(response.status);
+      throw toCatalogError(response.status, error);
     }
     return data as CatalogItem;
   } catch (err) {
@@ -98,7 +99,7 @@ export async function updateCatalogItem(
       body: input,
     });
     if (error || !data) {
-      throw toCatalogError(response.status);
+      throw toCatalogError(response.status, error);
     }
     return data as CatalogItem;
   } catch (err) {

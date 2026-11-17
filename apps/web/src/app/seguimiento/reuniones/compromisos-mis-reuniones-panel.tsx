@@ -33,7 +33,7 @@ import type {
   MeetingCommitmentsOpen,
 } from '@/lib/api-client';
 import { formatDateOnly } from '@/lib/format';
-import { MeetingError, listOpenCommitmentsOfMyMeetings } from '@/lib/meetings';
+import { listOpenCommitmentsOfMyMeetings } from '@/lib/meetings';
 import { initialsOf } from '@/lib/user-initials';
 import { cn } from '@/lib/utils';
 import type { CoordinationData } from './reuniones-view';
@@ -79,7 +79,7 @@ export function CompromisosMisReunionesPanel({
   const [dueFilter, setDueFilter] = React.useState<DueFilter>('TODOS');
   const [result, setResult] = React.useState<MeetingCommitmentsOpen | null>(null);
   const [state, setState] = React.useState<LoadState>('loading');
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<unknown>(null);
   const [attempt, setAttempt] = React.useState(0);
 
   const filtersActive = assignedFilter !== ALL || meetingFilter !== ALL || processFilter !== ALL;
@@ -99,7 +99,7 @@ export function CompromisosMisReunionesPanel({
       })
       .catch((err: unknown) => {
         if (!active) return;
-        setError(err instanceof MeetingError ? err.message : null);
+        setError(err);
         setState('error');
       });
     return () => {
@@ -130,7 +130,7 @@ export function CompromisosMisReunionesPanel({
       <div className="rounded-xl border bg-card shadow-card">
         <ErrorState
           title="No fue posible cargar los compromisos de tus reuniones."
-          message={error}
+          error={error}
           onRetry={() => {
             setState('loading');
             setAttempt((n) => n + 1);

@@ -77,7 +77,7 @@ export class ProcessService {
       where: { AND: [{ id }, this.scopeWhere(actor)] },
     });
     if (!process) {
-      throw new NotFoundException(`Proceso "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el proceso.');
     }
     return process;
   }
@@ -93,7 +93,7 @@ export class ProcessService {
       where: { id: dto.areaId },
     });
     if (!area) {
-      throw new NotFoundException(`Area "${dto.areaId}" no encontrada.`);
+      throw new NotFoundException('No se encontró el área.');
     }
 
     try {
@@ -126,7 +126,7 @@ export class ProcessService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new ConflictException(`Ya existe un proceso con code "${code}".`);
+        throw new ConflictException('Ya existe un proceso con ese código.');
       }
       throw error;
     }
@@ -141,7 +141,7 @@ export class ProcessService {
     // scopedProcessIds (Plano B). Se verifica existencia para dar 404.
     const existing = await this.prisma.process.findUnique({ where: { id } });
     if (!existing) {
-      throw new NotFoundException(`Proceso "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el proceso.');
     }
 
     return this.prisma.$transaction(async (tx) => {

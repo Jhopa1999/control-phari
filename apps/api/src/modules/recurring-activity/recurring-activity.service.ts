@@ -760,7 +760,7 @@ export class RecurringActivityService {
       )
     ) {
       throw new ConflictException(
-        'Debe asignarse exactamente un responsable (un usuario o un area, segun el tipo).',
+        'Debe asignarse exactamente un responsable (un usuario o un área, según el tipo).',
       );
     }
     const item = await this.prisma.catalogItem.findFirst({
@@ -800,7 +800,7 @@ export class RecurringActivityService {
       }
     }
     throw new ForbiddenException(
-      'No puedes gestionar actividades recurrentes fuera de tu area.',
+      'No puedes gestionar actividades recurrentes fuera de tu área.',
     );
   }
 
@@ -907,7 +907,7 @@ export class RecurringActivityService {
       where: { id },
     });
     if (!activity) {
-      throw new NotFoundException('La actividad no existe o esta fuera de tu alcance.');
+      throw new NotFoundException('La actividad no existe o está fuera de tu alcance.');
     }
     if (!actor.isAdmin) {
       await this.assertCanManageResponsible(
@@ -917,7 +917,7 @@ export class RecurringActivityService {
         activity.responsibleAreaId,
       ).catch(() => {
         throw new NotFoundException(
-          'La actividad no existe o esta fuera de tu alcance.',
+          'La actividad no existe o está fuera de tu alcance.',
         );
       });
     }
@@ -933,7 +933,7 @@ export class RecurringActivityService {
       where: { id },
     });
     if (!existing) {
-      throw new NotFoundException('La actividad no existe o esta fuera de tu alcance.');
+      throw new NotFoundException('La actividad no existe o está fuera de tu alcance.');
     }
 
     // Gestion sobre el estado ACTUAL (403/404 fuera de area).
@@ -1055,7 +1055,7 @@ export class RecurringActivityService {
       where: { id },
     });
     if (!existing) {
-      throw new NotFoundException('La actividad no existe o esta fuera de tu alcance.');
+      throw new NotFoundException('La actividad no existe o está fuera de tu alcance.');
     }
     await this.assertManageOrNotFound(
       actor,
@@ -1101,7 +1101,7 @@ export class RecurringActivityService {
       where: { id },
     });
     if (!existing) {
-      throw new NotFoundException('La actividad no existe o esta fuera de tu alcance.');
+      throw new NotFoundException('La actividad no existe o está fuera de tu alcance.');
     }
     await this.assertManageOrNotFound(
       actor,
@@ -1153,7 +1153,7 @@ export class RecurringActivityService {
       );
     } catch {
       throw new NotFoundException(
-        'La actividad no existe o esta fuera de tu alcance.',
+        'La actividad no existe o está fuera de tu alcance.',
       );
     }
   }
@@ -1175,7 +1175,7 @@ export class RecurringActivityService {
     const scope = filters.scope ?? 'mine';
     if (scope === 'all' && !this.isManager(actor)) {
       throw new ForbiddenException(
-        'Solo jefe de area o admin pueden ver todas las actividades.',
+        'Solo jefe de área o admin pueden ver todas las actividades.',
       );
     }
 
@@ -1299,7 +1299,7 @@ export class RecurringActivityService {
     if (!display.canStart) {
       if (display.displayStatus === OccurrenceDisplayStatus.PROGRAMADA) {
         throw new ConflictException(
-          `Aun no se puede tomar: se habilita el ${formatDayEs(display.opensOn)}.`,
+          `Aún no se puede tomar: se habilita el ${formatDayEs(display.opensOn)}.`,
         );
       }
       throw new ConflictException(
@@ -1358,7 +1358,7 @@ export class RecurringActivityService {
     const display = this.displayOf(row);
     if (!display.canComplete) {
       throw new ConflictException(
-        `Aun no se puede completar: se habilita el ${formatDayEs(display.opensOn)}.`,
+        `Aún no se puede completar: se habilita el ${formatDayEs(display.opensOn)}.`,
       );
     }
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -1388,7 +1388,7 @@ export class RecurringActivityService {
       });
       if (claimed.count === 0) {
         throw new ConflictException(
-          'La actividad ya fue completada o cambio de estado. Actualiza la vista.',
+          'La actividad ya fue completada o cambió de estado. Actualiza la vista.',
         );
       }
       const next = await tx.recurringActivityOccurrence.findUniqueOrThrow({
@@ -1524,7 +1524,7 @@ export class RecurringActivityService {
     const scope = query.scope ?? 'mine';
     if (scope === 'all' && !this.isManager(actor)) {
       throw new ForbiddenException(
-        'Solo jefe de area o admin pueden ver todas las actividades.',
+        'Solo jefe de área o admin pueden ver todas las actividades.',
       );
     }
     const from = this.toCalendarDate(query.from);
@@ -1535,7 +1535,7 @@ export class RecurringActivityService {
     const spanDays = Math.round((to.getTime() - from.getTime()) / DAY_MS) + 1;
     if (spanDays > CALENDAR_MAX_DAYS) {
       throw new BadRequestException(
-        `El rango del calendario admite como maximo ${CALENDAR_MAX_DAYS} dias.`,
+        `El rango del calendario admite como máximo ${CALENDAR_MAX_DAYS} días.`,
       );
     }
 
@@ -1750,7 +1750,7 @@ export class RecurringActivityService {
   ): Promise<ComplianceResponseDto> {
     if (!this.isManager(actor)) {
       throw new ForbiddenException(
-        'Solo jefe de area o admin pueden ver el panel de cumplimiento.',
+        'Solo jefe de área o admin pueden ver el panel de cumplimiento.',
       );
     }
 
@@ -1892,7 +1892,7 @@ export class RecurringActivityService {
       include: OCCURRENCE_INCLUDE,
     });
     if (!row) {
-      throw new NotFoundException('La ocurrencia no existe o esta fuera de tu alcance.');
+      throw new NotFoundException('La ocurrencia no existe o está fuera de tu alcance.');
     }
     const activity = row.activity;
 
@@ -1926,7 +1926,7 @@ export class RecurringActivityService {
         }
       }
     }
-    throw new NotFoundException('La ocurrencia no existe o esta fuera de tu alcance.');
+    throw new NotFoundException('La ocurrencia no existe o está fuera de tu alcance.');
   }
 }
 

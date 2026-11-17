@@ -134,7 +134,7 @@ export class CommitmentService {
       select: { id: true },
     });
     if (!request) {
-      throw new NotFoundException(`Solicitud "${requestId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la solicitud.');
     }
   }
 
@@ -152,7 +152,7 @@ export class CommitmentService {
       select: { id: true, state: true, processId: true },
     });
     if (!meeting) {
-      throw new NotFoundException(`Reunion "${meetingId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la reunión.');
     }
     if (isMinutesClosed(meeting.state)) {
       throw new ConflictException(
@@ -175,7 +175,7 @@ export class CommitmentService {
       include: MEETING_REF,
     });
     if (!row) {
-      throw new NotFoundException(`Compromiso "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el compromiso.');
     }
     return row;
   }

@@ -4,6 +4,7 @@ import {
   type CreateApproval,
   type Request,
 } from './api-client';
+import { messageFromBody } from './api-error';
 
 /**
  * Error de dominio del modulo de aprobaciones, con mensaje entendible.
@@ -34,13 +35,13 @@ function messageForStatus(status: number): string {
   }
 }
 
-function toApprovalError(status: number | undefined): ApprovalError {
+function toApprovalError(status: number | undefined, body?: unknown): ApprovalError {
   if (status === undefined) {
     return new ApprovalError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new ApprovalError(messageForStatus(status), status);
+  return new ApprovalError(messageFromBody(body) ?? messageForStatus(status), status);
 }
 
 /** Cola de solicitudes pendientes de aprobacion (GET /requests/pending-approval). */
@@ -50,7 +51,7 @@ export async function listPendingApproval(): Promise<Request[]> {
       '/requests/pending-approval',
     );
     if (error || !data) {
-      throw toApprovalError(response.status);
+      throw toApprovalError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -67,7 +68,7 @@ export async function listApprovals(requestId: string): Promise<Approval[]> {
       { params: { path: { id: requestId } } },
     );
     if (error || !data) {
-      throw toApprovalError(response.status);
+      throw toApprovalError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -90,7 +91,7 @@ export async function createApproval(
       { params: { path: { id: requestId } }, body: input },
     );
     if (error || !data) {
-      throw toApprovalError(response.status);
+      throw toApprovalError(response.status, error);
     }
     return data;
   } catch (err) {

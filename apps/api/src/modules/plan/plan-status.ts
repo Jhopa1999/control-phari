@@ -57,7 +57,7 @@ export function assertPlanTransition(
 ): PlanStatus {
   if (!isPlanStatus(from)) {
     throw new InternalServerErrorException(
-      `Estado de plan "${from}" no es un PlanStatus valido.`,
+      `Estado de plan "${from}" no es un PlanStatus válido.`,
     );
   }
   if (!isPlanTransitionAllowed(from, to)) {

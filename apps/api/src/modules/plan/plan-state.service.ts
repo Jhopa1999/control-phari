@@ -193,7 +193,7 @@ equest-scope.service.ts). */
   assertTaskTransition(from: string, to: TaskStatus): TaskStatus {
     if (!isTaskStatus(from)) {
       throw new InternalServerErrorException(
-        `Estado de tarea "${from}" no es un TaskStatus valido.`,
+        `Estado de tarea "${from}" no es un TaskStatus válido.`,
       );
     }
     if (!isTaskTransitionAllowed(from, to)) {
@@ -223,12 +223,12 @@ equest-scope.service.ts). */
       select: { id: true, mainProcessId: true, operationalState: true },
     });
     if (!request) {
-      throw new NotFoundException(`Solicitud "${requestId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la solicitud.');
     }
     const plan = await this.prisma.plan.findFirst({ where: { requestId } });
     if (!plan) {
       throw new NotFoundException(
-        `La solicitud "${requestId}" no tiene plan.`,
+        'La solicitud no tiene plan.',
       );
     }
     return {
@@ -249,7 +249,7 @@ equest-scope.service.ts). */
   ): Promise<PlanInScope> {
     const plan = await this.prisma.plan.findFirst({ where: { id: planId } });
     if (!plan) {
-      throw new NotFoundException(`Plan "${planId}" no encontrado.`);
+      throw new NotFoundException('No se encontró el plan.');
     }
     const request = await this.prisma.request.findFirst({
       where: { AND: [{ id: plan.requestId }, this.requestScopeWhere(actor)] },
@@ -257,7 +257,7 @@ equest-scope.service.ts). */
     });
     if (!request) {
       // Fuera de alcance: 404 sin confirmar existencia (design §2.8).
-      throw new NotFoundException(`Plan "${planId}" no encontrado.`);
+      throw new NotFoundException('No se encontró el plan.');
     }
     return {
       plan,
@@ -280,7 +280,7 @@ equest-scope.service.ts). */
       include: { phase: { select: { planId: true } } },
     });
     if (!task) {
-      throw new NotFoundException(`Tarea "${taskId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la tarea.');
     }
     const planId = task.phase.planId;
     const plan = await this.prisma.plan.findFirst({
@@ -288,14 +288,14 @@ equest-scope.service.ts). */
       select: { requestId: true, status: true },
     });
     if (!plan) {
-      throw new NotFoundException(`Tarea "${taskId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la tarea.');
     }
     const request = await this.prisma.request.findFirst({
       where: { AND: [{ id: plan.requestId }, this.requestScopeWhere(actor)] },
       select: { id: true, mainProcessId: true, operationalState: true },
     });
     if (!request) {
-      throw new NotFoundException(`Tarea "${taskId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la tarea.');
     }
     // El include tipa `phase`; se devuelve la tarea sin esa relacion embebida.
     const plainTask: Record<string, unknown> = { ...task };

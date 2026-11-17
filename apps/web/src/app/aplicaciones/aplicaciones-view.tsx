@@ -8,10 +8,12 @@ import { ErrorState } from '@/components/error-state';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActor } from '@/lib/actor-context';
 import {
   getAppHomeHref,
+  getDefaultHomeHref,
   getVisibleNavApps,
   getVisibleNavGroups,
   getWorkspaceGroups,
@@ -175,7 +177,8 @@ function WorkspaceLinks({ groups }: { groups: NavGroup[] }): React.ReactElement 
  * el control efectivo es del servidor.
  */
 export function AppLauncherView(): React.ReactElement {
-  const { authMode, authUser, allowedModules, state, reload, actorId, identityReady } = useActor();
+  const { authMode, authUser, allowedModules, state, permissionsError, reload, actorId, identityReady } =
+    useActor();
 
   const visibleGroups = React.useMemo(
     () => (state === 'success' ? getVisibleNavGroups(allowedModules) : []),
@@ -227,7 +230,7 @@ export function AppLauncherView(): React.ReactElement {
         <Card>
           <ErrorState
             title="No fue posible cargar tus aplicaciones"
-            message="Revisa tu conexión e inténtalo de nuevo."
+            error={permissionsError}
             onRetry={reload}
           />
         </Card>
@@ -235,6 +238,8 @@ export function AppLauncherView(): React.ReactElement {
     );
   }
 
+  const homeHref = getDefaultHomeHref(allowedModules);
+  const adminHomeHref = homeHref !== '/inicio' && homeHref !== '/aplicaciones' ? homeHref : null;
   const greeting = authMode === 'jwt' && firstName ? `Hola, ${firstName}` : 'Bienvenido a GIBO';
 
   return (
@@ -247,11 +252,32 @@ export function AppLauncherView(): React.ReactElement {
         </h2>
         {apps.length === 0 ? (
           <Card>
-            <EmptyState
-              icon={LayoutGrid}
-              title="No tienes aplicaciones habilitadas"
-              description="Pide acceso al jefe de área para empezar a trabajar en GIBO."
-            />
+            {allowedModules.has('systemSettings') ? (
+              <EmptyState
+                icon={LayoutGrid}
+                title="No tienes aplicaciones de área habilitadas"
+                description="Tu rol administra la configuración técnica del portal. Entra a las pantallas de administración desde este enlace."
+                action={
+                  adminHomeHref ? (
+                    <Link
+                      href={adminHomeHref}
+                      className={cn(
+                        buttonVariants({ variant: 'outline', size: 'sm' }),
+                        'w-full pointer-coarse:min-h-11 sm:w-auto',
+                      )}
+                    >
+                      Ir a mi inicio
+                    </Link>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={LayoutGrid}
+                title="No tienes aplicaciones habilitadas"
+                description="Pide acceso al jefe de área para empezar a trabajar en GIBO."
+              />
+            )}
           </Card>
         ) : (
           <ul

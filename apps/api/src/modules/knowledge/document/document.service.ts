@@ -146,7 +146,7 @@ export class DocumentService {
       where: { AND: [{ id: assetId }, this.scope.assetScopeWhere(actor)] },
     });
     if (!asset) {
-      throw new NotFoundException(`Activo "${assetId}" no encontrado.`);
+      throw new NotFoundException('No se encontró el activo.');
     }
     return asset;
   }
@@ -172,14 +172,14 @@ export class DocumentService {
       },
     });
     if (!document) {
-      throw new NotFoundException(`Documento "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el documento.');
     }
     const asset = await this.prisma.asset.findFirst({
       where: { id: document.assetId },
     });
     if (!asset) {
       // El activo siempre existe (FK requerida); defensivo.
-      throw new NotFoundException(`Documento "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el documento.');
     }
     return { document, asset };
   }
@@ -382,7 +382,7 @@ export class DocumentService {
         } catch (retryError) {
           if (this.isUniqueViolation(retryError)) {
             throw new ConflictException(
-              'Otra edicion creo una version; recarga el historial.',
+              'Otra edición creó una versión; recarga el historial.',
             );
           }
           throw retryError;
@@ -488,7 +488,7 @@ export class DocumentService {
       where: { id: versionId, documentId: document.id },
     });
     if (!version) {
-      throw new NotFoundException(`Version "${versionId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la versión.');
     }
     return {
       documentId: document.id,
@@ -505,13 +505,13 @@ export class DocumentService {
   ): Promise<DocumentContentResponseDto> {
     const { document } = await this.requireDocumentInScope(actor, id);
     if (!document.currentVersionId) {
-      throw new NotFoundException(`El documento "${id}" no tiene contenido.`);
+      throw new NotFoundException('El documento no tiene contenido.');
     }
     const version = await this.prisma.documentVersion.findFirst({
       where: { id: document.currentVersionId, documentId: document.id },
     });
     if (!version) {
-      throw new NotFoundException(`El documento "${id}" no tiene contenido.`);
+      throw new NotFoundException('El documento no tiene contenido.');
     }
     return {
       documentId: document.id,
@@ -712,7 +712,7 @@ export class DocumentService {
       select: { operationalState: true },
     });
     if (!request) {
-      throw new NotFoundException(`Solicitud "${requestId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la solicitud.');
     }
     if (request.operationalState === 'CERRADA') {
       throw new ConflictException(

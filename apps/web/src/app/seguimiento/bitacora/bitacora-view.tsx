@@ -1,5 +1,7 @@
 'use client';
 
+import { ModuleGate } from '@/components/module-gate';
+import { NO_ACCESS_COPY } from '@/components/no-access-notice';
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ClipboardList, Plus } from 'lucide-react';
@@ -145,7 +147,7 @@ function parseUrl(sp: URLSearchParams, canReview: boolean): UrlState {
   };
 }
 
-export function BitacoraView(): React.ReactElement {
+function BitacoraViewContent(): React.ReactElement {
   const { permissions } = useActor();
   const router = useRouter();
   const pathname = usePathname();
@@ -739,5 +741,18 @@ export function BitacoraView(): React.ReactElement {
         />
       ) : null}
     </PageLayout>
+  );
+}
+
+export function BitacoraView(): React.ReactElement {
+  return (
+    <ModuleGate
+      moduleKey="log"
+      title="Bitácora"
+      description="Lo que hiciste cada día y cuánto tiempo le dedicaste. La ven tu líder y tu jefatura."
+      copy={NO_ACCESS_COPY.log}
+    >
+      <BitacoraViewContent />
+    </ModuleGate>
   );
 }

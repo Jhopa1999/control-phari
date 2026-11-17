@@ -72,7 +72,7 @@ export async function listPriorityEvaluations(
       { params: { path: { id: requestId } } },
     );
     if (error || !data) {
-      throw toPriorityError(response.status);
+      throw toPriorityError(response.status, error);
     }
     return data;
   } catch (err) {

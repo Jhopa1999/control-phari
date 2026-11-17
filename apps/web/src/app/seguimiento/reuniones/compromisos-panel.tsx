@@ -299,7 +299,7 @@ export function CompromisosPanel({
   if (state === 'error') {
     return (
       <div className="rounded-lg border bg-card">
-        <ErrorState title="No fue posible cargar los compromisos." message={error} onRetry={() => void reload()} />
+        <ErrorState title="No fue posible cargar los compromisos." error={error} onRetry={() => void reload()} />
       </div>
     );
   }

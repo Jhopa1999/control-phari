@@ -1,15 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { Plug } from 'lucide-react';
 import { toast } from 'sonner';
 import { Field, FormError } from '@/components/field';
 import { InlineNotice } from '@/components/inline-notice';
+import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { Section } from '@/components/section';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
@@ -184,24 +184,7 @@ export function IaAgentesView(): React.ReactElement {
           title="Agentes de IA"
           description="Configuración de IA y de sus agentes."
         />
-        <InlineNotice
-          tone="neutral"
-          title="Esta pantalla no está disponible para tu rol."
-          action={
-            allowedModules.has('permissions') ? (
-              <Link
-                href="/gobierno/mis-permisos"
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
-              >
-                Ir a Mis permisos
-              </Link>
-            ) : undefined
-          }
-        >
-          <p className="text-muted-foreground">
-            La configuración de agentes de IA corresponde al rol de administrador.
-          </p>
-        </InlineNotice>
+        <NoAccessNotice {...NO_ACCESS_COPY.adminOnly} />
       </PageLayout>
     );
   }

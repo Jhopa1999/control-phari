@@ -29,7 +29,7 @@ import { listCalendar } from '@/lib/recurring-activities';
 import { isoWeekNumber, monthGrid, monthTitle, shortDayLabel } from '@/lib/recurring-format';
 import { getStatus } from '@/lib/status-presentation';
 import { cn } from '@/lib/utils';
-import { CHIP_CLASSES, DISPLAY_STATUS_ORDER, messageOf } from './occurrence-shared';
+import { CHIP_CLASSES, DISPLAY_STATUS_ORDER } from './occurrence-shared';
 
 const WEEKDAYS = [
   { short: 'Lun', full: 'Lunes' },
@@ -127,7 +127,7 @@ export function CalendarTab({
   const [scope, setScope] = React.useState<Scope>('mine');
   const [rows, setRows] = React.useState<RecurringOccurrence[]>([]);
   const [state, setState] = React.useState<'loading' | 'success' | 'error'>('loading');
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<unknown>(null);
   const [retry, setRetry] = React.useState(0);
   const [focusDay, setFocusDay] = React.useState(today);
   const [dayDialog, setDayDialog] = React.useState<string | null>(null);
@@ -149,7 +149,7 @@ export function CalendarTab({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(messageOf(err));
+        setError(err);
         setState('error');
       });
     return () => {
@@ -311,7 +311,7 @@ export function CalendarTab({
         <div className="rounded-xl bg-card shadow-card">
           <ErrorState
             title="No fue posible cargar el calendario."
-            message={error}
+            error={error}
             onRetry={() => {
               setState('loading');
               setRetry((n) => n + 1);

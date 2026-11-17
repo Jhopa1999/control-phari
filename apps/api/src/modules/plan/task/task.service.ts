@@ -208,7 +208,7 @@ export class TaskService {
       select: { id: true },
     });
     if (!task) {
-      throw new NotFoundException(`Tarea "${code}" no encontrada.`);
+      throw new NotFoundException('No se encontró la tarea.');
     }
     return this.findOne(actor, task.id);
   }
@@ -233,7 +233,7 @@ export class TaskService {
       include: TASK_RESPONSE_INCLUDE,
     });
     if (!task) {
-      throw new NotFoundException(`Tarea "${taskId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la tarea.');
     }
     return this.toResponse(task);
   }
@@ -293,7 +293,7 @@ export class TaskService {
       select: { id: true, planId: true, name: true, startDate: true, endDate: true },
     });
     if (!phase) {
-      throw new NotFoundException(`Fase "${phaseId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la fase.');
     }
     const { plan, mainProcessId, requestState, requestId } =
       await this.planState.requirePlanByIdInScope(actor, phase.planId);

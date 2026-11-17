@@ -911,6 +911,15 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Oleada 2, PR-E (D16, BL-068 y BL-069): la API rechaza con 400 un diario de fecha futura, un diario enviado sin actividades, un semanal de semana futura y un semanal enviado sin texto en ninguna sección; Bitácora y Reporte semanal limitan la fecha y dejan el botón Enviar no disponible con el motivo, y muestran el mensaje de la API. Contrato: solo descripciones de respuestas 400. MCP: las cuatro operaciones siguen como exclusiones PENDIENTE (sin tool); sin cambios de roles ni de esquema."
+    },
+    {
+      "timestamp": "2026-11-17T12:00:00Z",
+      "trigger_file": "apps/api/src/common/filters/all-exceptions.filter.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Oleada 3, PR-A (errores y acceso; BL-057, BL-058 y BL-080): filtro global de excepciones de la API (mensajes en español con tildes, sin UUID, rutas ni texto de Prisma; mismos códigos HTTP; 500 genérico) y validación de DTO en español; en la web, componente único NoAccessNotice y ModuleGate para las pantallas sin el módulo, ErrorState que distingue 403, red, servidor, 404 y sesión caducada con el mensaje del servidor, y selector de apps con texto propio para el administrador. Contrato OpenAPI sin cambios. MCP: sin tools nuevas ni exclusiones nuevas; los mensajes nuevos llegan tal cual."
     }
   ]
 }

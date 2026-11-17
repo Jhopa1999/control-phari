@@ -103,7 +103,7 @@ export class AuthLoginController {
     @Res({ passthrough: true }) res: CookieResponse,
   ): void {
     if (readSessionCookie(headers.cookie) !== undefined && !hasCsrfHeader(headers)) {
-      throw new ForbiddenException('Falta la cabecera de proteccion CSRF.');
+      throw new ForbiddenException('Falta la cabecera de protección CSRF.');
     }
     this.sessionCookie.clear(req, res);
   }

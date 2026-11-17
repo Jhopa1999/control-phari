@@ -601,11 +601,11 @@ export class PlanService {
     for (const phase of dto.phases) {
       for (const task of phase.tasks) {
         if (task.ref.trim() === '') {
-          throw new BadRequestException('Cada tarea debe tener un ref no vacio.');
+          throw new BadRequestException('Cada tarea debe tener un ref no vacío.');
         }
         if (refs.has(task.ref)) {
           throw new BadRequestException(
-            `El ref de tarea "${task.ref}" esta duplicado en el documento.`,
+            `El ref de tarea "${task.ref}" está duplicado en el documento.`,
           );
         }
         refs.add(task.ref);

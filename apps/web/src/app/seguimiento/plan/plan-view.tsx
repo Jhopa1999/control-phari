@@ -27,6 +27,7 @@ import { DisabledReason } from '@/components/disabled-reason';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { InlineNotice } from '@/components/inline-notice';
+import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RequestInbox } from '@/components/request-inbox';
@@ -185,7 +186,7 @@ export function PlanView(): React.ReactElement {
   // --- Selector de solicitud ---
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [requestsState, setRequestsState] = React.useState<LoadState>('loading');
-  const [requestsError, setRequestsError] = React.useState<string | null>(null);
+  const [requestsError, setRequestsError] = React.useState<unknown>(null);
   const [selectedId, setSelectedId] = React.useState('');
   const selectedRef = React.useRef(selectedId);
   // Ultimo valor para los callbacks asincronos (se actualiza tras el render, no durante).
@@ -200,6 +201,7 @@ export function PlanView(): React.ReactElement {
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [guide, setGuide] = React.useState<PlanGuide | null>(null);
   const [planState, setPlanState] = React.useState<PlanLoadState>('idle');
+  const [planError, setPlanError] = React.useState<unknown>(null);
   const [busy, setBusy] = React.useState(false);
   const [people, setPeople] = React.useState<ResponsibleCandidate[]>([]);
   // Distingue el fallo de carga de una lista legitimamente vacia (design 3.6.1).
@@ -261,7 +263,7 @@ export function PlanView(): React.ReactElement {
         }
       })
       .catch((err: unknown) => {
-        setRequestsError(err instanceof Error ? err.message : null);
+        setRequestsError(err);
         setRequestsState('error');
       });
   }, [selectRequest, setRequestId]);
@@ -355,6 +357,7 @@ export function PlanView(): React.ReactElement {
   }
 
   const handlePlanLoadError = React.useCallback((err: unknown) => {
+    setPlanError(err);
     if (err instanceof PlanError && err.status === 404) {
       // Aún no hay plan para esta solicitud: ofrecer crearlo.
       setPlan(null);
@@ -1237,7 +1240,7 @@ export function PlanView(): React.ReactElement {
     if (planState === 'error') {
       return (
         <div className="rounded-lg border bg-card">
-          <ErrorState title="No fue posible cargar el plan." onRetry={() => void loadPlan(selectedId)} />
+          <ErrorState title="No fue posible cargar el plan." error={planError} onRetry={() => void loadPlan(selectedId)} />
         </div>
       );
     }
@@ -1465,22 +1468,7 @@ export function PlanView(): React.ReactElement {
     return (
       <PageLayout>
         <PageHeader title={TITLE} description={PLAN_DESCRIPTION} />
-        <InlineNotice
-          tone="neutral"
-          title="Esta pantalla no está disponible para tu rol."
-          action={
-            allowedModules.has('assigned') ? (
-              <Link href="/mi-trabajo" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-                Ir a Mi trabajo
-              </Link>
-            ) : undefined
-          }
-        >
-          <p className="text-muted-foreground">
-            Planificar fases y tareas corresponde al jefe de área y a los líderes de proceso. Tus
-            tareas asignadas están en Mi trabajo.
-          </p>
-        </InlineNotice>
+        <NoAccessNotice {...NO_ACCESS_COPY.plan} />
       </PageLayout>
     );
   }
@@ -1498,7 +1486,7 @@ export function PlanView(): React.ReactElement {
       <div className="rounded-lg border bg-card">
         <ErrorState
           title="No fue posible cargar las solicitudes."
-          message={requestsError}
+          error={requestsError}
           onRetry={() => void loadRequests()}
         />
       </div>

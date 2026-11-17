@@ -1,5 +1,5 @@
 import { api, type NotificationList } from './api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, toApiError, apiErrorFrom } from './api-error';
 
 export { ApiError };
 
@@ -9,7 +9,7 @@ export async function listNotifications(take = 20): Promise<NotificationList> {
     const { data, error, response } = await api.GET('/notifications', {
       params: { query: { take } },
     });
-    if (error || !data) throw toApiError(response.status);
+    if (error || !data) throw apiErrorFrom(response.status, error);
     return data;
   } catch (err) {
     if (err instanceof ApiError) throw err;
@@ -23,7 +23,7 @@ export async function markNotificationRead(id: string): Promise<void> {
     const { error, response } = await api.POST('/notifications/{id}/read', {
       params: { path: { id } },
     });
-    if (error || !response.ok) throw toApiError(response.status);
+    if (error || !response.ok) throw apiErrorFrom(response.status, error);
   } catch (err) {
     if (err instanceof ApiError) throw err;
     throw toApiError(undefined);
@@ -34,7 +34,7 @@ export async function markNotificationRead(id: string): Promise<void> {
 export async function markAllNotificationsRead(): Promise<void> {
   try {
     const { error, response } = await api.POST('/notifications/read-all');
-    if (error || !response.ok) throw toApiError(response.status);
+    if (error || !response.ok) throw apiErrorFrom(response.status, error);
   } catch (err) {
     if (err instanceof ApiError) throw err;
     throw toApiError(undefined);

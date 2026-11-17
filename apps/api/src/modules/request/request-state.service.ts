@@ -80,7 +80,7 @@ equest-scope.service.ts). */
       where: { AND: [{ id }, this.scopeWhere(actor)] },
     });
     if (!request) {
-      throw new NotFoundException(`Solicitud "${id}" no encontrada.`);
+      throw new NotFoundException('No se encontró la solicitud.');
     }
     return request;
   }
@@ -164,7 +164,7 @@ equest-scope.service.ts). */
     if (!isRequestState(from)) {
       // Un valor no tipado en BD es un fallo de integridad, no del cliente.
       throw new InternalServerErrorException(
-        `Estado operativo "${from}" no es un RequestState valido.`,
+        `Estado operativo "${from}" no es un RequestState válido.`,
       );
     }
     if (!isImplementedTransition(from, to)) {

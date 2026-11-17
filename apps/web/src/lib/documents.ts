@@ -8,6 +8,7 @@ import {
   type DocumentVersion,
   type UpdateDocument,
 } from './api-client';
+import { messageFromBody } from './api-error';
 
 /**
  * Error de dominio de documentos con un mensaje ya entendible para el usuario.
@@ -39,13 +40,13 @@ function messageForStatus(status: number): string {
 }
 
 /** Normaliza cualquier fallo (HTTP o de red) a un DocumentError entendible. */
-function toDocumentError(status: number | undefined): DocumentError {
+function toDocumentError(status: number | undefined, body?: unknown): DocumentError {
   if (status === undefined) {
     return new DocumentError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new DocumentError(messageForStatus(status), status);
+  return new DocumentError(messageFromBody(body) ?? messageForStatus(status), status);
 }
 
 /** Documentos en alcance (GET /documents). Sin contenido; filtra el backend. */
@@ -53,7 +54,7 @@ export async function listDocuments(): Promise<Document[]> {
   try {
     const { data, error, response } = await api.GET('/documents');
     if (error || !data) {
-      throw toDocumentError(response.status);
+      throw toDocumentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -69,7 +70,7 @@ export async function getDocument(id: string): Promise<Document> {
       params: { path: { id } },
     });
     if (error || !data) {
-      throw toDocumentError(response.status);
+      throw toDocumentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -87,7 +88,7 @@ export async function createDocument(
       body: input,
     });
     if (error || !data) {
-      throw toDocumentError(response.status);
+      throw toDocumentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -107,7 +108,7 @@ export async function updateDocument(
       body: input,
     });
     if (error || !data) {
-      throw toDocumentError(response.status);
+      throw toDocumentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -130,7 +131,7 @@ export async function createDocumentVersion(
       },
     );
     if (error || !data) {
-      throw toDocumentError(response.status);
+      throw toDocumentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -151,7 +152,7 @@ export async function listDocumentVersions(
       },
     );
     if (error || !data) {
-      throw toDocumentError(response.status);
+      throw toDocumentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -173,7 +174,7 @@ export async function getVersionContent(
       },
     );
     if (error || !data) {
-      throw toDocumentError(response.status);
+      throw toDocumentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -191,7 +192,7 @@ export async function getCurrentContent(
       params: { path: { id } },
     });
     if (error || !data) {
-      throw toDocumentError(response.status);
+      throw toDocumentError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -265,7 +266,7 @@ export function downloadMarkdown(
 /** Mensaje de negocio del backend (400/409) si viene como texto simple. */
 function serverDocumentError(status: number, body: unknown): DocumentError {
   const message = (body as { message?: unknown } | undefined)?.message;
-  if ((status === 400 || status === 409 || status === 403) && typeof message === 'string' && message.trim()) {
+  if (status !== undefined && typeof message === 'string' && message.trim()) {
     return new DocumentError(message, status);
   }
   return toDocumentError(status);
@@ -307,7 +308,7 @@ export async function reviewDocument(
 export async function listPendingDocuments(): Promise<Document[]> {
   try {
     const { data, error, response } = await api.GET('/documents/pending-approval');
-    if (error || !data) throw toDocumentError(response.status);
+    if (error || !data) throw toDocumentError(response.status, error);
     return data;
   } catch (err) {
     if (err instanceof DocumentError) throw err;

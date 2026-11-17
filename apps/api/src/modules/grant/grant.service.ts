@@ -83,10 +83,10 @@ export class GrantService {
       this.prisma.process.findUnique({ where: { id: dto.processId } }),
     ]);
     if (!user) {
-      throw new NotFoundException(`Usuario "${dto.userId}" no encontrado.`);
+      throw new NotFoundException('No se encontró el usuario.');
     }
     if (!process) {
-      throw new NotFoundException(`Proceso "${dto.processId}" no encontrado.`);
+      throw new NotFoundException('No se encontró el proceso.');
     }
 
     // 2.5) Alcance por proceso: un actor no-admin solo concede grants en
@@ -109,7 +109,7 @@ export class GrantService {
     });
 
     if (existing && existing.active) {
-      throw new ConflictException('El grant ya existe y esta activo.');
+      throw new ConflictException('El grant ya existe y está activo.');
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -161,7 +161,7 @@ export class GrantService {
       include: { role: true },
     });
     if (!existing) {
-      throw new NotFoundException(`Grant "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el permiso.');
     }
 
     // Jerarquia: solo se revoca un grant cuyo rol este dominado por el actor.

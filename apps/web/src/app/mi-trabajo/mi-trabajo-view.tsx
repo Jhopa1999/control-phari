@@ -24,6 +24,7 @@ import { SegmentedRadio } from '@/components/ui/segmented-radio';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { MyWorkItem, Task, TaskStatus } from '@/lib/api-client';
+import { classifyError } from '@/lib/api-error';
 import { useActor } from '@/lib/actor-context';
 import { canApproveTasks } from '@/lib/task-transitions';
 import { formatPercent } from '@/lib/format';
@@ -61,6 +62,16 @@ import { PendingReviewSection } from './pending-review-section';
 import { CommitmentsSection } from './commitments-section';
 import { RecurringSection } from './recurring-section';
 
+/** Texto del aviso de recarga según el tipo de fallo (oleada 3, §5.3). */
+function refreshErrorText(err: unknown): string {
+  const { kind, message } = classifyError(err);
+  const detail = message.trim();
+  if (kind === 'forbidden') return `No tienes permiso para ver estos datos. ${detail}`.trim();
+  if (kind === 'network') return 'No se pudo actualizar. Revisa tu conexión e inténtalo de nuevo.';
+  return detail !== ''
+    ? `No se pudo actualizar. ${detail}`
+    : 'No se pudo actualizar. Inténtalo de nuevo; si continúa, avisa al administrador.';
+}
 type LoadState = 'loading' | 'success' | 'error';
 
 /** Centinela de «Todos» en el filtro de estado. */
@@ -146,7 +157,7 @@ export function MiTrabajoView(): React.ReactElement {
 
   const [items, setItems] = React.useState<MyWorkItem[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<unknown>(null);
   const [refreshFailed, setRefreshFailed] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -191,12 +202,11 @@ export function MiTrabajoView(): React.ReactElement {
         setRefreshFailed(false);
       })
       .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : null;
-        setErrorMessage(message);
+        setErrorMessage(err);
         setRefreshFailed(true);
         // Con datos ya cargados se conservan; sin ellos se muestra el error.
         setState((prev) => (prev === 'success' ? 'success' : 'error'));
-        toast.error(message ?? 'No se pudo actualizar. Revisa tu conexión e inténtalo de nuevo.');
+        toast.error(refreshErrorText(err));
       });
   }, []);
 
@@ -520,7 +530,7 @@ export function MiTrabajoView(): React.ReactElement {
   if (state === 'error') {
     body = (
       <div className="rounded-xl bg-card shadow-card">
-        <ErrorState title="No fue posible cargar tu trabajo." message={errorMessage} onRetry={refresh} />
+        <ErrorState title="No fue posible cargar tu trabajo." error={errorMessage} onRetry={refresh} />
       </div>
     );
   } else if (!ready || !groups) {

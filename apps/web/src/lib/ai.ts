@@ -11,7 +11,7 @@ import {
   type UpdateAiAgentConfig,
   type UpdateAiGlobalConfig,
 } from './api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, toApiError, apiErrorFrom } from './api-error';
 
 export { ApiError };
 
@@ -30,7 +30,7 @@ export async function getAiConfig(): Promise<AiConfig> {
   try {
     const { data, error, response } = await api.GET('/admin/ai/config');
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -48,7 +48,7 @@ export async function updateAiConfig(
       body: input,
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -64,7 +64,7 @@ export async function getAiAgent(code: string): Promise<AiAgentConfig> {
       params: { path: { code } },
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -84,7 +84,7 @@ export async function updateAiAgent(
       body: input,
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -106,7 +106,7 @@ export async function testAiAgent(code: string): Promise<AiConnectionTest> {
       { params: { path: { code } } },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -125,7 +125,7 @@ export async function getAiUsage(month?: string): Promise<AiUsageSummary> {
       params: { query: month ? { month } : {} },
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -139,7 +139,7 @@ export async function listAiModels(): Promise<AiModelCatalogEntry[]> {
   try {
     const { data, error, response } = await api.GET('/admin/ai/models');
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -153,7 +153,7 @@ export async function createAiModel(input: CreateAiModel): Promise<AiModelCatalo
   try {
     const { data, error, response } = await api.POST('/admin/ai/models', { body: input });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -173,7 +173,7 @@ export async function updateAiModel(
       body: input,
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {

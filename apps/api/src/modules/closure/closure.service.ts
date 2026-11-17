@@ -88,7 +88,7 @@ export class ClosureService {
       },
     });
     if (!request) {
-      throw new NotFoundException(`Solicitud "${requestId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la solicitud.');
     }
     return request;
   }

@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { ChevronDown, Inbox } from 'lucide-react';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -12,8 +11,7 @@ import { StatStrip, StatTile } from '@/components/stat-tile';
 import { AttentionSection } from './attention-section';
 import { StatusBadge } from '@/components/status-badge';
 import { TableSkeleton } from '@/components/table-skeleton';
-import { InlineNotice } from '@/components/inline-notice';
-import { buttonVariants } from '@/components/ui/button';
+import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -30,17 +28,12 @@ import {
   type DemandSummary,
 } from '@/lib/area-control';
 import { useActor } from '@/lib/actor-context';
-import { getDefaultHomeHref } from '@/lib/navigation';
 import type { StatusKind } from '@/lib/status-presentation';
 import { cn } from '@/lib/utils';
 
 type LoadState = 'loading' | 'success' | 'error';
 
 const NUMBER_FORMAT = new Intl.NumberFormat('es');
-
-function messageOf(err: unknown): string | null {
-  return err instanceof ApiError ? err.message : null;
-}
 
 interface DistributionRow {
   key: string;
@@ -141,46 +134,6 @@ function DistributionTable({
 }
 
 /**
- * Aviso de «sin acceso» del Panel (403). Informativo y sin «Reintentar»: repetir
- * la petición no cambia el permiso. Usa el mismo patrón que Áreas, Procesos,
- * SMTP e IA (InlineNotice neutral) y ofrece, como máximo, dos salidas.
- */
-function NoAccessNotice({
-  allowedModules,
-}: {
-  allowedModules: ReadonlySet<string>;
-}): React.ReactElement {
-  const homeHref = getDefaultHomeHref(allowedModules);
-  const showHome = homeHref !== '/inicio';
-  const showPermissions = allowedModules.has('permissions');
-  const linkClass = cn(
-    buttonVariants({ variant: 'outline', size: 'sm' }),
-    'pointer-coarse:min-h-11',
-  );
-  const action =
-    showHome || showPermissions ? (
-      <>
-        {showHome ? (
-          <Link href={homeHref} className={linkClass}>
-            Ir a mi inicio
-          </Link>
-        ) : null}
-        {showPermissions ? (
-          <Link href="/gobierno/mis-permisos" className={linkClass}>
-            Ir a Mis permisos
-          </Link>
-        ) : null}
-      </>
-    ) : undefined;
-  return (
-    <InlineNotice tone="neutral" role="status" title="No tienes acceso a este panel." action={action}>
-      El Panel del área está disponible para los roles que gestionan la demanda del área. Tu rol
-      puede usar otras secciones del portal.
-    </InlineNotice>
-  );
-}
-
-/**
  * Panel del área (design §11.3, patrón F): cuatro indicadores clave leídos de
  * GET /area-control/demand-summary sin ningún cálculo nuevo y las distribuciones
  * por estado operativo y por banda de prioridad. Es el estado actual, a hoy:
@@ -196,7 +149,7 @@ export function DashboardView(): React.ReactElement {
 
   const [summary, setSummary] = React.useState<DemandSummary | null>(null);
   const [state, setState] = React.useState<LoadState>('loading');
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<unknown>(null);
   const [forbidden, setForbidden] = React.useState(false);
 
   const fetchSummary = React.useCallback(() => {
@@ -209,7 +162,7 @@ export function DashboardView(): React.ReactElement {
         if (err instanceof ApiError && err.status === 403) {
           setForbidden(true);
         }
-        setErrorMessage(messageOf(err));
+        setErrorMessage(err);
         setState('error');
       });
   }, []);
@@ -252,7 +205,7 @@ export function DashboardView(): React.ReactElement {
     return (
       <PageLayout>
         {header}
-        <NoAccessNotice allowedModules={allowedModules} />
+        <NoAccessNotice {...NO_ACCESS_COPY.dashboard} />
       </PageLayout>
     );
   }
@@ -293,7 +246,7 @@ export function DashboardView(): React.ReactElement {
       <div className="overflow-hidden rounded-lg border bg-card">
         <ErrorState
           title="No fue posible cargar el panorama de la demanda."
-          message={errorMessage}
+          error={errorMessage}
           onRetry={() => void load()}
         />
       </div>

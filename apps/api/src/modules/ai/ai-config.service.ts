@@ -150,7 +150,7 @@ export class AiConfigService implements OnModuleInit {
   ): Promise<AiGlobalConfigResponseDto> {
     if (dto.awsSecretAccessKey === '') {
       throw new BadRequestException(
-        'El secret no puede ser una cadena vacia; usa clearCredentials para limpiarlo.',
+        'El secreto no puede ser una cadena vacía; usa clearCredentials para limpiarlo.',
       );
     }
     if (

@@ -1,5 +1,7 @@
 'use client';
 
+import { ModuleGate } from '@/components/module-gate';
+import { NO_ACCESS_COPY } from '@/components/no-access-notice';
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { CalendarCheck, CalendarClock, CircleCheck, Plus, RefreshCw } from 'lucide-react';
@@ -67,7 +69,7 @@ const ACTIVITY_TYPE_CATALOG = 'RECURRING_ACTIVITY_TYPE';
  * (displayStatus, canStart, canComplete): el web solo presenta. Usa el cliente
  * tipado del contrato OpenAPI.
  */
-export function ActividadesRecurrentesView(): React.ReactElement {
+function ActividadesRecurrentesViewContent(): React.ReactElement {
   const { actorId, permissions } = useActor();
   const roleCodes = React.useMemo(() => new Set(permissions?.roleCodes ?? []), [permissions]);
   const canManage = roleCodes.has('JEFE_AREA') || roleCodes.has('ADMIN');
@@ -75,7 +77,7 @@ export function ActividadesRecurrentesView(): React.ReactElement {
   // --- Qué me toca ---
   const [board, setBoard] = React.useState<RecurringBoard | null>(null);
   const [boardState, setBoardState] = React.useState<LoadState>('loading');
-  const [boardError, setBoardError] = React.useState<string | null>(null);
+  const [boardError, setBoardError] = React.useState<unknown>(null);
   const [refreshFailed, setRefreshFailed] = React.useState(false);
   const [completedWeeks, setCompletedWeeks] = React.useState(4);
   const [announce, setAnnounce] = React.useState('');
@@ -84,7 +86,7 @@ export function ActividadesRecurrentesView(): React.ReactElement {
   // --- Gestión ---
   const [activities, setActivities] = React.useState<RecurringActivity[]>([]);
   const [defState, setDefState] = React.useState<LoadState>('loading');
-  const [defError, setDefError] = React.useState<string | null>(null);
+  const [defError, setDefError] = React.useState<unknown>(null);
 
   // --- Catálogos ---
   const [activityTypes, setActivityTypes] = React.useState<CatalogItem[]>([]);
@@ -121,7 +123,7 @@ export function ActividadesRecurrentesView(): React.ReactElement {
           );
         })
         .catch((err: unknown) => {
-          setBoardError(messageOf(err));
+          setBoardError(err);
           // Con datos ya cargados se conserva la última carga y se avisa.
           setBoardState((current) => (current === 'success' ? 'success' : 'error'));
           setRefreshFailed(true);
@@ -144,7 +146,7 @@ export function ActividadesRecurrentesView(): React.ReactElement {
         setDefState('success');
       })
       .catch((err: unknown) => {
-        setDefError(messageOf(err));
+        setDefError(err);
         setDefState('error');
       });
   }, []);
@@ -309,7 +311,7 @@ export function ActividadesRecurrentesView(): React.ReactElement {
       <div className="rounded-xl bg-card shadow-card">
         <ErrorState
           title="No fue posible cargar tus actividades."
-          message={boardError}
+          error={boardError}
           onRetry={() => {
             setBoardState('loading');
             void loadBoard();
@@ -383,7 +385,7 @@ export function ActividadesRecurrentesView(): React.ReactElement {
       <div className="rounded-xl bg-card shadow-card">
         <ErrorState
           title="No fue posible cargar las definiciones."
-          message={defError}
+          error={defError}
           onRetry={() => void loadActivities()}
         />
       </div>
@@ -555,5 +557,18 @@ export function ActividadesRecurrentesView(): React.ReactElement {
         onConfirm={() => (pauseTarget ? handlePause(pauseTarget) : undefined)}
       />
     </PageLayout>
+  );
+}
+
+export function ActividadesRecurrentesView(): React.ReactElement {
+  return (
+    <ModuleGate
+      moduleKey="recurring"
+      title="Actividades recurrentes"
+      description="Lo que te toca hacer y cuándo. Las actividades programadas se habilitan unos días antes de su fecha."
+      copy={NO_ACCESS_COPY.recurring}
+    >
+      <ActividadesRecurrentesViewContent />
+    </ModuleGate>
   );
 }

@@ -25,12 +25,12 @@ export class WorkflowStateService {
   assertTransition(from: string, toState: string): RecordState {
     if (!isRecordState(toState)) {
       throw new BadRequestException(
-        `Estado destino "${toState}" no es un estado valido.`,
+        `Estado destino "${toState}" no es un estado válido.`,
       );
     }
     if (!isRecordState(from)) {
       throw new BadRequestException(
-        `Estado actual "${from}" no es un estado valido.`,
+        `Estado actual "${from}" no es un estado válido.`,
       );
     }
     if (!isRecordStateTransitionAllowed(from, toState)) {

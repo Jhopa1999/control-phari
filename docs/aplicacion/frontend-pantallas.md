@@ -194,3 +194,11 @@ Las vistas que consumen datos contemplan, cuando corresponde, los estados de car
 vacío, éxito y error, y los formularios muestran labels, validaciones junto al campo y
 estado de envío (ver el *steering* de frontend). Esos detalles viven en cada
 `*-view.tsx`.
+
+### Sin acceso y errores de carga (oleada 3, PR-A)
+
+- **`NoAccessNotice`** (`components/no-access-notice.tsx`): aviso único «Sin acceso» (`InlineNotice` neutral, `role="status"`, sin «Reintentar»). Textos fijos por pantalla en `NO_ACCESS_COPY` (contrastados con `MODULE_MATRIX`) y acciones «Ir a mi inicio» (`getDefaultHomeHref`) e «Ir a Mis permisos». Sustituye al aviso local del Panel y a los de Áreas, Procesos, Solicitantes, Equipo, Aprobaciones, Plan, Demanda, Agentes de IA y Configuración SMTP.
+- **`ModuleGate`** (`components/module-gate.tsx`): envuelve la vista de una ruta con el módulo requerido (Triage, Priorización, Bitácora, Auditoría, Capacidad, Reuniones, Actividades recurrentes). Con permisos cargados y sin el módulo muestra el encabezado y el aviso, y no monta la vista, de modo que no se pide nada a la API.
+- **`ErrorState`** recibe `error` (el fallo del wrapper) y lo clasifica con `classifyError` (`lib/api-error.ts`): 403 → `forbidden` (icono `Lock`, `role="status"`, mensaje del servidor, **sin «Reintentar»**); sin respuesta (red, timeout, aborto) → `network` («Revisa tu conexión…» y «Reintentar»); 404 → `notFound`; 401 → `unauthorized` («Tu sesión caducó», enlace «Iniciar sesión»); el resto → `server` (mensaje del servidor y «Reintentar»). `title` y `message` explícitos ganan al texto calculado. El 401 de la identidad y de los permisos lo sigue resolviendo `actor-context` (limpia la sesión y `route-guard` redirige a `/login`). «Revisa tu conexión» solo aparece en el tipo `network`.
+- Los wrappers de `lib/*.ts` conservan el `status` y el mensaje del cuerpo de la API (`messageFromBody`, `apiErrorFrom`), y las vistas guardan el error recibido (no solo su texto) para pasarlo a `ErrorState`.
+- Selector de apps: el administrador del sistema sin aplicaciones ve «No tienes aplicaciones de área habilitadas» y «Ir a mi inicio»; los demás, «Pide acceso al jefe de área». Mi trabajo y el asistente distinguen 403, red y servidor en sus avisos.

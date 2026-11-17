@@ -21,7 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { Asset, AssetRequestHistoryItem, Process } from '@/lib/api-client';
-import { AssetError, getAsset, listAssetRequests } from '@/lib/assets';
+import { getAsset, listAssetRequests } from '@/lib/assets';
 import { formatDate } from '@/lib/format';
 import {
   compareText,
@@ -38,12 +38,6 @@ const OUT_OF_SCOPE_PROCESS = 'Proceso fuera de tu alcance';
 /** Orden por defecto: fecha de registro descendente. */
 const DEFAULT_SORT: SortState<SortKey> = { key: 'registered', direction: 'desc' };
 
-function messageOf(err: unknown): string {
-  return err instanceof AssetError
-    ? err.message
-    : 'Ocurrió un error inesperado. Inténtalo de nuevo.';
-}
-
 export interface HistorialViewProps {
   assetId: string;
 }
@@ -58,7 +52,7 @@ export function HistorialView({ assetId }: HistorialViewProps): React.ReactEleme
   const [rows, setRows] = React.useState<AssetRequestHistoryItem[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<unknown>(null);
   const [sort, setSort] = React.useState<SortState<SortKey>>(DEFAULT_SORT);
 
   const loadData = React.useCallback(() => {
@@ -74,7 +68,7 @@ export function HistorialView({ assetId }: HistorialViewProps): React.ReactEleme
         setState('success');
       })
       .catch((err: unknown) => {
-        setErrorMessage(messageOf(err));
+        setErrorMessage(err);
         setState('error');
       });
   }, [assetId]);
@@ -139,7 +133,7 @@ export function HistorialView({ assetId }: HistorialViewProps): React.ReactEleme
       <div className="rounded-lg border bg-card">
         <ErrorState
           title="No fue posible cargar el historial del activo."
-          message={errorMessage}
+          error={errorMessage}
           onRetry={() => void load()}
         />
       </div>

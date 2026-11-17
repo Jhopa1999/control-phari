@@ -1,6 +1,6 @@
 import { api } from './api-client';
 import type { components } from '@plantilla-portales/api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, toApiError, apiErrorFrom } from './api-error';
 
 export { ApiError };
 
@@ -56,7 +56,7 @@ export async function getAreaIndicators(
       { params: { query: periodQuery(filter) } },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -78,7 +78,7 @@ export async function getDemandSummary(
       { params: { query: periodQuery(filter) } },
     );
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -95,7 +95,7 @@ export async function getAttention(): Promise<Attention> {
   try {
     const { data, error, response } = await api.GET('/area-control/attention');
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {

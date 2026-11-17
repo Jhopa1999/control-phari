@@ -2,15 +2,13 @@
 
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
-import Link from 'next/link';
 import { ErrorState } from '@/components/error-state';
-import { InlineNotice } from '@/components/inline-notice';
+import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { PeriodFieldset } from '@/components/period-fieldset';
 import { Section } from '@/components/section';
 import { Badge } from '@/components/ui/badge';
-import { buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -34,10 +32,6 @@ import { formatCount, formatPercent, localMonthPeriod, orDash } from '@/lib/form
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
 
 const NUMBER_FORMAT = new Intl.NumberFormat('es');
-
-function messageOf(err: unknown): string | null {
-  return err instanceof ApiError ? err.message : null;
-}
 
 function formatNumber(value: number | null): string {
   return value === null ? orDash(value) : NUMBER_FORMAT.format(value);
@@ -371,7 +365,7 @@ export function DemandOverviewView(): React.ReactElement {
   const [indicators, setIndicators] = React.useState<AreaIndicators | null>(null);
   const [loadedState, setState] = React.useState<LoadState>('loading');
   const state: LoadState = permissionsLoaded && !moduleAllowed ? 'forbidden' : loadedState;
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<unknown>(null);
 
   const fetchIndicators = React.useCallback((rangeFrom: string, rangeTo: string) => {
     return getAreaIndicators({ from: rangeFrom, to: rangeTo })
@@ -384,7 +378,7 @@ export function DemandOverviewView(): React.ReactElement {
           setState('forbidden');
           return;
         }
-        setErrorMessage(messageOf(err));
+        setErrorMessage(err);
         setState('error');
       });
   }, []);
@@ -411,24 +405,7 @@ export function DemandOverviewView(): React.ReactElement {
   let content: React.ReactNode;
   if (state === 'forbidden') {
     content = (
-      <InlineNotice
-        tone="neutral"
-        role="note"
-        title="Esta pantalla no está disponible para tu rol."
-        action={
-          allowedModules.has('dashboard') ? (
-            <Link href="/inicio" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-              Ir al Panel del área
-            </Link>
-          ) : undefined
-        }
-      >
-        <p className="text-muted-foreground">
-          Los indicadores del área son para el jefe de área y los líderes de proceso. Si
-          necesitas estos datos, solicita acceso. El panorama de la demanda está en el Panel
-          del área.
-        </p>
-      </InlineNotice>
+      <NoAccessNotice {...NO_ACCESS_COPY.demandOverview} />
     );
   } else if (state === 'loading') {
     content = <IndicatorsSkeleton />;
@@ -437,7 +414,7 @@ export function DemandOverviewView(): React.ReactElement {
       <div className="overflow-hidden rounded-lg border bg-card">
         <ErrorState
           title="No fue posible cargar los indicadores."
-          message={errorMessage}
+          error={errorMessage}
           onRetry={() => void load(from, to)}
         />
       </div>

@@ -1,6 +1,8 @@
 import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder } from '@nestjs/swagger';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { validationExceptionFactory } from './common/filters/validation-messages-es';
 import { securityHeadersMiddleware } from './security/security-headers.middleware';
 
 /**
@@ -77,8 +79,11 @@ export function configureApp(app: INestApplication): void {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      exceptionFactory: validationExceptionFactory,
     }),
   );
+  // Mensajes de error en español, sin UUID ni detalles internos; no cambia los códigos HTTP.
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Detras de nginx (loopback / redes privadas de Docker) req.secure refleja
   // X-Forwarded-Proto, de lo que depende el atributo Secure de la cookie.

@@ -48,7 +48,7 @@ export class KnowledgeScopeService {
       return;
     }
     throw new ForbiddenException(
-      'Solo el jefe de area puede crear, editar o cambiar el estado de un activo.',
+      'Solo el jefe de área puede crear, editar o cambiar el estado de un activo.',
     );
   }
 
@@ -100,6 +100,6 @@ export class KnowledgeScopeService {
     if (this.leaderProcessIds(actor).includes(asset.processId)) {
       return;
     }
-    throw new ForbiddenException('Solo el lider del proceso o el jefe de area puede gestionar el estado.');
+    throw new ForbiddenException('Solo el líder del proceso o el jefe de área puede gestionar el estado.');
   }
 }

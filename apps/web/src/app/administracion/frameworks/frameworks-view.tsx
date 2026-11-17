@@ -97,7 +97,7 @@ export function FrameworksView(): React.ReactElement {
   const [resultCatalog, setResultCatalog] = React.useState<CatalogItem[]>([]);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
   const [listState, setListState] = React.useState<LoadState>('loading');
-  const [listError, setListError] = React.useState<string | null>(null);
+  const [listError, setListError] = React.useState<unknown>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
 
   const [selectedId, setSelectedId] = React.useState('');
@@ -109,6 +109,7 @@ export function FrameworksView(): React.ReactElement {
   const [board, setBoard] = React.useState<GovernanceBoard | null>(null);
   const [validations, setValidations] = React.useState<ValidationRecord[]>([]);
   const [detailState, setDetailState] = React.useState<DetailState>('idle');
+  const [detailError, setDetailError] = React.useState<unknown>(null);
   const [busy, setBusy] = React.useState(false);
   const [tab, setTab] = React.useState<TabValue>('controles');
   const validationsRef = React.useRef<HTMLDivElement>(null);
@@ -138,8 +139,9 @@ export function FrameworksView(): React.ReactElement {
       setValidations(v);
       setRouteDraft(b.governanceRoute ?? '');
       setDetailState('success');
-    } catch {
+    } catch (err) {
       if (selectedRef.current !== requestId) return;
+      setDetailError(err);
       setBoard(null);
       setValidations([]);
       setDetailState('error');
@@ -182,7 +184,7 @@ export function FrameworksView(): React.ReactElement {
         }
       })
       .catch((err: unknown) => {
-        setListError(err instanceof Error ? err.message : null);
+        setListError(err);
         setListState('error');
       });
   }, [selectRequest, setRequestId]);
@@ -480,6 +482,7 @@ export function FrameworksView(): React.ReactElement {
         <div className="rounded-lg border bg-card">
           <ErrorState
             title="No fue posible cargar el tablero de gobierno."
+            error={detailError}
             // eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render.
             onRetry={() => void loadDetail(selectedId)}
           />
@@ -575,7 +578,7 @@ export function FrameworksView(): React.ReactElement {
       <div className="rounded-lg border bg-card">
         <ErrorState
           title="No fue posible cargar las solicitudes."
-          message={listError}
+          error={listError}
           onRetry={() => void loadList()}
         />
       </div>

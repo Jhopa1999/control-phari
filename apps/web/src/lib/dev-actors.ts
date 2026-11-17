@@ -1,5 +1,5 @@
 import { api, type DevActor } from './api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, toApiError, apiErrorFrom } from './api-error';
 
 export { ApiError };
 
@@ -12,7 +12,7 @@ export async function listDevActors(): Promise<DevActor[]> {
   try {
     const { data, error, response } = await api.GET('/dev/actors');
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {

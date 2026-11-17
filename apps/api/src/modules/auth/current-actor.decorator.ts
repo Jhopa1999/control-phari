@@ -16,7 +16,7 @@ export const CurrentActor = createParamDecorator(
     const request = context.switchToHttp().getRequest<RequestWithActor>();
     if (!request.actor) {
       throw new InternalServerErrorException(
-        'CurrentUserGuard no resolvio el actor para esta ruta.',
+        'CurrentUserGuard no resolvió el actor para esta ruta.',
       );
     }
     return request.actor;

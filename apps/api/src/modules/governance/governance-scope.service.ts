@@ -49,7 +49,7 @@ export class GovernanceScopeService {
       where: { AND: [{ id: requestId }, this.scopeWhere(actor)] },
     });
     if (!request) {
-      throw new NotFoundException(`Solicitud "${requestId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la solicitud.');
     }
     return request;
   }

@@ -9,6 +9,7 @@ import {
   type UpdateAssignment,
   type UpdateAvailability,
 } from './api-client';
+import { messageFromBody } from './api-error';
 
 /**
  * Error de dominio de capacidad con un mensaje ya entendible para el usuario.
@@ -42,13 +43,13 @@ function messageForStatus(status: number): string {
 /**
  * Normaliza cualquier fallo (HTTP o de red) a un CapacityError entendible.
  */
-function toCapacityError(status: number | undefined): CapacityError {
+function toCapacityError(status: number | undefined, body?: unknown): CapacityError {
   if (status === undefined) {
     return new CapacityError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new CapacityError(messageForStatus(status), status);
+  return new CapacityError(messageFromBody(body) ?? messageForStatus(status), status);
 }
 
 /** Resumen de carga por persona para un mes (GET /capacity/summary). */
@@ -60,7 +61,7 @@ export async function listCapacitySummary(
       params: { query: { month } },
     });
     if (error || !data) {
-      throw toCapacityError(response.status);
+      throw toCapacityError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -74,7 +75,7 @@ export async function listCapacityPeople(): Promise<CapacityPerson[]> {
   try {
     const { data, error, response } = await api.GET('/capacity/people');
     if (error || !data) {
-      throw toCapacityError(response.status);
+      throw toCapacityError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -92,7 +93,7 @@ export async function listAvailability(
       params: { query: { month } },
     });
     if (error || !data) {
-      throw toCapacityError(response.status);
+      throw toCapacityError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -110,7 +111,7 @@ export async function createAvailability(
       body: input,
     });
     if (error || !data) {
-      throw toCapacityError(response.status);
+      throw toCapacityError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -133,7 +134,7 @@ export async function updateAvailability(
       },
     );
     if (error || !data) {
-      throw toCapacityError(response.status);
+      throw toCapacityError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -165,7 +166,7 @@ export async function listAssignments(
       },
     });
     if (error || !data) {
-      throw toCapacityError(response.status);
+      throw toCapacityError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -183,7 +184,7 @@ export async function createAssignment(
       body: input,
     });
     if (error || !data) {
-      throw toCapacityError(response.status);
+      throw toCapacityError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -206,7 +207,7 @@ export async function updateAssignment(
       },
     );
     if (error || !data) {
-      throw toCapacityError(response.status);
+      throw toCapacityError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -222,7 +223,7 @@ export async function deleteAssignment(id: string): Promise<void> {
       params: { path: { id } },
     });
     if (error) {
-      throw toCapacityError(response.status);
+      throw toCapacityError(response.status, error);
     }
   } catch (err) {
     if (err instanceof CapacityError) throw err;

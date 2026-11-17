@@ -44,7 +44,7 @@ function toCommitmentError(status: number | undefined, body?: unknown): Commitme
     );
   }
   const server = (body as { message?: unknown } | undefined)?.message;
-  if ((status === 400 || status === 403 || status === 409) && typeof server === 'string' && server.trim()) {
+  if (status !== undefined && typeof server === 'string' && server.trim()) {
     return new CommitmentError(server, status);
   }
   return new CommitmentError(messageForStatus(status), status);

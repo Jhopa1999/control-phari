@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { BadgeCheck, Check, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -10,12 +9,13 @@ import { DataView, type DataViewState } from '@/components/data-view';
 import { DescriptionList } from '@/components/description-list';
 import { IdChip } from '@/components/id-chip';
 import { InlineNotice } from '@/components/inline-notice';
+import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell } from '@/components/row-actions';
 import { Section } from '@/components/section';
 import { PriorityBadge, PriorityLegend } from '@/components/status-badge';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -164,26 +164,7 @@ export function RevisionView(): React.ReactElement {
     return (
       <PageLayout>
         {header}
-        <InlineNotice
-          tone="neutral"
-          title="Esta pantalla no está disponible para tu rol."
-          action={
-            allowedModules.has('requests') ? (
-              <Link
-                href="/demanda/solicitudes"
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
-              >
-                Ir a Solicitudes
-              </Link>
-            ) : undefined
-          }
-        >
-          <p className="text-muted-foreground">
-            Aprobar compromisos es exclusivo del jefe de área; los líderes de proceso pueden
-            consultar la cola y autorizar planes. El estado de cada solicitud se consulta en
-            Solicitudes.
-          </p>
-        </InlineNotice>
+        <NoAccessNotice {...NO_ACCESS_COPY.review} />
       </PageLayout>
     );
   }

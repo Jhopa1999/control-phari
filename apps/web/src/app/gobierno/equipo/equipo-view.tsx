@@ -1,20 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { KeyRound, Mail, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DisabledReason } from '@/components/disabled-reason';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
-import { InlineNotice } from '@/components/inline-notice';
+import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell } from '@/components/row-actions';
 import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -77,7 +76,7 @@ export function EquipoView(): React.ReactElement {
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [loadedState, setState] = React.useState<LoadState>('loading');
   const state: LoadState = permissionsLoaded && !teamAllowed ? 'forbidden' : loadedState;
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [loadError, setLoadError] = React.useState<unknown>(null);
 
   const [userDialogOpen, setUserDialogOpen] = React.useState(false);
   const [grantDialogOpen, setGrantDialogOpen] = React.useState(false);
@@ -112,7 +111,7 @@ export function EquipoView(): React.ReactElement {
           setState('forbidden');
           return;
         }
-        setLoadError(err instanceof Error ? err.message : null);
+        setLoadError(err);
         setState('error');
       });
   }, []);
@@ -291,25 +290,7 @@ export function EquipoView(): React.ReactElement {
     return (
       <PageLayout>
         <PageHeader title="Equipo y permisos" description="Usuarios del portal y sus roles por proceso." />
-        <InlineNotice
-          tone="neutral"
-          title="Esta pantalla no está disponible para tu rol."
-          action={
-            allowedModules.has('permissions') ? (
-              <Link
-                href="/gobierno/mis-permisos"
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
-              >
-                Ir a Mis permisos
-              </Link>
-            ) : undefined
-          }
-        >
-          <p className="text-muted-foreground">
-            Administrar usuarios y roles corresponde al jefe de área. Tus propios roles se consultan
-            en Mis permisos.
-          </p>
-        </InlineNotice>
+        <NoAccessNotice {...NO_ACCESS_COPY.team} />
       </PageLayout>
     );
   }
@@ -325,7 +306,7 @@ export function EquipoView(): React.ReactElement {
   } else if (state === 'error') {
     content = (
       <div className="rounded-lg border bg-card">
-        <ErrorState title="No fue posible cargar el equipo." message={loadError} onRetry={() => void load()} />
+        <ErrorState title="No fue posible cargar el equipo." error={loadError} onRetry={() => void load()} />
       </div>
     );
   } else {

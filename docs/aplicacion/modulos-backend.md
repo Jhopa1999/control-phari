@@ -928,3 +928,13 @@ tiempo** (día local de `completedAt` ≤ día objetivo), **a destiempo** (poste
 de la ventana y los desgloses por actividad, por responsable y por persona que completó
 (`byPerson`). El alcance lo acota el service: ADMIN sin
 restricción; JEFE_AREA solo sus áreas.
+
+## Errores (transversal)
+
+`AllExceptionsFilter` (`src/common/filters/all-exceptions.filter.ts`) se registra en `configureApp` (`app.config.ts`) y vale para toda la API, el generador de OpenAPI y los e2e de Jest.
+
+- **Códigos HTTP sin cambios.** Una `HttpException` conserva su `statusCode` y la forma `{ statusCode, message, error }`; `message` puede seguir siendo un arreglo en el 400 de validación.
+- **Mensajes en español y sin detalles internos.** Los mensajes por defecto de Nest en inglés (`Forbidden resource`, `Unauthorized`, `Not Found`, `Too Many Requests`...) se traducen; de cualquier mensaje se quitan los UUID y las rutas del servidor. Las excepciones de `src/modules/**` nombran el recurso, nunca su id, y llevan tildes; la prueba `messages-es.spec.ts` lo vigila.
+- **Errores no HTTP** (Prisma, fallos inesperados) responden `500` con «Ocurrió un error interno. Inténtalo de nuevo; si continúa, avisa al administrador.», sin stack ni texto de la base; el detalle va solo al log (pino).
+- **Validación en español.** El `ValidationPipe` usa `validationExceptionFactory` (`validation-messages-es.ts`): traduce las restricciones de `class-validator` con el nombre legible del campo (`FIELD_LABELS`; «El campo» si no hay) y respeta un `message` propio del DTO. Misma respuesta `400`.
+- Las cabeceras ya escritas (`Retry-After` del 429 del login) y los 401 por cookie o Bearer no se alteran.

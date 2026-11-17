@@ -90,7 +90,7 @@ equest-scope.service.ts). */
       include: { participants: true },
     });
     if (!request) {
-      throw new NotFoundException(`Solicitud "${id}" no encontrada.`);
+      throw new NotFoundException('No se encontró la solicitud.');
     }
     return request as RequestWithParticipants;
   }
@@ -200,7 +200,7 @@ equest-scope.service.ts). */
       include: { participants: true },
     });
     if (!request) {
-      throw new NotFoundException(`Solicitud "${parsed.code}" no encontrada.`);
+      throw new NotFoundException('No se encontró la solicitud.');
     }
     return this.state.buildResponse(request as RequestWithParticipants);
   }
@@ -229,7 +229,7 @@ equest-scope.service.ts). */
       });
       if (!mainProcess) {
         throw new NotFoundException(
-          `Proceso principal "${dto.mainProcessId}" no encontrado.`,
+          'No se encontró el proceso principal.',
         );
       }
       participantIds = await this.resolveParticipantIds(

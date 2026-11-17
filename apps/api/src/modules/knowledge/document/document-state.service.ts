@@ -25,12 +25,12 @@ export class DocumentStateService {
   assertTransition(from: string, to: string): DocStatus {
     if (!isDocStatus(to)) {
       throw new BadRequestException(
-        `Estado destino "${to}" no es un estado valido.`,
+        `Estado destino "${to}" no es un estado válido.`,
       );
     }
     if (!isDocStatus(from)) {
       throw new BadRequestException(
-        `Estado actual "${from}" no es un estado valido.`,
+        `Estado actual "${from}" no es un estado válido.`,
       );
     }
     if (!isDocTransitionAllowed(from, to)) {
