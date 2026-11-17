@@ -101,6 +101,9 @@ test('el selector del triage ofrece los activos activos y al jefe los no asociab
   await expect(blocked).toHaveAttribute('aria-disabled', 'true');
   await expect(page.getByText('No asociables', { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
+  // El Select de Radix sigue montado mientras se cierra (aria-hidden en el resto
+  // de la página): axe se ejecuta cuando la lista ya no existe.
+  await expect(page.getByRole('listbox')).toHaveCount(0);
 
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(axe.violations.map((v) => v.id)).toEqual([]);
