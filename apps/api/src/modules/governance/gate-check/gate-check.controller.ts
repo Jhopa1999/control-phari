@@ -71,6 +71,7 @@ export class GateCheckController {
   @ApiResponse({ status: 201, type: GatePendingItemResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Solicitud/gate fuera de alcance.' })
+  @ApiResponse({ status: 409, description: 'El proyecto está cerrado: sus controles quedan congelados.' })
   addPendingItem(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -90,6 +91,7 @@ export class GateCheckController {
   @ApiResponse({ status: 200, type: GatePendingItemResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Faltante no encontrado.' })
+  @ApiResponse({ status: 409, description: 'El proyecto está cerrado: sus controles quedan congelados.' })
   resolvePendingItem(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -107,7 +109,7 @@ export class GateCheckController {
   @ApiBody({ type: AdvanceStageDto })
   @ApiResponse({ status: 201, type: GovernanceBoardResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  @ApiResponse({ status: 409, description: 'Estado actual no es el origen esperado.' })
+  @ApiResponse({ status: 409, description: 'Estado actual no es el origen esperado. El proyecto cerrado responde 409: sus controles quedan congelados.' })
   requestValidation(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -125,7 +127,7 @@ export class GateCheckController {
   @ApiBody({ type: AdvanceStageDto })
   @ApiResponse({ status: 201, type: GovernanceBoardResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  @ApiResponse({ status: 409, description: 'Validacion bloqueante/obligatoria faltante o estado invalido.' })
+  @ApiResponse({ status: 409, description: 'Validacion bloqueante/obligatoria faltante o estado invalido. El proyecto cerrado responde 409: sus controles quedan congelados.' })
   markReady(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -141,7 +143,7 @@ export class GateCheckController {
   @ApiBody({ type: AdvanceStageDto })
   @ApiResponse({ status: 201, type: GovernanceBoardResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  @ApiResponse({ status: 409, description: 'Estado actual no es el origen esperado.' })
+  @ApiResponse({ status: 409, description: 'Estado actual no es el origen esperado. El proyecto cerrado responde 409: sus controles quedan congelados.' })
   confirmStabilization(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -153,14 +155,14 @@ export class GateCheckController {
   @Post(':id/gates/:gateCode/approve')
   @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO)
   @ApiOperation({
-    summary: 'Aprobar un gate por la autoridad (solo GC4/GC5; GC1-GC3 => 409).',
+    summary: 'Aprobar GC4 por la autoridad. GC5 refleja el cierre formal del proyecto (no se aprueba a mano); GC1-GC3 se derivan.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiParam({ name: 'gateCode', description: 'GC4 o GC5' })
   @ApiBody({ type: ApproveGateDto })
   @ApiResponse({ status: 201, type: GateCheckResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  @ApiResponse({ status: 409, description: 'GC1-GC3 no aprobable, bloqueo o estado invalido.' })
+  @ApiResponse({ status: 409, description: 'GC1-GC3 no aprobable; GC5 sin cierre formal aprobado (El cierre se solicita y se aprueba desde el cierre del proyecto); GC4 bloqueado, proyecto cerrado o estado inválido.' })
   approve(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -172,13 +174,14 @@ export class GateCheckController {
 
   @Post(':id/gates/:gateCode/waive')
   @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO)
-  @ApiOperation({ summary: 'Marcar un gate NO_APLICA (requiere motivo y ruta compatible).' })
+  @ApiOperation({ summary: 'Marcar un gate NO_APLICA (solo un control PENDIENTE; requiere motivo y ruta compatible).' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiParam({ name: 'gateCode', description: 'GC1..GC5' })
   @ApiBody({ type: WaiveGateDto })
   @ApiResponse({ status: 201, type: GateCheckResponseDto })
   @ApiResponse({ status: 400, description: 'Ruta no admite NO_APLICA o falta motivo.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 409, description: 'El proyecto está cerrado, o el control no está pendiente (solo se marca NO_APLICA un control pendiente).' })
   waive(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -196,7 +199,7 @@ export class GateCheckController {
   @ApiResponse({ status: 201, type: GovernanceBoardResponseDto })
   @ApiResponse({ status: 400, description: 'Falta blockReason.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  @ApiResponse({ status: 409, description: 'La solicitud ya esta bloqueada.' })
+  @ApiResponse({ status: 409, description: 'La solicitud ya esta bloqueada. El proyecto cerrado responde 409: sus controles quedan congelados.' })
   block(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -212,7 +215,7 @@ export class GateCheckController {
   @ApiBody({ type: UnblockRequestDto })
   @ApiResponse({ status: 201, type: GovernanceBoardResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  @ApiResponse({ status: 409, description: 'La solicitud no esta bloqueada.' })
+  @ApiResponse({ status: 409, description: 'La solicitud no esta bloqueada. El proyecto cerrado responde 409: sus controles quedan congelados.' })
   unblock(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,
@@ -228,6 +231,7 @@ export class GateCheckController {
   @ApiBody({ type: SetRouteDto })
   @ApiResponse({ status: 200, type: GovernanceBoardResponseDto })
   @ApiResponse({ status: 400, description: 'Ruta fuera de catalogo.' })
+  @ApiResponse({ status: 409, description: 'El proyecto está cerrado: sus controles quedan congelados.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   setRoute(
     @CurrentActor() actor: CurrentActorType,

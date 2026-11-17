@@ -71,11 +71,11 @@ export class CreateValidationDto {
   @IsBoolean()
   blocking?: boolean;
 
-  @ApiProperty({ type: String, format: 'uuid', description: 'Ejecutor de la prueba.' })
+  @ApiProperty({ type: String, format: 'uuid', description: 'Ejecutor de la prueba: una persona existente y activa. El integrante solo puede registrar las suyas; el líder del proceso principal o el jefe de área, a nombre de cualquiera.' })
   @IsUUID()
   executedByUserId!: string;
 
-  @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de ejecucion (ISO).' })
+  @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de ejecución (ISO). No puede ser posterior a hoy.' })
   @IsISO8601()
   executedAt!: string;
 

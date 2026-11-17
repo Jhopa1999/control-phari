@@ -2174,7 +2174,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Aprobar un gate por la autoridad (solo GC4/GC5; GC1-GC3 => 409). */
+        /** Aprobar GC4 por la autoridad. GC5 refleja el cierre formal del proyecto (no se aprueba a mano); GC1-GC3 se derivan. */
         post: operations["GateCheckController_approve"];
         delete?: never;
         options?: never;
@@ -2191,7 +2191,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Marcar un gate NO_APLICA (requiere motivo y ruta compatible). */
+        /** Marcar un gate NO_APLICA (solo un control PENDIENTE; requiere motivo y ruta compatible). */
         post: operations["GateCheckController_waive"];
         delete?: never;
         options?: never;
@@ -2260,7 +2260,7 @@ export interface paths {
         /** Historial de validaciones de la solicitud. */
         get: operations["ValidationController_findForRequest"];
         put?: never;
-        /** Registrar una validacion/evidencia (NO aprueba gate, BR-008). */
+        /** Registrar una validacion/evidencia (NO aprueba gate, BR-008). El integrante solo registra las ejecutadas por el mismo. */
         post: operations["ValidationController_create"];
         delete?: never;
         options?: never;
@@ -6782,12 +6782,12 @@ export interface components {
             blocking?: boolean;
             /**
              * Format: uuid
-             * @description Ejecutor de la prueba.
+             * @description Ejecutor de la prueba: una persona existente y activa. El integrante solo puede registrar las suyas; el líder del proceso principal o el jefe de área, a nombre de cualquiera.
              */
             executedByUserId: string;
             /**
              * Format: date-time
-             * @description Fecha de ejecucion (ISO).
+             * @description Fecha de ejecución (ISO). No puede ser posterior a hoy.
              */
             executedAt: string;
             /** @description URL/nota de evidencia. */
@@ -14679,6 +14679,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description El proyecto está cerrado: sus controles quedan congelados. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     GateCheckController_resolvePendingItem: {
@@ -14721,6 +14728,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description El proyecto está cerrado: sus controles quedan congelados. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     GateCheckController_requestValidation: {
@@ -14753,7 +14767,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Estado actual no es el origen esperado. */
+            /** @description Estado actual no es el origen esperado. El proyecto cerrado responde 409: sus controles quedan congelados. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -14792,7 +14806,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validacion bloqueante/obligatoria faltante o estado invalido. */
+            /** @description Validacion bloqueante/obligatoria faltante o estado invalido. El proyecto cerrado responde 409: sus controles quedan congelados. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -14831,7 +14845,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Estado actual no es el origen esperado. */
+            /** @description Estado actual no es el origen esperado. El proyecto cerrado responde 409: sus controles quedan congelados. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -14872,7 +14886,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description GC1-GC3 no aprobable, bloqueo o estado invalido. */
+            /** @description GC1-GC3 no aprobable; GC5 sin cierre formal aprobado (El cierre se solicita y se aprueba desde el cierre del proyecto); GC4 bloqueado, proyecto cerrado o estado inválido. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -14920,6 +14934,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description El proyecto está cerrado, o el control no está pendiente (solo se marca NO_APLICA un control pendiente). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     GateCheckController_block: {
@@ -14959,7 +14980,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La solicitud ya esta bloqueada. */
+            /** @description La solicitud ya esta bloqueada. El proyecto cerrado responde 409: sus controles quedan congelados. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -14998,7 +15019,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description La solicitud no esta bloqueada. */
+            /** @description La solicitud no esta bloqueada. El proyecto cerrado responde 409: sus controles quedan congelados. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -15039,6 +15060,13 @@ export interface operations {
             };
             /** @description Rol insuficiente. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El proyecto está cerrado: sus controles quedan congelados. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15104,7 +15132,7 @@ export interface operations {
                     "application/json": components["schemas"]["ValidationResponseDto"];
                 };
             };
-            /** @description Catalogo invalido o evidencia incoherente. */
+            /** @description Catálogo inválido, evidencia incoherente, ejecutor inexistente o inactivo, o fecha de ejecución posterior a hoy. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15120,6 +15148,13 @@ export interface operations {
             };
             /** @description Solicitud/documento fuera de alcance. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El proyecto está cerrado: sus controles quedan congelados. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15167,6 +15202,13 @@ export interface operations {
             };
             /** @description Validacion no encontrada. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El proyecto está cerrado: sus controles quedan congelados. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

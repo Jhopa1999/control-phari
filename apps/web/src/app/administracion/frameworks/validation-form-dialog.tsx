@@ -19,7 +19,6 @@ import {
   Select,
   SelectContent,
   SelectItem,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -28,9 +27,6 @@ import type { CatalogItem, CoordinationPerson } from '@/lib/api-client';
 import type { CreateValidation } from '@/lib/governance';
 
 const FORM_ID = 'validation-form';
-/** Opción del ejecutor que muestra la entrada manual del id. */
-const OTHER_EXECUTOR = '__other__';
-
 interface ValidationFormValues {
   validationTypeCode: string;
   testCase: string;
@@ -38,10 +34,8 @@ interface ValidationFormValues {
   environment: string;
   resultCode: string;
   blocking: boolean;
-  /** Id de la persona elegida, OTHER_EXECUTOR o ''. */
+  /** Id de la persona elegida o ''. */
   executorChoice: string;
-  /** Id escrito a mano (opción «Otra persona» o lista vacía). */
-  executorManual: string;
   executedAt: string;
   evidenceRef: string;
   notes: string;
@@ -55,7 +49,6 @@ const EMPTY: ValidationFormValues = {
   resultCode: '',
   blocking: false,
   executorChoice: '',
-  executorManual: '',
   executedAt: '',
   evidenceRef: '',
   notes: '',
@@ -71,6 +64,11 @@ export interface ValidationFormDialogProps {
   resultCatalog: CatalogItem[];
   /** Personas en alcance; vacía si no hay o si la lista no se pudo cargar. */
   people: CoordinationPerson[];
+  /** Líder o jefe: pueden registrar a nombre de cualquier persona del alcance. */
+  canReview: boolean;
+  /** Persona actual: el integrante solo puede registrar validaciones ejecutadas por sí mismo. */
+  actorUserId: string | null;
+  actorName: string | null;
   submitting: boolean;
   /** Error del backend, en línea; los valores escritos se conservan. */
   errorMessage: string | null;
@@ -94,6 +92,9 @@ export function ValidationFormDialog({
   typeCatalog,
   resultCatalog,
   people,
+  canReview,
+  actorUserId,
+  actorName,
   submitting,
   errorMessage,
   onSubmit,
@@ -103,17 +104,32 @@ export function ValidationFormDialog({
   const [wasOpen, setWasOpen] = React.useState(open);
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
-  const hasPeople = people.length > 0;
-  // Sin lista, solo la entrada manual (comportamiento de siempre) con el id val-executor.
-  const manualMode = !hasPeople || values.executorChoice === OTHER_EXECUTOR;
-  const manualId = hasPeople ? 'val-executor-manual' : 'val-executor';
+  // Quien gestiona elige entre las personas del alcance; el integrante solo se tiene a sí mismo (D11).
+  const options = React.useMemo<Array<{ id: string; name: string }>>(() => {
+    if (canReview) {
+      const list = people.map((person) => ({ id: person.id, name: person.name }));
+      if (actorUserId && !list.some((p) => p.id === actorUserId)) {
+        list.unshift({ id: actorUserId, name: actorName ?? 'Yo' });
+      }
+      return list;
+    }
+    return actorUserId ? [{ id: actorUserId, name: actorName ?? 'Yo' }] : [];
+  }, [canReview, people, actorUserId, actorName]);
+  const ownOnly = !canReview;
+  // La fecha de ejecución no puede ser posterior a ahora (hora local del navegador).
+  const maxExecutedAt = React.useMemo(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- se recalcula cada vez que se abre el diálogo.
+  }, [open]);
 
   // Cada apertura empieza vacía; ante un error del backend el diálogo sigue
   // abierto y conserva lo escrito (el reinicio solo ocurre tras el éxito).
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setValues(EMPTY);
+      setValues({ ...EMPTY, executorChoice: !canReview && actorUserId ? actorUserId : '' });
       setErrors({});
     }
   }
@@ -128,7 +144,7 @@ export function ValidationFormDialog({
   }
 
   function executorId(): string {
-    return manualMode ? values.executorManual.trim() : values.executorChoice;
+    return values.executorChoice;
   }
 
   function validate(): FieldErrors {
@@ -138,6 +154,9 @@ export function ValidationFormDialog({
     if (!values.resultCode) next.result = 'Elige el resultado.';
     if (!executorId()) next.executor = 'Indica quién ejecutó la validación.';
     if (!values.executedAt) next.executedAt = 'Indica la fecha y hora de ejecución.';
+    else if (values.executedAt > maxExecutedAt) {
+      next.executedAt = 'La fecha de ejecución no puede ser posterior a hoy.';
+    }
     return next;
   }
 
@@ -151,7 +170,7 @@ export function ValidationFormDialog({
       ['type', 'val-type'],
       ['result', 'val-result'],
       ['testCase', 'val-case'],
-      ['executor', manualMode ? manualId : 'val-executor'],
+      ['executor', 'val-executor'],
       ['executedAt', 'val-executed-at'],
     ];
     const first = order.find(([key]) => next[key]);
@@ -257,52 +276,37 @@ export function ValidationFormDialog({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid content-start gap-4">
-                {hasPeople ? (
-                  <Field
-                    id="val-executor"
-                    label="Ejecutor"
-                    required
-                    error={values.executorChoice === OTHER_EXECUTOR ? null : errors.executor}
-                  >
-                    {(control) => (
-                      <Select
-                        value={values.executorChoice}
-                        onValueChange={(v) => update('executorChoice', v, 'executor')}
-                      >
-                        <SelectTrigger {...control}>
-                          <SelectValue placeholder="Elige una persona" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {people.map((person) => (
-                            <SelectItem key={person.id} value={person.id}>
-                              {person.name}
-                            </SelectItem>
-                          ))}
-                          <SelectSeparator />
-                          <SelectItem value={OTHER_EXECUTOR}>Otra persona (ingresar id)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </Field>
-                ) : null}
-                {manualMode ? (
-                  <Field
-                    id={manualId}
-                    label={hasPeople ? 'Id de usuario del ejecutor' : 'Ejecutor (id de usuario)'}
-                    required
-                    error={errors.executor}
-                  >
-                    <Input
-                      value={values.executorManual}
-                      autoComplete="off"
-                      onChange={(e) => update('executorManual', e.target.value, 'executor')}
-                    />
-                  </Field>
-                ) : null}
+                <Field
+                  id="val-executor"
+                  label="Ejecutor"
+                  required
+                  error={errors.executor}
+                  help={ownOnly ? 'Solo puedes registrar validaciones ejecutadas por ti.' : undefined}
+                >
+                  {(control) => (
+                    <Select
+                      value={values.executorChoice}
+                      disabled={ownOnly}
+                      onValueChange={(v) => update('executorChoice', v, 'executor')}
+                    >
+                      <SelectTrigger {...control}>
+                        <SelectValue placeholder="Elige una persona" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {options.map((person) => (
+                          <SelectItem key={person.id} value={person.id}>
+                            {person.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </Field>
               </div>
               <Field id="val-executed-at" label="Fecha de ejecución" required error={errors.executedAt}>
                 <Input
                   type="datetime-local"
+                  max={maxExecutedAt}
                   value={values.executedAt}
                   onChange={(e) => update('executedAt', e.target.value, 'executedAt')}
                 />

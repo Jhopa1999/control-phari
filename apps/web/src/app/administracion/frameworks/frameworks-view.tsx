@@ -4,6 +4,8 @@ import * as React from 'react';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DisabledReason } from '@/components/disabled-reason';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { Field } from '@/components/field';
@@ -48,6 +50,7 @@ import { listRequests } from '@/lib/requests';
 import { routeLabel } from '@/lib/status-presentation';
 import { useRequestIdParam } from '@/lib/use-request-param';
 import { listCoordinationPeople } from '@/lib/worklog';
+import { CLOSED_PROJECT_REASON } from './closed-project';
 import { GateItem, gateHeadingId } from './gate-item';
 import { ValidationFormDialog } from './validation-form-dialog';
 import { ValidationsTab } from './validations-tab';
@@ -60,6 +63,8 @@ const TITLE = 'Controles de gobierno';
 /** La misma descripción usa el PageFallback de page.tsx. */
 const DESCRIPTION = 'Controles GC1–GC5, ruta proporcional y validaciones de cada solicitud.';
 const NOT_AVAILABLE = 'La solicitud indicada no está disponible aquí.';
+const STAGE_CLOSED_REASON_ID = 'stage-closed-reason';
+const ROUTE_CLOSED_REASON_ID = 'route-closed-reason';
 const ROLE_NOTE =
   'Tu rol permite consultar y registrar validaciones. Aprobar controles, cambiar la ruta y marcar «No aplica» corresponde al jefe de área o al líder de proceso.';
 
@@ -116,6 +121,7 @@ export function FrameworksView(): React.ReactElement {
   const [validationError, setValidationError] = React.useState<string | null>(null);
 
   // El código se conserva al cerrar, para que el título no cambie durante la animación.
+  const [approveOpen, setApproveOpen] = React.useState(false);
   const [waiveCode, setWaiveCode] = React.useState<string | null>(null);
   const [waiveOpen, setWaiveOpen] = React.useState(false);
   const [waiveSubmitting, setWaiveSubmitting] = React.useState(false);
@@ -217,6 +223,7 @@ export function FrameworksView(): React.ReactElement {
     () => new Map(people.map((person) => [person.id, person.name])),
     [people],
   );
+  const projectClosed = board?.operationalState === 'CERRADA';
   const gc4Summary = board?.gates.find((g) => g.gateCode === 'GC4')?.validationSummary ?? null;
 
   async function refreshDetail(): Promise<void> {
@@ -369,7 +376,7 @@ export function FrameworksView(): React.ReactElement {
               <div className="flex flex-col gap-3">
                 <Field id="governance-route" label="Ruta">
                   {(control) => (
-                    <Select value={routeDraft} onValueChange={setRouteDraft} disabled={busy}>
+                    <Select value={routeDraft} onValueChange={setRouteDraft} disabled={busy || projectClosed}>
                       <SelectTrigger {...control}>
                         <SelectValue placeholder="Sin ruta asignada" />
                       </SelectTrigger>
@@ -390,11 +397,16 @@ export function FrameworksView(): React.ReactElement {
                     variant="outline"
                     size="sm"
                     onClick={() => void handleSaveRoute()}
-                    disabled={busy || !routeDraft || routeDraft === (currentRoute ?? '')}
+                    unavailable={projectClosed}
+                    aria-describedby={projectClosed ? ROUTE_CLOSED_REASON_ID : undefined}
+                    disabled={!projectClosed && (busy || !routeDraft || routeDraft === (currentRoute ?? ''))}
                   >
                     Guardar ruta
                   </Button>
                 </div>
+                {projectClosed ? (
+                  <DisabledReason id={ROUTE_CLOSED_REASON_ID}>{CLOSED_PROJECT_REASON}</DisabledReason>
+                ) : null}
               </div>
             ) : (
               currentLine
@@ -412,7 +424,9 @@ export function FrameworksView(): React.ReactElement {
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={busy}
+                  unavailable={projectClosed}
+                  aria-describedby={projectClosed ? STAGE_CLOSED_REASON_ID : undefined}
+                  disabled={!projectClosed && busy}
                   onClick={() =>
                     void handleStage(requestValidationStage, 'Solicitud enviada a validación.')
                   }
@@ -422,7 +436,9 @@ export function FrameworksView(): React.ReactElement {
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={busy}
+                  unavailable={projectClosed}
+                  aria-describedby={projectClosed ? STAGE_CLOSED_REASON_ID : undefined}
+                  disabled={!projectClosed && busy}
                   onClick={() => void handleStage(markReadyStage, 'Solicitud lista para liberar.')}
                 >
                   Marcar lista para liberar
@@ -430,13 +446,18 @@ export function FrameworksView(): React.ReactElement {
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={busy}
+                  unavailable={projectClosed}
+                  aria-describedby={projectClosed ? STAGE_CLOSED_REASON_ID : undefined}
+                  disabled={!projectClosed && busy}
                   onClick={() =>
                     void handleStage(confirmStabilizationStage, 'Estabilización confirmada.')
                   }
                 >
                   Confirmar estabilización
                 </Button>
+                {projectClosed ? (
+                  <DisabledReason id={STAGE_CLOSED_REASON_ID}>{CLOSED_PROJECT_REASON}</DisabledReason>
+                ) : null}
               </div>
             </Section>
           </div>
@@ -472,6 +493,23 @@ export function FrameworksView(): React.ReactElement {
             {board.blockedReason ?? 'Hay un bloqueo transversal vigente.'}
           </InlineNotice>
         ) : null}
+        {projectClosed ? (
+          <InlineNotice
+            tone="info"
+            role="status"
+            title="Proyecto cerrado"
+            action={
+              <Link
+                href={`/demanda/solicitudes/${encodeURIComponent(board.requestId)}`}
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                Ir a la ficha
+              </Link>
+            }
+          >
+            Sus controles quedaron congelados. Para modificarlos, reabre el proyecto desde la ficha de la solicitud.
+          </InlineNotice>
+        ) : null}
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
           <Tabs
             value={tab}
@@ -491,11 +529,12 @@ export function FrameworksView(): React.ReactElement {
                   <GateItem
                     key={gate.gateCode}
                     gate={gate}
+                    requestId={board.requestId}
+                    projectClosed={projectClosed}
                     canReview={canReview}
                     busy={busy}
                     peopleById={peopleById}
-                    // eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render.
-                    onApprove={() => void handleApprove(gate.gateCode)}
+                    onApprove={() => setApproveOpen(true)}
                     onWaive={() => openWaive(gate.gateCode)}
                     onShowValidations={showValidations}
                   />
@@ -510,6 +549,7 @@ export function FrameworksView(): React.ReactElement {
                 gc4Summary={gc4Summary}
                 canReview={canReview}
                 busy={busy}
+                closed={projectClosed}
                 resolvingId={resolvingId}
                 onRegister={openValidation}
                 onResolve={(id) => void handleResolveBlocking(id)}
@@ -611,9 +651,24 @@ export function FrameworksView(): React.ReactElement {
         typeCatalog={typeCatalog}
         resultCatalog={resultCatalog}
         people={people}
+        canReview={canReview}
+        actorUserId={permissions?.userId ?? null}
+        actorName={permissions?.name ?? null}
         submitting={validationSubmitting}
         errorMessage={validationError}
         onSubmit={(input) => void handleCreateValidation(input)}
+      />
+      <ConfirmDialog
+        open={approveOpen}
+        onOpenChange={setApproveOpen}
+        tone="default"
+        title="¿Aprobar GC4?"
+        description="La solicitud pasará a En estabilización. Esta decisión queda registrada con tu nombre."
+        confirmLabel="Aprobar GC4"
+        returnFocusTo={() => document.getElementById(gateHeadingId('GC4'))}
+        onConfirm={async () => {
+          await handleApprove('GC4');
+        }}
       />
       <ReasonDialog
         open={waiveOpen}

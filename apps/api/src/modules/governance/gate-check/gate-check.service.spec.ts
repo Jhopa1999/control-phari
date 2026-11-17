@@ -44,6 +44,7 @@ type Mocks = {
   validationRecord: { findMany: jest.Mock };
   request: { findFirst: jest.Mock; update: jest.Mock };
   user: { findUnique: jest.Mock };
+  projectClosure: { findFirst: jest.Mock };
   auditRecord: jest.Mock;
   service: GateCheckService;
 };
@@ -101,12 +102,15 @@ function setup(): Mocks {
   // Resolucion del nombre de quien decidio un control (solo cuando hay FK).
   const user = { findUnique: jest.fn().mockResolvedValue({ name: 'Decididor' }) };
 
+  // Cierre formal del proyecto (D10): por defecto no hay ninguno aprobado.
+  const projectClosure = { findFirst: jest.fn().mockResolvedValue(null) };
   const prismaObj: Record<string, unknown> = {
     gateCheck,
     gatePendingItem,
     validationRecord,
     request,
     user,
+    projectClosure,
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaObj));
   const prisma = prismaObj as unknown as PrismaService;
@@ -125,6 +129,7 @@ function setup(): Mocks {
     validationRecord,
     request,
     user,
+    projectClosure,
     auditRecord,
     service,
   };
@@ -696,5 +701,120 @@ describe('GateCheckService', () => {
       expect(updateArg.data).not.toHaveProperty('operationalState');
       expect(updateArg.data.blockedResolvedAt).toBeInstanceOf(Date);
     });
+  });
+});
+
+describe('GateCheckService · cierre y controles congelados (oleada 2, D10/D11)', () => {
+  const CLOSED_MESSAGE =
+    'El proyecto está cerrado; reabre el proyecto para modificar sus controles.';
+  const GC5_MESSAGE = 'El cierre se solicita y se aprueba desde el cierre del proyecto.';
+
+  function closedSetup(overrides: Partial<Record<string, unknown>> = {}) {
+    const m = setup();
+    m.request.findFirst.mockResolvedValue(
+      makeRequest({
+        operationalState: RequestState.CERRADA,
+        governanceRoute: GOVERNANCE_ROUTE.SIMPLIFICADA,
+        ...overrides,
+      }),
+    );
+    stubUpsert(m.gateCheck);
+    m.gateCheck.findUnique.mockImplementation(
+      (args: { where: { gate_check_request_gate_unique: { gateCode: GateCode } } }) =>
+        Promise.resolve(makeGate(args.where.gate_check_request_gate_unique.gateCode)),
+    );
+    return m;
+  }
+
+  describe('aprobación manual de GC5 (D10)', () => {
+    it('responde 409 si no hay cierre formal aprobado y no mueve la solicitud', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(
+        makeRequest({ operationalState: RequestState.OPERATIVA }),
+      );
+      stubUpsert(m.gateCheck);
+      m.gateCheck.findUnique.mockResolvedValue(makeGate(GateCode.GC5));
+      m.request.update.mockResolvedValue({ operationalState: RequestState.CERRADA });
+      const attempt = m.service.approve(JEFE, 'req-1', 'GC5', {});
+      await expect(attempt).rejects.toBeInstanceOf(ConflictException);
+      await expect(attempt).rejects.toThrow(GC5_MESSAGE);
+      expect(m.request.update).not.toHaveBeenCalled();
+      expect(m.auditRecord).not.toHaveBeenCalled();
+    });
+
+    it('con el proyecto cerrado y un cierre APROBADO devuelve el control sin tocar nada', async () => {
+      const m = closedSetup();
+      m.projectClosure.findFirst.mockResolvedValue({ id: 'c-1', status: 'APROBADO' });
+      const result = await m.service.approve(JEFE, 'req-1', 'GC5', {});
+      expect(result.gateCode).toBe(GateCode.GC5);
+      expect(m.request.update).not.toHaveBeenCalled();
+      expect(m.auditRecord).not.toHaveBeenCalled();
+    });
+
+    it('un proyecto reabierto con un cierre aprobado antiguo tampoco se cierra por GC5', async () => {
+      const m = setup();
+      m.request.findFirst.mockResolvedValue(
+        makeRequest({ operationalState: RequestState.OPERATIVA }),
+      );
+      stubUpsert(m.gateCheck);
+      m.gateCheck.findUnique.mockResolvedValue(makeGate(GateCode.GC5));
+      m.projectClosure.findFirst.mockResolvedValue({ id: 'c-old', status: 'APROBADO' });
+      await expect(m.service.approve(JEFE, 'req-1', 'GC5', {})).rejects.toThrow(GC5_MESSAGE);
+      expect(m.request.update).not.toHaveBeenCalled();
+    });
+
+    it('GC5 se muestra CUMPLIDO cuando la solicitud ya está cerrada', async () => {
+      const m = closedSetup();
+      const board = await m.service.getForRequest(JEFE, 'req-1');
+      const gc5 = board.gates.find((g) => g.gateCode === GateCode.GC5);
+      expect(gc5?.status).toBe(GateStatus.CUMPLIDO);
+    });
+  });
+
+  describe('solicitud CERRADA: los controles quedan congelados', () => {
+    it.each([
+      ['waive', (m: Mocks) => m.service.waive(JEFE, 'req-1', 'GC4', { waiverReason: 'x' })],
+      ['setRoute', (m: Mocks) => m.service.setRoute(JEFE, 'req-1', { route: 'COMPLETA' })],
+      ['addPendingItem', (m: Mocks) => m.service.addPendingItem(JEFE, 'req-1', 'GC4', { description: 'x' })],
+      [
+        'resolvePendingItem',
+        (m: Mocks) => m.service.resolvePendingItem(JEFE, 'req-1', 'GC4', 'item-1', { resolved: true }),
+      ],
+      ['advanceStage', (m: Mocks) => m.service.advanceStage(JEFE, 'req-1', 'request-validation')],
+      ['block', (m: Mocks) => m.service.block(JEFE, 'req-1', { blockReason: 'x' })],
+      ['unblock', (m: Mocks) => m.service.unblock(JEFE, 'req-1', {})],
+      ['approve GC4', (m: Mocks) => m.service.approve(JEFE, 'req-1', 'GC4', {})],
+    ])('%s responde 409 en español y no escribe', async (_name, call) => {
+      const m = closedSetup();
+      const attempt = call(m);
+      await expect(attempt).rejects.toBeInstanceOf(ConflictException);
+      await expect(attempt).rejects.toThrow(CLOSED_MESSAGE);
+      expect(m.request.update).not.toHaveBeenCalled();
+      expect(m.gateCheck.update).not.toHaveBeenCalled();
+      expect(m.gatePendingItem.create).not.toHaveBeenCalled();
+      expect(m.gatePendingItem.update).not.toHaveBeenCalled();
+      expect(m.auditRecord).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('waive solo sobre un control PENDIENTE', () => {
+    it.each([GateStatus.CUMPLIDO, GateStatus.NO_APLICA])(
+      'un control %s responde 409',
+      async (status) => {
+        const m = setup();
+        m.request.findFirst.mockResolvedValue(
+          makeRequest({ governanceRoute: GOVERNANCE_ROUTE.SIMPLIFICADA }),
+        );
+        m.gateCheck.upsert.mockResolvedValue(makeGate(GateCode.GC4, { status }));
+        m.gateCheck.findUnique.mockResolvedValue(makeGate(GateCode.GC4, { status }));
+        const attempt = m.service.waive(JEFE, 'req-1', 'GC4', { waiverReason: 'motivo' });
+        await expect(attempt).rejects.toBeInstanceOf(ConflictException);
+        await expect(attempt).rejects.toThrow(
+          'Solo se puede marcar como no aplicable un control pendiente.',
+        );
+        expect(m.gateCheck.update).not.toHaveBeenCalled();
+        expect(m.auditRecord).not.toHaveBeenCalled();
+      },
+    );
   });
 });

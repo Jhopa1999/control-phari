@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -7,7 +9,9 @@ import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
+import { RequestState } from '../../request/request-state';
 import { RequestStateService } from '../../request/request-state.service';
+import { CLOSED_PROJECT_MESSAGE } from '../gate';
 import { GovernanceScopeService } from '../governance-scope.service';
 import { CreateValidationDto } from './dto/create-validation.dto';
 import { ResolveBlockingDto } from './dto/resolve-blocking.dto';
@@ -26,6 +30,9 @@ type ValidationWithUsers = Prisma.ValidationRecordGetPayload<{
     blockingResolvedBy: { select: { id: true; name: true } };
   };
 }>;
+
+/** Holgura (ms) para relojes desfasados entre el navegador y el servidor. */
+const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
 const VALIDATION_USERS_INCLUDE = {
   executedBy: { select: { id: true, name: true } },
@@ -75,6 +82,13 @@ export class ValidationService {
     };
   }
 
+  /** 409 si la solicitud está cerrada: sus validaciones quedan congeladas. */
+  private assertNotClosed(request: { operationalState: string }): void {
+    if (request.operationalState === RequestState.CERRADA) {
+      throw new ConflictException(CLOSED_PROJECT_MESSAGE);
+    }
+  }
+
   /** Historial de validaciones de la Request (design §3.4). frameworks. */
   async findForRequest(
     actor: CurrentActor,
@@ -100,6 +114,29 @@ export class ValidationService {
     dto: CreateValidationDto,
   ): Promise<ValidationResponseDto> {
     const request = await this.scope.requireInScope(actor, requestId);
+    this.assertNotClosed(request);
+
+    // D11: quien no gestiona el proceso solo registra validaciones ejecutadas por el mismo.
+    if (
+      dto.executedByUserId !== actor.userId &&
+      !this.scope.isRequestManager(actor, request)
+    ) {
+      throw new ForbiddenException(
+        'Solo puedes registrar validaciones ejecutadas por ti. El líder del proceso o el jefe de área pueden registrarlas a nombre de otra persona.',
+      );
+    }
+    const executor = await this.prisma.user.findUnique({
+      where: { id: dto.executedByUserId },
+      select: { id: true, active: true },
+    });
+    if (!executor || !executor.active) {
+      throw new BadRequestException(
+        'La persona que ejecutó la validación no existe o está inactiva.',
+      );
+    }
+    if (new Date(dto.executedAt).getTime() > Date.now() + FUTURE_TOLERANCE_MS) {
+      throw new BadRequestException('La fecha de ejecución no puede ser posterior a hoy.');
+    }
 
     await this.state.assertCatalogCode('VALIDATION_TYPE', dto.validationTypeCode);
     await this.state.assertCatalogCode('VALIDATION_RESULT', dto.resultCode);
@@ -186,6 +223,7 @@ export class ValidationService {
   ): Promise<ValidationResponseDto> {
     const request = await this.scope.requireInScope(actor, requestId);
     this.scope.requireRequestManager(actor, request);
+    this.assertNotClosed(request);
 
     const record = await this.prisma.validationRecord.findFirst({
       where: { id: validationId, requestId },

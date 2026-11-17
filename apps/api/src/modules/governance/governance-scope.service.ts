@@ -54,6 +54,20 @@ export class GovernanceScopeService {
     return request;
   }
 
+  /** True si el actor es jefe de área o líder del proceso principal de la Request. */
+  isRequestManager(
+    actor: CurrentActor,
+    request: Pick<RequestModel, 'mainProcessId'>,
+  ): boolean {
+    if (actor.isJefeArea) {
+      return true;
+    }
+    return (
+      request.mainProcessId !== null &&
+      this.leaderProcessIds(actor).includes(request.mainProcessId)
+    );
+  }
+
   /**
    * Autoridad de gestion sobre la Request (design §1.2 D-B6): jefe de area, o
    * lider del proceso principal de la Request (`request.mainProcessId`). En otro
@@ -63,13 +77,7 @@ export class GovernanceScopeService {
     actor: CurrentActor,
     request: Pick<RequestModel, 'mainProcessId'>,
   ): void {
-    if (actor.isJefeArea) {
-      return;
-    }
-    if (
-      request.mainProcessId !== null &&
-      this.leaderProcessIds(actor).includes(request.mainProcessId)
-    ) {
+    if (this.isRequestManager(actor, request)) {
       return;
     }
     throw new ForbiddenException(

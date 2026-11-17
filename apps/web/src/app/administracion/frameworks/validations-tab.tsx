@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { ClipboardCheck, ExternalLink, Plus } from 'lucide-react';
+import { DisabledReason } from '@/components/disabled-reason';
 import { EmptyState } from '@/components/empty-state';
 import { InlineNotice } from '@/components/inline-notice';
 import { RowActionsCell } from '@/components/row-actions';
@@ -17,8 +18,10 @@ import {
 } from '@/components/ui/table';
 import type { CatalogItem } from '@/lib/api-client';
 import { formatCount, formatDateTime, orDash } from '@/lib/format';
+import { CLOSED_PROJECT_REASON } from './closed-project';
 import type { GateValidationSummary, ValidationRecord } from '@/lib/governance';
 
+const CLOSED_REASON_ID = 'validations-closed-reason';
 const VALIDATION_NOUN = { one: 'validación', other: 'validaciones' };
 const BLOCKING_NOUN = { one: 'bloqueante sin resolver', other: 'bloqueantes sin resolver' };
 
@@ -66,6 +69,8 @@ export interface ValidationsTabProps {
   gc4Summary: GateValidationSummary | null;
   canReview: boolean;
   busy: boolean;
+  /** La solicitud está cerrada: no se registran ni se resuelven validaciones. */
+  closed: boolean;
   /** Validación cuyo bloqueo se está resolviendo. */
   resolvingId: string | null;
   onRegister: () => void;
@@ -80,12 +85,18 @@ export function ValidationsTab({
   gc4Summary,
   canReview,
   busy,
+  closed,
   resolvingId,
   onRegister,
   onResolve,
 }: ValidationsTabProps): React.ReactElement {
   const registerButton = (
-    <Button type="button" onClick={onRegister}>
+    <Button
+      type="button"
+      unavailable={closed}
+      aria-describedby={closed ? CLOSED_REASON_ID : undefined}
+      onClick={onRegister}
+    >
       <Plus aria-hidden="true" />
       Registrar validación
     </Button>
@@ -97,7 +108,12 @@ export function ValidationsTab({
         <p className="text-meta text-muted-foreground">
           Evidencias y pruebas del expediente. Registrarlas no aprueba ningún control.
         </p>
-        {registerButton}
+        <div className="flex flex-col items-start gap-1 sm:items-end">
+          {registerButton}
+          {closed ? (
+            <DisabledReason id={CLOSED_REASON_ID}>{CLOSED_PROJECT_REASON}</DisabledReason>
+          ) : null}
+        </div>
       </div>
 
       {gc4Summary ? (
@@ -173,7 +189,9 @@ export function ValidationsTab({
                             variant="ghost"
                             size="sm"
                             loading={resolvingId === record.id}
-                            disabled={busy}
+                            disabled={busy && !closed}
+                            unavailable={closed}
+                            aria-describedby={closed ? CLOSED_REASON_ID : undefined}
                             onClick={() => onResolve(record.id)}
                           >
                             Resolver bloqueo
