@@ -569,7 +569,7 @@ export function ActasPanel({
         <div className="rounded-lg border bg-card">
           <ErrorState
             title="No fue posible cargar las actas."
-            message={error}
+            error={error}
             onRetry={() => void reload()}
           />
         </div>

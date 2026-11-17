@@ -72,7 +72,7 @@ export async function getPlan(requestId: string): Promise<Plan> {
       { params: { path: { requestId } } },
     );
     if (error || !data) {
-      throw toPlanError(response.status);
+      throw toPlanError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -95,7 +95,7 @@ export async function createPlan(
       { params: { path: { requestId } }, body: input },
     );
     if (error || !data) {
-      throw toPlanError(response.status);
+      throw toPlanError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -115,7 +115,7 @@ export async function updatePlan(
       { params: { path: { requestId } }, body: input },
     );
     if (error || !data) {
-      throw toPlanError(response.status);
+      throw toPlanError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -135,7 +135,7 @@ export async function getPlanGuide(requestId: string): Promise<PlanGuide> {
       { params: { path: { requestId } } },
     );
     if (error || !data) {
-      throw toPlanError(response.status);
+      throw toPlanError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -161,7 +161,7 @@ export async function submitPlan(requestId: string): Promise<Plan> {
       if (response.status === 409 && typeof body?.message === 'string' && body.message.trim() !== '') {
         throw new PlanError(body.message, 409);
       }
-      throw toPlanError(response.status);
+      throw toPlanError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -181,7 +181,7 @@ export async function authorizePlan(requestId: string): Promise<Plan> {
       { params: { path: { requestId } }, body: {} },
     );
     if (error || !data) {
-      throw toPlanError(response.status);
+      throw toPlanError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -204,7 +204,7 @@ export async function returnPlan(
       { params: { path: { requestId } }, body: input },
     );
     if (error || !data) {
-      throw toPlanError(response.status);
+      throw toPlanError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -224,7 +224,7 @@ export async function exportPlan(requestId: string): Promise<PlanDocument> {
       { params: { path: { requestId } } },
     );
     if (error || !data) {
-      throw toPlanError(response.status);
+      throw toPlanError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -248,7 +248,7 @@ export async function importPlan(
       { params: { path: { requestId } }, body: doc },
     );
     if (error || !data) {
-      throw toPlanError(response.status);
+      throw toPlanError(response.status, error);
     }
     return data;
   } catch (err) {

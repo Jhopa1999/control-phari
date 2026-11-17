@@ -212,7 +212,7 @@ export class DependencyService {
     }));
     if (reaches(edges, predecessorTaskId, dependentTaskId)) {
       throw new BadRequestException(
-        `La dependencia crearia un ciclo entre las tareas "${predecessorTaskId}" y "${dependentTaskId}".`,
+        'La dependencia crearía un ciclo entre las tareas.',
       );
     }
   }

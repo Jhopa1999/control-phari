@@ -55,7 +55,7 @@ export class SmtpConfigService {
     // Reglas e.2: cadena vacia no es "limpiar"; combinacion invalida.
     if (dto.password === '') {
       throw new BadRequestException(
-        'El password no puede ser una cadena vacia; usa clearPassword para limpiarlo.',
+        'La contraseña no puede ser una cadena vacía; usa clearPassword para limpiarlo.',
       );
     }
     if (dto.clearPassword === true && dto.password !== undefined && dto.password !== '') {

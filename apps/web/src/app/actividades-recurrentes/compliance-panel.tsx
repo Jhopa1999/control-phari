@@ -25,16 +25,12 @@ import type {
   User,
 } from '@/lib/api-client';
 import { formatHours, formatPercent, orDash } from '@/lib/format';
-import { ApiError, getCompliance } from '@/lib/recurring-activities';
+import { getCompliance } from '@/lib/recurring-activities';
 import { signedHours } from '@/lib/recurring-format';
 import { recurrenceLabel, responsibleKindLabel } from '@/lib/status-labels';
 import { cn } from '@/lib/utils';
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error';
-
-function messageOf(err: unknown): string {
-  return err instanceof ApiError ? err.message : 'Ocurrió un error inesperado.';
-}
 
 interface CompliancePanelProps {
   /** Usuarios para resolver nombres de responsables USER. */
@@ -97,7 +93,7 @@ export function CompliancePanel({ users, areas }: CompliancePanelProps): React.R
   const [from, setFrom] = React.useState('');
   const [to, setTo] = React.useState('');
   const [state, setState] = React.useState<LoadState>('idle');
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<unknown>(null);
   const [data, setData] = React.useState<RecurringCompliance | null>(null);
 
   const userNameById = React.useMemo(() => {
@@ -121,7 +117,7 @@ export function CompliancePanel({ users, areas }: CompliancePanelProps): React.R
         setState('success');
       })
       .catch((err: unknown) => {
-        setError(messageOf(err));
+        setError(err);
         setState('error');
       });
   }, [from, to]);
@@ -178,7 +174,7 @@ export function CompliancePanel({ users, areas }: CompliancePanelProps): React.R
       <div className="rounded-xl bg-card shadow-card">
         <ErrorState
           title="No fue posible cargar el panel de cumplimiento."
-          message={error}
+          error={error}
           onRetry={() => void load()}
         />
       </div>

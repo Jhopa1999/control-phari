@@ -1,6 +1,6 @@
 import { api } from './api-client';
 import type { components, paths } from '@plantilla-portales/api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, toApiError, apiErrorFrom } from './api-error';
 
 export { ApiError };
 
@@ -45,7 +45,7 @@ export async function listPortfolio(
       },
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {

@@ -152,7 +152,7 @@ export class MeetingService {
     for (const id of userIds) {
       if (!allowed.has(id)) {
         throw new BadRequestException(
-          `El participante "${id}" esta fuera de tu alcance.`,
+          'Un participante está fuera de tu alcance.',
         );
       }
     }
@@ -167,7 +167,7 @@ export class MeetingService {
       include: MEETING_INCLUDE,
     });
     if (!row) {
-      throw new NotFoundException(`Reunion "${id}" no encontrada.`);
+      throw new NotFoundException('No se encontró la reunión.');
     }
     return row;
   }

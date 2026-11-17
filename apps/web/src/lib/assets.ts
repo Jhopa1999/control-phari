@@ -6,6 +6,7 @@ import {
   type CreateAsset,
   type UpdateAsset,
 } from './api-client';
+import { messageFromBody } from './api-error';
 
 /**
  * Error de dominio de activos con un mensaje ya entendible para el usuario.
@@ -37,13 +38,13 @@ function messageForStatus(status: number): string {
 }
 
 /** Normaliza cualquier fallo (HTTP o de red) a un AssetError entendible. */
-function toAssetError(status: number | undefined): AssetError {
+function toAssetError(status: number | undefined, body?: unknown): AssetError {
   if (status === undefined) {
     return new AssetError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new AssetError(messageForStatus(status), status);
+  return new AssetError(messageFromBody(body) ?? messageForStatus(status), status);
 }
 
 /** Activos en alcance (GET /assets). El backend filtra por alcance. */
@@ -51,7 +52,7 @@ export async function listAssets(): Promise<Asset[]> {
   try {
     const { data, error, response } = await api.GET('/assets');
     if (error || !data) {
-      throw toAssetError(response.status);
+      throw toAssetError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -67,7 +68,7 @@ export async function getAsset(id: string): Promise<Asset> {
       params: { path: { id } },
     });
     if (error || !data) {
-      throw toAssetError(response.status);
+      throw toAssetError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -83,7 +84,7 @@ export async function createAsset(input: CreateAsset): Promise<Asset> {
       body: input,
     });
     if (error || !data) {
-      throw toAssetError(response.status);
+      throw toAssetError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -103,7 +104,7 @@ export async function updateAsset(
       body: input,
     });
     if (error || !data) {
-      throw toAssetError(response.status);
+      throw toAssetError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -124,7 +125,7 @@ export async function listAssetRequests(
       params: { path: { id: assetId } },
     });
     if (error || !data) {
-      throw toAssetError(response.status);
+      throw toAssetError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -144,7 +145,7 @@ export async function changeAssetStatus(
       body: input,
     });
     if (error || !data) {
-      throw toAssetError(response.status);
+      throw toAssetError(response.status, error);
     }
     return data;
   } catch (err) {

@@ -44,7 +44,7 @@ function toMeetingError(status: number | undefined, body?: unknown): MeetingErro
     );
   }
   const server = (body as { message?: unknown } | undefined)?.message;
-  if ((status === 400 || status === 403 || status === 409) && typeof server === 'string' && server.trim()) {
+  if (status !== undefined && typeof server === 'string' && server.trim()) {
     return new MeetingError(server, status);
   }
   return new MeetingError(messageForStatus(status), status);

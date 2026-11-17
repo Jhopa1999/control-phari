@@ -40,7 +40,7 @@ export class RolesGuard implements CanActivate {
     const allowed = requiredRoles.some((role) => actor.roleCodes.has(role));
     if (!allowed) {
       throw new ForbiddenException(
-        'No tienes el rol necesario para esta operacion.',
+        'No tienes el rol necesario para esta operación.',
       );
     }
 

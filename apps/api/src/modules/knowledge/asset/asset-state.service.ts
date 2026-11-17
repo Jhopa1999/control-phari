@@ -26,12 +26,12 @@ export class AssetStateService {
   assertTransition(from: string, to: string): AssetStatus {
     if (!isAssetStatus(to)) {
       throw new BadRequestException(
-        `Estado destino "${to}" no es un estado valido.`,
+        `Estado destino "${to}" no es un estado válido.`,
       );
     }
     if (!isAssetStatus(from)) {
       throw new BadRequestException(
-        `Estado actual "${from}" no es un estado valido.`,
+        `Estado actual "${from}" no es un estado válido.`,
       );
     }
     if (!isAssetTransitionAllowed(from, to)) {

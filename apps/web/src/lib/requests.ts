@@ -91,7 +91,7 @@ export async function listRequests(
       },
     });
     if (error || !data) {
-      throw toRequestError(response.status);
+      throw toRequestError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -107,7 +107,7 @@ export async function getRequest(id: string): Promise<Request> {
       params: { path: { id } },
     });
     if (error || !data) {
-      throw toRequestError(response.status);
+      throw toRequestError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -123,7 +123,7 @@ export async function createRequest(input: CreateRequest): Promise<Request> {
       body: input,
     });
     if (error || !data) {
-      throw toRequestError(response.status);
+      throw toRequestError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -145,7 +145,7 @@ export async function deleteRequest(id: string): Promise<void> {
           409,
         );
       }
-      throw toRequestError(response.status);
+      throw toRequestError(response.status, error);
     }
   } catch (err) {
     if (err instanceof RequestError) throw err;

@@ -1,5 +1,7 @@
 'use client';
 
+import { ModuleGate } from '@/components/module-gate';
+import { NO_ACCESS_COPY } from '@/components/no-access-notice';
 import * as React from 'react';
 import { History } from 'lucide-react';
 import {
@@ -67,7 +69,7 @@ function isAction(value: string): value is AuditAction {
  * hasMore }. El orden lo fija el servidor (createdAt desc), por eso los
  * encabezados no son ordenables.
  */
-export function AuditoriaView(): React.ReactElement {
+function AuditoriaViewContent(): React.ReactElement {
   const [events, setEvents] = React.useState<AuditEvent[]>([]);
   const [total, setTotal] = React.useState(0);
   const [processes, setProcesses] = React.useState<Process[]>([]);
@@ -370,5 +372,18 @@ export function AuditoriaView(): React.ReactElement {
         }}
       />
     </PageLayout>
+  );
+}
+
+export function AuditoriaView(): React.ReactElement {
+  return (
+    <ModuleGate
+      moduleKey="audit"
+      title="Auditoría"
+      description="Cambios registrados dentro de tu alcance."
+      copy={NO_ACCESS_COPY.audit}
+    >
+      <AuditoriaViewContent />
+    </ModuleGate>
   );
 }

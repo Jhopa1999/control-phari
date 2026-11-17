@@ -147,7 +147,7 @@ export function FichaView({
   const [state, setState] = React.useState<LoadState>('loading');
   const [request, setRequest] = React.useState<Request | null>(null);
   const [data, setData] = React.useState<StageData>(EMPTY_STAGE);
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<unknown>(null);
 
   const loadData = React.useCallback(() => {
     // getRequest es el dato troncal: si falla, es error global de la ficha.
@@ -216,7 +216,7 @@ export function FichaView({
         ),
       )
       .catch((err: unknown) => {
-        setErrorMessage(err instanceof RequestError ? err.message : 'Ocurrió un error inesperado.');
+        setErrorMessage(err);
         setState('error');
       });
   }, [id]);
@@ -252,7 +252,7 @@ export function FichaView({
         <div className="rounded-lg border bg-card">
           <ErrorState
             title="No fue posible cargar la solicitud."
-            message={errorMessage}
+            error={errorMessage}
             onRetry={() => void load()}
           />
           <div className="flex justify-center pb-6">

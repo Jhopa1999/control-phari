@@ -69,7 +69,7 @@ export function ParticipantsDialog({
   const [data, setData] = React.useState<PlanParticipants | null>(null);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [loadError, setLoadError] = React.useState<unknown>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [attempt, setAttempt] = React.useState(0);
 
@@ -91,7 +91,7 @@ export function ParticipantsDialog({
       })
       .catch((err: unknown) => {
         if (!active) return;
-        setLoadError(messageOf(err));
+        setLoadError(err);
         setState('error');
       });
     return () => {
@@ -164,7 +164,7 @@ export function ParticipantsDialog({
             {state === 'error' ? (
               <ErrorState
                 title="No fue posible cargar los procesos."
-                message={loadError}
+                error={loadError}
                 onRetry={() => setAttempt((n) => n + 1)}
               />
             ) : null}

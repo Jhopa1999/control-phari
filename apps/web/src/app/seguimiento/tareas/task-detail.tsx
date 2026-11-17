@@ -138,7 +138,8 @@ export function TaskDetail({
   const [fileCount, setFileCount] = React.useState<{ taskId: string; count: number } | null>(null);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
   const [history, setHistory] = React.useState<TaskHistoryEntry[] | null>(null);
-  const [historyError, setHistoryError] = React.useState<string | null>(null);
+  const [historyError, setHistoryError] = React.useState<unknown>(null);
+  const [loadError, setLoadError] = React.useState<unknown>(null);
 
   // Formulario de cambio de estado (reset solo en éxito, AC-031).
   const [nextStatus, setNextStatus] = React.useState<string>('');
@@ -157,7 +158,7 @@ export function TaskDetail({
         setHistoryError(null);
       })
       .catch((err: unknown) => {
-        setHistoryError(messageOf(err));
+        setHistoryError(err);
       });
   }, []);
 
@@ -186,7 +187,8 @@ export function TaskDetail({
         setFormError(null);
         setState('success');
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        setLoadError(err);
         setState('error');
       });
   }, []);
@@ -347,7 +349,7 @@ export function TaskDetail({
     return wrap(
       embedded ? null : <PageHeader title="Tarea" breadcrumbs={breadcrumbs} />,
       <div className="rounded-lg border bg-card">
-        <ErrorState title="No fue posible cargar la tarea." onRetry={() => void load(taskId)} />
+        <ErrorState title="No fue posible cargar la tarea." error={loadError} onRetry={() => void load(taskId)} />
       </div>,
     );
   }

@@ -98,7 +98,7 @@ export class TriageSuggestionService {
     ]);
 
     if (!globalRow?.enabled || !agent?.enabled) {
-      throw new ConflictException('La sugerencia de IA esta desactivada.');
+      throw new ConflictException('La sugerencia de IA está desactivada.');
     }
 
     // 2b) Presupuesto mensual: agotado -> 409 SIN invocar Bedrock.
@@ -177,7 +177,7 @@ export class TriageSuggestionService {
         throw new ServiceUnavailableException('La IA no respondio a tiempo.');
       }
       throw new ServiceUnavailableException(
-        'La IA no esta disponible en este momento.',
+        'La IA no está disponible en este momento.',
       );
     }
 

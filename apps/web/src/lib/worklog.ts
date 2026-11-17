@@ -59,7 +59,7 @@ function serverMessage(error: unknown): string | undefined {
 
 /** Normaliza cualquier fallo (HTTP o de red) a un WorklogError entendible. */
 function toWorklogError(status: number | undefined, error?: unknown): WorklogError {
-  const fromServer = status === 400 || status === 403 || status === 409 ? serverMessage(error) : undefined;
+  const fromServer = status !== undefined ? serverMessage(error) : undefined;
   if (fromServer) return new WorklogError(fromServer, status);
   if (status === undefined) {
     return new WorklogError(
@@ -76,7 +76,7 @@ export async function listCoordinationPeople(): Promise<CoordinationPerson[]> {
   try {
     const { data, error, response } = await api.GET('/coordination/people');
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -208,7 +208,7 @@ export async function getDailyLog(id: string): Promise<DailyLog> {
       params: { path: { id } },
     });
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -246,7 +246,7 @@ export async function updateDailyLog(
       body: input,
     });
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -262,7 +262,7 @@ export async function deleteDailyLog(id: string): Promise<void> {
       params: { path: { id } },
     });
     if (error) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
   } catch (err) {
     if (err instanceof WorklogError) throw err;
@@ -342,7 +342,7 @@ export async function deleteActivity(id: string): Promise<void> {
       params: { path: { id } },
     });
     if (error) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
   } catch (err) {
     if (err instanceof WorklogError) throw err;
@@ -448,7 +448,7 @@ export async function listWeeklyReports(
       params: { query },
     });
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -464,7 +464,7 @@ export async function getWeeklyReport(id: string): Promise<WeeklyReport> {
       params: { path: { id } },
     });
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -502,7 +502,7 @@ export async function updateWeeklyReport(
       body: input,
     });
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {

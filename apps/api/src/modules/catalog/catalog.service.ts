@@ -80,7 +80,7 @@ export class CatalogService {
       ) {
         // Violacion del unique (catalog, code): no exponemos el error interno.
         throw new ConflictException(
-          `Ya existe un elemento con catalog "${catalog}" y code "${code}".`,
+          'Ya existe un elemento con ese código en esta maestra.',
         );
       }
       throw error;
@@ -105,7 +105,7 @@ export class CatalogService {
   async findOne(id: string): Promise<CatalogItemModel> {
     const item = await this.prisma.catalogItem.findUnique({ where: { id } });
     if (!item) {
-      throw new NotFoundException(`CatalogItem "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el elemento de la maestra.');
     }
     return item;
   }

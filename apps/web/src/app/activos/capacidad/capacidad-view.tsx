@@ -1,5 +1,7 @@
 'use client';
 
+import { ModuleGate } from '@/components/module-gate';
+import { NO_ACCESS_COPY } from '@/components/no-access-notice';
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { CalendarClock, ChevronRight, Plus, Users } from 'lucide-react';
@@ -149,7 +151,7 @@ function assignmentActionId(id: string): string {
   return `asig-editar-${id}`;
 }
 
-export function CapacidadView(): React.ReactElement {
+function CapacidadViewContent(): React.ReactElement {
   const { permissions } = useActor();
 
   // Un integrante "puro" solo tiene grants INTEGRANTE: puede registrar su
@@ -896,5 +898,18 @@ export function CapacidadView(): React.ReactElement {
         onSubmit={handleAsigSubmit}
       />
     </PageLayout>
+  );
+}
+
+export function CapacidadView(): React.ReactElement {
+  return (
+    <ModuleGate
+      moduleKey="capacity"
+      title="Capacidad"
+      description="Disponibilidad y carga del equipo por mes, dentro de tu alcance."
+      copy={NO_ACCESS_COPY.capacity}
+    >
+      <CapacidadViewContent />
+    </ModuleGate>
   );
 }

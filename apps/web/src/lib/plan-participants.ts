@@ -38,7 +38,7 @@ function toError(status: number | undefined, body?: unknown): PlanParticipantsEr
     );
   }
   const message =
-    (status === 400 || status === 409) && typeof body === 'object' && body !== null
+    status !== undefined && typeof body === 'object' && body !== null
       ? (body as { message?: unknown }).message
       : undefined;
   return new PlanParticipantsError(

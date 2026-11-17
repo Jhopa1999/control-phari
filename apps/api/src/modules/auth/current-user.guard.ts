@@ -64,7 +64,7 @@ export class CurrentUserGuard implements CanActivate {
         if (cookieToken !== undefined) {
           if (requiresCsrf(request.method) && !hasCsrfHeader(request.headers)) {
             throw new ForbiddenException(
-              'Falta la cabecera de proteccion CSRF.',
+              'Falta la cabecera de protección CSRF.',
             );
           }
           rawIdentity = `Bearer ${cookieToken}`;
@@ -79,7 +79,7 @@ export class CurrentUserGuard implements CanActivate {
     const actor = await this.actorResolver.resolve(rawIdentity);
     if (!actor) {
       throw new UnauthorizedException(
-        'No hay un usuario actual valido para la peticion.',
+        'No hay un usuario actual válido para la petición.',
       );
     }
 

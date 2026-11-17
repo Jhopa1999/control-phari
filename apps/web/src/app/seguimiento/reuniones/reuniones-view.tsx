@@ -1,5 +1,7 @@
 'use client';
 
+import { ModuleGate } from '@/components/module-gate';
+import { NO_ACCESS_COPY } from '@/components/no-access-notice';
 import * as React from 'react';
 import { FileText, Handshake, ListChecks } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
@@ -7,8 +9,8 @@ import { PageLayout } from '@/components/page-layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import type { Commitment, CoordinationPerson, Meeting, Process } from '@/lib/api-client';
-import { CommitmentError, listCommitments } from '@/lib/commitments';
-import { MeetingError, listMeetings, listOpenCommitmentsOfMyMeetings } from '@/lib/meetings';
+import { listCommitments } from '@/lib/commitments';
+import { listMeetings, listOpenCommitmentsOfMyMeetings } from '@/lib/meetings';
 import { listProcesses } from '@/lib/team';
 import { listCoordinationPeople } from '@/lib/worklog';
 import { ActasPanel } from './actas-panel';
@@ -25,7 +27,7 @@ export interface CoordinationData {
   processes: Process[];
   people: CoordinationPerson[];
   state: LoadState;
-  error: string | null;
+  error: unknown;
   reload: () => Promise<void>;
 }
 
@@ -46,7 +48,7 @@ function readParam(name: string): string | null {
  * (`?tab=compromisos&commitmentId=…` o `?meetingId=…`) para los enlaces de las
  * notificaciones.
  */
-export function ReunionesView(): React.ReactElement {
+function ReunionesViewContent(): React.ReactElement {
   const [tab, setTab] = React.useState<Tab>('actas');
   const [initialMeetingId, setInitialMeetingId] = React.useState<string | null>(null);
   const [initialCommitmentId, setInitialCommitmentId] = React.useState<string | null>(null);
@@ -58,7 +60,7 @@ export function ReunionesView(): React.ReactElement {
   const [state, setState] = React.useState<LoadState>('loading');
   // Conteo de vencidos de «Mis compromisos abiertos» para la pestaña (null si no se pudo cargar).
   const [myOverdue, setMyOverdue] = React.useState<number | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<unknown>(null);
 
   React.useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- lee la pestaña y los ids de la URL tras montar (window no existe en el servidor).
@@ -87,9 +89,7 @@ export function ReunionesView(): React.ReactElement {
         setState('success');
       })
       .catch((err: unknown) => {
-        setError(
-          err instanceof MeetingError || err instanceof CommitmentError ? err.message : null,
-        );
+        setError(err);
         setState('error');
       });
   }, []);
@@ -179,5 +179,18 @@ export function ReunionesView(): React.ReactElement {
         </TabsContent>
       </Tabs>
     </PageLayout>
+  );
+}
+
+export function ReunionesView(): React.ReactElement {
+  return (
+    <ModuleGate
+      moduleKey="meeting"
+      title="Reuniones y compromisos"
+      description="Actas de reunión con sus participantes, agenda y decisiones, y el seguimiento de los compromisos acordados."
+      copy={NO_ACCESS_COPY.meeting}
+    >
+      <ReunionesViewContent />
+    </ModuleGate>
   );
 }

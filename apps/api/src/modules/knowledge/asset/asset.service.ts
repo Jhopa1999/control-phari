@@ -81,7 +81,7 @@ export class AssetService {
       include: ASSET_INCLUDE,
     });
     if (!row) {
-      throw new NotFoundException(`Activo "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el activo.');
     }
     return row;
   }
@@ -96,7 +96,7 @@ export class AssetService {
       select: { id: true },
     });
     if (!user) {
-      throw new BadRequestException('El responsable indicado no existe o esta inactivo.');
+      throw new BadRequestException('El responsable indicado no existe o está inactivo.');
     }
   }
 
@@ -141,7 +141,7 @@ export class AssetService {
     });
     if (found.length !== ids.length) {
       throw new BadRequestException(
-        'Alguno de los procesos indicados no existe o esta inactivo.',
+        'Alguno de los procesos indicados no existe o está inactivo.',
       );
     }
   }

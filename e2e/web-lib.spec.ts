@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
 import {
+  ApiError,
+  apiErrorFrom,
+  classifyError,
+  messageFromBody,
+} from '../apps/web/src/lib/api-error';
+import {
   CircleCheck,
   CircleDashed,
   CircleMinus,
@@ -1780,5 +1786,72 @@ test.describe('estado de ocurrencia (displayStatus)', () => {
   test('definicion: Activa / Pausada', () => {
     expect(getStatus('recurringDefinition', 'true').label).toBe('Activa');
     expect(getStatus('recurringDefinition', 'false').label).toBe('Pausada');
+  });
+});
+
+test.describe('classifyError y mensajes del servidor (oleada 3)', () => {
+  class DomainError extends Error {
+    constructor(
+      message: string,
+      readonly status?: number,
+    ) {
+      super(message);
+    }
+  }
+
+  test('403 -> forbidden con el mensaje del servidor', () => {
+    expect(classifyError(new ApiError('Tu rol no incluye esto.', 403))).toEqual({
+      kind: 'forbidden',
+      message: 'Tu rol no incluye esto.',
+      status: 403,
+    });
+  });
+
+  test('404 -> notFound, 401 -> unauthorized y 500 -> server', () => {
+    expect(classifyError(new ApiError('No se encontró la tarea.', 404)).kind).toBe('notFound');
+    expect(classifyError(new ApiError('Sesión caducada', 401)).kind).toBe('unauthorized');
+    expect(classifyError(new ApiError('Ocurrió un error interno.', 500))).toMatchObject({
+      kind: 'server',
+      status: 500,
+      message: 'Ocurrió un error interno.',
+    });
+    expect(classifyError(new ApiError('Revisa los datos ingresados.', 400)).kind).toBe('server');
+  });
+
+  test('sin status (sin respuesta, 0, timeout o aborto) -> network', () => {
+    expect(classifyError(new ApiError('No fue posible comunicarse con el servidor.')).kind).toBe(
+      'network',
+    );
+    expect(classifyError(new DomainError('sin respuesta')).kind).toBe('network');
+    const timeout = new Error('The operation timed out');
+    timeout.name = 'TimeoutError';
+    expect(classifyError(timeout).kind).toBe('network');
+    expect(classifyError(new DOMException('abortado', 'AbortError')).kind).toBe('network');
+    expect(classifyError('texto suelto').kind).toBe('network');
+    expect(classifyError(undefined).kind).toBe('network');
+  });
+
+  test('un error de dominio con status se clasifica igual que ApiError', () => {
+    expect(classifyError(new DomainError('Sin permiso.', 403)).kind).toBe('forbidden');
+    expect(classifyError(new DomainError('Falla.', 502)).kind).toBe('server');
+  });
+
+  test('sin texto, el mensaje sale de messageForStatus', () => {
+    expect(classifyError(new ApiError('', 403)).message).toBe('No tienes acceso a esta acción.');
+  });
+
+  test('messageFromBody une los arreglos con salto de línea y apiErrorFrom lo usa en cualquier status', () => {
+    expect(
+      messageFromBody({ message: ['El campo «título» es obligatorio.', 'El campo no es válido.'] }),
+    ).toBe('El campo «título» es obligatorio.\nEl campo no es válido.');
+    expect(messageFromBody({ message: '  ' })).toBeUndefined();
+    expect(messageFromBody(null)).toBeUndefined();
+    const err = apiErrorFrom(403, { message: 'No puedes ver esto.' });
+    expect(err.status).toBe(403);
+    expect(err.message).toBe('No puedes ver esto.');
+    expect(apiErrorFrom(undefined, { message: 'x' }).status).toBeUndefined();
+    expect(apiErrorFrom(500, {}).message).toBe(
+      'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.',
+    );
   });
 });

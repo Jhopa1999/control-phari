@@ -518,7 +518,7 @@ export class WorklogService {
       case 'EXTRAORDINARIA':
         if (!notEmpty(fields.requesterRef) || !notEmpty(fields.justification)) {
           throw new BadRequestException(
-            'Extraordinaria requiere solicitante y justificacion.',
+            'Extraordinaria requiere solicitante y justificación.',
           );
         }
         break;
@@ -535,7 +535,7 @@ export class WorklogService {
         }
         break;
       default:
-        throw new BadRequestException('Clasificacion de actividad invalida.');
+        throw new BadRequestException('Clasificación de actividad inválida.');
     }
   }
   // --- Resolucion de alcance ----------------------------------------------
@@ -563,7 +563,7 @@ export class WorklogService {
       include: LOG_INCLUDE,
     });
     if (!row) {
-      throw new NotFoundException(`Diario "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el diario.');
     }
     return row;
   }
@@ -577,7 +577,7 @@ export class WorklogService {
       include: LOG_INCLUDE,
     });
     if (!row) {
-      throw new NotFoundException(`Diario "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el diario.');
     }
     return row;
   }
@@ -591,7 +591,7 @@ export class WorklogService {
       where: { id: activityId },
     });
     if (!activity) {
-      throw new NotFoundException(`Actividad "${activityId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la actividad.');
     }
     const log = await this.prisma.dailyLog.findFirst({
       where: {
@@ -599,7 +599,7 @@ export class WorklogService {
       },
     });
     if (!log) {
-      throw new NotFoundException(`Actividad "${activityId}" no encontrada.`);
+      throw new NotFoundException('No se encontró la actividad.');
     }
     return { activity, log };
   }
@@ -614,7 +614,7 @@ export class WorklogService {
     throw new ConflictException(
       log.status === DailyLogStatus.REVISADO
         ? 'El diario ya fue revisado y no se puede modificar.'
-        : 'El diario ya fue enviado a revision y no se puede modificar.',
+        : 'El diario ya fue enviado a revisión y no se puede modificar.',
     );
   }
 
@@ -1322,7 +1322,7 @@ export class WorklogService {
       include: WEEKLY_INCLUDE,
     });
     if (!row) {
-      throw new NotFoundException(`Semanal "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el semanal.');
     }
     const consolidation = await this.consolidate(row);
     return this.toWeeklyReportResponse(row, consolidation, actor);
@@ -1441,7 +1441,7 @@ export class WorklogService {
       where: { AND: [{ id }, this.scope.weeklyReportWriteWhere(actor)] },
     });
     if (!row) {
-      throw new NotFoundException(`Semanal "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el semanal.');
     }
     return row;
   }
@@ -1456,7 +1456,7 @@ export class WorklogService {
       throw new ConflictException(
         existing.status === DailyLogStatus.REVISADO
           ? 'El semanal ya fue revisado y no se puede modificar.'
-          : 'El semanal ya fue enviado a revision y no se puede modificar.',
+          : 'El semanal ya fue enviado a revisión y no se puede modificar.',
       );
     }
 
@@ -1746,7 +1746,7 @@ export class WorklogService {
       where: { AND: [{ id }, this.scope.weeklyReportReadWhere(actor)] },
     });
     if (!existing) {
-      throw new NotFoundException(`Semanal "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el semanal.');
     }
     this.assertCanReview(actor, existing.authorUserId, existing.processId);
     if (existing.status !== DailyLogStatus.ENVIADO) {
@@ -1787,7 +1787,7 @@ export class WorklogService {
       where: { AND: [{ id }, this.scope.weeklyReportReadWhere(actor)] },
     });
     if (!existing) {
-      throw new NotFoundException(`Semanal "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el semanal.');
     }
     this.assertCanReview(actor, existing.authorUserId, existing.processId);
     if (existing.status !== DailyLogStatus.ENVIADO) {

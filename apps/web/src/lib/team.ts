@@ -6,7 +6,7 @@ import {
   type Process,
   type User,
 } from './api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, toApiError, apiErrorFrom } from './api-error';
 
 export { ApiError };
 
@@ -15,7 +15,7 @@ export async function listUsers(): Promise<User[]> {
   try {
     const { data, error, response } = await api.GET('/users');
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -29,7 +29,7 @@ export async function createUser(input: CreateUser): Promise<User> {
   try {
     const { data, error, response } = await api.POST('/users', { body: input });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -57,7 +57,7 @@ export async function listGrants(filters: GrantFilters = {}): Promise<Grant[]> {
       },
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -73,7 +73,7 @@ export async function createGrant(input: CreateGrant): Promise<Grant> {
       body: input,
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -89,7 +89,7 @@ export async function revokeGrant(id: string): Promise<Grant> {
       params: { path: { id } },
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -109,7 +109,7 @@ export async function inviteUser(id: string): Promise<void> {
       params: { path: { id } },
     });
     if (error) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
   } catch (err) {
     if (err instanceof ApiError) throw err;
@@ -125,7 +125,7 @@ export async function listProcesses(): Promise<Process[]> {
   try {
     const { data, error, response } = await api.GET('/processes');
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {

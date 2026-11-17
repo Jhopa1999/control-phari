@@ -98,7 +98,7 @@ export class AiModelCatalogService implements OnModuleInit {
     const row = await this.prisma.aiModel.findUnique({ where: { modelId } });
     if (!row || !row.enabled) {
       throw new BadRequestException(
-        'El modelo seleccionado no esta en el catalogo de modelos permitidos.',
+        'El modelo seleccionado no está en el catálogo de modelos permitidos.',
       );
     }
   }
@@ -197,7 +197,7 @@ export class AiModelCatalogService implements OnModuleInit {
   ): Promise<AiModelCatalogEntryDto> {
     const existing = await this.prisma.aiModel.findUnique({ where: { modelId } });
     if (!existing) {
-      throw new NotFoundException(`Modelo de IA "${modelId}" no encontrado.`);
+      throw new NotFoundException('No se encontró el modelo de IA.');
     }
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.aiModel.update({

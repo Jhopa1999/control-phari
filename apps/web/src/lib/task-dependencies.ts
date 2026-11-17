@@ -4,6 +4,7 @@ import {
   type TaskDependency,
 } from './api-client';
 import { PlanError } from './plan';
+import { messageFromBody } from './api-error';
 
 function messageForStatus(status: number): string {
   switch (status) {
@@ -20,13 +21,13 @@ function messageForStatus(status: number): string {
   }
 }
 
-function toDependencyError(status: number | undefined): PlanError {
+function toDependencyError(status: number | undefined, body?: unknown): PlanError {
   if (status === undefined) {
     return new PlanError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
   }
-  return new PlanError(messageForStatus(status), status);
+  return new PlanError(messageFromBody(body) ?? messageForStatus(status), status);
 }
 
 /** Predecesoras de una tarea (GET /tasks/:id/dependencies). */
@@ -39,7 +40,7 @@ export async function listDependencies(
       { params: { path: { id: taskId } } },
     );
     if (error || !data) {
-      throw toDependencyError(response.status);
+      throw toDependencyError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -62,7 +63,7 @@ export async function addDependency(
       { params: { path: { id: taskId } }, body: input },
     );
     if (error || !data) {
-      throw toDependencyError(response.status);
+      throw toDependencyError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -84,7 +85,7 @@ export async function removeDependency(
       { params: { path: { id: taskId, predecessorTaskId } } },
     );
     if (error) {
-      throw toDependencyError(response.status);
+      throw toDependencyError(response.status, error);
     }
   } catch (err) {
     if (err instanceof PlanError) throw err;

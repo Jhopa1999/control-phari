@@ -30,7 +30,7 @@ import { MODULE_LABELS, MODULE_ORDER } from '@/lib/navigation';
  * propia). El servidor aplica los permisos; el menú solo los refleja.
  */
 export function MisPermisosView(): React.ReactElement {
-  const { actorId, permissions, state, reload } = useActor();
+  const { actorId, permissions, state, permissionsError, reload } = useActor();
 
   let content: React.ReactNode;
   if (!actorId) {
@@ -53,7 +53,7 @@ export function MisPermisosView(): React.ReactElement {
   } else if (state === 'error' || !permissions) {
     content = (
       <div className="rounded-lg border bg-card">
-        <ErrorState title="No fue posible cargar tus permisos." onRetry={reload} />
+        <ErrorState title="No fue posible cargar tus permisos." error={permissionsError} onRetry={reload} />
       </div>
     );
   } else {

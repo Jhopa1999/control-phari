@@ -1,18 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { FolderKanban, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { InlineNotice } from '@/components/inline-notice';
+import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -58,7 +58,7 @@ export function ProcesosView(): React.ReactElement {
   const [activeAreas, setActiveAreas] = React.useState<Area[]>([]);
   const [loadedState, setState] = React.useState<LoadState>('loading');
   const state: LoadState = permissionsLoaded && !processesAllowed ? 'forbidden' : loadedState;
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [loadError, setLoadError] = React.useState<unknown>(null);
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Process | null>(null);
@@ -84,7 +84,7 @@ export function ProcesosView(): React.ReactElement {
           setState('forbidden');
           return;
         }
-        setLoadError(err instanceof Error ? err.message : null);
+        setLoadError(err);
         setState('error');
       });
   }, []);
@@ -206,24 +206,7 @@ export function ProcesosView(): React.ReactElement {
           title="Procesos"
           description="Procesos de cada área (por ejemplo, BI, Integraciones, IA)."
         />
-        <InlineNotice
-          tone="neutral"
-          title="Esta pantalla no está disponible para tu rol."
-          action={
-            allowedModules.has('permissions') ? (
-              <Link
-                href="/gobierno/mis-permisos"
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
-              >
-                Ir a Mis permisos
-              </Link>
-            ) : undefined
-          }
-        >
-          <p className="text-muted-foreground">
-            Gestionar procesos corresponde al administrador o al jefe de área.
-          </p>
-        </InlineNotice>
+        <NoAccessNotice {...NO_ACCESS_COPY.adminOrBoss} />
       </PageLayout>
     );
   }
@@ -240,7 +223,7 @@ export function ProcesosView(): React.ReactElement {
       <div className="rounded-lg border bg-card">
         <ErrorState
           title="No fue posible cargar los procesos."
-          message={loadError}
+          error={loadError}
           onRetry={() => void load()}
         />
       </div>

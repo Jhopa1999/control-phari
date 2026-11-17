@@ -225,7 +225,7 @@ export class TriageService {
     // POST encuentra EN_TRIAGE/otro estado -> 409 sin mutacion (HIGH-1).
     if (request.operationalState !== RequestState.REGISTRADA) {
       throw new ConflictException(
-        'Solo se puede registrar el triage de una solicitud recien registrada.',
+        'Solo se puede registrar el triage de una solicitud recién registrada.',
       );
     }
 
@@ -482,7 +482,7 @@ export class TriageService {
       asset.visibleProcessIds.includes(mainProcessId);
     if (!visibleForMainProcess) {
       throw new ConflictException(
-        'El activo no esta habilitado para el proceso de la solicitud.',
+        'El activo no está habilitado para el proceso de la solicitud.',
       );
     }
 

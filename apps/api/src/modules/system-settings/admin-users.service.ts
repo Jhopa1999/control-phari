@@ -52,7 +52,7 @@ export class AdminUsersService {
   ): Promise<void> {
     const user = await this.prisma.user.findFirst({ where: { id: userId } });
     if (!user) {
-      throw new NotFoundException(`Usuario "${userId}" no encontrado.`);
+      throw new NotFoundException('No se encontró el usuario.');
     }
     // Guard-rail del ultimo admin: si se va a degradar (isAdmin=false) y el
     // objetivo es admin activo, verificar que no sea el unico admin activo.

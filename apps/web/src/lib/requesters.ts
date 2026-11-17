@@ -4,7 +4,7 @@ import {
   type Requester,
   type UpdateRequester,
 } from './api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, toApiError, apiErrorFrom } from './api-error';
 
 export { ApiError };
 
@@ -30,7 +30,7 @@ export async function listRequesters(filters: RequesterFilters = {}): Promise<Re
       },
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -44,7 +44,7 @@ export async function createRequester(input: CreateRequester): Promise<Requester
   try {
     const { data, error, response } = await api.POST('/requesters', { body: input });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -64,7 +64,7 @@ export async function updateRequester(
       body: input,
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {

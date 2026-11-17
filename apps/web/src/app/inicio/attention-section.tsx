@@ -91,6 +91,7 @@ export function AttentionSection(): React.ReactElement {
   const [data, setData] = React.useState<Attention | null>(null);
   const [state, setState] = React.useState<LoadState>('loading');
   const [attempt, setAttempt] = React.useState(0);
+  const [loadError, setLoadError] = React.useState<unknown>(null);
 
   React.useEffect(() => {
     let active = true;
@@ -100,8 +101,9 @@ export function AttentionSection(): React.ReactElement {
         setData(result);
         setState('success');
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (!active) return;
+        setLoadError(err);
         setState('error');
       });
     return () => {
@@ -133,7 +135,7 @@ export function AttentionSection(): React.ReactElement {
       <div className="overflow-hidden rounded-xl border bg-card">
         <ErrorState
           title="No fue posible cargar lo que requiere tu atención."
-          message={null}
+          error={loadError}
           onRetry={retry}
         />
       </div>

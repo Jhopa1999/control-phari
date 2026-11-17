@@ -4,7 +4,7 @@ import {
   type CreateArea,
   type UpdateArea,
 } from './api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, toApiError, apiErrorFrom } from './api-error';
 
 export { ApiError };
 
@@ -29,7 +29,7 @@ export async function listAreas(filters: AreaFilters = {}): Promise<Area[]> {
       },
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -43,7 +43,7 @@ export async function createArea(input: CreateArea): Promise<Area> {
   try {
     const { data, error, response } = await api.POST('/areas', { body: input });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -60,7 +60,7 @@ export async function updateArea(id: string, input: UpdateArea): Promise<Area> {
       body: input,
     });
     if (error || !data) {
-      throw toApiError(response.status);
+      throw apiErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {

@@ -45,7 +45,7 @@ export class UserInviteService {
   async invite(actor: CurrentActor, userId: string): Promise<void> {
     const user = await this.prisma.user.findFirst({ where: { id: userId } });
     if (!user) {
-      throw new NotFoundException(`Usuario "${userId}" no encontrado.`);
+      throw new NotFoundException('No se encontró el usuario.');
     }
 
     const ttlMs = this.invitationTtlMs();

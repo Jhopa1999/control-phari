@@ -171,7 +171,7 @@ export class CapacityService {
         );
       }
       throw new NotFoundException(
-        `Persona "${targetUserId}" fuera de tu alcance.`,
+        'La persona está fuera de tu alcance.',
       );
     }
   }
@@ -204,7 +204,7 @@ export class CapacityService {
       select: { id: true },
     });
     if (!process) {
-      throw new NotFoundException(`Proceso "${processId}" fuera de tu alcance.`);
+      throw new NotFoundException('El proceso está fuera de tu alcance.');
     }
   }
 
@@ -227,7 +227,7 @@ export class CapacityService {
     });
     if (!request) {
       throw new NotFoundException(
-        `Solicitud "${requestId}" no encontrada.`,
+        'No se encontró la solicitud.',
       );
     }
   }
@@ -271,7 +271,7 @@ export class CapacityService {
         error.code === 'P2002'
       ) {
         throw new ConflictException(
-          'Ya existe disponibilidad para esa persona y mes; editala.',
+          'Ya existe disponibilidad para esa persona y mes; edítala.',
         );
       }
       throw error;
@@ -293,7 +293,7 @@ export class CapacityService {
       },
     });
     if (!existing) {
-      throw new NotFoundException(`Disponibilidad "${id}" no encontrada.`);
+      throw new NotFoundException('No se encontró la disponibilidad.');
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -398,7 +398,7 @@ export class CapacityService {
       },
     });
     if (!row) {
-      throw new NotFoundException(`Asignacion "${id}" no encontrada.`);
+      throw new NotFoundException('No se encontró la asignación.');
     }
     return row;
   }

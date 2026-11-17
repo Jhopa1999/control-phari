@@ -31,6 +31,8 @@ interface ActorContextValue {
   allowedModules: Set<string>;
   /** Estado de la carga de permisos. */
   state: PermissionsState;
+  /** El fallo de la última carga de permisos (para ErrorState); null si no falló. */
+  permissionsError: unknown;
   /** Recarga los permisos del actor actual. */
   reload: () => void;
   /** Usuario autenticado en modo jwt (null sin sesion o en dev-header). */
@@ -90,6 +92,7 @@ export function ActorProvider({
     null,
   );
   const [state, setState] = React.useState<PermissionsState>('none');
+  const [permissionsError, setPermissionsError] = React.useState<unknown>(null);
   const [sessionExpired, setSessionExpired] = React.useState(false);
   const [identityReady, setIdentityReady] = React.useState(false);
   const [signedOut, setSignedOut] = React.useState(false);
@@ -178,6 +181,7 @@ export function ActorProvider({
         const data = await getMyPermissions();
         if (authMode === 'jwt') loadedIdentifierRef.current = id;
         setPermissions(data);
+        setPermissionsError(null);
         setState('success');
       } catch (err) {
         // En jwt, un 401 al cargar permisos = sesion invalida/expirada: se
@@ -193,6 +197,7 @@ export function ActorProvider({
           return;
         }
         setPermissions(null);
+        setPermissionsError(err);
         setState('error');
       }
     },
@@ -255,6 +260,7 @@ export function ActorProvider({
       permissions,
       allowedModules,
       state,
+      permissionsError,
       reload,
       authUser,
       isAuthenticated,
@@ -271,6 +277,7 @@ export function ActorProvider({
       permissions,
       allowedModules,
       state,
+      permissionsError,
       reload,
       authUser,
       isAuthenticated,

@@ -169,7 +169,7 @@ export function BitacoraDetalle({
 }: BitacoraDetalleProps): React.ReactElement {
   const [detail, setDetail] = React.useState<DailyLog | null>(null);
   const [state, setState] = React.useState<LoadState>('loading');
-  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [loadError, setLoadError] = React.useState<unknown>(null);
 
   const [diarioOpen, setDiarioOpen] = React.useState(false);
   const [diarioSubmitting, setDiarioSubmitting] = React.useState(false);
@@ -208,7 +208,7 @@ export function BitacoraDetalle({
           setState('success');
         })
         .catch((err: unknown) => {
-          setLoadError(err instanceof WorklogError ? err.message : null);
+          setLoadError(err);
           setState('error');
         }),
     [logId],
@@ -574,7 +574,7 @@ export function BitacoraDetalle({
         <ErrorState
           size="compact"
           title="No fue posible cargar el diario."
-          message={loadError}
+          error={loadError}
           onRetry={() => {
             setState('loading');
             void fetchDetail();

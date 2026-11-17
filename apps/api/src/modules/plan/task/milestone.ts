@@ -23,7 +23,7 @@ export function applyMilestoneRule(input: {
   }
 
   if (estimateHours !== null && estimateHours > 0) {
-    throw new BadRequestException('Un hito debe tener estimacion 0.');
+    throw new BadRequestException('Un hito debe tener estimación 0.');
   }
   estimateHours = 0;
 

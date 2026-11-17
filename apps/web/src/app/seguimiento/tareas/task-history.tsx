@@ -31,7 +31,7 @@ export interface TaskHistoryProps {
   /** null mientras carga; [] si no hay eventos. */
   entries: TaskHistoryEntry[] | null;
   /** Mensaje de error de la carga, si falló. */
-  error: string | null;
+  error: unknown;
   onRetry: () => void;
 }
 
@@ -102,8 +102,8 @@ function ChangeRow({ change }: { change: DisplayTaskChange }): React.ReactElemen
  * los datos llegan ya cargados desde el detalle.
  */
 export function TaskHistory({ entries, error, onRetry }: TaskHistoryProps): React.ReactElement {
-  if (error) {
-    return <ErrorState title="No se pudo cargar el historial." message={error} onRetry={onRetry} />;
+  if (error !== null && error !== undefined) {
+    return <ErrorState title="No se pudo cargar el historial." error={error} onRetry={onRetry} />;
   }
   if (entries === null) {
     return (

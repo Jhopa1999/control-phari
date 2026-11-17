@@ -41,7 +41,7 @@ export class UserService {
       include: { grants: { include: { role: true, process: true } } },
     });
     if (!user) {
-      throw new NotFoundException(`Usuario "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el usuario.');
     }
     return { ...toUserResponse(user), grants: user.grants };
   }
@@ -74,7 +74,7 @@ export class UserService {
         error.code === 'P2002'
       ) {
         throw new ConflictException(
-          `Ya existe un usuario con identifier "${dto.identifier}".`,
+          'Ya existe un usuario con ese identificador.',
         );
       }
       throw error;
@@ -88,7 +88,7 @@ export class UserService {
   ): Promise<UserResponseDto> {
     const existing = await this.prisma.user.findUnique({ where: { id } });
     if (!existing) {
-      throw new NotFoundException(`Usuario "${id}" no encontrado.`);
+      throw new NotFoundException('No se encontró el usuario.');
     }
 
     return this.prisma.$transaction(async (tx) => {

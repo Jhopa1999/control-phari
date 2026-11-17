@@ -30,7 +30,7 @@ export function dateStringToDate(value: string): Date {
   const date = new Date(Date.UTC(year, monthIndex, day));
   if (dateToString(date) !== value) {
     throw new BadRequestException(
-      `La fecha "${value}" no es una fecha valida (formato YYYY-MM-DD).`,
+      `La fecha "${value}" no es una fecha válida (formato YYYY-MM-DD).`,
     );
   }
   return date;

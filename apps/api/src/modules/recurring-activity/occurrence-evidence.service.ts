@@ -62,7 +62,7 @@ export class OccurrenceEvidenceService {
   private assertOpen(canComplete: boolean): void {
     if (!canComplete) {
       throw new ConflictException(
-        'Solo se pueden adjuntar o quitar archivos mientras la actividad esta abierta.',
+        'Solo se pueden adjuntar o quitar archivos mientras la actividad está abierta.',
       );
     }
   }
