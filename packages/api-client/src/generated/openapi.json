@@ -5767,7 +5767,7 @@
             }
           },
           "400": {
-            "description": "El proceso indicado no existe (jefe de área).\n\nDatos invalidos."
+            "description": "El proceso indicado no existe (jefe de área).\n\nDatos inválidos o fecha posterior a hoy («No puedes registrar un diario de una fecha futura.»)."
           },
           "403": {
             "description": "El actor no pertenece al proceso indicado."
@@ -6065,6 +6065,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "El diario no tiene actividades («Agrega al menos una actividad antes de enviar el diario.»). El día libre se registra como actividad «Interna» con nota."
           },
           "404": {
             "description": "Diario fuera de alcance."
@@ -6641,7 +6644,7 @@
             }
           },
           "400": {
-            "description": "El proceso indicado no existe (jefe de área).\n\nDatos invalidos."
+            "description": "El proceso indicado no existe (jefe de área).\n\nDatos inválidos o semana posterior a la actual («No puedes registrar un semanal de una semana futura.»)."
           },
           "403": {
             "description": "El actor no pertenece al proceso indicado."
@@ -6761,6 +6764,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Ninguna sección del semanal tiene texto («Escribe al menos una sección del semanal antes de enviarlo.»)."
           },
           "404": {
             "description": "Semanal fuera de alcance."

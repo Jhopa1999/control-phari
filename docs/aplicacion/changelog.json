@@ -902,6 +902,15 @@
         "docs/aplicacion/autenticacion-autorizacion.md"
       ],
       "summary": "Oleada 2, PR-D (BL-073: D10 y D11): un solo camino de cierre (aprobar GC5 a mano responde 409 sin cierre formal; el cierre formal deja GC5 CUMPLIDO y una migración regulariza los ya cerrados); los controles de una solicitud CERRADA quedan congelados (409), waive solo sobre un control PENDIENTE, y registrar una validación exige ejecutor existente y activo (400), fecha no futura (400) y, para el integrante, que sea él mismo (403). Controles: GC5 enlaza al cierre, aviso de proyecto cerrado, confirmación al aprobar GC4 y selector de ejecutor sin id manual. MCP: descripción de governance.gate.approve; sin tools nuevas."
+    },
+    {
+      "timestamp": "2026-11-16T18:00:00Z",
+      "trigger_file": "apps/api/src/modules/coordination/worklog/worklog.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Oleada 2, PR-E (D16, BL-068 y BL-069): la API rechaza con 400 un diario de fecha futura, un diario enviado sin actividades, un semanal de semana futura y un semanal enviado sin texto en ninguna sección; Bitácora y Reporte semanal limitan la fecha y dejan el botón Enviar no disponible con el motivo, y muestran el mensaje de la API. Contrato: solo descripciones de respuestas 400. MCP: las cuatro operaciones siguen como exclusiones PENDIENTE (sin tool); sin cambios de roles ni de esquema."
     }
   ]
 }

@@ -14,6 +14,8 @@ import { CoordinationScopeService } from '../coordination-scope.service';
 import { RequestScopeService } from '../../request/request-scope.service';
 import { WorklogEligibilityService } from './worklog-eligibility.service';
 import { WorklogService } from './worklog.service';
+import { addDaysUTC, dateToString, mondayOf } from '../date';
+import { localToday } from '../local-day';
 
 function createMocks() {
   const prismaObj: Record<string, any> = {
@@ -416,7 +418,7 @@ describe('WorklogService', () => {
       );
       // findFirst 2a vez para recargar con actividades.
       (m.prismaObj.dailyLog as any).findFirst
-        .mockResolvedValueOnce(dailyLogRow())
+        .mockResolvedValueOnce(dailyLogRow({ activities: [activityRow()] }))
         .mockResolvedValueOnce(dailyLogRow({ status: 'ENVIADO' }));
 
       await m.service.submitDailyLog(integrante(['p1']), 'dl1');
@@ -759,7 +761,7 @@ describe('WorklogService', () => {
   describe('submitDailyLog', () => {
     it('BORRADOR -> ENVIADO ok', async () => {
       (m.prismaObj.dailyLog as any).findFirst
-        .mockResolvedValueOnce(dailyLogRow())
+        .mockResolvedValueOnce(dailyLogRow({ activities: [activityRow()] }))
         .mockResolvedValueOnce(dailyLogRow({ status: 'ENVIADO' }));
       (m.prismaObj.dailyLog as any).update.mockResolvedValue(
         dailyLogRow({ status: 'ENVIADO', submittedAt: now }),
@@ -1131,7 +1133,9 @@ describe('WorklogService', () => {
     });
 
     it('submitWeeklyReport BORRADOR -> ENVIADO ok', async () => {
-      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(weeklyRow());
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(
+        weeklyRow({ results: 'Entregué lo planificado' }),
+      );
       (m.prismaObj.weeklyReport as any).update.mockResolvedValue(
         weeklyRow({ status: 'ENVIADO', submittedAt: now }),
       );
@@ -1297,4 +1301,198 @@ describe('WorklogService', () => {
     });
   });
 
+});
+
+// --- D16: fechas futuras y envíos sin contenido (oleada 2, PR-E) -----------
+describe('WorklogService · D16 (futuro y vacío)', () => {
+  let m: ReturnType<typeof createMocks>;
+  const FUTURE_DAY = '2999-01-07'; // un miércoles muy posterior a hoy
+
+  /** Fecha `YYYY-MM-DD` del día local de hoy desplazada `days` días. */
+  function dayString(days: number): string {
+    return dateToString(addDaysUTC(localToday(), days));
+  }
+
+  beforeEach(() => {
+    m = createMocks();
+    (m.prismaObj.grant as any).findMany.mockResolvedValue([]);
+  });
+
+  describe('createDailyLog · fecha futura', () => {
+    it('una fecha posterior a hoy -> 400 en español y no se guarda nada', async () => {
+      await expect(
+        m.service.createDailyLog(integrante(['p1']), {
+          processId: 'p1',
+          date: FUTURE_DAY,
+        }),
+      ).rejects.toThrow('No puedes registrar un diario de una fecha futura.');
+      expect((m.prismaObj.dailyLog as any).create).not.toHaveBeenCalled();
+      expect(m.auditRecord).not.toHaveBeenCalled();
+    });
+
+    it('mañana también se rechaza (400)', async () => {
+      await expect(
+        m.service.createDailyLog(integrante(['p1']), {
+          processId: 'p1',
+          date: dayString(1),
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('hoy y ayer se aceptan', async () => {
+      (m.prismaObj.dailyLog as any).create.mockImplementation(
+        ({ data }: any) => Promise.resolve(dailyLogRow(data)),
+      );
+      await m.service.createDailyLog(integrante(['p1']), {
+        processId: 'p1',
+        date: dayString(0),
+      });
+      await m.service.createDailyLog(integrante(['p1']), {
+        processId: 'p1',
+        date: dayString(-1),
+      });
+      expect((m.prismaObj.dailyLog as any).create).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('submitDailyLog · sin actividades', () => {
+    it('un diario sin actividades (solo con notas) -> 400 y sigue en borrador', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(
+        dailyLogRow({ dayNotes: 'Día libre', activities: [] }),
+      );
+      await expect(
+        m.service.submitDailyLog(integrante(['p1']), 'dl1'),
+      ).rejects.toThrow(
+        'Agrega al menos una actividad antes de enviar el diario.',
+      );
+      expect((m.prismaObj.dailyLog as any).update).not.toHaveBeenCalled();
+      expect(m.auditRecord).not.toHaveBeenCalled();
+    });
+
+    it('un diario con una actividad "Interna" (día libre con nota) sí se envía', async () => {
+      (m.prismaObj.dailyLog as any).findFirst
+        .mockResolvedValueOnce(
+          dailyLogRow({
+            activities: [
+              activityRow({
+                classificationCode: 'INTERNA',
+                description: 'Día libre',
+              }),
+            ],
+          }),
+        )
+        .mockResolvedValueOnce(dailyLogRow({ status: 'ENVIADO' }));
+      (m.prismaObj.dailyLog as any).update.mockResolvedValue(
+        dailyLogRow({ status: 'ENVIADO', submittedAt: now }),
+      );
+      const res = await m.service.submitDailyLog(integrante(['p1']), 'dl1');
+      expect(res.status).toBe('ENVIADO');
+    });
+
+    it('un diario ya enviado sigue respondiendo 409 (no 400)', async () => {
+      (m.prismaObj.dailyLog as any).findFirst.mockResolvedValue(
+        dailyLogRow({ status: 'ENVIADO', activities: [] }),
+      );
+      await expect(
+        m.service.submitDailyLog(integrante(['p1']), 'dl1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
+
+  describe('createWeeklyReport · semana futura', () => {
+    it('una semana posterior a la actual -> 400 en español y no se guarda', async () => {
+      await expect(
+        m.service.createWeeklyReport(integrante(['p1']), {
+          processId: 'p1',
+          weekStart: FUTURE_DAY,
+        }),
+      ).rejects.toThrow('No puedes registrar un semanal de una semana futura.');
+      expect((m.prismaObj.weeklyReport as any).create).not.toHaveBeenCalled();
+    });
+
+    it('la semana siguiente (lunes de la próxima semana) se rechaza', async () => {
+      const monday = dateToString(mondayOf(addDaysUTC(localToday(), 7)));
+      await expect(
+        m.service.createWeeklyReport(integrante(['p1']), {
+          processId: 'p1',
+          weekStart: monday,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('la semana en curso (aunque la fecha dada sea posterior a hoy dentro de ella) se acepta', async () => {
+      (m.prismaObj.weeklyReport as any).create.mockImplementation(
+        ({ data }: any) => Promise.resolve(weeklyRow(data)),
+      );
+      (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([]);
+      const sunday = dateToString(
+        addDaysUTC(mondayOf(localToday()), 6),
+      );
+      await m.service.createWeeklyReport(integrante(['p1']), {
+        processId: 'p1',
+        weekStart: sunday,
+      });
+      expect((m.prismaObj.weeklyReport as any).create).toHaveBeenCalledTimes(1);
+    });
+
+    it('la semana pasada se acepta y un borrador vacío sigue permitido', async () => {
+      (m.prismaObj.weeklyReport as any).create.mockImplementation(
+        ({ data }: any) => Promise.resolve(weeklyRow(data)),
+      );
+      (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([]);
+      await m.service.createWeeklyReport(integrante(['p1']), {
+        processId: 'p1',
+        weekStart: dayString(-7),
+      });
+      expect((m.prismaObj.weeklyReport as any).create).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('submitWeeklyReport · sin contenido', () => {
+    it('todas las secciones vacías o solo con espacios -> 400 y sigue en borrador', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(
+        weeklyRow({
+          results: '   ',
+          proposals: '',
+          blockers: null,
+          commitmentsText: '\n',
+          decisions: null,
+        }),
+      );
+      await expect(
+        m.service.submitWeeklyReport(integrante(['p1']), 'wr1'),
+      ).rejects.toThrow(
+        'Escribe al menos una sección del semanal antes de enviarlo.',
+      );
+      expect((m.prismaObj.weeklyReport as any).update).not.toHaveBeenCalled();
+      expect(m.auditRecord).not.toHaveBeenCalled();
+    });
+
+    it.each(['results', 'proposals', 'blockers', 'commitmentsText', 'decisions'])(
+      'basta con texto en la sección %s para enviarlo',
+      async (field) => {
+        (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(
+          weeklyRow({ [field]: 'Contenido' }),
+        );
+        (m.prismaObj.weeklyReport as any).update.mockResolvedValue(
+          weeklyRow({ [field]: 'Contenido', status: 'ENVIADO', submittedAt: now }),
+        );
+        (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([]);
+        const res = await m.service.submitWeeklyReport(
+          integrante(['p1']),
+          'wr1',
+        );
+        expect(res.status).toBe('ENVIADO');
+      },
+    );
+
+    it('un semanal ya enviado sigue respondiendo 409 (no 400)', async () => {
+      (m.prismaObj.weeklyReport as any).findFirst.mockResolvedValue(
+        weeklyRow({ status: 'ENVIADO' }),
+      );
+      await expect(
+        m.service.submitWeeklyReport(integrante(['p1']), 'wr1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
 });

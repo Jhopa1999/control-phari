@@ -28,6 +28,7 @@ import {
   dateToString,
   mondayOf,
 } from '../date';
+import { localToday } from '../local-day';
 import { CONSOLIDATION_STATES, DailyLogStatus } from '../record-state';
 import { CreateDailyLogDto } from './dto/create-daily-log.dto';
 import { UpdateDailyLogDto } from './dto/update-daily-log.dto';
@@ -804,6 +805,12 @@ export class WorklogService {
     dto: CreateDailyLogDto,
   ): Promise<DailyLogResponseDto> {
     const date = dateStringToDate(dto.date);
+    // D16: un diario describe lo ya trabajado; no se registra a futuro.
+    if (date.getTime() > localToday().getTime()) {
+      throw new BadRequestException(
+        'No puedes registrar un diario de una fecha futura.',
+      );
+    }
     await this.scope.assertActorInProcess(actor, dto.processId);
 
     try {
@@ -929,6 +936,13 @@ export class WorklogService {
     if (existing.status !== DailyLogStatus.BORRADOR) {
       throw new ConflictException(
         `El diario ya fue enviado (estado "${existing.status}").`,
+      );
+    }
+    // D16: sin actividades no hay nada que revisar. El día libre se registra
+    // como actividad «Interna» con nota; `dayNotes` solo no basta.
+    if (existing.activities.length === 0) {
+      throw new BadRequestException(
+        'Agrega al menos una actividad antes de enviar el diario.',
       );
     }
 
@@ -1363,6 +1377,12 @@ export class WorklogService {
   ): Promise<WeeklyReportResponseDto> {
     // Normaliza SIEMPRE al lunes ISO (nunca 400 por no-lunes, Finding 3).
     const weekStart = mondayOf(dateStringToDate(dto.weekStart));
+    // D16: la semana en curso se acepta; una posterior no existe todavía.
+    if (weekStart.getTime() > localToday().getTime()) {
+      throw new BadRequestException(
+        'No puedes registrar un semanal de una semana futura.',
+      );
+    }
     await this.scope.assertActorInProcess(actor, dto.processId);
 
     try {
@@ -1483,6 +1503,19 @@ export class WorklogService {
     if (existing.status !== DailyLogStatus.BORRADOR) {
       throw new ConflictException(
         `El semanal ya fue enviado (estado "${existing.status}").`,
+      );
+    }
+    // D16: al menos una sección con texto (tras quitar espacios).
+    const hasContent = [
+      existing.results,
+      existing.proposals,
+      existing.blockers,
+      existing.commitmentsText,
+      existing.decisions,
+    ].some((section) => (section ?? '').trim().length > 0);
+    if (!hasContent) {
+      throw new BadRequestException(
+        'Escribe al menos una sección del semanal antes de enviarlo.',
       );
     }
 

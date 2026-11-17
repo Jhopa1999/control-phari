@@ -356,11 +356,11 @@ Agrupa tres submódulos: bitácora/semanal (worklog), reuniones
 | GET | `/worklog/daily` | Lista **paginada** (`{ data, page, pageSize, total, hasMore }`, 25 por defecto, máx. 100) de diarios en alcance. Filtros: `from`, `to`, `date`, `processId`, `authorUserId`, `status`, `classificationCode` (contiene al menos una actividad), `q` (notas, descripción, resultado, activo, solicitante y nombre del autor), `sort` y `page`/`pageSize`. Cada diario trae `authorName`, `processName`, `returned` y `actions` (qué puede hacer quien consulta). |
 | GET | `/worklog/daily/summary` | Resumen con los mismos filtros: diarios, horas, totales por estado, por clasificación y por persona. |
 | GET | `/worklog/options` | Proyectos y tareas que quien consulta puede **imputar** en el diario de un proceso y una fecha (misma regla que aplica al guardar). Query: `processId` (obligatorio), `date` (AAAA-MM-DD; referencia de la ventana de gracia, por defecto hoy), `q`, `includeTerminated`, `scope` (`mine` por defecto o `all`). Devuelve `projects` (`id, code, title, state, closedAt, hasMyTasks`), `tasks` (`id, code, title, status, phaseName, requestId, requestCode, requestTitle, isMine, responsibleName`) y `projectsTruncated`/`tasksTruncated` (tope de 200 por lista). |
-| POST | `/worklog/daily` | Crea la cabecera de un diario (autor = actor). El `processId` debe ser uno de los procesos del actor: `403` si no pertenece a él; el jefe de área puede usar cualquiera, pero uno inexistente da `400` (antes `500`). |
+| POST | `/worklog/daily` | Crea la cabecera de un diario (autor = actor). El `processId` debe ser uno de los procesos del actor: `403` si no pertenece a él; el jefe de área puede usar cualquiera, pero uno inexistente da `400` (antes `500`). Una `date` posterior a hoy (día local de la aplicación) da `400` «No puedes registrar un diario de una fecha futura.»; los diarios ya existentes no se tocan. |
 | GET | `/worklog/daily/:id` | Detalle de un diario con sus actividades. |
 | PATCH | `/worklog/daily/:id` | Edita la cabecera (notas) de un diario propio. |
 | DELETE | `/worklog/daily/:id` | Borra un diario propio (cascade de actividades). |
-| POST | `/worklog/daily/:id/submit` | Envía un diario a revisión (`BORRADOR → ENVIADO`); limpia una devolución anterior. |
+| POST | `/worklog/daily/:id/submit` | Envía un diario a revisión (`BORRADOR → ENVIADO`); limpia una devolución anterior. Un diario sin actividades da `400` «Agrega al menos una actividad antes de enviar el diario.» (`dayNotes` solo no basta; un día libre se registra como actividad «Interna» con nota); crear el borrador vacío sigue permitido. |
 | POST | `/worklog/daily/:id/recall` | El autor retira el envío (`ENVIADO → BORRADOR`); 409 si ya fue revisado o su semanal ya se envió. |
 | POST | `/worklog/daily/:id/review` | Jefe de área o líder del proceso (nunca el autor): `ENVIADO → REVISADO`; 403 si no puede revisar. |
 | POST | `/worklog/daily/:id/return` | Igual que revisar, devuelve `ENVIADO → BORRADOR` con `{ reason }` (10 a 1000 caracteres) y avisa al autor (notificación `WORKLOG_RETURNED`). 409 si su semanal ya se envió. |
@@ -375,7 +375,7 @@ Agrupa tres submódulos: bitácora/semanal (worklog), reuniones
 | POST | `/weekly-reports` | Crea un semanal (se ancla al lunes ISO). Misma validación de proceso que el diario (`403` si no pertenece al proceso; `400` si el jefe indica uno inexistente). |
 | GET | `/weekly-reports/:id` | Detalle de un semanal con conteos de consolidación. |
 | PATCH | `/weekly-reports/:id` | Edita las secciones de texto de un semanal propio. |
-| POST | `/weekly-reports/:id/submit` | Envía un semanal a revisión (`BORRADOR → ENVIADO`). |
+| POST | `/weekly-reports/:id/submit` | Envía un semanal a revisión (`BORRADOR → ENVIADO`). Si ninguna de las cinco secciones (resultados, propuestas, bloqueos, compromisos, decisiones) tiene texto tras quitar espacios, da `400` «Escribe al menos una sección del semanal antes de enviarlo.»; un semanal ya enviado sigue dando `409`. |
 | POST | `/weekly-reports/:id/review` | Jefe o líder del proceso (nunca el autor): `ENVIADO → REVISADO`. |
 | POST | `/weekly-reports/:id/return` | Devuelve `ENVIADO → BORRADOR` con `{ reason }` y avisa al autor. |
 

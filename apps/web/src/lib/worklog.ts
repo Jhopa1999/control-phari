@@ -278,7 +278,7 @@ export async function submitDailyLog(id: string): Promise<DailyLog> {
       { params: { path: { id } } },
     );
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -482,7 +482,7 @@ export async function createWeeklyReport(
       body: input,
     });
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
@@ -519,7 +519,7 @@ export async function submitWeeklyReport(id: string): Promise<WeeklyReport> {
       { params: { path: { id } } },
     );
     if (error || !data) {
-      throw toWorklogError(response.status);
+      throw toWorklogError(response.status, error);
     }
     return data;
   } catch (err) {
