@@ -79,7 +79,7 @@ export class CapacitySummaryRowDto {
   @ApiProperty({
     type: Number,
     description:
-      'Horas planificadas: suma de Task.estimateHours de las tareas del plan asignadas a la persona ese mes (estimacion, status != TERMINADA, estimateHours > 0). Dato informativo paralelo a `comprometido`; 0 si ninguna tarea aporta.',
+      'Horas planificadas: suma de Task.estimateHours de las tareas de planes AUTORIZADOS, en solicitudes vivas (no eliminadas ni RECHAZADA, RETIRADA o CERRADA), asignadas a la persona ese mes (estimacion, status != TERMINADA, estimateHours > 0). Dato informativo paralelo a `comprometido`; 0 si ninguna tarea aporta.',
   })
   planificado!: number;
 

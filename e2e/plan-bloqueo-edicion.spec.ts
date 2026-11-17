@@ -125,6 +125,10 @@ test.describe.serial('Planificación: bloqueo de edición (D5)', () => {
   test('en borrador se edita y se envía a autorización', async ({ request }) => {
     const edit = await call(request, 'patch', `/tasks/${taskId}`, JEFE, { title: 'Tarea uno editada' });
     expect(edit.status()).toBe(200);
+    // D6: sin compromiso el envío se rechaza; con él, pasa.
+    const sinCompromiso = await call(request, 'post', `/requests/${requestId}/plan/submit`, JEFE, {});
+    expect(sinCompromiso.status()).toBe(409);
+    await ok(request, 'patch', `/requests/${requestId}/plan`, { commitmentDate: '2030-02-10' });
     await ok(request, 'post', `/requests/${requestId}/plan/submit`, {});
   });
 

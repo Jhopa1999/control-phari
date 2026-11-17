@@ -155,6 +155,12 @@ export async function submitPlan(requestId: string): Promise<Plan> {
       { params: { path: { requestId } }, body: {} },
     );
     if (error || !data) {
+      // 409: el motivo (p. ej. «El plan necesita la fecha de compromiso.») viene
+      // en español en el cuerpo; se muestra tal cual.
+      const body = error as { message?: unknown } | undefined;
+      if (response.status === 409 && typeof body?.message === 'string' && body.message.trim() !== '') {
+        throw new PlanError(body.message, 409);
+      }
       throw toPlanError(response.status);
     }
     return data;

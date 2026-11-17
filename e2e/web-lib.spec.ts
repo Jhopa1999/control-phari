@@ -670,6 +670,13 @@ test.describe('plan-guide', () => {
         'Editar tarea',
         't-1',
       ],
+      [
+        pending('NO_COMMITMENT', 'commitment'),
+        'Falta la fecha de compromiso.',
+        'commitment',
+        'Ir al compromiso',
+        null,
+      ],
     ];
     for (const [p, label, kind, actionLabel, targetId] of cases) {
       expect(presentGuidePending(p, names)).toEqual({
@@ -723,6 +730,7 @@ test.describe('plan-guide', () => {
     expect(guideCategoryLabel('tasksResponsibles')).toBe(
       'Tareas y responsables',
     );
+    expect(guideCategoryLabel('commitment')).toBe('Datos del plan');
     expect(guideCategoryLabel('evidenceGates')).toBe('Evidencias de controles');
     expect(guideCategoryLabel('categoriaNueva')).toBe('categoriaNueva');
   });

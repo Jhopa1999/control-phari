@@ -11,6 +11,7 @@ import type { AssignmentModel } from '../../generated/prisma/models/Assignment';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
+import { PlanStatus } from '../plan/plan-status';
 import { TaskStatus } from '../plan/task-status';
 import { CapacityScopeService } from './capacity-scope.service';
 import { dateToMonthString, monthStringToDate } from './month';
@@ -27,6 +28,9 @@ import {
   CapacitySummaryEstado,
   CapacitySummaryRowDto,
 } from './dto/capacity-summary-row.dto';
+
+/** Estados en que una solicitud ya no esta viva: su plan no suma a «planificado» (D7). */
+const DEAD_REQUEST_STATES = ['RECHAZADA', 'RETIRADA', 'CERRADA'] as const;
 
 /** Asignación con la solicitud ligada (ID visible y título para la respuesta). */
 const ASSIGNMENT_INCLUDE = { request: { select: { code: true, title: true } } } as const;
@@ -565,8 +569,20 @@ export class CapacityService {
     const nextMonth = new Date(
       Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1),
     );
+    // D7 (oleada 2): solo cuentan tareas de planes AUTORIZADOS en solicitudes
+    // vivas (no eliminadas ni RECHAZADA, RETIRADA o CERRADA). Un borrador o un
+    // plan en autorizacion todavia no es un compromiso del equipo.
     const planTasks = await this.prisma.task.findMany({
       where: {
+        phase: {
+          plan: {
+            status: PlanStatus.AUTORIZADO,
+            request: {
+              deletedAt: null,
+              operationalState: { notIn: [...DEAD_REQUEST_STATES] },
+            },
+          },
+        },
         responsibleUserId: userIn ? { in: userIn } : { not: null },
         status: { not: TaskStatus.TERMINADA },
         estimateHours: { gt: 0 },
@@ -609,6 +625,20 @@ export class CapacityService {
     for (const a of availabilities) userIds.add(a.userId);
     for (const a of visibleAssignments) userIds.add(a.userId);
     for (const userId of planByUser.keys()) userIds.add(userId);
+
+    // D7: tambien se listan las personas del alcance con asignacion (grant)
+    // activa, aunque no tengan registros ese mes. Salen como SIN_DISPONIBILIDAD
+    // si no hay disponibilidad registrada. Se intersecta con el alcance.
+    const activeGrants = await this.prisma.grant.findMany({
+      where: {
+        active: true,
+        user: { active: true },
+        ...(userIn ? { userId: { in: userIn } } : {}),
+      },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    for (const grant of activeGrants) userIds.add(grant.userId);
 
     if (userIds.size === 0) {
       return [];

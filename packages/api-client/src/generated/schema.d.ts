@@ -1457,7 +1457,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Resumen de carga por persona para un mes (en alcance). */
+        /** Resumen de carga por persona para un mes (en alcance). Incluye a las personas con asignación activa aunque no tengan registros; «planificado» cuenta solo planes autorizados en solicitudes vivas. */
         get: operations["CapacityController_summary"];
         put?: never;
         post?: never;
@@ -4934,7 +4934,7 @@ export interface components {
             mitigations?: string;
         };
         PlanGuidePendingDto: {
-            /** @description Categoria del pendiente (datesPhases/tasksResponsibles/...). */
+            /** @description Categoria del pendiente (datesPhases/tasksResponsibles/commitment/...). */
             category: string;
             /** @description Codigo estable del tipo de pendiente. */
             code: string;
@@ -4953,6 +4953,11 @@ export interface components {
             canSubmit: boolean;
             /** @description Pendientes por categoria. */
             pendings: components["schemas"]["PlanGuidePendingDto"][];
+            /**
+             * Format: date-time
+             * @description Fecha sugerida para el compromiso: la fecha de fin mas tardia de las tareas del plan, o null si ninguna tiene fecha de fin. Es solo una sugerencia que la persona puede editar.
+             */
+            suggestedCommitmentDate: string | null;
             /** @description Categorias gancho de fases futuras (siempre 0 pendientes hoy). */
             futureCategories: string[];
         };
@@ -5400,7 +5405,7 @@ export interface components {
             sobrecargado: boolean;
             /** @description True (solo lider/integrante) si la persona tiene asignaciones fuera del alcance del actor. */
             cargaParcial: boolean;
-            /** @description Horas planificadas: suma de Task.estimateHours de las tareas del plan asignadas a la persona ese mes (estimacion, status != TERMINADA, estimateHours > 0). Dato informativo paralelo a `comprometido`; 0 si ninguna tarea aporta. */
+            /** @description Horas planificadas: suma de Task.estimateHours de las tareas de planes AUTORIZADOS, en solicitudes vivas (no eliminadas ni RECHAZADA, RETIRADA o CERRADA), asignadas a la persona ese mes (estimacion, status != TERMINADA, estimateHours > 0). Dato informativo paralelo a `comprometido`; 0 si ninguna tarea aporta. */
             planificado: number;
             /** @description Porcentaje de utilizacion planificada (round(planificado/disponible*100)) o null si no hay disponibilidad (>0). Misma guarda contra division por cero que `utilizacion`. */
             utilizacionPlan: number | null;
@@ -5459,14 +5464,14 @@ export interface components {
              */
             month: string;
             /**
-             * @description Horas disponibles en el mes (entero >= 0).
+             * @description Horas disponibles en el mes (entero entre 0 y 744, un mes completo).
              * @example 160
              */
             availableHours: number;
         };
         UpdateAvailabilityDto: {
             /**
-             * @description Horas disponibles en el mes (entero >= 0).
+             * @description Horas disponibles en el mes (entero entre 0 y 744, un mes completo).
              * @example 150
              */
             availableHours: number;
@@ -5541,7 +5546,7 @@ export interface components {
              */
             requestId?: string;
             /**
-             * @description Horas comprometidas en el mes (entero >= 0).
+             * @description Horas comprometidas en el mes (entero >= 1).
              * @example 40
              */
             committedHours: number;
@@ -5559,7 +5564,7 @@ export interface components {
              * @description Solicitud ligada (en alcance). Enviar null para desligar la solicitud actual.
              */
             requestId?: string | null;
-            /** @description Horas comprometidas (entero >= 0). */
+            /** @description Horas comprometidas (entero >= 1). */
             committedHours?: number;
             /** @description Distribucion del esfuerzo por periodo (texto libre). */
             description?: string;

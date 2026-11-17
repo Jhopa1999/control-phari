@@ -58,7 +58,10 @@ export class CapacityController {
   ) {}
 
   @Get('summary')
-  @ApiOperation({ summary: 'Resumen de carga por persona para un mes (en alcance).' })
+  @ApiOperation({
+    summary:
+      'Resumen de carga por persona para un mes (en alcance). Incluye a las personas con asignación activa aunque no tengan registros; «planificado» cuenta solo planes autorizados en solicitudes vivas.',
+  })
   @ApiQuery({ name: 'month', required: true, example: '2025-03' })
   @ApiResponse({ status: 200, description: 'Resumen de carga.', type: [CapacitySummaryRowDto] })
   @ApiResponse({ status: 400, description: 'Mes mal formado o ausente.' })

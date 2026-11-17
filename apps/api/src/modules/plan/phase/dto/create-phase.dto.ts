@@ -3,6 +3,7 @@ import { Transform } from 'class-transformer';
 import {
   IsDateString,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -21,6 +22,7 @@ export class CreatePhaseDto {
   @ApiProperty({ type: String, description: 'Nombre de la fase.', maxLength: 255 })
   @Transform(trim)
   @IsString()
+  @IsNotEmpty({ message: 'El nombre de la fase es obligatorio.' })
   @MaxLength(255)
   name!: string;
 

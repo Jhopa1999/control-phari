@@ -118,6 +118,12 @@ export class PlanService {
   ): Promise<PlanResponseDto> {
     const request = await this.requestState.requireInScope(actor, requestId);
 
+    assertValidRange(
+      dto.periodStart !== undefined ? new Date(dto.periodStart) : null,
+      dto.periodEnd !== undefined ? new Date(dto.periodEnd) : null,
+      'periodo',
+    );
+
     if (request.operationalState !== RequestState.COMPROMETIDA) {
       throw new ConflictException(
         'Solo se puede crear el plan de una solicitud comprometida.',
@@ -209,6 +215,14 @@ export class PlanService {
       await this.planState.requirePlanInScope(actor, requestId);
     this.planState.assertProjectOpen(requestState);
     assertPlanStructureEditable(plan.status);
+
+    // El periodo se valida con el valor final: lo que llega o, si no llega, lo
+    // ya guardado (editar solo el fin contra un inicio existente).
+    assertValidRange(
+      dto.periodStart !== undefined ? new Date(dto.periodStart) : plan.periodStart,
+      dto.periodEnd !== undefined ? new Date(dto.periodEnd) : plan.periodEnd,
+      'periodo',
+    );
 
     const data: Prisma.PlanUpdateInput = {};
     if (dto.periodStart !== undefined) data.periodStart = new Date(dto.periodStart);

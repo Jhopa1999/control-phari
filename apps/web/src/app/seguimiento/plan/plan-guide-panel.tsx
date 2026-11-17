@@ -22,6 +22,8 @@ export interface PlanGuidePanelProps {
   onEditPhase: (phase: PlanPhase) => void;
   onEditTask: (task: Task) => void;
   onSubmit: () => void;
+  /** Lleva el foco al campo «Fecha de compromiso» de la tarjeta «Datos del plan». */
+  onGoCommitment: () => void;
 }
 
 /**
@@ -42,6 +44,7 @@ export function PlanGuidePanel({
   onEditPhase,
   onEditTask,
   onSubmit,
+  onGoCommitment,
 }: PlanGuidePanelProps): React.ReactElement {
   const seen = new Map<string, number>();
   const presented = currentGuide.pendings.map((p) => {
@@ -65,6 +68,8 @@ export function PlanGuidePanel({
         action = initialPhaseId
           ? { label, onClick: () => onNewTask(initialPhaseId), disabled: busy }
           : { label, disabled: true, disabledReason: 'Primero crea una fase.' };
+      } else if (kind === 'commitment') {
+        action = { label, onClick: onGoCommitment, disabled: busy };
       } else if (kind === 'editPhase') {
         const phase = phases.find((p) => p.id === targetId);
         action = phase ? { label, onClick: () => onEditPhase(phase), disabled: busy } : undefined;

@@ -69,6 +69,8 @@ function validate(values: DisponibilidadFormValues): FieldErrors {
     const hours = Number(trimmed);
     if (!Number.isInteger(hours) || hours < 0) {
       errors.availableHours = 'Las horas disponibles deben ser un entero mayor o igual a 0.';
+    } else if (hours > 744) {
+      errors.availableHours = 'La disponibilidad no puede superar 744 horas al mes.';
     }
   }
   return errors;
@@ -180,12 +182,13 @@ export function DisponibilidadFormDialog({
               label="Horas disponibles"
               required
               error={fieldErrors.availableHours}
-              help="Entero mayor o igual a 0. 0 significa «sin disponibilidad» ese mes."
+              help="De 0 a 744 horas (un mes completo). 0 significa «sin disponibilidad» ese mes."
             >
               <Input
                 ref={hoursRef}
                 type="number"
                 min={0}
+                max={744}
                 step={1}
                 inputMode="numeric"
                 value={availableHours}

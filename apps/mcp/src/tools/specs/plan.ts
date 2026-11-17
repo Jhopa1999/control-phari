@@ -15,7 +15,8 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
     access: 'write',
     description:
       'Crea el plan de una solicitud (POST /requests/{requestId}/plan). El ' +
-      'cuerpo debe cumplir CreatePlanDto; el backend valida los datos.',
+      'cuerpo debe cumplir CreatePlanDto; el backend valida los datos. ' +
+      'Responde 400 si el fin del periodo es anterior al inicio.',
   },
   {
     name: 'plan.export',
@@ -48,7 +49,10 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
     description:
       'Envía el plan de una solicitud a autorización ' +
       '(POST /requests/{requestId}/plan/submit). El cuerpo (SubmitPlanDto) es ' +
-      'opcional; el backend valida los datos.',
+      'opcional; el backend valida los datos. Exige la fecha de compromiso ' +
+      '(commitmentDate) además de fases y tareas completas: sin ella responde ' +
+      '409 con el pendiente «El plan necesita la fecha de compromiso.». ' +
+      'Consulta plan.guide para ver pendientes y la fecha sugerida.',
   },
   {
     name: 'plan.authorize',

@@ -17,6 +17,7 @@ import { Toolbar } from '@/components/toolbar';
 import { UtilizationBar } from '@/components/utilization-bar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -130,6 +131,11 @@ function tieneHolgura(row: CapacitySummaryRow): boolean {
   );
 }
 
+/** Persona con carga (comprometida o planificada) o sin disponibilidad registrada. */
+function isRelevant(row: CapacitySummaryRow): boolean {
+  return row.comprometido > 0 || row.planificado > 0 || row.estado === 'SIN_DISPONIBILIDAD';
+}
+
 function trimOrUndefined(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
@@ -230,9 +236,20 @@ export function CapacidadView(): React.ReactElement {
     void fetchCapacity(month);
   }, [month, fetchCapacity]);
 
+  // D7: el resumen lista a todas las personas con asignación activa; por defecto
+  // se muestran solo las que tienen carga o no tienen disponibilidad registrada.
+  // Es presentación: la casilla no se persiste y no cambia el estado de la API.
+  const [onlyRelevant, setOnlyRelevant] = React.useState(true);
+  const relevantFilter = React.useCallback(
+    (row: CapacitySummaryRow) => !onlyRelevant || isRelevant(row),
+    [onlyRelevant],
+  );
+  const filterRef = React.useRef<HTMLInputElement>(null);
+
   // Resumen: todas las personas (pageSize null, §24.1), orden de la API por defecto.
   const summaryTable = useClientTable({
     rows: summary,
+    filter: relevantFilter,
     comparators: SUMMARY_COMPARATORS,
     defaultSort: null,
     pageSize: null,
@@ -408,7 +425,18 @@ export function CapacidadView(): React.ReactElement {
         description="Disponibilidad y carga del equipo por mes, dentro de tu alcance."
       />
 
-      <Toolbar label="Mes de capacidad">
+      <Toolbar
+        label="Mes de capacidad"
+        end={
+          state === 'success' && summary.length > 0 ? (
+            <span role="status" className="text-meta tabular-nums text-muted-foreground">
+              {onlyRelevant
+                ? `Mostrando ${summaryTable.filtered} de ${summaryTable.total} personas`
+                : `${summaryTable.total} ${summaryTable.total === 1 ? 'persona' : 'personas'}`}
+            </span>
+          ) : undefined
+        }
+      >
         <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="capacidad-month">Mes</Label>
           {month ? (
@@ -425,6 +453,18 @@ export function CapacidadView(): React.ReactElement {
             <Skeleton className="h-9 w-full sm:w-44" />
           )}
         </div>
+        <label
+          htmlFor="capacidad-solo-relevantes"
+          className="flex min-h-9 w-full cursor-pointer items-center gap-2 text-sm pointer-coarse:min-h-10 sm:w-auto"
+        >
+          <Checkbox
+            id="capacidad-solo-relevantes"
+            ref={filterRef}
+            checked={onlyRelevant}
+            onChange={(event) => setOnlyRelevant(event.target.checked)}
+          />
+          Solo con carga o sin disponibilidad registrada
+        </label>
       </Toolbar>
 
       {/* Explicación en lenguaje llano (design §11.11), cerrada por defecto. */}
@@ -449,10 +489,12 @@ export function CapacidadView(): React.ReactElement {
           </p>
           <p>
             Lo <strong className="text-foreground">planificado</strong> es una estimación
-            distinta: suma las horas estimadas de las tareas del plan asignadas a la persona ese
-            mes. No es lo mismo que lo <strong className="text-foreground">comprometido</strong>{' '}
-            (horas que se registran a mano en asignaciones) y no cambia la señal de sobrecarga; es
-            solo una referencia de la carga que proyecta el plan.
+            distinta: suma las horas estimadas de las tareas asignadas a la persona ese mes, solo
+            de planes autorizados y de solicitudes que siguen vivas (no cuentan borradores, planes
+            en autorización, ni solicitudes eliminadas, rechazadas, retiradas o cerradas). No es lo
+            mismo que lo <strong className="text-foreground">comprometido</strong> (horas que se
+            registran a mano en asignaciones) y no cambia la señal de sobrecarga; es solo una
+            referencia de la carga que proyecta el plan.
           </p>
         </div>
       </details>
@@ -481,27 +523,49 @@ export function CapacidadView(): React.ReactElement {
               sin disponibilidad
             </span>
             <span className="text-meta text-muted-foreground">
-              {`de ${signals.total} ${signals.total === 1 ? 'persona' : 'personas'} en tu alcance`}
+              {`de ${signals.total} ${signals.total === 1 ? 'persona con asignación activa' : 'personas con asignación activa'} en tu alcance`}
             </span>
           </div>
         ) : null}
         <DataView
-          state={sectionState(summary.length === 0)}
+          state={sectionState(summaryTable.filtered === 0)}
           loading={{ rows: 4, columns: 8 }}
           error={{
             title: 'No fue posible cargar el resumen de capacidad.',
             onRetry: retry,
           }}
-          empty={{
-            icon: Users,
-            title: 'Aún no hay disponibilidad ni asignaciones este mes.',
-            description:
-              'Registra la disponibilidad del equipo y crea asignaciones para ver la carga.',
-          }}
+          empty={
+            summary.length > 0
+              ? {
+                  icon: Users,
+                  size: 'inline',
+                  title: 'Ninguna persona tiene carga ni falta disponibilidad este mes.',
+                  description:
+                    'Desmarca el filtro para ver a todas las personas con asignación activa.',
+                  action: (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={() => {
+                        setOnlyRelevant(false);
+                        filterRef.current?.focus();
+                      }}
+                    >
+                      Mostrar a todas las personas
+                    </Button>
+                  ),
+                }
+              : {
+                  icon: Users,
+                  title: 'No hay personas con asignación activa en tu alcance.',
+                  description: 'Asigna a alguien a un proceso para verlo aquí.',
+                }
+          }
         >
           <Table scrollLabel="Tabla del resumen de carga">
             <TableCaption>
-              {`Resumen de carga por persona para ${month ? formatMonth(month) : 'el mes elegido'}. Incluye las horas comprometidas (asignaciones registradas a mano) y las horas planificadas (estimación de las tareas del plan).`}
+              {`Resumen de carga por persona para ${month ? formatMonth(month) : 'el mes elegido'}. Incluye las horas comprometidas (asignaciones registradas a mano) y las horas planificadas (estimación de las tareas de planes autorizados en solicitudes vivas).`}
             </TableCaption>
             <TableHeader>
               <TableRow>
@@ -528,6 +592,9 @@ export function CapacidadView(): React.ReactElement {
                 </TableHead>
                 <TableHead scope="col" className="text-right tabular-nums">
                   Planificado
+                  <span className="block text-meta font-normal text-muted-foreground">
+                    planes autorizados
+                  </span>
                 </TableHead>
                 <SortableTableHead
                   label="Utilización plan"

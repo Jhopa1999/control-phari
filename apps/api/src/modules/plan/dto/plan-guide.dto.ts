@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 /** Un pendiente de la guia, por categoria (design §2.1). */
 export class PlanGuidePendingDto {
-  @ApiProperty({ type: String, description: 'Categoria del pendiente (datesPhases/tasksResponsibles/...).' })
+  @ApiProperty({ type: String, description: 'Categoria del pendiente (datesPhases/tasksResponsibles/commitment/...).' })
   category!: string;
 
   @ApiProperty({ type: String, description: 'Codigo estable del tipo de pendiente.' })
@@ -28,6 +28,15 @@ export class PlanGuideDto {
 
   @ApiProperty({ type: [PlanGuidePendingDto], description: 'Pendientes por categoria.' })
   pendings!: PlanGuidePendingDto[];
+
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    description:
+      'Fecha sugerida para el compromiso: la fecha de fin mas tardia de las tareas del plan, o null si ninguna tiene fecha de fin. Es solo una sugerencia que la persona puede editar.',
+  })
+  suggestedCommitmentDate!: Date | null;
 
   @ApiProperty({ type: [String], description: 'Categorias gancho de fases futuras (siempre 0 pendientes hoy).' })
   futureCategories!: string[];

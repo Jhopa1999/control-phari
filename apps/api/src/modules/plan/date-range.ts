@@ -11,11 +11,12 @@ function fmt(d: Date): string {
 export function assertValidRange(
   start: Date | null | undefined,
   end: Date | null | undefined,
-  label: 'fase' | 'tarea',
+  label: 'fase' | 'tarea' | 'periodo',
 ): void {
   if (start && end && end.getTime() < start.getTime()) {
+    const de = label === 'periodo' ? 'del' : 'de la';
     throw new BadRequestException(
-      `La fecha de finalización de la ${label} (${fmt(end)}) no puede ser anterior a su fecha de inicio (${fmt(start)}).`,
+      `La fecha de finalización ${de} ${label} (${fmt(end)}) no puede ser anterior a su fecha de inicio (${fmt(start)}).`,
     );
   }
 }

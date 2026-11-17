@@ -71,7 +71,7 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   escritura(
     'plan.update',
     'PATCH /requests/{requestId}/plan',
-    'Edita los datos del plan de una solicitud (PATCH /requests/{requestId}/plan). No cambia el estado del plan; el backend valida los datos. Responde 409 si el plan está en autorización o autorizado (solo se edita en borrador o devuelto).',
+    'Edita los datos del plan de una solicitud (PATCH /requests/{requestId}/plan). No cambia el estado del plan; el backend valida los datos (400 si el fin del periodo es anterior al inicio; commitmentDate es obligatoria para enviar). Responde 409 si el plan está en autorización o autorizado (solo se edita en borrador o devuelto).',
   ),
   escritura(
     'phase.create',

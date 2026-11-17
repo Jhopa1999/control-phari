@@ -99,6 +99,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/
 import { TaskDetail } from '../tareas/task-detail';
 import { PhaseDialog } from './phase-dialog';
 import { ParticipantsDialog } from './participants-dialog';
+import { PlanDataCard } from './plan-data-card';
 import { PlanGuidePanel } from './plan-guide-panel';
 import { PlanSummary } from './plan-summary';
 import { BlockReasonDialog } from './block-reason-dialog';
@@ -717,6 +718,14 @@ export function PlanView(): React.ReactElement {
     [busy, rowBusyId],
   );
 
+  /** «Ir al compromiso» de la guía: foco y desplazamiento al campo de la tarjeta. */
+  function goToCommitment(): void {
+    const field = document.getElementById('plan-commitment');
+    if (!field) return;
+    field.focus();
+    field.scrollIntoView({ block: 'center', behavior: 'auto' });
+  }
+
   function openNewPhase(): void {
     setPhaseDialog({ open: true, phase: null });
   }
@@ -1265,6 +1274,16 @@ export function PlanView(): React.ReactElement {
           </InlineNotice>
         ) : null}
         <PlanSummary plan={plan} />
+        {canEdit ? (
+          <PlanDataCard
+            requestId={selectedId}
+            plan={plan}
+            guide={guide}
+            tasks={tasks}
+            busy={busy}
+            onSaved={refreshPlanData}
+          />
+        ) : null}
         {isJefeArea ? renderParticipantsAction() : null}
         {renderPlanActions()}
         {importErrors.length > 0 ? (
@@ -1293,6 +1312,7 @@ export function PlanView(): React.ReactElement {
             onEditPhase={openEditPhase}
             onEditTask={openEditTask}
             onSubmit={() => setSubmitOpen(true)}
+            onGoCommitment={goToCommitment}
           />
         ) : null}
       </>
@@ -1603,7 +1623,9 @@ export function PlanView(): React.ReactElement {
             onOpenChange={setSubmitOpen}
             tone="default"
             title="¿Enviar el plan a autorización?"
-            description="Mientras esté en autorización no podrás editar fases ni tareas."
+            description={`${
+              plan?.commitmentDate ? `Compromiso: ${formatDateOnly(plan.commitmentDate)}. ` : ''
+            }Mientras esté en autorización no podrás editar fases ni tareas.`}
             confirmLabel="Enviar a autorización"
             onConfirm={handleSubmitPlan}
           />
