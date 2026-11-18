@@ -6,6 +6,11 @@ import { AppShell } from '@/components/app-shell';
 import { BrandMark } from '@/components/brand';
 import { useActor } from '@/lib/actor-context';
 import { getDefaultHomeHref } from '@/lib/navigation';
+import {
+  CHANGE_PASSWORD_ROUTE,
+  leavesChangePasswordRoute,
+  mustChangePasswordRedirect,
+} from '@/lib/password-gate';
 import { safeInternalPath } from '@/lib/safe-redirect';
 /** Ruta publica de login. */
 const LOGIN_ROUTE = '/login';
@@ -77,6 +82,7 @@ export function RouteGuard({
     signedOut,
     state,
     allowedModules,
+    permissions,
   } = useActor();
   const isLoginRoute = pathname === LOGIN_ROUTE;
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
@@ -87,8 +93,12 @@ export function RouteGuard({
       // Sesion guardada y aceptada por el backend: fuera de /login.
       if (isAuthenticated && state === 'success') {
         const search = new URLSearchParams(window.location.search);
+        const next = safeInternalPath(search.get('next'));
+        // Con el cambio de contraseña pendiente, la pantalla de cambio va primero.
         router.replace(
-          safeInternalPath(search.get('next')) ?? getDefaultHomeHref(allowedModules),
+          mustChangePasswordRedirect(next ?? HOME_ROUTE, permissions) ??
+            next ??
+            getDefaultHomeHref(allowedModules),
         );
       }
       return;
@@ -97,7 +107,25 @@ export function RouteGuard({
     // sesion y sin redirigir. A diferencia de /login, no se expulsa al usuario
     // autenticado (puede restablecer su propia contrasena ya logueado).
     if (isPublicRoute) return;
-    if (isAuthenticated) return;
+    if (isAuthenticated) {
+      if (state === 'success') {
+        // Cambio de contraseña obligatorio: toda ruta lleva a la pantalla de cambio
+        // y, sin nada pendiente, esa pantalla devuelve al inicio.
+        const target = mustChangePasswordRedirect(
+          `${pathname}${window.location.search}`,
+          permissions,
+        );
+        if (target) {
+          router.replace(target);
+        } else if (leavesChangePasswordRoute(pathname, permissions)) {
+          const search = new URLSearchParams(window.location.search);
+          router.replace(
+            safeInternalPath(search.get('next')) ?? getDefaultHomeHref(allowedModules),
+          );
+        }
+      }
+      return;
+    }
     // La busqueda se lee aqui (no con useSearchParams) para no obligar a
     // envolver toda la app en un Suspense desde el layout.
     const params = new URLSearchParams();
@@ -118,6 +146,7 @@ export function RouteGuard({
     isAuthenticated,
     state,
     allowedModules,
+    permissions,
     pathname,
     signedOut,
     sessionExpired,
@@ -167,6 +196,22 @@ export function RouteGuard({
   // Con sesion pero permisos aun cargando: estado accesible, evita parpadeo.
   if (state === 'loading' || state === 'none') {
     return <CenteredMessage text="Cargando tu sesión…" />;
+  }
+  // Cambio obligatorio: la pantalla de cambio va sin shell (ninguna otra ruta
+  // responde); el resto espera la redireccion. Sin nada pendiente, esa pantalla
+  // tampoco se muestra.
+  if (mustChangePasswordRedirect(pathname, permissions) !== null) {
+    return <CenteredMessage text="Redirigiendo…" />;
+  }
+  if (pathname === CHANGE_PASSWORD_ROUTE) {
+    if (permissions?.mustChangePassword !== true) {
+      return <CenteredMessage text="Redirigiendo…" />;
+    }
+    return (
+      <main id="contenido" tabIndex={-1} className="focus:outline-none">
+        {children}
+      </main>
+    );
   }
   return <AppShell>{children}</AppShell>;
 }

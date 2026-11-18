@@ -15,6 +15,8 @@ import { AuthLoginService } from './auth-login.service';
 import { AuthThrottleService } from './auth-throttle.service';
 import { AuthResetController } from './auth-reset.controller';
 import { AuthResetService } from './auth-reset.service';
+import { AuthPasswordController } from './auth-password.controller';
+import { AuthPasswordService } from './auth-password.service';
 import { AuthTokenService } from './auth-token.service';
 import { SessionCookieService } from './session-cookie.service';
 
@@ -62,6 +64,7 @@ function resolveJwtSecret(): string | undefined {
     DevActorsController,
     AuthLoginController,
     AuthResetController,
+    AuthPasswordController,
   ],
   providers: [
     DevActorResolver,
@@ -70,6 +73,7 @@ function resolveJwtSecret(): string | undefined {
     AuthThrottleService,
     AuthTokenService,
     AuthResetService,
+    AuthPasswordService,
     SessionCookieService,
     {
       provide: ACTOR_RESOLVER,

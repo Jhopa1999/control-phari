@@ -127,21 +127,25 @@ model Process {
 /// Identidad funcional de una persona del area. NO es credencial: no hay
 /// password, token ni sesion (la autenticacion real es una capa separada).
 model User {
-  id            String         @id @default(uuid()) @db.Uuid
-  notifications Notification[]
-  identifier    String
-  name          String
-  active        Boolean        @default(true)
+  id                 String         @id @default(uuid()) @db.Uuid
+  notifications      Notification[]
+  identifier         String
+  name               String
+  active             Boolean        @default(true)
   // Hash bcrypt de la credencial, usado solo por la autenticacion real (JWT).
   // Nullable: dev-header no lo usa y las filas existentes no lo tienen; no es
   // credencial en modo dev. Nunca se expone en DTOs ni respuestas.
-  passwordHash  String?        @map("password_hash")
+  passwordHash       String?        @map("password_hash")
   // Rol de SISTEMA/GLOBAL (design a). Admin tecnico independiente de los grants
   // por proceso: no se concede por Grant ni por proceso. Es la UNICA fuente de
   // RoleCode.ADMIN (load-actor). Default false, aditivo y back-compat.
-  isAdmin       Boolean        @default(false) @map("is_admin")
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
+  isAdmin            Boolean        @default(false) @map("is_admin")
+  // Obliga a cambiar la contraseña en el próximo uso del portal. Lo activa el
+  // jefe de área; lo limpian el cambio de contraseña y el restablecimiento por
+  // correo. Default false: ninguna migración ni seed marca a nadie.
+  mustChangePassword Boolean        @default(false) @map("must_change_password")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
 
   grants      Grant[]
   auditEvents AuditEvent[]

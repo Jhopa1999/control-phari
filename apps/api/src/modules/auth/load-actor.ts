@@ -77,5 +77,6 @@ export async function loadActorByIdentifier(
     isJefeArea: roleCodes.has(RoleCode.JEFE_AREA),
     isLiderProceso: roleCodes.has(RoleCode.LIDER_PROCESO),
     isAdmin: user.isAdmin,
+    mustChangePassword: user.mustChangePassword,
   };
 }

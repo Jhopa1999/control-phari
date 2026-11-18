@@ -264,6 +264,61 @@
         ]
       }
     },
+    "/auth/change-password": {
+      "post": {
+        "operationId": "AuthPasswordController_changePassword",
+        "parameters": [
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "description": "Obligatoria (valor 1) cuando la petición llega por la cookie de sesión.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Contraseña actualizada."
+          },
+          "400": {
+            "description": "Contraseña actual incorrecta, nueva demasiado corta o igual a la actual."
+          },
+          "401": {
+            "description": "No hay un usuario actual válido."
+          },
+          "403": {
+            "description": "Falta la cabecera de protección CSRF."
+          },
+          "429": {
+            "description": "Demasiados intentos fallidos. La cabecera Retry-After indica los segundos de espera.",
+            "headers": {
+              "Retry-After": {
+                "description": "Segundos hasta poder reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cambia la contraseña de la persona autenticada (exige la actual) y limpia la exigencia de cambio obligatorio.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/audit-events": {
       "get": {
         "operationId": "AuditController_findMany",
@@ -322,7 +377,10 @@
                 "DELETE",
                 "REVOKE",
                 "LOGIN_FAILED",
-                "PASSWORD_RESET_THROTTLED"
+                "PASSWORD_RESET_THROTTLED",
+                "PASSWORD_CHANGE_REQUIRED",
+                "PASSWORD_CHANGE_CLEARED",
+                "PASSWORD_CHANGED"
               ],
               "type": "string"
             }
@@ -3271,6 +3329,47 @@
           }
         },
         "summary": "Crea una identidad funcional (solo JEFE_AREA).",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/force-password-change": {
+      "post": {
+        "operationId": "UserController_forcePasswordChange",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForcePasswordChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado de la acción.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForcePasswordChangeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cuerpo ambiguo o inválido."
+          },
+          "403": {
+            "description": "Solo el jefe de área."
+          },
+          "404": {
+            "description": "Algún usuario indicado no existe; no se aplicó nada."
+          }
+        },
+        "summary": "Exige el cambio de contraseña en el próximo uso del portal a todos los usuarios o a una selección, o retira la exigencia (solo JEFE_AREA).",
         "tags": [
           "users"
         ]
@@ -11152,6 +11251,11 @@
                 "ADMIN"
               ]
             }
+          },
+          "mustChangePassword": {
+            "type": "boolean",
+            "description": "Si es true, la persona debe cambiar su contraseña antes de usar el portal: toda ruta salvo este endpoint y POST /auth/change-password responde 403 con code PASSWORD_CHANGE_REQUIRED.",
+            "example": false
           }
         },
         "required": [
@@ -11160,7 +11264,8 @@
           "identifier",
           "grants",
           "allowedModules",
-          "roleCodes"
+          "roleCodes",
+          "mustChangePassword"
         ]
       },
       "DevActorResponseDto": {
@@ -11286,6 +11391,26 @@
         },
         "required": [
           "token",
+          "newPassword"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "description": "Contraseña actual de la persona.",
+            "maxLength": 255
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "Contraseña nueva (mínimo 8 caracteres, o PASSWORD_MIN_LENGTH si es mayor) y distinta de la actual.",
+            "minLength": 8,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "currentPassword",
           "newPassword"
         ]
       },
@@ -13698,6 +13823,11 @@
             "description": "Estado activo.",
             "example": true
           },
+          "mustChangePassword": {
+            "type": "boolean",
+            "description": "true si la persona debe cambiar su contraseña en su próximo uso del portal.",
+            "example": false
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -13714,8 +13844,64 @@
           "identifier",
           "name",
           "active",
+          "mustChangePassword",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "ForcePasswordChangeDto": {
+        "type": "object",
+        "properties": {
+          "all": {
+            "type": "boolean",
+            "description": "true aplica a todos los usuarios con contraseña (con enabled=true, excepto quien ejecuta la acción)."
+          },
+          "userIds": {
+            "description": "Usuarios a los que aplicar (1 a 500). Quien ejecuta puede incluirse a propósito.",
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "excludeUserIds": {
+            "description": "Solo con all=true: usuarios que se dejan fuera (p. ej. la cuenta del MCP). Máximo 100.",
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "true (por defecto) exige el cambio; false retira la exigencia."
+          }
+        }
+      },
+      "ForcePasswordChangeResponseDto": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "number",
+            "description": "Usuarios cuyo indicador cambió."
+          },
+          "skipped": {
+            "type": "number",
+            "description": "Usuarios omitidos: sin contraseña o que ya estaban en el estado pedido."
+          },
+          "excludedSelf": {
+            "type": "boolean",
+            "description": "true si all=true dejó fuera a quien ejecuta la acción."
+          }
+        },
+        "required": [
+          "updated",
+          "skipped",
+          "excludedSelf"
         ]
       },
       "CreateUserDto": {

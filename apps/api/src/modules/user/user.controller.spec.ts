@@ -1,5 +1,6 @@
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
+import { UserPasswordService } from './user-password.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 
@@ -24,7 +25,10 @@ describe('UserController (delegacion)', () => {
     create: jest.fn().mockResolvedValue('create'),
     update: jest.fn().mockResolvedValue('update'),
   } as unknown as UserService;
-  const controller = new UserController(svc);
+  const passwordSvc = {
+    forcePasswordChange: jest.fn().mockResolvedValue('force'),
+  } as unknown as UserPasswordService;
+  const controller = new UserController(svc, passwordSvc);
   const a = actor();
 
   it('findMany delega sin argumentos', async () => {
@@ -41,6 +45,20 @@ describe('UserController (delegacion)', () => {
     const dto = {} as never;
     await expect(controller.create(a, dto)).resolves.toBe('create');
     expect(svc.create).toHaveBeenCalledWith(a, dto);
+  });
+
+  it('forcePasswordChange delega actor y dto', async () => {
+    const dto = { all: true } as never;
+    await expect(controller.forcePasswordChange(a, dto)).resolves.toBe('force');
+    expect(passwordSvc.forcePasswordChange).toHaveBeenCalledWith(a, dto);
+  });
+
+  it('forcePasswordChange es solo del jefe de área (el rol del método anula el de la clase)', () => {
+    const roles = Reflect.getMetadata(
+      'roles',
+      Object.getOwnPropertyDescriptor(UserController.prototype, 'forcePasswordChange')!.value,
+    );
+    expect(roles).toEqual([RoleCode.JEFE_AREA]);
   });
 
   it('update delega actor, id y dto', async () => {

@@ -138,6 +138,23 @@ identidad de stdio se ignoran.
 
 Si en modo `jwt` se definen ambas vías, prevalece el token directo.
 
+### Cambio de contraseña obligatorio
+
+Si el jefe de área exige el cambio de contraseña a la persona cuya identidad usa
+el MCP (stdio con `MCP_LOGIN_*` o `MCP_API_TOKEN`, o su Bearer en HTTP), el login
+y el token siguen funcionando, pero la API responde `403` con
+`code: "PASSWORD_CHANGE_REQUIRED"` en toda operación salvo `me.permissions`
+(que devuelve `mustChangePassword: true`). El MCP lo traduce a «Tu usuario debe
+cambiar la contraseña antes de seguir. Hazlo en el portal; el MCP no gestiona
+credenciales.» No hay reintento: el re-login solo reacciona a `401`.
+
+No hay cuentas de servicio en el modelo, así que el MCP no se excluye solo. Para
+dejar fuera su cuenta, el jefe marca por selección o usa «todos» con
+`excludeUserIds` en la API. Tras cambiar la contraseña de una cuenta con
+`MCP_LOGIN_PASSWORD`, actualiza esa variable. `POST /auth/change-password` y
+`POST /users/force-password-change` están excluidos del catálogo (el MCP no
+gestiona credenciales ni acciones masivas de seguridad).
+
 ## Build y arranque
 
 El MCP consume `@plantilla-portales/api-client` por su salida compilada

@@ -39,6 +39,15 @@ class PruebaErroresController {
     throw new ForbiddenException();
   }
 
+  @Get('con-codigo')
+  conCodigo(): never {
+    throw new ForbiddenException({
+      statusCode: 403,
+      code: 'PASSWORD_CHANGE_REQUIRED',
+      message: 'Debes cambiar tu contraseña antes de continuar.',
+      error: 'Forbidden',
+    });
+  }
   @Get('sin-sesion')
   sinSesion(): never {
     throw new UnauthorizedException();
@@ -110,6 +119,12 @@ describe('AllExceptionsFilter (por HTTP real)', () => {
     expect(body.message).toBe('Mensaje propio sin cambios.');
   });
 
+  it('403 con code propio: el filtro conserva el code', async () => {
+    const { status, body } = await call('con-codigo');
+    expect(status).toBe(403);
+    expect(body.code).toBe('PASSWORD_CHANGE_REQUIRED');
+    expect(body.message).toBe('Debes cambiar tu contraseña antes de continuar.');
+  });
   it('error no HTTP: 500 genérico sin texto interno ni UUID', async () => {
     const { status, body } = await call('interno');
     expect(status).toBe(500);

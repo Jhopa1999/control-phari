@@ -46,6 +46,14 @@ describe('toMcpError', () => {
     assert.doesNotMatch(text, /secreto interno/);
   });
 
+  it('mapea 403 con PASSWORD_CHANGE_REQUIRED a un aviso claro', () => {
+    const text = errorText(
+      toMcpError(result(403, { code: 'PASSWORD_CHANGE_REQUIRED', message: 'x' })),
+    );
+    assert.match(text, /debe cambiar la contraseña/);
+    assert.doesNotMatch(text, /PASSWORD_CHANGE_REQUIRED/);
+  });
+
   it('mapea 403 a sin permiso', () => {
     assert.match(errorText(toMcpError(result(403, {}))), /No tienes permiso/);
   });

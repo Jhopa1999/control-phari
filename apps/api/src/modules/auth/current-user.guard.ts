@@ -7,6 +7,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ACTOR_RESOLVER, ActorResolver } from './actor-resolver';
+import { ALLOW_PASSWORD_CHANGE_PENDING_KEY } from './allow-password-change-pending.decorator';
+import { PASSWORD_CHANGE_REQUIRED_CODE } from './auth-error-codes';
 import { CurrentActor } from './current-actor';
 import { isJwtMode } from './dev-actor.resolver';
 import { hasCsrfHeader, readSessionCookie, requiresCsrf } from './session-cookie';
@@ -83,8 +85,32 @@ export class CurrentUserGuard implements CanActivate {
       );
     }
 
+    // Cambio de contraseña obligatorio: solo modo jwt (en dev-header no hay
+    // contraseñas) y solo las rutas de la lista cerrada. Va antes de RolesGuard.
+    if (
+      isJwtMode() &&
+      actor.mustChangePassword === true &&
+      !this.isAllowedWhilePending(context)
+    ) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: PASSWORD_CHANGE_REQUIRED_CODE,
+        message: 'Debes cambiar tu contraseña antes de continuar.',
+        error: 'Forbidden',
+      });
+    }
     request.actor = actor;
     return true;
+  }
+
+  /** Lee el decorador del método sin inyectar Reflector (los specs hacen `new`). */
+  private isAllowedWhilePending(context: ExecutionContext): boolean {
+    return (
+      Reflect.getMetadata(
+        ALLOW_PASSWORD_CHANGE_PENDING_KEY,
+        context.getHandler(),
+      ) === true
+    );
   }
 }
 

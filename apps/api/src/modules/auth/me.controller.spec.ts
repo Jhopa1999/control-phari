@@ -47,6 +47,7 @@ describe('MeController (delegacion)', () => {
       ],
       allowedModules: allowedModulesFor(a.roleCodes),
       roleCodes: [RoleCode.LIDER_PROCESO],
+      mustChangePassword: false,
     });
   });
 });

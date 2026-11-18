@@ -5,6 +5,7 @@ import { AuditModule } from '../audit/audit.module';
 import { MailModule } from '../mail/mail.module';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
+import { UserPasswordService } from './user-password.service';
 import { UserInviteController } from './user-invite.controller';
 import { UserInviteService } from './user-invite.service';
 
@@ -12,6 +13,6 @@ import { UserInviteService } from './user-invite.service';
   // AuthModule exporta AuthTokenService (invitacion); MailModule, MailService.
   imports: [PrismaModule, AuthModule, AuditModule, MailModule],
   controllers: [UserController, UserInviteController],
-  providers: [UserService, UserInviteService],
+  providers: [UserService, UserPasswordService, UserInviteService],
 })
 export class UserModule {}

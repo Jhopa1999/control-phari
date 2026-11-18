@@ -10,13 +10,16 @@ import { AuthTokenService } from './auth-token.service';
 import { parseTtlMs } from './auth-token.util';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
-import { RESET_PASSWORD_MIN_LENGTH, ResetPasswordDto } from './dto/reset-password.dto';
-import { hashPassword } from './password-hash';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { hashPassword, verifyPassword } from './password-hash';
+import { passwordMinLength } from './password-policy';
 
 /** TTL por defecto del token de reset si no se configura PASSWORD_RESET_TTL. */
 const DEFAULT_PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hora
 /** Mensaje de contrasena demasiado corta (400). */
 const PASSWORD_TOO_SHORT = 'La contrasena no cumple la longitud minima.';
+/** La nueva contraseña no puede repetir la actual (usuario marcado). */
+const SAME_AS_CURRENT = 'La contraseña nueva debe ser distinta de la actual.';
 /** Purposes que /auth/reset-password acepta: reset y activacion por invitacion. */
 const RESET_ALLOWED_PURPOSES: readonly AuthTokenPurpose[] = [
   AuthTokenPurpose.PASSWORD_RESET,
@@ -52,15 +55,6 @@ export class AuthResetService {
   /** Vigencia configurada del token de reset, en milisegundos. */
   private passwordResetTtlMs(): number {
     return parseTtlMs(process.env.PASSWORD_RESET_TTL, DEFAULT_PASSWORD_RESET_TTL_MS);
-  }
-
-  /** Longitud minima efectiva (configurable, con piso igual al del DTO). */
-  private passwordMinLength(): number {
-    const raw = process.env.PASSWORD_MIN_LENGTH?.trim();
-    const parsed = raw ? Number(raw) : NaN;
-    return Number.isInteger(parsed) && parsed > 0
-      ? parsed
-      : RESET_PASSWORD_MIN_LENGTH;
   }
 
   /**
@@ -152,7 +146,7 @@ export class AuthResetService {
    * (mismo criterio que el envio SMTP en forgotPassword).
    */
   async resetPassword(dto: ResetPasswordDto): Promise<LoginResponseDto> {
-    if (dto.newPassword.length < this.passwordMinLength()) {
+    if (dto.newPassword.length < passwordMinLength()) {
       throw new BadRequestException(PASSWORD_TOO_SHORT);
     }
 
@@ -165,9 +159,23 @@ export class AuthResetService {
         RESET_ALLOWED_PURPOSES,
       );
 
+      // Marcado: la nueva debe ser distinta de la actual (si falla, la
+      // transacción revierte y el token no se consume).
+      const current = await tx.user.findUnique({
+        where: { id: authToken.userId },
+        omit: { passwordHash: false },
+      });
+      if (
+        current?.mustChangePassword &&
+        current.passwordHash &&
+        (await verifyPassword(dto.newPassword, current.passwordHash))
+      ) {
+        throw new BadRequestException(SAME_AS_CURRENT);
+      }
+
       const user = await tx.user.update({
         where: { id: authToken.userId },
-        data: { passwordHash },
+        data: { passwordHash, mustChangePassword: false },
       });
 
       await this.audit.record(tx, {

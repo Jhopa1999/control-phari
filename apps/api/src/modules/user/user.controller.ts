@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -16,6 +18,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { UserService } from './user.service';
+import { UserPasswordService } from './user-password.service';
+import {
+  ForcePasswordChangeDto,
+  ForcePasswordChangeResponseDto,
+} from './dto/force-password-change.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -35,7 +42,10 @@ import { RoleCode } from '../auth/role-code';
 @UseGuards(CurrentUserGuard, RolesGuard)
 @Roles(RoleCode.ADMIN, RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO)
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly userPasswordService: UserPasswordService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Lista todos los usuarios (solo JEFE_AREA).' })
@@ -43,6 +53,25 @@ export class UserController {
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   findMany() {
     return this.userService.findMany();
+  }
+
+  @Post('force-password-change')
+  @HttpCode(HttpStatus.OK)
+  @Roles(RoleCode.JEFE_AREA)
+  @ApiOperation({
+    summary:
+      'Exige el cambio de contraseña en el próximo uso del portal a todos los usuarios o a una selección, o retira la exigencia (solo JEFE_AREA).',
+  })
+  @ApiBody({ type: ForcePasswordChangeDto })
+  @ApiResponse({ status: 200, description: 'Resultado de la acción.', type: ForcePasswordChangeResponseDto })
+  @ApiResponse({ status: 400, description: 'Cuerpo ambiguo o inválido.' })
+  @ApiResponse({ status: 403, description: 'Solo el jefe de área.' })
+  @ApiResponse({ status: 404, description: 'Algún usuario indicado no existe; no se aplicó nada.' })
+  forcePasswordChange(
+    @CurrentActor() actor: CurrentActorType,
+    @Body() dto: ForcePasswordChangeDto,
+  ) {
+    return this.userPasswordService.forcePasswordChange(actor, dto);
   }
 
   @Get(':id')

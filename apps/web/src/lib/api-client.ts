@@ -1,6 +1,10 @@
 import { createApiClient } from '@plantilla-portales/api-client';
 import type { components, paths } from '@plantilla-portales/api-client';
 import { getAuthMode } from './auth-mode';
+import {
+  PASSWORD_CHANGE_REQUIRED_EVENT,
+  isPasswordChangeRequiredBody,
+} from './password-gate';
 /**
  * Tipos del dominio derivados del contrato OpenAPI generado.
  * No se declaran interfaces manuales: la fuente es packages/api-client.
@@ -361,6 +365,21 @@ api.use({
       request.headers.set(name, value);
     }
     return request;
+  },
+  // Sesión abierta marcada después: un 403 con el código de cambio obligatorio
+  // avisa al ActorProvider para que recargue permisos y el guard redirija.
+  async onResponse({ response }) {
+    if (response.status === 403 && typeof window !== 'undefined') {
+      try {
+        const body: unknown = await response.clone().json();
+        if (isPasswordChangeRequiredBody(body)) {
+          window.dispatchEvent(new CustomEvent(PASSWORD_CHANGE_REQUIRED_EVENT));
+        }
+      } catch {
+        // Cuerpo no JSON: no es el 403 que interesa.
+      }
+    }
+    return undefined;
   },
 });
 

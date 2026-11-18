@@ -145,7 +145,47 @@ El token se emite/consume dentro de una transacción junto con la auditoría
 actualización del `passwordHash`; el envío del correo ocurre **fuera** de la
 transacción. Vigencias y mínimo configurables por entorno: `PASSWORD_RESET_TTL`
 (default `1h`), `USER_INVITATION_TTL` (default `72h`), `PASSWORD_MIN_LENGTH` (default
-`8`).
+`8`, compartido en `auth/password-policy.ts`).
+
+## Cambio de contraseña obligatorio
+
+El jefe de área puede exigir que una o varias personas cambien su contraseña en su
+próximo uso del portal (`POST /users/force-password-change`; en la web, «Equipo y
+permisos»). El indicador es la columna `users.must_change_password` (default `false`;
+ninguna migración ni el seed marcan a nadie: la activación es manual).
+
+- **Bloqueo (solo modo `jwt`).** `load-actor.ts` lee el indicador en cada petición, así
+  que surte efecto de inmediato sobre sesiones ya abiertas, por cookie o por Bearer
+  (MCP, scripts), sin tocar el token. `CurrentUserGuard` responde `403`
+  `{ code: "PASSWORD_CHANGE_REQUIRED", message: "Debes cambiar tu contraseña antes de
+  continuar." }` en toda ruta autenticada salvo `GET /me/permissions` (devuelve
+  `mustChangePassword: true`) y `POST /auth/change-password`. Las rutas públicas
+  (`login`, `logout`, `forgot-password`, `reset-password`) siguen funcionando. El orden
+  de errores es: sin identidad `401`; cookie sin CSRF en escritura `403` de CSRF (sin
+  `code`); marcado `403` con `code`; después el rol. En `dev-header` el indicador se
+  ignora.
+- **Salida.** `POST /auth/change-password` (Bearer o cookie con `X-Portal-Csrf: 1`) exige
+  la contraseña actual, aplica `PASSWORD_MIN_LENGTH` y que la nueva sea distinta, y
+  limpia el indicador en la misma transacción. Reutiliza el límite de intentos del
+  login (`429` con `Retry-After`). La contraseña actual incorrecta da `400` (no `401`,
+  que la web interpreta como sesión caducada). La sesión y los JWT emitidos siguen
+  valiendo tras el cambio (el `sub` no cambia); revocarlos queda en el backlog.
+- **Restablecer por correo también limpia el indicador**, porque prueba la propiedad
+  del buzón y fija una contraseña nueva; así quien olvidó la actual no queda atrapado.
+  Si la persona estaba marcada, el reset rechaza con `400` una contraseña igual a la
+  actual y el token no se consume.
+- **El jefe no se bloquea a sí mismo:** `all: true` lo excluye siempre; solo queda
+  marcado si se incluye de forma explícita en `userIds` (la web lo avisa). Siempre puede
+  salir con `change-password` o `reset-password`, y `enabled: false` retira la
+  exigencia.
+- **Auditoría:** `PASSWORD_CHANGE_REQUIRED` y `PASSWORD_CHANGE_CLEARED` (actor = quien
+  ejecuta, objeto = la persona) y `PASSWORD_CHANGED` (actor = la propia persona), con
+  `before`/`after` solo del indicador. Nunca contraseñas, hashes ni longitudes.
+- **Cuenta del MCP o de servicio.** No existe el concepto en el modelo y no se excluye
+  sola. Si la persona cuya identidad usa el MCP queda marcada, toda tool responde «Tu
+  usuario debe cambiar la contraseña antes de seguir…» hasta que la cambie en el portal.
+  Para dejarla fuera, marca por `userIds` o usa `all` con `excludeUserIds`. Si usa
+  `MCP_LOGIN_PASSWORD`, actualízala tras el cambio.
 
 ## Campos de credenciales: nunca salen por la API
 

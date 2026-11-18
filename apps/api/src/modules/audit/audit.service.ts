@@ -67,7 +67,10 @@ export type AuditAction =
   | 'DELETE'
   | 'REVOKE'
   | 'LOGIN_FAILED'
-  | 'PASSWORD_RESET_THROTTLED';
+  | 'PASSWORD_RESET_THROTTLED'
+  | 'PASSWORD_CHANGE_REQUIRED'
+  | 'PASSWORD_CHANGE_CLEARED'
+  | 'PASSWORD_CHANGED';
 
 /** Datos de un evento de auditoria a registrar dentro de una transaccion. */
 export interface AuditRecordInput {

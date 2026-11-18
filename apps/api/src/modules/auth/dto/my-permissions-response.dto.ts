@@ -50,4 +50,12 @@ export class MyPermissionsResponseDto {
     description: 'Codigos de rol efectivos del actor (incluye ADMIN si aplica).',
   })
   roleCodes!: RoleCode[];
+
+  @ApiProperty({
+    type: Boolean,
+    description:
+      'Si es true, la persona debe cambiar su contraseña antes de usar el portal: toda ruta salvo este endpoint y POST /auth/change-password responde 403 con code PASSWORD_CHANGE_REQUIRED.',
+    example: false,
+  })
+  mustChangePassword!: boolean;
 }
