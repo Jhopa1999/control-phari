@@ -335,7 +335,7 @@ function PendingReviewRow({
           data-control="title"
           title={item.title}
           onClick={() => onOpen(item.id)}
-          className="min-w-0 self-start rounded-sm text-left text-sm font-medium wrap-break-word text-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring max-sm:inline-flex max-sm:min-h-11 max-sm:items-center"
+          className="inline-flex min-h-6 min-w-0 items-center self-start rounded-sm text-left text-sm font-medium wrap-break-word text-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring max-sm:min-h-11"
         >
           <span className="line-clamp-2">{item.title}</span>
         </button>

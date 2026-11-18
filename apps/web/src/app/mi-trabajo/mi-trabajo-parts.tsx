@@ -182,8 +182,8 @@ export function TitleLink({
       title={item.title}
       onClick={() => onOpen(item)}
       className={cn(
-        'min-w-0 rounded-sm text-left text-sm font-medium wrap-break-word text-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-        touch && 'inline-flex min-h-11 items-center',
+        'inline-flex min-h-6 min-w-0 items-center rounded-sm text-left text-sm font-medium wrap-break-word text-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+        touch && 'min-h-11',
       )}
     >
       <span className="line-clamp-2">{item.title}</span>

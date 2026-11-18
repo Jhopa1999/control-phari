@@ -4,6 +4,7 @@ import * as React from 'react';
 import { BadgeCheck, Check, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DataCardList } from '@/components/data-card-list';
 import { CellTitle } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { DescriptionList } from '@/components/description-list';
@@ -12,7 +13,7 @@ import { InlineNotice } from '@/components/inline-notice';
 import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
-import { RowActions, RowActionsCell } from '@/components/row-actions';
+import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { Section } from '@/components/section';
 import { PriorityBadge, PriorityLegend } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,7 @@ import { formatDate } from '@/lib/format';
 import { DevolverDialog } from './devolver-dialog';
 import { PlanAuthorizationSection } from './plan-authorization-section';
 import { PendingReviewsSections } from './pending-reviews-sections';
-import { focusTargetAfterRemoval } from './row-focus';
+import { focusTargetAfterRemoval, visibleContainer } from './row-focus';
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
 
@@ -74,6 +75,7 @@ export function RevisionView(): React.ReactElement {
   const [devolverError, setDevolverError] = React.useState<string | null>(null);
   const rowIndexRef = React.useRef(0);
   const bodyRef = React.useRef<HTMLTableSectionElement>(null);
+  const cardsRef = React.useRef<HTMLUListElement>(null);
   const headingRef = React.useRef<HTMLHeadingElement>(null);
 
   const loadData = React.useCallback(() => {
@@ -105,7 +107,12 @@ export function RevisionView(): React.ReactElement {
   }, [permissionsLoaded, reviewAllowed, loadData]);
 
   const returnFocusTo = React.useCallback(
-    () => focusTargetAfterRemoval(bodyRef.current, rowIndexRef.current, headingRef.current),
+    () =>
+      focusTargetAfterRemoval(
+        visibleContainer(bodyRef.current, cardsRef.current),
+        rowIndexRef.current,
+        headingRef.current,
+      ),
     [],
   );
 
@@ -151,6 +158,38 @@ export function RevisionView(): React.ReactElement {
   function handleRefresh(): void {
     void load();
     setRefreshKey((key) => key + 1);
+  }
+
+  // Aprobar y Devolver: las mismas acciones en la tabla y en el pie de la tarjeta.
+  function decisionActions(req: Request, index: number, acting: boolean): RowAction[] {
+    return [
+      {
+        key: 'approve',
+        label: 'Aprobar',
+        icon: Check,
+        variant: 'default',
+        onSelect: () => {
+          rowIndexRef.current = index;
+          setApproveTarget({ request: req, index });
+        },
+        busy: approvingId === req.id,
+        busyLabel: 'Aprobando…',
+        disabled: acting,
+        placement: 'inline',
+      },
+      {
+        key: 'return',
+        label: 'Devolver',
+        variant: 'outline',
+        onSelect: () => {
+          rowIndexRef.current = index;
+          setDevolverError(null);
+          setDevolver(req);
+        },
+        disabled: acting,
+        placement: 'inline',
+      },
+    ];
   }
 
   const header = (
@@ -202,6 +241,7 @@ export function RevisionView(): React.ReactElement {
         <DataView
           state={viewState}
           loading={{ rows: 3, columns: 4 }}
+          mobileCards={{ footer: true }}
           error={{
             title: 'No fue posible cargar los compromisos por aprobar.',
             message: loadError,
@@ -214,6 +254,7 @@ export function RevisionView(): React.ReactElement {
             description: 'Las solicitudes priorizadas aparecerán aquí para su revisión.',
           }}
         >
+          <div className="hidden md:block">
           <Table scrollLabel="Tabla de compromisos por aprobar">
             <TableHeader>
               <TableRow>
@@ -243,34 +284,8 @@ export function RevisionView(): React.ReactElement {
                       {canDecide ? (
                         <RowActions
                           rowLabel={req.title}
-                          actions={[
-                            {
-                              key: 'approve',
-                              label: 'Aprobar',
-                              icon: Check,
-                              variant: 'default',
-                              onSelect: () => {
-                                rowIndexRef.current = index;
-                                setApproveTarget({ request: req, index });
-                              },
-                              busy: approvingId === req.id,
-                              busyLabel: 'Aprobando…',
-                              disabled: acting,
-                              placement: 'inline',
-                            },
-                            {
-                              key: 'return',
-                              label: 'Devolver',
-                              variant: 'outline',
-                              onSelect: () => {
-                                rowIndexRef.current = index;
-                                setDevolverError(null);
-                                setDevolver(req);
-                              },
-                              disabled: acting,
-                              placement: 'inline',
-                            },
-                          ]}
+                          actions={decisionActions(req, index, acting)}
+
                         />
                       ) : (
                         <span className="text-sm text-muted-foreground">Solo lectura</span>
@@ -281,6 +296,51 @@ export function RevisionView(): React.ReactElement {
               })}
             </TableBody>
           </Table>
+          </div>
+          <DataCardList
+            label="Compromisos por aprobar"
+            listRef={cardsRef}
+            rows={queue}
+            getKey={(req) => req.id}
+            card={(req) => {
+              const index = queue.indexOf(req);
+              const acting = actingId === req.id;
+              return {
+                code: <IdChip code={req.code} />,
+                title: (
+                  <CellTitle
+                    touch
+                    href={
+                      allowedModules.has('requests')
+                        ? `/demanda/solicitudes/${encodeURIComponent(req.id)}`
+                        : undefined
+                    }
+                  >
+                    {req.title}
+                  </CellTitle>
+                ),
+                badges: [
+                  <PriorityBadge
+                    key="priority"
+                    variant="compact"
+                    score={req.currentScore}
+                    label={req.priorityLabel}
+                  />,
+                ],
+                meta: [{ label: 'Registro', value: formatDate(req.registeredAt) }],
+                busy: acting,
+                footer: canDecide ? (
+                  <RowActions
+                    footer
+                    rowLabel={req.title}
+                    actions={decisionActions(req, index, acting)}
+                  />
+                ) : (
+                  <span className="flex items-center text-sm text-muted-foreground">Solo lectura</span>
+                ),
+              };
+            }}
+          />
         </DataView>
       </Section>
 

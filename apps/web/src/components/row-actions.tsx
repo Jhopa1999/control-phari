@@ -50,6 +50,11 @@ export interface RowActionsProps {
    * disparador mide 44 × 44 px (objetivo táctil).
    */
   menuOnly?: boolean;
+  /**
+   * Pie de tarjeta móvil: las acciones en línea son botones h-11 a todo el
+   * ancho (hijos directos de la rejilla del pie) y las del menú van al «…».
+   */
+  footer?: boolean;
 }
 
 // En densidad compacta los botones miden 28 px (por encima de los 24 px de WCAG 2.5.8).
@@ -72,13 +77,21 @@ function splitActions(actions: RowAction[]): { inline: RowAction[]; menu: RowAct
   return { inline, menu };
 }
 
-function InlineAction({ action }: { action: RowAction }): React.ReactElement {
+function InlineAction({
+  action,
+  footer = false,
+}: {
+  action: RowAction;
+  footer?: boolean;
+}): React.ReactElement {
   const Icon = action.icon;
   const iconOnly = action.iconOnly === true;
   const variant =
-    action.tone === 'danger' ? 'ghost-destructive' : (action.variant ?? 'ghost');
+    action.tone === 'danger'
+      ? 'ghost-destructive'
+      : (action.variant ?? (footer ? 'outline' : 'ghost'));
   const size = iconOnly ? 'icon-sm' : 'sm';
-  const className = iconOnly ? COMPACT_ICON : COMPACT_TEXT;
+  const className = footer ? 'h-11 w-full' : iconOnly ? COMPACT_ICON : COMPACT_TEXT;
   const iconNode = Icon ? <Icon aria-hidden="true" /> : null;
 
   if (action.busy) {
@@ -223,15 +236,18 @@ export function RowActions({
   actions,
   rowLabel,
   menuOnly = false,
+  footer = false,
 }: RowActionsProps): React.ReactElement {
   const { inline, menu } = menuOnly
     ? { inline: [] as RowAction[], menu: actions }
     : splitActions(actions);
   const menuBusy = menu.some((action) => action.busy);
+  const Wrapper = footer ? React.Fragment : 'div';
+  const wrapperProps = footer ? {} : { className: 'flex justify-end gap-1' };
   return (
-    <div className="flex justify-end gap-1">
+    <Wrapper {...wrapperProps}>
       {inline.map((action) => (
-        <InlineAction key={action.key} action={action} />
+        <InlineAction key={action.key} action={action} footer={footer} />
       ))}
       {menu.length > 0 ? (
         <DropdownMenu>
@@ -240,7 +256,7 @@ export function RowActions({
               type="button"
               variant="ghost"
               size="icon-sm"
-              className={cn(COMPACT_ICON, menuOnly && 'size-11')}
+              className={cn(COMPACT_ICON, (menuOnly || footer) && 'size-11')}
               aria-label={`Más acciones para «${rowLabel}»`}
               aria-busy={menuBusy ? true : undefined}
             >
@@ -258,7 +274,7 @@ export function RowActions({
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
-    </div>
+    </Wrapper>
   );
 }
 

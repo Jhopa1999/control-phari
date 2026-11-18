@@ -7,6 +7,7 @@ import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { CalendarCheck, CalendarClock, CircleCheck, Plus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DataCardList } from '@/components/data-card-list';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { InlineNotice } from '@/components/inline-notice';
@@ -402,6 +403,8 @@ function ActividadesRecurrentesViewContent(): React.ReactElement {
               action={newButton}
             />
           ) : (
+            <>
+            <div className="hidden md:block">
             <Table scrollLabel="Tabla de definiciones de actividades recurrentes">
               <TableHeader>
                 <TableRow>
@@ -452,6 +455,48 @@ function ActividadesRecurrentesViewContent(): React.ReactElement {
                 ))}
               </TableBody>
             </Table>
+            </div>
+            <DataCardList
+              label="Definiciones de actividades recurrentes"
+              rows={activities}
+              getKey={(activity) => activity.id}
+              card={(activity) => ({
+                title: (
+                  <span className="inline-flex min-h-11 items-center font-medium wrap-break-word">
+                    {activity.title}
+                  </span>
+                ),
+                subtitle: `${activityTypeLabel(activity.activityType, activityTypes)} · ${cadenceText(activity.cadence, activity.intervalCount)}`,
+                badges: [
+                  <StatusBadge
+                    key="state"
+                    kind="recurringDefinition"
+                    value={String(activity.active)}
+                  />,
+                ],
+                meta: [
+                  { label: 'Esfuerzo', value: formatHours(activity.estimatedHours) },
+                  { label: 'Inicio', value: formatDateOnly(activity.startDate) },
+                  {
+                    label: 'Responsable',
+                    wide: true,
+                    value: `${responsibleKindLabel(activity.responsibleKind)}: ${
+                      activity.responsibleKind === 'USER'
+                        ? orDash(activity.responsibleUserId ? userNameById.get(activity.responsibleUserId) : null)
+                        : orDash(
+                            activity.responsibleAreaId
+                              ? areas.find((a) => a.id === activity.responsibleAreaId)?.name
+                              : null,
+                          )
+                    }`,
+                  },
+                ],
+                actions: (
+                  <RowActions menuOnly rowLabel={activity.title} actions={definitionActions(activity)} />
+                ),
+              })}
+            />
+            </>
           )}
         </div>
       </Section>

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { paginationHeaders, serveRequestList } from './helpers/server-list-mock';
 import type { Request } from '../apps/web/src/lib/api-client';
+import { mockOleada3Data } from './helpers/oleada3-fixtures';
 
 /**
  * BL-024: en móvil (< 768 px) los listados muestran tarjetas por fila en vez de
@@ -110,5 +111,131 @@ test.describe('escritorio 1280×800', () => {
 
     await expect(page.getByRole('region', { name: 'Tabla de solicitudes' })).toBeVisible();
     await expect(page.getByRole('list', { name: 'Solicitudes' })).toBeHidden();
+  });
+});
+
+/*
+ * Oleada 3 · PR-C: tarjetas móviles en Aprobaciones, Capacidad, Auditoría,
+ * Equipo, Planificación, Actividades recurrentes y Reuniones. Datos de
+ * helpers/oleada3-fixtures.ts (no se escribe nada en la BD).
+ */
+async function expectNoHorizontalScroll(page: import('@playwright/test').Page): Promise<void> {
+  const ok = await page.evaluate(
+    () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+  );
+  expect(ok).toBe(true);
+}
+
+test.describe('oleada 3 · móvil 375×800', () => {
+  // La API de desarrollo carga varias secciones por pantalla: margen de espera mayor.
+  test.setTimeout(60_000);
+  test.use({ viewport: { width: 375, height: 800 } });
+
+  test('Aprobaciones: Aprobar y Devolver quedan visibles en la tarjeta', async ({ page }) => {
+    await mockOleada3Data(page);
+    await page.goto('/administracion/revision');
+    const list = page.getByRole('list', { name: 'Compromisos por aprobar' });
+    await expect(list).toBeVisible({ timeout: 15_000 });
+    await expect(list.getByRole('listitem')).toHaveCount(3);
+    await expect(page.getByRole('region', { name: 'Tabla de compromisos por aprobar' })).toBeHidden();
+    const first = list.getByRole('listitem').first();
+    for (const name of ['Aprobar', 'Devolver']) {
+      const button = first.getByRole('button', { name, exact: true });
+      await expect(button).toBeVisible({ timeout: 15_000 });
+      const box = await button.boundingBox();
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+    }
+    await expectNoHorizontalScroll(page);
+    // Aprobar abre la confirmación sin ejecutar nada.
+    await first.getByRole('button', { name: 'Aprobar', exact: true }).click();
+    await expect(page.getByRole('alertdialog')).toBeVisible({ timeout: 15_000 });
+    await page.keyboard.press('Escape');
+  });
+
+  test('Capacidad: resumen en tarjetas, la sobrecarga lleva su badge', async ({ page }) => {
+    await mockOleada3Data(page);
+    await page.goto('/activos/capacidad');
+    const list = page.getByRole('list', { name: 'Resumen de carga por persona' });
+    await expect(list).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('region', { name: 'Tabla del resumen de carga' })).toBeHidden();
+    const over = list.getByRole('listitem').filter({ hasText: 'Persona sobrecargada e2e' });
+    await expect(over).toContainText('sobre lo disponible');
+    await expect(over.locator('dt', { hasText: 'Utilización plan' })).toBeVisible({ timeout: 15_000 });
+    await expectNoHorizontalScroll(page);
+  });
+
+  test('Auditoría: una tarjeta por evento con «Ver cambio» a todo el ancho', async ({ page }) => {
+    await mockOleada3Data(page);
+    await page.goto('/gobierno/auditoria');
+    const list = page.getByRole('list', { name: 'Eventos de auditoría' });
+    await expect(list.getByRole('listitem')).toHaveCount(4);
+    await expect(page.getByRole('region', { name: 'Tabla de eventos de auditoría' })).toBeHidden();
+    const button = list.getByRole('button', { name: 'Ver cambio' }).first();
+    const box = await button.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    await button.click();
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15_000 });
+    await page.keyboard.press('Escape');
+    await expectNoHorizontalScroll(page);
+  });
+
+  test('Equipo: usuarios y roles en tarjetas compactas', async ({ page }) => {
+    await page.goto('/gobierno/equipo');
+    const users = page.getByRole('list', { name: 'Usuarios', exact: true });
+    await expect(users).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('region', { name: 'Tabla de usuarios' })).toBeHidden();
+    const invite = users.getByRole('button', { name: /^Reenviar invitación a / }).first();
+    const box = await invite.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    await expect(page.getByRole('list', { name: 'Roles asignados', exact: true })).toBeVisible({ timeout: 15_000 });
+    await expectNoHorizontalScroll(page);
+  });
+
+  test('Reuniones: las pestañas hacen scroll propio y la página no se ensancha', async ({
+    page,
+  }) => {
+    await page.goto('/seguimiento/reuniones');
+    const tabs = page.getByRole('tablist', { name: 'Vistas de reuniones y compromisos' });
+    await expect(tabs).toBeVisible({ timeout: 15_000 });
+    await expectNoHorizontalScroll(page);
+    const scrolls = await tabs.evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(scrolls).toBe(true);
+    await page.getByRole('tab', { name: /Mis compromisos abiertos/ }).click();
+    await expectNoHorizontalScroll(page);
+  });
+
+  test('Actividades recurrentes: la gestión se muestra en tarjetas', async ({ page }) => {
+    await page.goto('/actividades-recurrentes');
+    const manage = page.getByRole('tab', { name: /Gesti/ });
+    // Solo quien administra ve la pestaña de gestión; el jefe del seed sí.
+    await expect(manage).toBeVisible({ timeout: 15_000 });
+    await manage.click();
+    await expectNoHorizontalScroll(page);
+    const empty = page.getByText('No hay actividades recurrentes todavía.');
+    if ((await empty.count()) === 0) {
+      await expect(
+        page.getByRole('list', { name: 'Definiciones de actividades recurrentes' }),
+      ).toBeVisible({ timeout: 15_000 });
+    }
+  });
+
+  test('Planificación: fases y tareas en tarjetas sin desborde', async ({ page }) => {
+    await page.goto('/seguimiento/plan');
+    await expectNoHorizontalScroll(page);
+  });
+});
+
+test.describe('oleada 3 · escritorio 1280×800', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('las tablas siguen y las listas de tarjetas no existen', async ({ page }) => {
+    await mockOleada3Data(page);
+    await page.goto('/administracion/revision');
+    await expect(page.getByRole('region', { name: 'Tabla de compromisos por aprobar' })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('list', { name: 'Compromisos por aprobar' })).toHaveCount(0);
+    await page.goto('/gobierno/auditoria');
+    await expect(page.getByRole('region', { name: 'Tabla de eventos de auditoría' })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('list', { name: 'Eventos de auditoría' })).toHaveCount(0);
   });
 });

@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CellTitle, ResultCount, SortableTableHead } from '@/components/data-table';
+import { DataCardList } from '@/components/data-card-list';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { IdChip } from '@/components/id-chip';
 import { DisabledReason } from '@/components/disabled-reason';
@@ -762,15 +763,40 @@ export function PlanView(): React.ReactElement {
     setTaskConfirmOpen(true);
   }
 
+  // Tabla y tarjetas conviven en el DOM: solo se enfoca el control que se ve.
   const returnFocusToPhases = React.useCallback((): HTMLElement | null => {
     const id = focusAfterDeleteRef.current;
-    return (id ? document.getElementById(id) : null) ?? phasesHeadingRef.current;
+    const el = id ? document.getElementById(id) : null;
+    return (el && el.offsetParent !== null ? el : null) ?? phasesHeadingRef.current;
   }, []);
 
   const returnFocusToTasks = React.useCallback((): HTMLElement | null => {
     const id = focusAfterDeleteRef.current;
-    return (id ? document.getElementById(id) : null) ?? tasksHeadingRef.current;
+    const el = id ? document.getElementById(id) : null;
+    return (el && el.offsetParent !== null ? el : null) ?? tasksHeadingRef.current;
   }, []);
+
+  function taskRowActions(task: Task): RowAction[] {
+    return [
+      {
+        key: 'edit',
+        id: taskActionId(task.id),
+        label: 'Editar',
+        disabled: busy,
+        onSelect: () => openEditTask(task),
+      },
+      {
+        key: 'delete',
+        label: 'Eliminar tarea',
+        placement: 'menu',
+        tone: 'danger',
+        busy: deletingId === task.id,
+        busyLabel: 'Eliminando…',
+        disabled: busy,
+        onSelect: () => requestDeleteTask(task),
+      },
+    ];
+  }
 
   function phaseActions(phase: PlanPhase, index: number): RowAction[] {
     const isInitial = phase.id === initialPhaseId;
@@ -853,6 +879,7 @@ export function PlanView(): React.ReactElement {
             size: 'compact',
           }}
         >
+          <div className="hidden md:block">
           <Table density="compact" scrollLabel="Tabla de fases">
             <TableHeader>
               <TableRow>
@@ -917,6 +944,37 @@ export function PlanView(): React.ReactElement {
               })}
             </TableBody>
           </Table>
+          </div>
+          <DataCardList
+            label="Fases del plan"
+            rows={phases}
+            getKey={(phase) => phase.id}
+            card={(phase) => {
+              const index = phases.indexOf(phase);
+              const isInitial = phase.id === initialPhaseId;
+              const count = taskCountByPhase.get(phase.id) ?? 0;
+              return {
+                code: <IdChip code={phase.code} variant="short" />,
+                title: <span className="inline-flex min-h-11 items-center font-medium wrap-break-word">{phase.name}</span>,
+                subtitle: phase.deliverable ? `Entregable: ${phase.deliverable}` : undefined,
+                badges: isInitial ? [<Badge key="initial" variant="neutral">Fase inicial</Badge>] : [],
+                note: isInitial && count > 0 ? LOCK : undefined,
+                meta: [
+                  {
+                    label: 'Fechas',
+                    value:
+                      phase.startDate || phase.endDate
+                        ? `${formatDateOnly(phase.startDate)} → ${formatDateOnly(phase.endDate)}`
+                        : '—',
+                  },
+                  { label: 'Tareas', value: count },
+                ],
+                actions: canEdit ? (
+                  <RowActions menuOnly rowLabel={phase.name} actions={phaseActions(phase, index)} />
+                ) : undefined,
+              };
+            }}
+          />
         </DataView>
       </Section>
     );
@@ -1063,6 +1121,7 @@ export function PlanView(): React.ReactElement {
             size: 'compact',
           }}
         >
+          <div className="hidden md:block">
           <Table scrollLabel="Tabla de tareas del plan">
             <TableHeader>
               <TableRow>
@@ -1194,28 +1253,8 @@ export function PlanView(): React.ReactElement {
                     </TableCell>
                     {canEdit ? (
                       <RowActionsCell>
-                        <RowActions
-                          rowLabel={task.title}
-                          actions={[
-                            {
-                              key: 'edit',
-                              id: taskActionId(task.id),
-                              label: 'Editar',
-                              disabled: busy,
-                              onSelect: () => openEditTask(task),
-                            },
-                            {
-                              key: 'delete',
-                              label: 'Eliminar tarea',
-                              placement: 'menu',
-                              tone: 'danger',
-                              busy: deletingId === task.id,
-                              busyLabel: 'Eliminando…',
-                              disabled: busy,
-                              onSelect: () => requestDeleteTask(task),
-                            },
-                          ]}
-                        />
+                        <RowActions rowLabel={task.title} actions={taskRowActions(task)} />
+
                       </RowActionsCell>
                     ) : null}
                   </TableRow>
@@ -1223,6 +1262,92 @@ export function PlanView(): React.ReactElement {
               })}
             </TableBody>
           </Table>
+          </div>
+          <DataCardList
+            label="Tareas del plan"
+            rows={taskTable.pageRows}
+            getKey={(task) => task.id}
+            sort={{
+              value: taskTable.sort,
+              onChange: taskTable.setSort,
+              options: [
+                { key: 'end', label: 'Plazo' },
+                { key: 'status', label: 'Estado' },
+              ],
+            }}
+            card={(task) => {
+              const due = taskDueInfo(task, todayLocal);
+              const dueText = dueLabel(due);
+              const pendingPredecessors = task.predecessors.filter((p) => p.status !== 'TERMINADA').length;
+              const cannotChangeStatus =
+                !isPlanManager && task.responsibleUserId !== permissions?.userId;
+              return {
+                code: <IdChip code={task.code} variant="short" />,
+                title: (
+                  <CellTitle touch onOpen={() => setDetailTaskId(task.id)}>
+                    {task.title}
+                  </CellTitle>
+                ),
+                subtitle: phases.length > 1 ? (phaseNameById.get(task.phaseId) ?? '—') : undefined,
+                badges: [
+                  task.isMilestone ? <Badge key="milestone" variant="outline">Hito</Badge> : null,
+                  pendingPredecessors > 0 ? (
+                    <Badge key="pred" variant="warning">
+                      <Link2 aria-hidden="true" />
+                      {pendingPredecessors === 1
+                        ? '1 predecesora pendiente'
+                        : `${pendingPredecessors} predecesoras pendientes`}
+                    </Badge>
+                  ) : null,
+                  dueText ? (
+                    <Badge key="due" variant={due.kind === 'overdue' ? 'danger' : 'warning'}>
+                      {due.kind === 'overdue' ? (
+                        <AlarmClock aria-hidden="true" />
+                      ) : (
+                        <Clock aria-hidden="true" />
+                      )}
+                      {dueText}
+                    </Badge>
+                  ) : null,
+                ],
+                note:
+                  task.status === 'BLOQUEADA' ? <BlockedReasonLine reason={task.blockedReason} /> : undefined,
+                meta: [
+                  { label: 'Responsable', value: task.responsibleName ?? 'Sin asignar' },
+                  { label: 'Avance', value: formatPercent(task.progress) },
+                  {
+                    label: 'Plazo',
+                    wide: true,
+                    value:
+                      task.startDate || task.endDate
+                        ? `${formatDateOnly(task.startDate)} → ${formatDateOnly(task.endDate)}`
+                        : 'Sin fechas',
+                  },
+                ],
+                actions: canEdit ? (
+                  <RowActions menuOnly rowLabel={task.title} actions={taskRowActions(task)} />
+                ) : undefined,
+                footer: (
+                  <TaskStatusControl
+                    status={task.status}
+                    progress={task.progress}
+                    showProgress={false}
+                    busy={rowBusyId === task.id}
+                    disabled={permissions === null || inlineBusy(task.id) || cannotChangeStatus}
+                    disabledReason={
+                      cannotChangeStatus
+                        ? 'Solo puedes cambiar el estado de tus propias tareas.'
+                        : undefined
+                    }
+                    taskTitle={task.title}
+                    canApprove={isPlanManager}
+                    triggerClassName="min-h-11 flex-1 justify-between"
+                    onChange={(next) => handleInlineStatusChange(task, next)}
+                  />
+                ),
+              };
+            }}
+          />
         </DataView>
         )}
       </Section>

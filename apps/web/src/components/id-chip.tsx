@@ -57,7 +57,7 @@ export interface IdChipProps {
 }
 
 const CHIP_CLASS =
-  'inline-flex h-5 shrink-0 items-center rounded-md border border-border-strong/60 bg-muted px-1.5 font-mono text-xs font-medium whitespace-nowrap text-foreground tabular-nums';
+  'inline-flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-md border border-border-strong/60 bg-muted px-1.5 font-mono text-xs font-medium whitespace-nowrap text-foreground tabular-nums';
 
 export function IdChip({
   code,

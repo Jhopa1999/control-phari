@@ -7,6 +7,7 @@ import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { CalendarClock, ChevronRight, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DataCardList } from '@/components/data-card-list';
 import { SortableTableHead } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { IdChip } from '@/components/id-chip';
@@ -408,7 +409,9 @@ function CapacidadViewContent(): React.ReactElement {
 
   const returnFocusAfterDelete = React.useCallback((): HTMLElement | null => {
     const neighbourId = focusAfterDeleteRef.current;
-    const neighbour = neighbourId ? document.getElementById(assignmentActionId(neighbourId)) : null;
+    const found = neighbourId ? document.getElementById(assignmentActionId(neighbourId)) : null;
+    // Tabla y tarjetas conviven en el DOM: solo se enfoca el control que se ve.
+    const neighbour = found && found.offsetParent !== null ? found : null;
     return neighbour ?? assignmentsHeadingRef.current;
   }, []);
 
@@ -565,6 +568,7 @@ function CapacidadViewContent(): React.ReactElement {
                 }
           }
         >
+          <div className="hidden md:block">
           <Table scrollLabel="Tabla del resumen de carga">
             <TableCaption>
               {`Resumen de carga por persona para ${month ? formatMonth(month) : 'el mes elegido'}. Incluye las horas comprometidas (asignaciones registradas a mano) y las horas planificadas (estimación de las tareas de planes autorizados en solicitudes vivas).`}
@@ -687,6 +691,95 @@ function CapacidadViewContent(): React.ReactElement {
               })}
             </TableBody>
           </Table>
+          </div>
+          <DataCardList
+            label="Resumen de carga por persona"
+            rows={summaryTable.pageRows}
+            getKey={(row) => row.userId}
+            sort={{
+              value: summaryTable.sort,
+              onChange: summaryTable.setSort,
+              options: [
+                { key: 'person', label: 'Persona' },
+                { key: 'utilization', label: 'Utilización' },
+                { key: 'planUtilization', label: 'Utilización plan' },
+              ],
+            }}
+            card={(row) => {
+              const sobrecargada = row.sobrecargado || row.estado === 'SOBRECARGA';
+              const libreNegativo = row.libre !== null && row.libre < 0;
+              return {
+                tone: sobrecargada ? 'danger' : 'default',
+                title: <span className="inline-flex min-h-11 items-center font-medium">{row.userName}</span>,
+                badges: [
+                  row.estado === 'CARGA_PARCIAL' ? (
+                    <StatusBadge key="state" kind="capacity" value={row.estado} />
+                  ) : (
+                    <StatusBadge
+                      key="state"
+                      kind="capacity"
+                      value={row.estado}
+                      srDescription={SIGNAL_DESCRIPTIONS[row.estado]}
+                    />
+                  ),
+                  tieneHolgura(row) ? (
+                    <Badge key="slack" variant="outline">
+                      Holgura
+                    </Badge>
+                  ) : null,
+                  row.planSobreDisponible ? (
+                    <Badge key="plan" variant="warning">
+                      Plan supera lo disponible
+                    </Badge>
+                  ) : null,
+                ],
+                note:
+                  row.estado === 'CARGA_PARCIAL'
+                    ? 'Esta persona tiene asignaciones en procesos fuera de tu alcance; la carga total la ve el jefe de área.'
+                    : undefined,
+                meta: [
+                  { label: 'Disponible', value: hoursOrDash(row.disponible) },
+                  { label: 'Comprometido', value: formatHours(row.comprometido) },
+                  {
+                    label: 'Libre',
+                    value: (
+                      <span className={cn(libreNegativo && 'text-danger')}>
+                        {hoursOrDash(row.libre)}
+                        {libreNegativo ? (
+                          <span className="block text-meta text-muted-foreground">
+                            (sobre lo disponible)
+                          </span>
+                        ) : null}
+                      </span>
+                    ),
+                  },
+                  { label: 'Planificado', value: formatHours(row.planificado) },
+                  {
+                    label: 'Utilización',
+                    wide: true,
+                    value: (
+                      <UtilizationBar
+                        value={row.utilizacion}
+                        tone={row.sobrecargado ? 'danger' : 'default'}
+                        label="Utilización"
+                      />
+                    ),
+                  },
+                  {
+                    label: 'Utilización plan',
+                    wide: true,
+                    value: (
+                      <UtilizationBar
+                        value={row.utilizacionPlan}
+                        tone={row.planSobreDisponible ? 'warning' : 'default'}
+                        label="Utilización plan"
+                      />
+                    ),
+                  },
+                ],
+              };
+            }}
+          />
         </DataView>
       </Section>
 
@@ -714,6 +807,7 @@ function CapacidadViewContent(): React.ReactElement {
             size: 'inline',
           }}
         >
+          <div className="hidden md:block">
           <Table scrollLabel="Tabla de disponibilidad">
             <TableCaption>
               {`Disponibilidad registrada para ${month ? formatMonth(month) : 'el mes elegido'}.`}
@@ -748,6 +842,23 @@ function CapacidadViewContent(): React.ReactElement {
               ))}
             </TableBody>
           </Table>
+          </div>
+          <DataCardList
+            label="Disponibilidad del mes"
+            rows={availability}
+            getKey={(row) => row.id}
+            card={(row) => ({
+              title: <span className="inline-flex min-h-11 items-center font-medium">{personName(row.userId)}</span>,
+              meta: [{ label: 'Horas disponibles', value: formatHours(row.availableHours) }],
+              actions: (
+                <RowActions
+                  menuOnly
+                  rowLabel={personName(row.userId)}
+                  actions={[{ key: 'edit', label: 'Editar', onSelect: () => openEditDisp(row) }]}
+                />
+              ),
+            })}
+          />
         </DataView>
       </Section>
 
@@ -776,6 +887,7 @@ function CapacidadViewContent(): React.ReactElement {
             size: 'inline',
           }}
         >
+          <div className="hidden md:block">
           <Table scrollLabel="Tabla de asignaciones">
             <TableCaption>
               {`Asignaciones de horas para ${month ? formatMonth(month) : 'el mes elegido'}.`}
@@ -838,6 +950,59 @@ function CapacidadViewContent(): React.ReactElement {
               ))}
             </TableBody>
           </Table>
+          </div>
+          <DataCardList
+            label="Asignaciones del mes"
+            rows={assignments}
+            getKey={(row) => row.id}
+            card={(row) => {
+              const solicitud = row.requestTitle ?? requestTitle(row.requestId);
+              return {
+                code: <IdChip code={row.requestCode} />,
+                title: <span className="inline-flex min-h-11 items-center font-medium">{personName(row.userId)}</span>,
+                busy: deletingId === row.id,
+                meta: [
+                  { label: 'Proceso', value: processName(row.processId) },
+                  { label: 'Horas', value: formatHours(row.committedHours) },
+                  {
+                    label: 'Solicitud',
+                    wide: true,
+                    value: (
+                      <span className="line-clamp-2" title={solicitud}>
+                        {solicitud}
+                      </span>
+                    ),
+                  },
+                  {
+                    label: 'Descripción',
+                    wide: true,
+                    value: row.description ? (
+                      <span className="line-clamp-2" title={row.description}>
+                        {row.description}
+                      </span>
+                    ) : null,
+                  },
+                ],
+                actions: (
+                  <RowActions
+                    menuOnly
+                    rowLabel={personName(row.userId)}
+                    actions={[
+                      { key: 'edit', label: 'Editar', onSelect: () => openEditAsig(row) },
+                      {
+                        key: 'delete',
+                        label: 'Eliminar',
+                        tone: 'danger',
+                        busy: deletingId === row.id,
+                        busyLabel: 'Eliminando…',
+                        onSelect: () => requestDeleteAsig(row),
+                      },
+                    ]}
+                  />
+                ),
+              };
+            }}
+          />
         </DataView>
       </Section>
 
