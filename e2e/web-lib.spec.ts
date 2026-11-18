@@ -1859,6 +1859,8 @@ test.describe('classifyError y mensajes del servidor (oleada 3)', () => {
     expect(apiErrorFrom(500, {}).message).toBe(
       'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.',
     );
+  });
+});
 test.describe('pagination (listados en el servidor, oleada 3 PR-B)', () => {
   const headers = (values: Record<string, string>) => ({
     headers: { get: (name: string) => values[name] ?? null },
