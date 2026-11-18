@@ -57,7 +57,7 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
       expect(allowedModulesFor([role])).not.toContain('systemSettings');
     }
   });
-  it('ADMIN habilita solo modulos de sistema/administracion, no los de negocio', () => {
+  it('ADMIN habilita modulos de sistema/administracion y Actividades recurrentes, no los de negocio', () => {
     // ADMIN es un rol global de administracion: concede systemSettings, areas y
     // processesAdmin; los modulos de negocio salen de los grants por proceso.
     expect(allowedModulesFor([RoleCode.ADMIN])).toEqual([
@@ -66,7 +66,19 @@ describe('MODULE_MATRIX / allowedModulesFor', () => {
       'processesAdmin',
       'requesters',
       'aiSettings',
+      'recurring',
     ]);
+  });
+
+  it('recurring incluye a ADMIN (D14) y sigue siendo de los tres roles de área', () => {
+    for (const role of [
+      RoleCode.ADMIN,
+      RoleCode.JEFE_AREA,
+      RoleCode.LIDER_PROCESO,
+      RoleCode.INTEGRANTE,
+    ]) {
+      expect(allowedModulesFor([role])).toContain('recurring');
+    }
   });
   it('areas y processesAdmin son para ADMIN y JEFE_AREA', () => {
     expect(allowedModulesFor([RoleCode.ADMIN])).toContain('areas');

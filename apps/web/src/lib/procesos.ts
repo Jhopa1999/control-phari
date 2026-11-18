@@ -4,7 +4,7 @@ import {
   type Process,
   type UpdateProcess,
 } from './api-client';
-import { ApiError, toApiError, apiErrorFrom } from './api-error';
+import { ApiError, apiErrorFrom, apiFormErrorFrom, toApiError } from './api-error';
 
 export { ApiError };
 
@@ -48,7 +48,7 @@ export async function createProcess(input: CreateProcess): Promise<Process> {
       body: input,
     });
     if (error || !data) {
-      throw apiErrorFrom(response.status, error);
+      throw apiFormErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {
@@ -71,7 +71,7 @@ export async function updateProcess(
       body: input,
     });
     if (error || !data) {
-      throw apiErrorFrom(response.status, error);
+      throw apiFormErrorFrom(response.status, error);
     }
     return data;
   } catch (err) {

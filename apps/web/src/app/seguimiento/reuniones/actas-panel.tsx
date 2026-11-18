@@ -39,6 +39,7 @@ import {
 } from '@/lib/meetings';
 import { downloadMinutes, printMinutes } from '@/lib/minutes';
 import { nextStates, stateLabel } from '@/lib/record-state';
+import { PERSON_NOT_IN_PROCESS_MESSAGE } from '@/lib/use-person-error';
 import { CompromisoFormDialog, type CompromisoFormValues } from './compromiso-form-dialog';
 import { RegistrarDuracionDialog } from './registrar-duracion-dialog';
 import { ReunionFormDialog, type ReunionFormValues } from './reunion-form-dialog';
@@ -165,7 +166,8 @@ export function ActasPanel({
     } catch (err) {
       const message = messageOf(err);
       setFormError(message);
-      toast.error(message);
+      // La persona fuera de alcance se muestra junto al selector, sin toast.
+      if (message !== PERSON_NOT_IN_PROCESS_MESSAGE) toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -201,7 +203,8 @@ export function ActasPanel({
     } catch (err) {
       const message = messageOf(err);
       setFormError(message);
-      toast.error(message);
+      // La persona fuera de alcance se muestra junto al selector, sin toast.
+      if (message !== PERSON_NOT_IN_PROCESS_MESSAGE) toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -248,7 +251,8 @@ export function ActasPanel({
     } catch (err) {
       const message = messageOf(err);
       setFormError(message);
-      toast.error(message);
+      // La persona fuera de alcance se muestra junto al selector, sin toast.
+      if (message !== PERSON_NOT_IN_PROCESS_MESSAGE) toast.error(message);
     } finally {
       setSubmitting(false);
     }

@@ -10,6 +10,13 @@ export class ApiError extends Error {
     readonly status?: number,
     /** Segundos de espera que informó la API en `Retry-After` (solo en el 429). */
     readonly retryAfterSeconds?: number,
+    /**
+     * Mensajes de negocio del servidor en un 400/409 (uno por regla incumplida).
+     * Permiten marcar el campo exacto; nunca se interpreta texto libre.
+     */
+    readonly messages?: readonly string[],
+    /** Cuerpo JSON de un 409 con datos extra (p. ej. `requiresConfirmation`). */
+    readonly body?: Readonly<Record<string, unknown>>,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -120,4 +127,24 @@ export function classifyError(error: unknown): ClassifiedError {
   if (status === 404) return { kind: 'notFound', message, status };
   if (status === 401) return { kind: 'unauthorized', message, status };
   return { kind: 'server', message, status };
+}
+
+/**
+ * Como `apiErrorFrom`, pero conserva TODOS los mensajes del servidor (el 400 de
+ * validación trae `message` como arreglo, uno por campo) y el cuerpo de un 409
+ * para formularios que marcan el campo con el error. El texto principal es el
+ * de la primera regla; sin mensaje del servidor cae a `apiErrorFrom`.
+ */
+export function apiFormErrorFrom(status: number | undefined, body: unknown): ApiError {
+  if ((status === 400 || status === 409) && typeof body === 'object' && body !== null) {
+    const record = body as Record<string, unknown>;
+    const raw = record.message;
+    const messages = (Array.isArray(raw) ? raw : [raw]).filter(
+      (m): m is string => typeof m === 'string' && m.trim() !== '',
+    );
+    if (messages.length > 0) {
+      return new ApiError(messages[0], status, undefined, messages, record);
+    }
+  }
+  return apiErrorFrom(status, body);
 }

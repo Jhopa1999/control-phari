@@ -297,6 +297,7 @@ export class MeetingService {
   ): Promise<MeetingResponseDto> {
     const meetingDate = dateStringToDate(dto.meetingDate);
     await this.scope.assertActorInProcess(actor, dto.processId);
+    await this.scope.assertPeopleInProcess(dto.processId, [dto.responsibleUserId]);
     const participantIds = dto.participantUserIds ?? [];
     await this.assertParticipantsInScope(actor, participantIds);
     // De-duplicar por si el cliente repite.
@@ -395,6 +396,10 @@ export class MeetingService {
         ? dateStringToDate(dto.meetingDate)
         : undefined;
 
+    // Solo se valida si el responsable cambia (reenviar el guardado no debe bloquear).
+    await this.scope.assertPeopleInProcess(existing.processId, [
+      dto.responsibleUserId !== existing.responsibleUserId ? dto.responsibleUserId : undefined,
+    ]);
     let uniqueIds: string[] | undefined;
     if (dto.participantUserIds !== undefined) {
       await this.assertParticipantsInScope(actor, dto.participantUserIds);

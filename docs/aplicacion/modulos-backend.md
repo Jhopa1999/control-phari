@@ -122,12 +122,12 @@ actor; escritura solo `ADMIN` (rol de sistema).
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/areas` | Lista áreas (filtro opcional `active`). |
+| GET | `/areas` | Lista áreas (filtro opcional `active`). Cada área trae `processCount` (**procesos activos**; los inactivos no cuentan) y `requesterCount` (solicitantes activos), contados con `count` filtrado. |
 | GET | `/areas/:id` | Obtiene un área por id (`404` si no existe). |
 | POST | `/areas` | Crea un área (ADMIN o JEFE_AREA). |
-| PATCH | `/areas/:id` | Edita `name`/`active`/`sortOrder` (ADMIN o JEFE_AREA). |
+| PATCH | `/areas/:id` | Edita `name`/`active`/`sortOrder` (ADMIN o JEFE_AREA). Desactivar un área activa con procesos activos responde `409` «No se puede desactivar el área: tiene N procesos activos.» (sin ids). |
 
-Reglas: `code` se normaliza a MAYÚSCULAS y es único (`409` si se repite al crear); el
+Reglas: `code` se normaliza a MAYÚSCULAS y es único (`409` si se repite al crear); el **Formato del código (oleada 3, PR-E):** solo letras mayúsculas, números y guion bajo (`^[A-Z0-9_]+$`), máximo 40 caracteres; la API normaliza (recorta y pasa a mayúsculas) antes de validar y responde `400` en español («El código solo admite letras mayúsculas, números y guion bajo.», «El código admite como máximo 40 caracteres.»). Solo se valida al **crear**: los DTO de edición no reciben `code`, así que los registros existentes no se revalidan. El `409` por código repetido dice «Ya existe un área con ese código.».
 `code` no es editable (enviarlo en el PATCH → `400`). Cada alta/edición se audita como
 `AREA` (sin proceso de alcance).
 
@@ -142,9 +142,9 @@ admin; `ADMIN` y `JEFE_AREA` ven todos); escritura para `ADMIN` o `JEFE_AREA`.
 | GET | `/processes` | Lista procesos (jefe/admin: todos; no-jefe: solo su alcance). |
 | GET | `/processes/:id` | Obtiene un proceso por id (`404` fuera de alcance). |
 | POST | `/processes` | Crea un proceso (ADMIN o JEFE_AREA). |
-| PATCH | `/processes/:id` | Edita `name`/`framework`/`active`/`sortOrder` (ADMIN o JEFE_AREA). |
+| PATCH | `/processes/:id` | Edita `name`/`framework`/`active`/`sortOrder` (ADMIN o JEFE_AREA). Al desactivar (`active=false`) un proceso activo con trabajo en curso (asignaciones de capacidad del mes actual en adelante, solicitudes no cerradas/rechazadas/retiradas o tareas no terminadas) la API responde `409` con `requiresConfirmation`, `activeAssignments`, `openRequests` y `openTasks`; se reintenta con `confirmDeactivation: true` (campo opcional del DTO). Sin trabajo en curso desactiva sin confirmar. Un `count` por tabla, sin cargar filas. |
 
-Reglas: `code` es único (`409` si se repite al crear); al crear, `areaId` es requerido
+Reglas: `code` es único (`409` si se repite al crear); al crear, `areaId` es requerido El `code` sigue el mismo formato que el de las áreas (mayúsculas, números y guion bajo, máximo 40; `400` en español; solo al crear).
 (UUID) y debe apuntar a un área existente (`404` si no existe). El `areaId` no se edita
 en el PATCH.
 
@@ -439,7 +439,7 @@ Reglas: la **escritura** de diarios y semanales es solo del autor (el jefe y el 
 | --- | --- | --- |
 | GET | `/meetings` | Lista reuniones en alcance (filtros opcionales: `processId`, `state`, `requestId` = solicitud relacionada o proyecto relacionado). |
 | GET | `/meetings/commitments-open` | **Compromisos abiertos de mis reuniones**: compromisos `EN_CURSO`/`BLOQUEADO` cuya reunión de origen tiene al actor como responsable (no amplía la visibilidad). Filtros: `assignedUserId`, `dueStatus`, `meetingId`, `processId`. Devuelve `counts` (`total`, `vencido`, `venceHoy`, `proximo`, `aTiempo`), `truncated` (tope 500) e `items` con asignado (o responsable), reunión, proceso y semáforo. |
-| POST | `/meetings` | Crea una reunión (estado inicial BORRADOR); `durationMinutes` opcional. El `processId` debe ser un proceso del actor (`403` si no; `400` si el jefe indica uno inexistente). |
+| POST | `/meetings` | Crea una reunión (estado inicial BORRADOR); `durationMinutes` opcional. El `processId` debe ser un proceso del actor (`403` si no; `400` si el jefe indica uno inexistente). El `responsibleUserId` (también en el PATCH) debe existir, estar activo y pertenecer al proceso de la reunión (grant activo en él o grant de jefe de área): si no, `400` «La persona indicada no existe o no pertenece al proceso.» (antes un id inexistente daba `500`). |
 | GET | `/meetings/:id` | Detalle del acta: participantes y sus compromisos (`commitments` con `assignedUserName`, `responsibleUserName`, `dueStatus`, `daysToDue`; `commitmentsTotal`, `commitmentsOpen`, `closed`), `durationMinutes` y `meetingEndTime`. |
 | PATCH | `/meetings/:id` | Edita un acta abierta (incluye el set de participantes y `durationMinutes`; `null` la borra); `409` si está cerrada, salvo un PATCH **solo de duración** del responsable, líder del proceso o jefe (para actas cerradas sin duración; 403 a otros, 400 si intenta quitarla). |
 | POST | `/meetings/:id/close` | Cierra el acta (responsable, líder del proceso o jefe); exige la **duración** (400 «Indica la duración de la reunión antes de cerrar el acta.») y decisiones o al menos un compromiso (409). |
@@ -453,7 +453,7 @@ Duración de la reunión: `durationMinutes` entero, múltiplo de 15, entre 15 y 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/commitments` | Lista compromisos en alcance (filtros opcionales: `state`, `processId`, `assignedUserId`, `requestId` = solicitud relacionada o proyecto relacionado). |
-| POST | `/commitments` | Crea un compromiso (vencimiento requerido). El `processId` debe ser un proceso del actor (`403` si no; `400` si el jefe indica uno inexistente). |
+| POST | `/commitments` | Crea un compromiso (vencimiento requerido). El `processId` debe ser un proceso del actor (`403` si no; `400` si el jefe indica uno inexistente). `assignedUserId` y `responsibleUserId` (también en el PATCH) se validan igual que el responsable de una reunión: `400` «La persona indicada no existe o no pertenece al proceso.» (antes `500`). |
 | GET | `/commitments/my-work` | Compromisos de Mi trabajo: abiertos (`EN_CURSO`/`BLOQUEADO`) del actor (asignado; si no hay asignado, responsable) que están **vencidos o vencen hoy** (vencidos primero), con `total`, `overdueCount`, `dueTodayCount`, `upcomingCount` y `canComplete`. Completar usa la transición existente (`POST /commitments/:id/transition` con `COMPLETADO`). |
 | GET | `/commitments/:id` | Detalle de un compromiso. |
 | PATCH | `/commitments/:id` | Edita un compromiso. |

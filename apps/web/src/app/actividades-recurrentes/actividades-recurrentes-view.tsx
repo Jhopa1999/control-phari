@@ -65,7 +65,8 @@ const ACTIVITY_TYPE_CATALOG = 'RECURRING_ACTIVITY_TYPE';
 
 /**
  * Sección de Actividades recurrentes. Pestañas: «Qué me toca» (tablero de la
- * semana), «Calendario» (mensual) y, solo con permiso, «Gestión» y
+ * semana; no se muestra al administrador sin rol de área, que abre en
+ * «Gestión»), «Calendario» (mensual) y, solo con permiso, «Gestión» y
  * «Cumplimiento». El backend es la autoridad del alcance y de los estados
  * (displayStatus, canStart, canComplete): el web solo presenta. Usa el cliente
  * tipado del contrato OpenAPI.
@@ -74,6 +75,15 @@ function ActividadesRecurrentesViewContent(): React.ReactElement {
   const { actorId, permissions } = useActor();
   const roleCodes = React.useMemo(() => new Set(permissions?.roleCodes ?? []), [permissions]);
   const canManage = roleCodes.has('JEFE_AREA') || roleCodes.has('ADMIN');
+  // El administrador sin rol de área (D14) no tiene «Qué me toca»: no es
+  // responsable de ocurrencias. Abre directo en Gestión.
+  const adminOnly =
+    roleCodes.has('ADMIN') &&
+    !roleCodes.has('JEFE_AREA') &&
+    !roleCodes.has('LIDER_PROCESO') &&
+    !roleCodes.has('INTEGRANTE');
+  const [selectedTab, setSelectedTab] = React.useState<string | null>(null);
+  const activeTab = selectedTab ?? (adminOnly ? 'manage' : 'mine');
 
   // --- Qué me toca ---
   const [board, setBoard] = React.useState<RecurringBoard | null>(null);
@@ -530,14 +540,14 @@ function ActividadesRecurrentesViewContent(): React.ReactElement {
         {announce}
       </p>
 
-      <Tabs defaultValue="mine">
+      <Tabs value={activeTab} onValueChange={setSelectedTab}>
         <TabsList>
-          <TabsTrigger value="mine">Qué me toca</TabsTrigger>
+          {adminOnly ? null : <TabsTrigger value="mine">Qué me toca</TabsTrigger>}
           <TabsTrigger value="calendar">Calendario</TabsTrigger>
           {canManage ? <TabsTrigger value="manage">Gestión</TabsTrigger> : null}
           {canManage ? <TabsTrigger value="compliance">Cumplimiento</TabsTrigger> : null}
         </TabsList>
-        <TabsContent value="mine">{misActividades}</TabsContent>
+        {adminOnly ? null : <TabsContent value="mine">{misActividades}</TabsContent>}
         <TabsContent value="calendar">{calendar}</TabsContent>
         {canManage ? <TabsContent value="manage">{gestion}</TabsContent> : null}
         {canManage ? (

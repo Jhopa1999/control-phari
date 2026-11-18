@@ -136,3 +136,94 @@ describe('Altas de Seguimiento en un proceso ajeno', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
+
+describe('Personas indicadas en reuniones y compromisos (4.3)', () => {
+  const MESSAGE = 'La persona indicada no existe o no pertenece al proceso.';
+  const PERSON = '11111111-1111-4111-8111-111111111111';
+
+  function buildPeople(found: number) {
+    const m = build();
+    const userCount = jest.fn().mockResolvedValue(found);
+    const prismaObj: Record<string, unknown> = {
+      process: { findFirst: jest.fn().mockResolvedValue({ id: 'p1' }) },
+      user: { count: userCount, findMany: jest.fn().mockResolvedValue([]) },
+      meeting: { create: m.meetingCreate },
+      commitment: { create: m.commitmentCreate },
+    };
+    prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaObj));
+    const prisma = prismaObj as unknown as PrismaService;
+    const scope = new CoordinationScopeService(prisma);
+    const audit = { record: jest.fn() } as unknown as AuditService;
+    const notifier = { notify: jest.fn() } as never;
+    return {
+      scope,
+      userCount,
+      meeting: new MeetingService(prisma, audit, scope),
+      commitment: new CommitmentService(prisma, audit, scope, {} as never, notifier),
+      meetingCreate: m.meetingCreate,
+      commitmentCreate: m.commitmentCreate,
+    };
+  }
+
+  it('compromiso con asignado inexistente o ajeno al proceso: 400 en español y no crea', async () => {
+    const m = buildPeople(0);
+    const llamada = m.commitment.create(lider, {
+      processId: 'p1',
+      title: 'Enviar',
+      dueDate: '2026-05-30',
+      assignedUserId: PERSON,
+    });
+    await expect(llamada).rejects.toBeInstanceOf(BadRequestException);
+    await expect(llamada).rejects.toThrow(MESSAGE);
+    expect(m.commitmentCreate).not.toHaveBeenCalled();
+  });
+
+  it('compromiso con responsable inexistente: 400 y no crea', async () => {
+    const m = buildPeople(0);
+    await expect(
+      m.commitment.create(lider, {
+        processId: 'p1',
+        title: 'Enviar',
+        dueDate: '2026-05-30',
+        responsibleUserId: PERSON,
+      }),
+    ).rejects.toThrow(MESSAGE);
+    expect(m.commitmentCreate).not.toHaveBeenCalled();
+  });
+
+  it('reunión con responsable inexistente: 400 y no crea', async () => {
+    const m = buildPeople(0);
+    await expect(
+      m.meeting.create(lider, {
+        processId: 'p1',
+        title: 'Comité',
+        meetingDate: '2026-05-04',
+        responsibleUserId: PERSON,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(m.meetingCreate).not.toHaveBeenCalled();
+  });
+
+  it('busca solo usuarios activos con grant en el proceso o grant de jefe de área, sin duplicados', async () => {
+    const m = buildPeople(1);
+    await m.scope.assertPeopleInProcess('p1', [PERSON, PERSON, null, undefined]);
+    expect(m.userCount).toHaveBeenCalledWith({
+      where: {
+        id: { in: [PERSON] },
+        active: true,
+        grants: {
+          some: {
+            active: true,
+            OR: [{ processId: 'p1' }, { role: { code: RoleCode.JEFE_AREA } }],
+          },
+        },
+      },
+    });
+  });
+
+  it('sin personas indicadas no consulta nada', async () => {
+    const m = buildPeople(0);
+    await expect(m.scope.assertPeopleInProcess('p1', [undefined, null])).resolves.toBeUndefined();
+    expect(m.userCount).not.toHaveBeenCalled();
+  });
+});

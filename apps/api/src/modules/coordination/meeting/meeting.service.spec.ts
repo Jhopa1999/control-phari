@@ -20,7 +20,13 @@ function createMocks() {
       createMany: jest.fn(),
     },
     dailyLogSuggestionLink: { count: jest.fn().mockResolvedValue(0) },
-    user: { findMany: jest.fn() },
+    user: {
+      findMany: jest.fn(),
+      // Por defecto todas las personas existen y pertenecen al proceso.
+      count: jest.fn((args: { where: { id: { in: string[] } } }) =>
+        Promise.resolve(args.where.id.in.length),
+      ),
+    },
     grant: { findMany: jest.fn() },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
@@ -248,6 +254,28 @@ describe('MeetingService', () => {
         m.service.update(lider(['p1']), 'mt1', {
           participantUserIds: ['intruso'],
         }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('reenviar el responsable sin cambios no valida pertenencia -> no 400', async () => {
+      m.prismaObj.meeting.findFirst.mockResolvedValue(meetingRow({ responsibleUserId: 'ur' }));
+      m.prismaObj.user.count.mockResolvedValue(0);
+      m.prismaObj.meeting.update.mockImplementation(({ data }: any) =>
+        Promise.resolve(meetingRow({ responsibleUserId: 'ur', ...data, participants: [] })),
+      );
+      const res = await m.service.update(lider(['p1']), 'mt1', {
+        title: 'Otro',
+        responsibleUserId: 'ur',
+      });
+      expect(res.title).toBe('Otro');
+      expect(m.prismaObj.user.count).not.toHaveBeenCalled();
+    });
+
+    it('cambiar el responsable a alguien ajeno al proceso sigue dando 400', async () => {
+      m.prismaObj.meeting.findFirst.mockResolvedValue(meetingRow({ responsibleUserId: 'ur' }));
+      m.prismaObj.user.count.mockResolvedValue(0);
+      await expect(
+        m.service.update(lider(['p1']), 'mt1', { responsibleUserId: 'otra' }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 

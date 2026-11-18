@@ -3205,12 +3205,12 @@ export interface components {
         };
         CreateCatalogItemDto: {
             /**
-             * @description Maestra a la que pertenece la opcion (se normaliza a MAYUSCULAS).
+             * @description Maestra a la que pertenece la opción. Se normaliza a mayúsculas; solo admite letras mayúsculas, números y guion bajo (máximo 40 caracteres).
              * @example PRIORITY
              */
             catalog: string;
             /**
-             * @description Codigo estable de la opcion dentro del catalogo (se normaliza a MAYUSCULAS).
+             * @description Código estable de la opción dentro del catálogo. Se normaliza a mayúsculas; solo admite letras mayúsculas, números y guion bajo (máximo 40 caracteres).
              * @example HIGH
              */
             code: string;
@@ -3333,6 +3333,16 @@ export interface components {
              */
             sortOrder: number;
             /**
+             * @description Procesos activos del área (los inactivos no cuentan). Si es mayor que 0, el área no se puede desactivar.
+             * @example 3
+             */
+            processCount: number;
+            /**
+             * @description Solicitantes activos del área.
+             * @example 12
+             */
+            requesterCount: number;
+            /**
              * Format: date-time
              * @description Fecha de creacion.
              */
@@ -3345,7 +3355,7 @@ export interface components {
         };
         CreateAreaDto: {
             /**
-             * @description Codigo estable del area (se normaliza a MAYUSCULAS).
+             * @description Código estable del área. Se normaliza a mayúsculas; solo admite letras mayúsculas, números y guion bajo (máximo 40 caracteres).
              * @example ANALITICA
              */
             code: string;
@@ -4314,7 +4324,7 @@ export interface components {
         };
         CreateProcessDto: {
             /**
-             * @description Codigo estable del proceso (se normaliza a MAYUSCULAS).
+             * @description Código estable del proceso. Se normaliza a mayúsculas; solo admite letras mayúsculas, números y guion bajo (máximo 40 caracteres).
              * @example FIBI
              */
             code: string;
@@ -4352,6 +4362,8 @@ export interface components {
             framework?: string;
             /** @description Estado activo del proceso. */
             active?: boolean;
+            /** @description Confirma la desactivación de un proceso con trabajo en curso (asignaciones del mes actual en adelante, solicitudes abiertas o tareas sin terminar). Sin esta confirmación la API responde 409 con los recuentos. */
+            confirmDeactivation?: boolean;
             /** @description Orden de presentacion. */
             sortOrder?: number;
         };
@@ -8554,7 +8566,11 @@ export interface operations {
                     "application/json": components["schemas"]["AreaResponseDto"];
                 };
             };
-            /** @description Datos de entrada invalidos. */
+            /**
+             * @description Código con formato inválido (solo letras mayúsculas, números y guion bajo; máximo 40).
+             *
+             *     Datos de entrada invalidos.
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8568,7 +8584,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Ya existe el code. */
+            /** @description Ya existe un área con ese código. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -8646,6 +8662,13 @@ export interface operations {
             };
             /** @description Area no encontrada. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No se puede desactivar el área: tiene procesos activos (el mensaje indica cuántos). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10564,7 +10587,11 @@ export interface operations {
                     "application/json": components["schemas"]["ProcessResponseDto"];
                 };
             };
-            /** @description Datos de entrada invalidos. */
+            /**
+             * @description Código con formato inválido (solo letras mayúsculas, números y guion bajo; máximo 40).
+             *
+             *     Datos de entrada invalidos.
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -10656,6 +10683,13 @@ export interface operations {
             };
             /** @description Proceso no encontrado. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El proceso tiene trabajo en curso y falta confirmar: el cuerpo trae requiresConfirmation, activeAssignments, openRequests y openTasks. Reintenta con confirmDeactivation: true. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

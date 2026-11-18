@@ -23,7 +23,9 @@ export const CATALOG_SPECS: ReadonlyArray<ToolSpec> = [
     description:
       'Crea un elemento de catálogo (POST /catalog-items). Solo el jefe de ' +
       'área (módulo admin): integrante, líder y administrador reciben 403. El ' +
-      'cuerpo debe cumplir CreateCatalogItemDto; el backend valida los datos.',
+      'cuerpo debe cumplir CreateCatalogItemDto; catalog y code solo admiten ' +
+      'letras mayúsculas, números y guion bajo (máximo 40; se normalizan a ' +
+      'mayúsculas) o el backend responde 400 en español.',
   },
   {
     name: 'catalog.update',

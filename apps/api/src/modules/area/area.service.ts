@@ -12,6 +12,26 @@ import { CreateAreaDto } from './dto/create-area.dto';
 import { ListAreasDto } from './dto/list-areas.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
 
+/** Área con sus conteos de procesos activos y solicitantes activos. */
+export type AreaWithCounts = AreaModel & {
+  processCount: number;
+  requesterCount: number;
+};
+
+/** Conteos por fila con `count` filtrado (sin cargar las relaciones). */
+const COUNTS_INCLUDE = {
+  _count: {
+    select: {
+      processes: { where: { active: true } },
+      requesters: { where: { active: true } },
+    },
+  },
+} satisfies Prisma.AreaInclude;
+
+type AreaRowWithCount = AreaModel & {
+  _count: { processes: number; requesters: number };
+};
+
 @Injectable()
 export class AreaService {
   constructor(
@@ -21,6 +41,16 @@ export class AreaService {
 
   private normalizeKey(value: string): string {
     return value.trim().toUpperCase();
+  }
+
+  /** Aplana el conteo de Prisma en `processCount` y `requesterCount`. */
+  private withCounts(row: AreaRowWithCount): AreaWithCounts {
+    const { _count: counts, ...area } = row;
+    return {
+      ...area,
+      processCount: counts.processes,
+      requesterCount: counts.requesters,
+    };
   }
 
   /**
@@ -37,49 +67,51 @@ export class AreaService {
     };
   }
 
-  async findMany(filters: ListAreasDto): Promise<AreaModel[]> {
+  async findMany(filters: ListAreasDto): Promise<AreaWithCounts[]> {
     const where: Prisma.AreaWhereInput =
       filters.active === undefined ? {} : { active: filters.active };
-
-    return this.prisma.area.findMany({
+    const rows = await this.prisma.area.findMany({
       where,
+      include: COUNTS_INCLUDE,
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
+    return rows.map((row) => this.withCounts(row));
   }
 
-  async findOne(id: string): Promise<AreaModel> {
-    const area = await this.prisma.area.findUnique({ where: { id } });
+  async findOne(id: string): Promise<AreaWithCounts> {
+    const area = await this.prisma.area.findUnique({
+      where: { id },
+      include: COUNTS_INCLUDE,
+    });
     if (!area) {
       throw new NotFoundException('No se encontró el área.');
     }
-    return area;
+    return this.withCounts(area);
   }
 
-  async create(actor: CurrentActor, dto: CreateAreaDto): Promise<AreaModel> {
+  async create(actor: CurrentActor, dto: CreateAreaDto): Promise<AreaWithCounts> {
     const code = this.normalizeKey(dto.code);
-
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        const created = await tx.area.create({
+      const created = await this.prisma.$transaction(async (tx) => {
+        const row = await tx.area.create({
           data: {
             code,
             name: dto.name,
             ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
           },
         });
-
         await this.audit.record(tx, {
           actorUserId: actor.userId,
           action: 'CREATE',
           objectType: 'AREA',
-          objectId: created.id,
+          objectId: row.id,
           scopeProcessId: null,
           before: null,
-          after: this.snapshot(created),
+          after: this.snapshot(row),
         });
-
-        return created;
+        return row;
       });
+      return { ...created, processCount: 0, requesterCount: 0 };
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -95,13 +127,26 @@ export class AreaService {
     actor: CurrentActor,
     id: string,
     dto: UpdateAreaDto,
-  ): Promise<AreaModel> {
+  ): Promise<AreaWithCounts> {
     const existing = await this.prisma.area.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException('No se encontró el área.');
     }
-
-    return this.prisma.$transaction(async (tx) => {
+    // Desactivar un área activa con procesos activos se bloquea (409): primero
+    // hay que desactivar o reasignar esos procesos. Solo cuentan los activos.
+    if (dto.active === false && existing.active) {
+      const activeProcesses = await this.prisma.process.count({
+        where: { areaId: id, active: true },
+      });
+      if (activeProcesses > 0) {
+        throw new ConflictException(
+          `No se puede desactivar el área: tiene ${activeProcesses} ${
+            activeProcesses === 1 ? 'proceso activo' : 'procesos activos'
+          }.`,
+        );
+      }
+    }
+    await this.prisma.$transaction(async (tx) => {
       const updated = await tx.area.update({
         where: { id },
         data: {
@@ -110,7 +155,6 @@ export class AreaService {
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
         },
       });
-
       await this.audit.record(tx, {
         actorUserId: actor.userId,
         action: 'UPDATE',
@@ -120,8 +164,7 @@ export class AreaService {
         before: this.snapshot(existing),
         after: this.snapshot(updated),
       });
-
-      return updated;
     });
+    return this.findOne(id);
   }
 }

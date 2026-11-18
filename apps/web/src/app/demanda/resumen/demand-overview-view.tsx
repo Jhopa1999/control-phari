@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { ErrorState } from '@/components/error-state';
 import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
+import { FormError } from '@/components/field';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { PeriodFieldset } from '@/components/period-fieldset';
@@ -389,8 +390,11 @@ export function DemandOverviewView(): React.ReactElement {
   }, [fetchIndicators]);
 
   // Al cambiar el periodo se vuelve a mostrar la carga.
+  // Con «Desde» posterior a «Hasta» no se reinicia la carga: se conservan el
+  // estado y las cifras del último periodo válido (3.4).
+  const periodInvalid = from !== '' && to !== '' && from > to;
   useResetOnChange([from, to], () => {
-    if (!from || !to) return;
+    if (!from || !to || periodInvalid) return;
     setState('loading');
     setErrorMessage(null);
   });
@@ -399,6 +403,8 @@ export function DemandOverviewView(): React.ReactElement {
     // permitido, el aviso sale del estado derivado y no se llama al backend.
     if (!permissionsLoaded || !moduleAllowed) return;
     if (!from || !to) return;
+    // Periodo invertido: no se pide al servidor; el aviso explica el motivo.
+    if (from > to) return;
     void fetchIndicators(from, to);
   }, [permissionsLoaded, moduleAllowed, from, to, fetchIndicators]);
 
@@ -437,8 +443,16 @@ export function DemandOverviewView(): React.ReactElement {
           to={to}
           onFromChange={setFrom}
           onToChange={setTo}
+          invalid={periodInvalid}
+          errorId="indicadores-periodo-error"
         />
       )}
+      {state !== 'forbidden' && periodInvalid ? (
+        <FormError
+          id="indicadores-periodo"
+          message="La fecha «Desde» no puede ser posterior a «Hasta». Corrige el periodo para actualizar los indicadores."
+        />
+      ) : null}
       {content}
     </PageLayout>
   );

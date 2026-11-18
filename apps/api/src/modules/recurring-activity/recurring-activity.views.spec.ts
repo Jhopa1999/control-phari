@@ -343,6 +343,29 @@ describe('FEAT-002: adjuntos, vistas y avisos de actividades recurrentes', () =>
       expect(where.status.in).not.toContain(OccurrenceStatus.COMPLETADA);
       expect(where.status.in).not.toContain(OccurrenceStatus.CANCELADA);
     });
+
+    it('el administrador sin grants no recibe ocurrencias ajenas: el alcance es «mío» (D14)', async () => {
+      prisma.recurringActivityOccurrence.findMany.mockResolvedValue([]);
+
+      const res = await service.getMyWork(
+        actor({
+          userId: 'admin-1',
+          isAdmin: true,
+          roleCodes: new Set<RoleCode>([RoleCode.ADMIN]),
+        }),
+      );
+
+      expect(res).toEqual({ items: [], total: 0 });
+      const activity = prisma.recurringActivityOccurrence.findMany.mock.calls[0][0].where.activity;
+      // Solo definiciones donde es responsable USER o AREA de sus (cero) áreas:
+      // no usa el alcance «all» del administrador (que sería `{}`).
+      expect(activity).toEqual({
+        OR: [
+          { responsibleKind: ResponsibleKind.USER, responsibleUserId: 'admin-1' },
+          { responsibleKind: ResponsibleKind.AREA, responsibleAreaId: { in: [] } },
+        ],
+      });
+    });
   });
 
   describe('calendario', () => {

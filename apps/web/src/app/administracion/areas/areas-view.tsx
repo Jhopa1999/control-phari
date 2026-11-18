@@ -3,8 +3,10 @@
 import * as React from 'react';
 import { FolderTree, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { DataCardList } from '@/components/data-card-list';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { InlineNotice } from '@/components/inline-notice';
 import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
@@ -24,9 +26,16 @@ import {
 import { useActor } from '@/lib/actor-context';
 import type { Area } from '@/lib/api-client';
 import { ApiError, createArea, listAreas, updateArea } from '@/lib/areas';
+import { splitServerCodeErrors } from '@/lib/code-format';
+import { areaDeactivationBlockReason } from './area-blocking';
 import { AreaFormDialog, type AreaFormValues } from './area-form-dialog';
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
+
+/** «1 proceso activo», «3 procesos activos», «0 solicitantes». */
+function countLabel(count: number, one: string, other: string): string {
+  return `${count} ${count === 1 ? one : other}`;
+}
 
 function messageOf(err: unknown): string {
   return err instanceof ApiError ? err.message : 'Ocurrió un error inesperado.';
@@ -52,6 +61,9 @@ export function AreasView(): React.ReactElement {
   const [editing, setEditing] = React.useState<Area | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [codeServerError, setCodeServerError] = React.useState<string | null>(null);
+  /** 409 al desactivar desde la fila (el recuento cambió tras cargar la lista). */
+  const [rowNotice, setRowNotice] = React.useState<string | null>(null);
 
   const loadData = React.useCallback(() => {
     return listAreas()
@@ -82,18 +94,36 @@ export function AreasView(): React.ReactElement {
   function openCreate(): void {
     setEditing(null);
     setFormError(null);
+    setCodeServerError(null);
     setDialogOpen(true);
   }
 
   function openEdit(area: Area): void {
     setEditing(area);
     setFormError(null);
+    setCodeServerError(null);
     setDialogOpen(true);
+  }
+
+  async function handleDeactivate(area: Area): Promise<void> {
+    setRowNotice(null);
+    try {
+      await updateArea(area.id, { active: false });
+      toast.success('Área desactivada.');
+      await load(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setRowNotice(err.message);
+      } else {
+        toast.error(messageOf(err));
+      }
+    }
   }
 
   async function handleSubmit(values: AreaFormValues): Promise<void> {
     setSubmitting(true);
     setFormError(null);
+    setCodeServerError(null);
     try {
       if (editing) {
         // El code es estable: al editar solo se envian nombre, activo y orden.
@@ -116,15 +146,41 @@ export function AreasView(): React.ReactElement {
       await load(true);
     } catch (err) {
       const message = messageOf(err);
-      setFormError(message);
-      toast.error(message);
+      if (!editing && err instanceof ApiError && err.status === 409) {
+        // Alta: el único campo único es el código; el texto es el del servidor.
+        setCodeServerError(message);
+      } else if (!editing && err instanceof ApiError && err.status === 400 && err.messages) {
+        // Mensajes de formato que coinciden con una constante marcan el campo;
+        // el resto va al aviso del diálogo.
+        const split = splitServerCodeErrors(err.messages);
+        setCodeServerError(split.code);
+        const rest = split.catalog ? [...split.rest, split.catalog] : split.rest;
+        setFormError(rest.length > 0 ? rest.join(' ') : null);
+        if (!split.code && rest.length > 0) toast.error(message);
+      } else {
+        setFormError(message);
+        toast.error(message);
+      }
     } finally {
       setSubmitting(false);
     }
   }
 
   function rowActions(area: Area): RowAction[] {
-    return [{ key: 'edit', label: 'Editar', onSelect: () => openEdit(area), placement: 'inline' }];
+    const actions: RowAction[] = [
+      { key: 'edit', label: 'Editar', onSelect: () => openEdit(area), placement: 'inline' },
+    ];
+    if (area.active) {
+      const reason = areaDeactivationBlockReason(area);
+      actions.push({
+        key: 'deactivate',
+        label: 'Desactivar',
+        onSelect: () => void handleDeactivate(area),
+        placement: 'inline',
+        ...(reason ? { disabled: true, disabledReason: reason } : {}),
+      });
+    }
+    return actions;
   }
 
   const newButton = (
@@ -166,6 +222,27 @@ export function AreasView(): React.ReactElement {
   } else {
     content = (
       <Section title="Áreas" count={areas.length}>
+        {rowNotice ? (
+          <InlineNotice
+            tone="warning"
+            role="alert"
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setRowNotice(null);
+                  void load(true);
+                }}
+              >
+                Actualizar
+              </Button>
+            }
+          >
+            {rowNotice}
+          </InlineNotice>
+        ) : null}
         <div className="overflow-hidden rounded-lg border bg-card">
           {areas.length === 0 ? (
             <EmptyState
@@ -175,11 +252,15 @@ export function AreasView(): React.ReactElement {
               action={newButton}
             />
           ) : (
+            <>
+            <div className="hidden md:block">
             <Table scrollLabel="Tabla de áreas">
               <TableHeader>
                 <TableRow>
                   <TableHead>Código</TableHead>
                   <TableHead>Nombre</TableHead>
+                  <TableHead className="text-right">Procesos activos</TableHead>
+                  <TableHead className="text-right">Solicitantes</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Orden</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -190,6 +271,8 @@ export function AreasView(): React.ReactElement {
                   <TableRow key={area.id}>
                     <TableCell className="whitespace-nowrap font-medium">{area.code}</TableCell>
                     <TableCell className="min-w-40">{area.name}</TableCell>
+                    <TableCell className="text-right tabular-nums">{area.processCount}</TableCell>
+                    <TableCell className="text-right tabular-nums">{area.requesterCount}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       <StatusBadge kind="active" value={String(area.active)} />
                     </TableCell>
@@ -201,6 +284,27 @@ export function AreasView(): React.ReactElement {
                 ))}
               </TableBody>
             </Table>
+            </div>
+            <DataCardList
+              label="Áreas"
+              rows={areas}
+              getKey={(area) => area.id}
+              card={(area) => ({
+                title: <span className="font-medium">{area.name}</span>,
+                subtitle: <span className="font-mono break-all">{area.code}</span>,
+                badges: [<StatusBadge key="estado" kind="active" value={String(area.active)} />],
+                note: (
+                  <p className="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
+                    <span>{countLabel(area.processCount, 'proceso activo', 'procesos activos')}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{countLabel(area.requesterCount, 'solicitante', 'solicitantes')}</span>
+                  </p>
+                ),
+                meta: [{ label: 'Orden', value: area.sortOrder }],
+                actions: <RowActions rowLabel={area.name} actions={rowActions(area)} menuOnly />,
+              })}
+            />
+            </>
           )}
         </div>
       </Section>
@@ -223,11 +327,14 @@ export function AreasView(): React.ReactElement {
           if (!open) {
             setEditing(null);
             setFormError(null);
+            setCodeServerError(null);
           }
         }}
         editing={editing}
         submitting={submitting}
         errorMessage={formError}
+        codeServerError={codeServerError}
+        onCodeEdited={() => setCodeServerError(null)}
         onSubmit={(values) => void handleSubmit(values)}
       />
     </PageLayout>

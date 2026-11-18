@@ -26,6 +26,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import type { CoordinationPerson, Meeting, Process } from '@/lib/api-client';
 import { localDateInputValue } from '@/lib/format';
+import { usePersonError } from '@/lib/use-person-error';
 import {
   DuracionField,
   EMPTY_DURATION,
@@ -122,6 +123,13 @@ export function ReunionFormDialog({
   const dateRef = React.useRef<HTMLInputElement>(null);
   const timeRef = React.useRef<HTMLInputElement>(null);
   const durationRef = React.useRef<HTMLButtonElement>(null);
+  const responsibleRef = React.useRef<HTMLButtonElement>(null);
+  // «La persona indicada…» (4.3): error junto al selector y foco en él.
+  const person = usePersonError(errorMessage);
+  const hasPersonError = person.personError !== null;
+  React.useEffect(() => {
+    if (open && hasPersonError) responsibleRef.current?.focus();
+  }, [open, hasPersonError]);
   // Sin DialogTrigger, Radix no sabe a dónde devolver el foco al cerrar: vuelve
   // al botón que abrió el diálogo («Nueva reunión» o «Editar»), NIT 4.
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
@@ -299,13 +307,16 @@ export function ReunionFormDialog({
               hoursRef={durationRef}
             />
 
-            <Field id="reu-responsible" label="Responsable">
+            <Field id="reu-responsible" label="Responsable" error={person.personError}>
               {(control) => (
                 <Select
                   value={responsibleUserId || SIN_VALOR}
-                  onValueChange={(v) => setResponsibleUserId(v === SIN_VALOR ? '' : v)}
+                  onValueChange={(v) => {
+                    setResponsibleUserId(v === SIN_VALOR ? '' : v);
+                    person.dismiss();
+                  }}
                 >
-                  <SelectTrigger {...control}>
+                  <SelectTrigger ref={responsibleRef} {...control}>
                     <SelectValue placeholder="Sin responsable" />
                   </SelectTrigger>
                   <SelectContent>
@@ -354,7 +365,7 @@ export function ReunionFormDialog({
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
             </Field>
 
-            <FormError id={FORM_ID} message={errorMessage} />
+            <FormError id={FORM_ID} message={person.formMessage} />
           </DialogBody>
 
           <DialogFooter>

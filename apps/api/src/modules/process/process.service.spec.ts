@@ -30,7 +30,16 @@ function createMocks() {
     findUnique: jest.fn(),
   };
   // $transaction ejecuta el callback con el propio prisma mock como tx.
-  const prismaObj: Record<string, unknown> = { process, area };
+  const assignment = { count: jest.fn().mockResolvedValue(0) };
+  const request = { count: jest.fn().mockResolvedValue(0) };
+  const task = { count: jest.fn().mockResolvedValue(0) };
+  const prismaObj: Record<string, unknown> = {
+    process,
+    area,
+    assignment,
+    request,
+    task,
+  };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
     cb(prismaObj),
   );
@@ -38,7 +47,7 @@ function createMocks() {
 
   const audit = { record: jest.fn() } as unknown as AuditService;
   const auditRecord = audit.record as unknown as jest.Mock;
-  return { prisma, process, area, audit, auditRecord };
+  return { prisma, process, area, assignment, request, task, audit, auditRecord };
 }
 
 function makeProcess(overrides: Record<string, unknown> = {}) {
@@ -243,6 +252,88 @@ describe('ProcessService', () => {
       expect(audited.action).toBe('UPDATE');
       expect(audited.objectType).toBe('PROCESS');
       expect(audited.scopeProcessId).toBe('p1');
+    });
+  });
+
+  describe('desactivar con trabajo en curso (D21)', () => {
+    async function intentar(
+      mocks: ReturnType<typeof createMocks>,
+      dto: Record<string, unknown>,
+    ) {
+      const service = new ProcessService(mocks.prisma, mocks.audit);
+      return service.update(jefe(), 'p1', dto);
+    }
+
+    it('desactiva sin confirmar cuando no hay asignaciones, solicitudes ni tareas', async () => {
+      const mocks = createMocks();
+      mocks.process.findUnique.mockResolvedValue(makeProcess());
+      mocks.process.update.mockResolvedValue(makeProcess({ active: false }));
+      await intentar(mocks, { active: false });
+      expect(mocks.process.update).toHaveBeenCalled();
+    });
+
+    it('409 con requiresConfirmation y recuentos si hay trabajo en curso, sin escribir', async () => {
+      const mocks = createMocks();
+      mocks.process.findUnique.mockResolvedValue(makeProcess());
+      mocks.assignment.count.mockResolvedValue(2);
+      mocks.request.count.mockResolvedValue(1);
+      mocks.task.count.mockResolvedValue(5);
+      let error: unknown;
+      try {
+        await intentar(mocks, { active: false });
+      } catch (e) {
+        error = e;
+      }
+      expect(error).toBeInstanceOf(ConflictException);
+      expect((error as ConflictException).getResponse()).toMatchObject({
+        requiresConfirmation: true,
+        activeAssignments: 2,
+        openRequests: 1,
+        openTasks: 5,
+      });
+      expect(mocks.process.update).not.toHaveBeenCalled();
+    });
+
+    it('con confirmDeactivation: true desactiva aunque haya trabajo en curso', async () => {
+      const mocks = createMocks();
+      mocks.process.findUnique.mockResolvedValue(makeProcess());
+      mocks.task.count.mockResolvedValue(3);
+      mocks.process.update.mockResolvedValue(makeProcess({ active: false }));
+      await intentar(mocks, { active: false, confirmDeactivation: true });
+      expect(mocks.process.update).toHaveBeenCalled();
+      expect(mocks.task.count).not.toHaveBeenCalled();
+    });
+
+    it('cuenta con un count por tabla: solicitudes sin cerrar/rechazar/retirar y tareas no terminadas', async () => {
+      const mocks = createMocks();
+      mocks.process.findUnique.mockResolvedValue(makeProcess());
+      mocks.process.update.mockResolvedValue(makeProcess({ active: false }));
+      await intentar(mocks, { active: false });
+      expect(mocks.request.count).toHaveBeenCalledWith({
+        where: {
+          mainProcessId: 'p1',
+          deletedAt: null,
+          operationalState: { notIn: ['CERRADA', 'RECHAZADA', 'RETIRADA'] },
+        },
+      });
+      expect(mocks.task.count).toHaveBeenCalledWith({
+        where: { processId: 'p1', status: { not: 'TERMINADA' } },
+      });
+      const assignmentWhere = mocks.assignment.count.mock.calls[0][0].where;
+      expect(assignmentWhere.processId).toBe('p1');
+      // Mes actual en UTC: siempre día 1 a las 00:00 UTC.
+      const month = assignmentWhere.month.gte as Date;
+      expect(month.getUTCDate()).toBe(1);
+      expect(month.getUTCHours()).toBe(0);
+    });
+
+    it('no pide confirmación al reactivar, al editar ni si el proceso ya estaba inactivo', async () => {
+      const mocks = createMocks();
+      mocks.process.findUnique.mockResolvedValue(makeProcess({ active: false }));
+      mocks.process.update.mockResolvedValue(makeProcess({ active: false }));
+      await intentar(mocks, { active: false });
+      await intentar(mocks, { name: 'Otro' });
+      expect(mocks.task.count).not.toHaveBeenCalled();
     });
   });
 });

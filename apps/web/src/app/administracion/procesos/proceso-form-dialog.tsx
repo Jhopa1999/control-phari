@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
 import { Field, FormError, RequiredHint } from '@/components/field';
+import { CODE_HELP, normalizeCodeInput, validateCode } from '@/lib/code-format';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -45,8 +46,12 @@ interface ProcesoFormDialogProps {
   /** Areas activas para el selector obligatorio (solo al crear). */
   activeAreas: Area[];
   submitting: boolean;
-  /** Error del backend (p. ej. el 409 de code duplicado); el padre lo limpia al abrir. */
+  /** Error del backend que no es de un campo; el padre lo limpia al abrir. */
   errorMessage: string | null;
+  /** Error del servidor para el campo «Código» (formato o duplicado). */
+  codeServerError?: string | null;
+  /** El usuario editó el código: el padre borra `codeServerError`. */
+  onCodeEdited?: () => void;
   onSubmit: (values: ProcessFormValues) => void;
 }
 
@@ -73,7 +78,7 @@ const NO_ERRORS: Validation = { codeError: null, nameError: null, areaError: nul
 /** Reglas minimas en cliente; el backend es la autoridad. */
 function validate(values: ProcessFormValues, isEdit: boolean): Validation {
   return {
-    codeError: !isEdit && values.code.trim() === '' ? 'El código es obligatorio.' : null,
+    codeError: isEdit ? null : validateCode(values.code),
     nameError: values.name.trim() === '' ? 'El nombre es obligatorio.' : null,
     areaError: !isEdit && values.areaId === '' ? 'El área es obligatoria.' : null,
   };
@@ -93,6 +98,8 @@ export function ProcesoFormDialog({
   activeAreas,
   submitting,
   errorMessage,
+  codeServerError = null,
+  onCodeEdited,
   onSubmit,
 }: ProcesoFormDialogProps): React.ReactElement {
   const isEdit = Boolean(editing);
@@ -101,6 +108,12 @@ export function ProcesoFormDialog({
   const codeRef = React.useRef<HTMLInputElement>(null);
   const nameRef = React.useRef<HTMLInputElement>(null);
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
+  const codeFieldError = errors.codeError ?? codeServerError;
+
+  // Con un error del servidor en el código, el foco va a ese campo.
+  React.useEffect(() => {
+    if (open && codeServerError) codeRef.current?.focus();
+  }, [open, codeServerError]);
 
   // Nombre del area del proceso en edicion, solo para mostrarla (no se mueve).
   const editingAreaName = React.useMemo(() => {
@@ -137,7 +150,7 @@ export function ProcesoFormDialog({
       return;
     }
     onSubmit({
-      code: values.code.trim(),
+      code: normalizeCodeInput(values.code),
       name: values.name.trim(),
       areaId: values.areaId,
       framework: values.framework.trim(),
@@ -166,19 +179,28 @@ export function ProcesoFormDialog({
           <DialogBody className="grid gap-4">
             {!isEdit ? <RequiredHint /> : null}
 
-            <Field id="proceso-code" label="Código" required={!isEdit} error={errors.codeError}>
+            <Field
+              id="proceso-code"
+              label="Código"
+              required={!isEdit}
+              help={isEdit ? undefined : CODE_HELP}
+              error={codeFieldError}
+            >
               <Input
                 ref={codeRef}
+                className="font-mono uppercase placeholder:normal-case placeholder:text-muted-foreground"
                 value={values.code}
                 readOnly={isEdit}
                 disabled={isEdit}
-                placeholder="FIBI"
-                aria-invalid={errors.codeError ? true : undefined}
-                aria-describedby={errors.codeError ? FORM_ERROR_ID : undefined}
+                maxLength={40}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="p. ej. FIBI"
                 onChange={(e) => {
                   const code = e.target.value;
                   setValues((v) => ({ ...v, code }));
                   setErrors((prev) => (prev.codeError ? { ...prev, codeError: null } : prev));
+                  onCodeEdited?.();
                 }}
               />
             </Field>
@@ -187,7 +209,7 @@ export function ProcesoFormDialog({
               <Input
                 ref={nameRef}
                 value={values.name}
-                placeholder="BI"
+                placeholder="p. ej. Inteligencia de negocio"
                 onChange={(e) => {
                   const name = e.target.value;
                   setValues((v) => ({ ...v, name }));
@@ -230,7 +252,7 @@ export function ProcesoFormDialog({
             <Field id="proceso-framework" label="Marco" help="Opcional.">
               <Input
                 value={values.framework}
-                placeholder="INS-006"
+                placeholder="p. ej. INS-006"
                 onChange={(e) => setValues((v) => ({ ...v, framework: e.target.value }))}
               />
             </Field>

@@ -9,6 +9,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { CodeFormat } from '../../../common/code-format/code-format';
 
 /**
  * Recorta espacios si el valor es string; deja el resto igual para que las
@@ -27,26 +28,24 @@ const trim = ({ value }: { value: unknown }): unknown =>
 export class CreateCatalogItemDto {
   @ApiProperty({
     type: String,
-    description: 'Maestra a la que pertenece la opcion (se normaliza a MAYUSCULAS).',
+    description:
+      'Maestra a la que pertenece la opción. Se normaliza a mayúsculas; solo admite letras mayúsculas, números y guion bajo (máximo 40 caracteres).',
     example: 'PRIORITY',
-    maxLength: 100,
+    maxLength: 40,
+    pattern: '^[A-Z0-9_]+$',
   })
-  @Transform(trim)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
+  @CodeFormat('catalog')
   catalog!: string;
 
   @ApiProperty({
     type: String,
-    description: 'Codigo estable de la opcion dentro del catalogo (se normaliza a MAYUSCULAS).',
+    description:
+      'Código estable de la opción dentro del catálogo. Se normaliza a mayúsculas; solo admite letras mayúsculas, números y guion bajo (máximo 40 caracteres).',
     example: 'HIGH',
-    maxLength: 100,
+    maxLength: 40,
+    pattern: '^[A-Z0-9_]+$',
   })
-  @Transform(trim)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
+  @CodeFormat('code')
   code!: string;
 
   @ApiProperty({

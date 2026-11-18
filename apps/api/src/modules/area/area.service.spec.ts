@@ -21,7 +21,8 @@ function createMocks() {
     update: jest.fn(),
   };
   // $transaction ejecuta el callback con el propio prisma mock como tx.
-  const prismaObj: Record<string, unknown> = { area };
+  const process = { count: jest.fn().mockResolvedValue(0) };
+  const prismaObj: Record<string, unknown> = { area, process };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
     cb(prismaObj),
   );
@@ -29,7 +30,7 @@ function createMocks() {
 
   const audit = { record: jest.fn() } as unknown as AuditService;
   const auditRecord = audit.record as unknown as jest.Mock;
-  return { prisma, area, audit, auditRecord };
+  return { prisma, area, process, audit, auditRecord };
 }
 
 function makeArea(overrides: Record<string, unknown> = {}) {
@@ -44,6 +45,14 @@ function makeArea(overrides: Record<string, unknown> = {}) {
     updatedAt: now,
     ...overrides,
   };
+}
+
+function withCount(
+  area: ReturnType<typeof makeArea>,
+  processes: number,
+  requesters: number,
+) {
+  return { ...area, _count: { processes, requesters } };
 }
 
 function admin(): CurrentActor {
@@ -95,11 +104,17 @@ describe('AreaService', () => {
       });
     });
 
-    it('traduce P2002 a ConflictException', async () => {
+    it('traduce P2002 a ConflictException con el mensaje en español', async () => {
       mocks.area.create.mockRejectedValue(uniqueViolation());
-      await expect(
-        service.create(admin(), { code: 'ANALITICA', name: 'Analitica' }),
-      ).rejects.toBeInstanceOf(ConflictException);
+      const llamada = service.create(admin(), { code: 'ANALITICA', name: 'Analitica' });
+      await expect(llamada).rejects.toBeInstanceOf(ConflictException);
+      await expect(llamada).rejects.toThrow('Ya existe un área con ese código.');
+    });
+
+    it('devuelve el área nueva con conteos en cero', async () => {
+      mocks.area.create.mockResolvedValue(makeArea({ id: 'anew' }));
+      const created = await service.create(admin(), { code: 'N', name: 'N' });
+      expect(created).toMatchObject({ processCount: 0, requesterCount: 0 });
     });
   });
 
@@ -115,7 +130,9 @@ describe('AreaService', () => {
     it('audita AREA/UPDATE con before/after', async () => {
       const existing = makeArea();
       const updated = makeArea({ name: 'Analitica v2' });
-      mocks.area.findUnique.mockResolvedValue(existing);
+      mocks.area.findUnique
+        .mockResolvedValueOnce(existing)
+        .mockResolvedValueOnce(withCount(updated, 0, 0));
       mocks.area.update.mockResolvedValue(updated);
 
       await service.update(admin(), 'a1', { name: 'Analitica v2' });
@@ -125,6 +142,69 @@ describe('AreaService', () => {
       expect(audited.action).toBe('UPDATE');
       expect(audited.objectType).toBe('AREA');
       expect(audited.scopeProcessId).toBeNull();
+    });
+  });
+
+  describe('desactivar con procesos activos (D21)', () => {
+    it('409 con el recuento si el área activa tiene procesos activos y no escribe', async () => {
+      mocks.area.findUnique.mockResolvedValue(makeArea());
+      mocks.process.count.mockResolvedValue(3);
+      await expect(
+        service.update(admin(), 'a1', { active: false }),
+      ).rejects.toThrow('No se puede desactivar el área: tiene 3 procesos activos.');
+      expect(mocks.area.update).not.toHaveBeenCalled();
+      expect(mocks.process.count).toHaveBeenCalledWith({
+        where: { areaId: 'a1', active: true },
+      });
+    });
+
+    it('usa el singular con un solo proceso activo', async () => {
+      mocks.area.findUnique.mockResolvedValue(makeArea());
+      mocks.process.count.mockResolvedValue(1);
+      await expect(
+        service.update(admin(), 'a1', { active: false }),
+      ).rejects.toThrow('tiene 1 proceso activo.');
+    });
+
+    it('el mensaje no incluye ids', async () => {
+      mocks.area.findUnique.mockResolvedValue(makeArea({ id: 'uuid-secreto' }));
+      mocks.process.count.mockResolvedValue(2);
+      await expect(
+        service.update(admin(), 'uuid-secreto', { active: false }),
+      ).rejects.not.toThrow(/uuid-secreto/);
+    });
+
+    it('permite desactivar si no quedan procesos activos', async () => {
+      mocks.area.findUnique
+        .mockResolvedValueOnce(makeArea())
+        .mockResolvedValueOnce(withCount(makeArea({ active: false }), 0, 2));
+      mocks.process.count.mockResolvedValue(0);
+      mocks.area.update.mockResolvedValue(makeArea({ active: false }));
+      const result = await service.update(admin(), 'a1', { active: false });
+      expect(result.active).toBe(false);
+      expect(mocks.area.update).toHaveBeenCalled();
+    });
+
+    it('no cuenta procesos al reactivar un área inactiva', async () => {
+      mocks.area.findUnique
+        .mockResolvedValueOnce(makeArea({ active: false }))
+        .mockResolvedValueOnce(withCount(makeArea(), 0, 0));
+      mocks.area.update.mockResolvedValue(makeArea());
+      await service.update(admin(), 'a1', { active: true });
+      expect(mocks.process.count).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('conteos por fila', () => {
+    it('findMany pide count filtrado a activos y aplana processCount y requesterCount', async () => {
+      mocks.area.findMany.mockResolvedValue([withCount(makeArea(), 3, 12)]);
+      const rows = await service.findMany({});
+      expect(rows[0]).toMatchObject({ processCount: 3, requesterCount: 12 });
+      expect(rows[0]).not.toHaveProperty('_count');
+      expect(mocks.area.findMany.mock.calls[0][0].include._count.select).toEqual({
+        processes: { where: { active: true } },
+        requesters: { where: { active: true } },
+      });
     });
   });
 

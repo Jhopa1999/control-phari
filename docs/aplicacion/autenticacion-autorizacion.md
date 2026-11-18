@@ -296,7 +296,7 @@ de verdad** compartida con el frontend: el menú usa las mismas claves para filt
 | `processesAdmin` | — | — | ✓ |
 | `requesters` | — | — | ✓ |
 | `aiSettings` | — | — | — |
-| `recurring` | ✓ | ✓ | ✓ |
+| `recurring` | ✓ | ✓ | ✓ (también `ADMIN`) |
 
 > `systemSettings` (configuración del sistema: SMTP y administradores), `areas`
 > (gestión de áreas organizativas) y `aiSettings` (configuración de los agentes de
@@ -306,7 +306,7 @@ de verdad** compartida con el frontend: el menú usa las mismas claves para filt
 > `systemSettings` y `aiSettings`.
 >
 > `recurring` (actividades recurrentes) lo ven los tres roles de area para la
-> operacion (ver "que me toca" y completar ocurrencias); la gestion de definiciones
+> operacion (ver "que me toca" y completar ocurrencias); la gestion de definiciones Desde la oleada 3 (D14) `ADMIN` también tiene `recurring`: ve la sección en el menú y abre directo en «Gestión»; no tiene «Qué me toca» porque no es responsable de ocurrencias (`GET /recurring-activities/occurrences/my-work` le devuelve una lista vacía: el alcance «mía» no usa el alcance total del administrador). Un administrador que además tenga rol de área conserva «Qué me toca».
 > la acota el service a `JEFE_AREA`/`ADMIN`.
 
 `GET /me/permissions` también devuelve `roleCodes` (los códigos de rol efectivos del

@@ -30,6 +30,7 @@ import {
 } from '@/lib/commitments';
 import { formatDateOnly } from '@/lib/format';
 import { nextStates, stateLabel } from '@/lib/record-state';
+import { PERSON_NOT_IN_PROCESS_MESSAGE } from '@/lib/use-person-error';
 import { CompromisoFormDialog, type CompromisoFormValues } from './compromiso-form-dialog';
 import type { CoordinationData } from './reuniones-view';
 
@@ -145,7 +146,8 @@ export function CompromisosPanel({
     } catch (err) {
       const message = messageOf(err);
       setFormError(message);
-      toast.error(message);
+      // La persona fuera de alcance se muestra junto al selector, sin toast.
+      if (message !== PERSON_NOT_IN_PROCESS_MESSAGE) toast.error(message);
     } finally {
       setSubmitting(false);
     }

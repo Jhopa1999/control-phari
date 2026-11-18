@@ -18,7 +18,13 @@ function createMocks() {
     },
     meeting: { findFirst: jest.fn() },
     request: { findFirst: jest.fn() },
-    user: { findMany: jest.fn() },
+    user: {
+      findMany: jest.fn(),
+      // Por defecto todas las personas existen y pertenecen al proceso.
+      count: jest.fn((args: { where: { id: { in: string[] } } }) =>
+        Promise.resolve(args.where.id.in.length),
+      ),
+    },
     grant: { findMany: jest.fn() },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
@@ -294,6 +300,34 @@ describe('CommitmentService', () => {
       await m.service.update(integrante(), 'c1', { title: 'Solo titulo' });
       const data = m.prismaObj.commitment.update.mock.calls[0][0].data;
       expect(data.dueDate).toBeUndefined();
+    });
+
+    it('reenviar asignado/responsable sin cambios no valida pertenencia (persona ya sin grant) -> no 400', async () => {
+      m.prismaObj.commitment.findFirst.mockResolvedValue(
+        commitmentRow({ assignedUserId: 'ua', responsibleUserId: 'ur' }),
+      );
+      // Simula que ninguna persona pertenece ya al proceso.
+      m.prismaObj.user.count.mockResolvedValue(0);
+      m.prismaObj.commitment.update.mockImplementation(({ data }: any) =>
+        Promise.resolve(commitmentRow({ assignedUserId: 'ua', responsibleUserId: 'ur', ...data })),
+      );
+      const res = await m.service.update(integrante(), 'c1', {
+        title: 'Nuevo',
+        assignedUserId: 'ua',
+        responsibleUserId: 'ur',
+      });
+      expect(res.title).toBe('Nuevo');
+      expect(m.prismaObj.user.count).not.toHaveBeenCalled();
+    });
+
+    it('cambiar a una persona ajena al proceso sigue dando 400', async () => {
+      m.prismaObj.commitment.findFirst.mockResolvedValue(
+        commitmentRow({ assignedUserId: 'ua' }),
+      );
+      m.prismaObj.user.count.mockResolvedValue(0);
+      await expect(
+        m.service.update(integrante(), 'c1', { assignedUserId: 'otra' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it(':id fuera de alcance -> 404', async () => {

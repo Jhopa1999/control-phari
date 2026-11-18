@@ -64,7 +64,8 @@ export class AreaController {
   @ApiResponse({ status: 201, description: 'Area creada.', type: AreaResponseDto })
   @ApiResponse({ status: 400, description: 'Datos de entrada invalidos.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  @ApiResponse({ status: 409, description: 'Ya existe el code.' })
+  @ApiResponse({ status: 400, description: 'Código con formato inválido (solo letras mayúsculas, números y guion bajo; máximo 40).' })
+  @ApiResponse({ status: 409, description: 'Ya existe un área con ese código.' })
   create(
     @CurrentActor() actor: CurrentActorType,
     @Body() dto: CreateAreaDto,
@@ -81,6 +82,10 @@ export class AreaController {
   @ApiResponse({ status: 400, description: 'Datos de entrada invalidos o id no UUID.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Area no encontrada.' })
+  @ApiResponse({
+    status: 409,
+    description: 'No se puede desactivar el área: tiene procesos activos (el mensaje indica cuántos).',
+  })
   update(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

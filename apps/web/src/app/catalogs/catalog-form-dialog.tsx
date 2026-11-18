@@ -19,6 +19,12 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { CatalogItem } from '@/lib/api-client';
+import {
+  CODE_HELP,
+  normalizeCodeInput,
+  validateCatalogName,
+  validateCode,
+} from '@/lib/code-format';
 
 export interface CatalogFormValues {
   catalog: string;
@@ -37,6 +43,10 @@ interface CatalogFormDialogProps {
   submitting: boolean;
   /** Error del backend (p. ej. el 409 de duplicado); el padre lo limpia al abrir. */
   errorMessage: string | null;
+  /** Errores del servidor que marcan «Catálogo» o «Código» (formato o duplicado). */
+  serverErrors?: { catalog: string | null; code: string | null };
+  /** El usuario editó uno de los dos campos: el padre borra su error del servidor. */
+  onFieldEdited?: (field: 'catalog' | 'code') => void;
   onSubmit: (values: CatalogFormValues) => void;
 }
 
@@ -59,12 +69,17 @@ interface Validation {
   /** Campos de la regla combinada que la incumplen (NIT 6b). */
   missing: { catalog: boolean; code: boolean };
   labelError: string | null;
+  /** Formato o longitud de cada campo (los vacíos van en la regla combinada). */
+  catalogFormat: string | null;
+  codeFormat: string | null;
 }
 
 const NO_ERRORS: Validation = {
   formError: null,
   missing: { catalog: false, code: false },
   labelError: null,
+  catalogFormat: null,
+  codeFormat: null,
 };
 
 /** Reglas del cliente (las de siempre), evaluadas todas a la vez (design §9). */
@@ -75,6 +90,8 @@ function validate(values: CatalogFormValues, isEdit: boolean): Validation {
     formError: missingCatalog || missingCode ? 'Catálogo y código son obligatorios.' : null,
     missing: { catalog: missingCatalog, code: missingCode },
     labelError: values.label.trim() === '' ? 'La etiqueta es obligatoria.' : null,
+    catalogFormat: isEdit || missingCatalog ? null : validateCatalogName(values.catalog),
+    codeFormat: isEdit || missingCode ? null : validateCode(values.code),
   };
 }
 
@@ -89,6 +106,8 @@ export function CatalogFormDialog({
   editing,
   submitting,
   errorMessage,
+  serverErrors = { catalog: null, code: null },
+  onFieldEdited,
   onSubmit,
 }: CatalogFormDialogProps): React.ReactElement {
   const isEdit = Boolean(editing);
@@ -120,34 +139,47 @@ export function CatalogFormDialog({
 
   function updatePair(key: 'catalog' | 'code', value: string): void {
     setValues((v) => ({ ...v, [key]: value }));
+    onFieldEdited?.(key);
     // El error de un campo se limpia al editarlo; la regla combinada, cuando
     // ningún campo implicado queda marcado.
     setErrors((prev) => {
-      if (!prev.missing[key]) return prev;
+      const formatKey = key === 'catalog' ? 'catalogFormat' : 'codeFormat';
+      if (!prev.missing[key] && !prev[formatKey]) return prev;
       const missing = { ...prev.missing, [key]: false };
       return {
         ...prev,
         missing,
+        [formatKey]: null,
         formError: missing.catalog || missing.code ? prev.formError : null,
       };
     });
   }
+
+  const catalogFieldError = errors.catalogFormat ?? serverErrors.catalog;
+  const codeFieldError = errors.codeFormat ?? serverErrors.code;
+
+  // Con un error del servidor en un campo, el foco va al primero (en orden del DOM).
+  React.useEffect(() => {
+    if (!open) return;
+    if (serverErrors.catalog) catalogRef.current?.focus();
+    else if (serverErrors.code) codeRef.current?.focus();
+  }, [open, serverErrors.catalog, serverErrors.code]);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     // Validación mínima en cliente; el backend es la autoridad.
     const result = validate(values, isEdit);
     setErrors(result);
-    if (result.formError || result.labelError) {
+    if (result.formError || result.labelError || result.catalogFormat || result.codeFormat) {
       // Foco al primer campo con error, en orden del DOM.
-      if (result.missing.catalog) catalogRef.current?.focus();
-      else if (result.missing.code) codeRef.current?.focus();
+      if (result.missing.catalog || result.catalogFormat) catalogRef.current?.focus();
+      else if (result.missing.code || result.codeFormat) codeRef.current?.focus();
       else labelRef.current?.focus();
       return;
     }
     onSubmit({
-      catalog: values.catalog.trim(),
-      code: values.code.trim(),
+      catalog: normalizeCodeInput(values.catalog),
+      code: normalizeCodeInput(values.code),
       label: values.label.trim(),
       description: values.description.trim(),
       active: values.active,
@@ -175,26 +207,46 @@ export function CatalogFormDialog({
           <DialogBody className="grid gap-4">
             {!isEdit ? <RequiredHint /> : null}
 
-            <Field id="catalog" label="Catálogo" required={!isEdit}>
+            <Field
+              id="catalog"
+              label="Catálogo"
+              required={!isEdit}
+              help={isEdit ? undefined : CODE_HELP}
+              error={catalogFieldError}
+            >
               <Input
                 ref={catalogRef}
+                className="font-mono uppercase placeholder:normal-case placeholder:text-muted-foreground"
                 value={values.catalog}
                 readOnly={isEdit}
                 disabled={isEdit}
-                placeholder="PRIORITY"
+                maxLength={40}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="p. ej. FASE_PROYECTO"
                 aria-invalid={errors.missing.catalog ? true : undefined}
                 aria-describedby={errors.missing.catalog ? FORM_ERROR_ID : undefined}
                 onChange={(e) => updatePair('catalog', e.target.value)}
               />
             </Field>
 
-            <Field id="code" label="Código" required={!isEdit}>
+            <Field
+              id="code"
+              label="Código"
+              required={!isEdit}
+              help={isEdit ? undefined : CODE_HELP}
+              error={codeFieldError}
+            >
               <Input
                 ref={codeRef}
+                className="font-mono uppercase placeholder:normal-case placeholder:text-muted-foreground"
                 value={values.code}
                 readOnly={isEdit}
                 disabled={isEdit}
-                placeholder="HIGH"
+                maxLength={40}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="p. ej. TIPO_SOLICITUD"
                 aria-invalid={errors.missing.code ? true : undefined}
                 aria-describedby={errors.missing.code ? FORM_ERROR_ID : undefined}
                 onChange={(e) => updatePair('code', e.target.value)}
