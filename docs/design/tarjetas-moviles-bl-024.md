@@ -109,6 +109,8 @@ Reglas:
 
 Los textos y formatos son los mismos que en la tabla: no se reescriben.
 
+Oleada 3 (PR-C) extiende el patrón a *Aprobaciones*, *Planificación*, *Capacidad*, *Reuniones* (*Mis compromisos abiertos*), *Actividades recurrentes* (*Gestión*), *Auditoría* y *Equipo y permisos*, con las ranuras nuevas `code`, `footer`, `wide` y `tone`. Campos por pantalla en `docs/design/oleada-3-movil-accesibilidad.md` §1.4.
+
 ## 4. Acciones, estados, foco, accesibilidad
 
 **Acciones.** En tarjeta todas las acciones van en un único menú «…»

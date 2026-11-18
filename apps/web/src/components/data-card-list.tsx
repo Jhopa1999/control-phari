@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { SortState } from '@/lib/table-sort';
+import { cn } from '@/lib/utils';
 
 /*
  * Vista de tarjetas por fila para móvil (< 768 px, BL-024). Es la variante
@@ -26,9 +27,13 @@ export interface DataCardMeta {
   label: string;
   /** null, undefined, false o '' se omiten; la vista pone «—» si quiere mostrarlo. */
   value: React.ReactNode;
+  /** Ocupa las dos columnas (barras de utilización, textos largos). */
+  wide?: boolean;
 }
 
 export interface DataCard {
+  /** IdChip(s) sobre el título (fuera del recorte del subtítulo, para no cortar el foco). */
+  code?: React.ReactNode;
   /** Normalmente <CellTitle touch …>. */
   title: React.ReactNode;
   /** Una línea, text-meta. */
@@ -40,6 +45,12 @@ export interface DataCard {
   actions?: React.ReactNode;
   /** Contenido libre bajo los badges (p. ej. el motivo de un bloqueo). */
   note?: React.ReactNode;
+  /** Botones a todo el ancho al pie (acciones que son el motivo de la pantalla). */
+  footer?: React.ReactNode;
+  /** `danger`: borde y fondo de alerta; siempre acompañado de un badge con texto. */
+  tone?: 'default' | 'danger';
+  /** Acción en curso sobre la tarjeta: aria-busy. */
+  busy?: boolean;
 }
 
 export interface DataCardSortOption<K extends string> {
@@ -61,6 +72,8 @@ export interface DataCardListProps<T, K extends string> {
   card: (row: T) => DataCard;
   /** Sin cabeceras ordenables, el orden se elige aquí. */
   sort?: DataCardSort<K>;
+  /** Referencia a la ul (p. ej. para devolver el foco tras quitar una tarjeta). */
+  listRef?: React.Ref<HTMLUListElement>;
 }
 
 function isFilled(value: React.ReactNode): boolean {
@@ -123,17 +136,30 @@ export function DataCardList<T, K extends string = string>({
   getKey,
   card,
   sort,
+  listRef,
 }: DataCardListProps<T, K>): React.ReactElement {
   return (
     <div className="md:hidden">
       {sort ? <SortControl sort={sort} /> : null}
-      <ul aria-label={label} className="flex flex-col gap-3 p-3">
+      <ul ref={listRef} aria-label={label} className="flex flex-col gap-3 p-3">
         {rows.map((row) => {
           const data = card(row);
           const meta = (data.meta ?? []).filter((item) => isFilled(item.value));
           const badges = (data.badges ?? []).filter(isFilled);
           return (
-            <li key={getKey(row)} className="rounded-lg bg-muted/40 p-3">
+            <li
+              key={getKey(row)}
+              aria-busy={data.busy ? true : undefined}
+              className={cn(
+                'rounded-lg p-3',
+                data.tone === 'danger'
+                  ? 'border-l-4 border-l-danger bg-danger-subtle/50'
+                  : 'bg-muted/40 dark:ring-1 dark:ring-inset dark:ring-border',
+              )}
+            >
+              {isFilled(data.code) ? (
+                <div className="mb-1 flex flex-wrap items-center gap-2">{data.code}</div>
+              ) : null}
               <div className="flex items-start gap-2">
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-sm">
                   {data.title}
@@ -158,12 +184,17 @@ export function DataCardList<T, K extends string = string>({
               {meta.length > 0 ? (
                 <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-meta">
                   {meta.map((item) => (
-                    <div key={item.label} className="min-w-0">
+                    <div key={item.label} className={cn('min-w-0', item.wide && 'col-span-2')}>
                       <dt className="text-muted-foreground">{item.label}</dt>
                       <dd className="text-foreground tabular-nums wrap-break-word">{item.value}</dd>
                     </div>
                   ))}
                 </dl>
+              ) : null}
+              {isFilled(data.footer) ? (
+                <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 [&>*]:h-11 [&>*]:w-full">
+                  {data.footer}
+                </div>
               ) : null}
             </li>
           );
@@ -174,7 +205,14 @@ export function DataCardList<T, K extends string = string>({
 }
 
 /** Esqueleto de la lista de tarjetas (3 tarjetas); decorativo, como TableSkeleton. */
-export function CardListSkeleton({ cards = 3 }: { cards?: number }): React.ReactElement {
+export function CardListSkeleton({
+  cards = 3,
+  withFooter = false,
+}: {
+  cards?: number;
+  /** Añade un botón fantasma al pie, como las tarjetas con `footer`. */
+  withFooter?: boolean;
+}): React.ReactElement {
   return (
     <div aria-hidden="true" className="flex flex-col gap-3 p-3 md:hidden">
       {Array.from({ length: cards }, (_, index) => (
@@ -188,6 +226,7 @@ export function CardListSkeleton({ cards = 3 }: { cards?: number }): React.React
             <Skeleton className="h-4 w-4/5" />
             <Skeleton className="h-4 w-3/5" />
           </div>
+          {withFooter ? <Skeleton className="h-11 w-full" /> : null}
         </div>
       ))}
     </div>

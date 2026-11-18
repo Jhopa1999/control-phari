@@ -31,6 +31,9 @@ export interface CoordinationData {
   reload: () => Promise<void>;
 }
 
+/** Pestaña que no encoge y de 44 px con puntero táctil; la lista hace scroll propio en móvil. */
+const TAB_TRIGGER = 'shrink-0 pointer-coarse:h-11';
+
 function parseTab(value: string | null): Tab {
   return value === 'compromisos' || value === 'mis-abiertos' ? value : 'actas';
 }
@@ -61,6 +64,13 @@ function ReunionesViewContent(): React.ReactElement {
   // Conteo de vencidos de «Mis compromisos abiertos» para la pestaña (null si no se pudo cargar).
   const [myOverdue, setMyOverdue] = React.useState<number | null>(null);
   const [error, setError] = React.useState<unknown>(null);
+  const tabsListRef = React.useRef<HTMLDivElement>(null);
+  // Con scroll propio en la lista de pestañas, la activa se lleva a la vista (también si cambia por código).
+  React.useEffect(() => {
+    tabsListRef.current
+      ?.querySelector<HTMLElement>('[role="tab"][data-state="active"]')
+      ?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }, [tab]);
 
   React.useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- lee la pestaña y los ids de la URL tras montar (window no existe en el servidor).
@@ -119,21 +129,25 @@ function ReunionesViewContent(): React.ReactElement {
         title="Reuniones y compromisos"
         description="Actas de reunión con sus participantes, agenda y decisiones, y el seguimiento de los compromisos acordados."
       />
-      <Tabs value={tab} onValueChange={changeTab}>
-        <TabsList aria-label="Vistas de reuniones y compromisos">
-          <TabsTrigger value="actas">
+      <Tabs value={tab} onValueChange={changeTab} className="min-w-0">
+        <TabsList
+          ref={tabsListRef}
+          aria-label="Vistas de reuniones y compromisos"
+          className="max-w-full overflow-x-auto pb-px"
+        >
+          <TabsTrigger value="actas" className={TAB_TRIGGER}>
             <FileText aria-hidden="true" />
             Actas
             {state === 'success' ? <span className="text-muted-foreground">{` (${meetings.length})`}</span> : null}
           </TabsTrigger>
-          <TabsTrigger value="compromisos">
+          <TabsTrigger value="compromisos" className={TAB_TRIGGER}>
             <Handshake aria-hidden="true" />
             Compromisos
             {state === 'success' ? (
               <span className="text-muted-foreground">{` (${openCommitments} abiertos)`}</span>
             ) : null}
           </TabsTrigger>
-          <TabsTrigger value="mis-abiertos">
+          <TabsTrigger value="mis-abiertos" className={TAB_TRIGGER}>
             <ListChecks aria-hidden="true" />
             Mis compromisos abiertos
             {myOverdue !== null && myOverdue > 0 ? (

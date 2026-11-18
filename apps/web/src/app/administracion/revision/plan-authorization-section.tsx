@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { ChartGantt } from 'lucide-react';
 import { toast } from 'sonner';
+import { DataCardList } from '@/components/data-card-list';
 import { CellTitle } from '@/components/data-table';
 import { IdChip } from '@/components/id-chip';
 import { DataView, type DataViewState } from '@/components/data-view';
@@ -24,7 +25,7 @@ import { useActor } from '@/lib/actor-context';
 import { PlanError, authorizePlan, getPlan, returnPlan } from '@/lib/plan';
 import { listRequests } from '@/lib/requests';
 import { DevolverDialog } from './devolver-dialog';
-import { focusTargetAfterRemoval } from './row-focus';
+import { focusTargetAfterRemoval, visibleContainer } from './row-focus';
 
 type LoadState = 'loading' | 'success' | 'error';
 
@@ -57,6 +58,7 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
   const [devolverError, setDevolverError] = React.useState<string | null>(null);
   const rowIndexRef = React.useRef(0);
   const bodyRef = React.useRef<HTMLTableSectionElement>(null);
+  const cardsRef = React.useRef<HTMLUListElement>(null);
   const headingRef = React.useRef<HTMLHeadingElement>(null);
 
   const fetchPlans = React.useCallback(() => {
@@ -99,7 +101,12 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
   }, [canReview, fetchPlans, actorId]);
 
   const returnFocusTo = React.useCallback(
-    () => focusTargetAfterRemoval(bodyRef.current, rowIndexRef.current, headingRef.current),
+    () =>
+      focusTargetAfterRemoval(
+        visibleContainer(bodyRef.current, cardsRef.current),
+        rowIndexRef.current,
+        headingRef.current,
+      ),
     [],
   );
 
@@ -155,6 +162,7 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
       {
         key: 'authorize',
         label: 'Autorizar',
+        variant: 'default',
         onSelect: () => void handleAuthorize(row, index),
         busy: authorizingId === row.plan.id,
         busyLabel: 'Autorizando…',
@@ -196,6 +204,7 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
       <DataView
         state={viewState}
         loading={{ rows: 3, columns: 3 }}
+        mobileCards={{ footer: true }}
         error={{
           title: 'No fue posible cargar los planes.',
           onRetry: () => void load(),
@@ -207,6 +216,7 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
           description: 'Los planes enviados a autorización aparecerán aquí.',
         }}
       >
+        <div className="hidden md:block">
         <Table scrollLabel="Tabla de planes por autorizar">
           <TableHeader>
             <TableRow>
@@ -234,6 +244,34 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
             ))}
           </TableBody>
         </Table>
+        </div>
+        <DataCardList
+          label="Planes por autorizar"
+          listRef={cardsRef}
+          rows={rows}
+          getKey={(row) => row.plan.id}
+          card={(row) => {
+            const index = rows.indexOf(row);
+            return {
+              code: <IdChip code={row.request.code} />,
+              title: (
+                <CellTitle
+                  touch
+                  href={
+                    planAllowed
+                      ? `/seguimiento/plan?requestId=${encodeURIComponent(row.request.id)}`
+                      : undefined
+                  }
+                >
+                  {row.request.title}
+                </CellTitle>
+              ),
+              badges: [<StatusBadge key="plan" kind="plan" value={row.plan.status} />],
+              busy: actingId === row.plan.id,
+              footer: <RowActions footer rowLabel={row.request.title} actions={rowActions(row, index)} />,
+            };
+          }}
+        />
       </DataView>
 
       <DevolverDialog

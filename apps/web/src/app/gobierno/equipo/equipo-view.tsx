@@ -4,6 +4,7 @@ import * as React from 'react';
 import { KeyRound, Mail, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DataCardList } from '@/components/data-card-list';
 import { DisabledReason } from '@/components/disabled-reason';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -56,6 +57,15 @@ function messageOf(err: unknown): string {
 
 function revokeButtonId(grantId: string): string {
   return `revocar-${grantId}`;
+}
+
+/** Tabla y tarjetas conviven en el DOM (una está oculta): devuelve el control que se ve. */
+function visibleById(id: string): HTMLElement | null {
+  for (const candidate of [id, `${id}-card`]) {
+    const el = document.getElementById(candidate);
+    if (el && el.offsetParent !== null) return el;
+  }
+  return null;
 }
 
 function inviteButtonId(userId: string): string {
@@ -246,7 +256,7 @@ export function EquipoView(): React.ReactElement {
     const candidates = [...grants.slice(index + 1), ...grants.slice(0, Math.max(index, 0)).reverse()];
     for (const grant of candidates) {
       if (!grant.active) continue;
-      const button = document.getElementById(revokeButtonId(grant.id));
+      const button = visibleById(revokeButtonId(grant.id));
       if (button) return button;
     }
     return grantsHeadingRef.current;
@@ -327,6 +337,8 @@ export function EquipoView(): React.ReactElement {
                 }
               />
             ) : (
+              <>
+              <div className="hidden md:block">
               <Table scrollLabel="Tabla de usuarios">
                 <TableHeader>
                   <TableRow>
@@ -377,6 +389,40 @@ export function EquipoView(): React.ReactElement {
                   ))}
                 </TableBody>
               </Table>
+              </div>
+              <DataCardList
+                label="Usuarios"
+                rows={users}
+                getKey={(user) => user.id}
+                card={(user) => ({
+                  title: (
+                    <span className="inline-flex min-h-11 items-center font-medium wrap-break-word">
+                      {user.name}
+                    </span>
+                  ),
+                  subtitle: user.identifier,
+                  badges: [<StatusBadge key="active" kind="active" value={String(user.active)} />],
+                  actions: (
+                    <Button
+                      id={`${inviteButtonId(user.id)}-card`}
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      className="size-11"
+                      aria-label={`Reenviar invitación a ${user.name}`}
+                      loading={invitingUserId === user.id}
+                      disabled={invitingUserId !== null && invitingUserId !== user.id}
+                      onClick={() => {
+                        setInviteTarget(user);
+                        setInviteOpen(true);
+                      }}
+                    >
+                      <Mail aria-hidden="true" />
+                    </Button>
+                  ),
+                })}
+              />
+              </>
             )}
           </div>
         </Section>
@@ -390,6 +436,8 @@ export function EquipoView(): React.ReactElement {
                 description="Asigna un rol a un usuario dentro de un proceso."
               />
             ) : (
+              <>
+              <div className="hidden md:block">
               <Table scrollLabel="Tabla de roles asignados">
                 <TableHeader>
                   <TableRow>
@@ -427,6 +475,37 @@ export function EquipoView(): React.ReactElement {
                   ))}
                 </TableBody>
               </Table>
+              </div>
+              <DataCardList
+                label="Roles asignados"
+                rows={grants}
+                getKey={(grant) => grant.id}
+                card={(grant) => ({
+                  title: (
+                    <span className="inline-flex min-h-11 items-center font-medium wrap-break-word">
+                      {userName(grant.userId)}
+                    </span>
+                  ),
+                  subtitle: processName(grant.processId),
+                  badges: [<StatusBadge key="grant" kind="grant" value={String(grant.active)} />],
+                  actions: grant.active ? (
+                    <Button
+                      id={`${revokeButtonId(grant.id)}-card`}
+                      type="button"
+                      variant="ghost-destructive"
+                      className="h-11 px-3"
+                      aria-label={`Revocar rol de ${userName(grant.userId)} en ${processName(grant.processId)}`}
+                      onClick={() => {
+                        setRevokeTarget(grant);
+                        setRevokeOpen(true);
+                      }}
+                    >
+                      Revocar
+                    </Button>
+                  ) : undefined,
+                })}
+              />
+              </>
             )}
           </div>
         </Section>
@@ -499,7 +578,7 @@ export function EquipoView(): React.ReactElement {
         busy={invitingUserId === inviteTarget?.id}
         onConfirm={handleInvite}
         returnFocusTo={() =>
-          inviteTarget ? document.getElementById(inviteButtonId(inviteTarget.id)) : null
+          inviteTarget ? visibleById(inviteButtonId(inviteTarget.id)) : null
         }
       />
     </PageLayout>

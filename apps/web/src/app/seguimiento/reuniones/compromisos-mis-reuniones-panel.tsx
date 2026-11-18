@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Handshake } from 'lucide-react';
+import { DataCardList } from '@/components/data-card-list';
 import { DueBadge } from '@/components/due-badge';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -361,52 +362,63 @@ export function CompromisosMisReunionesPanel({
             </Table>
           </div>
 
-          <ul aria-label="Compromisos abiertos de mis reuniones" className="flex flex-col gap-2 md:hidden">
-            {items.map((item) => (
-              <li
-                key={item.id}
-                className={cn(
-                  'flex flex-col gap-2 rounded-xl bg-card p-3 shadow-card',
-                  item.dueStatus === 'VENCIDO' && 'border-l-2 border-l-danger',
-                )}
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <DueBadge status={item.dueStatus} daysToDue={item.daysToDue} dueDate={item.dueDate} />
-                  <StatusBadge kind="record" value={item.state} />
-                </div>
-                <span className="font-medium wrap-break-word">{item.title}</span>
-                <span className="flex items-center gap-2 text-sm">
-                  <Avatar name={item.assignedUserName} />
-                  {item.assignedUserName ?? 'Sin asignar'}
-                </span>
-                <span className="text-meta text-muted-foreground">
-                  {`${item.meetingTitle} · ${formatDateOnly(item.meetingDate)}`}
-                </span>
-                <div className="flex gap-2 max-sm:[&>button]:flex-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="max-sm:min-h-11"
-                    aria-label={`Abrir acta de ${item.title}`}
-                    onClick={() => onOpenMeeting(item.meetingId)}
-                  >
-                    Abrir acta
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="max-sm:min-h-11"
-                    aria-label={`Ver compromiso: ${item.title}`}
-                    onClick={() => onOpenCommitment(item.id)}
-                  >
-                    Ver compromiso
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="rounded-xl border bg-card shadow-card md:hidden">
+            <DataCardList
+              label="Compromisos abiertos de mis reuniones"
+              rows={items}
+              getKey={(item) => item.id}
+              card={(item) => ({
+                tone: item.dueStatus === 'VENCIDO' ? 'danger' : 'default',
+                title: <span className="inline-flex min-h-11 items-center font-medium wrap-break-word">{item.title}</span>,
+                badges: [
+                  <DueBadge
+                    key="due"
+                    status={item.dueStatus}
+                    daysToDue={item.daysToDue}
+                    dueDate={item.dueDate}
+                  />,
+                  <StatusBadge key="state" kind="record" value={item.state} />,
+                ],
+                note: item.expectedResult,
+                meta: [
+                  {
+                    label: 'Asignado a',
+                    value: (
+                      <span className="flex items-center gap-2">
+                        <Avatar name={item.assignedUserName} />
+                        {item.assignedUserName ?? 'Sin asignar'}
+                      </span>
+                    ),
+                  },
+                  {
+                    label: 'Reunión',
+                    wide: true,
+                    value: `${item.meetingTitle} · ${formatDateOnly(item.meetingDate)}`,
+                  },
+                ],
+                footer: (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      aria-label={`Abrir acta de ${item.title}`}
+                      onClick={() => onOpenMeeting(item.meetingId)}
+                    >
+                      Abrir acta
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      aria-label={`Ver compromiso: ${item.title}`}
+                      onClick={() => onOpenCommitment(item.id)}
+                    >
+                      Ver compromiso
+                    </Button>
+                  </>
+                ),
+              })}
+            />
+          </div>
         </>
       )}
     </div>

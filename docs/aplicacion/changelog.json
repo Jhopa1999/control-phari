@@ -930,6 +930,14 @@
         "apps/mcp/README.md"
       ],
       "summary": "Oleada 3, PR-B (ítem 4 y BL-039): patrón único de listado paginado en el servidor para GET /requests, /portfolio, /assets y /documents (page, pageSize hasta 100, q, sort con lista blanca, dir; total en X-Total-Count; sin página, el arreglo completo con tope de 1000 y X-Truncated), filtros múltiples state/mainProcessId/band en /requests, nombre y código de lo referenciado en los DTO (proceso, activo, responsable, solicitud de origen) y las cuatro pantallas con búsqueda, orden y paginación en el servidor sin atenuar la tabla durante la recarga. Corrección de revisión (B1): en /assets y /documents el código y título de la solicitud de origen solo se resuelven si la solicitud cae en el alcance de solicitudes del actor (consulta en lote); si no, llegan null."
+    },
+    {
+      "timestamp": "2026-11-17T21:30:00Z",
+      "trigger_file": "apps/web/src/components/data-card-list.tsx",
+      "updated_docs": [
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Oleada 3, PR-C: tarjetas móviles en Aprobaciones, Planificación, Capacidad, Reuniones, Actividades recurrentes, Auditoría y Equipo; IdChip de 24 px; contraste de la campana en oscuro y de «Vencido»; etiquetas del presupuesto de IA. Sin cambios de API, contrato ni MCP."
     }
   ]
 }

@@ -8,12 +8,14 @@ import {
   DataTablePagination,
   ResultCount,
 } from '@/components/data-table';
+import { DataCardList } from '@/components/data-card-list';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { Field } from '@/components/field';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActionsCell } from '@/components/row-actions';
 import { Toolbar } from '@/components/toolbar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -289,6 +291,7 @@ function AuditoriaViewContent(): React.ReactElement {
       <DataView
         state={viewState}
         loading={{ rows: 8, columns: 6 }}
+        mobileCards
         error={{
           title: 'No fue posible cargar la auditoría.',
           message: errorMessage,
@@ -300,6 +303,7 @@ function AuditoriaViewContent(): React.ReactElement {
           description: 'Los cambios registrados dentro de tu alcance aparecerán aquí.',
         }}
       >
+        <div className="hidden md:block">
         <Table density="compact" scrollLabel="Tabla de eventos de auditoría">
           <TableHeader>
             <TableRow>
@@ -350,6 +354,42 @@ function AuditoriaViewContent(): React.ReactElement {
             })}
           </TableBody>
         </Table>
+        </div>
+        <DataCardList
+          label="Eventos de auditoría"
+          rows={events}
+          getKey={(event) => event.id}
+          card={(event) => {
+            const { actorName } = detailsOf(event);
+            return {
+              title: (
+                <span className="inline-flex min-h-11 items-center text-sm font-medium wrap-break-word">
+                  {auditActionLabel(event.action)}
+                </span>
+              ),
+              subtitle:
+                event.actorUserId === null ? (
+                  'Sistema'
+                ) : actorName ? (
+                  actorName
+                ) : (
+                  <span title={event.actorUserId} className="font-mono">
+                    {`${event.actorUserId.slice(0, 8)}…`}
+                  </span>
+                ),
+              badges: [<Badge key="object" variant="neutral">{auditObjectLabel(event.objectType)}</Badge>],
+              meta: [
+                { label: 'Fecha', wide: true, value: formatDateTime(event.createdAt) },
+                { label: 'Proceso', wide: true, value: processLabel(event.scopeProcessId) },
+              ],
+              footer: (
+                <Button type="button" variant="outline" onClick={() => setSelected(event)}>
+                  Ver cambio
+                </Button>
+              ),
+            };
+          }}
+        />
         <DataTablePagination
           id="aud-paginacion"
           page={page}

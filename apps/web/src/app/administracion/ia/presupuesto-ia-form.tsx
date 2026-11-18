@@ -75,6 +75,7 @@ export function PresupuestoIaForm({
           help="Déjalo vacío para no poner tope."
           error={errors.budget}
         >
+          {(control) => (
           <div className="relative">
             <span
               aria-hidden="true"
@@ -83,6 +84,7 @@ export function PresupuestoIaForm({
               US$
             </span>
             <Input
+              {...control}
               type="number"
               inputMode="decimal"
               min={0}
@@ -95,15 +97,18 @@ export function PresupuestoIaForm({
               }}
             />
           </div>
+          )}
         </Field>
         <Field
           id="ai-budget-alert"
-          label="Avisar al llegar al (%)"
-          help="Se avisa cuando el gasto alcance este porcentaje del tope."
+          label="Umbral de aviso (% del tope)"
+          help="Número entero de 1 a 100. Se avisa a los administradores cuando el gasto alcance este porcentaje del tope."
           error={errors.alertPct}
         >
+          {(control) => (
           <div className="relative">
             <Input
+              {...control}
               type="number"
               inputMode="numeric"
               min={1}
@@ -123,6 +128,7 @@ export function PresupuestoIaForm({
               %
             </span>
           </div>
+          )}
         </Field>
         <InlineNotice tone="info" title="Qué pasa con el tope">
           <p className="text-muted-foreground">

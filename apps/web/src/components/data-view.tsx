@@ -38,7 +38,7 @@ export interface DataViewProps {
    * La vista ofrece tarjetas en móvil (BL-024): en carga se muestra el esqueleto
    * de tarjetas por debajo de md y el de tabla desde md.
    */
-  mobileCards?: boolean;
+  mobileCards?: boolean | { footer?: boolean };
   /** La tabla (y su paginación); solo se renderiza en 'ready'. */
   children?: React.ReactNode;
 }
@@ -65,7 +65,7 @@ export function DataView({
     content = mobileCards ? (
       <div aria-busy="true">
         <div className="hidden md:block">{table}</div>
-        <CardListSkeleton />
+        <CardListSkeleton withFooter={typeof mobileCards === 'object' && mobileCards.footer === true} />
       </div>
     ) : (
       <div aria-busy="true">{table}</div>
