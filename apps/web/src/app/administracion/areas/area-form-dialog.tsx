@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
+import { DisabledReason } from '@/components/disabled-reason';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Field, FormError, RequiredHint } from '@/components/field';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import type { Area } from '@/lib/api-client';
+import { CODE_HELP, normalizeCodeInput, validateCode } from '@/lib/code-format';
+import { areaDeactivationBlockReason } from './area-blocking';
 
 export interface AreaFormValues {
   code: string;
@@ -32,13 +35,16 @@ interface AreaFormDialogProps {
   /** Si se pasa, el dialogo esta en modo edicion (codigo de solo lectura). */
   editing?: Area | null;
   submitting: boolean;
-  /** Error del backend (p. ej. el 409 de code duplicado); el padre lo limpia al abrir. */
+  /** Error del backend que no es de un campo; el padre lo limpia al abrir. */
   errorMessage: string | null;
+  /** Error del servidor para el campo «Código» (formato o duplicado). */
+  codeServerError?: string | null;
+  /** El usuario editó el código: el padre borra `codeServerError`. */
+  onCodeEdited?: () => void;
   onSubmit: (values: AreaFormValues) => void;
 }
 
 const FORM_ID = 'area-form';
-const FORM_ERROR_ID = `${FORM_ID}-error`;
 
 const EMPTY: AreaFormValues = { code: '', name: '', active: true, sortOrder: 0 };
 
@@ -52,7 +58,7 @@ const NO_ERRORS: Validation = { codeError: null, nameError: null };
 /** Reglas minimas en cliente; el backend es la autoridad. */
 function validate(values: AreaFormValues, isEdit: boolean): Validation {
   return {
-    codeError: !isEdit && values.code.trim() === '' ? 'El código es obligatorio.' : null,
+    codeError: isEdit ? null : validateCode(values.code),
     nameError: values.name.trim() === '' ? 'El nombre es obligatorio.' : null,
   };
 }
@@ -60,7 +66,8 @@ function validate(values: AreaFormValues, isEdit: boolean): Validation {
 /**
  * Alta y edicion de un area (p. ej. Analitica), dialogo sm. Al editar, el
  * codigo queda en solo lectura (es estable) y el padre envia solo nombre,
- * activo y orden.
+ * activo y orden. Un área con procesos activos no se puede desactivar: el
+ * interruptor queda no disponible con su motivo visible.
  */
 export function AreaFormDialog({
   open,
@@ -68,6 +75,8 @@ export function AreaFormDialog({
   editing,
   submitting,
   errorMessage,
+  codeServerError = null,
+  onCodeEdited,
   onSubmit,
 }: AreaFormDialogProps): React.ReactElement {
   const isEdit = Boolean(editing);
@@ -76,6 +85,8 @@ export function AreaFormDialog({
   const codeRef = React.useRef<HTMLInputElement>(null);
   const nameRef = React.useRef<HTMLInputElement>(null);
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
+  const blockReason = editing ? areaDeactivationBlockReason(editing) : null;
+  const codeFieldError = errors.codeError ?? codeServerError;
 
   // Al abrir (o cambiar de registro) se reinician los campos y los errores.
   useResetOnChange([open, editing], () => {
@@ -93,6 +104,11 @@ export function AreaFormDialog({
     }
   });
 
+  // Con un error del servidor en el código, el foco va a ese campo.
+  React.useEffect(() => {
+    if (open && codeServerError) codeRef.current?.focus();
+  }, [open, codeServerError]);
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const result = validate(values, isEdit);
@@ -103,7 +119,7 @@ export function AreaFormDialog({
       return;
     }
     onSubmit({
-      code: values.code.trim(),
+      code: normalizeCodeInput(values.code),
       name: values.name.trim(),
       active: values.active,
       sortOrder: Number.isFinite(values.sortOrder) ? values.sortOrder : 0,
@@ -130,19 +146,28 @@ export function AreaFormDialog({
           <DialogBody className="grid gap-4">
             {!isEdit ? <RequiredHint /> : null}
 
-            <Field id="area-code" label="Código" required={!isEdit} error={errors.codeError}>
+            <Field
+              id="area-code"
+              label="Código"
+              required={!isEdit}
+              help={isEdit ? undefined : CODE_HELP}
+              error={codeFieldError}
+            >
               <Input
                 ref={codeRef}
+                className="font-mono uppercase placeholder:normal-case placeholder:text-muted-foreground"
                 value={values.code}
                 readOnly={isEdit}
                 disabled={isEdit}
-                placeholder="ANALITICA"
-                aria-invalid={errors.codeError ? true : undefined}
-                aria-describedby={errors.codeError ? FORM_ERROR_ID : undefined}
+                maxLength={40}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="p. ej. ANALITICA"
                 onChange={(e) => {
                   const code = e.target.value;
                   setValues((v) => ({ ...v, code }));
                   setErrors((prev) => (prev.codeError ? { ...prev, codeError: null } : prev));
+                  onCodeEdited?.();
                 }}
               />
             </Field>
@@ -151,7 +176,7 @@ export function AreaFormDialog({
               <Input
                 ref={nameRef}
                 value={values.name}
-                placeholder="Analitica"
+                placeholder="p. ej. Analítica"
                 onChange={(e) => {
                   const name = e.target.value;
                   setValues((v) => ({ ...v, name }));
@@ -180,9 +205,17 @@ export function AreaFormDialog({
               <Switch
                 id="area-active"
                 checked={values.active}
-                onCheckedChange={(checked) => setValues((v) => ({ ...v, active: checked }))}
+                aria-disabled={blockReason ? true : undefined}
+                aria-describedby={blockReason ? 'area-active-reason' : undefined}
+                onCheckedChange={(checked) => {
+                  if (blockReason && !checked) return;
+                  setValues((v) => ({ ...v, active: checked }));
+                }}
               />
             </div>
+            {blockReason ? (
+              <DisabledReason id="area-active-reason">{blockReason}</DisabledReason>
+            ) : null}
 
             <FormError id={FORM_ID} message={errorMessage} />
           </DialogBody>

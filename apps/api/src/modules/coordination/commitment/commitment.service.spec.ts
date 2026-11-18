@@ -18,7 +18,13 @@ function createMocks() {
     },
     meeting: { findFirst: jest.fn() },
     request: { findFirst: jest.fn() },
-    user: { findMany: jest.fn() },
+    user: {
+      findMany: jest.fn(),
+      // Por defecto todas las personas existen y pertenecen al proceso.
+      count: jest.fn((args: { where: { id: { in: string[] } } }) =>
+        Promise.resolve(args.where.id.in.length),
+      ),
+    },
     grant: { findMany: jest.fn() },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>

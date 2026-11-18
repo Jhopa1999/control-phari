@@ -22,7 +22,8 @@ export const PROCESS_SPECS: ReadonlyArray<ToolSpec> = [
     access: 'write',
     description:
       'Crea un proceso (POST /processes). El cuerpo debe cumplir ' +
-      'CreateProcessDto; el backend valida los datos.',
+      'CreateProcessDto; code solo admite letras mayúsculas, números y guion ' +
+      'bajo (máximo 40; se normaliza a mayúsculas) o el backend responde 400.',
   },
   {
     name: 'process.update',
@@ -30,6 +31,9 @@ export const PROCESS_SPECS: ReadonlyArray<ToolSpec> = [
     access: 'write',
     description:
       'Actualiza un proceso (PATCH /processes/{id}). El cuerpo debe cumplir ' +
-      'UpdateProcessDto; el backend valida los datos.',
+      'UpdateProcessDto. Al desactivar (active=false) un proceso con ' +
+      'asignaciones activas, solicitudes abiertas o tareas sin terminar, el ' +
+      'backend responde 409 con requiresConfirmation y los recuentos; para ' +
+      'continuar se reenvía con confirmDeactivation=true.',
   },
 ];

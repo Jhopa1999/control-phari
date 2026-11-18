@@ -10,6 +10,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { CodeFormat } from '../../../common/code-format/code-format';
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -27,14 +28,13 @@ export enum ProcessKind {
 export class CreateProcessDto {
   @ApiProperty({
     type: String,
-    description: 'Codigo estable del proceso (se normaliza a MAYUSCULAS).',
+    description:
+      'Código estable del proceso. Se normaliza a mayúsculas; solo admite letras mayúsculas, números y guion bajo (máximo 40 caracteres).',
     example: 'FIBI',
-    maxLength: 50,
+    maxLength: 40,
+    pattern: '^[A-Z0-9_]+$',
   })
-  @Transform(trim)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50)
+  @CodeFormat('code')
   code!: string;
 
   @ApiProperty({

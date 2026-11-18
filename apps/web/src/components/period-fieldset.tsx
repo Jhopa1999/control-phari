@@ -14,6 +14,13 @@ export interface PeriodFieldsetProps {
   to: string;
   onFromChange: (value: string) => void;
   onToChange: (value: string) => void;
+  /** Periodo inválido (Desde posterior a Hasta): `aria-invalid` en ambos campos. */
+  invalid?: boolean;
+  /**
+   * Id del aviso de error que pinta la vista (p. ej. `indicadores-periodo-error`):
+   * se aplica como `aria-describedby` de ambos campos mientras `invalid`.
+   */
+  errorId?: string;
 }
 
 /**
@@ -30,7 +37,13 @@ export function PeriodFieldset({
   to,
   onFromChange,
   onToChange,
+  invalid = false,
+  errorId,
 }: PeriodFieldsetProps): React.ReactElement {
+  const a11y = {
+    'aria-invalid': invalid ? (true as const) : undefined,
+    'aria-describedby': invalid ? errorId : undefined,
+  };
   return (
     <fieldset className="flex flex-wrap items-end gap-3">
       <legend className="mb-1.5 text-meta font-medium">Periodo</legend>
@@ -43,6 +56,7 @@ export function PeriodFieldset({
             className="w-full sm:w-40"
             value={from}
             max={to}
+            {...a11y}
             onChange={(e) => {
               if (e.target.value) onFromChange(e.target.value);
             }}
@@ -60,6 +74,7 @@ export function PeriodFieldset({
             className="w-full sm:w-40"
             value={to}
             min={from}
+            {...a11y}
             onChange={(e) => {
               if (e.target.value) onToChange(e.target.value);
             }}

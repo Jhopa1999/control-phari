@@ -39,6 +39,15 @@ export class UpdateProcessDto {
   @IsBoolean()
   active?: boolean;
 
+  @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      'Confirma la desactivación de un proceso con trabajo en curso (asignaciones del mes actual en adelante, solicitudes abiertas o tareas sin terminar). Sin esta confirmación la API responde 409 con los recuentos.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  confirmDeactivation?: boolean;
+
   @ApiPropertyOptional({ type: Number, description: 'Orden de presentacion.', minimum: 0 })
   @IsOptional()
   @IsInt()

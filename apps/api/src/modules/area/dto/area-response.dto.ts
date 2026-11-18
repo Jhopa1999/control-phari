@@ -17,6 +17,12 @@ export class AreaResponseDto {
   @ApiProperty({ type: Number, description: 'Orden de presentacion.', example: 1 })
   sortOrder!: number;
 
+  @ApiProperty({ type: Number, description: 'Procesos activos del área (los inactivos no cuentan). Si es mayor que 0, el área no se puede desactivar.', example: 3 })
+  processCount!: number;
+
+  @ApiProperty({ type: Number, description: 'Solicitantes activos del área.', example: 12 })
+  requesterCount!: number;
+
   @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de creacion.' })
   createdAt!: Date;
 

@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { FolderKanban, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { AlertTriangle, FolderKanban, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -26,6 +27,14 @@ import { useActor } from '@/lib/actor-context';
 import type { Area, CreateProcess, Process, UpdateProcess } from '@/lib/api-client';
 import { listAreas } from '@/lib/areas';
 import { ApiError, createProcess, listProcesses, updateProcess } from '@/lib/procesos';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DialogBody } from '@/components/ui/dialog';
+import { splitServerCodeErrors } from '@/lib/code-format';
+import {
+  impactFromError,
+  impactLines,
+  type DeactivationImpact,
+} from './deactivation-impact';
 import { ProcesoFormDialog, type ProcessFormValues } from './proceso-form-dialog';
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
@@ -35,6 +44,17 @@ interface AreaGroup {
   areaId: string;
   areaLabel: string;
   processes: Process[];
+}
+
+/** Texto del 409 al crear: el único campo único del alta es el código. */
+const DUPLICATE_PROCESS_CODE = 'Ya existe un proceso con ese código.';
+
+interface PendingDeactivation {
+  process: Process;
+  body: UpdateProcess;
+  impact: DeactivationImpact;
+  /** Venía del diálogo de edición (su error va en su FormError). */
+  fromDialog: boolean;
 }
 
 function messageOf(err: unknown): string {
@@ -64,6 +84,9 @@ export function ProcesosView(): React.ReactElement {
   const [editing, setEditing] = React.useState<Process | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [codeServerError, setCodeServerError] = React.useState<string | null>(null);
+  /** Desactivación pendiente de confirmar, con los recuentos que dio la API. */
+  const [pending, setPending] = React.useState<PendingDeactivation | null>(null);
 
   const loadData = React.useCallback(() => {
     // Procesos del alcance + areas (todas, para resolver nombres) + areas
@@ -141,9 +164,47 @@ export function ProcesosView(): React.ReactElement {
     setDialogOpen(true);
   }
 
+  /** Desactivación desde la fila: se envía sin confirmar; el 409 abre el diálogo. */
+  async function handleRowDeactivate(process: Process): Promise<void> {
+    try {
+      await updateProcess(process.id, { active: false });
+      toast.success('Proceso desactivado.');
+      await load(true);
+    } catch (err) {
+      const impact = impactFromError(err);
+      if (impact) {
+        setPending({ process, body: { active: false }, impact, fromDialog: false });
+        return;
+      }
+      toast.error(messageOf(err));
+    }
+  }
+
+  /** «Desactivar proceso» en el diálogo de confirmación: reenvía con confirmación. */
+  async function confirmDeactivation(): Promise<void> {
+    if (!pending) return;
+    const { process, body, fromDialog } = pending;
+    try {
+      await updateProcess(process.id, { ...body, confirmDeactivation: true });
+      toast.success('Proceso desactivado.');
+      if (fromDialog) {
+        setDialogOpen(false);
+        setEditing(null);
+      }
+      await load(true);
+    } catch (err) {
+      const message = messageOf(err);
+      if (fromDialog) setFormError(message);
+      toast.error(message);
+    } finally {
+      setPending(null);
+    }
+  }
+
   async function handleSubmit(values: ProcessFormValues): Promise<void> {
     setSubmitting(true);
     setFormError(null);
+    setCodeServerError(null);
     try {
       if (editing) {
         // El code, el kind y el area son estables: al editar solo se envian
@@ -155,7 +216,17 @@ export function ProcesosView(): React.ReactElement {
           sortOrder: values.sortOrder,
         };
         if (values.framework !== '') body.framework = values.framework;
-        await updateProcess(editing.id, body);
+        try {
+          await updateProcess(editing.id, body);
+        } catch (err) {
+          const impact = impactFromError(err);
+          if (impact) {
+            // Trabajo en curso: se pide confirmación sin cerrar el formulario.
+            setPending({ process: editing, body, impact, fromDialog: true });
+            return;
+          }
+          throw err;
+        }
         toast.success('Proceso actualizado.');
       } else {
         const body: CreateProcess = {
@@ -176,17 +247,39 @@ export function ProcesosView(): React.ReactElement {
       await load(true);
     } catch (err) {
       const message = messageOf(err);
-      setFormError(message);
-      toast.error(message);
+      if (!editing && err instanceof ApiError && err.status === 409) {
+        // Alta: el único campo único es el código.
+        setCodeServerError(DUPLICATE_PROCESS_CODE);
+      } else if (!editing && err instanceof ApiError && err.status === 400 && err.messages) {
+        // Mensajes de formato que coinciden con una constante marcan el campo;
+        // el resto va al aviso del diálogo.
+        const split = splitServerCodeErrors(err.messages);
+        setCodeServerError(split.code);
+        const rest = split.catalog ? [...split.rest, split.catalog] : split.rest;
+        setFormError(rest.length > 0 ? rest.join(' ') : null);
+        if (!split.code && rest.length > 0) toast.error(message);
+      } else {
+        setFormError(message);
+        toast.error(message);
+      }
     } finally {
       setSubmitting(false);
     }
   }
 
   function rowActions(process: Process): RowAction[] {
-    return [
+    const actions: RowAction[] = [
       { key: 'edit', label: 'Editar', onSelect: () => openEdit(process), placement: 'inline' },
     ];
+    if (process.active) {
+      actions.push({
+        key: 'deactivate',
+        label: 'Desactivar',
+        onSelect: () => void handleRowDeactivate(process),
+        placement: 'inline',
+      });
+    }
+    return actions;
   }
 
   // Crear requiere al menos un area activa donde ubicar el proceso.
@@ -316,8 +409,35 @@ export function ProcesosView(): React.ReactElement {
         activeAreas={activeAreas}
         submitting={submitting}
         errorMessage={formError}
+        codeServerError={codeServerError}
+        onCodeEdited={() => setCodeServerError(null)}
         onSubmit={(values) => void handleSubmit(values)}
       />
+
+      <ConfirmDialog
+        open={pending !== null}
+        onOpenChange={(open) => {
+          if (!open) setPending(null);
+        }}
+        tone="danger"
+        title={`¿Desactivar el proceso «${pending?.process.name ?? ''}»?`}
+        description="Este proceso todavía tiene trabajo en curso. Revisa el impacto antes de continuar."
+        confirmLabel="Desactivar proceso"
+        onConfirm={confirmDeactivation}
+      >
+        {pending ? (
+          <DialogBody>
+            <div className="flex gap-2 rounded-lg border border-warning-border bg-warning-subtle p-3">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+              <ul className="grid gap-1 text-sm text-foreground">
+                {impactLines(pending.impact).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          </DialogBody>
+        ) : null}
+      </ConfirmDialog>
     </PageLayout>
   );
 }

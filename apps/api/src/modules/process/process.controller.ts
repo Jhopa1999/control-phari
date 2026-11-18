@@ -72,6 +72,7 @@ export class ProcessController {
   @ApiResponse({ status: 201, description: 'Proceso creado.', type: ProcessResponseDto })
   @ApiResponse({ status: 400, description: 'Datos de entrada invalidos.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
+  @ApiResponse({ status: 400, description: 'Código con formato inválido (solo letras mayúsculas, números y guion bajo; máximo 40).' })
   @ApiResponse({ status: 409, description: 'Ya existe el code.' })
   create(
     @CurrentActor() actor: CurrentActorType,
@@ -89,6 +90,11 @@ export class ProcessController {
   @ApiResponse({ status: 400, description: 'Datos de entrada invalidos o id no UUID.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'Proceso no encontrado.' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'El proceso tiene trabajo en curso y falta confirmar: el cuerpo trae requiresConfirmation, activeAssignments, openRequests y openTasks. Reintenta con confirmDeactivation: true.',
+  })
   update(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

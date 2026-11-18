@@ -9,6 +9,10 @@ import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
 import { CoordinationPersonDto } from './dto/coordination-person.dto';
 
+/** Texto único (la web lo reconoce para marcar el selector de persona). */
+export const PERSON_NOT_IN_PROCESS_MESSAGE =
+  'La persona indicada no existe o no pertenece al proceso.';
+
 /**
  * Fuente unica de verdad del alcance por rol de Fase 5 (design §2.2, leccion 1).
  * NO reutiliza el `scopeWhere` privado de `request.service.ts` (que filtra por
@@ -177,6 +181,43 @@ export class CoordinationScopeService {
       throw new ForbiddenException(
         'No perteneces al proceso indicado; elige uno de tus procesos.',
       );
+    }
+  }
+
+  /**
+   * Exige que las personas indicadas (asignado, responsable) existan, estén
+   * activas y pertenezcan al proceso: grant activo en él o grant activo de jefe
+   * de área (el jefe actúa sobre todo el área). Un id inexistente o ajeno al
+   * proceso da 400 (antes caía en un 500 por la llave foránea) sin distinguir
+   * los dos casos. Los ids `null`/`undefined` se ignoran.
+   */
+  async assertPeopleInProcess(
+    processId: string,
+    userIds: ReadonlyArray<string | null | undefined>,
+  ): Promise<void> {
+    const ids = Array.from(
+      new Set(userIds.filter((id): id is string => typeof id === 'string')),
+    );
+    if (ids.length === 0) {
+      return;
+    }
+    const found = await this.prisma.user.count({
+      where: {
+        id: { in: ids },
+        active: true,
+        grants: {
+          some: {
+            active: true,
+            OR: [
+              { processId },
+              { role: { code: RoleCode.JEFE_AREA } },
+            ],
+          },
+        },
+      },
+    });
+    if (found !== ids.length) {
+      throw new BadRequestException(PERSON_NOT_IN_PROCESS_MESSAGE);
     }
   }
 

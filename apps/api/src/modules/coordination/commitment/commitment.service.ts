@@ -305,6 +305,10 @@ export class CommitmentService {
   ): Promise<CommitmentResponseDto> {
     const dueDate = dateStringToDate(dto.dueDate);
     await this.scope.assertActorInProcess(actor, dto.processId);
+    await this.scope.assertPeopleInProcess(dto.processId, [
+      dto.assignedUserId,
+      dto.responsibleUserId,
+    ]);
     if (dto.sourceMeetingId) {
       await this.requireOpenMeeting(actor, dto.sourceMeetingId, dto.processId);
     }
@@ -370,6 +374,10 @@ export class CommitmentService {
     const existing = await this.requireInScope(actor, id);
     const dueDate =
       dto.dueDate !== undefined ? dateStringToDate(dto.dueDate) : undefined;
+    await this.scope.assertPeopleInProcess(existing.processId, [
+      dto.assignedUserId,
+      dto.responsibleUserId,
+    ]);
     // Solo se valida el acta si el compromiso se liga a OTRA acta: los
     // compromisos de un acta cerrada siguen editables (seguimiento).
     if (dto.sourceMeetingId && dto.sourceMeetingId !== existing.sourceMeetingId) {

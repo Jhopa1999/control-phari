@@ -8,9 +8,25 @@ import { Prisma } from '../../generated/prisma/client';
 import type { ProcessModel } from '../../generated/prisma/models/Process';
 import { AuditService } from '../audit/audit.service';
 import { CurrentActor } from '../auth/current-actor';
+import { TaskStatus } from '../plan/task-status';
+import { RequestState } from '../request/request-state';
 import { CreateProcessDto, ProcessKind } from './dto/create-process.dto';
 import { ListProcessesDto } from './dto/list-processes.dto';
 import { UpdateProcessDto } from './dto/update-process.dto';
+
+/** Estados de solicitud que ya no cuentan como trabajo abierto. */
+const CLOSED_REQUEST_STATES = [
+  RequestState.CERRADA,
+  RequestState.RECHAZADA,
+  RequestState.RETIRADA,
+] as const;
+
+/** Recuentos que se muestran al confirmar la desactivación de un proceso. */
+export interface ProcessDeactivationImpact {
+  activeAssignments: number;
+  openRequests: number;
+  openTasks: number;
+}
 
 @Injectable()
 export class ProcessService {
@@ -50,6 +66,37 @@ export class ProcessService {
       return {};
     }
     return { id: { in: Array.from(actor.scopedProcessIds) } };
+  }
+
+  /**
+   * Trabajo en curso de un proceso, con un `count` por tabla (sin cargar filas):
+   * asignaciones de capacidad del mes actual en adelante (UTC), solicitudes no
+   * eliminadas con ese proceso principal que no están cerradas, rechazadas ni
+   * retiradas, y tareas del proceso que no están terminadas.
+   */
+  private async deactivationImpact(
+    processId: string,
+    now: Date = new Date(),
+  ): Promise<ProcessDeactivationImpact> {
+    const monthStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    );
+    const [activeAssignments, openRequests, openTasks] = await Promise.all([
+      this.prisma.assignment.count({
+        where: { processId, month: { gte: monthStart } },
+      }),
+      this.prisma.request.count({
+        where: {
+          mainProcessId: processId,
+          deletedAt: null,
+          operationalState: { notIn: [...CLOSED_REQUEST_STATES] },
+        },
+      }),
+      this.prisma.task.count({
+        where: { processId, status: { not: TaskStatus.TERMINADA } },
+      }),
+    ]);
+    return { activeAssignments, openRequests, openTasks };
   }
 
   async findMany(
@@ -144,6 +191,20 @@ export class ProcessService {
       throw new NotFoundException('No se encontró el proceso.');
     }
 
+    // Desactivar un proceso activo con trabajo en curso exige confirmación
+    // explícita: el primer intento responde 409 con los recuentos.
+    if (dto.active === false && existing.active && dto.confirmDeactivation !== true) {
+      const impact = await this.deactivationImpact(id);
+      if (impact.activeAssignments + impact.openRequests + impact.openTasks > 0) {
+        throw new ConflictException({
+          statusCode: 409,
+          error: 'Conflict',
+          message: 'El proceso tiene trabajo en curso. Confirma la desactivación para continuar.',
+          requiresConfirmation: true,
+          ...impact,
+        });
+      }
+    }
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.process.update({
         where: { id },

@@ -20,7 +20,13 @@ function createMocks() {
       createMany: jest.fn(),
     },
     dailyLogSuggestionLink: { count: jest.fn().mockResolvedValue(0) },
-    user: { findMany: jest.fn() },
+    user: {
+      findMany: jest.fn(),
+      // Por defecto todas las personas existen y pertenecen al proceso.
+      count: jest.fn((args: { where: { id: { in: string[] } } }) =>
+        Promise.resolve(args.where.id.in.length),
+      ),
+    },
     grant: { findMany: jest.fn() },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>

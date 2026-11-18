@@ -25,7 +25,8 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   ),
 
   // Áreas y solicitantes
-  lectura('area.list', 'GET /areas', 'Lista las áreas de la organización (GET /areas).'),
+  lectura('area.list', 'GET /areas', 'Lista las áreas de la organización (GET /areas). Cada área trae processCount ' +
+      '(procesos activos) y requesterCount (solicitantes activos).'),
   lectura('area.get', 'GET /areas/{id}', 'Obtiene un área por id (GET /areas/{id}).'),
   lectura(
     'requester.list',

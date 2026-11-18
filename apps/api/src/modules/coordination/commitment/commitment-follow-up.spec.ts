@@ -71,7 +71,10 @@ function build() {
     },
     meeting: { findFirst: jest.fn() },
     request: { findFirst: jest.fn() },
-    user: { findMany: jest.fn().mockResolvedValue([]) },
+    user: {
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn((args: any) => Promise.resolve(args.where.id.in.length)),
+    },
     grant: { findMany: jest.fn().mockResolvedValue([]) },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaObj));

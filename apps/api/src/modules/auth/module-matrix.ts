@@ -103,8 +103,15 @@ export const MODULE_MATRIX: Record<ModuleKey, readonly RoleCode[]> = {
   // Actividades recurrentes: la OPERACION (ver "que me toca" y completar
   // ocurrencias) es de los 3 roles de area; la GESTION de definiciones la
   // acota el service a JEFE_AREA (su area) / ADMIN. La seccion web es visible
-  // para los 3 roles.
-  recurring: [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE],
+  // para los 3 roles de area y, desde la oleada 3 (D14), para ADMIN: el
+  // administrador entra directo a Gestion; `Que me toca` no le aplica porque no
+  // tiene grants ni es responsable de ocurrencias (su lista sale vacia).
+  recurring: [
+    RoleCode.ADMIN,
+    RoleCode.JEFE_AREA,
+    RoleCode.LIDER_PROCESO,
+    RoleCode.INTEGRANTE,
+  ],
 };
 
 /** Todas las claves de modulo, en orden de declaracion. */

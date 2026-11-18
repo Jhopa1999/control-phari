@@ -42,6 +42,7 @@ import {
   updateCatalogItem,
   type CatalogFilters,
 } from '@/lib/catalog';
+import { splitServerCodeErrors } from '@/lib/code-format';
 import { useActor } from '@/lib/actor-context';
 import { formatDateTime } from '@/lib/format';
 import { compareNumber, compareText, type Comparator } from '@/lib/table-sort';
@@ -95,6 +96,10 @@ export function CatalogsView(): React.ReactElement {
   const [editing, setEditing] = React.useState<CatalogItem | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [serverErrors, setServerErrors] = React.useState<{
+    catalog: string | null;
+    code: string | null;
+  }>({ catalog: null, code: null });
   const [togglingId, setTogglingId] = React.useState<string | null>(null);
 
   const buildFilters = React.useCallback((): CatalogFilters => {
@@ -144,12 +149,14 @@ export function CatalogsView(): React.ReactElement {
 
   function openCreate(): void {
     setEditing(null);
+    setServerErrors({ catalog: null, code: null });
     setFormError(null);
     setDialogOpen(true);
   }
 
   function openEdit(item: CatalogItem): void {
     setEditing(item);
+    setServerErrors({ catalog: null, code: null });
     setFormError(null);
     setDialogOpen(true);
   }
@@ -157,6 +164,7 @@ export function CatalogsView(): React.ReactElement {
   async function handleSubmit(values: CatalogFormValues): Promise<void> {
     setSubmitting(true);
     setFormError(null);
+    setServerErrors({ catalog: null, code: null });
     try {
       if (editing) {
         // Al editar se envían solo etiqueta, activo y orden.
@@ -182,10 +190,21 @@ export function CatalogsView(): React.ReactElement {
       setEditing(null);
       await load();
     } catch (err) {
-      // Fallo: el diálogo sigue abierto, con el error en línea y el toast.
+      // Fallo: el diálogo sigue abierto. Un 409 al crear o un mensaje de
+      // formato conocido marcan su campo (sin toast); el resto va al aviso del
+      // diálogo y al toast.
       const message = messageOf(err);
-      setFormError(message);
-      toast.error(message);
+      if (!editing && err instanceof CatalogError && err.status === 409) {
+        setServerErrors({ catalog: null, code: message });
+      } else if (!editing && err instanceof CatalogError && err.status === 400 && err.messages) {
+        const split = splitServerCodeErrors(err.messages);
+        setServerErrors({ catalog: split.catalog, code: split.code });
+        setFormError(split.rest.length > 0 ? split.rest.join(' ') : null);
+        if (!split.catalog && !split.code) toast.error(message);
+      } else {
+        setFormError(message);
+        toast.error(message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -409,6 +428,8 @@ export function CatalogsView(): React.ReactElement {
         editing={editing}
         submitting={submitting}
         errorMessage={formError}
+        serverErrors={serverErrors}
+        onFieldEdited={(field) => setServerErrors((prev) => ({ ...prev, [field]: null }))}
         onSubmit={(values) => void handleSubmit(values)}
       />
     </PageLayout>

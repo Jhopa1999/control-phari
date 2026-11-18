@@ -14,6 +14,8 @@ export class CatalogError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    /** Mensajes de validación del servidor (400), uno por regla incumplida. */
+    readonly messages?: readonly string[],
   ) {
     super(message);
     this.name = 'CatalogError';
@@ -41,6 +43,13 @@ function toCatalogError(status: number | undefined, body?: unknown): CatalogErro
     return new CatalogError(
       'No fue posible comunicarse con el servidor. Revisa tu conexión e inténtalo de nuevo.',
     );
+  }
+  if (status === 400 && typeof body === 'object' && body !== null) {
+    const raw = (body as { message?: unknown }).message;
+    const messages = (Array.isArray(raw) ? raw : [raw]).filter(
+      (m): m is string => typeof m === 'string' && m.trim() !== '',
+    );
+    if (messages.length > 0) return new CatalogError(messages[0], status, messages);
   }
   return new CatalogError(messageFromBody(body) ?? messageForStatus(status), status);
 }

@@ -956,6 +956,16 @@
         "docs/aplicacion/modulos-backend.md"
       ],
       "summary": "Oleada 3, PR-D: la etiqueta del objeto en GET /audit-events ignora los objectId que no son UUID (LOGIN_FAILED guarda el identificador escrito); antes una página con esos eventos respondía 500. Sin cambios de contrato ni de MCP."
+    },
+    {
+      "timestamp": "2026-11-18T14:02:07Z",
+      "trigger_file": "apps/api/src/modules/area/area.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md"
+      ],
+      "summary": "Oleada 3, PR-E (módulos puntuales): formato de códigos de áreas, procesos y maestras (^[A-Z0-9_]+$, máximo 40, solo al crear, 400 en español); áreas con processCount/requesterCount y 409 al desactivar con procesos activos; procesos piden confirmDeactivation con recuentos (409 requiresConfirmation); compromisos y reuniones validan asignado/responsable (400 en lugar de 500); recurring incluye a ADMIN (abre en Gestión); Indicadores avisa del periodo invertido y conserva las cifras. Contrato y api-client regenerados; MCP: descripciones de area.list, process.create/update y catalog.create; sin cambios de esquema."
     }
   ]
 }

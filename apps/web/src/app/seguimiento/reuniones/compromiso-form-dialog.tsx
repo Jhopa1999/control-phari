@@ -30,6 +30,7 @@ import type {
   Process,
 } from '@/lib/api-client';
 import { formatDateOnly, localDateInputValue } from '@/lib/format';
+import { usePersonError } from '@/lib/use-person-error';
 
 export interface CompromisoFormValues {
   processId: string;
@@ -108,6 +109,16 @@ export function CompromisoFormDialog({
   const processRef = React.useRef<HTMLButtonElement>(null);
   const titleRef = React.useRef<HTMLInputElement>(null);
   const dueRef = React.useRef<HTMLInputElement>(null);
+  const assignedRef = React.useRef<HTMLButtonElement>(null);
+  const responsibleRef = React.useRef<HTMLButtonElement>(null);
+  // «La persona indicada…» (4.3): error junto al selector que se envió y foco en él.
+  const person = usePersonError(errorMessage);
+  const hasPersonError = person.personError !== null;
+  React.useEffect(() => {
+    if (!open || !hasPersonError) return;
+    if (assignedUserId) assignedRef.current?.focus();
+    else responsibleRef.current?.focus();
+  }, [open, hasPersonError, assignedUserId]);
   // Sin DialogTrigger, Radix no sabe a dónde devolver el foco al cerrar: vuelve
   // al botón que abrió el diálogo («Nuevo compromiso» o «Editar»), NIT 4.
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
@@ -254,13 +265,20 @@ export function CompromisoFormDialog({
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="com-assigned" label="Asignado">
+              <Field
+                id="com-assigned"
+                label="Asignado"
+                error={assignedUserId ? person.personError : null}
+              >
                 {(control) => (
                   <Select
                     value={assignedUserId || SIN_VALOR}
-                    onValueChange={(v) => setAssignedUserId(v === SIN_VALOR ? '' : v)}
+                    onValueChange={(v) => {
+                      setAssignedUserId(v === SIN_VALOR ? '' : v);
+                      person.dismiss();
+                    }}
                   >
-                    <SelectTrigger {...control}>
+                    <SelectTrigger ref={assignedRef} {...control}>
                       <SelectValue placeholder="Sin asignar" />
                     </SelectTrigger>
                     <SelectContent>
@@ -274,13 +292,20 @@ export function CompromisoFormDialog({
                   </Select>
                 )}
               </Field>
-              <Field id="com-responsible" label="Responsable">
+              <Field
+                id="com-responsible"
+                label="Responsable"
+                error={responsibleUserId ? person.personError : null}
+              >
                 {(control) => (
                   <Select
                     value={responsibleUserId || SIN_VALOR}
-                    onValueChange={(v) => setResponsibleUserId(v === SIN_VALOR ? '' : v)}
+                    onValueChange={(v) => {
+                      setResponsibleUserId(v === SIN_VALOR ? '' : v);
+                      person.dismiss();
+                    }}
                   >
-                    <SelectTrigger {...control}>
+                    <SelectTrigger ref={responsibleRef} {...control}>
                       <SelectValue placeholder="Sin responsable" />
                     </SelectTrigger>
                     <SelectContent>
@@ -339,7 +364,7 @@ export function CompromisoFormDialog({
               <Textarea value={blockers} onChange={(e) => setBlockers(e.target.value)} />
             </Field>
 
-            <FormError id={FORM_ID} message={errorMessage} />
+            <FormError id={FORM_ID} message={person.formMessage} />
           </DialogBody>
 
           <DialogFooter>

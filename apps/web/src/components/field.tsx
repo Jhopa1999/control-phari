@@ -20,8 +20,11 @@ import { cn } from '@/lib/utils';
  *   que incumplen la regla, nunca en los que ya están bien. Con children como
  *   elemento, Field conserva el aria-describedby y el aria-invalid propios del
  *   control; con children como función, la vista los añade a las props.
- * - Los errores del backend no marcan campos: van en FormError y se conserva
- *   el toast.
+ * - Errores del backend: por regla general no marcan campos; van en FormError y
+ *   se conserva el toast. Excepción (oleada 3): los mensajes de formato de
+ *   código y catálogo (lib/code-format.ts), el duplicado de código al crear y
+ *   «La persona indicada…» (4.3) se reconocen por texto exacto y van en el
+ *   `error` del campo, sin toast.
  */
 
 /** Props que Field pasa al control. */

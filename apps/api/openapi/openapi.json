@@ -618,13 +618,13 @@
             }
           },
           "400": {
-            "description": "Datos de entrada invalidos."
+            "description": "Código con formato inválido (solo letras mayúsculas, números y guion bajo; máximo 40).\n\nDatos de entrada invalidos."
           },
           "403": {
             "description": "Rol insuficiente."
           },
           "409": {
-            "description": "Ya existe el code."
+            "description": "Ya existe un área con ese código."
           }
         },
         "summary": "Crea un area (ADMIN o JEFE_AREA).",
@@ -709,6 +709,9 @@
           },
           "404": {
             "description": "Area no encontrada."
+          },
+          "409": {
+            "description": "No se puede desactivar el área: tiene procesos activos (el mensaje indica cuántos)."
           }
         },
         "summary": "Edita name/active/sortOrder (ADMIN o JEFE_AREA).",
@@ -3104,7 +3107,7 @@
             }
           },
           "400": {
-            "description": "Datos de entrada invalidos."
+            "description": "Código con formato inválido (solo letras mayúsculas, números y guion bajo; máximo 40).\n\nDatos de entrada invalidos."
           },
           "403": {
             "description": "Rol insuficiente."
@@ -3195,6 +3198,9 @@
           },
           "404": {
             "description": "Proceso no encontrado."
+          },
+          "409": {
+            "description": "El proceso tiene trabajo en curso y falta confirmar: el cuerpo trae requiresConfirmation, activeAssignments, openRequests y openTasks. Reintenta con confirmDeactivation: true."
           }
         },
         "summary": "Edita name/framework/active/sortOrder (ADMIN o JEFE_AREA).",
@@ -11402,15 +11408,17 @@
         "properties": {
           "catalog": {
             "type": "string",
-            "description": "Maestra a la que pertenece la opcion (se normaliza a MAYUSCULAS).",
+            "description": "Maestra a la que pertenece la opción. Se normaliza a mayúsculas; solo admite letras mayúsculas, números y guion bajo (máximo 40 caracteres).",
             "example": "PRIORITY",
-            "maxLength": 100
+            "maxLength": 40,
+            "pattern": "^[A-Z0-9_]+$"
           },
           "code": {
             "type": "string",
-            "description": "Codigo estable de la opcion dentro del catalogo (se normaliza a MAYUSCULAS).",
+            "description": "Código estable de la opción dentro del catálogo. Se normaliza a mayúsculas; solo admite letras mayúsculas, números y guion bajo (máximo 40 caracteres).",
             "example": "HIGH",
-            "maxLength": 100
+            "maxLength": 40,
+            "pattern": "^[A-Z0-9_]+$"
           },
           "label": {
             "type": "string",
@@ -11562,6 +11570,16 @@
             "description": "Orden de presentacion.",
             "example": 1
           },
+          "processCount": {
+            "type": "number",
+            "description": "Procesos activos del área (los inactivos no cuentan). Si es mayor que 0, el área no se puede desactivar.",
+            "example": 3
+          },
+          "requesterCount": {
+            "type": "number",
+            "description": "Solicitantes activos del área.",
+            "example": 12
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -11579,6 +11597,8 @@
           "name",
           "active",
           "sortOrder",
+          "processCount",
+          "requesterCount",
           "createdAt",
           "updatedAt"
         ]
@@ -11588,9 +11608,10 @@
         "properties": {
           "code": {
             "type": "string",
-            "description": "Codigo estable del area (se normaliza a MAYUSCULAS).",
+            "description": "Código estable del área. Se normaliza a mayúsculas; solo admite letras mayúsculas, números y guion bajo (máximo 40 caracteres).",
             "example": "ANALITICA",
-            "maxLength": 50
+            "maxLength": 40,
+            "pattern": "^[A-Z0-9_]+$"
           },
           "name": {
             "type": "string",
@@ -13582,9 +13603,10 @@
         "properties": {
           "code": {
             "type": "string",
-            "description": "Codigo estable del proceso (se normaliza a MAYUSCULAS).",
+            "description": "Código estable del proceso. Se normaliza a mayúsculas; solo admite letras mayúsculas, números y guion bajo (máximo 40 caracteres).",
             "example": "FIBI",
-            "maxLength": 50
+            "maxLength": 40,
+            "pattern": "^[A-Z0-9_]+$"
           },
           "name": {
             "type": "string",
@@ -13641,6 +13663,10 @@
           "active": {
             "type": "boolean",
             "description": "Estado activo del proceso."
+          },
+          "confirmDeactivation": {
+            "type": "boolean",
+            "description": "Confirma la desactivación de un proceso con trabajo en curso (asignaciones del mes actual en adelante, solicitudes abiertas o tareas sin terminar). Sin esta confirmación la API responde 409 con los recuentos."
           },
           "sortOrder": {
             "type": "number",

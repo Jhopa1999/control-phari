@@ -106,8 +106,23 @@ import {
   postLoginPath,
   safeInternalPath,
 } from '../apps/web/src/lib/safe-redirect';
-import { messageForStatus, parseRetryAfter } from '../apps/web/src/lib/api-error';
+import {
+  apiFormErrorFrom,
+  messageForStatus,
+  parseRetryAfter,
+} from '../apps/web/src/lib/api-error';
 import { AUDIT_OBJECT_CODE_PATTERN, isAuditObjectCode } from '../apps/web/src/lib/visible-code';
+import {
+  CATALOG_ERRORS,
+  CODE_ERRORS,
+  normalizeCodeInput,
+  splitServerCodeErrors,
+  validateCatalogName,
+  validateCode,
+} from '../apps/web/src/lib/code-format';
+import { PERSON_NOT_IN_PROCESS_MESSAGE } from '../apps/web/src/lib/use-person-error';
+import { areaDeactivationBlockReason } from '../apps/web/src/app/administracion/areas/area-blocking';
+import { impactFromError, impactLines } from '../apps/web/src/app/administracion/procesos/deactivation-impact';
 import { countdownLabel, waitLabel } from '../apps/web/src/lib/wait-label';
 import {
   getStatus,
@@ -1929,5 +1944,126 @@ test.describe('IDs visibles de activos y documentos (oleada 3, PR-D)', () => {
     for (const bad of ['', 'PRY-12', 'ACT-7', 'ACT-0007-T01', 'DOC-0003-F1', 'T07', 'XYZ-0001', 'ACT 0007']) {
       expect(isAuditObjectCode(bad), bad).toBe(false);
     }
+  });
+});
+
+// --- Oleada 3 · PR-E: formato de códigos, bloqueo de áreas y confirmación de procesos ---
+
+test.describe('code-format (oleada 3, PR-E)', () => {
+  test('normaliza a mayúsculas y recorta', () => {
+    expect(normalizeCodeInput('  analitica ')).toBe('ANALITICA');
+  });
+
+  test('acepta letras mayúsculas, números y guion bajo (también minúsculas, que se normalizan)', () => {
+    for (const value of ['ANALITICA', 'fibi_2', 'A', '2026_Q1', 'X'.repeat(40)]) {
+      expect(validateCode(value), value).toBeNull();
+    }
+  });
+
+  test('rechaza espacios, guiones, tildes y signos con el texto del formato', () => {
+    for (const value of ['mal codigo', 'MAL-CODIGO', 'ANALÍTICA', 'COD.1', 'ÑANDÚ']) {
+      expect(validateCode(value), value).toBe(CODE_ERRORS.format);
+    }
+  });
+
+  test('vacío y longitud tienen su propio texto; el catálogo, los suyos', () => {
+    expect(validateCode('   ')).toBe(CODE_ERRORS.required);
+    expect(validateCode('X'.repeat(41))).toBe(CODE_ERRORS.maxLength);
+    expect(validateCatalogName('')).toBe(CATALOG_ERRORS.required);
+    expect(validateCatalogName('mi catalogo')).toBe(CATALOG_ERRORS.format);
+    expect(validateCatalogName('C'.repeat(41))).toBe(CATALOG_ERRORS.maxLength);
+    expect(validateCatalogName('fase_proyecto')).toBeNull();
+  });
+
+  test('los textos son los de la API', async () => {
+    const { CODE_MESSAGES } = await import('../apps/api/src/common/code-format/code-format');
+    expect(CODE_ERRORS).toEqual(CODE_MESSAGES.code);
+    expect(CATALOG_ERRORS).toEqual(CODE_MESSAGES.catalog);
+  });
+
+  test('reparte los mensajes del servidor por texto exacto y deja el resto', () => {
+    const split = splitServerCodeErrors([
+      CATALOG_ERRORS.format,
+      CODE_ERRORS.maxLength,
+      'label should not be empty',
+    ]);
+    expect(split).toEqual({
+      code: CODE_ERRORS.maxLength,
+      catalog: CATALOG_ERRORS.format,
+      rest: ['label should not be empty'],
+    });
+  });
+
+  test('un texto parecido no marca el campo (no se interpreta texto libre)', () => {
+    expect(splitServerCodeErrors(['El código es inválido.']).code).toBeNull();
+  });
+});
+
+test.describe('apiFormErrorFrom (oleada 3, PR-E)', () => {
+  test('conserva todos los mensajes de un 400 y el primero como texto', () => {
+    const error = apiFormErrorFrom(400, { message: ['uno', 'dos'] });
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.message).toBe('uno');
+    expect(error.messages).toEqual(['uno', 'dos']);
+    expect(error.status).toBe(400);
+  });
+
+  test('en un 409 conserva el cuerpo (requiresConfirmation y recuentos)', () => {
+    const error = apiFormErrorFrom(409, { message: 'Confirma.', requiresConfirmation: true, openTasks: 2 });
+    expect(error.body).toMatchObject({ requiresConfirmation: true, openTasks: 2 });
+  });
+
+  test('sin mensaje del servidor cae al mensaje por estado; con otro estado usa el del servidor', () => {
+    expect(apiFormErrorFrom(400, null).message).toBe(messageForStatus(400));
+    expect(apiFormErrorFrom(500, { message: 'interno' }).message).toBe('interno');
+    expect(apiFormErrorFrom(500, {}).message).toBe(messageForStatus(500));
+    expect(apiFormErrorFrom(undefined, undefined).status).toBeUndefined();
+  });
+});
+
+test.describe('áreas: motivo del bloqueo y recuentos de procesos (oleada 3, PR-E)', () => {
+  test('con procesos activos el motivo trae el número, con singular y plural', () => {
+    expect(areaDeactivationBlockReason({ active: true, processCount: 3 })).toBe(
+      'No se puede desactivar el área: tiene 3 procesos activos. Desactiva o reasigna esos procesos primero.',
+    );
+    expect(areaDeactivationBlockReason({ active: true, processCount: 1 })).toContain(
+      'tiene 1 proceso activo.',
+    );
+  });
+
+  test('sin procesos activos o con el área inactiva no hay bloqueo', () => {
+    expect(areaDeactivationBlockReason({ active: true, processCount: 0 })).toBeNull();
+    expect(areaDeactivationBlockReason({ active: false, processCount: 4 })).toBeNull();
+  });
+
+  test('el impacto de desactivar un proceso solo lista los recuentos mayores que cero', () => {
+    expect(impactLines({ activeAssignments: 1, openRequests: 0, openTasks: 3 })).toEqual([
+      '1 asignación activa',
+      '3 tareas sin cerrar',
+    ]);
+    expect(impactLines({ activeAssignments: 2, openRequests: 1, openTasks: 1 })).toEqual([
+      '2 asignaciones activas',
+      '1 solicitud abierta',
+      '1 tarea sin cerrar',
+    ]);
+  });
+
+  test('impactFromError solo reconoce el 409 con requiresConfirmation', () => {
+    const confirm = apiFormErrorFrom(409, {
+      message: 'Confirma.',
+      requiresConfirmation: true,
+      activeAssignments: 2,
+      openRequests: 'x',
+    });
+    expect(impactFromError(confirm)).toEqual({ activeAssignments: 2, openRequests: 0, openTasks: 0 });
+    expect(impactFromError(apiFormErrorFrom(409, { message: 'Otro conflicto.' }))).toBeNull();
+    expect(impactFromError(new Error('red'))).toBeNull();
+  });
+
+  test('el texto de persona fuera de alcance es el de la API', async () => {
+    const { PERSON_NOT_IN_PROCESS_MESSAGE: apiMessage } = await import(
+      '../apps/api/src/modules/coordination/coordination-scope.service'
+    );
+    expect(PERSON_NOT_IN_PROCESS_MESSAGE).toBe(apiMessage);
   });
 });
