@@ -404,6 +404,9 @@ Activo genérico, compartido y gobernado. `processId` es el proceso propietario/
 frecuencia) se retiraron del modelo: pertenecen a cada solicitud, no al activo. Sin
 borrado físico: retiro = cambio de estado. La escritura (crear/editar/cambiar estado)
 está reservada al jefe de área.
+- ID visible (solo lectura, no se reutiliza): `number` (entero, único, de la secuencia
+  `assets_number_seq`; `@default(autoincrement())`). El código `ACT-0007` **no se guarda**:
+  se calcula con `formatAssetCode` (4 dígitos mínimo) al mapear el DTO.
 - Campos clave: `processId` (propietario), `requestId?`, `ownerUserId?`, `name`,
   `status` (default `BORRADOR`), `documentationRef?`, `generalDescription?` (descripción
   general del activo), `dependencies?`.
@@ -425,6 +428,9 @@ visible. Solo el jefe de área define este conjunto al crear/editar el activo.
 ### Document (`documents`)
 Metadatos de un documento Markdown; FK requerida al activo. El contenido vive en las
 versiones.
+- ID visible (solo lectura, no se reutiliza): `number` (entero, único, de la secuencia
+  `documents_number_seq`; `@default(autoincrement())`). El código `DOC-0012` no se
+  guarda: se calcula con `formatDocumentCode`.
 - Campos clave: `assetId`, `title`, `categoryCode?`, `status` (default `BORRADOR`),
   `currentVersionId?` (apunta a la última versión).
 - Aprobación documental: `submittedAt?`/`submittedByUserId?` (envío a aprobación),
@@ -657,3 +663,23 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     `FORGOT_MAX_ATTEMPTS = 3`, `FORGOT_WINDOW_MINUTES = 60`; `ON CONFLICT DO NOTHING`, no pisa ediciones
     de Maestras.)
 52. `20261117100000_triage_decision_reason` (aditiva e idempotente: `ALTER TABLE triages ADD COLUMN IF NOT EXISTS decision_reason TEXT`; sin backfill.)
+    (la migración `20261118120000_gc5_refleja_cierre_formal` no se detalla aquí)
+53. `20261118140000_activos_documentos_codigo_visible` (oleada 3, PR-D; aditiva e
+    idempotente: crea las secuencias `assets_number_seq` y `documents_number_seq` y la
+    columna `number` en `assets` y `documents`; rellena SOLO las filas sin número, en orden
+    determinista `created_at, id` y a continuación del máximo existente; lleva la secuencia
+    al máximo **sin bajarla nunca** (no reutiliza números); recién entonces pone `DEFAULT
+    nextval`, `NOT NULL`, `OWNED BY` e índice único `assets_number_key`/`documents_number_key`.
+    Reejecutarla no cambia nada. No añade parámetros ni variables de entorno. Ensayada sobre
+    una copia de la BD de desarrollo (1 135 activos y 122 documentos): aplicada dos veces
+    seguidas (huella md5 de `id:number` idéntica), numeración 1..N sin huecos ni repetidos
+    y en orden de `created_at`, el siguiente `INSERT` toma N+1, sobre una BD vacía aplica
+    toda la cadena y `prisma migrate diff` no encuentra deriva con `schema.prisma`.
+    Consulta de verificación (antes y después del despliegue):
+    `scripts/verificar-ids-activos-documentos.sql`.
+    **Rollback** (solo si aún no se citan los códigos fuera del portal):
+    `DROP INDEX assets_number_key, documents_number_key;`
+    `ALTER TABLE assets DROP COLUMN number; ALTER TABLE documents DROP COLUMN number;`
+    `DROP SEQUENCE IF EXISTS assets_number_seq, documents_number_seq;` y quitar la fila de
+    `_prisma_migrations`; el código anterior sigue funcionando sin las columnas. Antes de
+    desplegar, respaldar con `pg_dump`.)

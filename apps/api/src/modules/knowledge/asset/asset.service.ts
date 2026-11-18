@@ -9,6 +9,7 @@ import { Prisma } from '../../../generated/prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { readableRequestIds } from '../../request/request-scope.service';
+import { formatAssetCode } from '../../plan/visible-code';
 import { KnowledgeScopeService } from '../knowledge-scope.service';
 import { AssetStateService } from './asset-state.service';
 import { AssetStatus } from './asset-status';
@@ -83,6 +84,7 @@ export class AssetService {
   ): AssetResponseDto {
     return {
       id: row.id,
+      code: formatAssetCode(row.number),
       processId: row.processId,
       requestId: row.requestId,
       ownerUserId: row.ownerUserId,
@@ -99,6 +101,8 @@ export class AssetService {
       // nombra («No disponible» en la web).
       requestCode: originRequest(row, readable)?.code ?? null,
       requestTitle: originRequest(row, readable)?.title ?? null,
+      requestsCount: row._count.requestsAssociated,
+      documentsCount: row._count.documents,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -231,7 +235,15 @@ export class AssetService {
     }
     const q = normalizeSearch(filters.q);
     if (q !== undefined) {
-      and.push({ name: { contains: q, mode: 'insensitive' } });
+      // El texto coincide con el nombre o, si parece un código (ACT-0007, act-7, 7),
+      // con el número del activo.
+      const byNumber = /^(?:act-?)?(\d{1,9})$/i.exec(q);
+      and.push({
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          ...(byNumber ? [{ number: Number(byNumber[1]) }] : []),
+        ],
+      });
     }
 
     const window = resolveLegacyTakeWindow(filters);
@@ -274,6 +286,7 @@ export class AssetService {
       orderBy: [{ registeredAt: 'desc' }, { createdAt: 'desc' }],
       select: {
         id: true,
+        code: true,
         title: true,
         registeredAt: true,
         operationalState: true,
@@ -282,6 +295,7 @@ export class AssetService {
     });
     return rows.map((row) => ({
       id: row.id,
+      code: row.code,
       title: row.title,
       registeredAt: row.registeredAt,
       operationalState: row.operationalState,
@@ -481,6 +495,13 @@ const ASSET_INCLUDE = {
   process: { select: { code: true, name: true } },
   owner: { select: { name: true } },
   request: { select: { code: true, title: true, deletedAt: true } },
+  // Dependientes del retiro, en la misma consulta (sin N+1).
+  _count: {
+    select: {
+      requestsAssociated: { where: { deletedAt: null } },
+      documents: true,
+    },
+  },
 } satisfies Prisma.AssetInclude;
 
 /** Payload de Asset con la relacion de visibilidad (sin `any`, MEDIUM-C). */

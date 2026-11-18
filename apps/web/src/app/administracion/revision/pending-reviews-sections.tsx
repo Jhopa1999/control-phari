@@ -6,6 +6,7 @@ import { FileCheck2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { CellTitle } from '@/components/data-table';
 import { IdChip } from '@/components/id-chip';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { ReasonDialog } from '@/components/reason-dialog';
 import { RowActions, RowActionsCell } from '@/components/row-actions';
@@ -23,6 +24,7 @@ import type { Document, PendingClosure } from '@/lib/api-client';
 import { ApiError, decideClosure, listPendingClosures } from '@/lib/closure';
 import { DocumentError, listPendingDocuments, reviewDocument } from '@/lib/documents';
 import { formatDateTime } from '@/lib/format';
+import { getStatus } from '@/lib/status-presentation';
 
 type LoadState = 'loading' | 'success' | 'error';
 
@@ -31,6 +33,10 @@ function messageOf(err: unknown): string {
   return 'Ocurrió un error inesperado.';
 }
 
+/** Aprobación pendiente de confirmar (criterio común, oleada 3 PR-D). */
+type Approving =
+  | { kind: 'document'; id: string; title: string; code?: string | null; targetLabel: string }
+  | { kind: 'closure'; id: string; busyId: string; title: string; code?: string | null };
 type Rejecting =
   | { kind: 'document'; id: string; title: string }
   | { kind: 'closure'; id: string; title: string };
@@ -53,6 +59,7 @@ export function PendingReviewsSections(): React.ReactElement | null {
   const [docState, setDocState] = React.useState<LoadState>('loading');
   const [closureState, setClosureState] = React.useState<LoadState>('loading');
   const [actingId, setActingId] = React.useState<string | null>(null);
+  const [approving, setApproving] = React.useState<Approving | null>(null);
   const [rejecting, setRejecting] = React.useState<Rejecting | null>(null);
   const [rejectError, setRejectError] = React.useState<string | null>(null);
 
@@ -157,11 +164,13 @@ export function PendingReviewsSections(): React.ReactElement | null {
                             busy: actingId === doc.id,
                             busyLabel: 'Aprobando…',
                             onSelect: () =>
-                              void act(
-                                doc.id,
-                                () => reviewDocument(doc.id, { decision: 'APROBAR' }),
-                                'Documento aprobado.',
-                              ),
+                              setApproving({
+                                kind: 'document',
+                                id: doc.id,
+                                title: doc.title,
+                                code: doc.code,
+                                targetLabel: getStatus('document', 'VIGENTE').label,
+                              }),
                           },
                           {
                             key: 'reject',
@@ -237,11 +246,13 @@ export function PendingReviewsSections(): React.ReactElement | null {
                             busy: actingId === c.closureId,
                             busyLabel: 'Aprobando…',
                             onSelect: () =>
-                              void act(
-                                c.closureId,
-                                () => decideClosure(c.requestId, { decision: 'APROBAR' }),
-                                'Cierre aprobado. El proyecto quedó cerrado.',
-                              ),
+                              setApproving({
+                                kind: 'closure',
+                                id: c.requestId,
+                                busyId: c.closureId,
+                                title: c.requestTitle,
+                                code: c.requestCode,
+                              }),
                           },
                           {
                             key: 'reject',
@@ -266,6 +277,51 @@ export function PendingReviewsSections(): React.ReactElement | null {
         </DataView>
       </Section>
 
+      <ConfirmDialog
+        open={approving !== null}
+        onOpenChange={(open) => {
+          if (!open) setApproving(null);
+        }}
+        title={
+          approving?.kind === 'closure'
+            ? `¿Aprobar el cierre de ${approving.code ?? `«${approving.title}»`}?`
+            : `¿Aprobar «${approving?.title ?? ''}»?`
+        }
+        description={
+          approving?.kind === 'closure'
+            ? 'El proyecto quedará cerrado. Si hace falta, se puede reabrir con un motivo.'
+            : `El documento pasará a ${approving?.kind === 'document' ? approving.targetLabel : ''}.`
+        }
+        confirmLabel={approving?.kind === 'closure' ? 'Aprobar cierre' : 'Aprobar documento'}
+        tone="default"
+        returnFocusTo={() => document.querySelector<HTMLElement>('h1')}
+        onConfirm={async () => {
+          if (!approving) return;
+          const target = approving;
+          await act(
+            target.kind === 'closure' ? target.busyId : target.id,
+            () =>
+              target.kind === 'document'
+                ? reviewDocument(target.id, { decision: 'APROBAR' })
+                : decideClosure(target.id, { decision: 'APROBAR' }),
+            target.kind === 'document'
+              ? 'Documento aprobado.'
+              : 'Cierre aprobado. El proyecto quedó cerrado.',
+          );
+        }}
+      >
+        {approving ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 rounded-lg bg-muted/40 p-3 text-sm dark:ring-1 dark:ring-inset dark:ring-border">
+            <dt className="text-muted-foreground">
+              {approving.kind === 'closure' ? 'Proyecto' : 'Documento'}
+            </dt>
+            <dd className="flex flex-wrap items-center gap-2 text-foreground wrap-break-word">
+              <IdChip code={approving.code} copyable={false} />
+              <span>{approving.title}</span>
+            </dd>
+          </dl>
+        ) : null}
+      </ConfirmDialog>
       <ReasonDialog
         open={rejecting !== null}
         onOpenChange={(open) => {

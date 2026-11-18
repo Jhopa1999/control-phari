@@ -245,8 +245,18 @@ export function DocumentoEditorDialog({
                     </SelectTrigger>
                     <SelectContent>
                       {assets.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.name}
+                        <SelectItem
+                          key={a.id}
+                          value={a.id}
+                          textValue={`${a.code ?? ''} ${a.name}`.trim()}
+                        >
+                          {a.code ? (
+                            <span className="font-mono text-xs tabular-nums">{a.code}</span>
+                          ) : null}
+                          <span>
+                            {a.code ? ' · ' : ''}
+                            {a.name}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>

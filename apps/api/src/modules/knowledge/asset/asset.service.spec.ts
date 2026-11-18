@@ -124,6 +124,7 @@ const now = new Date('2025-03-10T00:00:00.000Z');
 function assetRow(overrides: Record<string, unknown> = {}) {
   return {
     id: 'a1',
+    number: 7,
     processId: 'p1',
     requestId: null,
     ownerUserId: null,
@@ -136,6 +137,7 @@ function assetRow(overrides: Record<string, unknown> = {}) {
     process: { code: 'BI', name: 'Inteligencia de Negocio' },
     owner: null as { name: string } | null,
     request: null as { code: string; title: string; deletedAt: Date | null } | null,
+    _count: { requestsAssociated: 0, documents: 0 },
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -451,6 +453,7 @@ describe('AssetService', () => {
       m.prismaObj.request.findMany.mockResolvedValue([
         {
           id: 'r2',
+          code: 'PRY-0002',
           title: 'Modelo analitico',
           registeredAt: new Date('2025-03-02T00:00:00.000Z'),
           operationalState: 'EN_TRIAGE',
@@ -473,6 +476,7 @@ describe('AssetService', () => {
       });
       expect(res.map((r) => r.id)).toEqual(['r2', 'r1']);
       expect(res[0].operationalState).toBe('EN_TRIAGE');
+      expect(res[0].code).toBe('PRY-0002');
     });
   });
 
@@ -598,6 +602,18 @@ describe('AssetService', () => {
       expect(result.truncated).toBe(true);
     });
 
+    it('q con forma de código busca también por número (ACT-0007, act-7, 7)', async () => {
+      m.prismaObj.asset.findMany.mockResolvedValue([]);
+      m.prismaObj.asset.count.mockResolvedValue(0);
+      for (const q of ['ACT-0007', 'act-7', '7']) {
+        m.prismaObj.asset.findMany.mockClear();
+        await m.service.list(lider(), { q } as any);
+        const and = m.prismaObj.asset.findMany.mock.calls[0][0].where.AND;
+        expect(and).toContainEqual({
+          OR: [{ name: { contains: q, mode: 'insensitive' } }, { number: 7 }],
+        });
+      }
+    });
     it('page/pageSize, q por nombre, orden y total del alcance filtrado', async () => {
       m.prismaObj.asset.findMany.mockResolvedValue([assetRow()]);
       m.prismaObj.asset.count.mockResolvedValue(42);
@@ -614,7 +630,7 @@ describe('AssetService', () => {
       expect(call.take).toBe(10);
       expect(call.orderBy).toEqual([{ name: 'asc' }, { id: 'asc' }]);
       expect(call.where.AND).toContainEqual({
-        name: { contains: 'tablero', mode: 'insensitive' },
+        OR: [{ name: { contains: 'tablero', mode: 'insensitive' } }],
       });
       // El count usa el mismo where (alcance incluido): el total no se sale del alcance.
       const countWhere = m.prismaObj.asset.count.mock.calls[0][0].where;

@@ -12,6 +12,10 @@ export const AUDIT_SPECS: ReadonlyArray<ToolSpec> = [
       'REVOKE, LOGIN_FAILED para fallos de inicio de sesión y ' +
       'PASSWORD_RESET_THROTTLED para solicitudes de contraseña bloqueadas por ' +
       'límite); page ' +
-      '(desde 1) y pageSize (1..100) paginan el resultado.',
+      '(desde 1) y pageSize (1..100) paginan el resultado. objectCode filtra por ' +
+      'el código visible del objeto (PRY-0012, PRY-0012-F2, PRY-0012-T07, ' +
+      'ACT-0007, DOC-0003); un código inexistente devuelve la lista vacía. Cada ' +
+      'evento trae objectCode y objectLabel (código y nombre del objeto; nulos ' +
+      'si no aplica o ya no existe).',
   },
 ];

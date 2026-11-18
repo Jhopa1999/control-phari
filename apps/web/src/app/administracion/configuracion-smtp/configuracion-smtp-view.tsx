@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Switch } from '@/components/ui/switch';
 import {
   Table,
@@ -91,6 +92,11 @@ export function ConfiguracionSmtpView(): React.ReactElement {
   // Administradores del sistema.
   const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>([]);
   const [togglingId, setTogglingId] = React.useState<string | null>(null);
+  // Dar o quitar el rol de administrador cambia el acceso: pide confirmación (PR-D).
+  // El Switch es controlado: no cambia hasta confirmar; cancelar lo deja como estaba.
+  const [adminChange, setAdminChange] = React.useState<{ user: AdminUser; next: boolean } | null>(
+    null,
+  );
   const fillForm = React.useCallback((c: SmtpConfig) => {
     setHost(c.host ?? '');
     setPort(c.port !== null ? String(c.port) : '');
@@ -520,7 +526,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                         <Switch
                           checked={user.isAdmin}
                           disabled={togglingId !== null}
-                          onCheckedChange={(next) => void handleToggleAdmin(user, next)}
+                          onCheckedChange={(next) => setAdminChange({ user, next })}
                           aria-label={`Administrador: ${user.name}`}
                         />
                       </div>
@@ -531,6 +537,27 @@ export function ConfiguracionSmtpView(): React.ReactElement {
             </Table>
           </div>
         </Section>
+        <ConfirmDialog
+          open={adminChange !== null}
+          onOpenChange={(open) => {
+            if (!open) setAdminChange(null);
+          }}
+          title={
+            adminChange?.next
+              ? `¿Dar el rol de administrador a ${adminChange.user.name}?`
+              : `¿Quitar el rol de administrador a ${adminChange?.user.name ?? ''}?`
+          }
+          description={
+            adminChange?.next
+              ? `${adminChange.user.name} podrá cambiar la configuración técnica del portal: correo, áreas, procesos, solicitantes e IA. El cambio se aplica de inmediato.`
+              : `${adminChange?.user.name ?? ''} dejará de poder cambiar la configuración técnica del portal. Puedes darle el rol de nuevo. No se puede quitar al último administrador activo.`
+          }
+          confirmLabel={adminChange?.next ? 'Dar rol de administrador' : 'Quitar rol'}
+          tone={adminChange?.next ? 'default' : 'danger'}
+          onConfirm={async () => {
+            if (adminChange) await handleToggleAdmin(adminChange.user, adminChange.next);
+          }}
+        />
       </>
     );
   }

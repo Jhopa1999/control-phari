@@ -9,6 +9,12 @@ import { ApiProperty } from '@nestjs/swagger';
 export class AssetResponseDto {
   @ApiProperty({ type: String, format: 'uuid' })
   id!: string;
+  @ApiProperty({
+    type: String,
+    example: 'ACT-0007',
+    description: 'ID visible del activo (solo lectura, asignado por el sistema, nunca se reutiliza).',
+  })
+  code!: string;
 
   @ApiProperty({ type: String, format: 'uuid', description: 'Proceso propietario del activo.' })
   processId!: string;
@@ -65,6 +71,13 @@ export class AssetResponseDto {
   })
   requestTitle!: string | null;
 
+  @ApiProperty({
+    type: Number,
+    description: 'Solicitudes no eliminadas que tienen este activo como base (dependientes del retiro).',
+  })
+  requestsCount!: number;
+  @ApiProperty({ type: Number, description: 'Documentos del activo (dependientes del retiro).' })
+  documentsCount!: number;
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt!: Date;
 

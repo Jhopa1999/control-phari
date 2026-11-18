@@ -136,3 +136,57 @@ export function codeSearchConditions(
   }
   return conditions;
 }
+
+/**
+ * IDs visibles de activos y documentos (oleada 3, PR-D). Igual que el de la
+ * solicitud, solo se guarda el número (secuencia de Postgres) y el código se
+ * calcula al mapear el DTO. Única fuente de los prefijos.
+ *
+ *   Activo:    ACT-0007   (4 dígitos mínimo; crece a 5+ sin truncar)
+ *   Documento: DOC-0012
+ */
+export const ASSET_CODE_PREFIX = 'ACT';
+export const DOCUMENT_CODE_PREFIX = 'DOC';
+const SIMPLE_CODE_DIGITS = 4;
+
+export function formatAssetCode(number: number): string {
+  return `${ASSET_CODE_PREFIX}-${String(number).padStart(SIMPLE_CODE_DIGITS, '0')}`;
+}
+
+export function formatDocumentCode(number: number): string {
+  return `${DOCUMENT_CODE_PREFIX}-${String(number).padStart(SIMPLE_CODE_DIGITS, '0')}`;
+}
+
+/** Forma completa del código de un objeto auditable: solicitud, fase, tarea, activo o documento. */
+export const AUDIT_OBJECT_CODE_PATTERN = /^(?:PRY-\d{4,}(?:-(?:F\d+|T\d+))?|ACT-\d{4,}|DOC-\d{4,})$/;
+
+export type AuditObjectCodeKind = VisibleCodeKind | 'ASSET' | 'DOCUMENT';
+
+export interface ParsedAuditObjectCode {
+  kind: AuditObjectCodeKind;
+  /** Código canónico en mayúsculas. */
+  code: string;
+  /** Número del activo o documento (solo `ASSET` y `DOCUMENT`). */
+  number?: number;
+}
+
+/**
+ * Analiza el código escrito en el filtro «Código del objeto» de Auditoría
+ * (`PRY-0012`, `PRY-0012-F2`, `PRY-0012-T07`, `ACT-0007`, `DOC-0003`), sin
+ * distinguir mayúsculas. Devuelve `null` si no tiene la forma de un código.
+ */
+export function parseAuditObjectCode(raw: string): ParsedAuditObjectCode | null {
+  if (typeof raw !== 'string' || raw.length > VISIBLE_CODE_MAX_LENGTH * 2) return null;
+  const code = normalizeVisibleCode(raw);
+  if (code.length === 0 || code.length > VISIBLE_CODE_MAX_LENGTH) return null;
+  if (!AUDIT_OBJECT_CODE_PATTERN.test(code)) return null;
+  const simple = /^(ACT|DOC)-(\d+)$/.exec(code);
+  if (simple) {
+    const number = Number(simple[2]);
+    // Un número fuera del rango de la columna entera no puede existir.
+    if (!Number.isSafeInteger(number) || number > 2_147_483_647) return null;
+    return { kind: simple[1] === 'ACT' ? 'ASSET' : 'DOCUMENT', code, number };
+  }
+  const request = parseVisibleCode(code);
+  return request ? { kind: request.kind, code: request.code } : null;
+}

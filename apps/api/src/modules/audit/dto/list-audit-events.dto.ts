@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import { AUDIT_OBJECT_CODE_PATTERN, normalizeVisibleCode } from '../../plan/visible-code';
 
 /**
  * Tipos de objeto filtrables. DEBE mantenerse sincronizado con AuditObjectType
@@ -74,6 +75,24 @@ export class ListAuditEventsDto {
   @IsOptional()
   @IsIn(AUDIT_ACTIONS)
   action?: (typeof AUDIT_ACTIONS)[number];
+
+  @ApiPropertyOptional({
+    type: String,
+    maxLength: 20,
+    example: 'PRY-0012-T07',
+    description:
+      'Filtra por el código visible del objeto: PRY-0012, PRY-0012-F2, PRY-0012-T07, ACT-0007 o DOC-0003 (sin distinguir mayúsculas). Un código que no existe devuelve la lista vacía.',
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? normalizeVisibleCode(value) : value,
+  )
+  @IsString()
+  @MaxLength(20)
+  @Matches(AUDIT_OBJECT_CODE_PATTERN, {
+    message: 'El código del objeto debe ser como PRY-0012, PRY-0012-T07, ACT-0007 o DOC-0003.',
+  })
+  objectCode?: string;
 
   @ApiPropertyOptional({
     type: Number,

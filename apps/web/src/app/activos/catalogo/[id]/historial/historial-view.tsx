@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, FileClock } from 'lucide-react';
 import { CellTitle, SortableTableHead } from '@/components/data-table';
 import { EmptyState } from '@/components/empty-state';
+import { IdChip } from '@/components/id-chip';
 import { ErrorState } from '@/components/error-state';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
@@ -180,7 +181,10 @@ export function HistorialView({ assetId }: HistorialViewProps): React.ReactEleme
             {sortedRows.map((row) => (
               <TableRow key={row.id}>
                 <TableCell className="min-w-56 max-w-[28rem]">
-                  <CellTitle>{row.title}</CellTitle>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <IdChip code={row.code} />
+                    <CellTitle>{row.title}</CellTitle>
+                  </div>
                 </TableCell>
                 <TableCell className="min-w-32 whitespace-nowrap text-muted-foreground">
                   {formatDate(row.registeredAt)}
@@ -209,7 +213,8 @@ export function HistorialView({ assetId }: HistorialViewProps): React.ReactEleme
         actions={backLink}
       />
       {asset ? (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <IdChip code={asset.code} />
           <span className="text-meta text-muted-foreground">Estado del activo:</span>
           <StatusBadge kind="asset" value={asset.status} />
         </div>

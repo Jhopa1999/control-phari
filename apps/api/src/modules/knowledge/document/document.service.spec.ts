@@ -137,6 +137,7 @@ function assetRow(overrides: Record<string, unknown> = {}) {
 function docRow(overrides: Record<string, unknown> = {}) {
   return {
     id: 'd1',
+    number: 12,
     assetId: 'a1',
     title: 'Doc',
     categoryCode: null,
@@ -145,7 +146,7 @@ function docRow(overrides: Record<string, unknown> = {}) {
     createdAt: now,
     updatedAt: now,
     currentVersion: null,
-    asset: { name: 'Activo' },
+    asset: { name: 'Activo', number: 7 },
     request: null,
     ...overrides,
   };
@@ -584,7 +585,7 @@ describe('DocumentService', () => {
       expect(and).toContainEqual({ assetId: 'a1' });
       expect(and).toContainEqual({ status: 'BORRADOR' });
       expect(and).toContainEqual({
-        title: { contains: 'manual', mode: 'insensitive' },
+        OR: [{ title: { contains: 'manual', mode: 'insensitive' } }],
       });
       // Filtros de activo embebidos.
       const assetFilter = and.find((c: any) => c.asset);
@@ -596,6 +597,30 @@ describe('DocumentService', () => {
       expect(call.take).toBe(10);
     });
 
+    it('expone el código visible del documento y el de su activo (DOC-0012 / ACT-0007)', async () => {
+      m.prismaObj.document.findMany.mockResolvedValue([docRow({ number: 12 })]);
+      const [row] = await rowsOf(m.service.list(lider(), {} as any));
+      expect(row).toMatchObject({ code: 'DOC-0012', assetCode: 'ACT-0007' });
+    });
+    it('q con forma de código busca también por número (DOC-0012, doc-12, 12)', async () => {
+      m.prismaObj.document.findMany.mockResolvedValue([]);
+      for (const q of ['DOC-0012', 'doc-12', '12']) {
+        m.prismaObj.document.findMany.mockClear();
+        await m.service.list(lider(), { q } as any);
+        const and = m.prismaObj.document.findMany.mock.calls[0][0].where.AND;
+        expect(and).toContainEqual({
+          OR: [{ title: { contains: q, mode: 'insensitive' } }, { number: 12 }],
+        });
+      }
+    });
+    it('q de texto libre no busca por número', async () => {
+      m.prismaObj.document.findMany.mockResolvedValue([]);
+      await m.service.list(lider(), { q: 'manual 12' } as any);
+      const and = m.prismaObj.document.findMany.mock.calls[0][0].where.AND;
+      expect(and).toContainEqual({
+        OR: [{ title: { contains: 'manual 12', mode: 'insensitive' } }],
+      });
+    });
     it('sin parámetros devuelve el alcance completo con el tope de 1000 filas', async () => {
       m.prismaObj.document.findMany.mockResolvedValue([]);
       const result = await m.service.list(lider(), {} as any);
@@ -637,7 +662,7 @@ describe('DocumentService', () => {
       m.prismaObj.document.findMany.mockResolvedValue([
         docRow({
           requestId: 'r1',
-          asset: { name: 'Tablero de ventas' },
+          asset: { name: 'Tablero de ventas', number: 7 },
           request: { code: 'PRY-0012', title: 'Cierre', deletedAt: null },
         }),
         docRow({
@@ -655,7 +680,7 @@ describe('DocumentService', () => {
       expect(borrado.requestCode).toBeNull();
       expect(borrado.requestTitle).toBeNull();
       expect(m.prismaObj.document.findMany.mock.calls[0][0].include).toMatchObject({
-        asset: { select: { name: true } },
+        asset: { select: { name: true, number: true } },
       });
     });
 

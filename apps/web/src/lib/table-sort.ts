@@ -254,6 +254,14 @@ export function matchCode(code: string | null | undefined, query: string): boole
   if (q === '' || !code) return false;
   const upper = code.toUpperCase();
   if (upper.includes(q)) return true;
+  // ACT-7, act-0007, 7 o 0007 encuentran ACT-0007 (el número, sin ceros a la izquierda).
+  const numeric = /^(?:([A-Z]{3})-?)?(\d+)$/.exec(q);
+  if (numeric) {
+    const own = /^([A-Z]{3})-(\d+)$/.exec(upper);
+    if (own && (!numeric[1] || numeric[1] === own[1]) && Number(own[2]) === Number(numeric[2])) {
+      return true;
+    }
+  }
   const short = /^([FT])(\d+)$/.exec(q);
   if (!short) return false;
   const seq = Number(short[2]);

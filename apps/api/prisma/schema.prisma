@@ -1002,6 +1002,9 @@ model Commitment {
 /// retiro = cambio de estado (design §4.1 D3).
 model Asset {
   id                 String   @id @default(uuid()) @db.Uuid
+  // ID visible (solo lectura, nunca se reutiliza): ACT-0007. Solo se guarda el
+  // número (secuencia assets_number_seq); el código se calcula al mapear el DTO.
+  number             Int      @unique @default(autoincrement())
   processId          String   @map("process_id") @db.Uuid
   requestId          String?  @map("request_id") @db.Uuid
   ownerUserId        String?  @map("owner_user_id") @db.Uuid
@@ -1059,6 +1062,9 @@ model AssetProcessVisibility {
 /// apunta a la ultima version de contenido (ortogonal al status).
 model Document {
   id                String    @id @default(uuid()) @db.Uuid
+  // ID visible (solo lectura, nunca se reutiliza): DOC-0012. Solo se guarda el
+  // número (secuencia documents_number_seq); el código se calcula al mapear el DTO.
+  number            Int       @unique @default(autoincrement())
   assetId           String    @map("asset_id") @db.Uuid
   title             String
   categoryCode      String?   @map("category_code")

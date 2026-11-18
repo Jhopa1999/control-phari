@@ -24,6 +24,8 @@ function fakeEvents(count: number, objectType: string): AuditEvent[] {
     scopeProcessId: null,
     before: null,
     after: null,
+    objectCode: null,
+    objectLabel: null,
     createdAt: new Date(base - i * 60_000).toISOString(),
   }));
 }
@@ -142,4 +144,64 @@ test('una respuesta anterior que llega tarde no pisa la del filtro elegido', asy
   // La respuesta tardía (120) no reemplaza la del filtro (3).
   await expect(page.getByText('3 eventos', { exact: true })).toBeVisible();
   await expect(page.getByText('120 eventos', { exact: true })).toHaveCount(0);
+});
+
+test('«Código del objeto»: uno inválido no consulta; uno válido viaja al servidor y se muestra el chip y la etiqueta', async ({
+  page,
+}) => {
+  const queries: URLSearchParams[] = [];
+  await page.route('**/audit-events?**', async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const params = new URL(route.request().url()).searchParams;
+    queries.push(params);
+    const response = await route.fetch();
+    const code = params.get('objectCode');
+    if (code === 'ACT-0007') {
+      const [event] = fakeEvents(1, 'ASSET');
+      await route.fulfill({
+        response,
+        json: {
+          data: [{ ...event, objectCode: 'ACT-0007', objectLabel: 'E2E Contrato marco' }],
+          page: 1,
+          pageSize: 25,
+          total: 1,
+          hasMore: false,
+        },
+      });
+      return;
+    }
+    if (code) {
+      await route.fulfill({ response, json: { data: [], page: 1, pageSize: 25, total: 0, hasMore: false } });
+      return;
+    }
+    await route.fulfill({ response, json: pagedBody(params, 5, 'PROCESS') });
+  });
+  await page.goto('/gobierno/auditoria');
+  await expect(page.getByText('5 eventos', { exact: true })).toBeVisible();
+  const field = page.getByLabel('Código del objeto');
+  // Inválido: error junto al campo y ninguna consulta con objectCode.
+  await field.fill('pry-12');
+  await expect(field).toHaveValue('PRY-12');
+  await page.waitForTimeout(700);
+  await field.press('Enter');
+  await expect(page.getByText('Escribe un código completo, por ejemplo PRY-0012 o ACT-0007.')).toBeVisible();
+  await expect(field).toHaveAttribute('aria-invalid', 'true');
+  expect(queries.some((q) => q.has('objectCode'))).toBe(false);
+  // Válido: tras la pausa consulta con el código normalizado.
+  const withCode = page.waitForRequest(
+    (r) => new URL(r.url()).searchParams.get('objectCode') === 'ACT-0007',
+  );
+  await field.fill('act-0007');
+  await withCode;
+  await expect(page.getByText('1 evento', { exact: true })).toBeVisible();
+  const row = page.getByRole('row', { name: /E2E Contrato marco/ });
+  await expect(row.getByRole('button', { name: /Código ACT-0007, copiar/ })).toBeVisible();
+  await expect(row.getByText('Activo', { exact: true })).toBeVisible();
+  // Sin coincidencia: mismo texto exista o no el objeto fuera del alcance.
+  await field.fill('PRY-0099');
+  await expect(page.getByText('No hay eventos para PRY-0099 dentro de tu alcance.')).toBeVisible();
+  // «Limpiar filtros» vacía el campo y vuelve a consultar sin código.
+  await page.getByRole('button', { name: 'Limpiar filtros' }).click();
+  await expect(field).toHaveValue('');
+  await expect(page.getByText('5 eventos', { exact: true })).toBeVisible();
 });

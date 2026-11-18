@@ -96,9 +96,14 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
       'Paginación opcional: page y pageSize (máximo 100); sin ellos devuelve el ' +
       'listado completo con un tope de 1000 filas. Para recorrer todo, pide ' +
       'páginas sucesivas hasta recibir menos filas que pageSize. ' +
-      'Cada fila trae processName, processCode, ownerName, requestCode y requestTitle.',
+      'Cada fila trae su código visible (code, p. ej. ACT-0007), processName, processCode, ' +
+      'ownerName, requestCode, requestTitle y los recuentos requestsCount y documentsCount.',
   ),
-  lectura('asset.get', 'GET /assets/{id}', 'Obtiene un activo por id (GET /assets/{id}).'),
+  lectura(
+    'asset.get',
+    'GET /assets/{id}',
+    'Obtiene un activo por id (GET /assets/{id}), con su código visible (code, ACT-0007).',
+  ),
   lectura(
     'asset.requests',
     'GET /assets/{id}/requests',
@@ -110,11 +115,12 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
     'document.list',
     'GET /documents',
     'Lista los documentos (GET /documents), sin contenido, con filtros opcionales; q busca ' +
-      'en el título; sort (createdAt, title, status) y dir ordenan. ' +
+      'en el título o por código (DOC-0012); sort (createdAt, title, status) y dir ordenan. ' +
       'Paginación opcional: page y pageSize (máximo 100); sin ellos devuelve el ' +
       'listado completo con un tope de 1000 filas. Para recorrer todo, pide ' +
       'páginas sucesivas hasta recibir menos filas que pageSize. ' +
-      'Cada fila trae assetName, requestCode y requestTitle.',
+      'Cada fila trae su código visible (code, DOC-0012), el del activo (assetCode, ACT-0007), ' +
+      'assetName, requestCode y requestTitle.',
   ),
   lectura(
     'document.pending-approval',
