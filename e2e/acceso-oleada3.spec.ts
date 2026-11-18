@@ -81,15 +81,20 @@ test.describe('«Sin acceso» unificado', () => {
     await expect(page.getByRole('button', { name: 'Reintentar' })).toHaveCount(0);
   });
 
-  test('el administrador abre Actividades recurrentes (D14) y ve el aviso', async ({
+  test('el administrador abre Actividades recurrentes (D14, PR-E 4.4) sin aviso y en Gestión', async ({
     page,
     context,
   }) => {
     await actAs(context, 'admin@demo.local');
     await page.goto('/actividades-recurrentes');
     await expect(
-      page.getByRole('status').filter({ hasText: 'No tienes acceso a las actividades recurrentes.' }),
+      page.getByRole('heading', { level: 1, name: 'Actividades recurrentes' }),
     ).toBeVisible();
+    await expect(page.getByText('No tienes acceso a las actividades recurrentes.')).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Gestión' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   test('el aviso ofrece «Ir a mi inicio» hacia la primera pantalla del administrador', async ({
