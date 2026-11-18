@@ -396,7 +396,10 @@ export class MeetingService {
         ? dateStringToDate(dto.meetingDate)
         : undefined;
 
-    await this.scope.assertPeopleInProcess(existing.processId, [dto.responsibleUserId]);
+    // Solo se valida si el responsable cambia (reenviar el guardado no debe bloquear).
+    await this.scope.assertPeopleInProcess(existing.processId, [
+      dto.responsibleUserId !== existing.responsibleUserId ? dto.responsibleUserId : undefined,
+    ]);
     let uniqueIds: string[] | undefined;
     if (dto.participantUserIds !== undefined) {
       await this.assertParticipantsInScope(actor, dto.participantUserIds);

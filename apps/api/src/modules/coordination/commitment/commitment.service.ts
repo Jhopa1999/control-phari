@@ -374,9 +374,13 @@ export class CommitmentService {
     const existing = await this.requireInScope(actor, id);
     const dueDate =
       dto.dueDate !== undefined ? dateStringToDate(dto.dueDate) : undefined;
+    // Solo se validan las personas que cambian: reenviar el valor guardado no
+    // debe bloquear la edición si esa persona ya salió del proceso.
     await this.scope.assertPeopleInProcess(existing.processId, [
-      dto.assignedUserId,
-      dto.responsibleUserId,
+      dto.assignedUserId !== existing.assignedUserId ? dto.assignedUserId : undefined,
+      dto.responsibleUserId !== existing.responsibleUserId
+        ? dto.responsibleUserId
+        : undefined,
     ]);
     // Solo se valida el acta si el compromiso se liga a OTRA acta: los
     // compromisos de un acta cerrada siguen editables (seguimiento).
