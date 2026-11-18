@@ -8,6 +8,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
+import { readableRequestIds } from '../../request/request-scope.service';
 import { KnowledgeScopeService } from '../knowledge-scope.service';
 import { AssetStateService } from './asset-state.service';
 import { AssetStatus } from './asset-status';
@@ -17,7 +18,28 @@ import { ListAssetsDto } from './dto/list-assets.dto';
 import { ChangeAssetStatusDto } from './dto/change-asset-status.dto';
 import { AssetResponseDto } from './dto/asset-response.dto';
 import { AssetRequestHistoryItemDto } from './dto/asset-request-history-item.dto';
+import {
+  PageResult,
+  buildPageResult,
+  normalizeSearch,
+  resolveLegacyTakeWindow,
+} from '../../../common/pagination/pagination';
 
+/**
+ * Solicitud de origen del activo, solo si no está eliminada y el actor puede
+ * leerla (alcance de solicitudes): si no, no se nombra.
+ */
+function originRequest(
+  row: AssetWithVisibilities,
+  readable: ReadonlySet<string>,
+): { code: string; title: string } | null {
+  return row.request &&
+    row.request.deletedAt === null &&
+    row.requestId !== null &&
+    readable.has(row.requestId)
+    ? row.request
+    : null;
+}
 /**
  * Activo generico, compartido y gobernado (design §2/§3/§5/§a-§e). Lectura via
  * KnowledgeScopeService (propietario ∪ visibilidad, 404 fuera). ESCRITURA
@@ -55,7 +77,10 @@ export class AssetService {
     };
   }
 
-  private toResponse(row: AssetWithVisibilities): AssetResponseDto {
+  private toResponse(
+    row: AssetWithVisibilities,
+    readable: ReadonlySet<string>,
+  ): AssetResponseDto {
     return {
       id: row.id,
       processId: row.processId,
@@ -67,9 +92,29 @@ export class AssetService {
       generalDescription: row.generalDescription,
       dependencies: row.dependencies,
       visibleProcessIds: row.visibilities.map((v) => v.processId).sort(),
+      processCode: row.process.code,
+      processName: row.process.name,
+      ownerName: row.owner?.name ?? null,
+      // Una solicitud de origen eliminada o fuera del alcance del actor no se
+      // nombra («No disponible» en la web).
+      requestCode: originRequest(row, readable)?.code ?? null,
+      requestTitle: originRequest(row, readable)?.title ?? null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
+  }
+
+  /** Respuestas con la solicitud de origen resuelta según el alcance del actor. */
+  private async toResponses(
+    actor: CurrentActor,
+    rows: AssetWithVisibilities[],
+  ): Promise<AssetResponseDto[]> {
+    const readable = await readableRequestIds(
+      this.prisma,
+      actor,
+      rows.map((row) => row.requestId),
+    );
+    return rows.map((row) => this.toResponse(row, readable));
   }
 
   private async requireInScope(
@@ -163,10 +208,14 @@ export class AssetService {
     );
   }
 
+  /**
+   * Catálogo de activos en alcance con filtros, `q` (nombre), orden y ventana
+   * de página. El total es el del alcance filtrado.
+   */
   async list(
     actor: CurrentActor,
     filters: ListAssetsDto,
-  ): Promise<AssetResponseDto[]> {
+  ): Promise<PageResult<AssetResponseDto>> {
     const where: Prisma.AssetWhereInput = {
       AND: [this.scope.assetScopeWhere(actor)],
     };
@@ -180,19 +229,34 @@ export class AssetService {
     if (filters.status !== undefined) {
       and.push({ status: filters.status });
     }
+    const q = normalizeSearch(filters.q);
+    if (q !== undefined) {
+      and.push({ name: { contains: q, mode: 'insensitive' } });
+    }
 
-    const rows = await this.prisma.asset.findMany({
-      where,
-      include: ASSET_INCLUDE,
-      orderBy: [{ createdAt: 'desc' }],
-      ...(filters.take !== undefined ? { take: filters.take } : {}),
-    });
-    return rows.map((row) => this.toResponse(row));
+    const window = resolveLegacyTakeWindow(filters);
+    const sort = filters.sort ?? 'createdAt';
+    const dir = filters.dir ?? (sort === 'createdAt' ? 'desc' : 'asc');
+    const [rows, total] = await Promise.all([
+      this.prisma.asset.findMany({
+        where,
+        include: ASSET_INCLUDE,
+        orderBy: [{ [sort]: dir }, { id: 'asc' }],
+        skip: window.skip,
+        take: window.take,
+      }),
+      this.prisma.asset.count({ where }),
+    ]);
+    return buildPageResult(
+      await this.toResponses(actor, rows),
+      total,
+      window,
+    );
   }
 
   async get(actor: CurrentActor, id: string): Promise<AssetResponseDto> {
     const row = await this.requireInScope(actor, id);
-    return this.toResponse(row);
+    return (await this.toResponses(actor, [row]))[0];
   }
 
   /**
@@ -277,7 +341,7 @@ export class AssetService {
         return row;
       });
 
-      return this.toResponse(created);
+      return (await this.toResponses(actor, [created]))[0];
     } catch (error) {
       throw this.mapError(error);
     }
@@ -353,7 +417,7 @@ export class AssetService {
         return row;
       });
 
-      return this.toResponse(updated);
+      return (await this.toResponses(actor, [updated]))[0];
     } catch (error) {
       throw this.mapError(error);
     }
@@ -392,7 +456,7 @@ export class AssetService {
         return row;
       });
 
-      return this.toResponse(updated);
+      return (await this.toResponses(actor, [updated]))[0];
     } catch (error) {
       throw this.mapError(error);
     }
@@ -413,6 +477,10 @@ export class AssetService {
 /** Include estandar: trae las filas de visibilidad (solo el processId). */
 const ASSET_INCLUDE = {
   visibilities: { select: { processId: true } },
+  // BL-039: nombre y código de lo referenciado, con `select` mínimo (sin 1+N).
+  process: { select: { code: true, name: true } },
+  owner: { select: { name: true } },
+  request: { select: { code: true, title: true, deletedAt: true } },
 } satisfies Prisma.AssetInclude;
 
 /** Payload de Asset con la relacion de visibilidad (sin `any`, MEDIUM-C). */

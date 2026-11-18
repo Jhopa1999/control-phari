@@ -2,7 +2,14 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -100,6 +107,8 @@ export interface ResultCountProps {
   /** Filas que pasan la búsqueda y los filtros. */
   filtered: number;
   noun: CountNoun;
+  /** Icono giratorio junto a «Cargando…» (recargas de listados en el servidor). */
+  spinner?: boolean;
 }
 
 /**
@@ -108,13 +117,22 @@ export interface ResultCountProps {
  * DataView. Regla del NIT 7: filtered === total → «45 solicitudes»; en otro
  * caso, «12 de 45 solicitudes».
  */
-export function ResultCount({ loading, total, filtered, noun }: ResultCountProps): React.ReactElement {
+export function ResultCount({
+  loading,
+  total,
+  filtered,
+  noun,
+  spinner = false,
+}: ResultCountProps): React.ReactElement {
   let text: string;
   if (loading) text = `Cargando ${noun.other}…`;
   else if (filtered === total) text = formatCount(total, noun);
   else text = `${NUMBER_FORMAT.format(filtered)} de ${formatCount(total, noun)}`;
   return (
-    <p role="status" className="text-meta tabular-nums text-muted-foreground">
+    <p role="status" className="flex items-center gap-1.5 text-meta tabular-nums text-muted-foreground">
+      {loading && spinner ? (
+        <Loader2 aria-hidden="true" className="size-3.5 animate-spin motion-reduce:animate-none" />
+      ) : null}
       {text}
     </p>
   );
@@ -134,6 +152,15 @@ export interface DataTablePaginationProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: ClientTablePageSize) => void;
   noun: CountNoun;
+  /** Antepone «Mostrando » a la posición (listados paginados en el servidor). */
+  showingPrefix?: boolean;
+  /**
+   * Hay una petición en curso (paginación en el servidor): los botones llevan
+   * aria-disabled (no disabled, que expulsaría el foco) e ignoran la activación.
+   */
+  busy?: boolean;
+  /** Destino del foco si ambos botones quedan en su límite natural (una sola página). */
+  fallbackFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
 /**
@@ -154,25 +181,54 @@ export function DataTablePagination({
   onPageChange,
   onPageSizeChange,
   noun,
+  showingPrefix = false,
+  busy = false,
+  fallbackFocusRef,
 }: DataTablePaginationProps): React.ReactElement {
   const previousRef = React.useRef<HTMLButtonElement>(null);
   const nextRef = React.useRef<HTMLButtonElement>(null);
   const selectId = `${id}-filas`;
+  const pendingFocus = React.useRef<'previous' | 'next' | null>(null);
+
+  // Si el botón pulsado queda en su límite natural (disabled) cuando la página
+  // ya está pintada, el foco pasa al otro botón o, si ambos están en su
+  // límite, al contenedor de la tabla; nunca a body.
+  function relocateFocus(pressed: 'previous' | 'next'): void {
+    const pressedButton = pressed === 'next' ? nextRef.current : previousRef.current;
+    const otherButton = pressed === 'next' ? previousRef.current : nextRef.current;
+    const focusLost =
+      document.activeElement === pressedButton || document.activeElement === document.body;
+    if (!pressedButton?.disabled || !focusLost) return;
+    if (otherButton && !otherButton.disabled) otherButton.focus();
+    else fallbackFocusRef?.current?.focus();
+  }
+
+  // Paginación en el servidor: la página cambia cuando llega la respuesta, así
+  // que la reubicación espera a que termine la carga.
+  React.useEffect(() => {
+    if (busy || pendingFocus.current === null) return;
+    const pressed = pendingFocus.current;
+    pendingFocus.current = null;
+    relocateFocus(pressed);
+  });
 
   function goTo(target: number, pressed: 'previous' | 'next'): void {
+    if (busy) return;
     onPageChange(target);
-    // Tras el render, si el botón pulsado quedó deshabilitado (extremo), el
-    // foco pasa al otro para que el teclado no lo pierda.
+    pendingFocus.current = pressed;
+    // Paginación en cliente: la página ya está pintada en el siguiente cuadro.
     requestAnimationFrame(() => {
-      const pressedButton = pressed === 'next' ? nextRef.current : previousRef.current;
-      const otherButton = pressed === 'next' ? previousRef.current : nextRef.current;
-      const focusLost =
-        document.activeElement === pressedButton || document.activeElement === document.body;
-      if (pressedButton?.disabled && focusLost && otherButton && !otherButton.disabled) {
-        otherButton.focus();
+      if (pendingFocus.current === pressed && !busy) {
+        pendingFocus.current = null;
+        relocateFocus(pressed);
       }
     });
   }
+
+  const position =
+    filtered === 0
+      ? 'Sin resultados'
+      : `${showingPrefix ? 'Mostrando ' : ''}${NUMBER_FORMAT.format(from)}–${NUMBER_FORMAT.format(to)} de ${formatCount(filtered, noun)}`;
 
   return (
     <nav
@@ -180,9 +236,7 @@ export function DataTablePagination({
       aria-label={`Paginación de ${noun.other}`}
       className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t px-3 py-2 text-meta text-muted-foreground"
     >
-      <p className="tabular-nums">
-        {`${NUMBER_FORMAT.format(from)}–${NUMBER_FORMAT.format(to)} de ${formatCount(filtered, noun)}`}
-      </p>
+      <p className="tabular-nums">{position}</p>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-2">
           <Label htmlFor={selectId} className="font-normal text-muted-foreground">
@@ -217,6 +271,7 @@ export function DataTablePagination({
               size="icon-sm"
               className="max-md:size-11"
               aria-label="Página anterior"
+              aria-disabled={busy || undefined}
               disabled={page <= 1}
               onClick={() => goTo(page - 1, 'previous')}
             >
@@ -231,6 +286,7 @@ export function DataTablePagination({
               size="icon-sm"
               className="max-md:size-11"
               aria-label="Página siguiente"
+              aria-disabled={busy || undefined}
               disabled={page >= pageCount}
               onClick={() => goTo(page + 1, 'next')}
             >

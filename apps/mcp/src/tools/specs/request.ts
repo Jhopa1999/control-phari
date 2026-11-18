@@ -8,8 +8,15 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
     access: 'read',
     description:
       'Lista solicitudes (GET /requests), con filtros opcionales por proceso ' +
-      'principal y estado. Alcance: jefe y líder ven todas; el integrante, las de ' +
-      'sus procesos más las que él creó.',
+      'principal (UUID o SIN_PROCESO), estado y banda de prioridad; cada filtro ' +
+      'admite varios valores (arreglo, se combinan con O; entre filtros es Y). ' +
+      'q busca en código, título y solicitante; sort (registeredAt, code, title, ' +
+      'state, score) y dir (asc, desc) ordenan. ' +
+      'Paginación opcional: page y pageSize (máximo 100); sin ellos devuelve el ' +
+      'listado completo con un tope de 1000 filas. Para recorrer todo, pide ' +
+      'páginas sucesivas hasta recibir menos filas que pageSize. ' +
+      'Cada fila trae mainProcessName, mainProcessCode y assetName. Alcance: jefe ' +
+      'y líder ven todas; el integrante, las de sus procesos más las que él creó.',
   },
   {
     name: 'request.get',
@@ -135,6 +142,11 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
       '(arreglo, se combinan con O; entre filtros es Y; máximo 50 por filtro). ' +
       'Mismo alcance que request.list (jefe y líder ven todas; el integrante, sus ' +
       'procesos más las que creó) y sin parámetros devuelve todos los estados. ' +
+      'q busca en código y título; sort (registeredAt, code, title, state, score) y ' +
+      'dir ordenan. ' +
+      'Paginación opcional: page y pageSize (máximo 100); sin ellos devuelve el ' +
+      'listado completo con un tope de 1000 filas. Para recorrer todo, pide ' +
+      'páginas sucesivas hasta recibir menos filas que pageSize. ' +
       'El vencimiento (dueStatus, daysToTarget) se mide contra referenceDate: el ' +
       'compromiso del plan autorizado (referenceSource=PLAN) o, sin plan autorizado, ' +
       'la fecha objetivo de la solicitud, que es solo una expectativa inicial ' +

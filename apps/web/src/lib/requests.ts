@@ -5,6 +5,7 @@ import {
   type Request,
   type UpdateRequest,
 } from './api-client';
+import { readServerPage, type ServerPage } from './pagination';
 
 /**
  * Error de dominio con un mensaje ya entendible para el usuario.
@@ -75,7 +76,11 @@ export interface RequestFilters {
   state?: string;
 }
 
-/** Lista solicitudes dentro del alcance del actor (GET /requests). */
+/**
+ * Lista solicitudes dentro del alcance del actor (GET /requests) sin paginar:
+ * para selectores y cruces de datos. El servidor devuelve como máximo 1000
+ * filas (cabecera X-Truncated); los listados usan `listRequestsPage`.
+ */
 export async function listRequests(
   filters: RequestFilters = {},
 ): Promise<Request[]> {
@@ -84,9 +89,9 @@ export async function listRequests(
       params: {
         query: {
           ...(filters.mainProcessId
-            ? { mainProcessId: filters.mainProcessId }
+            ? { mainProcessId: [filters.mainProcessId] }
             : {}),
-          ...(filters.state ? { state: filters.state as RequestListQuery['state'] } : {}),
+          ...(filters.state ? { state: [filters.state] as RequestListQuery['state'] } : {}),
         },
       },
     });
@@ -96,6 +101,58 @@ export async function listRequests(
     return data;
   } catch (err) {
     if (err instanceof RequestError) throw err;
+    throw toRequestError(undefined);
+  }
+}
+
+/** Columnas por las que el servidor sabe ordenar solicitudes (lista blanca). */
+export type RequestSortKey = NonNullable<RequestListQuery['sort']>;
+
+/** Filtros, búsqueda, orden y página del listado de Solicitudes. */
+export interface RequestPageQuery {
+  /** Ids de proceso o `SIN_PROCESO`; varios se combinan con O. */
+  mainProcessId?: string[];
+  state?: string[];
+  band?: string[];
+  q?: string;
+  sort?: RequestSortKey;
+  dir?: 'asc' | 'desc';
+  page: number;
+  pageSize: number;
+}
+
+/**
+ * Una página de solicitudes (GET /requests con page/pageSize). Filtra, busca
+ * (código, título y solicitante), ordena y pagina el servidor; el total del
+ * alcance filtrado llega en X-Total-Count.
+ */
+export async function listRequestsPage(
+  query: RequestPageQuery,
+  signal?: AbortSignal,
+): Promise<ServerPage<Request>> {
+  try {
+    const { data, error, response } = await api.GET('/requests', {
+      params: {
+        query: {
+          page: query.page,
+          pageSize: query.pageSize,
+          ...(query.mainProcessId?.length ? { mainProcessId: query.mainProcessId } : {}),
+          ...(query.state?.length ? { state: query.state as RequestListQuery['state'] } : {}),
+          ...(query.band?.length ? { band: query.band as RequestListQuery['band'] } : {}),
+          ...(query.q?.trim() ? { q: query.q.trim() } : {}),
+          ...(query.sort ? { sort: query.sort } : {}),
+          ...(query.dir ? { dir: query.dir } : {}),
+        },
+      },
+      signal,
+    });
+    if (error || !data) {
+      throw toRequestError(response.status, error);
+    }
+    return readServerPage(data, response);
+  } catch (err) {
+    if (err instanceof RequestError) throw err;
+    if (signal?.aborted) throw err;
     throw toRequestError(undefined);
   }
 }

@@ -7,6 +7,7 @@ import { RequestState } from '../request-state';
 import { RequestStateService } from '../request-state.service';
 import { PriorityService } from './priority.service';
 import { CreatePriorityEvaluationDto } from './dto/create-priority-evaluation.dto';
+import { withReferenceLookups } from '../../../testing/reference-lookups';
 
 function createMocks() {
   const prismaObj: Record<string, unknown> = {
@@ -20,7 +21,7 @@ function createMocks() {
   const prisma = prismaObj as unknown as PrismaService;
   const audit = { record: jest.fn() } as unknown as AuditService;
   const auditRecord = audit.record as unknown as jest.Mock;
-  const state = new RequestStateService(prisma);
+  const state = new RequestStateService(withReferenceLookups(prisma));
   return { prisma, prismaObj, audit, auditRecord, state };
 }
 

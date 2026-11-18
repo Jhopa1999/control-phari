@@ -9,9 +9,15 @@ import { Prisma } from '../../../generated/prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
+import { requestScopeWhere } from '../../request/request-scope.service';
 import { KnowledgeScopeService } from '../knowledge-scope.service';
 import { DocumentStateService } from './document-state.service';
 import { DocumentService } from './document.service';
+
+/** Filas de un listado paginado (el servicio devuelve PageResult). */
+async function rowsOf<T>(p: Promise<{ rows: T[] }>): Promise<T[]> {
+  return (await p).rows;
+}
 
 function p2002(): Prisma.PrismaClientKnownRequestError {
   return new Prisma.PrismaClientKnownRequestError('Unique constraint', {
@@ -23,10 +29,12 @@ function p2002(): Prisma.PrismaClientKnownRequestError {
 function createMocks() {
   const prismaObj: Record<string, any> = {
     asset: { findFirst: jest.fn() },
+    request: { findMany: jest.fn().mockResolvedValue([]) },
     catalogItem: { findFirst: jest.fn().mockResolvedValue({ id: 'c1' }) },
     document: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
       create: jest.fn(),
       update: jest.fn(),
     },
@@ -137,6 +145,8 @@ function docRow(overrides: Record<string, unknown> = {}) {
     createdAt: now,
     updatedAt: now,
     currentVersion: null,
+    asset: { name: 'Activo' },
+    request: null,
     ...overrides,
   };
 }
@@ -558,14 +568,16 @@ describe('DocumentService', () => {
   describe('list', () => {
     it('aplica filtros processId/requestId/assetId/status/q y take', async () => {
       m.prismaObj.document.findMany.mockResolvedValue([docRow()]);
-      const res = await m.service.list(lider(), {
-        processId: 'p1',
-        requestId: 'r1',
-        assetId: 'a1',
-        status: 'BORRADOR',
-        q: 'manual',
-        take: 10,
-      } as any);
+      const res = await rowsOf(
+        m.service.list(lider(), {
+          processId: 'p1',
+          requestId: 'r1',
+          assetId: 'a1',
+          status: 'BORRADOR',
+          q: 'manual',
+          take: 10,
+        } as any),
+      );
       expect(res).toHaveLength(1);
       const call = m.prismaObj.document.findMany.mock.calls[0][0];
       const and = call.where.AND;
@@ -584,12 +596,107 @@ describe('DocumentService', () => {
       expect(call.take).toBe(10);
     });
 
-    it('sin filtros devuelve solo alcance (sin take)', async () => {
+    it('sin parámetros devuelve el alcance completo con el tope de 1000 filas', async () => {
       m.prismaObj.document.findMany.mockResolvedValue([]);
-      const res = await m.service.list(lider(), {} as any);
-      expect(res).toEqual([]);
+      const result = await m.service.list(lider(), {} as any);
+      expect(result.rows).toEqual([]);
       const call = m.prismaObj.document.findMany.mock.calls[0][0];
-      expect(call.take).toBeUndefined();
+      expect(call.skip).toBe(0);
+      expect(call.take).toBe(1000);
+      expect(call.orderBy).toEqual([{ createdAt: 'desc' }, { id: 'asc' }]);
+      expect(result.truncated).toBe(false);
+    });
+
+    it('page/pageSize, orden por título y total del mismo where', async () => {
+      m.prismaObj.document.findMany.mockResolvedValue([docRow()]);
+      m.prismaObj.document.count.mockResolvedValue(51);
+      const result = await m.service.list(integrante(['p1']), {
+        page: 2,
+        pageSize: 25,
+        sort: 'title',
+        dir: 'desc',
+      } as any);
+      const call = m.prismaObj.document.findMany.mock.calls[0][0];
+      expect(call.skip).toBe(25);
+      expect(call.take).toBe(25);
+      expect(call.orderBy).toEqual([{ title: 'desc' }, { id: 'asc' }]);
+      const countWhere = m.prismaObj.document.count.mock.calls[0][0].where;
+      expect(countWhere).toEqual(call.where);
+      // El alcance del integrante (por el activo) está en el where del total.
+      expect(countWhere.AND[0].asset.AND[0]).toEqual({
+        OR: [
+          { processId: { in: ['p1'] } },
+          { visibilities: { some: { processId: { in: ['p1'] } } } },
+        ],
+      });
+      expect(result.total).toBe(51);
+    });
+
+    it('BL-039: nombre del activo y código/título del proyecto; eliminado no se nombra', async () => {
+      m.prismaObj.request.findMany.mockResolvedValue([{ id: 'r1' }, { id: 'r2' }]);
+      m.prismaObj.document.findMany.mockResolvedValue([
+        docRow({
+          requestId: 'r1',
+          asset: { name: 'Tablero de ventas' },
+          request: { code: 'PRY-0012', title: 'Cierre', deletedAt: null },
+        }),
+        docRow({
+          id: 'd2',
+          requestId: 'r2',
+          request: { code: 'PRY-0013', title: 'X', deletedAt: new Date() },
+        }),
+      ]);
+      const [doc, borrado] = await rowsOf(m.service.list(lider(), {} as any));
+      expect(doc).toMatchObject({
+        assetName: 'Tablero de ventas',
+        requestCode: 'PRY-0012',
+        requestTitle: 'Cierre',
+      });
+      expect(borrado.requestCode).toBeNull();
+      expect(borrado.requestTitle).toBeNull();
+      expect(m.prismaObj.document.findMany.mock.calls[0][0].include).toMatchObject({
+        asset: { select: { name: true } },
+      });
+    });
+
+    it('B1: la solicitud fuera del alcance del actor no se nombra; con alcance sí', async () => {
+      m.prismaObj.document.findMany.mockResolvedValue([
+        docRow({
+          requestId: 'r1',
+          request: { code: 'PRY-0012', title: 'Cierre', deletedAt: null },
+        }),
+      ]);
+
+      // Integrante sin acceso a la solicitud: el alcance no la devuelve.
+      m.prismaObj.request.findMany.mockResolvedValue([]);
+      const [sinAcceso] = await rowsOf(m.service.list(integrante(), {} as any));
+      expect(sinAcceso.requestId).toBe('r1');
+      expect(sinAcceso.requestCode).toBeNull();
+      expect(sinAcceso.requestTitle).toBeNull();
+      expect(m.prismaObj.request.findMany).toHaveBeenCalledTimes(1);
+      expect(m.prismaObj.request.findMany.mock.calls[0][0].where).toEqual({
+        AND: [{ id: { in: ['r1'] } }, requestScopeWhere(integrante())],
+      });
+
+      // Jefe: la solicitud está en su alcance y se nombra.
+      m.prismaObj.request.findMany.mockResolvedValue([{ id: 'r1' }]);
+      const [conAcceso] = await rowsOf(m.service.list(jefe(), {} as any));
+      expect(conAcceso.requestCode).toBe('PRY-0012');
+      expect(conAcceso.requestTitle).toBe('Cierre');
+    });
+
+    it('B1: get no nombra la solicitud fuera del alcance', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(
+        docRow({
+          requestId: 'r1',
+          request: { code: 'PRY-0012', title: 'Cierre', deletedAt: null },
+        }),
+      );
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.request.findMany.mockResolvedValue([]);
+      const res = await m.service.get(integrante(), 'd1');
+      expect(res.requestCode).toBeNull();
+      expect(res.requestTitle).toBeNull();
     });
   });
 

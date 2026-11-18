@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { Prisma } from '../../generated/prisma/client';
 import { CurrentActor } from '../auth/current-actor';
 import { RequestStateService } from '../request/request-state.service';
 import { PortfolioScopeService } from './portfolio-scope.service';
@@ -11,7 +10,17 @@ import {
   dueSoonDaysFromEnv,
   type TaskProgressInput,
 } from './progress';
-import { ListPortfolioDto, NO_PROCESS_SENTINEL } from './dto/list-portfolio.dto';
+import {
+  PageResult,
+  buildPageResult,
+  resolvePage,
+} from '../../common/pagination/pagination';
+import {
+  buildRequestWhere,
+  orderByIds,
+  pageRequestIds,
+} from '../request/request-list-query';
+import { ListPortfolioDto } from './dto/list-portfolio.dto';
 import { PortfolioItemResponseDto } from './dto/portfolio-item-response.dto';
 
 /** Eco de una fecha como `YYYY-MM-DD` en UTC o null. */
@@ -40,42 +49,39 @@ export class PortfolioService {
     private readonly scope: PortfolioScopeService,
   ) {}
 
+  /**
+   * Página del portafolio. Mismo alcance, filtros, orden y paginación que
+   * Solicitudes (`request-list-query.ts`); `q` busca en código y título. La
+   * banda se resuelve sobre la evaluación vigente antes de paginar, así el
+   * total ya la descuenta.
+   */
   async list(
     actor: CurrentActor,
     filters: ListPortfolioDto,
-  ): Promise<PortfolioItemResponseDto[]> {
-    const where: Prisma.RequestWhereInput = {
-      AND: [this.scope.requestScope(actor)],
-    };
-    const and = where.AND as Prisma.RequestWhereInput[];
-
-    // Filtros que INTERSECTAN el alcance (se suman al AND, no lo amplian). OR
-    // dentro de cada filtro, AND entre filtros. El centinela SIN_PROCESO se
-    // combina en OR con los UUID (mainProcessId IN (uuids) OR IS NULL).
-    const processFilter = filters.mainProcessId;
-    if (processFilter !== undefined && processFilter.length > 0) {
-      const uuids = processFilter.filter((id) => id !== NO_PROCESS_SENTINEL);
-      const includeNull = uuids.length !== processFilter.length;
-      const branches: Prisma.RequestWhereInput[] = [];
-      if (uuids.length > 0) {
-        branches.push({ mainProcessId: { in: uuids } });
-      }
-      if (includeNull) {
-        branches.push({ mainProcessId: null });
-      }
-      and.push(branches.length === 1 ? branches[0] : { OR: branches });
-    }
-    if (filters.state !== undefined && filters.state.length > 0) {
-      and.push({ operationalState: { in: filters.state } });
-    }
-    const bandFilter =
-      filters.band !== undefined && filters.band.length > 0
-        ? new Set<string>(filters.band)
-        : null;
-
-    const requests = await this.prisma.request.findMany({
+  ): Promise<PageResult<PortfolioItemResponseDto>> {
+    const window = resolvePage(filters);
+    // Los filtros INTERSECTAN el alcance (AND), nunca lo amplían.
+    const where = buildRequestWhere(this.scope.requestScope(actor), filters, {
+      searchRequester: false,
+    });
+    const { ids, total } = await pageRequestIds(
+      this.prisma,
       where,
-      orderBy: [{ registeredAt: 'desc' }, { createdAt: 'desc' }],
+      filters,
+      window,
+      (score) => this.state.priorityBand(score),
+    );
+    const items = await this.itemsFor(ids);
+    return buildPageResult(items, total, window);
+  }
+
+  /** Arma las filas del portafolio de los ids dados, en ese orden. */
+  private async itemsFor(ids: string[]): Promise<PortfolioItemResponseDto[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const loaded = await this.prisma.request.findMany({
+      where: { id: { in: ids } },
       select: {
         id: true,
         code: true,
@@ -93,6 +99,7 @@ export class PortfolioService {
         mainProcess: { select: { code: true, name: true } },
       },
     });
+    const requests = orderByIds(ids, loaded);
 
     // Evaluaciones de prioridad vigentes en UNA sola consulta en lote (antes
     // 1+N: un currentPriorityEvaluation por request). Mismo criterio de vigencia
@@ -184,14 +191,6 @@ export class PortfolioService {
         ? this.state.priorityLabel(evaluation.score)
         : null;
       const currentScore = hasEvaluation ? evaluation.score : null;
-
-      // El filtro de banda intersecta el alcance tras resolver la vigente.
-      if (bandFilter !== null) {
-        const effectiveBand = priorityBand ?? 'SIN_PRIORIZAR';
-        if (!bandFilter.has(effectiveBand)) {
-          continue;
-        }
-      }
 
       items.push({
         id: req.id,

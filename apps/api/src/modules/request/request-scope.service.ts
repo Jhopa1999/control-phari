@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
+import { PrismaService } from '../../database/prisma.service';
 import { CurrentActor } from '../auth/current-actor';
 
 /**
@@ -29,6 +30,31 @@ export function requestScopeWhere(
       { createdByUserId: actor.userId },
     ],
   };
+}
+
+/**
+ * De los ids de solicitud dados, devuelve los que el actor puede LEER según
+ * equestScopeWhere (una sola consulta en lote, sin 1+N). Lo usan los DTO que
+ * nombran la solicitud de origen (código y título) para no revelar datos de
+ * solicitudes fuera del alcance: si el id no está en el conjunto, el código y el
+ * título se devuelven nulos («No disponible» en la web).
+ */
+export async function readableRequestIds(
+  prisma: Pick<PrismaService, 'request'>,
+  actor: CurrentActor,
+  requestIds: ReadonlyArray<string | null | undefined>,
+): Promise<ReadonlySet<string>> {
+  const ids = Array.from(
+    new Set(requestIds.filter((id): id is string => typeof id === 'string')),
+  );
+  if (ids.length === 0) {
+    return new Set();
+  }
+  const rows = await prisma.request.findMany({
+    where: { AND: [{ id: { in: ids } }, requestScopeWhere(actor)] },
+    select: { id: true },
+  });
+  return new Set(rows.map((row) => row.id));
 }
 
 /** Provider inyectable del alcance de solicitudes (exportado por RequestModule). */

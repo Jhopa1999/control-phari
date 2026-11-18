@@ -6,7 +6,9 @@ import {
   type CreateAsset,
   type UpdateAsset,
 } from './api-client';
+import type { paths } from '@plantilla-portales/api-client';
 import { messageFromBody } from './api-error';
+import { readServerPage, type ServerPage } from './pagination';
 
 /**
  * Error de dominio de activos con un mensaje ya entendible para el usuario.
@@ -47,7 +49,10 @@ function toAssetError(status: number | undefined, body?: unknown): AssetError {
   return new AssetError(messageFromBody(body) ?? messageForStatus(status), status);
 }
 
-/** Activos en alcance (GET /assets). El backend filtra por alcance. */
+/**
+ * Activos en alcance (GET /assets) sin paginar, para selectores. El backend
+ * filtra por alcance y devuelve como máximo 1000 filas.
+ */
 export async function listAssets(): Promise<Asset[]> {
   try {
     const { data, error, response } = await api.GET('/assets');
@@ -57,6 +62,54 @@ export async function listAssets(): Promise<Asset[]> {
     return data;
   } catch (err) {
     if (err instanceof AssetError) throw err;
+    throw toAssetError(undefined);
+  }
+}
+
+type AssetListQuery = NonNullable<paths['/assets']['get']['parameters']['query']>;
+/** Columnas por las que el servidor sabe ordenar activos (lista blanca). */
+export type AssetSortKey = NonNullable<AssetListQuery['sort']>;
+
+/** Filtros, búsqueda (nombre), orden y página del catálogo de activos. */
+export interface AssetPageQuery {
+  processId?: string;
+  requestId?: string;
+  status?: string;
+  q?: string;
+  sort?: AssetSortKey;
+  dir?: 'asc' | 'desc';
+  page: number;
+  pageSize: number;
+}
+
+/** Una página del catálogo (GET /assets con page/pageSize); total en X-Total-Count. */
+export async function listAssetsPage(
+  query: AssetPageQuery,
+  signal?: AbortSignal,
+): Promise<ServerPage<Asset>> {
+  try {
+    const { data, error, response } = await api.GET('/assets', {
+      params: {
+        query: {
+          page: query.page,
+          pageSize: query.pageSize,
+          ...(query.processId ? { processId: query.processId } : {}),
+          ...(query.requestId ? { requestId: query.requestId } : {}),
+          ...(query.status ? { status: query.status as AssetListQuery['status'] } : {}),
+          ...(query.q?.trim() ? { q: query.q.trim() } : {}),
+          ...(query.sort ? { sort: query.sort } : {}),
+          ...(query.dir ? { dir: query.dir } : {}),
+        },
+      },
+      signal,
+    });
+    if (error || !data) {
+      throw toAssetError(response.status);
+    }
+    return readServerPage(data, response);
+  } catch (err) {
+    if (err instanceof AssetError) throw err;
+    if (signal?.aborted) throw err;
     throw toAssetError(undefined);
   }
 }

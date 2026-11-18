@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { paginationHeaders, serveRequestList } from './helpers/server-list-mock';
 import { expect, test, type Page } from '@playwright/test';
 // Solo tipo: lib/api-client.ts lanza al evaluarse sin NEXT_PUBLIC_API_BASE_URL.
 import type { Request } from '../apps/web/src/lib/api-client';
@@ -90,7 +91,13 @@ test.describe('accesibilidad (axe-core)', () => {
       async (route) => {
         if (route.request().method() !== 'GET') return route.continue();
         const response = await route.fetch();
-        await route.fulfill({ response, json: REQUESTS_FIXTURE });
+        // El servidor pagina (oleada 3, PR-B): el mock aplica los mismos parámetros.
+        const served = serveRequestList(REQUESTS_FIXTURE, new URL(route.request().url()));
+        await route.fulfill({
+          response,
+          json: served.rows,
+          headers: { ...response.headers(), ...paginationHeaders(served.total) },
+        });
       },
     );
     await page.goto('/demanda/solicitudes');

@@ -34,24 +34,22 @@ import type { Process, Request, Requester } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
 import {
   BAND_FILTER_OPTIONS,
-  NO_BAND,
-  NO_PROCESS,
   parseProcessParam,
   processFilterOptions,
   stateFilterOptions,
 } from '@/lib/filter-options';
 import { formatDate } from '@/lib/format';
-import { matchesAny, normalizeSelection } from '@/lib/multi-filter';
+import { normalizeSelection } from '@/lib/multi-filter';
 import { listRequesters } from '@/lib/requesters';
 import {
   RequestError,
   createRequest,
   deleteRequest,
-  listRequests,
+  listRequestsPage,
   updateRequest,
+  type RequestSortKey,
 } from '@/lib/requests';
 import {
-  REQUEST_STATE_LABELS,
   isCommitted,
   isPlannable,
   editPolicy,
@@ -59,71 +57,53 @@ import {
   isTriageable,
   requestActorFrom,
 } from '@/lib/request-state';
-import { parseBand } from '@/lib/status-presentation';
-import {
-  compareByOrder,
-  compareDate,
-  compareNumber,
-  compareText,
-  matchCode,
-  matchesSearch,
-  type Comparator,
-  type SortState,
-} from '@/lib/table-sort';
+import type { SortState } from '@/lib/table-sort';
 import { listProcesses } from '@/lib/team';
-import { useClientTable } from '@/lib/use-client-table';
+import { useDebouncedValue, useServerTable } from '@/lib/use-server-table';
+import { ServerListBody } from '@/components/server-list';
+import { ProcessRefCell, RefMissing } from '@/components/reference-cell';
 import {
   SolicitudFormDialog,
   type SolicitudFormValues,
 } from './solicitud-form-dialog';
 import { solicitudUpdatePayload, toIso, trimOrUndefined } from './solicitud-payload';
 
-type LoadState = 'loading' | 'success' | 'error';
-type SortKey = 'title' | 'state' | 'priority' | 'registered';
+type SortKey = 'code' | 'title' | 'state' | 'priority' | 'registered';
 
 /** Opciones del filtro de estado, agrupadas por fase del flujo. */
 const STATE_OPTIONS = stateFilterOptions();
 const NOUN = { one: 'solicitud', other: 'solicitudes' };
 
-/** Estados en el orden del flujo (el de REQUEST_STATE_LABELS). */
-const REQUEST_STATES = Object.keys(REQUEST_STATE_LABELS);
-const compareState = compareByOrder(REQUEST_STATES);
 /** Registro descendente: las más recientes primero. */
 const DEFAULT_SORT: SortState<SortKey> = { key: 'registered', direction: 'desc' };
-const COMPARATORS: Record<SortKey, Comparator<Request>> = {
-  title: (a, b, direction) => compareText(a.title, b.title, direction),
-  state: (a, b, direction) => compareState(a.operationalState, b.operationalState, direction),
+/** Columna de la vista → columna de orden del servidor (lista blanca de la API). */
+const SERVER_SORT: Record<SortKey, RequestSortKey> = {
+  code: 'code',
+  title: 'title',
+  state: 'state',
   // Por score; las solicitudes sin score quedan al final en las dos direcciones.
-  priority: (a, b, direction) => compareNumber(a.currentScore, b.currentScore, direction),
-  registered: (a, b, direction) => compareDate(a.registeredAt, b.registeredAt, direction),
+  priority: 'score',
+  registered: 'registeredAt',
 };
 
 function messageOf(err: unknown): string {
   return err instanceof RequestError ? err.message : 'Ocurrió un error inesperado.';
 }
 
-/** Banda de una solicitud para el filtro: la del prefijo de priorityLabel, o «Sin priorizar». */
-function bandOf(request: Request): string {
-  return parseBand(request.priorityLabel) ?? NO_BAND;
-}
-
 /**
  * Solicitudes (design §11.5, patrón A): listado con búsqueda, filtros, orden y
- * paginación en cliente sobre GET /requests. El título abre la ficha; el menú
- * «Más acciones» lleva a cada fase solo si el módulo está permitido y la
- * solicitud cumple el predicado del destino.
+ * paginación EN EL SERVIDOR sobre GET /requests (oleada 3, PR-B). El título
+ * abre la ficha; el menú «Más acciones» lleva a cada fase solo si el módulo
+ * está permitido y la solicitud cumple el predicado del destino.
  */
 export function SolicitudesView(): React.ReactElement {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { allowedModules, permissions } = useActor();
   const requestActor = React.useMemo(() => requestActorFrom(permissions), [permissions]);
-  const [requests, setRequests] = React.useState<Request[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [requesters, setRequesters] = React.useState<Requester[]>([]);
   const [toDelete, setToDelete] = React.useState<Request | null>(null);
-  const [state, setState] = React.useState<LoadState>('loading');
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const [query, setQuery] = React.useState('');
   // Filtros de selección múltiple: arreglo de valores; vacío = sin restricción.
@@ -141,76 +121,62 @@ export function SolicitudesView(): React.ReactElement {
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
 
-  const loadData = React.useCallback(() => {
-    return Promise.all([
-      listRequests(),
-      listProcesses().catch(() => [] as Process[]),
-      listRequesters().catch(() => [] as Requester[]),
-    ])
-      .then(([reqs, procs, reqrs]) => {
-        setRequests(reqs);
-        setProcesses(procs);
-        setRequesters(reqrs);
-        setState('success');
-      })
-      .catch((err: unknown) => {
-        setErrorMessage(messageOf(err));
-        setState('error');
-      });
-  }, []);
-  const load = React.useCallback(async () => {
-    setState('loading');
-    await loadData();
-  }, [loadData]);
-
+  // Maestras para los filtros y el formulario; si fallan, se degradan a vacío.
   React.useEffect(() => {
-    void loadData();
-  }, [loadData]);
-
-  const processName = React.useMemo(() => {
-    const names = new Map(processes.map((p) => [p.id, p.name]));
-    // null = la solicitud aún no tiene proceso (se fija en el triage);
-    // un id fuera de alcance devuelve null (se pinta «—»).
-    return (id: string | null): string | null => (id ? names.get(id) ?? null : null);
-  }, [processes]);
-
-  /** Texto de la celda de proceso: «Sin proceso aún» si la solicitud no lo tiene. */
-  const processCell = React.useCallback(
-    (r: Request): string =>
-      r.mainProcessId === null ? 'Sin proceso aún' : processName(r.mainProcessId) ?? '—',
-    [processName],
-  );
+    void listProcesses()
+      .then(setProcesses)
+      .catch(() => setProcesses([]));
+    void listRequesters()
+      .then(setRequesters)
+      .catch(() => setRequesters([]));
+  }, []);
 
   const processOptions = React.useMemo(() => processFilterOptions(processes), [processes]);
-  // Los UUID de ?proceso= que no existen entre los procesos cargados se descartan.
+  // Los UUID de ?proceso= que no existen entre los procesos cargados se
+  // descartan (parseProcessParam ya solo admite SIN_PROCESO y UUID). Mientras
+  // los procesos no llegan, la selección viaja tal cual: el servidor la
+  // intersecta con el alcance.
   const processFilter = React.useMemo(
-    () => normalizeSelection(processOptions, processSelection),
-    [processOptions, processSelection],
+    () =>
+      processes.length === 0
+        ? processSelection
+        : normalizeSelection(processOptions, processSelection),
+    [processes.length, processOptions, processSelection],
   );
 
+  // La búsqueda viaja al servidor 300 ms después de la última tecla.
+  const debouncedQuery = useDebouncedValue(query.trim(), 300);
   const hasFilters =
-    query.trim() !== '' ||
+    debouncedQuery !== '' ||
     stateFilter.length > 0 ||
     processFilter.length > 0 ||
     bandFilter.length > 0;
-  // Y entre filtros, O dentro de cada uno. Una solicitud sin proceso (null)
-  // coincide con el centinela SIN_PROCESO; con proceso, con su id.
-  const filter = React.useCallback(
-    (r: Request) =>
-      (matchesSearch(r.title, query) || matchCode(r.code, query)) &&
-      matchesAny(stateFilter, r.operationalState) &&
-      matchesAny(processFilter, r.mainProcessId === null ? NO_PROCESS : r.mainProcessId) &&
-      matchesAny(bandFilter, bandOf(r)),
-    [query, stateFilter, processFilter, bandFilter],
+  const fetchPage = React.useCallback(
+    ({ page, pageSize, sort, signal }: { page: number; pageSize: number; sort: SortState<SortKey> | null; signal: AbortSignal }) =>
+      listRequestsPage(
+        {
+          q: debouncedQuery,
+          state: stateFilter,
+          // Y entre filtros, O dentro de cada uno; SIN_PROCESO = sin proceso aún.
+          mainProcessId: processFilter,
+          // «Sin priorizar» (NO_BAND) ya es el literal SIN_PRIORIZAR de la API.
+          band: bandFilter,
+          sort: sort ? SERVER_SORT[sort.key] : undefined,
+          dir: sort?.direction,
+          page,
+          pageSize,
+        },
+        signal,
+      ),
+    [debouncedQuery, stateFilter, processFilter, bandFilter],
   );
-  const table = useClientTable({
-    rows: requests,
-    filter,
-    comparators: COMPARATORS,
+  const table = useServerTable<Request, SortKey>({
+    fetchPage,
+    filtersKey: JSON.stringify([debouncedQuery, stateFilter, processFilter, bandFilter]),
     defaultSort: DEFAULT_SORT,
-    resetKey: JSON.stringify([query, stateFilter, processFilter, bandFilter]),
-    pageSize: 25,
   });
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const load = table.reload;
 
   function clearFilters(): void {
     setQuery('');
@@ -364,12 +330,14 @@ export function SolicitudesView(): React.ReactElement {
     }
   }
 
+  // Una recarga con filas visibles sigue en 'ready': la tabla no parpadea a
+  // vacío (docs/design/oleada-3-listados.md §5.4).
   let viewState: DataViewState;
-  if (state === 'loading') viewState = 'loading';
-  else if (state === 'error') viewState = 'error';
-  else if (table.total === 0) viewState = 'empty';
-  else if (table.filtered === 0) viewState = 'no-results';
+  if (table.status === 'loading') viewState = 'loading';
+  else if (table.status === 'error') viewState = 'error';
+  else if (table.total === 0 && table.status === 'ready') viewState = hasFilters ? 'no-results' : 'empty';
   else viewState = 'ready';
+  const showClear = hasFilters || query.trim() !== '';
 
   return (
     <PageLayout>
@@ -404,15 +372,16 @@ export function SolicitudesView(): React.ReactElement {
         collapseOnMobile
         end={
           <>
-            {state !== 'error' ? (
+            {table.status !== 'error' ? (
               <ResultCount
-                loading={state === 'loading'}
+                loading={table.busy}
+                spinner
                 total={table.total}
-                filtered={table.filtered}
+                filtered={table.total}
                 noun={NOUN}
               />
             ) : null}
-            {hasFilters ? (
+            {showClear ? (
               <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
                 Limpiar filtros
               </Button>
@@ -423,9 +392,15 @@ export function SolicitudesView(): React.ReactElement {
         <SearchInput
           ref={searchRef}
           id="sol-buscar"
-          placeholder="Título o ID"
+          placeholder="Código, título o solicitante"
+          maxLength={100}
+          autoComplete="off"
+          enterKeyHint="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && query !== '') setQuery('');
+          }}
         />
         <MultiSelectFilter
           id="sol-filtro-estado"
@@ -463,7 +438,7 @@ export function SolicitudesView(): React.ReactElement {
         mobileCards
         error={{
           title: 'No fue posible cargar las solicitudes.',
-          message: errorMessage,
+          message: messageOf(table.error),
           onRetry: () => void load(),
         }}
         empty={{
@@ -477,12 +452,29 @@ export function SolicitudesView(): React.ReactElement {
             </Button>
           ),
         }}
+        noResults={{
+          title: 'Sin resultados',
+          description: 'Ninguna solicitud coincide con la búsqueda o los filtros.',
+        }}
       >
+        <ServerListBody
+          containerRef={listRef}
+          reloading={table.status === 'reloading'}
+          reloadFailed={table.status === 'reload-error'}
+          onRetry={table.reload}
+          truncated={table.truncated}
+        >
         <div className="hidden md:block">
         <Table scrollLabel="Tabla de solicitudes">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-28">ID</TableHead>
+              <SortableTableHead
+                label="ID"
+                sortKey="code"
+                sort={table.sort}
+                onSort={table.toggleSort}
+                className="w-28"
+              />
               <SortableTableHead
                 label="Título"
                 sortKey="title"
@@ -490,6 +482,7 @@ export function SolicitudesView(): React.ReactElement {
                 onSort={table.toggleSort}
               />
               <TableHead>Proceso</TableHead>
+              <TableHead>Activo</TableHead>
               <SortableTableHead
                 label="Estado"
                 sortKey="state"
@@ -513,7 +506,7 @@ export function SolicitudesView(): React.ReactElement {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {table.pageRows.map((r) => (
+            {table.rows.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>
                   <IdChip code={r.code} />
@@ -521,8 +514,22 @@ export function SolicitudesView(): React.ReactElement {
                 <TableCell className="min-w-56 max-w-[28rem]">
                   <CellTitle onOpen={() => openTitle(r)}>{r.title}</CellTitle>
                 </TableCell>
-                <TableCell className="min-w-32 text-muted-foreground">
-                  {processCell(r)}
+                <TableCell className="min-w-32 max-w-[14rem]">
+                  <ProcessRefCell
+                    name={r.mainProcessName}
+                    code={r.mainProcessCode}
+                    missingLabel="Sin proceso aún"
+                    missingVisible={r.mainProcessId === null}
+                  />
+                </TableCell>
+                <TableCell className="min-w-32 max-w-[14rem]">
+                  {r.assetName ? (
+                    <span className="line-clamp-1" title={r.assetName}>
+                      {r.assetName}
+                    </span>
+                  ) : (
+                    <RefMissing label="Sin activo" />
+                  )}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   <StatusBadge kind="request" value={r.operationalState} />
@@ -531,7 +538,7 @@ export function SolicitudesView(): React.ReactElement {
                   {r.currentTriageDecision ? (
                     <StatusBadge kind="triage" value={r.currentTriageDecision} />
                   ) : (
-                    <span className="text-muted-foreground">—</span>
+                    <RefMissing label="Sin decisión" />
                   )}
                 </TableCell>
                 <TableCell>
@@ -550,12 +557,13 @@ export function SolicitudesView(): React.ReactElement {
         </div>
         <DataCardList
           label="Solicitudes"
-          rows={table.pageRows}
+          rows={table.rows}
           getKey={(r) => r.id}
           sort={{
             value: table.sort,
             onChange: table.setSort,
             options: [
+              { key: 'code', label: 'ID' },
               { key: 'title', label: 'Título' },
               { key: 'state', label: 'Estado' },
               { key: 'priority', label: 'Prioridad' },
@@ -571,7 +579,9 @@ export function SolicitudesView(): React.ReactElement {
             subtitle: (
               <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <IdChip code={r.code} />
-                {processCell(r)}
+                {r.mainProcessName
+                  ? [r.mainProcessName, r.mainProcessCode].filter(Boolean).join(' · ')
+                  : 'Sin proceso aún'}
               </span>
             ),
             badges: [
@@ -586,7 +596,10 @@ export function SolicitudesView(): React.ReactElement {
                 label={r.priorityLabel}
               />,
             ],
-            meta: [{ label: 'Registro', value: formatDate(r.registeredAt) }],
+            meta: [
+              ...(r.assetName ? [{ label: 'Activo', value: r.assetName }] : []),
+              { label: 'Registro', value: formatDate(r.registeredAt) },
+            ],
             actions: <RowActions menuOnly rowLabel={r.title} actions={rowActions(r)} />,
           })}
         />
@@ -596,12 +609,16 @@ export function SolicitudesView(): React.ReactElement {
           pageCount={table.pageCount}
           from={table.from}
           to={table.to}
-          filtered={table.filtered}
-          pageSize={table.pageSize ?? 25}
+          filtered={table.total}
+          pageSize={table.pageSize}
           onPageChange={table.setPage}
           onPageSizeChange={table.setPageSize}
           noun={NOUN}
+          showingPrefix
+          busy={table.busy}
+          fallbackFocusRef={listRef}
         />
+        </ServerListBody>
       </DataView>
 
       <SolicitudFormDialog

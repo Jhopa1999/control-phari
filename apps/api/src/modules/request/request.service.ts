@@ -28,6 +28,12 @@ import { formatRequestCode, nextRequestNumber, parseVisibleCode } from '../plan/
 import { requestScopeWhere } from './request-scope.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ListRequestsDto } from './dto/list-requests.dto';
+import {
+  PageResult,
+  buildPageResult,
+  resolvePage,
+} from '../../common/pagination/pagination';
+import { buildRequestWhere, orderByIds, pageRequestIds } from './request-list-query';
 import { RequestResponseDto } from './dto/request-response.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
 import {
@@ -153,29 +159,38 @@ equest-scope.service.ts). */
     };
   }
 
+  /**
+   * Lista solicitudes del alcance del actor con filtros, `q` (código, título y
+   * solicitante), orden y ventana de página. El alcance es el único de
+   * `requestScopeWhere`; los filtros solo lo intersectan. El total es el del
+   * alcance filtrado, no el de la página.
+   */
   async findMany(
     actor: CurrentActor,
     filters: ListRequestsDto,
-  ): Promise<RequestResponseDto[]> {
-    const where: Prisma.RequestWhereInput = { ...this.scopeWhere(actor) };
-    if (filters.state !== undefined) {
-      where.operationalState = filters.state;
-    }
-    if (filters.mainProcessId !== undefined) {
-      where.mainProcessId = filters.mainProcessId;
-    }
-
-    const requests = await this.prisma.request.findMany({
-      where,
-      orderBy: [{ registeredAt: 'desc' }, { createdAt: 'desc' }],
-      include: { participants: true },
+  ): Promise<PageResult<RequestResponseDto>> {
+    const window = resolvePage(filters);
+    const where = buildRequestWhere(this.scopeWhere(actor), filters, {
+      searchRequester: true,
     });
-
-    return Promise.all(
-      requests.map((r) =>
-        this.state.buildResponse(r as RequestWithParticipants),
-      ),
+    const { ids, total } = await pageRequestIds(
+      this.prisma,
+      where,
+      filters,
+      window,
+      (score) => this.state.priorityBand(score),
     );
+    const requests =
+      ids.length === 0
+        ? []
+        : await this.prisma.request.findMany({
+            where: { id: { in: ids } },
+            include: { participants: true },
+          });
+    const rows = await this.state.buildResponses(
+      orderByIds(ids, requests) as RequestWithParticipants[],
+    );
+    return buildPageResult(rows, total, window);
   }
 
   async findOne(actor: CurrentActor, id: string): Promise<RequestResponseDto> {

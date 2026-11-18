@@ -427,7 +427,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista solicitudes dentro del alcance del actor. */
+        /** Lista solicitudes dentro del alcance del actor (jefe y líder: todas; integrante: sus procesos más las que creó). Filtros opcionales de selección múltiple (state, mainProcessId con SIN_PROCESO, band), búsqueda q en código, título y solicitante, orden sort/dir y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count. */
         get: operations["RequestController_findMany"];
         put?: never;
         /** Crea una solicitud (estado REGISTRADA; BR-001). */
@@ -554,7 +554,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista activos en alcance (filtros opcionales). */
+        /** Lista activos en alcance con filtros opcionales, búsqueda q por nombre, orden sort/dir y paginación page/pageSize (take queda como alias obsoleto). Sin page, pageSize ni take devuelve el listado completo con un tope de 1000 filas. Cada fila trae el nombre y código del proceso, el responsable y la solicitud de origen. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count. */
         get: operations["AssetController_list"];
         put?: never;
         /** Crea un activo (nace BORRADOR). Solo el jefe de area. */
@@ -624,7 +624,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista documentos en alcance (filtros opcionales, sin contenido). */
+        /** Lista documentos en alcance (sin contenido) con filtros opcionales, búsqueda q en el título, orden sort/dir y paginación page/pageSize (take queda como alias obsoleto). Sin page, pageSize ni take devuelve el listado completo con un tope de 1000 filas. Cada fila trae el nombre del activo y el código y título del proyecto. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count. */
         get: operations["DocumentController_list"];
         put?: never;
         /** Crea un documento + version 1 (contenido Markdown). */
@@ -2343,7 +2343,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Listado del portafolio en alcance, el mismo que Solicitudes: jefe y líder ven todas; el integrante, sus procesos más las que creó (filtros opcionales de selección múltiple: OR dentro de un filtro, AND entre filtros). */
+        /** Listado del portafolio en alcance, el mismo que Solicitudes: jefe y líder ven todas; el integrante, sus procesos más las que creó. Filtros opcionales de selección múltiple (OR dentro de un filtro, AND entre filtros), búsqueda q en código y título, orden sort/dir y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count. */
         get: operations["PortfolioController_list"];
         put?: never;
         post?: never;
@@ -3578,10 +3578,19 @@ export interface components {
              */
             mainProcessId: string | null;
             /**
+             * @description Código del proceso principal (null si aún no tiene proceso).
+             * @example BI
+             */
+            mainProcessCode: string | null;
+            /** @description Nombre del proceso principal (null si aún no tiene proceso). */
+            mainProcessName: string | null;
+            /**
              * Format: uuid
              * @description Activo al que pertenece la solicitud (P1) o null.
              */
             assetId: string | null;
+            /** @description Nombre del activo al que pertenece la solicitud (null si no tiene). */
+            assetName: string | null;
             /**
              * Format: uuid
              * @description Usuario que registró la solicitud (para que el creador identifique lo suyo aunque aún no tenga proceso).
@@ -3974,6 +3983,22 @@ export interface components {
             dependencies: string | null;
             /** @description Procesos que pueden ver/usar el activo (sin incluir al propietario). */
             visibleProcessIds: string[];
+            /**
+             * @description Código del proceso propietario.
+             * @example BI
+             */
+            processCode: string;
+            /** @description Nombre del proceso propietario. */
+            processName: string;
+            /** @description Nombre del responsable (null si no tiene). */
+            ownerName: string | null;
+            /**
+             * @description ID visible de la solicitud de origen (null si no tiene o fue eliminada).
+             * @example PRY-0012
+             */
+            requestCode: string | null;
+            /** @description Título de la solicitud de origen (null si no tiene o fue eliminada). */
+            requestTitle: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -4079,6 +4104,8 @@ export interface components {
              * @description Activo del documento.
              */
             assetId: string;
+            /** @description Nombre del activo del documento. */
+            assetName: string;
             /** @description Titulo. */
             title: string;
             /** @description Categoria (maestra DOC_CATEGORY). */
@@ -4090,6 +4117,13 @@ export interface components {
              * @description Proyecto (solicitud) vinculado, p. ej. documentación de cierre.
              */
             requestId: string | null;
+            /**
+             * @description ID visible del proyecto (solicitud) vinculado (null si no tiene o fue eliminado).
+             * @example PRY-0012
+             */
+            requestCode: string | null;
+            /** @description Título del proyecto (solicitud) vinculado (null si no tiene o fue eliminado). */
+            requestTitle: string | null;
             /**
              * Format: date-time
              * @description Envío a aprobación.
@@ -9092,10 +9126,22 @@ export interface operations {
     RequestController_findMany: {
         parameters: {
             query?: {
-                /** @description Filtra por estado operativo. */
-                state?: "REGISTRADA" | "EN_TRIAGE" | "DEVUELTA" | "RECHAZADA" | "BACKLOG_PRIORIZADO" | "COMPROMETIDA" | "EN_PLANIFICACION" | "EN_EJECUCION" | "BLOQUEADA" | "EN_VALIDACION" | "LISTA_PARA_LIBERAR" | "EN_ESTABILIZACION" | "OPERATIVA" | "CERRADA" | "RETIRADA";
-                /** @description Filtra por proceso principal. */
-                mainProcessId?: string;
+                /** @description Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated). */
+                page?: number;
+                /** @description Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count. */
+                pageSize?: number;
+                /** @description Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado. */
+                q?: string;
+                /** @description Sentido del orden (asc o desc). Por defecto, el propio de cada listado. */
+                dir?: "asc" | "desc";
+                /** @description Filtra por uno o varios estados operativos (?state=A&state=B; se combinan con O). Máximo 50 valores. */
+                state?: ("REGISTRADA" | "EN_TRIAGE" | "DEVUELTA" | "RECHAZADA" | "BACKLOG_PRIORIZADO" | "COMPROMETIDA" | "EN_PLANIFICACION" | "EN_EJECUCION" | "BLOQUEADA" | "EN_VALIDACION" | "LISTA_PARA_LIBERAR" | "EN_ESTABILIZACION" | "OPERATIVA" | "CERRADA" | "RETIRADA")[];
+                /** @description Filtra por uno o varios procesos principales (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aún por triar). Se repite el parámetro (?mainProcessId=a&mainProcessId=b); los valores se combinan con O. Máximo 50 valores. */
+                mainProcessId?: string[];
+                /** @description Filtra por una o varias bandas de prioridad (P1..P4) o SIN_PRIORIZAR (?band=P1&band=SIN_PRIORIZAR; se combinan con O). Máximo 50 valores. */
+                band?: ("P1" | "P2" | "P3" | "P4" | "SIN_PRIORIZAR")[];
+                /** @description Columna de orden: registeredAt (por defecto, descendente), code, title, state (orden del flujo), score (prioridad; sin evaluación al final). Empata por id. */
+                sort?: "registeredAt" | "code" | "title" | "state" | "score";
             };
             header?: never;
             path?: never;
@@ -9103,14 +9149,29 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Listado de solicitudes. */
+            /** @description Listado de solicitudes (la página pedida o hasta 1000 filas). */
             200: {
                 headers: {
+                    /** @description Total de filas tras alcance, filtros y búsqueda (no solo la página). */
+                    "X-Total-Count"?: number;
+                    /** @description Página servida (1 si no se pidió página). */
+                    "X-Page"?: number;
+                    /** @description Tamaño de la página servida (1000 si no se pidió página). */
+                    "X-Page-Size"?: number;
+                    /** @description true si no se pidió página y el listado superó el tope de 1000 filas. */
+                    "X-Truncated"?: "true" | "false";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["RequestResponseDto"][];
                 };
+            };
+            /** @description Filtros, orden o paginación inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description No hay un usuario actual valido. */
             401: {
@@ -9614,13 +9675,26 @@ export interface operations {
     AssetController_list: {
         parameters: {
             query?: {
+                /** @description Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated). */
+                page?: number;
+                /** @description Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count. */
+                pageSize?: number;
+                /** @description Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado. */
+                q?: string;
+                /** @description Sentido del orden (asc o desc). Por defecto, el propio de cada listado. */
+                dir?: "asc" | "desc";
                 /** @description Filtra por proceso. */
                 processId?: string;
                 /** @description Filtra por solicitud. */
                 requestId?: string;
                 /** @description Filtra por estado. */
                 status?: "BORRADOR" | "ACTIVO" | "RETIRADO";
-                /** @description Maximo de resultados. */
+                /** @description Columna de orden: createdAt (por defecto, descendente), name o status. Empata por id. */
+                sort?: "createdAt" | "name" | "status";
+                /**
+                 * @deprecated
+                 * @description Obsoleto: usa pageSize. Máximo de resultados (primera página). Si llegan take y pageSize, gana pageSize.
+                 */
                 take?: number;
             };
             header?: never;
@@ -9629,16 +9703,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Activos. */
+            /** @description Activos (la página pedida o hasta 1000 filas). */
             200: {
                 headers: {
+                    /** @description Total de filas tras alcance, filtros y búsqueda (no solo la página). */
+                    "X-Total-Count"?: number;
+                    /** @description Página servida (1 si no se pidió página). */
+                    "X-Page"?: number;
+                    /** @description Tamaño de la página servida (1000 si no se pidió página). */
+                    "X-Page-Size"?: number;
+                    /** @description true si no se pidió página y el listado superó el tope de 1000 filas. */
+                    "X-Truncated"?: "true" | "false";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["AssetResponseDto"][];
                 };
             };
-            /** @description Filtros invalidos. */
+            /** @description Filtros, orden o paginación inválidos. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9861,6 +9943,14 @@ export interface operations {
     DocumentController_list: {
         parameters: {
             query?: {
+                /** @description Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated). */
+                page?: number;
+                /** @description Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count. */
+                pageSize?: number;
+                /** @description Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado. */
+                q?: string;
+                /** @description Sentido del orden (asc o desc). Por defecto, el propio de cada listado. */
+                dir?: "asc" | "desc";
                 /** @description Filtra por activo. */
                 assetId?: string;
                 /** @description Filtra por proceso (del activo). */
@@ -9871,9 +9961,12 @@ export interface operations {
                 categoryCode?: string;
                 /** @description Filtra por estado. */
                 status?: "BORRADOR" | "PENDIENTE_APROBACION" | "VIGENTE" | "RECHAZADO" | "ARCHIVADA";
-                /** @description Busqueda por texto en el titulo. */
-                q?: string;
-                /** @description Maximo de resultados. */
+                /** @description Columna de orden: createdAt (por defecto, descendente), title o status. Empata por id. */
+                sort?: "createdAt" | "title" | "status";
+                /**
+                 * @deprecated
+                 * @description Obsoleto: usa pageSize. Máximo de resultados (primera página). Si llegan take y pageSize, gana pageSize.
+                 */
                 take?: number;
             };
             header?: never;
@@ -9882,16 +9975,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Documentos. */
+            /** @description Documentos (la página pedida o hasta 1000 filas). */
             200: {
                 headers: {
+                    /** @description Total de filas tras alcance, filtros y búsqueda (no solo la página). */
+                    "X-Total-Count"?: number;
+                    /** @description Página servida (1 si no se pidió página). */
+                    "X-Page"?: number;
+                    /** @description Tamaño de la página servida (1000 si no se pidió página). */
+                    "X-Page-Size"?: number;
+                    /** @description true si no se pidió página y el listado superó el tope de 1000 filas. */
+                    "X-Truncated"?: "true" | "false";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentResponseDto"][];
                 };
             };
-            /** @description Filtros invalidos. */
+            /** @description Filtros, orden o paginación inválidos. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15338,12 +15439,22 @@ export interface operations {
     PortfolioController_list: {
         parameters: {
             query?: {
+                /** @description Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated). */
+                page?: number;
+                /** @description Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count. */
+                pageSize?: number;
+                /** @description Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado. */
+                q?: string;
+                /** @description Sentido del orden (asc o desc). Por defecto, el propio de cada listado. */
+                dir?: "asc" | "desc";
                 /** @description Filtra por uno o varios procesos principales (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aún por triar). Se repite el parámetro (?mainProcessId=a&mainProcessId=b); los valores se combinan con O. Máximo 50 valores. */
                 mainProcessId?: string[];
                 /** @description Filtra por uno o varios estados operativos (?state=A&state=B; se combinan con O). Máximo 50 valores. */
                 state?: ("REGISTRADA" | "EN_TRIAGE" | "DEVUELTA" | "RECHAZADA" | "BACKLOG_PRIORIZADO" | "COMPROMETIDA" | "EN_PLANIFICACION" | "EN_EJECUCION" | "BLOQUEADA" | "EN_VALIDACION" | "LISTA_PARA_LIBERAR" | "EN_ESTABILIZACION" | "OPERATIVA" | "CERRADA" | "RETIRADA")[];
                 /** @description Filtra por una o varias bandas de prioridad (P1..P4) o SIN_PRIORIZAR (?band=P1&band=SIN_PRIORIZAR; se combinan con O). Máximo 50 valores. */
                 band?: ("P1" | "P2" | "P3" | "P4" | "SIN_PRIORIZAR")[];
+                /** @description Columna de orden: registeredAt (por defecto, descendente), code, title, state (orden del flujo), score (prioridad; sin evaluación al final). Empata por id. */
+                sort?: "registeredAt" | "code" | "title" | "state" | "score";
             };
             header?: never;
             path?: never;
@@ -15351,16 +15462,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Iniciativas del portafolio. */
+            /** @description Iniciativas del portafolio (la página pedida o hasta 1000 filas). */
             200: {
                 headers: {
+                    /** @description Total de filas tras alcance, filtros y búsqueda (no solo la página). */
+                    "X-Total-Count"?: number;
+                    /** @description Página servida (1 si no se pidió página). */
+                    "X-Page"?: number;
+                    /** @description Tamaño de la página servida (1000 si no se pidió página). */
+                    "X-Page-Size"?: number;
+                    /** @description true si no se pidió página y el listado superó el tope de 1000 filas. */
+                    "X-Truncated"?: "true" | "false";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioItemResponseDto"][];
                 };
             };
-            /** @description Filtros invalidos. */
+            /** @description Filtros, orden o paginación inválidos. */
             400: {
                 headers: {
                     [name: string]: unknown;

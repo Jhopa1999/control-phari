@@ -56,20 +56,16 @@ import {
   createDocumentVersion,
   downloadMarkdown,
   getCurrentContent,
-  listDocuments,
+  getDocument,
+  listDocumentsPage,
   updateDocument,
 } from '@/lib/documents';
 import { getStatus } from '@/lib/status-presentation';
-import {
-  compareByOrder,
-  compareNumber,
-  compareText,
-  matchesSearch,
-  type Comparator,
-  type SortState,
-} from '@/lib/table-sort';
+import type { SortState } from '@/lib/table-sort';
 import { listProcesses } from '@/lib/team';
-import { useClientTable } from '@/lib/use-client-table';
+import { useDebouncedValue, useServerTable } from '@/lib/use-server-table';
+import { ServerListBody } from '@/components/server-list';
+import { ProcessRefCell, RefMissing, RequestRefCell } from '@/components/reference-cell';
 import { listCoordinationPeople } from '@/lib/worklog';
 import { listRequests } from '@/lib/requests';
 import {
@@ -79,8 +75,8 @@ import {
 import { HistorialDialog } from './historial-dialog';
 import { VerDocumentoDialog } from './ver-documento-dialog';
 
-type LoadState = 'loading' | 'success' | 'error';
-type SortKey = 'title' | 'asset' | 'version' | 'status';
+/** Columnas ordenables en el servidor (lista blanca); Activo y Versión ya no ordenan. */
+type SortKey = 'title' | 'status';
 
 /** Centinela de «Todos» / «Todas» en los filtros. */
 const ALL = '__all__';
@@ -95,7 +91,6 @@ const DOCUMENT_STATES = [
 ] as const;
 /** Categoría de la documentación de cierre de proyectos. */
 const CLOSURE_CATEGORY = 'CIERRE';
-const compareStatus = compareByOrder(DOCUMENT_STATES);
 /** Orden por defecto: Título ascendente (design §11.17). */
 const DEFAULT_SORT: SortState<SortKey> = { key: 'title', direction: 'asc' };
 /** Id del motivo de «Nuevo documento» no disponible. */
@@ -184,14 +179,11 @@ export function DocumentosView(): React.ReactElement {
     [permissions],
   );
 
-  const [documents, setDocuments] = React.useState<Document[]>([]);
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [owners, setOwners] = React.useState<CoordinationPerson[]>([]);
   const [categoryOptions, setCategoryOptions] = React.useState<CatalogItem[]>([]);
-  const [state, setState] = React.useState<LoadState>('loading');
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   // Búsqueda y filtros en cliente (el contrato no expone parámetros de consulta).
   const [processFilter, setProcessFilter] = React.useState<string>(ALL);
@@ -239,24 +231,10 @@ export function DocumentosView(): React.ReactElement {
     [assetById, isJefe, leaderProcessIds],
   );
 
-  // Enlace directo (?documentId=, p. ej. desde una notificación): tras la primera
-  // carga correcta abre el documento o avisa si no está en el alcance. Solo una vez.
-  const deepLinkDone = React.useRef(false);
-  const openDeepLink = React.useCallback((docs: Document[]) => {
-    if (deepLinkDone.current) return;
-    deepLinkDone.current = true;
-    const id = new URLSearchParams(window.location.search).get('documentId');
-    const doc = id ? docs.find((d) => d.id === id) : undefined;
-    if (doc) {
-      setViewDoc(doc);
-      setViewOpen(true);
-    } else if (id) {
-      toast.error('El documento no existe o está fuera de tu alcance.');
-    }
-  }, []);
-  const loadData = React.useCallback(() => {
-    return Promise.all([
-      listDocuments(),
+  // Maestras (filtros, formulario y gating de estado); si fallan, se degradan a vacío.
+  const [lookupsReady, setLookupsReady] = React.useState(false);
+  React.useEffect(() => {
+    void Promise.all([
       listAssets().catch(() => [] as Asset[]),
       listProcesses().catch(() => [] as Process[]),
       listRequests().catch(() => [] as Request[]),
@@ -264,91 +242,88 @@ export function DocumentosView(): React.ReactElement {
       listCatalogItems({ catalog: 'DOC_CATEGORY', active: true }).catch(
         () => [] as CatalogItem[],
       ),
-    ])
-      .then(([docs, assetList, procs, reqs, usrs, cats]) => {
-        setDocuments(docs);
-        setAssets(assetList);
-        setProcesses(procs);
-        setRequests(reqs);
-        setOwners(usrs);
-        setCategoryOptions(cats);
-        setState('success');
-        openDeepLink(docs);
-      })
-      .catch((err: unknown) => {
-        setErrorMessage(messageOf(err));
-        setState('error');
-      });
-  }, [openDeepLink]);
-  const load = React.useCallback(async () => {
-    setState('loading');
-    await loadData();
-  }, [loadData]);
+    ]).then(([assetList, procs, reqs, usrs, cats]) => {
+      setAssets(assetList);
+      setProcesses(procs);
+      setRequests(reqs);
+      setOwners(usrs);
+      setCategoryOptions(cats);
+      setLookupsReady(true);
+    });
+  }, []);
 
+  // Enlace directo (?documentId=, p. ej. desde una notificación): abre el
+  // documento aunque no esté en la página visible, o avisa si no está en el
+  // alcance (404). Solo una vez.
   React.useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    const id = new URLSearchParams(window.location.search).get('documentId');
+    if (!id) return;
+    let cancelled = false;
+    getDocument(id)
+      .then((doc) => {
+        if (cancelled) return;
+        setViewDoc(doc);
+        setViewOpen(true);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('El documento no existe o está fuera de tu alcance.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-
-  const assetName = React.useCallback(
-    // Ids que no vienen en las listas del alcance: nunca un UUID visible (§13.1).
-    (id: string) => assetById.get(id)?.name ?? 'Activo fuera de tu alcance',
-    [assetById],
-  );
   const processName = React.useCallback(
-    (id: string) => processes.find((p) => p.id === id)?.name ?? 'Proceso fuera de tu alcance',
+    (id: string) => processes.find((p) => p.id === id)?.name ?? null,
     [processes],
   );
 
-  const comparators = React.useMemo<Record<SortKey, Comparator<Document>>>(
-    () => ({
-      title: (a, b, direction) => compareText(a.title, b.title, direction),
-      asset: (a, b, direction) => compareText(assetName(a.assetId), assetName(b.assetId), direction),
-      version: (a, b, direction) =>
-        compareNumber(
-          a.currentVersion?.versionNumber ?? null,
-          b.currentVersion?.versionNumber ?? null,
-          direction,
-        ),
-      status: (a, b, direction) => compareStatus(a.status, b.status, direction),
-    }),
-    [assetName],
-  );
-
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
   const hasFilters =
-    search.trim() !== '' ||
+    debouncedSearch !== '' ||
     processFilter !== ALL ||
     requestFilter !== ALL ||
     assetFilter !== ALL ||
     statusFilter !== ALL;
-  const filter = React.useCallback(
-    (doc: Document) => {
-      const asset = assetById.get(doc.assetId);
-      return (
-        matchesSearch(doc.title, search) &&
-        (processFilter === ALL || asset?.processId === processFilter) &&
-        (requestFilter === ALL || asset?.requestId === requestFilter) &&
-        (assetFilter === ALL || doc.assetId === assetFilter) &&
-        (statusFilter === ALL || doc.status === statusFilter)
-      );
-    },
-    [assetById, search, processFilter, requestFilter, assetFilter, statusFilter],
+  const showClear = hasFilters || search.trim() !== '';
+  const fetchPage = React.useCallback(
+    ({ page, pageSize, sort, signal }: { page: number; pageSize: number; sort: SortState<SortKey> | null; signal: AbortSignal }) =>
+      listDocumentsPage(
+        {
+          q: debouncedSearch,
+          processId: processFilter === ALL ? undefined : processFilter,
+          // Documentos del proyecto: vinculados a la solicitud o del activo de origen.
+          requestId: requestFilter === ALL ? undefined : requestFilter,
+          assetId: assetFilter === ALL ? undefined : assetFilter,
+          status: statusFilter === ALL ? undefined : statusFilter,
+          sort: sort?.key,
+          dir: sort?.direction,
+          page,
+          pageSize,
+        },
+        signal,
+      ),
+    [debouncedSearch, processFilter, requestFilter, assetFilter, statusFilter],
   );
-  const table = useClientTable({
-    rows: documents,
-    filter,
-    comparators,
+  const table = useServerTable<Document, SortKey>({
+    fetchPage,
+    filtersKey: JSON.stringify([debouncedSearch, processFilter, requestFilter, assetFilter, statusFilter]),
     defaultSort: DEFAULT_SORT,
-    resetKey: JSON.stringify([search, processFilter, requestFilter, assetFilter, statusFilter]),
-    pageSize: 25,
   });
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const load = table.reload;
+  /** Nombre del activo para el editor: del DTO o de la maestra. */
+  const assetName = React.useCallback(
+    (id: string) => assetById.get(id)?.name ?? table.rows.find((d) => d.assetId === id)?.assetName ?? '',
+    [assetById, table.rows],
+  );
 
   // Activos candidatos para crear un documento: solo los no retirados.
   const creatableAssets = React.useMemo(
     () => assets.filter((a) => a.status !== 'RETIRADO'),
     [assets],
   );
-  const noCreatableAssets = state === 'success' && creatableAssets.length === 0;
+  const noCreatableAssets = lookupsReady && creatableAssets.length === 0;
 
   function clearFilters(): void {
     setSearch('');
@@ -558,10 +533,10 @@ export function DocumentosView(): React.ReactElement {
   }
 
   let viewState: DataViewState;
-  if (state === 'loading') viewState = 'loading';
-  else if (state === 'error') viewState = 'error';
-  else if (table.total === 0) viewState = 'empty';
-  else if (table.filtered === 0) viewState = 'no-results';
+  // Una recarga con filas visibles sigue en 'ready': la tabla no parpadea a vacío.
+  if (table.status === 'loading') viewState = 'loading';
+  else if (table.status === 'error') viewState = 'error';
+  else if (table.total === 0 && table.status === 'ready') viewState = hasFilters ? 'no-results' : 'empty';
   else viewState = 'ready';
 
   const goToAssets = allowedModules.has('asset') ? (
@@ -582,7 +557,7 @@ export function DocumentosView(): React.ReactElement {
       {goToAssets}
     </div>
   ) : (
-    <Button type="button" onClick={openCreate} disabled={state === 'loading'}>
+    <Button type="button" onClick={openCreate} disabled={table.status === 'loading'}>
       <Plus aria-hidden="true" />
       Nuevo documento
     </Button>
@@ -601,15 +576,16 @@ export function DocumentosView(): React.ReactElement {
         collapseOnMobile
         end={
           <>
-            {state !== 'error' ? (
+            {table.status !== 'error' ? (
               <ResultCount
-                loading={state === 'loading'}
+                loading={table.busy}
+                spinner
                 total={table.total}
-                filtered={table.filtered}
+                filtered={table.total}
                 noun={NOUN}
               />
             ) : null}
-            {hasFilters ? (
+            {showClear ? (
               <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
                 Limpiar filtros
               </Button>
@@ -621,8 +597,14 @@ export function DocumentosView(): React.ReactElement {
           ref={searchRef}
           id="doc-filtro-busqueda"
           placeholder="Título del documento"
+          maxLength={100}
+          autoComplete="off"
+          enterKeyHint="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && search !== '') setSearch('');
+          }}
         />
         <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="doc-filtro-proceso">Proceso</Label>
@@ -650,7 +632,7 @@ export function DocumentosView(): React.ReactElement {
               <SelectItem value={ALL}>Todas</SelectItem>
               {requests.map((r) => (
                 <SelectItem key={r.id} value={r.id}>
-                  {r.title}
+                  {r.code} · {r.title}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -696,8 +678,12 @@ export function DocumentosView(): React.ReactElement {
         mobileCards
         error={{
           title: 'No fue posible cargar los documentos.',
-          message: errorMessage,
+          message: messageOf(table.error),
           onRetry: () => void load(),
+        }}
+        noResults={{
+          title: 'Sin resultados',
+          description: 'Ningún documento coincide con la búsqueda o los filtros.',
         }}
         empty={
           creatableAssets.length === 0
@@ -720,6 +706,13 @@ export function DocumentosView(): React.ReactElement {
               }
         }
       >
+        <ServerListBody
+          containerRef={listRef}
+          reloading={table.status === 'reloading'}
+          reloadFailed={table.status === 'reload-error'}
+          onRetry={table.reload}
+          truncated={table.truncated}
+        >
         <div className="hidden md:block">
         <Table scrollLabel="Tabla de documentos">
           <TableHeader>
@@ -730,20 +723,10 @@ export function DocumentosView(): React.ReactElement {
                 sort={table.sort}
                 onSort={table.toggleSort}
               />
-              <SortableTableHead
-                label="Activo"
-                sortKey="asset"
-                sort={table.sort}
-                onSort={table.toggleSort}
-              />
+              <TableHead>Activo</TableHead>
               <TableHead>Proceso</TableHead>
-              <SortableTableHead
-                label="Versión"
-                sortKey="version"
-                sort={table.sort}
-                onSort={table.toggleSort}
-                align="right"
-              />
+              <TableHead>Solicitud</TableHead>
+              <TableHead className="text-right">Versión</TableHead>
               <SortableTableHead
                 label="Estado"
                 sortKey="status"
@@ -754,8 +737,7 @@ export function DocumentosView(): React.ReactElement {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {/* eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render. */}
-            {table.pageRows.map((doc) => {
+            {table.rows.map((doc) => {
               const asset = assetById.get(doc.assetId);
               return (
                 <TableRow key={doc.id}>
@@ -772,16 +754,32 @@ export function DocumentosView(): React.ReactElement {
                       {doc.title}
                     </CellTitle>
                   </TableCell>
-                  <TableCell className="min-w-40 max-w-64">
-                    <span className="line-clamp-2 wrap-break-word text-muted-foreground">
-                      {assetName(doc.assetId)}
+                  <TableCell className="min-w-40 max-w-[18rem]">
+                    <span className="line-clamp-1" title={doc.assetName}>
+                      {doc.assetName}
                     </span>
                   </TableCell>
-                  <TableCell className="min-w-28 text-muted-foreground">
-                    {asset ? processName(asset.processId) : '—'}
+                  <TableCell className="min-w-32 max-w-[18rem]">
+                    <ProcessRefCell
+                      name={asset ? processName(asset.processId) : null}
+                      code={null}
+                      missingLabel="Proceso no disponible"
+                    />
+                  </TableCell>
+                  <TableCell className="min-w-40 max-w-[18rem]">
+                    <RequestRefCell
+                      code={doc.requestCode}
+                      title={doc.requestTitle}
+                      unavailable={doc.requestId !== null}
+                      missingLabel="Sin solicitud"
+                    />
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {doc.currentVersion ? `v${doc.currentVersion.versionNumber}` : '—'}
+                    {doc.currentVersion ? (
+                      `v${doc.currentVersion.versionNumber}`
+                    ) : (
+                      <RefMissing label="Sin versión" />
+                    )}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <StatusBadge kind="document" value={doc.status} />
@@ -797,15 +795,13 @@ export function DocumentosView(): React.ReactElement {
         </div>
         <DataCardList
           label="Documentos"
-          rows={table.pageRows}
+          rows={table.rows}
           getKey={(doc) => doc.id}
           sort={{
             value: table.sort,
             onChange: table.setSort,
             options: [
               { key: 'title', label: 'Título' },
-              { key: 'asset', label: 'Activo' },
-              { key: 'version', label: 'Versión' },
               { key: 'status', label: 'Estado' },
             ],
           }}
@@ -826,10 +822,23 @@ export function DocumentosView(): React.ReactElement {
                   {doc.title}
                 </CellTitle>
               ),
-              subtitle: assetName(doc.assetId),
+              subtitle: doc.assetName,
               badges: [<StatusBadge key="status" kind="document" value={doc.status} />],
               meta: [
-                { label: 'Proceso', value: asset ? processName(asset.processId) : '—' },
+                ...(asset && processName(asset.processId)
+                  ? [{ label: 'Proceso', value: processName(asset.processId) }]
+                  : []),
+                {
+                  label: 'Solicitud',
+                  value: (
+                    <RequestRefCell
+                      code={doc.requestCode}
+                      title={doc.requestTitle}
+                      unavailable={doc.requestId !== null}
+                      missingLabel="Sin solicitud"
+                    />
+                  ),
+                },
                 {
                   label: 'Versión',
                   value: doc.currentVersion ? `v${doc.currentVersion.versionNumber}` : '—',
@@ -845,12 +854,16 @@ export function DocumentosView(): React.ReactElement {
           pageCount={table.pageCount}
           from={table.from}
           to={table.to}
-          filtered={table.filtered}
-          pageSize={table.pageSize ?? 25}
+          filtered={table.total}
+          pageSize={table.pageSize}
           onPageChange={table.setPage}
           onPageSizeChange={table.setPageSize}
           noun={NOUN}
+          showingPrefix
+          busy={table.busy}
+          fallbackFocusRef={listRef}
         />
+        </ServerListBody>
       </DataView>
 
       <DocumentoEditorDialog

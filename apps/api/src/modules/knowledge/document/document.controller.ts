@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -17,6 +18,8 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { HeaderResponse, setPaginationHeaders } from '../../../common/pagination/pagination';
+import { PAGINATION_RESPONSE_HEADERS } from '../../../common/pagination/pagination-openapi';
 import { DocumentService } from './document.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
@@ -48,15 +51,26 @@ export class DocumentController {
   constructor(private readonly documentService: DocumentService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lista documentos en alcance (filtros opcionales, sin contenido).' })
-  @ApiResponse({ status: 200, description: 'Documentos.', type: [DocumentResponseDto] })
-  @ApiResponse({ status: 400, description: 'Filtros invalidos.' })
+  @ApiOperation({
+    summary:
+      'Lista documentos en alcance (sin contenido) con filtros opcionales, búsqueda q en el título, orden sort/dir y paginación page/pageSize (take queda como alias obsoleto). Sin page, pageSize ni take devuelve el listado completo con un tope de 1000 filas. Cada fila trae el nombre del activo y el código y título del proyecto. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Documentos (la página pedida o hasta 1000 filas).',
+    type: [DocumentResponseDto],
+    headers: PAGINATION_RESPONSE_HEADERS,
+  })
+  @ApiResponse({ status: 400, description: 'Filtros, orden o paginación inválidos.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  list(
+  async list(
     @CurrentActor() actor: CurrentActorType,
     @Query() filters: ListDocumentsDto,
-  ) {
-    return this.documentService.list(actor, filters);
+    @Res({ passthrough: true }) res: HeaderResponse,
+  ): Promise<DocumentResponseDto[]> {
+    const result = await this.documentService.list(actor, filters);
+    setPaginationHeaders(res, result);
+    return result.rows;
   }
 
   @Get('pending-approval')

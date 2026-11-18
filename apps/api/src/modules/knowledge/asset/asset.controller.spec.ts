@@ -19,7 +19,7 @@ function actor(): CurrentActor {
 
 describe('AssetController (delegacion)', () => {
   const svc = {
-    list: jest.fn().mockResolvedValue('list'),
+    list: jest.fn().mockResolvedValue({ rows: ['fila'], total: 7, truncated: false, window: { paginated: true, page: 2, pageSize: 5, skip: 5, take: 5 } }),
     create: jest.fn().mockResolvedValue('create'),
     get: jest.fn().mockResolvedValue('get'),
     listRequests: jest.fn().mockResolvedValue('listRequests'),
@@ -31,7 +31,16 @@ describe('AssetController (delegacion)', () => {
 
   it('list delega actor y filtros', async () => {
     const filters = {} as never;
-    await expect(controller.list(a, filters)).resolves.toBe('list');
+    const headers: Record<string, string> = {};
+    const res = { setHeader: (k: string, v: string) => (headers[k] = v) };
+    await expect(controller.list(a, filters, res)).resolves.toEqual(['fila']);
+    // El total y la ventana viajan en cabeceras; el cuerpo sigue siendo un arreglo.
+    expect(headers).toEqual({
+      'X-Total-Count': '7',
+      'X-Page': '2',
+      'X-Page-Size': '5',
+      'X-Truncated': 'false',
+    });
     expect(svc.list).toHaveBeenCalledWith(a, filters);
   });
 

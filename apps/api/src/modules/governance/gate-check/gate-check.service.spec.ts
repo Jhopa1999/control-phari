@@ -14,6 +14,7 @@ import { GovernanceScopeService } from '../governance-scope.service';
 import { GovernanceStateService } from '../governance-state.service';
 import { GateCode, GateStatus, GOVERNANCE_ROUTE } from '../gate';
 import { GateCheckService } from './gate-check.service';
+import { withReferenceLookups } from '../../../testing/reference-lookups';
 
 /** Actor jefe de area (sin filtro de alcance). */
 const JEFE: CurrentActor = {
@@ -118,7 +119,7 @@ function setup(): Mocks {
   const audit = { record: jest.fn() } as unknown as AuditService;
   const auditRecord = audit.record as unknown as jest.Mock;
   const scope = new GovernanceScopeService(prisma);
-  const state = new RequestStateService(prisma);
+  const state = new RequestStateService(withReferenceLookups(prisma));
   const governanceState = new GovernanceStateService(state);
   const service = new GateCheckService(prisma, audit, scope, state, governanceState);
 

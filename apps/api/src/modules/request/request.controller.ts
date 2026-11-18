@@ -9,16 +9,18 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBody,
   ApiOperation,
   ApiParam,
-  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { HeaderResponse, setPaginationHeaders } from '../../common/pagination/pagination';
+import { PAGINATION_RESPONSE_HEADERS } from '../../common/pagination/pagination-openapi';
 import { RequestService } from './request.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ListRequestsDto } from './dto/list-requests.dto';
@@ -43,16 +45,26 @@ export class RequestController {
   constructor(private readonly requestService: RequestService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lista solicitudes dentro del alcance del actor.' })
-  @ApiQuery({ name: 'state', required: false })
-  @ApiQuery({ name: 'mainProcessId', required: false, format: 'uuid' })
-  @ApiResponse({ status: 200, description: 'Listado de solicitudes.', type: [RequestResponseDto] })
+  @ApiOperation({
+    summary:
+      'Lista solicitudes dentro del alcance del actor (jefe y líder: todas; integrante: sus procesos más las que creó). Filtros opcionales de selección múltiple (state, mainProcessId con SIN_PROCESO, band), búsqueda q en código, título y solicitante, orden sort/dir y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Listado de solicitudes (la página pedida o hasta 1000 filas).',
+    type: [RequestResponseDto],
+    headers: PAGINATION_RESPONSE_HEADERS,
+  })
+  @ApiResponse({ status: 400, description: 'Filtros, orden o paginación inválidos.' })
   @ApiResponse({ status: 401, description: 'No hay un usuario actual valido.' })
-  findMany(
+  async findMany(
     @CurrentActor() actor: CurrentActorType,
     @Query() filters: ListRequestsDto,
-  ) {
-    return this.requestService.findMany(actor, filters);
+    @Res({ passthrough: true }) res: HeaderResponse,
+  ): Promise<RequestResponseDto[]> {
+    const result = await this.requestService.findMany(actor, filters);
+    setPaginationHeaders(res, result);
+    return result.rows;
   }
 
   // Va ANTES de `:id`: resuelve una solicitud por su ID visible (solo lectura).

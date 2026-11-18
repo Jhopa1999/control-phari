@@ -41,6 +41,30 @@ export class AssetResponseDto {
   })
   visibleProcessIds!: string[];
 
+  @ApiProperty({ type: String, example: 'BI', description: 'Código del proceso propietario.' })
+  processCode!: string;
+
+  @ApiProperty({ type: String, description: 'Nombre del proceso propietario.' })
+  processName!: string;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Nombre del responsable (null si no tiene).' })
+  ownerName!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'PRY-0012',
+    description: 'ID visible de la solicitud de origen (null si no tiene o fue eliminada).',
+  })
+  requestCode!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Título de la solicitud de origen (null si no tiene o fue eliminada).',
+  })
+  requestTitle!: string | null;
+
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt!: Date;
 

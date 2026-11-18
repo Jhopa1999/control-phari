@@ -1291,45 +1291,162 @@
         "operationId": "RequestController_findMany",
         "parameters": [
           {
-            "name": "state",
+            "name": "page",
             "required": false,
             "in": "query",
-            "description": "Filtra por estado operativo.",
+            "description": "Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated).",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado.",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "dir",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden (asc o desc). Por defecto, el propio de cada listado.",
             "schema": {
               "type": "string",
               "enum": [
-                "REGISTRADA",
-                "EN_TRIAGE",
-                "DEVUELTA",
-                "RECHAZADA",
-                "BACKLOG_PRIORIZADO",
-                "COMPROMETIDA",
-                "EN_PLANIFICACION",
-                "EN_EJECUCION",
-                "BLOQUEADA",
-                "EN_VALIDACION",
-                "LISTA_PARA_LIBERAR",
-                "EN_ESTABILIZACION",
-                "OPERATIVA",
-                "CERRADA",
-                "RETIRADA"
+                "asc",
+                "desc"
               ]
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por uno o varios estados operativos (?state=A&state=B; se combinan con O). Máximo 50 valores.",
+            "schema": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "REGISTRADA",
+                  "EN_TRIAGE",
+                  "DEVUELTA",
+                  "RECHAZADA",
+                  "BACKLOG_PRIORIZADO",
+                  "COMPROMETIDA",
+                  "EN_PLANIFICACION",
+                  "EN_EJECUCION",
+                  "BLOQUEADA",
+                  "EN_VALIDACION",
+                  "LISTA_PARA_LIBERAR",
+                  "EN_ESTABILIZACION",
+                  "OPERATIVA",
+                  "CERRADA",
+                  "RETIRADA"
+                ]
+              }
             }
           },
           {
             "name": "mainProcessId",
             "required": false,
             "in": "query",
-            "description": "Filtra por proceso principal.",
+            "description": "Filtra por uno o varios procesos principales (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aún por triar). Se repite el parámetro (?mainProcessId=a&mainProcessId=b); los valores se combinan con O. Máximo 50 valores.",
             "schema": {
-              "format": "uuid",
-              "type": "string"
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "band",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por una o varias bandas de prioridad (P1..P4) o SIN_PRIORIZAR (?band=P1&band=SIN_PRIORIZAR; se combinan con O). Máximo 50 valores.",
+            "schema": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "P1",
+                  "P2",
+                  "P3",
+                  "P4",
+                  "SIN_PRIORIZAR"
+                ]
+              }
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Columna de orden: registeredAt (por defecto, descendente), code, title, state (orden del flujo), score (prioridad; sin evaluación al final). Empata por id.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "registeredAt",
+                "code",
+                "title",
+                "state",
+                "score"
+              ]
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Listado de solicitudes.",
+            "description": "Listado de solicitudes (la página pedida o hasta 1000 filas).",
+            "headers": {
+              "X-Total-Count": {
+                "description": "Total de filas tras alcance, filtros y búsqueda (no solo la página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page": {
+                "description": "Página servida (1 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Tamaño de la página servida (1000 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Truncated": {
+                "description": "true si no se pidió página y el listado superó el tope de 1000 filas.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -1341,11 +1458,14 @@
               }
             }
           },
+          "400": {
+            "description": "Filtros, orden o paginación inválidos."
+          },
           "401": {
             "description": "No hay un usuario actual valido."
           }
         },
-        "summary": "Lista solicitudes dentro del alcance del actor.",
+        "summary": "Lista solicitudes dentro del alcance del actor (jefe y líder: todas; integrante: sus procesos más las que creó). Filtros opcionales de selección múltiple (state, mainProcessId con SIN_PROCESO, band), búsqueda q en código, título y solicitante, orden sort/dir y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.",
         "tags": [
           "requests"
         ]
@@ -1852,6 +1972,50 @@
         "operationId": "AssetController_list",
         "parameters": [
           {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated).",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado.",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "dir",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden (asc o desc). Por defecto, el propio de cada listado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
             "name": "processId",
             "required": false,
             "in": "query",
@@ -1886,10 +2050,25 @@
             }
           },
           {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Columna de orden: createdAt (por defecto, descendente), name o status. Empata por id.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "name",
+                "status"
+              ]
+            }
+          },
+          {
             "name": "take",
             "required": false,
             "in": "query",
-            "description": "Maximo de resultados.",
+            "deprecated": true,
+            "description": "Obsoleto: usa pageSize. Máximo de resultados (primera página). Si llegan take y pageSize, gana pageSize.",
             "schema": {
               "minimum": 1,
               "maximum": 500,
@@ -1899,7 +2078,37 @@
         ],
         "responses": {
           "200": {
-            "description": "Activos.",
+            "description": "Activos (la página pedida o hasta 1000 filas).",
+            "headers": {
+              "X-Total-Count": {
+                "description": "Total de filas tras alcance, filtros y búsqueda (no solo la página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page": {
+                "description": "Página servida (1 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Tamaño de la página servida (1000 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Truncated": {
+                "description": "true si no se pidió página y el listado superó el tope de 1000 filas.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -1912,13 +2121,13 @@
             }
           },
           "400": {
-            "description": "Filtros invalidos."
+            "description": "Filtros, orden o paginación inválidos."
           },
           "403": {
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Lista activos en alcance (filtros opcionales).",
+        "summary": "Lista activos en alcance con filtros opcionales, búsqueda q por nombre, orden sort/dir y paginación page/pageSize (take queda como alias obsoleto). Sin page, pageSize ni take devuelve el listado completo con un tope de 1000 filas. Cada fila trae el nombre y código del proceso, el responsable y la solicitud de origen. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.",
         "tags": [
           "assets"
         ]
@@ -2144,6 +2353,50 @@
         "operationId": "DocumentController_list",
         "parameters": [
           {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated).",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado.",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "dir",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden (asc o desc). Por defecto, el propio de cada listado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
             "name": "assetId",
             "required": false,
             "in": "query",
@@ -2200,20 +2453,25 @@
             }
           },
           {
-            "name": "q",
+            "name": "sort",
             "required": false,
             "in": "query",
-            "description": "Busqueda por texto en el titulo.",
+            "description": "Columna de orden: createdAt (por defecto, descendente), title o status. Empata por id.",
             "schema": {
-              "maxLength": 200,
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "title",
+                "status"
+              ]
             }
           },
           {
             "name": "take",
             "required": false,
             "in": "query",
-            "description": "Maximo de resultados.",
+            "deprecated": true,
+            "description": "Obsoleto: usa pageSize. Máximo de resultados (primera página). Si llegan take y pageSize, gana pageSize.",
             "schema": {
               "minimum": 1,
               "maximum": 500,
@@ -2223,7 +2481,37 @@
         ],
         "responses": {
           "200": {
-            "description": "Documentos.",
+            "description": "Documentos (la página pedida o hasta 1000 filas).",
+            "headers": {
+              "X-Total-Count": {
+                "description": "Total de filas tras alcance, filtros y búsqueda (no solo la página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page": {
+                "description": "Página servida (1 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Tamaño de la página servida (1000 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Truncated": {
+                "description": "true si no se pidió página y el listado superó el tope de 1000 filas.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -2236,13 +2524,13 @@
             }
           },
           "400": {
-            "description": "Filtros invalidos."
+            "description": "Filtros, orden o paginación inválidos."
           },
           "403": {
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Lista documentos en alcance (filtros opcionales, sin contenido).",
+        "summary": "Lista documentos en alcance (sin contenido) con filtros opcionales, búsqueda q en el título, orden sort/dir y paginación page/pageSize (take queda como alias obsoleto). Sin page, pageSize ni take devuelve el listado completo con un tope de 1000 filas. Cada fila trae el nombre del activo y el código y título del proyecto. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.",
         "tags": [
           "documents"
         ]
@@ -8409,6 +8697,50 @@
         "operationId": "PortfolioController_list",
         "parameters": [
           {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated).",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado.",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "dir",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden (asc o desc). Por defecto, el propio de cada listado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
             "name": "mainProcessId",
             "required": false,
             "in": "query",
@@ -8470,11 +8802,57 @@
                 ]
               }
             }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Columna de orden: registeredAt (por defecto, descendente), code, title, state (orden del flujo), score (prioridad; sin evaluación al final). Empata por id.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "registeredAt",
+                "code",
+                "title",
+                "state",
+                "score"
+              ]
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Iniciativas del portafolio.",
+            "description": "Iniciativas del portafolio (la página pedida o hasta 1000 filas).",
+            "headers": {
+              "X-Total-Count": {
+                "description": "Total de filas tras alcance, filtros y búsqueda (no solo la página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page": {
+                "description": "Página servida (1 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Tamaño de la página servida (1000 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Truncated": {
+                "description": "true si no se pidió página y el listado superó el tope de 1000 filas.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -8487,13 +8865,13 @@
             }
           },
           "400": {
-            "description": "Filtros invalidos."
+            "description": "Filtros, orden o paginación inválidos."
           },
           "403": {
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Listado del portafolio en alcance, el mismo que Solicitudes: jefe y líder ven todas; el integrante, sus procesos más las que creó (filtros opcionales de selección múltiple: OR dentro de un filtro, AND entre filtros).",
+        "summary": "Listado del portafolio en alcance, el mismo que Solicitudes: jefe y líder ven todas; el integrante, sus procesos más las que creó. Filtros opcionales de selección múltiple (OR dentro de un filtro, AND entre filtros), búsqueda q en código y título, orden sort/dir y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.",
         "tags": [
           "portfolio"
         ]
@@ -11727,11 +12105,27 @@
             "nullable": true,
             "description": "Proceso principal o null. Se determina en el triage: la solicitud se registra sin proceso."
           },
+          "mainProcessCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "BI",
+            "description": "Código del proceso principal (null si aún no tiene proceso)."
+          },
+          "mainProcessName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del proceso principal (null si aún no tiene proceso)."
+          },
           "assetId": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
             "description": "Activo al que pertenece la solicitud (P1) o null."
+          },
+          "assetName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del activo al que pertenece la solicitud (null si no tiene)."
           },
           "createdByUserId": {
             "type": "string",
@@ -11811,7 +12205,10 @@
           "referenceUrl",
           "expectedResult",
           "mainProcessId",
+          "mainProcessCode",
+          "mainProcessName",
           "assetId",
+          "assetName",
           "createdByUserId",
           "operationalState",
           "initialCommitmentDate",
@@ -12530,6 +12927,31 @@
               "format": "uuid"
             }
           },
+          "processCode": {
+            "type": "string",
+            "example": "BI",
+            "description": "Código del proceso propietario."
+          },
+          "processName": {
+            "type": "string",
+            "description": "Nombre del proceso propietario."
+          },
+          "ownerName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del responsable (null si no tiene)."
+          },
+          "requestCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud de origen (null si no tiene o fue eliminada)."
+          },
+          "requestTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Título de la solicitud de origen (null si no tiene o fue eliminada)."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -12550,6 +12972,11 @@
           "generalDescription",
           "dependencies",
           "visibleProcessIds",
+          "processCode",
+          "processName",
+          "ownerName",
+          "requestCode",
+          "requestTitle",
           "createdAt",
           "updatedAt"
         ]
@@ -12749,6 +13176,10 @@
             "format": "uuid",
             "description": "Activo del documento."
           },
+          "assetName": {
+            "type": "string",
+            "description": "Nombre del activo del documento."
+          },
           "title": {
             "type": "string",
             "description": "Titulo."
@@ -12767,6 +13198,17 @@
             "format": "uuid",
             "nullable": true,
             "description": "Proyecto (solicitud) vinculado, p. ej. documentación de cierre."
+          },
+          "requestCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "PRY-0012",
+            "description": "ID visible del proyecto (solicitud) vinculado (null si no tiene o fue eliminado)."
+          },
+          "requestTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Título del proyecto (solicitud) vinculado (null si no tiene o fue eliminado)."
           },
           "submittedAt": {
             "type": "string",
@@ -12817,10 +13259,13 @@
         "required": [
           "id",
           "assetId",
+          "assetName",
           "title",
           "categoryCode",
           "status",
           "requestId",
+          "requestCode",
+          "requestTitle",
           "submittedAt",
           "submittedByUserId",
           "reviewedAt",

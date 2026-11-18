@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { paginationHeaders, serveRequestList } from './helpers/server-list-mock';
 import type { Request } from '../apps/web/src/lib/api-client';
 
 /**
@@ -48,7 +49,13 @@ async function mockRequests(page: import('@playwright/test').Page): Promise<void
     async (route) => {
       if (route.request().method() !== 'GET') return route.continue();
       const response = await route.fetch();
-      await route.fulfill({ response, json: FIXTURE });
+      // El servidor pagina (oleada 3, PR-B): el mock aplica los mismos parámetros.
+        const served = serveRequestList(FIXTURE, new URL(route.request().url()));
+        await route.fulfill({
+          response,
+          json: served.rows,
+          headers: { ...response.headers(), ...paginationHeaders(served.total) },
+        });
     },
   );
 }

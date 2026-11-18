@@ -19,7 +19,7 @@ function actor(): CurrentActor {
 
 describe('RequestController (delegacion)', () => {
   const svc = {
-    findMany: jest.fn().mockResolvedValue('findMany'),
+    findMany: jest.fn().mockResolvedValue({ rows: ['fila'], total: 7, truncated: false, window: { paginated: true, page: 2, pageSize: 5, skip: 5, take: 5 } }),
     findOne: jest.fn().mockResolvedValue('findOne'),
     create: jest.fn().mockResolvedValue('create'),
     update: jest.fn().mockResolvedValue('update'),
@@ -29,7 +29,16 @@ describe('RequestController (delegacion)', () => {
 
   it('findMany delega actor y filtros', async () => {
     const filters = {} as never;
-    await expect(controller.findMany(a, filters)).resolves.toBe('findMany');
+    const headers: Record<string, string> = {};
+    const res = { setHeader: (k: string, v: string) => (headers[k] = v) };
+    await expect(controller.findMany(a, filters, res)).resolves.toEqual(['fila']);
+    // El total y la ventana viajan en cabeceras; el cuerpo sigue siendo un arreglo.
+    expect(headers).toEqual({
+      'X-Total-Count': '7',
+      'X-Page': '2',
+      'X-Page-Size': '5',
+      'X-Truncated': 'false',
+    });
     expect(svc.findMany).toHaveBeenCalledWith(a, filters);
   });
 

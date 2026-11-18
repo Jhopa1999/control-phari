@@ -8,7 +8,9 @@ import {
   type DocumentVersion,
   type UpdateDocument,
 } from './api-client';
+import type { paths } from '@plantilla-portales/api-client';
 import { messageFromBody } from './api-error';
+import { readServerPage, type ServerPage } from './pagination';
 
 /**
  * Error de dominio de documentos con un mensaje ya entendible para el usuario.
@@ -59,6 +61,59 @@ export async function listDocuments(): Promise<Document[]> {
     return data;
   } catch (err) {
     if (err instanceof DocumentError) throw err;
+    throw toDocumentError(undefined);
+  }
+}
+
+type DocumentListQuery = NonNullable<paths['/documents']['get']['parameters']['query']>;
+/** Columnas por las que el servidor sabe ordenar documentos (lista blanca). */
+export type DocumentSortKey = NonNullable<DocumentListQuery['sort']>;
+
+/** Filtros, búsqueda (título), orden y página del listado de documentos. */
+export interface DocumentPageQuery {
+  assetId?: string;
+  processId?: string;
+  /** Documentos del proyecto: vinculados a la solicitud o del activo de origen. */
+  requestId?: string;
+  status?: string;
+  categoryCode?: string;
+  q?: string;
+  sort?: DocumentSortKey;
+  dir?: 'asc' | 'desc';
+  page: number;
+  pageSize: number;
+}
+
+/** Una página de documentos (GET /documents con page/pageSize); total en X-Total-Count. */
+export async function listDocumentsPage(
+  query: DocumentPageQuery,
+  signal?: AbortSignal,
+): Promise<ServerPage<Document>> {
+  try {
+    const { data, error, response } = await api.GET('/documents', {
+      params: {
+        query: {
+          page: query.page,
+          pageSize: query.pageSize,
+          ...(query.assetId ? { assetId: query.assetId } : {}),
+          ...(query.processId ? { processId: query.processId } : {}),
+          ...(query.requestId ? { requestId: query.requestId } : {}),
+          ...(query.status ? { status: query.status as DocumentListQuery['status'] } : {}),
+          ...(query.categoryCode ? { categoryCode: query.categoryCode } : {}),
+          ...(query.q?.trim() ? { q: query.q.trim() } : {}),
+          ...(query.sort ? { sort: query.sort } : {}),
+          ...(query.dir ? { dir: query.dir } : {}),
+        },
+      },
+      signal,
+    });
+    if (error || !data) {
+      throw toDocumentError(response.status);
+    }
+    return readServerPage(data, response);
+  } catch (err) {
+    if (err instanceof DocumentError) throw err;
+    if (signal?.aborted) throw err;
     throw toDocumentError(undefined);
   }
 }

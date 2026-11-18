@@ -104,11 +104,49 @@ Solicitud (`PRY-0012`), fase (`PRY-0012-F2`) y tarea (`PRY-0012-T07`) llevan un 
 
 - **Forma corta** (`T07`, `F2`) en *Planificación*, donde el proyecto ya está a la vista: columna estrecha **ID** (`w-16`) al inicio de la tabla de fases y de la tabla de tareas (no rompe el ancho a 1024 px), prefijo en las tarjetas del kanban y encima del título en el panel lateral de detalle. La fase sigue como subtítulo de cada tarea.
 - **Forma completa** (`PRY-0012-T07`, `PRY-0012`) en las vistas que mezclan proyectos: *Mi trabajo* (lista, tablero y *Por aprobar*, en la línea de contexto), detalle de tarea (campo *Código*), ficha de la solicitud (junto al estado), *Solicitudes* (columna **ID** y tarjeta móvil), *Portafolio* (prefijo del título y tarjeta móvil), bandeja y selector de solicitudes (`PRY-0012 · título · estado`) y selectores de proyecto y tarea de la *Bitácora*.
-- **Búsqueda por ID**, sin distinguir mayúsculas: el buscador de tareas del Plan y de *Mi trabajo* acepta `T07`, `t7` o el código completo; *Solicitudes* y *Portafolio* (filtro de cliente) aceptan el código del proyecto, completo o parcial (`pry-0012`). Lógica compartida en `matchCode` (`lib/table-sort.ts`).
+- **Búsqueda por ID**, sin distinguir mayúsculas: el buscador de tareas del Plan y de *Mi trabajo* acepta `T07`, `t7` o el código completo; *Solicitudes* y *Portafolio* aceptan el código del proyecto, completo o parcial (`pry-0012`); desde la oleada 3 (PR-B) la búsqueda la resuelve el servidor con `q` (ver «Listados paginados en el servidor»). Lógica de cliente compartida en `matchCode` (`lib/table-sort.ts`) para el resto de vistas.
 - Los diálogos de eliminar fase y tarea nombran el código (`¿Eliminar la tarea PRY-0012-T07 «…»?`). El aviso de importar plan indica que lo importado recibe códigos **nuevos** que continúan la numeración y no reutilizan los anteriores.
 - **F3**: el `IdChip` completo se añade a la ficha de la solicitud (`RequestFacts`, que usan *Triage* y *Priorización*), a *Aprobaciones* (solicitudes, planes y cierres por aprobar), a *Capacidad* (asignaciones, con `requestCode`/`requestTitle`) y a *Cierre* (`requestCode`). *Bitácora* ya mostraba `projectRequestCode` y `taskCode`. *Panel* y *Reporte semanal* solo devuelven conteos, sin filas con código: no cambian.
 - **Búsqueda global por ID** (`components/global-code-search.tsx`, lógica en `lib/code-search.ts`): campo en la cabecera de escritorio (entre las migas y las acciones) y botón «Buscar por código» en `mobile-nav` que abre un modo de ancho completo. Solo se monta con permisos cargados y rol `JEFE_AREA`, `LIDER_PROCESO` o `INTEGRANTE`. Acepta `PRY-0012`, `PRY-0012-F2` o `PRY-0012-T07` (forma completa; mayúsculas o minúsculas), consulta `GET /codes/{code}` a los 400 ms o con Enter y navega al destino según los módulos del actor: solicitud → ficha, luego portafolio, luego Plan (solo si es planificable); fase → Plan con `?requestId=&phaseId=` (ancla `fase-{id}`) o, si no, ficha/portafolio; tarea → `/seguimiento/tareas?taskId=`, o ficha/portafolio. Si el rol no tiene pantalla, la fila se muestra sin navegar y lo avisa. Atajo `/` para enfocar el campo; `Escape` cierra el panel, borra el texto o sale del campo. Estados (buscando, encontrado, no encontrado, formato inválido, sin permiso, error con «Reintentar») anunciados en una región `aria-live`; el foco pasa a `main#contenido` al navegar. Especificación en `docs/design/busqueda-global-id.md`.
 - Pendiente: BL-043 (conservar el código al reimportar un plan) y BL-046 (asistente).
+
+## Listados paginados en el servidor (oleada 3, PR-B)
+
+*Solicitudes*, *Portafolio*, *Activos* y *Documentos* filtran, buscan, ordenan y
+paginan en el servidor (especificación visual `docs/design/oleada-3-listados.md`):
+
+- Hook `lib/use-server-table.ts` (`useServerTable`, `useDebouncedValue`) y funciones
+  puras `lib/pagination.ts` (`readServerPage`: lee `X-Total-Count` y `X-Truncated`;
+  sin cabecera, el total es el número de filas recibidas). Cada vista usa
+  `listRequestsPage`, `listPortfolioPage`, `listAssetsPage` y `listDocumentsPage`;
+  `listRequests()`, `listAssets()` y `listDocuments()` sin página se conservan para
+  selectores (tope de 1000 filas del servidor).
+- La búsqueda viaja con 300 ms de espera tras la última tecla; `Escape` la borra.
+  Cualquier cambio de búsqueda, filtro u orden vuelve a la página 1 y cancela la
+  petición anterior. Placeholders: «Código, título o solicitante» (Solicitudes),
+  «Código o título» (Portafolio), «Nombre del activo», «Título del documento».
+- Contador: el total del servidor tras filtros («12 solicitudes»; ya no «12 de 300»).
+  Paginación: «Mostrando 26–50 de 300 solicitudes» (prop `showingPrefix` de
+  `DataTablePagination`), «Sin resultados» con 0 filas, tamaños 25/50/100.
+- Recarga (`components/server-list.tsx`, `ServerListBody`): la tabla anterior **se
+  conserva sin atenuar** (sin `opacity-*` ni velo), con `aria-busy`, cursor de progreso,
+  filas sin puntero y una barra fina pasados 400 ms; el contador dice «Cargando …» con
+  icono. Los botones de página llevan `aria-disabled` durante la carga (el foco no se
+  pierde) y, en el límite natural, el foco pasa al otro botón o al contenedor de la
+  tabla. Error de recarga: aviso «No se pudo actualizar la lista.» con *Reintentar*
+  sobre las filas anteriores; truncado: aviso «Mostramos solo las primeras 1.000 filas.».
+- Solo las columnas de la lista blanca del servidor son ordenables: Solicitudes (ID,
+  Título, Estado, Prioridad, Registro), Portafolio (Título, Estado, Prioridad, Registro;
+  *Entrega* deja de ordenarse), Activos (Nombre, Estado; *Proceso* deja de ordenarse) y
+  Documentos (Título, Estado; *Activo* y *Versión* dejan de ordenarse).
+- BL-039, nombre y código de lo referenciado (`components/reference-cell.tsx`):
+  Solicitudes añade la columna **Activo** y muestra el proceso con su código debajo;
+  Activos muestra proceso (nombre y código), responsable y solicitud de origen
+  (`IdChip` + título); Documentos añade la columna **Solicitud** (`IdChip` + título). Un
+  dato ausente es «—» con texto para lectores de pantalla; una referencia eliminada,
+  «No disponible». Los selectores de solicitud de Activos y Documentos muestran
+  `PRY-0012 · título`. El enlace `?documentId=` de Documentos abre el documento con
+  `GET /documents/:id` aunque no esté en la página visible.
 
 ## Activos y conocimiento (`/activos/*`)
 

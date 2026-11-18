@@ -9,6 +9,7 @@ import { PlanService } from './plan.service';
 import { PlanGuideService } from './plan-guide.service';
 import { PlanStateService } from './plan-state.service';
 import { PlanStatus } from './plan-status';
+import { withReferenceLookups } from '../../testing/reference-lookups';
 
 function createMocks() {
   const prismaObj: Record<string, unknown> = {
@@ -48,7 +49,7 @@ function createMocks() {
 
   const audit = { record: jest.fn() } as unknown as AuditService;
   const auditRecord = audit.record as unknown as jest.Mock;
-  const requestState = new RequestStateService(prisma);
+  const requestState = new RequestStateService(withReferenceLookups(prisma));
 
   const planState = {
     requirePlanInScope: jest.fn(),

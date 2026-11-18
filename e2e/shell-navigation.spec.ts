@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { paginationHeaders, serveRequestList } from './helpers/server-list-mock';
 // Solo tipo: lib/api-client.ts lanza al evaluarse sin NEXT_PUBLIC_API_BASE_URL.
 // lib/requests.ts importa Request pero no lo reexporta.
 import type { Request } from '../apps/web/src/lib/api-client';
@@ -410,7 +411,7 @@ function fakeRequest(i: number): Request {
 
 const FIXTURE = Array.from({ length: 30 }, (_, i) => fakeRequest(i + 1));
 
-test('Solicitudes cuenta, pagina, filtra y ordena en cliente (fixture de 30)', async ({
+test('Solicitudes cuenta, pagina, filtra y ordena en el servidor (fixture de 30)', async ({
   page,
 }) => {
   await page.route(
@@ -419,7 +420,14 @@ test('Solicitudes cuenta, pagina, filtra y ordena en cliente (fixture de 30)', a
       // El resto de métodos sigue a la API sin cambios.
       if (route.request().method() !== 'GET') return route.continue();
       const response = await route.fetch(); // estado y cabeceras reales (CORS incluido)
-      await route.fulfill({ response, json: FIXTURE });
+      // Oleada 3 (PR-B): el servidor filtra, ordena y pagina; el mock aplica los
+      // mismos parámetros y devuelve el total en X-Total-Count.
+      const served = serveRequestList(FIXTURE, new URL(route.request().url()));
+      await route.fulfill({
+        response,
+        json: served.rows,
+        headers: { ...response.headers(), ...paginationHeaders(served.total) },
+      });
     },
   );
   await page.goto('/demanda/solicitudes'); // la ruta se registra antes de navegar
@@ -434,7 +442,7 @@ test('Solicitudes cuenta, pagina, filtra y ordena en cliente (fixture de 30)', a
   // está dentro de la paginación.
   await expect(count).toHaveText('30 solicitudes');
   const pagination = page.getByRole('navigation', { name: 'Paginación de solicitudes' });
-  await expect(pagination).toContainText('1–25 de 30 solicitudes');
+  await expect(pagination).toContainText('Mostrando 1–25 de 30 solicitudes');
   await expect(pagination).toContainText('Página 1 de 2');
   await expect(rows).toHaveCount(26);
   await expect(rows.nth(1).getByText('—', { exact: true }).first()).toBeVisible();
@@ -442,8 +450,8 @@ test('Solicitudes cuenta, pagina, filtra y ordena en cliente (fixture de 30)', a
   // Sin resultados: un solo «Limpiar filtros», en el toolbar.
   const search = page.locator('#sol-buscar');
   await search.fill('zzz sin coincidencias e2e');
-  await expect(count).toHaveText('0 de 30 solicitudes');
-  await expect(page.getByText('Ningún resultado coincide con los filtros.')).toBeVisible();
+  await expect(count).toHaveText('0 solicitudes');
+  await expect(page.getByText('Ninguna solicitud coincide con la búsqueda o los filtros.')).toBeVisible();
   const clear = page.getByRole('button', { name: 'Limpiar filtros', exact: true });
   await expect(clear).toHaveCount(1);
   await clear.click();
