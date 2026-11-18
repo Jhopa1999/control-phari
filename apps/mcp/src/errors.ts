@@ -64,6 +64,15 @@ function extractMessage(error: unknown): string | undefined {
   return undefined;
 }
 
+/** Indica si el cuerpo de error trae el `code` indicado. */
+function hasErrorCode(error: unknown, code: string): boolean {
+  return (
+    error != null &&
+    typeof error === 'object' &&
+    (error as { code?: unknown }).code === code
+  );
+}
+
 /** Añade `: <message>` solo si hay mensaje; evita dejar un ": " colgando. */
 function withMessage(base: string, message: string | undefined): string {
   return message ? `${base}: ${message}` : base;
@@ -92,6 +101,12 @@ export function toMcpError(
     case 401:
       return errorResult('No autenticado o no autorizado.');
     case 403:
+      // La API decide el bloqueo y envía un código; aquí solo se traduce.
+      if (hasErrorCode(result.error, 'PASSWORD_CHANGE_REQUIRED')) {
+        return errorResult(
+          'Tu usuario debe cambiar la contraseña antes de seguir. Hazlo en el portal; el MCP no gestiona credenciales.',
+        );
+      }
       return errorResult('No tienes permiso para realizar esta operación.');
     case 404:
       return errorResult(

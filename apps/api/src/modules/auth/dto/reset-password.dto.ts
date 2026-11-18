@@ -2,16 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
 
+import { RESET_PASSWORD_MIN_LENGTH } from '../password-policy';
+
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
 
-/**
- * Longitud minima de contrasena validada por el DTO. Es un piso fijo de forma
- * (defensa en la capa de entrada); el service re-chequea PASSWORD_MIN_LENGTH
- * (configurable por ambiente, con default igual a este valor) como fuente de
- * verdad de negocio.
- */
-export const RESET_PASSWORD_MIN_LENGTH = 8;
+export { RESET_PASSWORD_MIN_LENGTH };
 
 /**
  * Cuerpo de POST /auth/reset-password. Lo usan tanto el reset de contrasena

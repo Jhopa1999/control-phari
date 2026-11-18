@@ -9,19 +9,24 @@ export const USER_SPECS: ReadonlyArray<ToolSpec> = [
     description:
       'Devuelve los permisos del actor actual (GET /me/permissions). Usa la ' +
       'identidad del modo configurado; en jwt vía login puede disparar el ' +
-      'login perezoso.',
+      'login perezoso. mustChangePassword indica si la persona debe cambiar su ' +
+      'contraseña: mientras sea true, toda otra tool responde con ese aviso.',
   },
   {
     name: 'user.list',
     operation: 'GET /users',
     access: 'read',
-    description: 'Lista los usuarios (GET /users).',
+    description:
+      'Lista los usuarios (GET /users). Cada usuario trae mustChangePassword ' +
+      '(cambio de contraseña obligatorio pendiente).',
   },
   {
     name: 'user.get',
     operation: 'GET /users/{id}',
     access: 'read',
-    description: 'Obtiene un usuario por id (GET /users/{id}).',
+    description:
+      'Obtiene un usuario por id (GET /users/{id}). Incluye mustChangePassword ' +
+      '(cambio de contraseña obligatorio pendiente).',
   },
   {
     name: 'user.create',

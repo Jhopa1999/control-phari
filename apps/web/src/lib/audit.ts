@@ -77,6 +77,9 @@ const AUDIT_ACTION_LABEL_MAP: Record<AuditAction, string> = {
   REVOKE: 'Revocación',
   LOGIN_FAILED: 'Inicio de sesión fallido',
   PASSWORD_RESET_THROTTLED: 'Recuperación bloqueada por límite',
+  PASSWORD_CHANGE_REQUIRED: 'Cambio de contraseña exigido',
+  PASSWORD_CHANGE_CLEARED: 'Exigencia de cambio retirada',
+  PASSWORD_CHANGED: 'Contraseña cambiada',
 };
 
 export const AUDIT_ACTION_LABELS: Record<string, string> = AUDIT_ACTION_LABEL_MAP;

@@ -1,5 +1,6 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AllowPasswordChangePending } from './allow-password-change-pending.decorator';
 import { CurrentActor } from './current-actor.decorator';
 import { CurrentActor as CurrentActorType } from './current-actor';
 import { CurrentUserGuard } from './current-user.guard';
@@ -16,6 +17,7 @@ import { MyPermissionsResponseDto } from './dto/my-permissions-response.dto';
 @UseGuards(CurrentUserGuard)
 export class MeController {
   @Get('permissions')
+  @AllowPasswordChangePending()
   @ApiOperation({ summary: 'Permisos del usuario actual (rol, alcance y modulos).' })
   @ApiResponse({ status: 200, description: 'Permisos del actor.', type: MyPermissionsResponseDto })
   @ApiResponse({ status: 401, description: 'No hay un usuario actual valido.' })
@@ -33,6 +35,7 @@ export class MeController {
       })),
       allowedModules: allowedModulesFor(actor.roleCodes),
       roleCodes: Array.from(actor.roleCodes),
+      mustChangePassword: actor.mustChangePassword === true,
     };
   }
 }

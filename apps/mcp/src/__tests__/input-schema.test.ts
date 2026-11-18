@@ -57,6 +57,9 @@ describe('tools/list expone inputSchema', () => {
     'REVOKE',
     'LOGIN_FAILED',
     'PASSWORD_RESET_THROTTLED',
+    'PASSWORD_CHANGE_REQUIRED',
+    'PASSWORD_CHANGE_CLEARED',
+    'PASSWORD_CHANGED',
   ]);
     assert.ok(props.objectType.description);
 

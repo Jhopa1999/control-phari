@@ -10,6 +10,7 @@ import {
 import { getAuthMode, type AuthMode } from './auth-mode';
 import { logout as logoutRequest } from './auth';
 import { ApiError, getMyPermissions } from './me';
+import { PASSWORD_CHANGE_REQUIRED_EVENT } from './password-gate';
 type PermissionsState = 'loading' | 'success' | 'error' | 'none';
 
 interface ActorContextValue {
@@ -156,6 +157,19 @@ export function ActorProvider({
       });
   }, [authMode]);
 
+  // Cambio de contraseña exigido con la sesión abierta: la API respondió 403
+  // PASSWORD_CHANGE_REQUIRED. Se recargan los permisos (traen el indicador) y el
+  // guard lleva a la pantalla de cambio.
+  const reloadRef = React.useRef<() => void>(() => undefined);
+  React.useEffect(() => {
+    if (authMode !== 'jwt') return;
+    function onRequired(): void {
+      reloadRef.current();
+    }
+    window.addEventListener(PASSWORD_CHANGE_REQUIRED_EVENT, onRequired);
+    return () => window.removeEventListener(PASSWORD_CHANGE_REQUIRED_EVENT, onRequired);
+  }, [authMode]);
+
   // Otras pestanas: al cerrar sesion se borra la pista y esta pestana sale.
   React.useEffect(() => {
     if (authMode !== 'jwt') return;
@@ -247,6 +261,9 @@ export function ActorProvider({
   const reload = React.useCallback(() => {
     void loadPermissions(actorId);
   }, [actorId, loadPermissions]);
+  React.useEffect(() => {
+    reloadRef.current = reload;
+  }, [reload]);
   const allowedModules = React.useMemo(
     () => new Set<string>(permissions?.allowedModules ?? []),
     [permissions],

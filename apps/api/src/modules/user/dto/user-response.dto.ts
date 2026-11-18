@@ -14,6 +14,13 @@ export class UserResponseDto {
   @ApiProperty({ type: Boolean, description: 'Estado activo.', example: true })
   active!: boolean;
 
+  @ApiProperty({
+    type: Boolean,
+    description: 'true si la persona debe cambiar su contraseña en su próximo uso del portal.',
+    example: false,
+  })
+  mustChangePassword!: boolean;
+
   @ApiProperty({ type: String, format: 'date-time', description: 'Fecha de creacion.' })
   createdAt!: Date;
 

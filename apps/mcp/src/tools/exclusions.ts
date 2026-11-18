@@ -68,6 +68,13 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
       'POST /auth/logout',
       'POST /auth/forgot-password',
       'POST /auth/reset-password',
+      'POST /auth/change-password',
+    ],
+  ),
+  ...permanente(
+    'Acción masiva de seguridad sobre las credenciales de otras personas (exigir el cambio de contraseña): la ejecuta el jefe de área desde la web, no un agente.',
+    [
+      'POST /users/force-password-change',
     ],
   ),
   ...permanente(

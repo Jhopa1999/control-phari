@@ -46,6 +46,11 @@ Identidad funcional de una persona (no es credencial por sí misma).
   JWT; nunca se expone).
 - `isAdmin` (`is_admin`, default `false`): rol de sistema ADMIN, global e
   independiente de los grants por proceso.
+- `mustChangePassword` (`must_change_password`, default `false`): cambio de contraseña
+  obligatorio en el próximo uso. Lo activa el jefe de área
+  (`POST /users/force-password-change`) y lo limpian el cambio de contraseña y el
+  restablecimiento por correo. Migración aditiva e idempotente
+  `20261119090000_user_must_change_password`; ni la migración ni el seed marcan a nadie.
 - Restricciones: único `identifier`; índice por `active`.
 - Relaciones: grants, y numerosas FKs como actor/responsable/autor en los flujos
   (triage, planes, tareas, disponibilidad, diarios, reuniones, activos, gobierno…).
@@ -66,7 +71,9 @@ Asignación de un usuario a un rol dentro de un proceso (corazón del alcance). 
 ### AuditEvent (`audit_events`)
 Registro append-only de cada mutación (inmutable, sin `updatedAt`). Además de los verbos
 de mutación (`CREATE`, `UPDATE`, `DELETE`, `REVOKE`) registra eventos de seguridad del
-acceso: `LOGIN_FAILED` (fallo de inicio de sesión) y `PASSWORD_RESET_THROTTLED`
+acceso: `PASSWORD_CHANGE_REQUIRED`, `PASSWORD_CHANGE_CLEARED` y `PASSWORD_CHANGED`
+(exigencia, retiro y cambio de contraseña obligatorio, sobre `USER`, solo con el
+indicador en `before`/`after`), `LOGIN_FAILED` (fallo de inicio de sesión) y `PASSWORD_RESET_THROTTLED`
 (solicitud de recuperación bloqueada por el límite). Con identificador inexistente,
 `objectId` es `identificador:<huella>` (no es un UUID de usuario).
 - Campos clave: `actorUserId?`, `action`, `objectType`, `objectId`, `scopeProcessId?`,

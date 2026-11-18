@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { KeyRound, Mail, Plus, Users } from 'lucide-react';
+import { KeyRound, LockOpen, Mail, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataCardList } from '@/components/data-card-list';
@@ -9,12 +9,15 @@ import { DisabledReason } from '@/components/disabled-reason';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
+import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
-import { RowActions, RowActionsCell } from '@/components/row-actions';
+import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -30,6 +33,7 @@ import {
   ApiError,
   createGrant,
   createUser,
+  forcePasswordChange,
   inviteUser,
   listGrants,
   listProcesses,
@@ -37,6 +41,7 @@ import {
   revokeGrant,
 } from '@/lib/team';
 import { assignableRolesFor } from '@/lib/role-hierarchy';
+import { describeForceFailure, describeForceResult } from '@/lib/password-messages';
 import { CreateGrantDialog } from './create-grant-dialog';
 import { CreateUserDialog } from './create-user-dialog';
 
@@ -70,6 +75,31 @@ function visibleById(id: string): HTMLElement | null {
 
 function inviteButtonId(userId: string): string {
   return `invitar-${userId}`;
+}
+
+function forceButtonId(userId: string): string {
+  return `exigir-cambio-${userId}`;
+}
+
+function personas(n: number): string {
+  return n === 1 ? 'persona' : 'personas';
+}
+
+/** Qué confirma el diálogo de «Exigir cambio de contraseña». */
+type ForceTarget =
+  | { kind: 'all' }
+  | { kind: 'selection' }
+  | { kind: 'one'; user: User }
+  | { kind: 'clear'; user: User };
+
+/** Insignia «Cambio de contraseña pendiente» (icono y texto: no depende del color). */
+function PendingPasswordBadge(): React.ReactElement {
+  return (
+    <Badge variant="warning">
+      <KeyRound aria-hidden="true" />
+      Cambio de contraseña pendiente
+    </Badge>
+  );
 }
 
 /**
@@ -108,6 +138,16 @@ export function EquipoView(): React.ReactElement {
   // deshabilita; las demás filas quedan intactas.
   const [invitingUserId, setInvitingUserId] = React.useState<string | null>(null);
 
+  // Cambio de contraseña obligatorio (solo jefe de área; el backend es la autoridad).
+  const isJefe = permissions?.roleCodes.includes('JEFE_AREA') === true;
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [forceTarget, setForceTarget] = React.useState<ForceTarget | null>(null);
+  const [forceOpen, setForceOpen] = React.useState(false);
+  const [forcingUserId, setForcingUserId] = React.useState<string | null>(null);
+  const [forcingBulk, setForcingBulk] = React.useState(false);
+  const usersHeadingRef = React.useRef<HTMLHeadingElement>(null);
+  const selectAllRef = React.useRef<HTMLInputElement>(null);
+
   const loadData = React.useCallback(() => {
     return Promise.all([listUsers(), listGrants(), listProcesses()])
       .then(([u, g, p]) => {
@@ -140,6 +180,62 @@ export function EquipoView(): React.ReactElement {
     if (!teamAllowed) return;
     void loadData();
   }, [permissionsLoaded, teamAllowed, loadData]);
+
+  // La selección solo conserva personas que siguen en la lista.
+  const selectedIds = React.useMemo(
+    () => users.filter((u) => selected.has(u.id)).map((u) => u.id),
+    [users, selected],
+  );
+  const allSelected = users.length > 0 && selectedIds.length === users.length;
+  const someSelected = selectedIds.length > 0 && !allSelected;
+  React.useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected;
+  }, [someSelected, users.length, loadedState]);
+
+  function toggleUser(id: string, checked: boolean): void {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleAll(checked: boolean): void {
+    setSelected(checked ? new Set(users.map((u) => u.id)) : new Set());
+  }
+
+  function askForce(target: ForceTarget): void {
+    setForceTarget(target);
+    setForceOpen(true);
+  }
+
+  async function handleForce(): Promise<void> {
+    if (!forceTarget) return;
+    const target = forceTarget;
+    const enabled = target.kind !== 'clear';
+    const body =
+      target.kind === 'all'
+        ? { all: true }
+        : target.kind === 'selection'
+          ? { userIds: selectedIds }
+          : { userIds: [target.user.id], enabled };
+    if (target.kind === 'one' || target.kind === 'clear') setForcingUserId(target.user.id);
+    else setForcingBulk(true);
+    try {
+      const result = await forcePasswordChange(body);
+      const summary = describeForceResult(result, enabled);
+      if (summary.tone === 'info') toast.info(summary.message);
+      else toast.success(summary.message, { description: summary.detail });
+      setSelected(new Set());
+      await load(true);
+    } catch (err) {
+      toast.error(describeForceFailure(err instanceof ApiError ? err.status : undefined));
+    } finally {
+      setForcingUserId(null);
+      setForcingBulk(false);
+    }
+  }
 
   const usersById = React.useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
   const processesById = React.useMemo(() => new Map(processes.map((p) => [p.id, p])), [processes]);
@@ -269,6 +365,96 @@ export function EquipoView(): React.ReactElement {
       ? 'Tu rol no permite asignar roles.'
       : 'Necesitas al menos un usuario y un proceso para asignar roles.';
 
+  // Acciones de fila del cambio obligatorio: solo el jefe, siempre en el menú «…».
+  function forceRowActions(user: User): RowAction[] {
+    if (!isJefe) return [];
+    const busy = forcingUserId === user.id;
+    const otherBusy = forcingUserId !== null && !busy;
+    return user.mustChangePassword
+      ? [
+          {
+            key: 'clear-force',
+            id: forceButtonId(user.id),
+            label: 'Retirar exigencia',
+            icon: LockOpen,
+            placement: 'menu',
+            busy,
+            busyLabel: 'Guardando…',
+            disabled: otherBusy,
+            onSelect: () => askForce({ kind: 'clear', user }),
+          },
+        ]
+      : [
+          {
+            key: 'force',
+            id: forceButtonId(user.id),
+            label: 'Exigir cambio de contraseña',
+            icon: KeyRound,
+            placement: 'menu',
+            busy,
+            busyLabel: 'Guardando…',
+            disabled: otherBusy,
+            onSelect: () => askForce({ kind: 'one', user }),
+          },
+        ];
+  }
+
+  // Diálogo de confirmación del cambio obligatorio (tono no destructivo: es reversible).
+  const SESSION_NOTES = [
+    'Las sesiones abiertas se interrumpen en la siguiente acción de cada persona.',
+    'Los accesos por MCP o scripts de esas personas quedan limitados hasta que cambien su contraseña.',
+  ];
+  let forceDialog: {
+    title: string;
+    description: string;
+    confirmLabel: string;
+    notes: string[];
+    names?: string[];
+  } | null = null;
+  if (forceTarget?.kind === 'all') {
+    forceDialog = {
+      title: '¿Exigir el cambio de contraseña a todo el equipo?',
+      description:
+        'Cada persona con contraseña, excepto tú, deberá elegir una nueva la próxima vez que use el portal.',
+      confirmLabel: 'Exigir cambio a todos',
+      notes: [
+        ...SESSION_NOTES,
+        'Para dejar fuera a alguien, cancela y selecciona solo a las personas que quieras.',
+        'Puedes retirar la exigencia después desde esta pantalla.',
+      ],
+    };
+  } else if (forceTarget?.kind === 'selection') {
+    const n = selectedIds.length;
+    const names = users.filter((u) => selected.has(u.id)).map((u) => u.name);
+    forceDialog = {
+      title: `¿Exigir el cambio de contraseña a ${n} ${personas(n)}?`,
+      description: 'Cada una deberá elegir una contraseña nueva la próxima vez que use el portal.',
+      confirmLabel: `Exigir cambio a ${n} ${personas(n)}`,
+      notes: SESSION_NOTES,
+      names: names.length > 5 ? [...names.slice(0, 5), `y ${names.length - 5} más.`] : names,
+    };
+  } else if (forceTarget?.kind === 'one') {
+    forceDialog = {
+      title: `¿Exigir a ${forceTarget.user.name} que cambie su contraseña?`,
+      description: 'Deberá elegir una contraseña nueva la próxima vez que use el portal.',
+      confirmLabel: 'Exigir cambio',
+      notes: [],
+    };
+  } else if (forceTarget?.kind === 'clear') {
+    forceDialog = {
+      title: `¿Retirar la exigencia a ${forceTarget.user.name}?`,
+      description: 'Podrá seguir usando el portal sin cambiar su contraseña.',
+      confirmLabel: 'Retirar exigencia',
+      notes: [],
+    };
+  }
+
+  // Aviso cuando quien ejecuta la acción también queda marcado (selección o fila propia).
+  const selfInForce =
+    forceTarget?.kind === 'selection'
+      ? selectedIds.includes(permissions?.userId ?? '')
+      : forceTarget?.kind === 'one' && forceTarget.user.id === permissions?.userId;
+
   const headerActions = (
     <>
       <Button type="button" variant="outline" onClick={openUserDialog}>
@@ -322,7 +508,53 @@ export function EquipoView(): React.ReactElement {
   } else {
     content = (
       <>
-        <Section title="Usuarios" count={users.length}>
+        <Section
+          title="Usuarios"
+          count={users.length}
+          headingRef={usersHeadingRef}
+          actions={
+            isJefe && users.length > 0 ? (
+              <Button type="button" variant="outline" onClick={() => askForce({ kind: 'all' })}>
+                <KeyRound aria-hidden="true" />
+                Exigir cambio a todos
+              </Button>
+            ) : undefined
+          }
+        >
+          {isJefe && selectedIds.length > 0 ? (
+            <InlineNotice
+              tone="info"
+              icon={false}
+              action={
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    onClick={() => askForce({ kind: 'selection' })}
+                  >
+                    <KeyRound aria-hidden="true" />
+                    Exigir cambio de contraseña
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    onClick={() => setSelected(new Set())}
+                  >
+                    Quitar selección
+                  </Button>
+                </>
+              }
+            >
+              <span aria-live="polite" className="font-medium">
+                {selectedIds.length}{' '}
+                {selectedIds.length === 1 ? 'persona seleccionada' : 'personas seleccionadas'}
+              </span>
+            </InlineNotice>
+          ) : null}
           <div className="overflow-hidden rounded-lg border bg-card">
             {users.length === 0 ? (
               <EmptyState
@@ -342,6 +574,18 @@ export function EquipoView(): React.ReactElement {
               <Table scrollLabel="Tabla de usuarios">
                 <TableHeader>
                   <TableRow>
+                    {isJefe ? (
+                      <TableHead className="w-10">
+                        <label className="flex min-h-8 cursor-pointer items-center">
+                          <Checkbox
+                            ref={selectAllRef}
+                            checked={allSelected}
+                            onChange={(e) => toggleAll(e.target.checked)}
+                          />
+                          <span className="sr-only">Seleccionar todos los usuarios</span>
+                        </label>
+                      </TableHead>
+                    ) : null}
                     <TableHead>Nombre</TableHead>
                     <TableHead>Identificador</TableHead>
                     <TableHead>Estado</TableHead>
@@ -351,12 +595,26 @@ export function EquipoView(): React.ReactElement {
                 <TableBody>
                   {users.map((user) => (
                     <TableRow key={user.id}>
+                      {isJefe ? (
+                        <TableCell className="w-10">
+                          <label className="flex min-h-8 cursor-pointer items-center">
+                            <Checkbox
+                              checked={selected.has(user.id)}
+                              onChange={(e) => toggleUser(user.id, e.target.checked)}
+                            />
+                            <span className="sr-only">Seleccionar a {user.name}</span>
+                          </label>
+                        </TableCell>
+                      ) : null}
                       <TableCell className="min-w-40 font-medium">{user.name}</TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {user.identifier}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <StatusBadge kind="active" value={String(user.active)} />
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <StatusBadge kind="active" value={String(user.active)} />
+                          {user.mustChangePassword ? <PendingPasswordBadge /> : null}
+                        </div>
                       </TableCell>
                       <RowActionsCell>
                         {/* «Reenviar invitación»: el endpoint reenvía el correo de
@@ -382,6 +640,7 @@ export function EquipoView(): React.ReactElement {
                                 setInviteOpen(true);
                               },
                             },
+                            ...forceRowActions(user),
                           ]}
                         />
                       </RowActionsCell>
@@ -395,14 +654,30 @@ export function EquipoView(): React.ReactElement {
                 rows={users}
                 getKey={(user) => user.id}
                 card={(user) => ({
-                  title: (
+                  title: isJefe ? (
+                    <label className="inline-flex min-h-11 cursor-pointer items-center gap-3 font-medium wrap-break-word">
+                      <Checkbox
+                        className="size-5"
+                        checked={selected.has(user.id)}
+                        onChange={(e) => toggleUser(user.id, e.target.checked)}
+                      />
+                      <span>{user.name}</span>
+                    </label>
+                  ) : (
                     <span className="inline-flex min-h-11 items-center font-medium wrap-break-word">
                       {user.name}
                     </span>
                   ),
                   subtitle: user.identifier,
-                  badges: [<StatusBadge key="active" kind="active" value={String(user.active)} />],
+                  badges: [
+                    <StatusBadge key="active" kind="active" value={String(user.active)} />,
+                    ...(user.mustChangePassword ? [<PendingPasswordBadge key="pending" />] : []),
+                  ],
                   actions: (
+                    <div className="flex items-center gap-1">
+                    {isJefe ? (
+                      <RowActions rowLabel={user.name} menuOnly actions={forceRowActions(user)} />
+                    ) : null}
                     <Button
                       id={`${inviteButtonId(user.id)}-card`}
                       type="button"
@@ -419,6 +694,7 @@ export function EquipoView(): React.ReactElement {
                     >
                       <Mail aria-hidden="true" />
                     </Button>
+                    </div>
                   ),
                 })}
               />
@@ -546,6 +822,42 @@ export function EquipoView(): React.ReactElement {
         errorMessage={grantError}
         onSubmit={handleCreateGrant}
       />
+      <ConfirmDialog
+        open={forceOpen}
+        onOpenChange={setForceOpen}
+        tone="default"
+        title={forceDialog?.title ?? ''}
+        description={forceDialog?.description ?? ''}
+        confirmLabel={forceDialog?.confirmLabel ?? 'Confirmar'}
+        busy={forcingBulk || forcingUserId !== null}
+        onConfirm={handleForce}
+        returnFocusTo={() =>
+          forceTarget?.kind === 'one' || forceTarget?.kind === 'clear'
+            ? (visibleById(forceButtonId(forceTarget.user.id)) ?? usersHeadingRef.current)
+            : usersHeadingRef.current
+        }
+      >
+        {selfInForce ? (
+          <InlineNotice tone="warning">
+            Tu usuario está en la selección. Al confirmar, tú también deberás cambiar tu contraseña
+            en tu próxima acción.
+          </InlineNotice>
+        ) : null}
+        {forceDialog?.names && forceDialog.names.length > 0 ? (
+          <ul className="grid list-disc gap-1 pl-5 text-sm text-muted-foreground">
+            {forceDialog.names.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+        ) : null}
+        {forceDialog && forceDialog.notes.length > 0 ? (
+          <ul className="grid list-disc gap-1 pl-5 text-sm text-muted-foreground">
+            {forceDialog.notes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        ) : null}
+      </ConfirmDialog>
       <ConfirmDialog
         open={revokeOpen}
         onOpenChange={setRevokeOpen}

@@ -126,6 +126,21 @@ que ejecutaría y borra la carpeta.
   posteriores al respaldo. Procedimientos de restauración: `docs/respaldo-restauracion-bd.md`.
 - **Stack por red:** el dump está en `%USERPROFILE%\control-phari-backups\stack-red-<TS>-pre.dump`.
 
+## Cambio de contraseña obligatorio (migración `20261119090000_user_must_change_password`)
+
+- La migración es aditiva e idempotente y no marca a nadie. Sin variables de entorno
+  nuevas ni parámetros de seed. Revertir el código no exige revertir la BD.
+- Verificación (sobre la copia del ensayo y sobre la BD real; debe dar `0`, si no se
+  aborta): `SELECT count(*) FROM users WHERE must_change_password;`
+- **Activación manual**, cuando lo decida el usuario: «Equipo y permisos» → «Exigir
+  cambio a todos» (deja auditoría). Antes, decidir si se excluye la cuenta que usa el
+  MCP (marcar por selección o `POST /users/force-password-change` con `all: true` y
+  `excludeUserIds`, con el Bearer del jefe). No usar SQL directo salvo emergencia: no
+  deja rastro en la auditoría.
+- Marcha atrás: la misma acción con `enabled: false` o, en emergencia,
+  `UPDATE users SET must_change_password = false`. Las sesiones abiertas se
+  interrumpen en la siguiente acción de cada persona marcada.
+
 ## Trampas conocidas
 
 - **Variables del shell.** El shell persistente arrastra `NEXT_PUBLIC_*`,

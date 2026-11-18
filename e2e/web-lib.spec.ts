@@ -1732,6 +1732,98 @@ import {
   weekRangeLabel,
 } from '../apps/web/src/lib/recurring-format';
 import { activityTypeLabel, cadenceText } from '../apps/web/src/lib/status-labels';
+import {
+  isPasswordChangeRequiredBody,
+  leavesChangePasswordRoute,
+  mustChangePasswordRedirect,
+} from '../apps/web/src/lib/password-gate';
+import {
+  describeChangePasswordFailure,
+  describeForceFailure,
+  describeForceResult,
+} from '../apps/web/src/lib/password-messages';
+
+test.describe('password-gate (cambio de contraseña obligatorio)', () => {
+  const pending = { mustChangePassword: true };
+  const clear = { mustChangePassword: false };
+
+  test('sin indicador no redirige', () => {
+    expect(mustChangePasswordRedirect('/inicio', clear)).toBeNull();
+    expect(mustChangePasswordRedirect('/inicio', null)).toBeNull();
+  });
+
+  test('con indicador redirige a la pantalla y conserva un next seguro', () => {
+    expect(mustChangePasswordRedirect('/inicio', pending)).toBe('/cambiar-contrasena');
+    expect(mustChangePasswordRedirect('/mi-trabajo?x=1', pending)).toBe(
+      `/cambiar-contrasena?next=${encodeURIComponent('/mi-trabajo?x=1')}`,
+    );
+    expect(mustChangePasswordRedirect('/cambiar-contrasena?next=%2Fa', pending)).toBeNull();
+  });
+
+  test('sin nada pendiente sale de la pantalla de cambio', () => {
+    expect(leavesChangePasswordRoute('/cambiar-contrasena', clear)).toBe(true);
+    expect(leavesChangePasswordRoute('/cambiar-contrasena', pending)).toBe(false);
+    expect(leavesChangePasswordRoute('/cambiar-contrasena', null)).toBe(false);
+    expect(leavesChangePasswordRoute('/inicio', clear)).toBe(false);
+  });
+
+  test('reconoce el 403 por su código', () => {
+    expect(isPasswordChangeRequiredBody({ code: 'PASSWORD_CHANGE_REQUIRED' })).toBe(true);
+    expect(isPasswordChangeRequiredBody({ message: 'x' })).toBe(false);
+    expect(isPasswordChangeRequiredBody(null)).toBe(false);
+  });
+});
+
+test.describe('password-messages', () => {
+  test('400 con texto conocido marca el campo; otro va al formulario', () => {
+    expect(
+      describeChangePasswordFailure(400, { message: 'La contraseña actual no es correcta.' }),
+    ).toEqual({ field: 'currentPassword', message: 'La contraseña actual no es correcta.' });
+    expect(
+      describeChangePasswordFailure(400, {
+        message: 'La contraseña nueva debe ser distinta de la actual.',
+      }).field,
+    ).toBe('newPassword');
+    expect(describeChangePasswordFailure(400, { message: 'Corta.' })).toEqual({ message: 'Corta.' });
+    expect(describeChangePasswordFailure(400, {}).message).toBe(
+      'La contraseña no cumple los requisitos. Elige otra.',
+    );
+  });
+
+  test('429 informa la espera; red y 5xx dan el genérico sin códigos', () => {
+    expect(describeChangePasswordFailure(429, {}, 120).message).toBe(
+      'Espera 2 min e inténtalo de nuevo.',
+    );
+    expect(describeChangePasswordFailure(429, {}).message).toBe(
+      'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.',
+    );
+    for (const status of [undefined, 500, 403]) {
+      expect(describeChangePasswordFailure(status, { code: 'X' }).message).toBe(
+        'No fue posible cambiar la contraseña. Inténtalo de nuevo.',
+      );
+    }
+  });
+
+  test('resultado y errores de la acción del jefe', () => {
+    expect(describeForceResult({ updated: 1, skipped: 0 }, true)).toEqual({
+      tone: 'success',
+      message: 'Se exigió el cambio de contraseña a 1 persona.',
+      detail: undefined,
+    });
+    expect(describeForceResult({ updated: 3, skipped: 2 }, true).detail).toBe(
+      '2 no se modificaron: no tienen contraseña o ya estaban pendientes.',
+    );
+    expect(describeForceResult({ updated: 0, skipped: 2 }, true).tone).toBe('info');
+    expect(describeForceResult({ updated: 2, skipped: 0 }, false).message).toBe(
+      'Se retiró la exigencia a 2 personas.',
+    );
+    expect(describeForceFailure(404)).toMatch(/No se marcó a nadie/);
+    expect(describeForceFailure(403)).toBe(
+      'Solo el jefe de área puede exigir el cambio de contraseña.',
+    );
+    expect(describeForceFailure(undefined)).toMatch(/Inténtalo de nuevo/);
+  });
+});
 
 test.describe('recurring-format', () => {
   test('weekRangeLabel: dentro de un mes y cruzando meses', () => {

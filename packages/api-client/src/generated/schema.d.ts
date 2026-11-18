@@ -140,6 +140,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cambia la contraseña de la persona autenticada (exige la actual) y limpia la exigencia de cambio obligatorio. */
+        post: operations["AuthPasswordController_changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit-events": {
         parameters: {
             query?: never;
@@ -824,6 +841,23 @@ export interface paths {
         put?: never;
         /** Crea una identidad funcional (solo JEFE_AREA). */
         post: operations["UserController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/force-password-change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Exige el cambio de contraseña en el próximo uso del portal a todos los usuarios o a una selección, o retira la exigencia (solo JEFE_AREA). */
+        post: operations["UserController_forcePasswordChange"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3064,6 +3098,11 @@ export interface components {
             allowedModules: string[];
             /** @description Codigos de rol efectivos del actor (incluye ADMIN si aplica). */
             roleCodes: ("JEFE_AREA" | "LIDER_PROCESO" | "INTEGRANTE" | "ADMIN")[];
+            /**
+             * @description Si es true, la persona debe cambiar su contraseña antes de usar el portal: toda ruta salvo este endpoint y POST /auth/change-password responde 403 con code PASSWORD_CHANGE_REQUIRED.
+             * @example false
+             */
+            mustChangePassword: boolean;
         };
         DevActorResponseDto: {
             /**
@@ -3134,6 +3173,12 @@ export interface components {
              * @description Nueva contrasena en claro (minimo 8 caracteres).
              * @example nueva-contrasena-123
              */
+            newPassword: string;
+        };
+        ChangePasswordDto: {
+            /** @description Contraseña actual de la persona. */
+            currentPassword: string;
+            /** @description Contraseña nueva (mínimo 8 caracteres, o PASSWORD_MIN_LENGTH si es mayor) y distinta de la actual. */
             newPassword: string;
         };
         AuditEventResponseDto: {
@@ -4389,6 +4434,11 @@ export interface components {
              */
             active: boolean;
             /**
+             * @description true si la persona debe cambiar su contraseña en su próximo uso del portal.
+             * @example false
+             */
+            mustChangePassword: boolean;
+            /**
              * Format: date-time
              * @description Fecha de creacion.
              */
@@ -4398,6 +4448,27 @@ export interface components {
              * @description Fecha de ultima actualizacion.
              */
             updatedAt: string;
+        };
+        ForcePasswordChangeDto: {
+            /** @description true aplica a todos los usuarios con contraseña (con enabled=true, excepto quien ejecuta la acción). */
+            all?: boolean;
+            /** @description Usuarios a los que aplicar (1 a 500). Quien ejecuta puede incluirse a propósito. */
+            userIds?: string[];
+            /** @description Solo con all=true: usuarios que se dejan fuera (p. ej. la cuenta del MCP). Máximo 100. */
+            excludeUserIds?: string[];
+            /**
+             * @description true (por defecto) exige el cambio; false retira la exigencia.
+             * @default true
+             */
+            enabled: boolean;
+        };
+        ForcePasswordChangeResponseDto: {
+            /** @description Usuarios cuyo indicador cambió. */
+            updated: number;
+            /** @description Usuarios omitidos: sin contraseña o que ya estaban en el estado pedido. */
+            skipped: number;
+            /** @description true si all=true dejó fuera a quien ejecuta la acción. */
+            excludedSelf: boolean;
         };
         CreateUserDto: {
             /**
@@ -8314,13 +8385,68 @@ export interface operations {
             };
         };
     };
+    AuthPasswordController_changePassword: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Obligatoria (valor 1) cuando la petición llega por la cookie de sesión. */
+                "x-portal-csrf"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordDto"];
+            };
+        };
+        responses: {
+            /** @description Contraseña actualizada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Contraseña actual incorrecta, nueva demasiado corta o igual a la actual. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No hay un usuario actual válido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Falta la cabecera de protección CSRF. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiados intentos fallidos. La cabecera Retry-After indica los segundos de espera. */
+            429: {
+                headers: {
+                    /** @description Segundos hasta poder reintentar. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     AuditController_findMany: {
         parameters: {
             query?: {
                 /** @description Filtra por tipo de objeto. */
                 objectType?: "PROCESS" | "AREA" | "REQUESTER" | "PROJECT_CLOSURE" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD" | "RECURRING_ACTIVITY" | "RECURRING_ACTIVITY_OCCURRENCE";
                 /** @description Filtra por verbo de la mutacion. */
-                action?: "CREATE" | "UPDATE" | "DELETE" | "REVOKE" | "LOGIN_FAILED" | "PASSWORD_RESET_THROTTLED";
+                action?: "CREATE" | "UPDATE" | "DELETE" | "REVOKE" | "LOGIN_FAILED" | "PASSWORD_RESET_THROTTLED" | "PASSWORD_CHANGE_REQUIRED" | "PASSWORD_CHANGE_CLEARED" | "PASSWORD_CHANGED";
                 /** @description Filtra por el código visible del objeto: PRY-0012, PRY-0012-F2, PRY-0012-T07, ACT-0007 o DOC-0003 (sin distinguir mayúsculas). Un código que no existe devuelve la lista vacía. */
                 objectCode?: string;
                 /** @description Pagina (1-based). Por defecto 1. */
@@ -10762,6 +10888,51 @@ export interface operations {
             };
             /** @description Ya existe el identifier. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserController_forcePasswordChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForcePasswordChangeDto"];
+            };
+        };
+        responses: {
+            /** @description Resultado de la acción. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForcePasswordChangeResponseDto"];
+                };
+            };
+            /** @description Cuerpo ambiguo o inválido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solo el jefe de área. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Algún usuario indicado no existe; no se aplicó nada. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

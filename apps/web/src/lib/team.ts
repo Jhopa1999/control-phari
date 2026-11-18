@@ -6,9 +6,14 @@ import {
   type Process,
   type User,
 } from './api-client';
+import type { components } from '@plantilla-portales/api-client';
 import { ApiError, toApiError, apiErrorFrom } from './api-error';
 
 export { ApiError };
+
+/** Resultado de exigir o retirar el cambio de contraseña, derivado del contrato. */
+export type ForcePasswordChangeResult =
+  components['schemas']['ForcePasswordChangeResponseDto'];
 
 /** Usuarios del area (GET /users). Solo jefe. */
 export async function listUsers(): Promise<User[]> {
@@ -111,6 +116,28 @@ export async function inviteUser(id: string): Promise<void> {
     if (error) {
       throw apiErrorFrom(response.status, error);
     }
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw toApiError(undefined);
+  }
+}
+
+/**
+ * Exige (o retira) el cambio de contraseña obligatorio (POST
+ * /users/force-password-change, solo jefe de área). Todo o nada: un 404 o un
+ * fallo no marca a nadie. `all` excluye siempre a quien ejecuta la acción.
+ */
+export async function forcePasswordChange(
+  input: Omit<components['schemas']['ForcePasswordChangeDto'], 'enabled'> & { enabled?: boolean },
+): Promise<ForcePasswordChangeResult> {
+  try {
+    const { data, error, response } = await api.POST('/users/force-password-change', {
+      body: { ...input, enabled: input.enabled ?? true },
+    });
+    if (error || !data) {
+      throw apiErrorFrom(response.status, error);
+    }
+    return data;
   } catch (err) {
     if (err instanceof ApiError) throw err;
     throw toApiError(undefined);

@@ -11,12 +11,14 @@ import * as passwordHash from './password-hash';
 
 type UserDelegateMock = {
   findFirst: jest.Mock;
+  findUnique: jest.Mock;
   update: jest.Mock;
 };
 
 function createMocks() {
   const user: UserDelegateMock = {
     findFirst: jest.fn(),
+    findUnique: jest.fn().mockResolvedValue(null),
     update: jest.fn(),
   };
   const prismaObj: Record<string, unknown> = {
@@ -235,7 +237,7 @@ describe('AuthResetService', () => {
       expect(mocks.user.update).toHaveBeenCalledTimes(1);
       expect(mocks.user.update.mock.calls[0][0]).toMatchObject({
         where: { id: 'u1' },
-        data: { passwordHash: 'hashed-password' },
+        data: { passwordHash: 'hashed-password', mustChangePassword: false },
       });
       expect(mocks.auditRecord).toHaveBeenCalledTimes(1);
       // La sesion se emite para el usuario actualizado (duenno del token).
@@ -261,6 +263,36 @@ describe('AuthResetService', () => {
       );
       expect(mocks.issueSessionForUser).toHaveBeenCalledWith(updated);
       expect(result).toEqual(SESSION);
+    });
+
+    it('usuario marcado: la nueva igual a la actual da 400 y no actualiza (el token no se consume porque la transacción revierte)', async () => {
+      mocks.consume.mockResolvedValue({ id: 't1', userId: 'u1' });
+      mocks.user.findUnique.mockResolvedValue(
+        makeUser({ passwordHash: 'hash-actual', mustChangePassword: true }),
+      );
+      jest.spyOn(passwordHash, 'verifyPassword').mockResolvedValue(true);
+
+      await expect(
+        service.resetPassword({ token: 't', newPassword: 'contrasena-larga' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(mocks.user.update).not.toHaveBeenCalled();
+      expect(mocks.issueSessionForUser).not.toHaveBeenCalled();
+    });
+
+    it('usuario marcado con una contraseña distinta: restablece y limpia el indicador', async () => {
+      mocks.consume.mockResolvedValue({ id: 't1', userId: 'u1' });
+      mocks.user.findUnique.mockResolvedValue(
+        makeUser({ passwordHash: 'hash-actual', mustChangePassword: true }),
+      );
+      jest.spyOn(passwordHash, 'verifyPassword').mockResolvedValue(false);
+      mocks.user.update.mockResolvedValue(makeUser());
+      mocks.issueSessionForUser.mockResolvedValue(SESSION);
+
+      await service.resetPassword({ token: 't', newPassword: 'contrasena-larga' });
+      expect(mocks.user.update.mock.calls[0][0].data).toEqual({
+        passwordHash: 'hashed-password',
+        mustChangePassword: false,
+      });
     });
 
     it('token invalido (400) se propaga sin actualizar ni emitir sesion', async () => {

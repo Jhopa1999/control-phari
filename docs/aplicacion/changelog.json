@@ -966,6 +966,18 @@
         "docs/aplicacion/autenticacion-autorizacion.md"
       ],
       "summary": "Oleada 3, PR-E (módulos puntuales): formato de códigos de áreas, procesos y maestras (^[A-Z0-9_]+$, máximo 40, solo al crear, 400 en español); áreas con processCount/requesterCount y 409 al desactivar con procesos activos; procesos piden confirmDeactivation con recuentos (409 requiresConfirmation); compromisos y reuniones validan asignado/responsable (400 en lugar de 500); recurring incluye a ADMIN (abre en Gestión); Indicadores avisa del periodo invertido y conserva las cifras. Contrato y api-client regenerados; MCP: descripciones de area.list, process.create/update y catalog.create; sin cambios de esquema."
+    },
+    {
+      "timestamp": "2026-11-18T17:05:00Z",
+      "trigger_file": "apps/api/src/modules/user/user.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "apps/mcp/README.md"
+      ],
+      "summary": "Cambio de contraseña obligatorio: columna users.must_change_password (migración aditiva, nadie marcado); POST /users/force-password-change (solo jefe, todos o selección, retirar con enabled=false, auditoría PASSWORD_CHANGE_REQUIRED/CLEARED); POST /auth/change-password (exige la actual, política vigente, distinta, audita PASSWORD_CHANGED); bloqueo 403 PASSWORD_CHANGE_REQUIRED en CurrentUserGuard para cookie y Bearer salvo /me/permissions y change-password; reset-password limpia el indicador; mustChangePassword en /me/permissions y /users; pantalla /cambiar-contrasena y acciones en Equipo y permisos. MCP: dos exclusiones permanentes y mensaje claro para el 403."
     }
   ]
 }

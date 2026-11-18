@@ -38,4 +38,10 @@ export interface CurrentActor {
    * (pero NO amplia `scopedProcessIds`, que es por proceso).
    */
   isAdmin: boolean;
+  /**
+   * Debe cambiar su contraseña antes de seguir usando el portal (columna
+   * `User.mustChangePassword`). Opcional para no romper los fixtures que
+   * construyen un actor; `CurrentUserGuard` solo bloquea con `true`.
+   */
+  mustChangePassword?: boolean;
 }

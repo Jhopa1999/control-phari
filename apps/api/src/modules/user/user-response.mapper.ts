@@ -6,6 +6,7 @@ type UserLike = {
   identifier: string;
   name: string;
   active: boolean;
+  mustChangePassword: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -21,6 +22,7 @@ export function toUserResponse(user: UserLike): UserResponseDto {
     identifier: user.identifier,
     name: user.name,
     active: user.active,
+    mustChangePassword: user.mustChangePassword,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };

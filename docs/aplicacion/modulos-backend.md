@@ -57,7 +57,18 @@ por `AUTH_MODE`: `dev-header` (header `X-Actor-Id`) y `jwt` (login real).
 | POST | `/auth/forgot-password` | Solicita el reestablecimiento de contraseña; responde `204` exista o no el usuario (ruta pública). Desde la 4.ª solicitud en una hora por identificador no emite token ni correo, sigue respondiendo `204` y audita una vez por ventana `PASSWORD_RESET_THROTTLED`. |
 | POST | `/auth/reset-password` | Define una nueva contraseña consumiendo un token de reset o de activación y devuelve la sesión del login para entrar directo y emite también la cookie de sesión (`200` con `LoginResponseDto`; `400` token/contraseña inválidos, `410` token caducado/usado). |
 | GET | `/dev/actors` | Lista usuarios activos para el selector de desarrollo (solo con `AUTH_MODE=dev-header`; si no, `404`). |
-| GET | `/me/permissions` | Permisos del usuario actual: rol, alcance y módulos permitidos. |
+| GET | `/me/permissions` | Permisos del usuario actual: rol, alcance, módulos permitidos y `mustChangePassword` (cambio de contraseña obligatorio pendiente). Responde también con el cambio pendiente. |
+| POST | `/auth/change-password` | Cambia la contraseña de la sesión actual (Bearer o cookie con `X-Portal-Csrf: 1`). Exige la contraseña actual, cumple `PASSWORD_MIN_LENGTH` y la nueva debe ser distinta. Limpia `mustChangePassword` y audita `PASSWORD_CHANGED`. `204`; `400` actual incorrecta, corta o igual; `429` con `Retry-After` (mismo límite que el login). Excluido del MCP. |
+
+Cambio de contraseña obligatorio: con `users.must_change_password = true` y en modo
+`jwt`, `CurrentUserGuard` responde `403` con `code: "PASSWORD_CHANGE_REQUIRED"` en toda
+ruta autenticada salvo las marcadas con `@AllowPasswordChangePending()`: solo
+`GET /me/permissions` y `POST /auth/change-password` (lista cerrada que fija
+`allow-password-change-pending.spec.ts`). Las rutas públicas (`login`, `logout`,
+`forgot-password`, `reset-password`, `health`) no cambian. Aplica igual a cookie y
+Bearer, y a las sesiones ya abiertas desde su siguiente petición. En `dev-header` se
+ignora. `reset-password` también limpia el indicador y, si la persona estaba marcada,
+rechaza con `400` una contraseña igual a la actual sin consumir el token.
 
 Transversal a la API (`app.config.ts`, `security/`): el `CurrentUserGuard` acepta
 `Authorization: Bearer` o la cookie `portal_session` (con cookie, las escrituras exigen
@@ -95,11 +106,12 @@ Administra las identidades funcionales de las personas del área. Solo `JEFE_ARE
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/users` | Lista todos los usuarios (ADMIN, JEFE_AREA y LIDER_PROCESO). Devuelve solo `id`, `identifier`, `name`, `active`, `createdAt` y `updatedAt` (`UserResponseDto`); nunca credenciales. |
+| GET | `/users` | Lista todos los usuarios (ADMIN, JEFE_AREA y LIDER_PROCESO). Devuelve solo `id`, `identifier`, `name`, `active`, `mustChangePassword`, `createdAt` y `updatedAt` (`UserResponseDto`); nunca credenciales. |
 | GET | `/users/:id` | Obtiene un usuario con sus grants (mismos campos que el listado más `grants`). |
 | POST | `/users` | Crea una identidad funcional (solo JEFE_AREA). |
 | PATCH | `/users/:id` | Edita `name`/`active` (solo JEFE_AREA). |
 | POST | `/users/:id/invite` | Emite y envía la invitación de activación; el reenvío invalida el enlace previo (solo JEFE_AREA; `204`, `404` si no existe). |
+| POST | `/users/force-password-change` | Exige el cambio de contraseña en el próximo uso (solo JEFE_AREA; líder y admin `403`). Cuerpo: exactamente uno de `all: true` o `userIds` (1 a 500); `excludeUserIds` solo con `all`; `enabled: false` retira la exigencia. `all` marca a todos los usuarios con contraseña, también inactivos, excepto a quien ejecuta; por `userIds` quien ejecuta puede incluirse. Todo o nada: un id inexistente da `404` sin cambios. Idempotente (`skipped`). Un evento `PASSWORD_CHANGE_REQUIRED` o `PASSWORD_CHANGE_CLEARED` por usuario cambiado, en la misma transacción. `200` `{ updated, skipped, excludedSelf }`. Excluido del MCP. |
 
 ## grant — Concesión de permisos (rol × proceso)
 
