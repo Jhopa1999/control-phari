@@ -8,6 +8,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
+import { readableRequestIds } from '../../request/request-scope.service';
 import { KnowledgeScopeService } from '../knowledge-scope.service';
 import { AssetStateService } from './asset-state.service';
 import { AssetStatus } from './asset-status';
@@ -24,13 +25,21 @@ import {
   resolveLegacyTakeWindow,
 } from '../../../common/pagination/pagination';
 
-/** Solicitud de origen del activo, salvo que esté eliminada. */
+/**
+ * Solicitud de origen del activo, solo si no está eliminada y el actor puede
+ * leerla (alcance de solicitudes): si no, no se nombra.
+ */
 function originRequest(
   row: AssetWithVisibilities,
+  readable: ReadonlySet<string>,
 ): { code: string; title: string } | null {
-  return row.request && row.request.deletedAt === null ? row.request : null;
+  return row.request &&
+    row.request.deletedAt === null &&
+    row.requestId !== null &&
+    readable.has(row.requestId)
+    ? row.request
+    : null;
 }
-
 /**
  * Activo generico, compartido y gobernado (design §2/§3/§5/§a-§e). Lectura via
  * KnowledgeScopeService (propietario ∪ visibilidad, 404 fuera). ESCRITURA
@@ -68,7 +77,10 @@ export class AssetService {
     };
   }
 
-  private toResponse(row: AssetWithVisibilities): AssetResponseDto {
+  private toResponse(
+    row: AssetWithVisibilities,
+    readable: ReadonlySet<string>,
+  ): AssetResponseDto {
     return {
       id: row.id,
       processId: row.processId,
@@ -83,12 +95,26 @@ export class AssetService {
       processCode: row.process.code,
       processName: row.process.name,
       ownerName: row.owner?.name ?? null,
-      // Una solicitud de origen eliminada no se nombra («No disponible» en la web).
-      requestCode: originRequest(row)?.code ?? null,
-      requestTitle: originRequest(row)?.title ?? null,
+      // Una solicitud de origen eliminada o fuera del alcance del actor no se
+      // nombra («No disponible» en la web).
+      requestCode: originRequest(row, readable)?.code ?? null,
+      requestTitle: originRequest(row, readable)?.title ?? null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
+  }
+
+  /** Respuestas con la solicitud de origen resuelta según el alcance del actor. */
+  private async toResponses(
+    actor: CurrentActor,
+    rows: AssetWithVisibilities[],
+  ): Promise<AssetResponseDto[]> {
+    const readable = await readableRequestIds(
+      this.prisma,
+      actor,
+      rows.map((row) => row.requestId),
+    );
+    return rows.map((row) => this.toResponse(row, readable));
   }
 
   private async requireInScope(
@@ -222,7 +248,7 @@ export class AssetService {
       this.prisma.asset.count({ where }),
     ]);
     return buildPageResult(
-      rows.map((row) => this.toResponse(row)),
+      await this.toResponses(actor, rows),
       total,
       window,
     );
@@ -230,7 +256,7 @@ export class AssetService {
 
   async get(actor: CurrentActor, id: string): Promise<AssetResponseDto> {
     const row = await this.requireInScope(actor, id);
-    return this.toResponse(row);
+    return (await this.toResponses(actor, [row]))[0];
   }
 
   /**
@@ -315,7 +341,7 @@ export class AssetService {
         return row;
       });
 
-      return this.toResponse(created);
+      return (await this.toResponses(actor, [created]))[0];
     } catch (error) {
       throw this.mapError(error);
     }
@@ -391,7 +417,7 @@ export class AssetService {
         return row;
       });
 
-      return this.toResponse(updated);
+      return (await this.toResponses(actor, [updated]))[0];
     } catch (error) {
       throw this.mapError(error);
     }
@@ -430,7 +456,7 @@ export class AssetService {
         return row;
       });
 
-      return this.toResponse(updated);
+      return (await this.toResponses(actor, [updated]))[0];
     } catch (error) {
       throw this.mapError(error);
     }

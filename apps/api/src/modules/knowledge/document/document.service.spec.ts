@@ -9,6 +9,7 @@ import { Prisma } from '../../../generated/prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
+import { requestScopeWhere } from '../../request/request-scope.service';
 import { KnowledgeScopeService } from '../knowledge-scope.service';
 import { DocumentStateService } from './document-state.service';
 import { DocumentService } from './document.service';
@@ -28,6 +29,7 @@ function p2002(): Prisma.PrismaClientKnownRequestError {
 function createMocks() {
   const prismaObj: Record<string, any> = {
     asset: { findFirst: jest.fn() },
+    request: { findMany: jest.fn().mockResolvedValue([]) },
     catalogItem: { findFirst: jest.fn().mockResolvedValue({ id: 'c1' }) },
     document: {
       findFirst: jest.fn(),
@@ -631,6 +633,7 @@ describe('DocumentService', () => {
     });
 
     it('BL-039: nombre del activo y código/título del proyecto; eliminado no se nombra', async () => {
+      m.prismaObj.request.findMany.mockResolvedValue([{ id: 'r1' }, { id: 'r2' }]);
       m.prismaObj.document.findMany.mockResolvedValue([
         docRow({
           requestId: 'r1',
@@ -654,6 +657,46 @@ describe('DocumentService', () => {
       expect(m.prismaObj.document.findMany.mock.calls[0][0].include).toMatchObject({
         asset: { select: { name: true } },
       });
+    });
+
+    it('B1: la solicitud fuera del alcance del actor no se nombra; con alcance sí', async () => {
+      m.prismaObj.document.findMany.mockResolvedValue([
+        docRow({
+          requestId: 'r1',
+          request: { code: 'PRY-0012', title: 'Cierre', deletedAt: null },
+        }),
+      ]);
+
+      // Integrante sin acceso a la solicitud: el alcance no la devuelve.
+      m.prismaObj.request.findMany.mockResolvedValue([]);
+      const [sinAcceso] = await rowsOf(m.service.list(integrante(), {} as any));
+      expect(sinAcceso.requestId).toBe('r1');
+      expect(sinAcceso.requestCode).toBeNull();
+      expect(sinAcceso.requestTitle).toBeNull();
+      expect(m.prismaObj.request.findMany).toHaveBeenCalledTimes(1);
+      expect(m.prismaObj.request.findMany.mock.calls[0][0].where).toEqual({
+        AND: [{ id: { in: ['r1'] } }, requestScopeWhere(integrante())],
+      });
+
+      // Jefe: la solicitud está en su alcance y se nombra.
+      m.prismaObj.request.findMany.mockResolvedValue([{ id: 'r1' }]);
+      const [conAcceso] = await rowsOf(m.service.list(jefe(), {} as any));
+      expect(conAcceso.requestCode).toBe('PRY-0012');
+      expect(conAcceso.requestTitle).toBe('Cierre');
+    });
+
+    it('B1: get no nombra la solicitud fuera del alcance', async () => {
+      m.prismaObj.document.findFirst.mockResolvedValue(
+        docRow({
+          requestId: 'r1',
+          request: { code: 'PRY-0012', title: 'Cierre', deletedAt: null },
+        }),
+      );
+      m.prismaObj.asset.findFirst.mockResolvedValue(assetRow());
+      m.prismaObj.request.findMany.mockResolvedValue([]);
+      const res = await m.service.get(integrante(), 'd1');
+      expect(res.requestCode).toBeNull();
+      expect(res.requestTitle).toBeNull();
     });
   });
 

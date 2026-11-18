@@ -12,6 +12,7 @@ import type { DocumentModel } from '../../../generated/prisma/models/Document';
 import type { DocumentVersionModel } from '../../../generated/prisma/models/DocumentVersion';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
+import { readableRequestIds } from '../../request/request-scope.service';
 import { KnowledgeScopeService } from '../knowledge-scope.service';
 import { DocumentStateService } from './document-state.service';
 import { CLOSURE_DOC_CATEGORY, DocStatus } from './doc-status';
@@ -102,7 +103,30 @@ export class DocumentService {
     };
   }
 
-  private toResponse(row: DocumentWithCurrent): DocumentResponseDto {
+  /** Respuestas con la solicitud resuelta según el alcance de solicitudes del actor. */
+  private async toResponses(
+    actor: CurrentActor,
+    rows: DocumentWithCurrent[],
+  ): Promise<DocumentResponseDto[]> {
+    const readable = await readableRequestIds(
+      this.prisma,
+      actor,
+      rows.map((row) => row.requestId),
+    );
+    return rows.map((row) => this.toResponse(row, readable));
+  }
+
+  private toResponse(
+    row: DocumentWithCurrent,
+    readable: ReadonlySet<string>,
+  ): DocumentResponseDto {
+    const request =
+      row.request &&
+      row.request.deletedAt === null &&
+      row.requestId !== null &&
+      readable.has(row.requestId)
+        ? row.request
+        : null;
     return {
       id: row.id,
       assetId: row.assetId,
@@ -111,9 +135,10 @@ export class DocumentService {
       categoryCode: row.categoryCode,
       status: row.status,
       requestId: row.requestId,
-      // Un proyecto eliminado no se nombra («No disponible» en la web).
-      requestCode: row.request && row.request.deletedAt === null ? row.request.code : null,
-      requestTitle: row.request && row.request.deletedAt === null ? row.request.title : null,
+      // Un proyecto eliminado o fuera del alcance del actor no se nombra
+      // («No disponible» en la web).
+      requestCode: request?.code ?? null,
+      requestTitle: request?.title ?? null,
       submittedAt: row.submittedAt,
       submittedByUserId: row.submittedByUserId,
       reviewedAt: row.reviewedAt,
@@ -249,7 +274,7 @@ export class DocumentService {
       this.prisma.document.count({ where }),
     ]);
     return buildPageResult(
-      rows.map((row) => this.toResponse(row)),
+      await this.toResponses(actor, rows),
       total,
       window,
     );
@@ -257,7 +282,7 @@ export class DocumentService {
 
   async get(actor: CurrentActor, id: string): Promise<DocumentResponseDto> {
     const { document } = await this.requireDocumentInScope(actor, id);
-    return this.toResponse(document);
+    return (await this.toResponses(actor, [document]))[0];
   }
 
   async createDocument(
@@ -321,7 +346,7 @@ export class DocumentService {
         return withPointer;
       });
 
-      return this.toResponse(created);
+      return (await this.toResponses(actor, [created]))[0];
     } catch (error) {
       throw this.mapError(error);
     }
@@ -360,7 +385,7 @@ export class DocumentService {
       return row;
     });
 
-    return this.toResponse(updated);
+    return (await this.toResponses(actor, [updated]))[0];
   }
 
   async createVersion(
@@ -454,7 +479,7 @@ export class DocumentService {
         after: this.documentSnapshot(withPointer),
       });
 
-      return this.toResponse(withPointer);
+      return (await this.toResponses(actor, [withPointer]))[0];
     });
   }
 
@@ -596,7 +621,7 @@ export class DocumentService {
     });
 
     await this.notifyStatusChange(actor, updated, asset, nextStatus, isDecision);
-    return this.toResponse(updated);
+    return (await this.toResponses(actor, [updated]))[0];
   }
 
   /** Atajo: enviar a aprobación (BORRADOR/RECHAZADO -> PENDIENTE_APROBACION). */
@@ -628,7 +653,7 @@ export class DocumentService {
       orderBy: [{ submittedAt: 'asc' }, { createdAt: 'asc' }],
       include: DOCUMENT_INCLUDE,
     });
-    return rows.map((row) => this.toResponse(row));
+    return this.toResponses(actor, rows);
   }
 
   /** Ruta interna del documento en el portal. */

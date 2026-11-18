@@ -47,7 +47,10 @@ function build(doc: { status: string; categoryCode?: string | null; requestId?: 
   const prisma = {
     document: { findFirst: jest.fn().mockResolvedValue(row) },
     asset: { findFirst: jest.fn().mockResolvedValue({ id: 'a1', processId: 'p1', status: 'ACTIVO' }) },
-    request: { findFirst: jest.fn().mockResolvedValue({ operationalState: requestState }) },
+    request: {
+      findFirst: jest.fn().mockResolvedValue({ operationalState: requestState }),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
   };
   const notifications = {

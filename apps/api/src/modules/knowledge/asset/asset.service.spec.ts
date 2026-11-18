@@ -8,6 +8,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
+import { requestScopeWhere } from '../../request/request-scope.service';
 import { KnowledgeScopeService } from '../knowledge-scope.service';
 import { AssetStateService } from './asset-state.service';
 import { AssetService } from './asset.service';
@@ -31,7 +32,7 @@ function createMocks() {
       createMany: jest.fn(),
     },
     user: { findFirst: jest.fn() },
-    request: { findFirst: jest.fn(), findMany: jest.fn() },
+    request: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
     process: { findMany: jest.fn() },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
@@ -505,6 +506,7 @@ describe('AssetService', () => {
     });
 
     it('BL-039: trae nombre y código del proceso, responsable y solicitud de origen', async () => {
+      m.prismaObj.request.findMany.mockResolvedValue([{ id: 'r1' }, { id: 'r2' }]);
       m.prismaObj.asset.findMany.mockResolvedValue([
         assetRow({
           requestId: 'r1',
@@ -535,6 +537,53 @@ describe('AssetService', () => {
         process: { select: { code: true, name: true } },
         owner: { select: { name: true } },
       });
+    });
+
+    it('B1: la solicitud de origen fuera del alcance del actor no se nombra; con alcance sí', async () => {
+      const row = () =>
+        assetRow({
+          requestId: 'r1',
+          request: { code: 'PRY-0012', title: 'Tablero', deletedAt: null },
+        });
+      m.prismaObj.asset.findMany.mockResolvedValue([row()]);
+
+      // Integrante sin acceso a la solicitud: el alcance no la devuelve.
+      m.prismaObj.request.findMany.mockResolvedValue([]);
+      const [sinAcceso] = await rowsOf(m.service.list(integrante(), {} as any));
+      expect(sinAcceso.requestId).toBe('r1');
+      expect(sinAcceso.requestCode).toBeNull();
+      expect(sinAcceso.requestTitle).toBeNull();
+
+      // La consulta en lote usa el alcance único de solicitudes (una sola vez).
+      expect(m.prismaObj.request.findMany).toHaveBeenCalledTimes(1);
+      expect(m.prismaObj.request.findMany.mock.calls[0][0].where).toEqual({
+        AND: [
+          { id: { in: ['r1'] } },
+          requestScopeWhere(integrante()),
+        ],
+      });
+
+      // Jefe: la solicitud está en su alcance y se nombra.
+      m.prismaObj.request.findMany.mockResolvedValue([{ id: 'r1' }]);
+      const [conAcceso] = await rowsOf(m.service.list(jefe(), {} as any));
+      expect(conAcceso.requestCode).toBe('PRY-0012');
+      expect(conAcceso.requestTitle).toBe('Tablero');
+      expect(m.prismaObj.request.findMany.mock.calls[1][0].where.AND[1]).toEqual({
+        deletedAt: null,
+      });
+    });
+
+    it('B1: get no nombra la solicitud de origen fuera del alcance', async () => {
+      m.prismaObj.asset.findFirst.mockResolvedValue(
+        assetRow({
+          requestId: 'r1',
+          request: { code: 'PRY-0012', title: 'Tablero', deletedAt: null },
+        }),
+      );
+      m.prismaObj.request.findMany.mockResolvedValue([]);
+      const res = await m.service.get(integrante(), 'a1');
+      expect(res.requestCode).toBeNull();
+      expect(res.requestTitle).toBeNull();
     });
 
     it('sin parámetros conserva el listado completo con tope de 1000 y marca el truncado', async () => {

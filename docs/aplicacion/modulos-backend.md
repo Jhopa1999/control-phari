@@ -498,7 +498,7 @@ escritura). La máquina de estado se aplica en el service.
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/assets` | Lista activos en alcance (filtros `processId`, `requestId`, `status`) con el [patrón de listado paginado](#listados-paginados-oleada-3-pr-b): `q` por nombre; `sort` ∈ `createdAt` (por defecto, descendente), `name`, `status`. `take` queda como alias obsoleto (primeras N filas; si llega con `pageSize`, gana `pageSize`). Cada fila añade `processCode`, `processName`, `ownerName`, `requestCode` y `requestTitle` (BL-039; la solicitud de origen eliminada no se nombra). Los 3 roles de área. |
+| GET | `/assets` | Lista activos en alcance (filtros `processId`, `requestId`, `status`) con el [patrón de listado paginado](#listados-paginados-oleada-3-pr-b): `q` por nombre; `sort` ∈ `createdAt` (por defecto, descendente), `name`, `status`. `take` queda como alias obsoleto (primeras N filas; si llega con `pageSize`, gana `pageSize`). Cada fila añade `processCode`, `processName`, `ownerName`, `requestCode` y `requestTitle` (BL-039; la solicitud de origen eliminada o fuera del alcance de solicitudes del actor, `RequestScopeService`, no se nombra: `requestCode`/`requestTitle` llegan `null` y `requestId` se conserva). Los 3 roles de área. |
 | POST | `/assets` | Crea un activo (nace BORRADOR). Solo `JEFE_AREA`. |
 | GET | `/assets/:id` | Detalle de un activo. |
 | GET | `/assets/:id/requests` | Historial de solicitudes que tienen el activo como base (más reciente primero). |
