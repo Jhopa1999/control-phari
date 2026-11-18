@@ -4,6 +4,11 @@ import { Prisma } from '../../generated/prisma/client';
 import { RoleCode } from '../auth/role-code';
 import { CurrentActor } from '../auth/current-actor';
 import type { AuditEventModel } from '../../generated/prisma/models/AuditEvent';
+import {
+  formatAssetCode,
+  formatDocumentCode,
+  parseAuditObjectCode,
+} from '../plan/visible-code';
 import { ListAuditEventsDto } from './dto/list-audit-events.dto';
 import { AuditEventResponseDto } from './dto/audit-event-response.dto';
 import { PaginatedAuditEventsResponseDto } from './dto/paginated-audit-events-response.dto';
@@ -151,6 +156,27 @@ export class AuditService {
       where.action = filters.action;
     }
 
+    if (filters.objectCode !== undefined) {
+      // El código se traduce a tipo e id del objeto ANTES de consultar; el
+      // alcance por rol de arriba sigue aplicándose. Sin coincidencia (o código
+      // inexistente) la lista queda vacía: nunca un 404 que delate el objeto.
+      const target = await this.resolveObjectCode(filters.objectCode);
+      if (
+        target === null ||
+        (filters.objectType !== undefined && filters.objectType !== target.objectType)
+      ) {
+        return {
+          data: [],
+          page: filters.page ?? 1,
+          pageSize: Math.min(filters.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE),
+          total: 0,
+          hasMore: false,
+        };
+      }
+      where.objectType = target.objectType;
+      where.objectId = target.objectId;
+    }
+
     const pageSize = Math.min(filters.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const page = filters.page ?? 1;
     const skip = (page - 1) * pageSize;
@@ -167,14 +193,181 @@ export class AuditService {
       this.prisma.auditEvent.count({ where }),
     ]);
 
+    const labels = await this.resolveLabels(rows);
     return {
-      data: rows.map(toResponseDto),
+      data: rows.map((row) => toResponseDto(row, labels.get(labelKey(row.objectType, row.objectId)))),
       page,
       pageSize,
       total,
       hasMore: page * pageSize < total,
     };
   }
+
+  /**
+   * Traduce un código visible (`PRY-0012`, `PRY-0012-F2`, `PRY-0012-T07`,
+   * `ACT-0007`, `DOC-0003`) al tipo y al id del objeto auditado. `null` si el
+   * código no existe o no tiene forma de código.
+   */
+  private async resolveObjectCode(
+    raw: string,
+  ): Promise<{ objectType: string; objectId: string } | null> {
+    const parsed = parseAuditObjectCode(raw);
+    if (parsed === null) return null;
+    switch (parsed.kind) {
+      case 'REQUEST': {
+        const row = await this.prisma.request.findUnique({
+          where: { code: parsed.code },
+          select: { id: true },
+        });
+        return row ? { objectType: 'REQUEST', objectId: row.id } : null;
+      }
+      case 'PHASE': {
+        const row = await this.prisma.planPhase.findUnique({
+          where: { code: parsed.code },
+          select: { id: true },
+        });
+        return row ? { objectType: 'PLAN_PHASE', objectId: row.id } : null;
+      }
+      case 'TASK': {
+        const row = await this.prisma.task.findUnique({
+          where: { code: parsed.code },
+          select: { id: true },
+        });
+        return row ? { objectType: 'TASK', objectId: row.id } : null;
+      }
+      case 'ASSET': {
+        const row = await this.prisma.asset.findUnique({
+          where: { number: parsed.number as number },
+          select: { id: true },
+        });
+        return row ? { objectType: 'ASSET', objectId: row.id } : null;
+      }
+      case 'DOCUMENT': {
+        const row = await this.prisma.document.findUnique({
+          where: { number: parsed.number as number },
+          select: { id: true },
+        });
+        return row ? { objectType: 'DOCUMENT', objectId: row.id } : null;
+      }
+    }
+  }
+
+  /**
+   * Etiqueta (y código visible) de los objetos de la página, por lote: una
+   * consulta por tipo de objeto presente, sin N+1. Solo se calcula para
+   * eventos que el actor ya puede ver (las filas vienen filtradas por alcance).
+   * Un objeto eliminado o de un tipo sin etiqueta no aparece en el mapa.
+   */
+  private async resolveLabels(
+    rows: Array<{ objectType: string; objectId: string }>,
+  ): Promise<Map<string, ObjectLabel>> {
+    const ids = new Map<string, Set<string>>();
+    for (const row of rows) {
+      if (typeof row.objectType !== 'string' || !LABELED_TYPES.has(row.objectType)) continue;
+      // Algunos eventos guardan en objectId algo que no es un UUID (p. ej.
+      // LOGIN_FAILED guarda el identificador escrito): las columnas id son uuid y
+      // un valor así haría fallar toda la consulta. Esos eventos van sin etiqueta.
+      if (!UUID_PATTERN.test(row.objectId)) continue;
+      const set = ids.get(row.objectType) ?? new Set<string>();
+      set.add(row.objectId);
+      ids.set(row.objectType, set);
+    }
+    const result = new Map<string, ObjectLabel>();
+    const put = (type: string, id: string, code: string | null, label: string): void => {
+      result.set(labelKey(type, id), { code, label });
+    };
+    const inIds = (type: string): { in: string[] } => ({ in: [...(ids.get(type) ?? [])] });
+    const jobs: Array<Promise<void>> = [];
+    if (ids.has('REQUEST')) {
+      jobs.push(
+        this.prisma.request
+          .findMany({ where: { id: inIds('REQUEST') }, select: { id: true, code: true, title: true } })
+          .then((list) => list.forEach((r) => put('REQUEST', r.id, r.code, r.title))),
+      );
+    }
+    if (ids.has('PLAN_PHASE')) {
+      jobs.push(
+        this.prisma.planPhase
+          .findMany({ where: { id: inIds('PLAN_PHASE') }, select: { id: true, code: true, name: true } })
+          .then((list) => list.forEach((r) => put('PLAN_PHASE', r.id, r.code, r.name))),
+      );
+    }
+    if (ids.has('TASK')) {
+      jobs.push(
+        this.prisma.task
+          .findMany({ where: { id: inIds('TASK') }, select: { id: true, code: true, title: true } })
+          .then((list) => list.forEach((r) => put('TASK', r.id, r.code, r.title))),
+      );
+    }
+    if (ids.has('ASSET')) {
+      jobs.push(
+        this.prisma.asset
+          .findMany({ where: { id: inIds('ASSET') }, select: { id: true, number: true, name: true } })
+          .then((list) => list.forEach((r) => put('ASSET', r.id, formatAssetCode(r.number), r.name))),
+      );
+    }
+    if (ids.has('DOCUMENT')) {
+      jobs.push(
+        this.prisma.document
+          .findMany({ where: { id: inIds('DOCUMENT') }, select: { id: true, number: true, title: true } })
+          .then((list) => list.forEach((r) => put('DOCUMENT', r.id, formatDocumentCode(r.number), r.title))),
+      );
+    }
+    if (ids.has('USER')) {
+      jobs.push(
+        this.prisma.user
+          .findMany({ where: { id: inIds('USER') }, select: { id: true, name: true } })
+          .then((list) => list.forEach((r) => put('USER', r.id, null, r.name))),
+      );
+    }
+    if (ids.has('AREA')) {
+      jobs.push(
+        this.prisma.area
+          .findMany({ where: { id: inIds('AREA') }, select: { id: true, name: true } })
+          .then((list) => list.forEach((r) => put('AREA', r.id, null, r.name))),
+      );
+    }
+    if (ids.has('PROCESS')) {
+      jobs.push(
+        this.prisma.process
+          .findMany({ where: { id: inIds('PROCESS') }, select: { id: true, name: true } })
+          .then((list) => list.forEach((r) => put('PROCESS', r.id, null, r.name))),
+      );
+    }
+    if (ids.has('CATALOG_ITEM')) {
+      jobs.push(
+        this.prisma.catalogItem
+          .findMany({ where: { id: inIds('CATALOG_ITEM') }, select: { id: true, label: true } })
+          .then((list) => list.forEach((r) => put('CATALOG_ITEM', r.id, null, r.label))),
+      );
+    }
+    await Promise.all(jobs);
+    return result;
+  }
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Tipos de objeto con etiqueta (y código, si lo tienen) en la respuesta. */
+const LABELED_TYPES: ReadonlySet<string> = new Set([
+  'REQUEST',
+  'PLAN_PHASE',
+  'TASK',
+  'ASSET',
+  'DOCUMENT',
+  'USER',
+  'AREA',
+  'PROCESS',
+  'CATALOG_ITEM',
+]);
+
+interface ObjectLabel {
+  code: string | null;
+  label: string;
+}
+
+function labelKey(objectType: string, objectId: string): string {
+  return `${objectType}:${objectId}`;
 }
 
 /**
@@ -182,8 +375,10 @@ export class AuditService {
  * null o, en teoria, escalar); el contrato los expone como objeto nullable, que
  * es lo que registran las mutaciones (siempre objeto o null).
  */
-function toResponseDto(row: AuditEventModel): AuditEventResponseDto {
+function toResponseDto(row: AuditEventModel, label?: ObjectLabel): AuditEventResponseDto {
   return {
+    objectCode: label?.code ?? null,
+    objectLabel: label?.label ?? null,
     id: row.id,
     actorUserId: row.actorUserId,
     action: row.action,

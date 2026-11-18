@@ -505,6 +505,22 @@ escritura). La máquina de estado se aplica en el service.
 | PATCH | `/assets/:id` | Edita atributos de un activo (no el estado). Solo `JEFE_AREA`. |
 | POST | `/assets/:id/status` | Cambia el estado de un activo (transición válida). Solo `JEFE_AREA`. |
 
+**Código visible (oleada 3, PR-D).** `AssetResponseDto.code` (`ACT-0007`) y
+`DocumentResponseDto.code` (`DOC-0012`) son de solo lectura: los asigna el sistema, no se
+reutilizan y ningún DTO de entrada los acepta (enviar `code` o `number` da 400 por
+`forbidNonWhitelisted`). Solo se guarda el número (`number`, secuencias
+`assets_number_seq` y `documents_number_seq`); el código se calcula al mapear el DTO con
+`formatAssetCode`/`formatDocumentCode` (`plan/visible-code.ts`, prefijos `ACT` y `DOC` en
+una sola constante, 4 dígitos mínimo). `DocumentResponseDto.assetCode` lleva el código del
+activo del documento. `AssetResponseDto.requestsCount` (solicitudes no eliminadas que
+tienen el activo como base) y `documentsCount` salen de `_count` en la misma consulta, sin
+N+1; la web los usa para decidir entre «Deshacer» y confirmación al retirar.
+`AssetRequestHistoryItemDto.code` añade el código de cada solicitud del historial.
+`GET /documents?q=` busca en el título y, si el texto parece un código (`DOC-0012`,
+`doc-12`, `12`), también por el número del documento. **Decisión:** se creó un código
+propio porque el único id legible existente (el `PRY-` de la solicitud de origen) puede
+faltar (`requestId` es nulo), no es único por activo y no identifica un documento.
+`GET /codes/{code}` no se extiende a ACT/DOC en esta oleada (BL-082).
 El activo es genérico: ya no tiene tipo/tecnología/fuente/frecuencia (esos atributos
 pertenecen a cada solicitud). `generalDescription` lo describe en general. El jefe define
 con `visibleProcessIds` qué procesos pueden ver/usar el activo (tabla puente
@@ -632,7 +648,7 @@ service.
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/audit-events` | Lista paginada de eventos con alcance por rol. Filtros `objectType` y `action` (`CREATE`, `UPDATE`, `DELETE`, `REVOKE`, `LOGIN_FAILED`, `PASSWORD_RESET_THROTTLED`); paginación `page`/`pageSize` (pageSize ≤ 100, por defecto 25). Devuelve `{ data, page, pageSize, total, hasMore }`; el alcance por rol se aplica antes de paginar. |
+| GET | `/audit-events` | Lista paginada de eventos con alcance por rol. Filtros `objectType`, `action` (`CREATE`, `UPDATE`, `DELETE`, `REVOKE`, `LOGIN_FAILED`, `PASSWORD_RESET_THROTTLED`) y `objectCode` (código visible completo `PRY-0012`, `PRY-0012-F2`, `PRY-0012-T07`, `ACT-0007` o `DOC-0003`, sin distinguir mayúsculas; forma inválida → 400; un código inexistente o de otro `objectType` devuelve lista vacía, nunca 404, y el alcance por rol sigue aplicándose); paginación `page`/`pageSize` (pageSize ≤ 100, por defecto 25). Cada evento trae `objectCode` y `objectLabel` (nulos si el objeto ya no existe, si su tipo no tiene etiqueta o si su `objectId` no es un UUID, como en `LOGIN_FAILED`, que guarda el identificador escrito): solicitud, fase y tarea con su código y título o nombre; activo y documento con `ACT-`/`DOC-` y su nombre o título; usuario, área, proceso y elemento de maestra solo con etiqueta. Se resuelven por lote, una consulta por tipo de objeto presente en la página (sin N+1) y solo para eventos ya visibles para el actor. Devuelve `{ data, page, pageSize, total, hasMore }`; el alcance por rol se aplica antes de paginar. |
 
 ## system-settings — Administración de sistema (rol ADMIN)
 

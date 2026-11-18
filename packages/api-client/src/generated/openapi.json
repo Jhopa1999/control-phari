@@ -328,6 +328,17 @@
             }
           },
           {
+            "name": "objectCode",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por el código visible del objeto: PRY-0012, PRY-0012-F2, PRY-0012-T07, ACT-0007 o DOC-0003 (sin distinguir mayúsculas). Un código que no existe devuelve la lista vacía.",
+            "schema": {
+              "maxLength": 20,
+              "example": "PRY-0012-T07",
+              "type": "string"
+            }
+          },
+          {
             "name": "page",
             "required": false,
             "in": "query",
@@ -11318,6 +11329,17 @@
             "nullable": true,
             "description": "Estado posterior (null en DELETE fisico)."
           },
+          "objectCode": {
+            "type": "string",
+            "nullable": true,
+            "example": "PRY-0012",
+            "description": "Código visible del objeto (PRY-0012, PRY-0012-F2, PRY-0012-T07, ACT-0007, DOC-0003). Nulo en objetos sin código (usuarios, áreas, procesos, catálogos), eliminados o de otros tipos."
+          },
+          "objectLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre o título del objeto afectado. Nulo si el objeto ya no existe o su tipo no tiene etiqueta."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -11333,6 +11355,8 @@
           "scopeProcessId",
           "before",
           "after",
+          "objectCode",
+          "objectLabel",
           "createdAt"
         ]
       },
@@ -12881,6 +12905,11 @@
             "type": "string",
             "format": "uuid"
           },
+          "code": {
+            "type": "string",
+            "example": "ACT-0007",
+            "description": "ID visible del activo (solo lectura, asignado por el sistema, nunca se reutiliza)."
+          },
           "processId": {
             "type": "string",
             "format": "uuid",
@@ -12952,6 +12981,14 @@
             "nullable": true,
             "description": "Título de la solicitud de origen (null si no tiene o fue eliminada)."
           },
+          "requestsCount": {
+            "type": "number",
+            "description": "Solicitudes no eliminadas que tienen este activo como base (dependientes del retiro)."
+          },
+          "documentsCount": {
+            "type": "number",
+            "description": "Documentos del activo (dependientes del retiro)."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -12963,6 +13000,7 @@
         },
         "required": [
           "id",
+          "code",
           "processId",
           "requestId",
           "ownerUserId",
@@ -12977,6 +13015,8 @@
           "ownerName",
           "requestCode",
           "requestTitle",
+          "requestsCount",
+          "documentsCount",
           "createdAt",
           "updatedAt"
         ]
@@ -13041,6 +13081,11 @@
             "format": "uuid",
             "description": "Identificador de la solicitud."
           },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud."
+          },
           "title": {
             "type": "string",
             "description": "Titulo de la solicitud."
@@ -13063,6 +13108,7 @@
         },
         "required": [
           "id",
+          "code",
           "title",
           "registeredAt",
           "operationalState",
@@ -13171,6 +13217,11 @@
             "type": "string",
             "format": "uuid"
           },
+          "code": {
+            "type": "string",
+            "example": "DOC-0012",
+            "description": "ID visible del documento (solo lectura, asignado por el sistema, nunca se reutiliza)."
+          },
           "assetId": {
             "type": "string",
             "format": "uuid",
@@ -13179,6 +13230,11 @@
           "assetName": {
             "type": "string",
             "description": "Nombre del activo del documento."
+          },
+          "assetCode": {
+            "type": "string",
+            "example": "ACT-0007",
+            "description": "ID visible del activo del documento."
           },
           "title": {
             "type": "string",
@@ -13258,8 +13314,10 @@
         },
         "required": [
           "id",
+          "code",
           "assetId",
           "assetName",
+          "assetCode",
           "title",
           "categoryCode",
           "status",

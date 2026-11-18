@@ -137,7 +137,11 @@ export interface AuditQuery {
   pageSize: number;
   objectType?: AuditObjectType;
   action?: AuditAction;
+  /** Código visible completo del objeto (PRY-0012, ACT-0007, DOC-0003...). */
+  objectCode?: string;
 }
+
+export { AUDIT_OBJECT_CODE_PATTERN } from './visible-code';
 
 /**
  * Página de eventos de auditoría visibles para el actor (GET /audit-events),
@@ -157,6 +161,7 @@ export async function listAuditEvents(
           pageSize: query.pageSize,
           ...(query.objectType ? { objectType: query.objectType } : {}),
           ...(query.action ? { action: query.action } : {}),
+          ...(query.objectCode ? { objectCode: query.objectCode } : {}),
         },
       },
     });

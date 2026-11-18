@@ -24,6 +24,7 @@ function actor(role: RoleCode): CurrentActor {
 function build(doc: { status: string; categoryCode?: string | null; requestId?: string | null }, requestState = 'EN_EJECUCION') {
   const row = {
     id: 'd1',
+    number: 12,
     assetId: 'a1',
     title: 'Acta de cierre',
     categoryCode: doc.categoryCode ?? 'CIERRE',
@@ -38,7 +39,7 @@ function build(doc: { status: string; categoryCode?: string | null; requestId?: 
     createdAt: new Date(),
     updatedAt: new Date(),
     currentVersion: null,
-    asset: { name: 'Activo' },
+    asset: { name: 'Activo', number: 7 },
     request: null,
   };
   const tx = {

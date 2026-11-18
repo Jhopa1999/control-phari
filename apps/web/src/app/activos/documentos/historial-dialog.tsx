@@ -135,7 +135,7 @@ export function HistorialDialog({
       >
         <DialogHeader>
           <DialogTitle className="wrap-break-word">
-            {`Historial de versiones${document ? ` — ${document.title}` : ''}`}
+            {`Historial de versiones${document ? ` — ${document.code ? `${document.code} · ` : ''}${document.title}` : ''}`}
           </DialogTitle>
           <DialogDescription>
             Cada edición crea una versión que no cambia. Elige una para ver su contenido y

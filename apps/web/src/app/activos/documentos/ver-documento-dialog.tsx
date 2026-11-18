@@ -92,7 +92,7 @@ export function VerDocumentoDialog({
       >
         <DialogHeader>
           <DialogTitle className="wrap-break-word">
-            {`Ver documento${document ? ` — ${document.title}` : ''}`}
+            {`Ver documento${document ? ` — ${document.code ? `${document.code} · ` : ''}${document.title}` : ''}`}
           </DialogTitle>
           <DialogDescription>
             Contenido de la versión vigente en solo lectura.

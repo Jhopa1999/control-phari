@@ -107,6 +107,7 @@ import {
   safeInternalPath,
 } from '../apps/web/src/lib/safe-redirect';
 import { messageForStatus, parseRetryAfter } from '../apps/web/src/lib/api-error';
+import { AUDIT_OBJECT_CODE_PATTERN, isAuditObjectCode } from '../apps/web/src/lib/visible-code';
 import { countdownLabel, waitLabel } from '../apps/web/src/lib/wait-label';
 import {
   getStatus,
@@ -125,6 +126,7 @@ import {
   compareDate,
   compareNumber,
   compareText,
+  matchCode,
   matchesSearch,
   nextSort,
   paginate,
@@ -1890,5 +1892,42 @@ test.describe('pagination (listados en el servidor, oleada 3 PR-B)', () => {
     // Página fuera de rango tras un filtro: la última existente.
     expect(clampPage(5, 30, 25)).toBe(2);
     expect(clampPage(0, 30, 25)).toBe(1);
+  });
+});
+test.describe('IDs visibles de activos y documentos (oleada 3, PR-D)', () => {
+  test('matchCode encuentra ACT-0007 con el código completo, parcial, sin ceros o solo el número', () => {
+    for (const q of ['ACT-0007', 'act-0007', 'ACT-7', 'act-7', '0007', '7', 'ACT']) {
+      expect(matchCode('ACT-0007', q), q).toBe(true);
+    }
+    for (const q of ['ACT-8', '8', 'DOC-7', 'DOC-0007', '']) {
+      expect(matchCode('ACT-0007', q), q).toBe(false);
+    }
+  });
+
+  test('matchCode distingue el prefijo y sigue aceptando fases y tareas', () => {
+    expect(matchCode('DOC-0012', 'doc-12')).toBe(true);
+    expect(matchCode('DOC-0012', 'ACT-12')).toBe(false);
+    expect(matchCode('PRY-0012-T07', 't7')).toBe(true);
+    expect(matchCode('PRY-0012-T07', 'PRY-0012')).toBe(true);
+    expect(matchCode(null, '7')).toBe(false);
+  });
+
+  test('el número, no el texto, ordena los códigos (ACT-10000 va después de ACT-9999)', () => {
+    const number = (code: string) => Number(/(\d+)$/.exec(code)?.[1]);
+    const rows = [{ code: 'ACT-10000' }, { code: 'ACT-9999' }, { code: 'ACT-0007' }];
+    const sorted = sortRows(rows, { key: 'code', direction: 'asc' }, {
+      code: (a, b, direction) => compareNumber(number(a.code), number(b.code), direction),
+    });
+    expect(sorted.map((r) => r.code)).toEqual(['ACT-0007', 'ACT-9999', 'ACT-10000']);
+  });
+
+  test('el filtro de Auditoría solo acepta códigos completos', () => {
+    for (const ok of ['PRY-0012', 'PRY-0012-F2', 'PRY-0012-T07', 'ACT-0007', 'DOC-0003', 'ACT-10000']) {
+      expect(AUDIT_OBJECT_CODE_PATTERN.test(ok), ok).toBe(true);
+      expect(isAuditObjectCode(` ${ok} `), ok).toBe(true);
+    }
+    for (const bad of ['', 'PRY-12', 'ACT-7', 'ACT-0007-T01', 'DOC-0003-F1', 'T07', 'XYZ-0001', 'ACT 0007']) {
+      expect(isAuditObjectCode(bad), bad).toBe(false);
+    }
   });
 });

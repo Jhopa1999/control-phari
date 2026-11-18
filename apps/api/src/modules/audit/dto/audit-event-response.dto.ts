@@ -49,6 +49,21 @@ export class AuditEventResponseDto {
   })
   after!: Record<string, unknown> | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'PRY-0012',
+    description:
+      'Código visible del objeto (PRY-0012, PRY-0012-F2, PRY-0012-T07, ACT-0007, DOC-0003). Nulo en objetos sin código (usuarios, áreas, procesos, catálogos), eliminados o de otros tipos.',
+  })
+  objectCode!: string | null;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Nombre o título del objeto afectado. Nulo si el objeto ya no existe o su tipo no tiene etiqueta.',
+  })
+  objectLabel!: string | null;
   @ApiProperty({ type: String, format: 'date-time', description: 'Momento del evento.' })
   createdAt!: Date;
 }

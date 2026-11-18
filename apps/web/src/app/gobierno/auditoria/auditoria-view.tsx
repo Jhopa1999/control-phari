@@ -11,12 +11,14 @@ import {
 import { DataCardList } from '@/components/data-card-list';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { Field } from '@/components/field';
+import { IdChip } from '@/components/id-chip';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActionsCell } from '@/components/row-actions';
 import { Toolbar } from '@/components/toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -35,6 +37,7 @@ import {
 import type { AuditEvent, CoordinationPerson, Process } from '@/lib/api-client';
 import {
   AUDIT_ACTION_OPTIONS,
+  AUDIT_OBJECT_CODE_PATTERN,
   AUDIT_OBJECT_TYPE_OPTIONS,
   auditActionLabel,
   auditObjectLabel,
@@ -54,6 +57,10 @@ type LoadState = 'loading' | 'success' | 'error';
 const ALL = 'ALL';
 const NOUN = { one: 'evento', other: 'eventos' };
 const DEFAULT_PAGE_SIZE: ClientTablePageSize = 25;
+/** Pausa antes de consultar mientras se escribe el código del objeto (ms). */
+const CODE_DEBOUNCE_MS = 400;
+const CODE_HELP = 'Por ejemplo PRY-0012, PRY-0012-T07, ACT-0007 o DOC-0003.';
+const CODE_ERROR = 'Escribe un código completo, por ejemplo PRY-0012 o ACT-0007.';
 
 function isObjectType(value: string): value is AuditObjectType {
   return (AUDIT_OBJECT_TYPE_OPTIONS as readonly string[]).includes(value);
@@ -80,6 +87,10 @@ function AuditoriaViewContent(): React.ReactElement {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [objectFilter, setObjectFilter] = React.useState<AuditObjectType | typeof ALL>(ALL);
   const [actionFilter, setActionFilter] = React.useState<AuditAction | typeof ALL>(ALL);
+  // Código del objeto: lo que se escribe, y el código válido ya aplicado a la consulta.
+  const [codeInput, setCodeInput] = React.useState('');
+  const [codeApplied, setCodeApplied] = React.useState('');
+  const [codeError, setCodeError] = React.useState<string | null>(null);
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState<ClientTablePageSize>(DEFAULT_PAGE_SIZE);
   const [selected, setSelected] = React.useState<AuditEvent | null>(null);
@@ -110,6 +121,7 @@ function AuditoriaViewContent(): React.ReactElement {
     (
       objectType: AuditObjectType | typeof ALL,
       action: AuditAction | typeof ALL,
+      objectCode: string,
       requestedPage: number,
       requestedPageSize: ClientTablePageSize,
     ) => {
@@ -121,6 +133,7 @@ function AuditoriaViewContent(): React.ReactElement {
           pageSize: requestedPageSize,
           ...(objectType === ALL ? {} : { objectType }),
           ...(action === ALL ? {} : { action }),
+          ...(objectCode === '' ? {} : { objectCode }),
         }),
         loadLookups(),
       ])
@@ -144,18 +157,19 @@ function AuditoriaViewContent(): React.ReactElement {
     (
       objectType: AuditObjectType | typeof ALL,
       action: AuditAction | typeof ALL,
+      objectCode: string,
       requestedPage: number,
       requestedPageSize: ClientTablePageSize,
     ) => {
       setState('loading');
-      return fetchEvents(objectType, action, requestedPage, requestedPageSize);
+      return fetchEvents(objectType, action, objectCode, requestedPage, requestedPageSize);
     },
     [fetchEvents],
   );
 
   React.useEffect(() => {
     // El estado inicial ya es 'loading': la carga de montaje no lo vuelve a fijar.
-    void fetchEvents(ALL, ALL, 1, DEFAULT_PAGE_SIZE);
+    void fetchEvents(ALL, ALL, '', 1, DEFAULT_PAGE_SIZE);
   }, [fetchEvents]);
 
   const processById = React.useMemo(() => new Map(processes.map((p) => [p.id, p])), [processes]);
@@ -174,7 +188,7 @@ function AuditoriaViewContent(): React.ReactElement {
     };
   }
 
-  const hasFilters = objectFilter !== ALL || actionFilter !== ALL;
+  const hasFilters = objectFilter !== ALL || actionFilter !== ALL || codeApplied !== '';
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = total === 0 ? 0 : from + events.length - 1;
@@ -183,32 +197,61 @@ function AuditoriaViewContent(): React.ReactElement {
     const next = isObjectType(value) ? value : ALL;
     setObjectFilter(next);
     setPage(1);
-    void load(next, actionFilter, 1, pageSize);
+    void load(next, actionFilter, codeApplied, 1, pageSize);
   }
 
   function handleActionChange(value: string): void {
     const next = isAction(value) ? value : ALL;
     setActionFilter(next);
     setPage(1);
-    void load(objectFilter, next, 1, pageSize);
+    void load(objectFilter, next, codeApplied, 1, pageSize);
   }
 
   function handlePageChange(next: number): void {
     setPage(next);
-    void load(objectFilter, actionFilter, next, pageSize);
+    void load(objectFilter, actionFilter, codeApplied, next, pageSize);
   }
 
   function handlePageSizeChange(next: ClientTablePageSize): void {
     setPageSize(next);
     setPage(1);
-    void load(objectFilter, actionFilter, 1, next);
+    void load(objectFilter, actionFilter, codeApplied, 1, next);
   }
+
+  /** Aplica el código (vacío o válido) a la consulta; uno inválido no llama a la API. */
+  function applyCode(value: string, showError: boolean): void {
+    const code = value.trim();
+    if (code !== '' && !AUDIT_OBJECT_CODE_PATTERN.test(code)) {
+      if (showError) setCodeError(CODE_ERROR);
+      return;
+    }
+    setCodeError(null);
+    if (code === codeApplied) return;
+    setCodeApplied(code);
+    setPage(1);
+    void load(objectFilter, actionFilter, code, 1, pageSize);
+  }
+
+  // Con 400 ms de pausa, solo si el texto está vacío o es un código completo válido.
+  const applyCodeRef = React.useRef(applyCode);
+  React.useEffect(() => {
+    applyCodeRef.current = applyCode;
+  });
+  React.useEffect(() => {
+    const value = codeInput.trim();
+    if (value !== '' && !AUDIT_OBJECT_CODE_PATTERN.test(value)) return;
+    const timer = window.setTimeout(() => applyCodeRef.current(value, false), CODE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [codeInput]);
 
   function clearFilters(): void {
     setObjectFilter(ALL);
     setActionFilter(ALL);
+    setCodeInput('');
+    setCodeApplied('');
+    setCodeError(null);
     setPage(1);
-    void load(ALL, ALL, 1, pageSize);
+    void load(ALL, ALL, '', 1, pageSize);
     // «Limpiar filtros» desaparece: el foco pasa al filtro Objeto (NIT 4, plan D9).
     objectFilterRef.current?.focus();
   }
@@ -247,7 +290,7 @@ function AuditoriaViewContent(): React.ReactElement {
         <Field
           id="aud-filtro-objeto"
           label="Objeto"
-          className="w-full sm:w-auto"
+          className="w-full sm:w-auto sm:self-start"
         >
           {(control) => (
             <Select value={objectFilter} onValueChange={handleObjectChange}>
@@ -268,7 +311,7 @@ function AuditoriaViewContent(): React.ReactElement {
         <Field
           id="aud-filtro-accion"
           label="Acción"
-          className="w-full sm:w-auto"
+          className="w-full sm:w-auto sm:self-start"
         >
           {(control) => (
             <Select value={actionFilter} onValueChange={handleActionChange}>
@@ -286,16 +329,55 @@ function AuditoriaViewContent(): React.ReactElement {
             </Select>
           )}
         </Field>
+        <Field
+          id="aud-filtro-codigo"
+          label="Código del objeto"
+          help={CODE_HELP}
+          error={codeError}
+          className="w-full sm:w-auto sm:self-start"
+        >
+          {(control) => (
+            <Input
+              {...control}
+              value={codeInput}
+              onChange={(event) => {
+                setCodeInput(event.target.value.toUpperCase());
+                setCodeError(null);
+              }}
+              onBlur={() => applyCode(codeInput, true)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  applyCode(codeInput, true);
+                }
+              }}
+              className="w-full sm:w-52"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              maxLength={20}
+              placeholder="PRY-0012"
+            />
+          )}
+        </Field>
       </Toolbar>
 
       <DataView
         state={viewState}
         loading={{ rows: 8, columns: 6 }}
         mobileCards
+        noResults={
+          codeApplied !== ''
+            ? {
+                title: `No hay eventos para ${codeApplied} dentro de tu alcance.`,
+                description: 'Revisa el código o limpia los filtros para ver todos los eventos.',
+              }
+            : undefined
+        }
         error={{
           title: 'No fue posible cargar la auditoría.',
           message: errorMessage,
-          onRetry: () => void load(objectFilter, actionFilter, page, pageSize),
+          onRetry: () => void load(objectFilter, actionFilter, codeApplied, page, pageSize),
         }}
         empty={{
           icon: History,
@@ -337,7 +419,21 @@ function AuditoriaViewContent(): React.ReactElement {
                   </TableCell>
                   <TableCell className="min-w-40">{processLabel(event.scopeProcessId)}</TableCell>
                   <TableCell className="whitespace-nowrap">{auditActionLabel(event.action)}</TableCell>
-                  <TableCell className="whitespace-nowrap">{auditObjectLabel(event.objectType)}</TableCell>
+                  <TableCell className="min-w-64 max-w-[26rem]">
+                    {event.objectCode || event.objectLabel ? (
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <IdChip code={event.objectCode} />
+                        {event.objectLabel ? (
+                          <span className="line-clamp-2 wrap-break-word text-foreground">
+                            {event.objectLabel}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <span className="block text-meta text-muted-foreground">
+                      {auditObjectLabel(event.objectType)}
+                    </span>
+                  </TableCell>
                   <RowActionsCell>
                     <Button
                       type="button"
@@ -362,6 +458,7 @@ function AuditoriaViewContent(): React.ReactElement {
           card={(event) => {
             const { actorName } = detailsOf(event);
             return {
+              code: event.objectCode ? <IdChip code={event.objectCode} /> : undefined,
               title: (
                 <span className="inline-flex min-h-11 items-center text-sm font-medium wrap-break-word">
                   {auditActionLabel(event.action)}
@@ -379,6 +476,7 @@ function AuditoriaViewContent(): React.ReactElement {
                 ),
               badges: [<Badge key="object" variant="neutral">{auditObjectLabel(event.objectType)}</Badge>],
               meta: [
+                { label: 'Objeto', wide: true, value: event.objectLabel },
                 { label: 'Fecha', wide: true, value: formatDateTime(event.createdAt) },
                 { label: 'Proceso', wide: true, value: processLabel(event.scopeProcessId) },
               ],

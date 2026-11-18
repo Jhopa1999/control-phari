@@ -3173,6 +3173,13 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             /**
+             * @description Código visible del objeto (PRY-0012, PRY-0012-F2, PRY-0012-T07, ACT-0007, DOC-0003). Nulo en objetos sin código (usuarios, áreas, procesos, catálogos), eliminados o de otros tipos.
+             * @example PRY-0012
+             */
+            objectCode: string | null;
+            /** @description Nombre o título del objeto afectado. Nulo si el objeto ya no existe o su tipo no tiene etiqueta. */
+            objectLabel: string | null;
+            /**
              * Format: date-time
              * @description Momento del evento.
              */
@@ -3959,6 +3966,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
+             * @description ID visible del activo (solo lectura, asignado por el sistema, nunca se reutiliza).
+             * @example ACT-0007
+             */
+            code: string;
+            /**
              * Format: uuid
              * @description Proceso propietario del activo.
              */
@@ -3999,6 +4011,10 @@ export interface components {
             requestCode: string | null;
             /** @description Título de la solicitud de origen (null si no tiene o fue eliminada). */
             requestTitle: string | null;
+            /** @description Solicitudes no eliminadas que tienen este activo como base (dependientes del retiro). */
+            requestsCount: number;
+            /** @description Documentos del activo (dependientes del retiro). */
+            documentsCount: number;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -4037,6 +4053,11 @@ export interface components {
              * @description Identificador de la solicitud.
              */
             id: string;
+            /**
+             * @description ID visible de la solicitud.
+             * @example PRY-0012
+             */
+            code: string;
             /** @description Titulo de la solicitud. */
             title: string;
             /**
@@ -4100,12 +4121,22 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
+             * @description ID visible del documento (solo lectura, asignado por el sistema, nunca se reutiliza).
+             * @example DOC-0012
+             */
+            code: string;
+            /**
              * Format: uuid
              * @description Activo del documento.
              */
             assetId: string;
             /** @description Nombre del activo del documento. */
             assetName: string;
+            /**
+             * @description ID visible del activo del documento.
+             * @example ACT-0007
+             */
+            assetCode: string;
             /** @description Titulo. */
             title: string;
             /** @description Categoria (maestra DOC_CATEGORY). */
@@ -8278,6 +8309,8 @@ export interface operations {
                 objectType?: "PROCESS" | "AREA" | "REQUESTER" | "PROJECT_CLOSURE" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD" | "RECURRING_ACTIVITY" | "RECURRING_ACTIVITY_OCCURRENCE";
                 /** @description Filtra por verbo de la mutacion. */
                 action?: "CREATE" | "UPDATE" | "DELETE" | "REVOKE" | "LOGIN_FAILED" | "PASSWORD_RESET_THROTTLED";
+                /** @description Filtra por el código visible del objeto: PRY-0012, PRY-0012-F2, PRY-0012-T07, ACT-0007 o DOC-0003 (sin distinguir mayúsculas). Un código que no existe devuelve la lista vacía. */
+                objectCode?: string;
                 /** @description Pagina (1-based). Por defecto 1. */
                 page?: number;
                 /** @description Tamano de pagina (acotado a 100). Por defecto 25. */

@@ -10,6 +10,9 @@ export class AssetRequestHistoryItemDto {
   @ApiProperty({ type: String, format: 'uuid', description: 'Identificador de la solicitud.' })
   id!: string;
 
+  @ApiProperty({ type: String, example: 'PRY-0012', description: 'ID visible de la solicitud.' })
+  code!: string;
+
   @ApiProperty({ type: String, description: 'Titulo de la solicitud.' })
   title!: string;
 

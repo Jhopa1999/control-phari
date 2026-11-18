@@ -26,11 +26,20 @@ export class DocumentResponseDto {
   @ApiProperty({ type: String, format: 'uuid' })
   id!: string;
 
+  @ApiProperty({
+    type: String,
+    example: 'DOC-0012',
+    description: 'ID visible del documento (solo lectura, asignado por el sistema, nunca se reutiliza).',
+  })
+  code!: string;
+
   @ApiProperty({ type: String, format: 'uuid', description: 'Activo del documento.' })
   assetId!: string;
 
   @ApiProperty({ type: String, description: 'Nombre del activo del documento.' })
   assetName!: string;
+  @ApiProperty({ type: String, example: 'ACT-0007', description: 'ID visible del activo del documento.' })
+  assetCode!: string;
 
   @ApiProperty({ type: String, description: 'Titulo.' })
   title!: string;

@@ -13,6 +13,7 @@ import type { DocumentVersionModel } from '../../../generated/prisma/models/Docu
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { readableRequestIds } from '../../request/request-scope.service';
+import { formatAssetCode, formatDocumentCode } from '../../plan/visible-code';
 import { KnowledgeScopeService } from '../knowledge-scope.service';
 import { DocumentStateService } from './document-state.service';
 import { CLOSURE_DOC_CATEGORY, DocStatus } from './doc-status';
@@ -45,7 +46,7 @@ const DOCUMENT_INCLUDE = {
   currentVersion: {
     select: { id: true, versionNumber: true, authorUserId: true, createdAt: true },
   },
-  asset: { select: { name: true } },
+  asset: { select: { name: true, number: true } },
   request: { select: { code: true, title: true, deletedAt: true } },
 } satisfies Prisma.DocumentInclude;
 
@@ -54,7 +55,8 @@ type DocumentWithCurrent = DocumentModel & {
   currentVersion:
     | Pick<DocumentVersionModel, 'id' | 'versionNumber' | 'authorUserId' | 'createdAt'>
     | null;
-  asset: { name: string };
+  /** Nombre del activo y su número (de ahí sale assetCode). */
+  asset: { name: string; number: number };
   request: { code: string; title: string; deletedAt: Date | null } | null;
 };
 
@@ -129,8 +131,10 @@ export class DocumentService {
         : null;
     return {
       id: row.id,
+      code: formatDocumentCode(row.number),
       assetId: row.assetId,
       assetName: row.asset.name,
+      assetCode: formatAssetCode(row.asset.number),
       title: row.title,
       categoryCode: row.categoryCode,
       status: row.status,
@@ -257,7 +261,15 @@ export class DocumentService {
     }
     const q = normalizeSearch(filters.q);
     if (q !== undefined) {
-      and.push({ title: { contains: q, mode: 'insensitive' } });
+      // El texto coincide con el título o, si parece un código (DOC-0012, doc-12, 12),
+      // con el número del documento.
+      const byNumber = /^(?:doc-?)?(\d{1,9})$/i.exec(q);
+      and.push({
+        OR: [
+          { title: { contains: q, mode: 'insensitive' } },
+          ...(byNumber ? [{ number: Number(byNumber[1]) }] : []),
+        ],
+      });
     }
 
     const window = resolveLegacyTakeWindow(filters);

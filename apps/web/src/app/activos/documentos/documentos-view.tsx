@@ -11,7 +11,9 @@ import {
   SortableTableHead,
 } from '@/components/data-table';
 import { DataCardList } from '@/components/data-card-list';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataView, type DataViewState } from '@/components/data-view';
+import { IdChip } from '@/components/id-chip';
 import { DisabledReason } from '@/components/disabled-reason';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
@@ -77,6 +79,21 @@ import { VerDocumentoDialog } from './ver-documento-dialog';
 
 /** Columnas ordenables en el servidor (lista blanca); Activo y Versión ya no ordenan. */
 type SortKey = 'title' | 'status';
+
+/** Ranura o celda de código: el chip, o «—» con «Sin código» para lectores si falta. */
+function CodeCell({ code }: { code: string | null | undefined }): React.ReactElement {
+  if (!code) {
+    return (
+      <>
+        <span className="text-muted-foreground" aria-hidden="true">
+          —
+        </span>
+        <span className="sr-only">Sin código</span>
+      </>
+    );
+  }
+  return <IdChip code={code} />;
+}
 
 /** Centinela de «Todos» / «Todas» en los filtros. */
 const ALL = '__all__';
@@ -210,6 +227,8 @@ export function DocumentosView(): React.ReactElement {
   const [viewDoc, setViewDoc] = React.useState<Document | null>(null);
 
   const [statusBusyId, setStatusBusyId] = React.useState<string | null>(null);
+  // Aprobación: confirma antes de publicar (criterio común, oleada 3 PR-D).
+  const [approving, setApproving] = React.useState<Document | null>(null);
   // Rechazo con motivo (aprobación documental).
   const [rejecting, setRejecting] = React.useState<Document | null>(null);
   const [rejectSubmitting, setRejectSubmitting] = React.useState(false);
@@ -273,6 +292,11 @@ export function DocumentosView(): React.ReactElement {
     };
   }, []);
 
+  /** Código del activo del documento: el que trae el documento o el de la lista de activos. */
+  const assetCodeOf = React.useCallback(
+    (doc: Document) => doc.assetCode ?? assetById.get(doc.assetId)?.code ?? null,
+    [assetById],
+  );
   const processName = React.useCallback(
     (id: string) => processes.find((p) => p.id === id)?.name ?? null,
     [processes],
@@ -520,7 +544,7 @@ export function DocumentosView(): React.ReactElement {
           busy,
           onSelect: () => {
             if (transition.kind === 'status') void handleStatus(doc, transition.target);
-            else if (transition.kind === 'approve') void handleApprove(doc);
+            else if (transition.kind === 'approve') setApproving(doc);
             else {
               setRejectError(null);
               setRejecting(doc);
@@ -596,7 +620,8 @@ export function DocumentosView(): React.ReactElement {
         <SearchInput
           ref={searchRef}
           id="doc-filtro-busqueda"
-          placeholder="Título del documento"
+          aria-label="Buscar por título o código"
+          placeholder="Título o código del documento"
           maxLength={100}
           autoComplete="off"
           enterKeyHint="search"
@@ -647,8 +672,14 @@ export function DocumentosView(): React.ReactElement {
             <SelectContent>
               <SelectItem value={ALL}>Todos</SelectItem>
               {assets.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.name}
+                <SelectItem key={a.id} value={a.id} textValue={`${a.code ?? ''} ${a.name}`.trim()}>
+                  {a.code ? (
+                    <span className="font-mono text-xs tabular-nums">{a.code}</span>
+                  ) : null}
+                  <span>
+                    {a.code ? ' · ' : ''}
+                    {a.name}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -674,7 +705,7 @@ export function DocumentosView(): React.ReactElement {
 
       <DataView
         state={viewState}
-        loading={{ rows: 6, columns: 6 }}
+        loading={{ rows: 6, columns: 7 }}
         mobileCards
         error={{
           title: 'No fue posible cargar los documentos.',
@@ -717,6 +748,7 @@ export function DocumentosView(): React.ReactElement {
         <Table scrollLabel="Tabla de documentos">
           <TableHeader>
             <TableRow>
+              <TableHead className="w-28">Código</TableHead>
               <SortableTableHead
                 label="Título"
                 sortKey="title"
@@ -741,6 +773,9 @@ export function DocumentosView(): React.ReactElement {
               const asset = assetById.get(doc.assetId);
               return (
                 <TableRow key={doc.id}>
+                  <TableCell className="whitespace-nowrap">
+                    <CodeCell code={doc.code} />
+                  </TableCell>
                   <TableCell className="min-w-56 max-w-[28rem]">
                     <CellTitle
                       meta={
@@ -755,9 +790,12 @@ export function DocumentosView(): React.ReactElement {
                     </CellTitle>
                   </TableCell>
                   <TableCell className="min-w-40 max-w-[18rem]">
-                    <span className="line-clamp-1" title={doc.assetName}>
-                      {doc.assetName}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <CodeCell code={assetCodeOf(doc)} />
+                      <span className="line-clamp-1" title={doc.assetName}>
+                        {doc.assetName}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="min-w-32 max-w-[18rem]">
                     <ProcessRefCell
@@ -808,6 +846,7 @@ export function DocumentosView(): React.ReactElement {
           card={(doc) => {
             const asset = assetById.get(doc.assetId);
             return {
+              code: <CodeCell code={doc.code} />,
               title: (
                 <CellTitle
                   touch
@@ -825,11 +864,13 @@ export function DocumentosView(): React.ReactElement {
               subtitle: doc.assetName,
               badges: [<StatusBadge key="status" kind="document" value={doc.status} />],
               meta: [
+                { label: 'Código del activo', value: <CodeCell code={assetCodeOf(doc)} /> },
                 ...(asset && processName(asset.processId)
                   ? [{ label: 'Proceso', value: processName(asset.processId) }]
                   : []),
                 {
                   label: 'Solicitud',
+                  wide: true,
                   value: (
                     <RequestRefCell
                       code={doc.requestCode}
@@ -904,6 +945,33 @@ export function DocumentosView(): React.ReactElement {
         }}
         document={viewDoc}
       />
+
+      <ConfirmDialog
+        open={approving !== null}
+        onOpenChange={(next) => {
+          if (!next) setApproving(null);
+        }}
+        title={`¿Aprobar «${approving?.title ?? ''}»?`}
+        description={`El documento pasará a ${getStatus('document', 'VIGENTE').label}. Si hay que corregir algo, usa Rechazar.`}
+        confirmLabel="Aprobar documento"
+        tone="default"
+        onConfirm={() => (approving ? handleApprove(approving) : undefined)}
+      >
+        {approving ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 rounded-lg bg-muted/40 p-3 text-sm dark:ring-1 dark:ring-inset dark:ring-border">
+            <dt className="text-muted-foreground">Documento</dt>
+            <dd className="flex flex-wrap items-center gap-2 text-foreground wrap-break-word">
+              <IdChip code={approving.code} copyable={false} />
+              <span>{approving.title}</span>
+            </dd>
+            <dt className="text-muted-foreground">Activo</dt>
+            <dd className="flex flex-wrap items-center gap-2 text-foreground wrap-break-word">
+              <IdChip code={assetCodeOf(approving)} copyable={false} />
+              <span>{assetName(approving.assetId)}</span>
+            </dd>
+          </dl>
+        ) : null}
+      </ConfirmDialog>
 
       <ReasonDialog
         open={rejecting !== null}

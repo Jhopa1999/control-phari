@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { DataCardList } from '@/components/data-card-list';
 import { CellTitle } from '@/components/data-table';
 import { IdChip } from '@/components/id-chip';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { InlineNotice } from '@/components/inline-notice';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
@@ -54,6 +55,8 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
   const [actingId, setActingId] = React.useState<string | null>(null);
   const [authorizingId, setAuthorizingId] = React.useState<string | null>(null);
 
+  // Autorizar lleva la solicitud a En ejecución: pide confirmación (criterio común, PR-D).
+  const [authorizing, setAuthorizing] = React.useState<{ row: PlanRow; index: number } | null>(null);
   const [devolver, setDevolver] = React.useState<PlanRow | null>(null);
   const [devolverError, setDevolverError] = React.useState<string | null>(null);
   const rowIndexRef = React.useRef(0);
@@ -116,10 +119,9 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
     try {
       await authorizePlan(row.request.id);
       toast.success('Plan autorizado. La solicitud pasa a En ejecución.');
-      await load();
-      // La fila ya no está: tras pintar la tabla, el foco pasa a la siguiente.
+      // La fila ya no está: el diálogo devuelve el foco a la fila siguiente (returnFocusTo).
       rowIndexRef.current = index;
-      requestAnimationFrame(() => requestAnimationFrame(() => returnFocusTo()?.focus()));
+      await load();
     } catch (err) {
       toast.error(messageOf(err));
     } finally {
@@ -163,7 +165,10 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
         key: 'authorize',
         label: 'Autorizar',
         variant: 'default',
-        onSelect: () => void handleAuthorize(row, index),
+        onSelect: () => {
+          rowIndexRef.current = index;
+          setAuthorizing({ row, index });
+        },
         busy: authorizingId === row.plan.id,
         busyLabel: 'Autorizando…',
         disabled: acting,
@@ -273,6 +278,31 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
           }}
         />
       </DataView>
+
+      <ConfirmDialog
+        open={authorizing !== null}
+        onOpenChange={(open) => {
+          if (!open) setAuthorizing(null);
+        }}
+        title={`¿Autorizar el plan de ${authorizing?.row.request.code ?? `«${authorizing?.row.request.title ?? ''}»`}?`}
+        description="La solicitud pasará a En ejecución. Si hay que corregir algo, usa Devolver."
+        confirmLabel="Autorizar plan"
+        tone="default"
+        returnFocusTo={returnFocusTo}
+        onConfirm={async () => {
+          if (authorizing) await handleAuthorize(authorizing.row, authorizing.index);
+        }}
+      >
+        {authorizing ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 rounded-lg bg-muted/40 p-3 text-sm dark:ring-1 dark:ring-inset dark:ring-border">
+            <dt className="text-muted-foreground">Solicitud</dt>
+            <dd className="flex flex-wrap items-center gap-2 text-foreground wrap-break-word">
+              <IdChip code={authorizing.row.request.code} copyable={false} />
+              <span>{authorizing.row.request.title}</span>
+            </dd>
+          </dl>
+        ) : null}
+      </ConfirmDialog>
 
       <DevolverDialog
         kind="plan"

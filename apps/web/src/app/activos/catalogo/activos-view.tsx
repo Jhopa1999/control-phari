@@ -10,7 +10,9 @@ import {
   SortableTableHead,
 } from '@/components/data-table';
 import { DataCardList } from '@/components/data-card-list';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataView, type DataViewState } from '@/components/data-view';
+import { IdChip } from '@/components/id-chip';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
@@ -52,6 +54,7 @@ import {
 import { getStatus } from '@/lib/status-presentation';
 import type { SortState } from '@/lib/table-sort';
 import { listProcesses } from '@/lib/team';
+import { useUndoableAction } from '@/lib/use-undoable-action';
 import { useDebouncedValue, useServerTable } from '@/lib/use-server-table';
 import { ServerListBody } from '@/components/server-list';
 import { ProcessRefCell, RefMissing, RequestRefCell } from '@/components/reference-cell';
@@ -74,6 +77,45 @@ function messageOf(err: unknown): string {
   return err instanceof AssetError
     ? err.message
     : 'Ocurrió un error inesperado. Inténtalo de nuevo.';
+}
+
+/** Cómo se nombra un activo en mensajes: su código y, si falta, su nombre. */
+function assetLabel(asset: Asset): string {
+  return asset.code || `«${asset.name}»`;
+}
+
+/** Texto con plural: «1 solicitud», «3 solicitudes». */
+function plural(count: number, one: string, other: string): string {
+  return `${count} ${count === 1 ? one : other}`;
+}
+
+/** Celda o ranura de código: el chip, o «—» con «Sin código» para lectores si falta. */
+function CodeCell({ code }: { code: string | null | undefined }): React.ReactElement {
+  if (!code) {
+    return (
+      <>
+        <span className="text-muted-foreground" aria-hidden="true">
+          —
+        </span>
+        <span className="sr-only">Sin código</span>
+      </>
+    );
+  }
+  return <IdChip code={code} />;
+}
+
+/** Consecuencia del retiro con dependientes (o sin recuentos). */
+function retireDescription(asset: Asset | null): string {
+  if (!asset) return '';
+  const requests = typeof asset.requestsCount === 'number' ? asset.requestsCount : null;
+  const documents = typeof asset.documentsCount === 'number' ? asset.documentsCount : null;
+  if (requests === null || documents === null) {
+    return 'El retiro no borra ningún dato y puedes recuperar el activo cuando quieras.';
+  }
+  const parts: string[] = [];
+  if (requests > 0) parts.push(plural(requests, 'solicitud', 'solicitudes'));
+  if (documents > 0) parts.push(plural(documents, 'documento', 'documentos'));
+  return `Este activo está asociado a ${parts.join(' y ')}. El retiro no borra ningún dato y puedes recuperarlo cuando quieras.`;
 }
 
 function trimOrUndefined(value: string): string | undefined {
@@ -125,6 +167,9 @@ export function ActivosView(): React.ReactElement {
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [statusBusyId, setStatusBusyId] = React.useState<string | null>(null);
+  // Retiro con dependientes: espera la confirmación del jefe.
+  const [retiringAsset, setRetiringAsset] = React.useState<Asset | null>(null);
+  const undoable = useUndoableAction();
 
   // Maestras del formulario y de los filtros; si fallan, se degradan a vacío.
   React.useEffect(() => {
@@ -231,6 +276,31 @@ export function ActivosView(): React.ReactElement {
     }
   }
 
+  /** Devuelve el foco al «…» de la fila (o al título de la página si ya no está). */
+  function focusRow(asset: Asset): void {
+    window.setTimeout(() => {
+      const trigger = Array.from(document.querySelectorAll<HTMLElement>('button[aria-label]')).find(
+        (el) =>
+          el.getAttribute('aria-label') === `Más acciones para «${asset.name}»` &&
+          el.offsetParent !== null,
+      );
+      if (trigger) {
+        trigger.focus();
+        return;
+      }
+      const heading = document.querySelector<HTMLElement>('h1');
+      if (heading) {
+        if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+        heading.focus();
+      }
+    }, 0);
+  }
+
+  /** Refresco sin pasar por el esqueleto: las filas siguen montadas y el foco no se pierde. */
+  async function refreshQuietly(): Promise<void> {
+    await load();
+  }
+
   async function handleStatus(asset: Asset, targetStatus: AssetStatus): Promise<void> {
     setStatusBusyId(asset.id);
     try {
@@ -242,6 +312,82 @@ export function ActivosView(): React.ReactElement {
     } finally {
       setStatusBusyId(null);
     }
+  }
+
+  /**
+   * Retirar y Recuperar (criterio en docs/design/confirmacion-deshacer.md):
+   * reversibles con la acción inversa y sin notificar a nadie. Sin dependientes
+   * se ejecutan de inmediato con «Deshacer» 8 s; con dependientes (o sin sus
+   * recuentos) Retirar pide confirmación y ya no ofrece «Deshacer».
+   */
+  async function handleReversibleStatus(
+    asset: Asset,
+    targetStatus: 'RETIRADO' | 'ACTIVO',
+  ): Promise<void> {
+    const label = assetLabel(asset);
+    const retiring = targetStatus === 'RETIRADO';
+    const inverse: AssetStatus = retiring ? 'ACTIVO' : 'RETIRADO';
+    setStatusBusyId(asset.id);
+    try {
+      await undoable.execute({
+        run: () => changeAssetStatus(asset.id, { targetStatus }).then(() => undefined),
+        undo: () => changeAssetStatus(asset.id, { targetStatus: inverse }).then(() => undefined),
+        message: retiring ? `${label} retirado.` : `${label} recuperado.`,
+        description: retiring
+          ? `«${asset.name}» está en Retirado. Puedes deshacerlo ahora o recuperarlo después con la acción «Recuperar» de la fila.`
+          : `«${asset.name}» está en Activo. Puedes deshacerlo ahora o retirarlo después desde la fila.`,
+        undoLabelHidden: retiring ? `el retiro de ${label}` : `la recuperación de ${label}`,
+        undoneMessage: retiring ? `${label} recuperado.` : `${label} retirado.`,
+        errorMessage: (reason) =>
+          `No se pudo ${retiring ? 'retirar' : 'recuperar'} ${label}.${reason ? ` ${reason}` : ''}`,
+        undoErrorMessage: `No se pudo deshacer. ${
+          retiring ? 'Recupera' : 'Retira'
+        } el activo desde la fila.`,
+        onSettled: async (outcome) => {
+          await refreshQuietly();
+          if (outcome === 'undone' || outcome === 'undo-failed') focusRow(asset);
+        },
+      });
+    } finally {
+      setStatusBusyId(null);
+    }
+  }
+
+  /** Retiro con dependientes: confirmado en el diálogo, sin «Deshacer» posterior. */
+  async function confirmRetire(): Promise<void> {
+    const asset = retiringAsset;
+    if (!asset) return;
+    const label = assetLabel(asset);
+    setStatusBusyId(asset.id);
+    try {
+      await changeAssetStatus(asset.id, { targetStatus: 'RETIRADO' });
+      toast.success(`${label} retirado. Puedes recuperarlo desde la fila.`);
+      await refreshQuietly();
+    } catch (err) {
+      toast.error(`No se pudo retirar ${label}. ${messageOf(err)}`);
+    } finally {
+      setStatusBusyId(null);
+    }
+  }
+
+  /** Punto de entrada de la acción de estado de la fila. */
+  function startStatusChange(asset: Asset, targetStatus: AssetStatus): void {
+    if (targetStatus === 'RETIRADO') {
+      const known =
+        typeof asset.requestsCount === 'number' && typeof asset.documentsCount === 'number';
+      const dependents = known ? asset.requestsCount + asset.documentsCount : 0;
+      if (!known || dependents > 0) {
+        setRetiringAsset(asset);
+        return;
+      }
+      void handleReversibleStatus(asset, 'RETIRADO');
+      return;
+    }
+    if (asset.status === 'RETIRADO' && targetStatus === 'ACTIVO') {
+      void handleReversibleStatus(asset, 'ACTIVO');
+      return;
+    }
+    void handleStatus(asset, targetStatus);
   }
 
   function rowActions(asset: Asset): RowAction[] {
@@ -270,7 +416,7 @@ export function ActivosView(): React.ReactElement {
         placement: 'inline',
         busy: statusBusyId === asset.id,
         busyLabel: transition.label,
-        onSelect: () => void handleStatus(asset, transition.target),
+        onSelect: () => startStatusChange(asset, transition.target),
       });
     }
     return actions;
@@ -323,7 +469,8 @@ export function ActivosView(): React.ReactElement {
         <SearchInput
           ref={searchRef}
           id="filtro-busqueda"
-          placeholder="Nombre del activo"
+          aria-label="Buscar por nombre o código"
+          placeholder="Nombre o código del activo"
           maxLength={100}
           autoComplete="off"
           enterKeyHint="search"
@@ -385,7 +532,7 @@ export function ActivosView(): React.ReactElement {
 
       <DataView
         state={viewState}
-        loading={{ rows: 6, columns: 6 }}
+        loading={{ rows: 6, columns: 7 }}
         mobileCards
         error={{
           title: 'No fue posible cargar los activos.',
@@ -419,6 +566,7 @@ export function ActivosView(): React.ReactElement {
         <Table scrollLabel="Tabla de activos">
           <TableHeader>
             <TableRow>
+              <TableHead className="w-28">Código</TableHead>
               <SortableTableHead
                 label="Nombre"
                 sortKey="name"
@@ -440,6 +588,9 @@ export function ActivosView(): React.ReactElement {
           <TableBody>
             {table.rows.map((asset) => (
               <TableRow key={asset.id}>
+                <TableCell className="whitespace-nowrap">
+                  <CodeCell code={asset.code} />
+                </TableCell>
                 <TableCell className="min-w-56 max-w-[28rem]">
                   <CellTitle>{asset.name}</CellTitle>
                 </TableCell>
@@ -491,12 +642,14 @@ export function ActivosView(): React.ReactElement {
             ],
           }}
           card={(asset) => ({
+            code: <CodeCell code={asset.code} />,
             title: <CellTitle touch>{asset.name}</CellTitle>,
             subtitle: [asset.processName, asset.processCode].filter(Boolean).join(' · '),
             badges: [<StatusBadge key="status" kind="asset" value={asset.status} />],
             meta: [
               {
                 label: 'Solicitud',
+                wide: true,
                 value: (
                   <RequestRefCell
                     code={asset.requestCode}
@@ -532,6 +685,40 @@ export function ActivosView(): React.ReactElement {
         </ServerListBody>
       </DataView>
 
+      <ConfirmDialog
+        open={retiringAsset !== null}
+        onOpenChange={(next) => {
+          if (!next) setRetiringAsset(null);
+        }}
+        title={`¿Retirar ${retiringAsset ? assetLabel(retiringAsset) : ''}?`}
+        description={retireDescription(retiringAsset)}
+        confirmLabel="Retirar activo"
+        tone="default"
+        onConfirm={() => confirmRetire()}
+        returnFocusTo={() => document.querySelector<HTMLElement>('h1')}
+      >
+        {retiringAsset ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 rounded-lg bg-muted/40 p-3 text-sm dark:ring-1 dark:ring-inset dark:ring-border">
+            <dt className="text-muted-foreground">Activo</dt>
+            <dd className="flex flex-wrap items-center gap-2 text-foreground wrap-break-word">
+              <IdChip code={retiringAsset.code} copyable={false} />
+              <span>{retiringAsset.name}</span>
+            </dd>
+            {typeof retiringAsset.requestsCount === 'number' ? (
+              <>
+                <dt className="text-muted-foreground">Solicitudes asociadas</dt>
+                <dd className="text-foreground tabular-nums">{retiringAsset.requestsCount}</dd>
+              </>
+            ) : null}
+            {typeof retiringAsset.documentsCount === 'number' ? (
+              <>
+                <dt className="text-muted-foreground">Documentos asociados</dt>
+                <dd className="text-foreground tabular-nums">{retiringAsset.documentsCount}</dd>
+              </>
+            ) : null}
+          </dl>
+        ) : null}
+      </ConfirmDialog>
       <ActivoFormDialog
         open={open}
         onOpenChange={(next) => {

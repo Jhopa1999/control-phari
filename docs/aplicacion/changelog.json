@@ -938,6 +938,24 @@
         "docs/aplicacion/frontend-pantallas.md"
       ],
       "summary": "Oleada 3, PR-C: tarjetas móviles en Aprobaciones, Planificación, Capacidad, Reuniones, Actividades recurrentes, Auditoría y Equipo; IdChip de 24 px; contraste de la campana en oscuro y de «Vencido»; etiquetas del presupuesto de IA. Sin cambios de API, contrato ni MCP."
+    },
+    {
+      "timestamp": "2026-11-18T04:10:00Z",
+      "trigger_file": "apps/api/src/modules/knowledge/asset/asset.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Oleada 3, PR-D (BL-071, BL-072, BL-074, BL-080): activos y documentos tienen código visible propio (ACT-0007, DOC-0012; migración aditiva con número por secuencia y backfill por created_at, id), AssetResponseDto añade code, requestsCount y documentsCount, DocumentResponseDto code y assetCode, el historial de un activo trae el código de cada solicitud, GET /documents?q busca también por código y GET /audit-events añade el filtro objectCode y devuelve objectCode y objectLabel por evento; la web muestra los chips y busca por código, Retirar y Recuperar activo ofrecen Deshacer o confirmación con dependientes, y Autorizar plan, Aprobar documento, Aprobar cierre y el rol de administrador piden confirmación. Contrato regenerado; MCP: solo descripciones de asset.list, asset.get, document.list y audit.events.list, sin tools nuevas ni exclusiones."
+    },
+    {
+      "timestamp": "2026-11-18T05:00:00Z",
+      "trigger_file": "apps/api/src/modules/audit/audit.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md"
+      ],
+      "summary": "Oleada 3, PR-D: la etiqueta del objeto en GET /audit-events ignora los objectId que no son UUID (LOGIN_FAILED guarda el identificador escrito); antes una página con esos eventos respondía 500. Sin cambios de contrato ni de MCP."
     }
   ]
 }
