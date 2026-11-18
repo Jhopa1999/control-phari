@@ -4,7 +4,7 @@ import {
   type Process,
   type UpdateProcess,
 } from './api-client';
-import { ApiError, apiFormErrorFrom, toApiError } from './api-error';
+import { ApiError, apiErrorFrom, apiFormErrorFrom, toApiError } from './api-error';
 
 export { ApiError };
 
