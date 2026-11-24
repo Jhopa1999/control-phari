@@ -50,6 +50,8 @@ function createMocks() {
     plan: { findFirst: jest.fn() },
     catalogItem: { findFirst: jest.fn().mockResolvedValue(null) },
     user: { findMany: jest.fn() },
+    issue: { findMany: jest.fn().mockResolvedValue([]) },
+    commitment: { findMany: jest.fn().mockResolvedValue([]) },
     grant: { findMany: jest.fn() },
   };
   // El servicio relee el semanal con autor y revisión tras mutarlo: el doble
@@ -1494,5 +1496,148 @@ describe('WorklogService · D16 (futuro y vacío)', () => {
         m.service.submitWeeklyReport(integrante(['p1']), 'wr1'),
       ).rejects.toBeInstanceOf(ConflictException);
     });
+  });
+});
+
+// --- FEAT-004: borrador del semanal (oleada 4, PR D) ------------------------
+describe('WorklogService · draftWeeklyReport', () => {
+  let m: ReturnType<typeof createMocks>;
+  const query = { processId: 'p1', weekStart: '2025-03-12' }; // miércoles
+
+  function logWithActivities() {
+    return dailyLogRow({
+      date: new Date(Date.UTC(2025, 2, 11)),
+      activities: [
+        activityRow({
+          id: 'a2',
+          description: 'Segunda tarea',
+          hours: 2,
+          projectRequest: { code: 'PRY-0012', title: 'Portal' },
+        }),
+        activityRow({
+          id: 'a1',
+          description: 'Primera tarea',
+          hours: 4.5,
+          projectRequest: { code: 'PRY-0012', title: 'Portal' },
+        }),
+        activityRow({
+          id: 'a3',
+          description: 'Esperando acceso',
+          hours: 1,
+          activityStatus: 'BLOQUEADO',
+          projectRequest: null,
+        }),
+      ],
+    });
+  }
+
+  beforeEach(() => {
+    m = createMocks();
+    (m.prismaObj.grant as any).findMany.mockResolvedValue([]);
+    (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([]);
+  });
+
+  it('arma resultados, bloqueos y compromisos y deja propuestas y decisiones vacías', async () => {
+    (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([logWithActivities()]);
+    (m.prismaObj.issue as any).findMany.mockResolvedValue([
+      {
+        id: 'i1',
+        title: 'Servidor caído',
+        date: new Date(Date.UTC(2025, 2, 10)),
+        state: 'EN_CURSO',
+        relatedRequest: { code: 'PRY-0012' },
+      },
+    ]);
+    (m.prismaObj.commitment as any).findMany.mockResolvedValue([
+      { id: 'c1', title: 'Entregar manual', dueDate: new Date(Date.UTC(2025, 2, 18)), state: 'EN_CURSO' },
+    ]);
+    const res = await m.service.draftWeeklyReport(integrante(['p1']), query);
+    expect(res.results).toBe(
+      [
+        'PRY-0012 · Portal (6,5 h)',
+        '- Primera tarea (4,5 h)',
+        '- Segunda tarea (2 h)',
+        '',
+        'Otras actividades (1 h)',
+        '- Esperando acceso (1 h)',
+      ].join('\n'),
+    );
+    expect(res.blockers).toBe(
+      [
+        '- Actividad bloqueada (2025-03-11): Esperando acceso',
+        '- Novedad abierta (2025-03-10): PRY-0012: Servidor caído',
+      ].join('\n'),
+    );
+    expect(res.commitmentsText).toBe('- Entregar manual (vence 2025-03-18)');
+    expect(res.proposals).toBe('');
+    expect(res.decisions).toBe('');
+    expect(res.sources).toEqual({ dailyLogs: 1, activities: 3 });
+  });
+
+  it('consulta la semana anclada al lunes y los compromisos de la semana siguiente', async () => {
+    await m.service.draftWeeklyReport(integrante(['p1']), query);
+    const logWhere = (m.prismaObj.dailyLog as any).findMany.mock.calls[0][0].where;
+    expect(logWhere.authorUserId).toBe('ui');
+    expect(logWhere.date.gte.toISOString()).toBe('2025-03-10T00:00:00.000Z');
+    expect(logWhere.date.lte.toISOString()).toBe('2025-03-16T00:00:00.000Z');
+    const cWhere = (m.prismaObj.commitment as any).findMany.mock.calls[0][0].where;
+    expect(cWhere.dueDate.gte.toISOString()).toBe('2025-03-17T00:00:00.000Z');
+    expect(cWhere.dueDate.lte.toISOString()).toBe('2025-03-23T00:00:00.000Z');
+    expect(cWhere.OR).toEqual([{ assignedUserId: 'ui' }, { responsibleUserId: 'ui' }]);
+  });
+
+  it('dos llamadas con los mismos datos devuelven el mismo borrador', async () => {
+    (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([logWithActivities()]);
+    const first = await m.service.draftWeeklyReport(integrante(['p1']), query);
+    const second = await m.service.draftWeeklyReport(integrante(['p1']), query);
+    expect(second).toEqual(first);
+  });
+
+  it('una semana sin diarios devuelve secciones vacías y sources en 0', async () => {
+    const res = await m.service.draftWeeklyReport(integrante(['p1']), query);
+    expect(res).toEqual({
+      results: '',
+      proposals: '',
+      blockers: '',
+      commitmentsText: '',
+      decisions: '',
+      sources: { dailyLogs: 0, activities: 0 },
+    });
+  });
+
+  it('una semana futura -> 400 en español sin consultar nada', async () => {
+    await expect(
+      m.service.draftWeeklyReport(integrante(['p1']), { processId: 'p1', weekStart: '2999-01-07' }),
+    ).rejects.toThrow('No puedes registrar un semanal de una semana futura.');
+    expect((m.prismaObj.dailyLog as any).findMany).not.toHaveBeenCalled();
+  });
+
+  it('un proceso al que el actor no pertenece -> 403 y no consulta diarios', async () => {
+    await expect(
+      m.service.draftWeeklyReport(integrante(['p1']), { processId: 'p9', weekStart: '2025-03-12' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect((m.prismaObj.dailyLog as any).findMany).not.toHaveBeenCalled();
+  });
+
+  it('no persiste ni audita nada', async () => {
+    (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([logWithActivities()]);
+    await m.service.draftWeeklyReport(integrante(['p1']), query);
+    expect((m.prismaObj.weeklyReport as any).create).not.toHaveBeenCalled();
+    expect((m.prismaObj.weeklyReport as any).update).not.toHaveBeenCalled();
+    expect((m.prismaObj as any).$transaction).not.toHaveBeenCalled();
+    expect(m.auditRecord).not.toHaveBeenCalled();
+  });
+
+  it('recorta cada sección al tope de 5000 caracteres', async () => {
+    const long = 'x'.repeat(400);
+    const activities = Array.from({ length: 30 }, (_, i) =>
+      activityRow({ id: `a${String(i).padStart(2, '0')}`, description: long, hours: 1 }),
+    );
+    (m.prismaObj.dailyLog as any).findMany.mockResolvedValue([
+      dailyLogRow({ activities }),
+    ]);
+    const res = await m.service.draftWeeklyReport(integrante(['p1']), query);
+    expect(res.results.length).toBe(5000);
+    expect(res.results.endsWith('…')).toBe(true);
   });
 });

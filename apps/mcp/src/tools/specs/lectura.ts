@@ -230,6 +230,14 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
     'GET /weekly-reports/{id}',
     'Obtiene un reporte semanal por id (GET /weekly-reports/{id}).',
   ),
+  lectura(
+    'weekly-report.draft',
+    'GET /weekly-reports/draft',
+    'Propone un borrador del reporte semanal (GET /weekly-reports/draft) sin guardar nada: processId y weekStart (AAAA-MM-DD, cualquier día de la semana) son obligatorios. ' +
+      'Arma resultados (actividades de los diarios de la persona agrupadas por solicitud, con horas), bloqueos (actividades bloqueadas y novedades abiertas del proceso) y ' +
+      'compromisos abiertos de la persona que vencen la semana siguiente; propuestas y decisiones quedan vacías. Incluye sources con los diarios y actividades usados. ' +
+      'La persona debe pertenecer al proceso y la semana no puede ser futura.',
+  ),
 
   // Reuniones y compromisos
   lectura(

@@ -51,6 +51,10 @@ import {
 } from './dto/daily-log-summary.dto';
 import { ActivityResponseDto } from './dto/activity-response.dto';
 import { WeeklyReportResponseDto } from './dto/weekly-report-response.dto';
+import {
+  WeeklyReportDraftDto,
+  WeeklyReportDraftQueryDto,
+} from './dto/weekly-report-draft.dto';
 import { CoordinationPersonDto } from '../dto/coordination-person.dto';
 import { CurrentActor } from '../../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../../auth/current-actor';
@@ -412,6 +416,22 @@ export class WorklogController {
     @Body() dto: CreateWeeklyReportDto,
   ) {
     return this.worklogService.createWeeklyReport(actor, dto);
+  }
+
+  // Declarada ANTES de `weekly-reports/:id` para que `draft` no se lea como UUID.
+  @Get('weekly-reports/draft')
+  @ApiOperation({
+    summary: 'Propone un borrador del semanal desde los diarios, novedades y compromisos (no guarda nada).',
+  })
+  @ApiResponse({ status: 200, description: 'Borrador determinista.', type: WeeklyReportDraftDto })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o semana posterior a la actual («No puedes registrar un semanal de una semana futura.»).' })
+  @ApiResponse({ status: 400, description: 'El proceso indicado no existe (jefe de área).' })
+  @ApiResponse({ status: 403, description: 'El actor no pertenece al proceso indicado.' })
+  draftWeeklyReport(
+    @CurrentActor() actor: CurrentActorType,
+    @Query() query: WeeklyReportDraftQueryDto,
+  ) {
+    return this.worklogService.draftWeeklyReport(actor, query);
   }
 
   @Get('weekly-reports/:id')

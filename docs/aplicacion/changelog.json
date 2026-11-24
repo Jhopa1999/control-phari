@@ -1009,6 +1009,17 @@
         "docs/BACKLOG.md"
       ],
       "summary": "Portafolio con franja de alertas y sección «Ejecución» (oleada 4 PR C): GET /portfolio admite alert (VENCIDA, PROXIMA, CON_DESVIACION, BLOQUEADA) resuelto antes de paginar; nuevos GET /portfolio/summary (contadores iguales al total del listado con cada alerta) y GET /portfolio/{id}/execution (plan, línea base, pronóstico, desviación, avance y fases con tareas; 404 fuera de alcance; sin exigir el módulo plan); tools MCP portfolio.summary y portfolio.execution. Web: cuatro contadores clicables reflejados en ?alert= y sección «Ejecución» de solo lectura en la ficha con el módulo portfolio."
+    },
+    {
+      "timestamp": "2026-11-24T08:00:00Z",
+      "trigger_file": "apps/api/src/modules/coordination/worklog/worklog.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "apps/mcp/README.md",
+        "docs/BACKLOG.md"
+      ],
+      "summary": "Borrador del reporte semanal (oleada 4 PR D): nuevo GET /weekly-reports/draft (solo lectura y determinista: resultados por solicitud con horas, bloqueos de actividades y novedades abiertas, compromisos de la semana siguiente, sources; semana futura 400, proceso ajeno 403); tool MCP weekly-report.draft. Web: botón «Proponer borrador» en el semanal con confirmación antes de reemplazar texto escrito; nunca guarda solo."
     }
   ]
 }

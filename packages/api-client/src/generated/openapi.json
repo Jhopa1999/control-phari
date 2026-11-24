@@ -7109,6 +7109,56 @@
         ]
       }
     },
+    "/weekly-reports/draft": {
+      "get": {
+        "operationId": "WorklogController_draftWeeklyReport",
+        "parameters": [
+          {
+            "name": "processId",
+            "required": true,
+            "in": "query",
+            "description": "Proceso del semanal.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "weekStart",
+            "required": true,
+            "in": "query",
+            "description": "Día de la semana (cualquiera) en formato YYYY-MM-DD; se ancla al lunes.",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2025-03-12",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Borrador determinista.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyReportDraftDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El proceso indicado no existe (jefe de área).\n\nDatos inválidos o semana posterior a la actual («No puedes registrar un semanal de una semana futura.»)."
+          },
+          "403": {
+            "description": "El actor no pertenece al proceso indicado."
+          }
+        },
+        "summary": "Propone un borrador del semanal desde los diarios, novedades y compromisos (no guarda nada).",
+        "tags": [
+          "worklog"
+        ]
+      }
+    },
     "/weekly-reports/{id}": {
       "get": {
         "operationId": "WorklogController_getWeeklyReport",
@@ -18010,6 +18060,59 @@
         "required": [
           "processId",
           "weekStart"
+        ]
+      },
+      "WeeklyReportDraftSourcesDto": {
+        "type": "object",
+        "properties": {
+          "dailyLogs": {
+            "type": "number",
+            "description": "Diarios del actor en la semana y el proceso."
+          },
+          "activities": {
+            "type": "number",
+            "description": "Actividades de esos diarios."
+          }
+        },
+        "required": [
+          "dailyLogs",
+          "activities"
+        ]
+      },
+      "WeeklyReportDraftDto": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "string",
+            "description": "Actividades de la semana agrupadas por solicitud, con horas."
+          },
+          "proposals": {
+            "type": "string",
+            "description": "Vacío: el borrador no propone."
+          },
+          "blockers": {
+            "type": "string",
+            "description": "Actividades bloqueadas de la semana y novedades abiertas del proceso."
+          },
+          "commitmentsText": {
+            "type": "string",
+            "description": "Compromisos abiertos del actor que vencen la semana siguiente."
+          },
+          "decisions": {
+            "type": "string",
+            "description": "Vacío: el borrador no decide."
+          },
+          "sources": {
+            "$ref": "#/components/schemas/WeeklyReportDraftSourcesDto"
+          }
+        },
+        "required": [
+          "results",
+          "proposals",
+          "blockers",
+          "commitmentsText",
+          "decisions",
+          "sources"
         ]
       },
       "UpdateWeeklyReportDto": {
