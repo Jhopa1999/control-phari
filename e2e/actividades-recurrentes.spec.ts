@@ -105,6 +105,10 @@ async function stubEvidence(page: Page): Promise<void> {
 async function openMyWork(page: Page): Promise<void> {
   await page.goto('/mi-trabajo');
   await expect(page.getByRole('heading', { level: 1, name: 'Mi trabajo' })).toBeVisible();
+  // Las colas de Mi trabajo llegan plegadas: se abre la de recurrentes.
+  const toggle = page.locator('#mt-cola-recurrentes-toggle');
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click();
   const section = page.getByRole('region', { name: 'Actividades recurrentes' });
   await expect(section).toBeVisible();
   // Con muchas filas la sección muestra solo 5: se despliegan las restantes.

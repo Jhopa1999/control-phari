@@ -27,6 +27,7 @@ describe('TaskController (delegacion)', () => {
     remove: jest.fn().mockResolvedValue(undefined),
     changeStatus: jest.fn().mockResolvedValue('changeStatus'),
     accept: jest.fn().mockResolvedValue('accept'),
+    batchApprove: jest.fn().mockResolvedValue('batchApprove'),
   } as unknown as TaskService;
   const controller = new TaskController(svc);
   const a = actor();
@@ -78,5 +79,11 @@ describe('TaskController (delegacion)', () => {
     const dto = {} as never;
     await expect(controller.accept(a, 't1', dto)).resolves.toBe('accept');
     expect(svc.accept).toHaveBeenCalledWith(a, 't1', dto);
+  });
+  it('batchApprove delega actor e ids', async () => {
+    await expect(controller.batchApprove(a, { taskIds: ['t1', 't2'] })).resolves.toBe(
+      'batchApprove',
+    );
+    expect(svc.batchApprove).toHaveBeenCalledWith(a, ['t1', 't2']);
   });
 });

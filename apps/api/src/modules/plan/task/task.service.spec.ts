@@ -348,6 +348,122 @@ describe('TaskService', () => {
     });
   });
 
+  describe('batchApprove (aprobar tareas en lote)', () => {
+    const lider = () => actorWith(RoleCode.LIDER_PROCESO, 'ul');
+    const scopeOf = (overrides: Record<string, unknown>, requestState = 'EN_EJECUCION') => ({
+      task: makeTask({ status: TaskStatus.EN_REVISION, responsibleUserId: 'otro', ...overrides }),
+      planId: 'plan1',
+      requestId: 'r1',
+      mainProcessId: 'p1',
+      requestState,
+    });
+
+    // `findOne` (respuesta de cada aprobación) también pasa por requireTaskInScope.
+    const scopes = (byId: Record<string, ReturnType<typeof scopeOf>>) =>
+      (m.planState.requireTaskInScope as jest.Mock).mockImplementation(
+        async (_actor: unknown, id: string) => {
+          const found = byId[id];
+          if (!found) throw new NotFoundException('No se encontró la tarea.');
+          return found;
+        },
+      );
+
+    beforeEach(() => {
+      (m.prismaObj.task as any).count.mockResolvedValue(2);
+      (m.prismaObj.task as any).update.mockResolvedValue(
+        makeTask({ status: TaskStatus.TERMINADA }),
+      );
+      (m.prismaObj.task as any).findFirst.mockResolvedValue(
+        makeTaskWithDeps({ status: TaskStatus.TERMINADA }),
+      );
+    });
+
+    it('lote parcial: aprueba la elegible y omite con motivo las demás, sin frenar el lote', async () => {
+      scopes({
+        a: scopeOf({ id: 'a', code: 'PRY-0012-T01' }),
+        b: scopeOf({ id: 'b', code: 'PRY-0012-T02', responsibleUserId: 'ul' }),
+        c: scopeOf({ id: 'c', code: 'PRY-0012-T03', status: TaskStatus.EN_CURSO }),
+      });
+      (m.planState.assertProjectOpen as jest.Mock).mockImplementation(() => undefined);
+
+      const res = await service.batchApprove(lider(), ['a', 'b', 'c', 'd']);
+
+      expect(res.results).toEqual([
+        { id: 'a', code: 'PRY-0012-T01', status: 'APROBADA', reason: null },
+        {
+          id: 'b',
+          code: 'PRY-0012-T02',
+          status: 'OMITIDA',
+          reason: 'Tus propias tareas no se aprueban en lote.',
+        },
+        {
+          id: 'c',
+          code: 'PRY-0012-T03',
+          status: 'OMITIDA',
+          reason: 'La tarea ya no está en revisión.',
+        },
+        { id: 'd', code: null, status: 'OMITIDA', reason: 'No encontrada.' },
+      ]);
+      expect(res.approved).toBe(1);
+      expect(res.skipped).toBe(3);
+      expect((m.prismaObj.task as any).update).toHaveBeenCalledTimes(1);
+    });
+
+    it('proyecto cerrado: omite con motivo y no modifica la tarea', async () => {
+      (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue(
+        scopeOf({ id: 'a', code: 'PRY-0012-T01' }, 'CERRADA'),
+      );
+      (m.planState.assertProjectOpen as jest.Mock).mockImplementation(() => {
+        throw new ConflictException('El proyecto está cerrado.');
+      });
+
+      const res = await service.batchApprove(lider(), ['a']);
+
+      expect(res.results[0]).toEqual({
+        id: 'a',
+        code: 'PRY-0012-T01',
+        status: 'OMITIDA',
+        reason: 'El proyecto está cerrado.',
+      });
+      expect((m.prismaObj.task as any).update).not.toHaveBeenCalled();
+    });
+
+    it('audita una vez por tarea aprobada, con el estado antes y después', async () => {
+      scopes({
+        a: scopeOf({ id: 'a', code: 'PRY-0012-T01' }),
+        b: scopeOf({ id: 'b', code: 'PRY-0012-T02' }),
+      });
+      (m.planState.assertProjectOpen as jest.Mock).mockImplementation(() => undefined);
+
+      const res = await service.batchApprove(lider(), ['a', 'b']);
+
+      expect(res.approved).toBe(2);
+      const record = m.audit.record as jest.Mock;
+      expect(record).toHaveBeenCalledTimes(2);
+      expect(record.mock.calls[0][1]).toMatchObject({
+        actorUserId: 'ul',
+        action: 'UPDATE',
+        objectType: 'TASK',
+        before: { status: TaskStatus.EN_REVISION },
+        after: { status: TaskStatus.TERMINADA },
+      });
+    });
+
+    it('integrante -> 403 y no consulta ninguna tarea', async () => {
+      await expect(
+        service.batchApprove(actorWith(RoleCode.INTEGRANTE), ['a']),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(m.planState.requireTaskInScope).not.toHaveBeenCalled();
+    });
+
+    it('más de 25 ids -> 400', async () => {
+      const ids = Array.from({ length: 26 }, (_, i) => `id${i}`);
+      await expect(service.batchApprove(lider(), ids)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+  });
+
   describe('accept (D6b)', () => {
     it('aceptar una tarea no TERMINADA -> 409', async () => {
       (m.planState.requireTaskInScope as jest.Mock).mockResolvedValue({

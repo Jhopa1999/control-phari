@@ -39,7 +39,13 @@ import { collectReferencedIds, diffTaskSnapshots } from './task-history';
 import { MyWorkItemDto } from './dto/my-work-item.dto';
 import { PendingReviewListDto } from './dto/pending-review-task.dto';
 import {
+  BatchItemResultDto,
+  BatchResultDto,
+  MAX_BATCH_SIZE,
+} from '../../../common/batch-result.dto';
+import {
   PENDING_REVIEW_LIMIT,
+  canApproveTasks,
   hasEvidenceOf,
   isEvidenceRequired,
   pendingReviewWhere,
@@ -641,6 +647,26 @@ export class TaskService {
     if (dto.progress !== undefined) data.progress = dto.progress;
     if (dto.evidenceUrl !== undefined) data.evidenceUrl = dto.evidenceUrl;
 
+    return this.persistStatusChange(
+      actor,
+      { task, mainProcessId, requestId, planId },
+      data,
+      nextStatus,
+    );
+  }
+
+  /**
+   * Camino común de un cambio de estado ya validado (lo usan `changeStatus` y
+   * `batchApprove`): actualiza la tarea y audita en una transacción, y después
+   * avisa si el plan quedó completo y del flujo de revisión.
+   */
+  private async persistStatusChange(
+    actor: CurrentActor,
+    scope: { task: TaskModel; mainProcessId: string | null; requestId: string; planId: string },
+    data: Prisma.TaskUpdateInput,
+    nextStatus: TaskStatus,
+  ): Promise<TaskResponseDto> {
+    const { task, mainProcessId, requestId, planId } = scope;
     await this.prisma.$transaction(async (tx) => {
       const next = await tx.task.update({ where: { id: task.id }, data });
       await this.audit.record(tx, {
@@ -670,6 +696,82 @@ export class TaskService {
     const result = await this.findOne(actor, task.id);
     await this.notifyReviewFlow(actor, task, nextStatus, result.requestTitle, requestId, mainProcessId);
     return result;
+  }
+
+  /**
+   * Aprueba tareas en lote (EN_REVISION -> TERMINADA), no atómico: cada tarea
+   * sigue el mismo camino que `changeStatus` y una omitida no frena a las demás.
+   * Solo jefe de área o líder de proceso. Omite con motivo la tarea inexistente o
+   * fuera de alcance (sin distinguirlas), la de un proyecto cerrado, la propia del
+   * actor y la que ya no está en revisión.
+   */
+  async batchApprove(actor: CurrentActor, taskIds: string[]): Promise<BatchResultDto> {
+    if (!canApproveTasks(actor)) {
+      throw new ForbiddenException(
+        'Solo un líder de proceso o el jefe de área puede aprobar tareas.',
+      );
+    }
+    const uniqueIds = Array.from(new Set(taskIds));
+    if (uniqueIds.length < 1 || uniqueIds.length > MAX_BATCH_SIZE) {
+      throw new BadRequestException(
+        `El lote debe tener entre 1 y ${MAX_BATCH_SIZE} tareas.`,
+      );
+    }
+    const results: BatchItemResultDto[] = [];
+    for (const id of uniqueIds) {
+      let scope: Awaited<ReturnType<PlanStateService['requireTaskInScope']>>;
+      try {
+        scope = await this.planState.requireTaskInScope(actor, id);
+      } catch (error) {
+        if (error instanceof NotFoundException) {
+          results.push({ id, code: null, status: 'OMITIDA', reason: 'No encontrada.' });
+          continue;
+        }
+        throw error;
+      }
+      const { task, mainProcessId, requestState, requestId, planId } = scope;
+      const skip = (reason: string): void => {
+        results.push({ id, code: task.code, status: 'OMITIDA', reason });
+      };
+      try {
+        this.planState.assertProjectOpen(requestState);
+      } catch (error) {
+        if (error instanceof ConflictException) {
+          skip('El proyecto está cerrado.');
+          continue;
+        }
+        throw error;
+      }
+      if (task.responsibleUserId === actor.userId) {
+        skip('Tus propias tareas no se aprueban en lote.');
+        continue;
+      }
+      if (task.status !== TaskStatus.EN_REVISION) {
+        skip('La tarea ya no está en revisión.');
+        continue;
+      }
+      const nextStatus = this.planState.assertTaskTransition(
+        task.status,
+        TaskStatus.TERMINADA,
+      );
+      try {
+        await this.persistStatusChange(
+          actor,
+          { task, mainProcessId, requestId, planId },
+          { status: nextStatus, blockedReason: null, reviewRequestedAt: null },
+          nextStatus,
+        );
+        results.push({ id, code: task.code, status: 'APROBADA', reason: null });
+      } catch (error) {
+        if (error instanceof ConflictException) {
+          skip('La tarea ya no está en revisión.');
+          continue;
+        }
+        throw error;
+      }
+    }
+    const approved = results.filter((r) => r.status === 'APROBADA').length;
+    return { results, approved, skipped: results.length - approved };
   }
 
   /**
