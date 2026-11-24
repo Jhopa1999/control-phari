@@ -6,6 +6,8 @@ import {
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import type { ApprovalModel } from '../../../generated/prisma/models/Approval';
+import type { RequestModel } from '../../../generated/prisma/models/Request';
+import { BatchItemResultDto, BatchResultDto } from '../../../common/batch-result.dto';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { requestScopeWhere } from '../request-scope.service';
@@ -148,13 +150,80 @@ equest-scope.service.ts). */
       throw new BadRequestException('El motivo es obligatorio para devolver.');
     }
 
+    const created = await this.decideInTransaction(actor, request, dto);
+    return this.toResponse(created);
+  }
+
+  /**
+   * Aprueba solicitudes en lote (solo APROBAR). NO es atómico: cada solicitud
+   * corre su propia transacción por el mismo camino que `create`, de modo que
+   * una que ya cambió de estado no frena a las demás. Devuelve un resultado por
+   * ítem en el orden pedido; inexistente y fuera de alcance no se distinguen.
+   */
+  async batchApprove(
+    actor: CurrentActor,
+    requestIds: string[],
+  ): Promise<BatchResultDto> {
+    const results: BatchItemResultDto[] = [];
+    for (const id of requestIds) {
+      const request = await this.prisma.request.findFirst({
+        where: { AND: [{ id }, this.scopeWhere(actor)] },
+      });
+      if (!request) {
+        results.push({ id, code: null, status: 'OMITIDA', reason: 'No encontrada.' });
+        continue;
+      }
+      if (request.operationalState !== RequestState.BACKLOG_PRIORIZADO) {
+        results.push({
+          id,
+          code: request.code,
+          status: 'OMITIDA',
+          reason: 'Ya no está en backlog priorizado.',
+        });
+        continue;
+      }
+      try {
+        await this.decideInTransaction(actor, request, { decision: 'APROBAR' });
+        results.push({ id, code: request.code, status: 'APROBADA', reason: null });
+      } catch (error) {
+        if (error instanceof ConflictException) {
+          results.push({
+            id,
+            code: request.code,
+            status: 'OMITIDA',
+            reason: 'Ya no está en backlog priorizado.',
+          });
+          continue;
+        }
+        throw error;
+      }
+    }
+    const approved = results.filter((r) => r.status === 'APROBADA').length;
+    return { results, approved, skipped: results.length - approved };
+  }
+
+  /**
+   * Transacción de decisión compartida por `create` y `batchApprove`: Approval
+   * append-only + UPDATE Request + auditoría. Marca `approvedByCreator` cuando
+   * quien aprueba es el creador de la solicitud (informativo; no bloquea).
+   */
+  private async decideInTransaction(
+    actor: CurrentActor,
+    request: RequestModel,
+    dto: CreateApprovalDto,
+  ): Promise<ApprovalWithDecider> {
     const target = DECISION_TO_STATE[dto.decision];
     const nextState = this.state.assertTransition(
       request.operationalState,
       target,
     );
+    const approvedByCreator =
+      dto.decision === 'APROBAR' &&
+      request.createdByUserId !== null &&
+      request.createdByUserId === actor.userId;
+    const requestId = request.id;
 
-    const created = await this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       const approval = await tx.approval.create({
         data: {
           requestId,
@@ -174,7 +243,10 @@ equest-scope.service.ts). */
         objectId: approval.id,
         scopeProcessId: request.mainProcessId,
         before: null,
-        after: this.snapshot(approval),
+        after: {
+          ...(this.snapshot(approval) as Record<string, Prisma.InputJsonValue>),
+          ...(approvedByCreator ? { approvedByCreator: true } : {}),
+        },
       });
 
       const updated = await tx.request.update({
@@ -189,12 +261,13 @@ equest-scope.service.ts). */
         objectId: requestId,
         scopeProcessId: request.mainProcessId,
         before: { operationalState: request.operationalState },
-        after: { operationalState: updated.operationalState },
+        after: {
+          operationalState: updated.operationalState,
+          ...(approvedByCreator ? { approvedByCreator: true } : {}),
+        },
       });
 
       return approval;
     });
-
-    return this.toResponse(created);
   }
 }

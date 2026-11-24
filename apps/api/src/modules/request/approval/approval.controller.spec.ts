@@ -18,11 +18,17 @@ function actor(): CurrentActor {
   };
 }
 
+import 'reflect-metadata';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { BatchApprovalDto } from './dto/batch-approval.dto';
+
 describe('ApprovalController (delegacion)', () => {
   const svc = {
     pendingApproval: jest.fn().mockResolvedValue('pendingApproval'),
     findForRequest: jest.fn().mockResolvedValue('findForRequest'),
     create: jest.fn().mockResolvedValue('create'),
+    batchApprove: jest.fn().mockResolvedValue('batch'),
   } as unknown as ApprovalService;
   const controller = new ApprovalController(svc);
   const a = actor();
@@ -45,6 +51,11 @@ describe('ApprovalController (delegacion)', () => {
     const dto = {} as never;
     await expect(controller.create(a, 'r1', dto)).resolves.toBe('create');
     expect(svc.create).toHaveBeenCalledWith(a, 'r1', dto);
+  });
+
+  it('batchApproval delega actor y requestIds', async () => {
+    await expect(controller.batchApproval(a, { requestIds: ['x'] })).resolves.toBe('batch');
+    expect(svc.batchApprove).toHaveBeenCalledWith(a, ['x']);
   });
 });
 
@@ -82,5 +93,33 @@ describe('ApprovalController (autorizacion por rol)', () => {
     );
     expect(pending).toBeUndefined();
     expect(history).toBeUndefined();
+  });
+});
+
+describe('POST requests/batch-approval', () => {
+  it('es exclusivo de JEFE_AREA (el líder recibe 403)', () => {
+    const roles = Reflect.getMetadata(
+      ROLES_KEY,
+      ApprovalController.prototype.batchApproval,
+    ) as RoleCode[] | undefined;
+    expect(roles).toEqual([RoleCode.JEFE_AREA]);
+  });
+
+  const uuid = (n: number) =>
+    `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  const check = async (requestIds: unknown) =>
+    validate(plainToInstance(BatchApprovalDto, { requestIds }));
+
+  it('acepta de 1 a 25 ids únicos', async () => {
+    expect(await check([uuid(1)])).toHaveLength(0);
+    expect(await check(Array.from({ length: 25 }, (_, i) => uuid(i + 1)))).toHaveLength(0);
+  });
+
+  it('rechaza lista vacía, repetidos, más de 25 e ids no UUID', async () => {
+    expect(await check([])).not.toHaveLength(0);
+    expect(await check([uuid(1), uuid(1)])).not.toHaveLength(0);
+    expect(await check(Array.from({ length: 26 }, (_, i) => uuid(i + 1)))).not.toHaveLength(0);
+    expect(await check(['no-es-uuid'])).not.toHaveLength(0);
+    expect(await check(undefined)).not.toHaveLength(0);
   });
 });

@@ -53,7 +53,7 @@ puede bajar). El test `src/__tests__/coverage.test.ts` **falla** si una
 operación no tiene tool ni exclusión, si una exclusión está obsoleta, si una
 tool no tiene operación en el contrato, si falta una anotación, si una tool GET
 no es de solo lectura, si un `body` es de forma libre o si hay más pendientes
-que el tope. Hoy hay 140 tools sobre 233 operaciones (45 exclusiones permanentes
+que el tope. Hoy hay 141 tools sobre 234 operaciones (45 exclusiones permanentes
 y 48 pendientes, todas de escritura). Ya están expuestas las de coordinación (crear y editar
 reuniones —con su duración `durationMinutes`— y compromisos, y cambiar el estado de compromisos; los hallazgos se retiraron con el módulo Novedades), las
 sugerencias del día de la Bitácora (`worklog.daily.suggestions` de lectura y `worklog.daily.suggestions.accept`,

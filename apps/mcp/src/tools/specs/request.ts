@@ -146,6 +146,18 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
       'El cuerpo debe cumplir CreateApprovalDto; el backend valida los datos.',
   },
   {
+    name: 'request.batch_approve',
+    operation: 'POST /requests/batch-approval',
+    access: 'write',
+    description:
+      'Aprueba varias solicitudes en backlog priorizado de una vez (POST /requests/batch-approval); ' +
+      'solo JEFE_AREA. Cuerpo: requestIds, de 1 a 25 UUID sin repetidos. Solo aprueba: devolver ' +
+      'se hace de una en una con request.approval.create y un motivo. NO es atómico: cada ' +
+      'solicitud se procesa por separado y las que ya no están en backlog priorizado, o no existen ' +
+      'o están fuera de alcance, se omiten sin frenar a las demás. Devuelve results (id, code, ' +
+      'status APROBADA u OMITIDA, reason en español), approved y skipped.',
+  },
+  {
     name: 'portfolio.get',
     operation: 'GET /portfolio',
     access: 'read',

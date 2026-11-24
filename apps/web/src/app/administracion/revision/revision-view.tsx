@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { BadgeCheck, Check, RefreshCw } from 'lucide-react';
+import { BadgeCheck, Check, Info, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataCardList } from '@/components/data-card-list';
@@ -17,6 +17,7 @@ import { RowActions, RowActionsCell, type RowAction } from '@/components/row-act
 import { Section } from '@/components/section';
 import { PriorityBadge, PriorityLegend } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -25,9 +26,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Request } from '@/lib/api-client';
+import type { BatchApprovalResult, Request } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
-import { ApprovalError, createApproval, listPendingApproval } from '@/lib/approval';
+import { ApprovalError, batchApprove, createApproval, listPendingApproval } from '@/lib/approval';
 import { formatDate } from '@/lib/format';
 import { DevolverDialog } from './devolver-dialog';
 import { PlanAuthorizationSection } from './plan-authorization-section';
@@ -35,6 +36,9 @@ import { PendingReviewsSections } from './pending-reviews-sections';
 import { focusTargetAfterRemoval, visibleContainer } from './row-focus';
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
+
+/** Tope del lote: coincide con el contrato (`BatchApprovalDto`); el servidor lo valida igual. */
+const MAX_BATCH = 25;
 
 function messageOf(err: unknown): string {
   return err instanceof ApprovalError ? err.message : 'Ocurrió un error inesperado.';
@@ -74,6 +78,15 @@ export function RevisionView(): React.ReactElement {
   const [devolver, setDevolver] = React.useState<Request | null>(null);
   const [devolverError, setDevolverError] = React.useState<string | null>(null);
   const rowIndexRef = React.useRef(0);
+  // Aprobación en lote: ids marcados (solo cuentan los que siguen en la cola),
+  // diálogo de confirmación y resultado del último lote.
+  const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
+  const [batchOpen, setBatchOpen] = React.useState(false);
+  const [batchBusy, setBatchBusy] = React.useState(false);
+  const [batchResult, setBatchResult] = React.useState<BatchApprovalResult | null>(null);
+  const resultRef = React.useRef<HTMLDivElement>(null);
+  const batchButtonRef = React.useRef<HTMLButtonElement>(null);
+  const selectAllRef = React.useRef<HTMLInputElement>(null);
   const bodyRef = React.useRef<HTMLTableSectionElement>(null);
   const cardsRef = React.useRef<HTMLUListElement>(null);
   const headingRef = React.useRef<HTMLHeadingElement>(null);
@@ -134,6 +147,62 @@ export function RevisionView(): React.ReactElement {
     }
   }
 
+  // Selección vigente, en el orden de la cola.
+  const selectedRequests = queue.filter((req) => selected.has(req.id));
+  const selectedCount = selectedRequests.length;
+  const atLimit = selectedCount >= MAX_BATCH;
+  const allSelected = queue.length > 0 && selectedCount === Math.min(queue.length, MAX_BATCH);
+
+  React.useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = selectedCount > 0 && !allSelected;
+    }
+  }, [selectedCount, allSelected]);
+
+  function toggleSelected(id: string, checked: boolean): void {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleAll(checked: boolean): void {
+    setSelected(checked ? new Set(queue.slice(0, MAX_BATCH).map((req) => req.id)) : new Set());
+  }
+
+  async function handleBatchApprove(): Promise<void> {
+    const ids = selectedRequests.map((req) => req.id);
+    if (ids.length === 0) return;
+    setBatchBusy(true);
+    setBatchResult(null);
+    try {
+      const result = await batchApprove(ids);
+      setSelected(new Set());
+      setBatchResult(result);
+      if (result.approved === 0) {
+        toast.warning('No se aprobó ninguna solicitud.');
+      } else if (result.skipped > 0) {
+        toast.warning(
+          `${result.approved} ${result.approved === 1 ? 'solicitud aprobada' : 'solicitudes aprobadas'}; ${result.skipped} omitida(s).`,
+        );
+      } else {
+        toast.success(
+          `${result.approved} ${result.approved === 1 ? 'solicitud aprobada. Pasa' : 'solicitudes aprobadas. Pasan'} a Comprometida.`,
+        );
+      }
+      await load();
+      requestAnimationFrame(() => requestAnimationFrame(() => resultRef.current?.focus()));
+    } catch (err) {
+      // La selección se conserva para reintentar.
+      toast.error(messageOf(err));
+      requestAnimationFrame(() => batchButtonRef.current?.focus());
+    } finally {
+      setBatchBusy(false);
+    }
+  }
+
   async function handleDevolver(reason: string): Promise<void> {
     if (!devolver) return;
     setActingId(devolver.id);
@@ -156,6 +225,7 @@ export function RevisionView(): React.ReactElement {
   }
 
   function handleRefresh(): void {
+    setBatchResult(null);
     void load();
     setRefreshKey((key) => key + 1);
   }
@@ -234,10 +304,88 @@ export function RevisionView(): React.ReactElement {
       >
         <InlineNotice tone="info" className="py-2">
           {canDecide
-            ? 'Aprobar pide confirmación y lleva la solicitud a Comprometida; devolver la regresa a Priorización con un motivo (el triage ya registrado se conserva).'
+            ? 'Aprobar pide confirmación y lleva la solicitud a Comprometida. Puedes marcar varias y aprobarlas juntas (hasta 25). Devolver se hace de una en una, con un motivo (el triage ya registrado se conserva).'
             : 'Solo el jefe de área puede aprobar o devolver. Aquí puedes consultar las solicitudes priorizadas pendientes de decisión.'}
         </InlineNotice>
         <PriorityLegend />
+        {canDecide && batchResult ? (
+          <div ref={resultRef} tabIndex={-1} className="outline-none" data-testid="approve-batch-result">
+            <InlineNotice
+              tone={batchResult.skipped === 0 ? 'success' : 'warning'}
+              role="status"
+              title={`${batchResult.approved} ${batchResult.approved === 1 ? 'solicitud aprobada' : 'solicitudes aprobadas'}${batchResult.skipped > 0 ? ` · ${batchResult.skipped} omitida(s)` : ''}`}
+              action={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Cerrar resultado del lote"
+                  onClick={() => setBatchResult(null)}
+                >
+                  Cerrar aviso
+                </Button>
+              }
+            >
+              {batchResult.skipped > 0 ? (
+                <ul className="mt-2 grid gap-1.5 text-sm">
+                  {batchResult.results
+                    .filter((item) => item.status === 'OMITIDA')
+                    .map((item) => (
+                      <li key={item.id} className="flex flex-wrap items-baseline gap-x-2">
+                        {item.code ? <IdChip code={item.code} /> : null}
+                        <span>{item.reason}</span>
+                      </li>
+                    ))}
+                </ul>
+              ) : null}
+            </InlineNotice>
+          </div>
+        ) : null}
+        {canDecide && state === 'success' && selectedCount > 0 ? (
+          <div
+            role="region"
+            aria-label="Acciones sobre la selección"
+            className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-xl border border-primary/30 bg-card px-4 py-3 shadow-card sm:flex-row sm:items-center sm:justify-between md:static md:bottom-auto"
+          >
+            <div className="text-sm font-medium" aria-live="polite" aria-atomic="true">
+              <p>
+                {selectedCount} {selectedCount === 1 ? 'solicitud seleccionada' : 'solicitudes seleccionadas'}
+                <span className="font-normal text-muted-foreground"> · máximo {MAX_BATCH}</span>
+              </p>
+              {atLimit ? (
+                <p id="tope-lote" className="mt-1 flex items-center gap-1.5 text-warning">
+                  <Info className="size-4 shrink-0" aria-hidden="true" />
+                  Llegaste al máximo de {MAX_BATCH}. Aprueba este lote y selecciona el resto.
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full sm:w-auto"
+                disabled={batchBusy}
+                onClick={() => {
+                  setSelected(new Set());
+                  requestAnimationFrame(() => (selectAllRef.current ?? headingRef.current)?.focus());
+                }}
+              >
+                Limpiar selección
+              </Button>
+              <Button
+                ref={batchButtonRef}
+                type="button"
+                variant="default"
+                className="w-full sm:w-auto"
+                disabled={batchBusy}
+                onClick={() => setBatchOpen(true)}
+              >
+                <Check aria-hidden="true" />
+                Aprobar {selectedCount} {selectedCount === 1 ? 'solicitud' : 'solicitudes'}
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <DataView
           state={viewState}
           loading={{ rows: 3, columns: 4 }}
@@ -258,6 +406,19 @@ export function RevisionView(): React.ReactElement {
           <Table scrollLabel="Tabla de compromisos por aprobar">
             <TableHeader>
               <TableRow>
+                {canDecide ? (
+                  <TableHead className="w-10 pr-0">
+                    <label className="flex min-h-8 min-w-8 cursor-pointer items-center justify-center">
+                      <Checkbox
+                        ref={selectAllRef}
+                        checked={allSelected}
+                        disabled={batchBusy}
+                        aria-label={`Seleccionar todas las solicitudes (hasta ${MAX_BATCH})`}
+                        onChange={(event) => toggleAll(event.target.checked)}
+                      />
+                    </label>
+                  </TableHead>
+                ) : null}
                 <TableHead>Título</TableHead>
                 <TableHead>Prioridad</TableHead>
                 <TableHead>Registro</TableHead>
@@ -266,9 +427,23 @@ export function RevisionView(): React.ReactElement {
             </TableHeader>
             <TableBody ref={bodyRef}>
               {queue.map((req, index) => {
-                const acting = actingId === req.id;
+                const acting = actingId === req.id || batchBusy;
+                const isSelected = selected.has(req.id);
                 return (
-                  <TableRow key={req.id}>
+                  <TableRow key={req.id} className={isSelected ? 'bg-primary-subtle/60' : undefined}>
+                    {canDecide ? (
+                      <TableCell className="w-10 pr-0">
+                        <label className="flex min-h-8 min-w-8 cursor-pointer items-center justify-center">
+                          <Checkbox
+                            checked={isSelected}
+                            disabled={batchBusy || (atLimit && !isSelected)}
+                            aria-describedby={atLimit && !isSelected ? 'tope-lote' : undefined}
+                            aria-label={`Seleccionar ${req.code}: ${req.title}`}
+                            onChange={(event) => toggleSelected(req.id, event.target.checked)}
+                          />
+                        </label>
+                      </TableCell>
+                    ) : null}
                     <TableCell className="min-w-56 max-w-[28rem]">
                       <CellTitle href={allowedModules.has('requests') ? `/demanda/solicitudes/${encodeURIComponent(req.id)}` : undefined} meta={<IdChip code={req.code} />}>
                         {req.title}
@@ -304,7 +479,8 @@ export function RevisionView(): React.ReactElement {
             getKey={(req) => req.id}
             card={(req) => {
               const index = queue.indexOf(req);
-              const acting = actingId === req.id;
+              const acting = actingId === req.id || batchBusy;
+              const isSelected = selected.has(req.id);
               return {
                 code: <IdChip code={req.code} />,
                 title: (
@@ -330,11 +506,24 @@ export function RevisionView(): React.ReactElement {
                 meta: [{ label: 'Registro', value: formatDate(req.registeredAt) }],
                 busy: acting,
                 footer: canDecide ? (
-                  <RowActions
-                    footer
-                    rowLabel={req.title}
-                    actions={decisionActions(req, index, acting)}
-                  />
+                  <div className="flex w-full items-center justify-between gap-3">
+                    <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+                      <Checkbox
+                        className="size-5"
+                        checked={isSelected}
+                        disabled={batchBusy || (atLimit && !isSelected)}
+                        aria-describedby={atLimit && !isSelected ? 'tope-lote' : undefined}
+                        aria-label={`Seleccionar ${req.code}`}
+                        onChange={(event) => toggleSelected(req.id, event.target.checked)}
+                      />
+                      Seleccionar
+                    </label>
+                    <RowActions
+                      footer
+                      rowLabel={req.title}
+                      actions={decisionActions(req, index, acting)}
+                    />
+                  </div>
                 ) : (
                   <span className="flex items-center text-sm text-muted-foreground">Solo lectura</span>
                 ),
@@ -394,6 +583,35 @@ export function RevisionView(): React.ReactElement {
             />
           </div>
         ) : null}
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={batchOpen}
+        onOpenChange={setBatchOpen}
+        title={`¿Aprobar ${selectedCount} ${selectedCount === 1 ? 'solicitud' : 'solicitudes'}?`}
+        description="Pasarán a Comprometida. Cada una se aprueba por separado: si alguna ya cambió de estado, se omite y las demás sí se aprueban."
+        confirmLabel={`Aprobar ${selectedCount} ${selectedCount === 1 ? 'solicitud' : 'solicitudes'}`}
+        tone="default"
+        busy={batchBusy}
+        onConfirm={handleBatchApprove}
+        returnFocusTo={() => batchButtonRef.current ?? headingRef.current}
+      >
+        <ul
+          aria-label="Solicitudes que se aprobarán"
+          className="grid max-h-64 min-w-0 gap-2 overflow-y-auto rounded-lg bg-muted/50 p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          data-testid="approve-batch-summary"
+          tabIndex={0}
+        >
+          {selectedRequests.map((req) => (
+            <li key={req.id} className="grid min-w-0 gap-1 rounded-md bg-card p-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <IdChip code={req.code} />
+                <PriorityBadge variant="full" score={req.currentScore} label={req.priorityLabel} />
+              </div>
+              <p className="line-clamp-2 break-words text-sm font-medium">{req.title}</p>
+            </li>
+          ))}
+        </ul>
       </ConfirmDialog>
 
       <DevolverDialog

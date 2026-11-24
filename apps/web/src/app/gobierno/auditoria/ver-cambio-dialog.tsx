@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { UserCheck } from 'lucide-react';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
 import { DescriptionList } from '@/components/description-list';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,16 @@ interface VerCambioDialogProps {
   event: AuditEvent | null;
   details: AuditEventDetails | null;
   onOpenChange: (open: boolean) => void;
+}
+
+/** `true` si el estado «después» lleva la marca de aprobación por el creador. */
+function approvedByCreator(value: AuditEvent['after']): boolean {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    (value as Record<string, unknown>).approvedByCreator === true
+  );
 }
 
 function render(value: AuditEvent['before']): string {
@@ -98,6 +109,24 @@ export function VerCambioDialog({ event, details, onOpenChange }: VerCambioDialo
                 { term: 'Proceso', value: shown.details.process },
                 { term: 'Acción', value: auditActionLabel(current.action) },
                 { term: 'Objeto', value: auditObjectLabel(current.objectType) },
+                ...(approvedByCreator(current.after)
+                  ? [
+                      {
+                        term: 'Observación',
+                        value: (
+                          <span className="flex flex-col gap-1">
+                            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-info-border bg-info-subtle px-2.5 py-0.5 text-xs font-medium text-info">
+                              <UserCheck className="size-3.5" aria-hidden="true" />
+                              Aprobada por el creador
+                            </span>
+                            <span className="text-meta text-muted-foreground">
+                              Quien aprobó también registró la solicitud.
+                            </span>
+                          </span>
+                        ),
+                      },
+                    ]
+                  : []),
               ]}
             />
             <div className="grid gap-4 lg:grid-cols-2">

@@ -419,6 +419,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests/batch-approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aprueba solicitudes en lote (no atómico; solo APROBAR). Solo JEFE_AREA. */
+        post: operations["ApprovalController_batchApproval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/requests/{id}/approval": {
         parameters: {
             query?: never;
@@ -3762,6 +3779,34 @@ export interface components {
              * @description Fecha de ultima actualizacion.
              */
             updatedAt: string;
+        };
+        BatchApprovalDto: {
+            /** @description Ids de las solicitudes a aprobar (1 a 25, sin repetidos). */
+            requestIds: string[];
+        };
+        BatchItemResultDto: {
+            /**
+             * Format: uuid
+             * @description Id pedido en el lote.
+             */
+            id: string;
+            /** @description ID visible (p. ej. PRY-0012). Nulo si no se encontró o está fuera de alcance. */
+            code: string | null;
+            /**
+             * @description APROBADA si se aplicó; OMITIDA si se dejó sin cambios.
+             * @enum {string}
+             */
+            status: "APROBADA" | "OMITIDA";
+            /** @description Motivo en español cuando el ítem se omitió; nulo si se aprobó. */
+            reason: string | null;
+        };
+        BatchResultDto: {
+            /** @description Un resultado por ítem, en el orden pedido. */
+            results: components["schemas"]["BatchItemResultDto"][];
+            /** @description Cantidad de ítems aprobados. */
+            approved: number;
+            /** @description Cantidad de ítems omitidos. */
+            skipped: number;
         };
         ApprovalResponseDto: {
             /**
@@ -9422,6 +9467,44 @@ export interface operations {
                 };
             };
             /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApprovalController_batchApproval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchApprovalDto"];
+            };
+        };
+        responses: {
+            /** @description Resultado por solicitud, en el orden pedido. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchResultDto"];
+                };
+            };
+            /** @description Lista vacía, con repetidos, de más de 25 ids o con ids inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente (exclusivo de JEFE_AREA). */
             403: {
                 headers: {
                     [name: string]: unknown;

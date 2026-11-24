@@ -53,8 +53,15 @@ function jefe(): CurrentActor {
   };
 }
 
-function makeRequest(state: string) {
-  return { id: 'r1', mainProcessId: 'p1', operationalState: state };
+function makeRequest(state: string, extra: Record<string, unknown> = {}) {
+  return {
+    id: 'r1',
+    code: 'PRY-0001',
+    mainProcessId: 'p1',
+    operationalState: state,
+    createdByUserId: null,
+    ...extra,
+  };
 }
 
 function mockApproval(
@@ -200,4 +207,91 @@ describe('ApprovalService', () => {
       { deletedAt: null },
     ]);
   });
-});
+
+  describe('approvedByCreator', () => {
+    it('es verdadero en ambos eventos cuando quien aprueba es el creador', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.BACKLOG_PRIORIZADO, { createdByUserId: 'uj' }),
+      );
+      (m.prismaObj.approval as any).create.mockResolvedValue(
+        mockApproval('APROBAR', RequestState.COMPROMETIDA),
+      );
+      (m.prismaObj.request as any).update.mockResolvedValue(
+        makeRequest(RequestState.COMPROMETIDA),
+      );
+      await service.create(jefe(), 'r1', { decision: 'APROBAR' });
+      expect(m.auditRecord.mock.calls[0][1].after.approvedByCreator).toBe(true);
+      expect(m.auditRecord.mock.calls[1][1].after.approvedByCreator).toBe(true);
+    });
+
+    it('está ausente si aprueba otra persona', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.BACKLOG_PRIORIZADO, { createdByUserId: 'otro' }),
+      );
+      (m.prismaObj.approval as any).create.mockResolvedValue(
+        mockApproval('APROBAR', RequestState.COMPROMETIDA),
+      );
+      (m.prismaObj.request as any).update.mockResolvedValue(
+        makeRequest(RequestState.COMPROMETIDA),
+      );
+      await service.create(jefe(), 'r1', { decision: 'APROBAR' });
+      expect(m.auditRecord.mock.calls[0][1].after).not.toHaveProperty('approvedByCreator');
+      expect(m.auditRecord.mock.calls[1][1].after).not.toHaveProperty('approvedByCreator');
+    });
+
+    it('está ausente al devolver aunque el creador sea quien decide', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(
+        makeRequest(RequestState.BACKLOG_PRIORIZADO, { createdByUserId: 'uj' }),
+      );
+      (m.prismaObj.approval as any).create.mockResolvedValue(
+        mockApproval('DEVOLVER', RequestState.EN_TRIAGE, 'x'),
+      );
+      (m.prismaObj.request as any).update.mockResolvedValue(
+        makeRequest(RequestState.EN_TRIAGE),
+      );
+      await service.create(jefe(), 'r1', { decision: 'DEVOLVER', reason: 'x' });
+      expect(m.auditRecord.mock.calls[0][1].after).not.toHaveProperty('approvedByCreator');
+    });
+  });
+
+  describe('batchApprove', () => {
+    it('aprueba las elegibles aunque otras se omitan, en el orden pedido', async () => {
+      const find = (m.prismaObj.request as any).findFirst;
+      find
+        .mockResolvedValueOnce(makeRequest(RequestState.BACKLOG_PRIORIZADO, { id: 'r1', code: 'PRY-0001' }))
+        .mockResolvedValueOnce(makeRequest(RequestState.COMPROMETIDA, { id: 'r2', code: 'PRY-0002' }))
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(makeRequest(RequestState.BACKLOG_PRIORIZADO, { id: 'r4', code: 'PRY-0004' }));
+      (m.prismaObj.approval as any).create.mockResolvedValue(
+        mockApproval('APROBAR', RequestState.COMPROMETIDA),
+      );
+      (m.prismaObj.request as any).update.mockResolvedValue(
+        makeRequest(RequestState.COMPROMETIDA),
+      );
+
+      const res = await service.batchApprove(jefe(), ['r1', 'r2', 'r3', 'r4']);
+
+      expect(res.results).toEqual([
+        { id: 'r1', code: 'PRY-0001', status: 'APROBADA', reason: null },
+        { id: 'r2', code: 'PRY-0002', status: 'OMITIDA', reason: 'Ya no está en backlog priorizado.' },
+        { id: 'r3', code: null, status: 'OMITIDA', reason: 'No encontrada.' },
+        { id: 'r4', code: 'PRY-0004', status: 'APROBADA', reason: null },
+      ]);
+      expect(res.approved).toBe(2);
+      expect(res.skipped).toBe(2);
+      expect((m.prismaObj.approval as any).create).toHaveBeenCalledTimes(2);
+      expect(m.prismaObj.$transaction).toHaveBeenCalledTimes(2);
+      expect(m.auditRecord).toHaveBeenCalledTimes(4);
+    });
+
+    it('usa el alcance del actor al buscar cada solicitud', async () => {
+      (m.prismaObj.request as any).findFirst.mockResolvedValue(null);
+      await service.batchApprove(lider(['p1']), ['r9']);
+      const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0].where;
+      expect(where.AND[0]).toEqual({ id: 'r9' });
+      expect(where.AND[1]).toEqual({
+        deletedAt: null,
+        OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }],
+      });
+    });
+  });});

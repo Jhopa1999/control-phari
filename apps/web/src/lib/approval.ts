@@ -1,6 +1,7 @@
 import {
   api,
   type Approval,
+  type BatchApprovalResult,
   type CreateApproval,
   type Request,
 } from './api-client';
@@ -50,6 +51,25 @@ export async function listPendingApproval(): Promise<Request[]> {
     const { data, error, response } = await api.GET(
       '/requests/pending-approval',
     );
+    if (error || !data) {
+      throw toApprovalError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof ApprovalError) throw err;
+    throw toApprovalError(undefined);
+  }
+}
+
+/**
+ * Aprueba solicitudes en lote (POST /requests/batch-approval, solo jefe de
+ * área). No es atómico: la respuesta trae un resultado por solicitud.
+ */
+export async function batchApprove(requestIds: string[]): Promise<BatchApprovalResult> {
+  try {
+    const { data, error, response } = await api.POST('/requests/batch-approval', {
+      body: { requestIds },
+    });
     if (error || !data) {
       throw toApprovalError(response.status, error);
     }
