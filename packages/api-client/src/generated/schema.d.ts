@@ -1869,6 +1869,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/weekly-reports/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Propone un borrador del semanal desde los diarios, novedades y compromisos (no guarda nada). */
+        get: operations["WorklogController_draftWeeklyReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/weekly-reports/{id}": {
         parameters: {
             query?: never;
@@ -6337,6 +6354,25 @@ export interface components {
             commitmentsText?: string;
             /** @description Decisiones para el jefe. */
             decisions?: string;
+        };
+        WeeklyReportDraftSourcesDto: {
+            /** @description Diarios del actor en la semana y el proceso. */
+            dailyLogs: number;
+            /** @description Actividades de esos diarios. */
+            activities: number;
+        };
+        WeeklyReportDraftDto: {
+            /** @description Actividades de la semana agrupadas por solicitud, con horas. */
+            results: string;
+            /** @description Vacío: el borrador no propone. */
+            proposals: string;
+            /** @description Actividades bloqueadas de la semana y novedades abiertas del proceso. */
+            blockers: string;
+            /** @description Compromisos abiertos del actor que vencen la semana siguiente. */
+            commitmentsText: string;
+            /** @description Vacío: el borrador no decide. */
+            decisions: string;
+            sources: components["schemas"]["WeeklyReportDraftSourcesDto"];
         };
         UpdateWeeklyReportDto: {
             /** @description Resultados/entregables. */
@@ -14362,6 +14398,49 @@ export interface operations {
             };
             /** @description Ya existe un semanal para persona/proceso/semana. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorklogController_draftWeeklyReport: {
+        parameters: {
+            query: {
+                /** @description Proceso del semanal. */
+                processId: string;
+                /** @description Día de la semana (cualquiera) en formato YYYY-MM-DD; se ancla al lunes. */
+                weekStart: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Borrador determinista. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReportDraftDto"];
+                };
+            };
+            /**
+             * @description El proceso indicado no existe (jefe de área).
+             *
+             *     Datos inválidos o semana posterior a la actual («No puedes registrar un semanal de una semana futura.»).
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El actor no pertenece al proceso indicado. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

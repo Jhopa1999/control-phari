@@ -52,6 +52,17 @@ import {
   ActivitySourceDto,
 } from './dto/activity-response.dto';
 import { assertQuarterHours } from './quarter-hours';
+import { OPEN_COMMITMENT_STATES } from '../commitment/commitment-due';
+import {
+  WeeklyReportDraftDto,
+  WeeklyReportDraftQueryDto,
+} from './dto/weekly-report-draft.dto';
+import {
+  buildBlockers,
+  buildCommitmentsText,
+  buildResults,
+  type DraftActivity,
+} from './weekly-report-draft';
 import type { SuggestionKind } from './suggestion-key';
 import {
   WeeklyConsolidationDto,
@@ -1431,6 +1442,97 @@ export class WorklogService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Borrador del semanal (FEAT-004). Solo lectura y determinista: arma texto
+   * desde los diarios del actor, las novedades abiertas del proceso y sus
+   * compromisos de la semana siguiente. No escribe en base ni en auditoría.
+   */
+  async draftWeeklyReport(
+    actor: CurrentActor,
+    query: WeeklyReportDraftQueryDto,
+  ): Promise<WeeklyReportDraftDto> {
+    const weekStart = mondayOf(dateStringToDate(query.weekStart));
+    if (weekStart.getTime() > localToday().getTime()) {
+      throw new BadRequestException(
+        'No puedes registrar un semanal de una semana futura.',
+      );
+    }
+    await this.scope.assertActorInProcess(actor, query.processId);
+    const weekEnd = addDaysUTC(weekStart, 6);
+    const nextStart = addDaysUTC(weekStart, 7);
+    const nextEnd = addDaysUTC(weekStart, 13);
+
+    const [logs, issues, commitments] = await Promise.all([
+      this.prisma.dailyLog.findMany({
+        where: {
+          authorUserId: actor.userId,
+          processId: query.processId,
+          date: { gte: weekStart, lte: weekEnd },
+        },
+        include: {
+          activities: {
+            include: { projectRequest: { select: { code: true, title: true } } },
+          },
+        },
+        orderBy: [{ date: 'asc' }, { id: 'asc' }],
+      }),
+      this.prisma.issue.findMany({
+        where: {
+          processId: query.processId,
+          state: { in: [...OPEN_COMMITMENT_STATES] },
+        },
+        include: { relatedRequest: { select: { code: true } } },
+        orderBy: [{ date: 'asc' }, { id: 'asc' }],
+      }),
+      this.prisma.commitment.findMany({
+        where: {
+          processId: query.processId,
+          state: { in: [...OPEN_COMMITMENT_STATES] },
+          dueDate: { gte: nextStart, lte: nextEnd },
+          OR: [{ assignedUserId: actor.userId }, { responsibleUserId: actor.userId }],
+        },
+        orderBy: [{ dueDate: 'asc' }, { id: 'asc' }],
+      }),
+    ]);
+
+    const activities: DraftActivity[] = logs.flatMap((log) =>
+      log.activities.map((activity) => ({
+        id: activity.id,
+        hours: Number(activity.hours),
+        description: activity.description,
+        result: activity.result,
+        activityStatus: activity.activityStatus,
+        createdAt: activity.createdAt,
+        request: activity.projectRequest,
+        logDate: dateToString(log.date),
+      })),
+    );
+    return {
+      results: buildResults(activities),
+      proposals: '',
+      blockers: buildBlockers(
+        activities,
+        issues.map((issue) => ({
+          id: issue.id,
+          title: issue.title,
+          date: dateToString(issue.date),
+          state: issue.state,
+          requestCode: issue.relatedRequest?.code ?? null,
+        })),
+      ),
+      commitmentsText: buildCommitmentsText(
+        commitments.map((c) => ({
+          id: c.id,
+          title: c.title,
+          dueDate: dateToString(c.dueDate),
+          state: c.state,
+        })),
+      ),
+      decisions: '',
+      sources: { dailyLogs: logs.length, activities: activities.length },
+    };
   }
 
   private async requireWeeklyReportWritable(

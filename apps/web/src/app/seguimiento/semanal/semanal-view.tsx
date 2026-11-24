@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
-import { CheckCircle2, Plus, Send, Undo2 } from 'lucide-react';
+import { CheckCircle2, FileText, Plus, Send, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DescriptionList } from '@/components/description-list';
@@ -30,12 +30,18 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useActor } from '@/lib/actor-context';
-import type { CoordinationPerson, Process, WeeklyReport } from '@/lib/api-client';
+import type {
+  CoordinationPerson,
+  Process,
+  WeeklyReport,
+  WeeklyReportDraft,
+} from '@/lib/api-client';
 import { formatDateOnly, formatDateTime, formatHours } from '@/lib/format';
 import {
   WorklogError,
   createWeeklyReport,
   getWeeklyReport,
+  getWeeklyReportDraft,
   listCoordinationPeople,
   listWeeklyReports,
   returnWeeklyReport,
@@ -91,6 +97,18 @@ const SECTION_FIELDS: { key: keyof Sections; id: string; label: string; help?: s
   { key: 'decisions', id: 'sem-decisions', label: 'Decisiones' },
 ];
 
+/** Secciones que el borrador puede rellenar (propuestas y decisiones nunca se tocan). */
+const DRAFT_KEYS = ['results', 'blockers', 'commitmentsText'] as const;
+
+type DraftNotice =
+  | { kind: 'applied'; dailyLogs: number; activities: number; hasLogs: boolean }
+  | { kind: 'empty' }
+  | { kind: 'error'; message: string };
+
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
 /** «Semana del 26 oct 2026 al 1 nov 2026»: lunes a domingo (UTC, como el resto de fechas). */
 function weekLabel(weekStart: string): string {
   const start = new Date(String(weekStart).slice(0, 10) + 'T00:00:00.000Z');
@@ -139,6 +157,17 @@ export function SemanalView(): React.ReactElement {
   const [saving, setSaving] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [sendOpen, setSendOpen] = React.useState(false);
+
+  // Borrador propuesto (FEAT-004): nunca se guarda solo.
+  const [drafting, setDrafting] = React.useState(false);
+  const [draftNotice, setDraftNotice] = React.useState<DraftNotice | null>(null);
+  const [pendingDraft, setPendingDraft] = React.useState<WeeklyReportDraft | null>(null);
+  const [replaceOpen, setReplaceOpen] = React.useState(false);
+  const sectionsRef = React.useRef(sections);
+  React.useEffect(() => {
+    sectionsRef.current = sections;
+  }, [sections]);
+  const draftButtonRef = React.useRef<HTMLButtonElement>(null);
 
   const [createOpen, setCreateOpen] = React.useState(false);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
@@ -217,6 +246,9 @@ export function SemanalView(): React.ReactElement {
   useResetOnChange([selectedId], () => {
     if (!selectedId) setDetail(null);
     else setDetailState('loading');
+    setDraftNotice(null);
+    setPendingDraft(null);
+    setReplaceOpen(false);
   });
   React.useEffect(() => {
     if (!selectedId) {
@@ -270,6 +302,120 @@ export function SemanalView(): React.ReactElement {
     setSections((prev) => ({ ...prev, [key]: value }));
   }
 
+  /** Secciones que el borrador trae con texto (las vacías no borran lo escrito). */
+  function draftSectionsOf(draft: WeeklyReportDraft): (typeof DRAFT_KEYS)[number][] {
+    return DRAFT_KEYS.filter((key) => draft[key].trim().length > 0);
+  }
+
+  function applyDraft(draft: WeeklyReportDraft) {
+    const keys = draftSectionsOf(draft);
+    setSections((prev) => {
+      const next = { ...prev };
+      for (const key of keys) next[key] = draft[key];
+      return next;
+    });
+    setDraftNotice({
+      kind: 'applied',
+      dailyLogs: draft.sources.dailyLogs,
+      activities: draft.sources.activities,
+      hasLogs: draft.sources.dailyLogs > 0,
+    });
+  }
+
+  async function handleProposeDraft() {
+    if (!detail) return;
+    const requestedId = detail.id;
+    setDrafting(true);
+    setDraftNotice(null);
+    try {
+      const draft = await getWeeklyReportDraft(detail.processId, String(detail.weekStart).slice(0, 10));
+      if (latestDetailIdRef.current !== requestedId) return;
+      const keys = draftSectionsOf(draft);
+      if (keys.length === 0) {
+        setDraftNotice({ kind: 'empty' });
+        return;
+      }
+      // El conflicto se mide con lo escrito al llegar la respuesta, no al hacer clic.
+      const conflicts = keys.filter((key) => sectionsRef.current[key].trim().length > 0);
+      if (conflicts.length === 0) {
+        applyDraft(draft);
+      } else {
+        setPendingDraft(draft);
+        setReplaceOpen(true);
+      }
+    } catch (err) {
+      setDraftNotice({ kind: 'error', message: messageOf(err) });
+    } finally {
+      setDrafting(false);
+    }
+  }
+
+  function applyPendingDraft() {
+    if (pendingDraft) applyDraft(pendingDraft);
+    setPendingDraft(null);
+  }
+
+  function discardPendingDraft(open: boolean) {
+    setReplaceOpen(open);
+    if (!open) setPendingDraft(null);
+  }
+
+  const conflictLabels = pendingDraft
+    ? draftSectionsOf(pendingDraft)
+        .filter((key) => sections[key].trim().length > 0)
+        .map((key) => SECTION_FIELDS.find((field) => field.key === key)?.label ?? key)
+    : [];
+
+  function renderDraftNotice(): React.ReactNode {
+    if (!draftNotice) return null;
+    if (draftNotice.kind === 'error') {
+      return (
+        <InlineNotice
+          tone="danger"
+          role="alert"
+          title="No se pudo armar el borrador"
+          className="max-w-[720px]"
+        >
+          {draftNotice.message} Puedes escribir las secciones a mano.
+        </InlineNotice>
+      );
+    }
+    if (draftNotice.kind === 'empty') {
+      return (
+        <InlineNotice
+          tone="neutral"
+          role="status"
+          title="No hay nada que proponer para esta semana"
+          className="max-w-[720px]"
+        >
+          No encontramos diarios, bloqueos ni compromisos. No se cambió ningún campo. Escribe las
+          secciones a mano o registra tus diarios y vuelve a intentarlo.
+        </InlineNotice>
+      );
+    }
+    return draftNotice.hasLogs ? (
+      <InlineNotice
+        tone="info"
+        role="status"
+        title={`Borrador generado desde ${plural(draftNotice.dailyLogs, 'diario', 'diarios')}`}
+        className="max-w-[720px]"
+      >
+        {plural(draftNotice.activities, 'actividad', 'actividades')} de tu bitácora. Revísalo antes
+        de guardar: todavía no se ha guardado nada.
+      </InlineNotice>
+    ) : (
+      <InlineNotice
+        tone="info"
+        role="status"
+        title="No hay diarios tuyos en esta semana"
+        className="max-w-[720px]"
+      >
+        El borrador solo trae los bloqueos o compromisos abiertos que se encontraron. Revísalo antes
+        de guardar.
+      </InlineNotice>
+    );
+  }
+
   async function handleSaveSections(event: React.FormEvent) {
     event.preventDefault();
     if (!detail) return;
@@ -283,6 +429,7 @@ export function SemanalView(): React.ReactElement {
         decisions: trimOrUndefined(sections.decisions),
       });
       toast.success('Secciones guardadas.');
+      setDraftNotice(null);
       await loadDetail(detail.id, true);
     } catch (err) {
       // Fallo: conserva lo escrito en las secciones (AC-031).
@@ -418,6 +565,29 @@ export function SemanalView(): React.ReactElement {
 
         <Section title="Secciones del reporte" headingLevel={3}>
           {renderStatusNotice(detail)}
+          {isDraft ? (
+            <div className="flex max-w-[720px] flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <p id="semanal-borrador-help" className="text-sm text-muted-foreground">
+                Arma un borrador con tus diarios de la semana. No se guarda hasta que pulses
+                «Guardar secciones».
+              </p>
+              <Button
+                ref={draftButtonRef}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto sm:shrink-0"
+                loading={drafting}
+                disabled={saving || drafting}
+                aria-describedby="semanal-borrador-help"
+                onClick={() => void handleProposeDraft()}
+              >
+                <FileText aria-hidden="true" />
+                {drafting ? 'Armando borrador…' : 'Proponer borrador'}
+              </Button>
+            </div>
+          ) : null}
+          {isDraft ? <div aria-live="polite">{renderDraftNotice()}</div> : null}
           {isDraft ? (
             <form noValidate onSubmit={handleSaveSections} className="grid max-w-[720px] gap-4">
               {SECTION_FIELDS.map((field) => (
@@ -680,6 +850,24 @@ export function SemanalView(): React.ReactElement {
         onConfirm={(reason) => void handleReturn(reason)}
         returnFocusTo={returnFocusToHeading}
       />
+
+      <ConfirmDialog
+        open={replaceOpen}
+        onOpenChange={discardPendingDraft}
+        tone="default"
+        title="¿Reemplazar el texto escrito?"
+        description="El borrador sustituirá lo que ya escribiste en estas secciones. Lo que está guardado no cambia hasta que pulses «Guardar secciones»."
+        confirmLabel="Reemplazar con el borrador"
+        cancelLabel="Conservar mi texto"
+        onConfirm={applyPendingDraft}
+        returnFocusTo={() => draftButtonRef.current}
+      >
+        <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
+          {conflictLabels.map((label) => (
+            <li key={label}>{label}</li>
+          ))}
+        </ul>
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={sendOpen}

@@ -14,6 +14,7 @@ import {
   type UpdateActivity,
   type UpdateDailyLog,
   type UpdateWeeklyReport,
+  type WeeklyReportDraft,
   type WeeklyReportsQuery,
   type WeeklyReport,
   type WorklogOptions,
@@ -473,6 +474,24 @@ export async function getWeeklyReport(id: string): Promise<WeeklyReport> {
   }
 }
 
+/** Borrador del semanal desde las bitácoras (GET /weekly-reports/draft). No guarda nada. */
+export async function getWeeklyReportDraft(
+  processId: string,
+  weekStart: string,
+): Promise<WeeklyReportDraft> {
+  try {
+    const { data, error, response } = await api.GET('/weekly-reports/draft', {
+      params: { query: { processId, weekStart } },
+    });
+    if (error || !data) {
+      throw toWorklogError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof WorklogError) throw err;
+    throw toWorklogError(undefined);
+  }
+}
 /** Crea un semanal; el backend lo ancla al lunes ISO (POST, 201). */
 export async function createWeeklyReport(
   input: CreateWeeklyReport,

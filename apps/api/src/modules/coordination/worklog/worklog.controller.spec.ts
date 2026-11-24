@@ -34,6 +34,7 @@ describe('WorklogController (delegacion)', () => {
     listWeeklyReports: jest.fn().mockResolvedValue('listWeeklyReports'),
     createWeeklyReport: jest.fn().mockResolvedValue('createWeeklyReport'),
     getWeeklyReport: jest.fn().mockResolvedValue('getWeeklyReport'),
+    draftWeeklyReport: jest.fn().mockResolvedValue('draftWeeklyReport'),
     updateWeeklyReport: jest.fn().mockResolvedValue('updateWeeklyReport'),
     submitWeeklyReport: jest.fn().mockResolvedValue('submitWeeklyReport'),
   } as unknown as WorklogService;
@@ -157,6 +158,11 @@ describe('WorklogController (delegacion)', () => {
     expect(worklogService.createWeeklyReport).toHaveBeenCalledWith(a, dto);
   });
 
+  it('draftWeeklyReport delega actor y consulta', async () => {
+    const query = { processId: 'p1', weekStart: '2025-03-12' };
+    await expect(controller.draftWeeklyReport(a, query)).resolves.toBe('draftWeeklyReport');
+    expect(worklogService.draftWeeklyReport).toHaveBeenCalledWith(a, query);
+  });
   it('getWeeklyReport delega actor e id', async () => {
     await expect(controller.getWeeklyReport(a, 'w1')).resolves.toBe(
       'getWeeklyReport',

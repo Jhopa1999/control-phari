@@ -140,6 +140,8 @@ export type ReturnWorklog = components['schemas']['ReturnWorklogDto'];
 export type WeeklyReportsQuery = NonNullable<
   paths['/weekly-reports']['get']['parameters']['query']
 >;
+/** Borrador del semanal (GET /weekly-reports/draft): no se guarda hasta que el autor lo guarda. */
+export type WeeklyReportDraft = components['schemas']['WeeklyReportDraftDto'];
 export type CreateDailyLog = components['schemas']['CreateDailyLogDto'];
 export type UpdateDailyLog = components['schemas']['UpdateDailyLogDto'];
 export type CreateActivity = components['schemas']['CreateActivityDto'];
