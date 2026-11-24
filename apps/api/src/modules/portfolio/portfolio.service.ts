@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { Prisma } from '../../generated/prisma/client';
 import { CurrentActor } from '../auth/current-actor';
 import { RequestStateService } from '../request/request-state.service';
 import { PortfolioScopeService } from './portfolio-scope.service';
@@ -14,14 +15,18 @@ import {
   PageResult,
   buildPageResult,
   resolvePage,
+  sliceWindow,
 } from '../../common/pagination/pagination';
 import {
   buildRequestWhere,
   orderByIds,
   pageRequestIds,
 } from '../request/request-list-query';
-import { ListPortfolioDto } from './dto/list-portfolio.dto';
+import { ListPortfolioDto, type PortfolioAlert } from './dto/list-portfolio.dto';
 import { PortfolioItemResponseDto } from './dto/portfolio-item-response.dto';
+import { PortfolioSummaryQueryDto } from './dto/portfolio-summary-query.dto';
+import { PortfolioSummaryResponseDto } from './dto/portfolio-summary-response.dto';
+import { PortfolioExecutionResponseDto } from './dto/portfolio-execution-response.dto';
 
 /** Eco de una fecha como `YYYY-MM-DD` en UTC o null. */
 function toIsoDate(date: Date | null): string | null {
@@ -32,6 +37,37 @@ function toIsoDate(date: Date | null): string | null {
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
   const day = String(date.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/** true si la fila cae en la alerta de la franja (única regla, usada por listado y contadores). */
+export function matchesAlert(
+  item: Pick<PortfolioItemResponseDto, 'dueStatus' | 'scheduleVarianceDays' | 'blocked'>,
+  alert: PortfolioAlert,
+): boolean {
+  switch (alert) {
+    case 'VENCIDA':
+      return item.dueStatus === 'VENCIDO';
+    case 'PROXIMA':
+      return item.dueStatus === 'PROXIMO_A_VENCER';
+    case 'CON_DESVIACION':
+      return item.scheduleVarianceDays !== null && item.scheduleVarianceDays > 0;
+    case 'BLOQUEADA':
+      return item.blocked;
+  }
+}
+
+/** Estado de una fase derivado de sus tareas (la fase no guarda estado propio). */
+function phaseStatus(tasks: Array<{ status: string }>): string {
+  if (tasks.length === 0) {
+    return 'SIN_TAREAS';
+  }
+  if (tasks.every((task) => task.status === 'TERMINADA')) {
+    return 'TERMINADA';
+  }
+  if (tasks.every((task) => task.status === 'POR_HACER')) {
+    return 'POR_HACER';
+  }
+  return 'EN_CURSO';
 }
 
 /**
@@ -64,6 +100,20 @@ export class PortfolioService {
     const where = buildRequestWhere(this.scope.requestScope(actor), filters, {
       searchRequester: false,
     });
+    if (filters.alert !== undefined) {
+      // La alerta depende de fechas y tareas (no es columna): se resuelve en
+      // memoria sobre el alcance filtrado (tope 1000) antes de paginar, así el
+      // total ya la descuenta. Se conserva el orden pedido.
+      const all = await this.scopedItems(where, filters);
+      const matching = all.items.filter((item) =>
+        matchesAlert(item, filters.alert as PortfolioAlert),
+      );
+      return buildPageResult(
+        sliceWindow(matching, window),
+        matching.length,
+        window,
+      );
+    }
     const { ids, total } = await pageRequestIds(
       this.prisma,
       where,
@@ -73,6 +123,159 @@ export class PortfolioService {
     );
     const items = await this.itemsFor(ids);
     return buildPageResult(items, total, window);
+  }
+
+  /**
+   * Contadores de la franja: las filas del alcance filtrado (mismo `where` y
+   * banda que el listado, sin `alert` ni paginación, tope 1000) y cuántas caen en
+   * cada alerta. Reutiliza `itemsFor`, de modo que cada cifra coincide con el
+   * total de `list` con el filtro `alert` correspondiente.
+   */
+  async summary(
+    actor: CurrentActor,
+    filters: PortfolioSummaryQueryDto,
+  ): Promise<PortfolioSummaryResponseDto> {
+    const where = buildRequestWhere(this.scope.requestScope(actor), filters, {
+      searchRequester: false,
+    });
+    const { items, truncated } = await this.scopedItems(where, filters);
+    return {
+      total: items.length,
+      overdue: items.filter((item) => matchesAlert(item, 'VENCIDA')).length,
+      dueSoon: items.filter((item) => matchesAlert(item, 'PROXIMA')).length,
+      withVariance: items.filter((item) => matchesAlert(item, 'CON_DESVIACION')).length,
+      blocked: items.filter((item) => matchesAlert(item, 'BLOQUEADA')).length,
+      truncated,
+    };
+  }
+
+  /**
+   * Ejecución de solo lectura de una iniciativa: plan, línea base, pronóstico,
+   * desviación, avance y fases con tareas. Alcance único de solicitudes: 404
+   * idéntico si no existe o está fuera de alcance.
+   */
+  async execution(
+    actor: CurrentActor,
+    id: string,
+  ): Promise<PortfolioExecutionResponseDto> {
+    const request = await this.prisma.request.findFirst({
+      where: { AND: [{ id }, this.scope.requestScope(actor)] },
+      select: { id: true, code: true, targetDate: true },
+    });
+    if (request === null) {
+      throw new NotFoundException('No se encontró la solicitud.');
+    }
+    // Un plan por solicitud (único `plan_request_unique`).
+    const plan = await this.prisma.plan.findFirst({
+      where: { requestId: request.id },
+      select: {
+        status: true,
+        baselineDate: true,
+        commitmentDate: true,
+        periodEnd: true,
+        phases: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            order: true,
+            startDate: true,
+            endDate: true,
+            tasks: {
+              orderBy: [{ code: 'asc' }],
+              select: {
+                id: true,
+                code: true,
+                title: true,
+                status: true,
+                progress: true,
+                startDate: true,
+                endDate: true,
+                responsible: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (plan === null) {
+      return {
+        requestId: request.id,
+        requestCode: request.code,
+        hasPlan: false,
+        planStatus: null,
+        baselineDate: null,
+        forecastDate: null,
+        scheduleVarianceDays: null,
+        progressPercent: null,
+        phases: [],
+      };
+    }
+    const allTasks = plan.phases.flatMap((phase) => phase.tasks);
+    let forecast: Date | null = null;
+    for (const task of allTasks) {
+      if (task.status !== 'TERMINADA' && task.endDate !== null) {
+        if (forecast === null || task.endDate > forecast) {
+          forecast = task.endDate;
+        }
+      }
+    }
+    const authorized = plan.status === 'AUTORIZADO';
+    const schedule = computeSchedule({
+      targetDate: request.targetDate,
+      planAuthorized: authorized,
+      baselineDate: plan.baselineDate ?? plan.commitmentDate ?? plan.periodEnd,
+      forecastDate: forecast,
+    });
+    return {
+      requestId: request.id,
+      requestCode: request.code,
+      hasPlan: true,
+      planStatus: plan.status,
+      baselineDate:
+        schedule.referenceSource === 'PLAN' ? toIsoDate(schedule.referenceDate) : null,
+      forecastDate: toIsoDate(schedule.forecastDate),
+      scheduleVarianceDays: schedule.scheduleVarianceDays,
+      progressPercent: computeProgressPercent(allTasks),
+      phases: plan.phases.map((phase) => ({
+        id: phase.id,
+        code: phase.code,
+        name: phase.name,
+        order: phase.order,
+        startDate: toIsoDate(phase.startDate),
+        endDate: toIsoDate(phase.endDate),
+        status: phaseStatus(phase.tasks),
+        progressPercent: computeProgressPercent(phase.tasks),
+        tasksTotal: phase.tasks.length,
+        tasksDone: phase.tasks.filter((task) => task.status === 'TERMINADA').length,
+        tasks: phase.tasks.map((task) => ({
+          id: task.id,
+          code: task.code,
+          title: task.title,
+          status: task.status,
+          progress: task.progress,
+          startDate: toIsoDate(task.startDate),
+          endDate: toIsoDate(task.endDate),
+          responsibleName: task.responsible?.name ?? null,
+        })),
+      })),
+    };
+  }
+
+  /** Filas (hasta 1000) del alcance filtrado, en el orden y con la banda pedidos. */
+  private async scopedItems(
+    where: Prisma.RequestWhereInput,
+    criteria: Pick<ListPortfolioDto, 'band' | 'sort' | 'dir'>,
+  ): Promise<{ items: PortfolioItemResponseDto[]; truncated: boolean }> {
+    const { ids, total } = await pageRequestIds(
+      this.prisma,
+      where,
+      criteria,
+      resolvePage({}),
+      (score) => this.state.priorityBand(score),
+    );
+    return { items: await this.itemsFor(ids), truncated: total > ids.length };
   }
 
   /** Arma las filas del portafolio de los ids dados, en ese orden. */

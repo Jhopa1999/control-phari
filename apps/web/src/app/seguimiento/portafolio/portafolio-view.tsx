@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { FolderKanban } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { FolderKanban, X } from 'lucide-react';
 import {
   CellTitle,
   DataTablePagination,
@@ -42,8 +42,11 @@ import {
 import { formatDateOnly } from '@/lib/format';
 import {
   ApiError,
+  getPortfolioSummary,
   listPortfolioPage,
+  type PortfolioAlert,
   type PortfolioItem,
+  type PortfolioSummary,
   type PortfolioSortKey,
 } from '@/lib/portfolio';
 import { COMMITTED_STATES } from '@/lib/request-state';
@@ -53,6 +56,7 @@ import type { SortState } from '@/lib/table-sort';
 import { listProcesses } from '@/lib/team';
 import { useDebouncedValue, useServerTable } from '@/lib/use-server-table';
 import { ServerListBody } from '@/components/server-list';
+import { AlertStrip, alertLabel, parseAlert } from './alert-strip';
 
 /**
  * Columnas ordenables: solo las de la lista blanca del servidor. «Entrega» se
@@ -246,7 +250,11 @@ export function PortafolioView(): React.ReactElement {
   // marca con el panel abierto). Se aplica al CERRAR el panel: un clic por
   // casilla no dispara una petición ni una pantalla de carga (spec D8).
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const { allowedModules } = useActor();
+  // La alerta activa vive en la URL (?alert=); un valor desconocido se ignora.
+  const alert = parseAlert(searchParams.get('alert'));
   const [applied, setApplied] = React.useState<SelectionState>(DEFAULT_SELECTION);
   const [draft, setDraft] = React.useState<SelectionState>(DEFAULT_SELECTION);
   // «Ver en Portafolio» (Solicitudes) llega con ?q=<título>: se precarga la búsqueda.
@@ -267,6 +275,18 @@ export function PortafolioView(): React.ReactElement {
       .catch(() => setRoutes([]));
   }, []);
 
+  /** Activa o apaga la alerta en la URL sin añadir historial; conserva el resto de parámetros. */
+  const selectAlert = React.useCallback(
+    (next: PortfolioAlert | undefined): void => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === undefined) params.delete('alert');
+      else params.set('alert', next);
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
   const processOptions = React.useMemo(() => processFilterOptions(processes), [processes]);
 
   /** Al cerrar el panel de un filtro, su borrador pasa a aplicarse (solo si cambió). */
@@ -283,8 +303,8 @@ export function PortafolioView(): React.ReactElement {
     applied.process.length > 0 ||
     applied.band.length > 0 ||
     !sameList(applied.state, DEFAULT_SELECTION.state);
-  const hasFilters = hasServerFilters || debouncedQuery !== '';
-  const showClear = hasServerFilters || query.trim() !== '';
+  const hasFilters = hasServerFilters || debouncedQuery !== '' || alert !== undefined;
+  const showClear = hasServerFilters || query.trim() !== '' || alert !== undefined;
   const pendingIncluded = includesPending(applied.state);
   // Solo cambia cuando cambia la selección APLICADA (no la del borrador).
   const fetchPage = React.useCallback(
@@ -294,6 +314,7 @@ export function PortafolioView(): React.ReactElement {
           mainProcessId: applied.process,
           state: applied.state,
           band: applied.band,
+          alert,
           q: debouncedQuery,
           sort: sort ? SERVER_SORT[sort.key] : undefined,
           dir: sort ? serverDirection(sort) : undefined,
@@ -302,11 +323,37 @@ export function PortafolioView(): React.ReactElement {
         },
         signal,
       ),
-    [applied, debouncedQuery],
+    [applied, debouncedQuery, alert],
   );
+  // Contadores de la franja: mismos filtros que el listado, sin la alerta (D3).
+  // El resultado guarda la clave con la que se pidió: «cargando» = la clave vigente
+  // aún no tiene respuesta (sin setState síncrono en el efecto).
+  const [summaryNonce, setSummaryNonce] = React.useState(0);
+  const summaryKey = JSON.stringify([applied, debouncedQuery, summaryNonce]);
+  const [summaryResult, setSummaryResult] = React.useState<{
+    key: string;
+    summary: PortfolioSummary | null;
+    failed: boolean;
+  }>({ key: '', summary: null, failed: false });
+  React.useEffect(() => {
+    const controller = new AbortController();
+    getPortfolioSummary(
+      { mainProcessId: applied.process, state: applied.state, band: applied.band, q: debouncedQuery },
+      controller.signal,
+    )
+      .then((next) => setSummaryResult({ key: summaryKey, summary: next, failed: false }))
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setSummaryResult((prev) => ({ key: summaryKey, summary: prev.summary, failed: true }));
+      });
+    return () => controller.abort();
+  }, [applied, debouncedQuery, summaryKey]);
+  const summaryLoading = summaryResult.key !== summaryKey;
+  const summaryFailed = !summaryLoading && summaryResult.failed;
+
   const table = useServerTable<PortfolioItem, SortKey>({
     fetchPage,
-    filtersKey: JSON.stringify([debouncedQuery, applied]),
+    filtersKey: JSON.stringify([debouncedQuery, applied, alert]),
     defaultSort: DEFAULT_SORT,
   });
   const listRef = React.useRef<HTMLDivElement>(null);
@@ -317,6 +364,7 @@ export function PortafolioView(): React.ReactElement {
     setApplied(DEFAULT_SELECTION);
     setDraft(DEFAULT_SELECTION);
     setQuery('');
+    if (alert !== undefined) selectAlert(undefined);
     // «Limpiar filtros» desaparece: el foco pasa a la búsqueda (NIT 4, plan D9).
     searchRef.current?.focus();
   }
@@ -362,6 +410,15 @@ export function PortafolioView(): React.ReactElement {
         }
       />
 
+      <AlertStrip
+        summary={summaryResult.summary}
+        loading={summaryLoading}
+        failed={summaryFailed}
+        active={alert}
+        onSelect={selectAlert}
+        onRetry={() => setSummaryNonce((n) => n + 1)}
+      />
+
       <Toolbar
         label="Filtros del portafolio"
         collapseOnMobile
@@ -375,6 +432,19 @@ export function PortafolioView(): React.ReactElement {
                 filtered={table.total}
                 noun={pendingIncluded ? NOUN_ALL : NOUN}
               />
+            ) : null}
+            {alert !== undefined ? (
+              <Badge variant="accent" className="gap-1 pr-0.5">
+                {`Alerta: ${alertLabel(alert)}`}
+                <button
+                  type="button"
+                  aria-label={`Quitar alerta ${alertLabel(alert)}`}
+                  onClick={() => selectAlert(undefined)}
+                  className="inline-flex size-6 items-center justify-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                >
+                  <X aria-hidden="true" />
+                </button>
+              </Badge>
             ) : null}
             {showClear ? (
               <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
@@ -457,7 +527,10 @@ export function PortafolioView(): React.ReactElement {
         }}
         noResults={{
           title: 'Sin resultados',
-          description: 'Ninguna iniciativa coincide con la búsqueda o los filtros.',
+          description:
+            alert !== undefined
+              ? 'Ninguna iniciativa coincide con la búsqueda o los filtros. Quita el filtro de alerta para ver más.'
+              : 'Ninguna iniciativa coincide con la búsqueda o los filtros.',
         }}
         empty={{
           icon: FolderKanban,

@@ -165,6 +165,33 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
       'la fecha objetivo de la solicitud, que es solo una expectativa inicial ' +
       '(referenceSource=SOLICITUD). requestedGapDays informa cuánto se aparta el plan ' +
       'de lo solicitado y scheduleVarianceDays cuánto se corrió el pronóstico ' +
-      '(forecastDate) respecto al compromiso; ninguno de los dos es un vencimiento.',
+      '(forecastDate) respecto al compromiso; ninguno de los dos es un vencimiento. ' +
+      'alert (VENCIDA, PROXIMA, CON_DESVIACION o BLOQUEADA; uno solo) deja solo las ' +
+      'iniciativas con esa alerta y X-Total-Count ya lo descuenta.',
+  },
+  {
+    name: 'portfolio.summary',
+    operation: 'GET /portfolio/summary',
+    access: 'read',
+    description:
+      'Cuenta las alertas del portafolio (GET /portfolio/summary): total, vencidas ' +
+      '(overdue), próximas a vencer (dueSoon), con desviación (withVariance, ' +
+      'scheduleVarianceDays mayor que 0) y bloqueadas (blocked). Acepta los mismos ' +
+      'filtros que portfolio.get (q, mainProcessId, state, band) salvo paginación, ' +
+      'orden y alert, y usa el mismo alcance. Cada cifra es igual al total de ' +
+      'portfolio.get con el filtro alert correspondiente. Una iniciativa puede ' +
+      'contar en varios grupos: las cifras no se suman. Evalúa hasta 1000 ' +
+      'iniciativas (truncated indica si hubo más).',
+  },
+  {
+    name: 'portfolio.execution',
+    operation: 'GET /portfolio/{id}/execution',
+    access: 'read',
+    description:
+      'Obtiene la ejecución de una iniciativa en solo lectura (GET /portfolio/{id}/execution): ' +
+      'estado del plan, línea base, pronóstico, desviación en días, avance y las fases con sus ' +
+      'tareas (code, título, estado, avance, fechas y responsable). El id es el UUID de la ' +
+      'solicitud. Devuelve 404 si no existe o está fuera de alcance. Sin plan, hasPlan es false ' +
+      'y phases viene vacío. No exige el módulo de Planificación.',
   },
 ];

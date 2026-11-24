@@ -56,6 +56,18 @@ export const PORTFOLIO_BANDS = [
 ] as const;
 
 /**
+ * Alertas de la franja del portafolio. Una iniciativa puede cumplir varias a la
+ * vez (por ejemplo vencida y bloqueada); el filtro admite una sola por consulta.
+ */
+export const PORTFOLIO_ALERTS = [
+  'VENCIDA',
+  'PROXIMA',
+  'CON_DESVIACION',
+  'BLOQUEADA',
+] as const;
+export type PortfolioAlert = (typeof PORTFOLIO_ALERTS)[number];
+
+/**
  * Parametro de consulta repetido (`?state=A&state=B`): un valor suelto se
  * convierte en arreglo de un elemento, asi un solo valor se comporta como antes.
  */
@@ -118,6 +130,17 @@ export class ListPortfolioDto extends PaginationQueryDto {
     message: 'Cada valor de band debe ser P1, P2, P3, P4 o SIN_PRIORIZAR.',
   })
   band?: (typeof PORTFOLIO_BANDS)[number][];
+
+  @ApiPropertyOptional({
+    enum: PORTFOLIO_ALERTS,
+    description:
+      'Filtra por una alerta (una sola): VENCIDA (dueStatus VENCIDO), PROXIMA (PROXIMO_A_VENCER), CON_DESVIACION (scheduleVarianceDays mayor que 0) o BLOQUEADA (blocked). Se combina con Y con el resto de filtros y se resuelve antes de paginar: X-Total-Count ya lo descuenta. Sin page ni pageSize se evalúan como máximo 1000 iniciativas.',
+  })
+  @IsOptional()
+  @IsIn(PORTFOLIO_ALERTS as readonly string[], {
+    message: 'alert debe ser VENCIDA, PROXIMA, CON_DESVIACION o BLOQUEADA.',
+  })
+  alert?: PortfolioAlert;
 
   @ApiPropertyOptional({
     enum: REQUEST_SORT_KEYS,
