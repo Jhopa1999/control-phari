@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RequestFacts } from '@/components/request-context-bar';
 import { Section } from '@/components/section';
+import { VerAuditoriaLink } from '@/components/ver-auditoria-link';
 import { PriorityBadge, StatusBadge } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -314,6 +315,7 @@ export function FichaView({
           { label: origin.label, href: origin.href },
           { label: request.title },
         ]}
+        actions={<VerAuditoriaLink code={request.code} />}
         meta={
           <>
             <IdChip code={request.code} />

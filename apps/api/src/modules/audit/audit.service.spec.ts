@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { AuditService } from './audit.service';
@@ -22,8 +23,9 @@ function createMocks() {
   // findMany usa this.prisma.$transaction([findMany, count]); el mock resuelve
   // el array de promesas en orden, como lo hace Prisma con operaciones batch.
   const $transaction = jest.fn((ops: Promise<unknown>[]) => Promise.all(ops));
-  const prisma = { auditEvent, $transaction } as unknown as PrismaService;
-  return { prisma, auditEvent };
+  const user = { findMany: jest.fn().mockResolvedValue([]) };
+  const prisma = { auditEvent, user, $transaction } as unknown as PrismaService;
+  return { prisma, auditEvent, user };
 }
 
 function actorWith(roles: RoleCode[], scoped: string[]): CurrentActor {
@@ -242,6 +244,125 @@ describe('AuditService', () => {
         { scopeProcessId: null, actorUserId: 'u1' },
       ]);
       expect(where.objectType).toBe('REQUEST');
+    });
+  });
+
+  describe('findMany - filtros de investigación', () => {
+    const U1 = '11111111-1111-4111-8111-111111111111';
+    const U2 = '22222222-2222-4222-8222-222222222222';
+    const P1 = '33333333-3333-4333-8333-333333333333';
+
+    function lastWhere() {
+      return mocks.auditEvent.findMany.mock.calls[0][0].where;
+    }
+
+    it('actorUserId, processId y fechas van en AND y no tocan el alcance del integrante', async () => {
+      stubPage();
+      await service.findMany(actorWith([RoleCode.INTEGRANTE], ['p1']), {
+        actorUserId: U2,
+        processId: P1,
+        from: '2026-03-01',
+        to: '2026-03-31',
+      });
+      const where = lastWhere();
+      expect(where.actorUserId).toBe('u1');
+      expect(where.AND).toEqual([
+        { actorUserId: U2 },
+        { scopeProcessId: P1 },
+        { createdAt: { gte: new Date(2026, 2, 1), lt: new Date(2026, 3, 1) } },
+      ]);
+      expect(mocks.auditEvent.count.mock.calls[0][0].where).toEqual(where);
+    });
+
+    it('líder: el OR de alcance sigue intacto y los filtros se intersectan en AND', async () => {
+      stubPage();
+      await service.findMany(actorWith([RoleCode.LIDER_PROCESO], ['p1', 'p2']), {
+        actorUserId: U1,
+        processId: P1,
+      });
+      const where = lastWhere();
+      expect(where.OR).toEqual([
+        { scopeProcessId: { in: ['p1', 'p2'] } },
+        { scopeProcessId: null, actorUserId: 'u1' },
+      ]);
+      expect(where.AND).toEqual([{ actorUserId: U1 }, { scopeProcessId: P1 }]);
+    });
+
+    it('jefe: sin filtros nuevos no añade AND', async () => {
+      stubPage();
+      await service.findMany(actorWith([RoleCode.JEFE_AREA], []), {});
+      expect(lastWhere().AND).toBeUndefined();
+    });
+
+    it('from y to son inclusivos: desde las 00:00 del primer día hasta el fin del último', async () => {
+      stubPage();
+      await service.findMany(actorWith([RoleCode.JEFE_AREA], []), { from: '2026-03-05', to: '2026-03-05' });
+      expect(lastWhere().AND).toEqual([
+        { createdAt: { gte: new Date(2026, 2, 5), lt: new Date(2026, 2, 6) } },
+      ]);
+    });
+
+    it('acepta solo from o solo to', async () => {
+      stubPage();
+      await service.findMany(actorWith([RoleCode.JEFE_AREA], []), { from: '2026-03-05' });
+      expect(lastWhere().AND).toEqual([{ createdAt: { gte: new Date(2026, 2, 5) } }]);
+    });
+
+    it('rechaza con 400 un rango invertido', async () => {
+      await expect(
+        service.findMany(actorWith([RoleCode.JEFE_AREA], []), { from: '2026-03-10', to: '2026-03-01' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mocks.auditEvent.findMany).not.toHaveBeenCalled();
+    });
+
+    it('rechaza con 400 un rango de más de 366 días y acepta exactamente 366', async () => {
+      await expect(
+        service.findMany(actorWith([RoleCode.JEFE_AREA], []), { from: '2025-01-01', to: '2026-01-02' }),
+      ).rejects.toThrow('El rango máximo es de un año');
+      stubPage();
+      await service.findMany(actorWith([RoleCode.JEFE_AREA], []), { from: '2025-01-01', to: '2026-01-01' });
+      expect(mocks.auditEvent.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('rechaza con 400 una fecha inexistente', async () => {
+      await expect(
+        service.findMany(actorWith([RoleCode.JEFE_AREA], []), { from: '2026-02-30' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('findMany - actorName', () => {
+    const U1 = '11111111-1111-4111-8111-111111111111';
+    const U2 = '22222222-2222-4222-8222-222222222222';
+    const row = (id: string, actorUserId: string | null) => ({
+      id,
+      actorUserId,
+      action: 'UPDATE',
+      objectType: 'GRANT',
+      objectId: 'g1',
+      scopeProcessId: null,
+      before: null,
+      after: null,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+    });
+
+    it('resuelve los nombres con una sola consulta por página y deja nulo al sistema', async () => {
+      stubPage(
+        [row('e1', U1), row('e2', U1), row('e3', null), row('e4', U2)] as unknown as AuditEventRow[],
+        4,
+      );
+      mocks.user.findMany.mockResolvedValue([{ id: U1, name: 'Ana Pérez' }]);
+      const result = await service.findMany(actorWith([RoleCode.JEFE_AREA], []), {});
+      expect(mocks.user.findMany).toHaveBeenCalledTimes(1);
+      expect(mocks.user.findMany.mock.calls[0][0].where).toEqual({ id: { in: [U1, U2] } });
+      expect(result.data.map((e) => e.actorName)).toEqual(['Ana Pérez', 'Ana Pérez', null, null]);
+    });
+
+    it('no consulta usuarios si todos los eventos son del sistema', async () => {
+      stubPage([row('e1', null)] as unknown as AuditEventRow[], 1);
+      const result = await service.findMany(actorWith([RoleCode.JEFE_AREA], []), {});
+      expect(mocks.user.findMany).not.toHaveBeenCalled();
+      expect(result.data[0].actorName).toBeNull();
     });
   });
 });

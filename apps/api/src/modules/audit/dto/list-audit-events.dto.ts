@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min } from 'class-validator';
+import { DATE_PATTERN } from '../../coordination/date';
 import { AUDIT_OBJECT_CODE_PATTERN, normalizeVisibleCode } from '../../plan/visible-code';
 
 /**
@@ -96,6 +97,45 @@ export class ListAuditEventsDto {
     message: 'El código del objeto debe ser como PRY-0012, PRY-0012-T07, ACT-0007 o DOC-0003.',
   })
   objectCode?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description:
+      'Filtra por el usuario que originó el evento. Solo intersecta el alcance por rol: nunca muestra eventos fuera de él.',
+  })
+  @IsOptional()
+  @IsUUID()
+  actorUserId?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    example: '2026-03-01',
+    description:
+      'Fecha inicial (YYYY-MM-DD), inclusiva desde las 00:00 en hora del servidor. Debe ser anterior o igual a `to`; el rango máximo es de 366 días.',
+  })
+  @IsOptional()
+  @Matches(DATE_PATTERN, { message: 'La fecha inicial debe tener el formato YYYY-MM-DD.' })
+  from?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    example: '2026-03-31',
+    description: 'Fecha final (YYYY-MM-DD), inclusiva hasta el fin de ese día en hora del servidor.',
+  })
+  @IsOptional()
+  @Matches(DATE_PATTERN, { message: 'La fecha final debe tener el formato YYYY-MM-DD.' })
+  to?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description:
+      'Filtra por proceso de alcance del evento. Se intersecta con el alcance por rol: nunca lo amplía.',
+  })
+  @IsOptional()
+  @IsUUID()
+  processId?: string;
 
   @ApiPropertyOptional({
     type: Number,

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { RoleCode } from '../auth/role-code';
@@ -9,6 +9,7 @@ import {
   formatDocumentCode,
   parseAuditObjectCode,
 } from '../plan/visible-code';
+import { dateStringToDate } from '../coordination/date';
 import { ListAuditEventsDto } from './dto/list-audit-events.dto';
 import { AuditEventResponseDto } from './dto/audit-event-response.dto';
 import { PaginatedAuditEventsResponseDto } from './dto/paginated-audit-events-response.dto';
@@ -180,6 +181,23 @@ export class AuditService {
       where.objectId = target.objectId;
     }
 
+    // Filtros de investigación: van en un AND aparte para que el alcance por rol
+    // (incluido el OR del líder) quede intacto; solo intersectan, nunca amplían.
+    const extra: Prisma.AuditEventWhereInput[] = [];
+    if (filters.actorUserId !== undefined) {
+      extra.push({ actorUserId: filters.actorUserId });
+    }
+    if (filters.processId !== undefined) {
+      extra.push({ scopeProcessId: filters.processId });
+    }
+    const createdAt = buildCreatedAtRange(filters.from, filters.to);
+    if (createdAt !== null) {
+      extra.push({ createdAt });
+    }
+    if (extra.length > 0) {
+      where.AND = extra;
+    }
+
     const pageSize = Math.min(filters.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const page = filters.page ?? 1;
     const skip = (page - 1) * pageSize;
@@ -196,14 +214,39 @@ export class AuditService {
       this.prisma.auditEvent.count({ where }),
     ]);
 
-    const labels = await this.resolveLabels(rows);
+    const [labels, actorNames] = await Promise.all([
+      this.resolveLabels(rows),
+      this.resolveActorNames(rows),
+    ]);
     return {
-      data: rows.map((row) => toResponseDto(row, labels.get(labelKey(row.objectType, row.objectId)))),
+      data: rows.map((row) =>
+        toResponseDto(
+          row,
+          labels.get(labelKey(row.objectType, row.objectId)),
+          row.actorUserId === null ? null : (actorNames.get(row.actorUserId) ?? null),
+        ),
+      ),
       page,
       pageSize,
       total,
       hasMore: page * pageSize < total,
     };
+  }
+
+  /** Nombre de los actores de la página, en una sola consulta (sin N+1). */
+  private async resolveActorNames(
+    rows: Array<{ actorUserId: string | null }>,
+  ): Promise<Map<string, string>> {
+    const ids = new Set<string>();
+    for (const row of rows) {
+      if (row.actorUserId !== null && UUID_PATTERN.test(row.actorUserId)) ids.add(row.actorUserId);
+    }
+    if (ids.size === 0) return new Map();
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: [...ids] } },
+      select: { id: true, name: true },
+    });
+    return new Map(users.map((u) => [u.id, u.name]));
   }
 
   /**
@@ -378,8 +421,13 @@ function labelKey(objectType: string, objectId: string): string {
  * null o, en teoria, escalar); el contrato los expone como objeto nullable, que
  * es lo que registran las mutaciones (siempre objeto o null).
  */
-function toResponseDto(row: AuditEventModel, label?: ObjectLabel): AuditEventResponseDto {
+function toResponseDto(
+  row: AuditEventModel,
+  label?: ObjectLabel,
+  actorName: string | null = null,
+): AuditEventResponseDto {
   return {
+    actorName,
     objectCode: label?.code ?? null,
     objectLabel: label?.label ?? null,
     id: row.id,
@@ -392,4 +440,37 @@ function toResponseDto(row: AuditEventModel, label?: ObjectLabel): AuditEventRes
     after: row.after as Record<string, unknown> | null,
     createdAt: row.createdAt,
   };
+}
+
+/** Rango máximo entre «from» y «to», en días (ambos inclusivos). */
+const MAX_RANGE_DAYS = 366;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Traduce «from» y «to» (YYYY-MM-DD) a un rango sobre createdAt en hora local del
+ * servidor: «from» inclusivo desde las 00:00 y «to» inclusivo hasta el fin de ese
+ * día. 400 en español si la fecha no es real, «from» es posterior a «to» o el
+ * rango pasa de 366 días.
+ */
+function buildCreatedAtRange(from?: string, to?: string): Prisma.DateTimeFilter | null {
+  if (from === undefined && to === undefined) return null;
+  const fromUtc = from === undefined ? null : dateStringToDate(from);
+  const toUtc = to === undefined ? null : dateStringToDate(to);
+  if (fromUtc !== null && toUtc !== null) {
+    if (fromUtc.getTime() > toUtc.getTime()) {
+      throw new BadRequestException('La fecha final no puede ser anterior a la inicial.');
+    }
+    const days = Math.round((toUtc.getTime() - fromUtc.getTime()) / MS_PER_DAY) + 1;
+    if (days > MAX_RANGE_DAYS) {
+      throw new BadRequestException('El rango máximo es de un año (366 días). Acota las fechas.');
+    }
+  }
+  const range: Prisma.DateTimeFilter = {};
+  if (fromUtc !== null) {
+    range.gte = new Date(fromUtc.getUTCFullYear(), fromUtc.getUTCMonth(), fromUtc.getUTCDate());
+  }
+  if (toUtc !== null) {
+    range.lt = new Date(toUtc.getUTCFullYear(), toUtc.getUTCMonth(), toUtc.getUTCDate() + 1);
+  }
+  return range;
 }

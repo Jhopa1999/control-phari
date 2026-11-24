@@ -989,6 +989,15 @@
         "apps/mcp/README.md"
       ],
       "summary": "Búsqueda por texto (D18, oleada 4 PR A): GET /search?q=&limit= (roles jefe, líder e integrante; q de 2 a 80 caracteres, limit 1 a 20 por grupo) sobre el alcance único requestScopeWhere, solicitudes por código, título y solicitante y tareas por código y título, código exacto primero y truncated; tool MCP search.global. Web: paleta Ctrl/⌘+K que unifica «Buscar código» y «Buscar pantalla…» (grupos Pantallas y Solicitudes y tareas); el menú lateral ya no filtra en línea y la barra móvil ya no cambia de forma."
+    },
+    {
+      "timestamp": "2026-11-24T04:00:25Z",
+      "trigger_file": "apps/api/src/modules/audit/audit.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Auditoría investigable y ficha del activo (oleada 4 PR B): GET /audit-events admite actorUserId, processId, from y to (YYYY-MM-DD inclusivos, máximo 366 días, 400 en español) que solo intersectan el alcance por rol, y cada evento trae actorName resuelto por lote; la tool MCP audit.events.list describe los filtros nuevos. Web: ficha /activos/catalogo/[id] con pestañas Resumen, Solicitudes y Documentos (la ruta /historial redirige), filtros Actor, Desde, Hasta y Proceso con chips en Auditoría, lectura de ?objectCode=/?objectType=/?actorUserId= y enlaces «Ver auditoría» desde la ficha de solicitud, la del activo y Documentos."
     }
   ]
 }

@@ -3221,6 +3221,8 @@ export interface components {
             objectType: string;
             /** @description Id del objeto afectado. */
             objectId: string;
+            /** @description Nombre de quien originó la mutación. Nulo si fue el sistema o si el usuario ya no existe. */
+            actorName: string | null;
             /**
              * Format: uuid
              * @description Proceso de alcance del evento (null si no aplica).
@@ -8472,8 +8474,16 @@ export interface operations {
                 objectType?: "PROCESS" | "AREA" | "REQUESTER" | "PROJECT_CLOSURE" | "USER" | "GRANT" | "CATALOG_ITEM" | "REQUEST" | "TRIAGE" | "PRIORITY_EVALUATION" | "APPROVAL" | "PLAN" | "PLAN_PHASE" | "TASK" | "TASK_DEPENDENCY" | "MONTHLY_AVAILABILITY" | "ASSIGNMENT" | "DAILY_LOG" | "DAILY_LOG_ACTIVITY" | "WEEKLY_REPORT" | "ISSUE" | "MEETING" | "COMMITMENT" | "ASSET" | "DOCUMENT" | "DOCUMENT_VERSION" | "GATE_CHECK" | "GATE_PENDING_ITEM" | "VALIDATION_RECORD" | "RECURRING_ACTIVITY" | "RECURRING_ACTIVITY_OCCURRENCE";
                 /** @description Filtra por verbo de la mutacion. */
                 action?: "CREATE" | "UPDATE" | "DELETE" | "REVOKE" | "LOGIN_FAILED" | "PASSWORD_RESET_THROTTLED" | "PASSWORD_CHANGE_REQUIRED" | "PASSWORD_CHANGE_CLEARED" | "PASSWORD_CHANGED";
-                /** @description Filtra por el código visible del objeto: PRY-0012, PRY-0012-F2, PRY-0012-T07, ACT-0007 o DOC-0003 (sin distinguir mayúsculas). Un código que no existe devuelve la lista vacía. */
+                /** @description Código visible del objeto (PRY-0012, ACT-0007, DOC-0003...). */
                 objectCode?: string;
+                /** @description Usuario que originó el evento (uuid). */
+                actorUserId?: string;
+                /** @description Desde (YYYY-MM-DD), inclusivo. */
+                from?: string;
+                /** @description Hasta (YYYY-MM-DD), inclusivo; rango máximo de 366 días. */
+                to?: string;
+                /** @description Proceso de alcance del evento (uuid). */
+                processId?: string;
                 /** @description Pagina (1-based). Por defecto 1. */
                 page?: number;
                 /** @description Tamano de pagina (acotado a 100). Por defecto 25. */
@@ -8493,6 +8503,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PaginatedAuditEventsResponseDto"];
                 };
+            };
+            /** @description Filtros inválidos (fecha irreal, inicio posterior al fin o rango mayor de 366 días). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description No hay un usuario actual valido. */
             401: {

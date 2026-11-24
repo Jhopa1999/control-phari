@@ -142,6 +142,13 @@ export interface AuditQuery {
   action?: AuditAction;
   /** Código visible completo del objeto (PRY-0012, ACT-0007, DOC-0003...). */
   objectCode?: string;
+  /** Usuario que originó el evento (uuid). */
+  actorUserId?: string;
+  /** Fechas YYYY-MM-DD, inclusivas; el servidor limita el rango a 366 días. */
+  from?: string;
+  to?: string;
+  /** Proceso de alcance del evento (uuid). */
+  processId?: string;
 }
 
 export { AUDIT_OBJECT_CODE_PATTERN } from './visible-code';
@@ -165,6 +172,10 @@ export async function listAuditEvents(
           ...(query.objectType ? { objectType: query.objectType } : {}),
           ...(query.action ? { action: query.action } : {}),
           ...(query.objectCode ? { objectCode: query.objectCode } : {}),
+          ...(query.actorUserId ? { actorUserId: query.actorUserId } : {}),
+          ...(query.from ? { from: query.from } : {}),
+          ...(query.to ? { to: query.to } : {}),
+          ...(query.processId ? { processId: query.processId } : {}),
         },
       },
     });

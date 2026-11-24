@@ -389,10 +389,50 @@
             "name": "objectCode",
             "required": false,
             "in": "query",
-            "description": "Filtra por el código visible del objeto: PRY-0012, PRY-0012-F2, PRY-0012-T07, ACT-0007 o DOC-0003 (sin distinguir mayúsculas). Un código que no existe devuelve la lista vacía.",
+            "description": "Código visible del objeto (PRY-0012, ACT-0007, DOC-0003...).",
             "schema": {
               "maxLength": 20,
               "example": "PRY-0012-T07",
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorUserId",
+            "required": false,
+            "in": "query",
+            "description": "Usuario que originó el evento (uuid).",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Desde (YYYY-MM-DD), inclusivo.",
+            "schema": {
+              "example": "2026-03-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Hasta (YYYY-MM-DD), inclusivo; rango máximo de 366 días.",
+            "schema": {
+              "example": "2026-03-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "description": "Proceso de alcance del evento (uuid).",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -430,6 +470,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Filtros inválidos (fecha irreal, inicio posterior al fin o rango mayor de 366 días)."
           },
           "401": {
             "description": "No hay un usuario actual valido."
@@ -11495,6 +11538,11 @@
             "type": "string",
             "description": "Id del objeto afectado."
           },
+          "actorName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre de quien originó la mutación. Nulo si fue el sistema o si el usuario ya no existe."
+          },
           "scopeProcessId": {
             "type": "string",
             "format": "uuid",
@@ -11536,6 +11584,7 @@
           "action",
           "objectType",
           "objectId",
+          "actorName",
           "scopeProcessId",
           "before",
           "after",
