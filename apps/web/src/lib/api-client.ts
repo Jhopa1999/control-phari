@@ -67,6 +67,7 @@ export type CreatePriorityEvaluation =
   components['schemas']['CreatePriorityEvaluationDto'];
 export type Approval = components['schemas']['ApprovalResponseDto'];
 export type CreateApproval = components['schemas']['CreateApprovalDto'];
+export type BatchApprovalResult = components['schemas']['BatchResultDto'];
 // --- Fase 3 (plan y ejecucion): tipos derivados del contrato OpenAPI ---
 export type Plan = components['schemas']['PlanResponseDto'];
 export type CreatePlan = components['schemas']['CreatePlanDto'];

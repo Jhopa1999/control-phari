@@ -1308,6 +1308,44 @@
         ]
       }
     },
+    "/requests/batch-approval": {
+      "post": {
+        "operationId": "ApprovalController_batchApproval",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchApprovalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado por solicitud, en el orden pedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lista vacía, con repetidos, de más de 25 ids o con ids inválidos."
+          },
+          "403": {
+            "description": "Rol insuficiente (exclusivo de JEFE_AREA)."
+          }
+        },
+        "summary": "Aprueba solicitudes en lote (no atómico; solo APROBAR). Solo JEFE_AREA.",
+        "tags": [
+          "approval"
+        ]
+      }
+    },
     "/requests/{id}/approval": {
       "get": {
         "operationId": "ApprovalController_findForRequest",
@@ -12700,6 +12738,84 @@
           "participants",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "BatchApprovalDto": {
+        "type": "object",
+        "properties": {
+          "requestIds": {
+            "minItems": 1,
+            "maxItems": 25,
+            "uniqueItems": true,
+            "description": "Ids de las solicitudes a aprobar (1 a 25, sin repetidos).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "requestIds"
+        ]
+      },
+      "BatchItemResultDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id pedido en el lote."
+          },
+          "code": {
+            "type": "string",
+            "nullable": true,
+            "description": "ID visible (p. ej. PRY-0012). Nulo si no se encontró o está fuera de alcance."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "APROBADA",
+              "OMITIDA"
+            ],
+            "description": "APROBADA si se aplicó; OMITIDA si se dejó sin cambios."
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo en español cuando el ítem se omitió; nulo si se aprobó."
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "status",
+          "reason"
+        ]
+      },
+      "BatchResultDto": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "description": "Un resultado por ítem, en el orden pedido.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchItemResultDto"
+            }
+          },
+          "approved": {
+            "type": "number",
+            "description": "Cantidad de ítems aprobados."
+          },
+          "skipped": {
+            "type": "number",
+            "description": "Cantidad de ítems omitidos."
+          }
+        },
+        "required": [
+          "results",
+          "approved",
+          "skipped"
         ]
       },
       "ApprovalResponseDto": {

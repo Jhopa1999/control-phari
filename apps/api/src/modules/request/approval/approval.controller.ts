@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Post,
@@ -16,6 +17,8 @@ import {
 } from '@nestjs/swagger';
 import { ApprovalService } from './approval.service';
 import { CreateApprovalDto } from './dto/create-approval.dto';
+import { BatchApprovalDto } from './dto/batch-approval.dto';
+import { BatchResultDto } from '../../../common/batch-result.dto';
 import { ApprovalResponseDto } from './dto/approval-response.dto';
 import { RequestResponseDto } from '../dto/request-response.dto';
 import { CurrentActor } from '../../auth/current-actor.decorator';
@@ -48,6 +51,20 @@ export class ApprovalController {
     return this.approvalService.pendingApproval(actor);
   }
 
+  @Post('batch-approval')
+  @HttpCode(200)
+  @Roles(RoleCode.JEFE_AREA)
+  @ApiOperation({ summary: 'Aprueba solicitudes en lote (no atómico; solo APROBAR). Solo JEFE_AREA.' })
+  @ApiBody({ type: BatchApprovalDto })
+  @ApiResponse({ status: 200, description: 'Resultado por solicitud, en el orden pedido.', type: BatchResultDto })
+  @ApiResponse({ status: 400, description: 'Lista vacía, con repetidos, de más de 25 ids o con ids inválidos.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente (exclusivo de JEFE_AREA).' })
+  batchApproval(
+    @CurrentActor() actor: CurrentActorType,
+    @Body() dto: BatchApprovalDto,
+  ) {
+    return this.approvalService.batchApprove(actor, dto.requestIds);
+  }
   @Get(':id/approval')
   @ApiOperation({ summary: 'Historico de decisiones de compromiso.' })
   @ApiParam({ name: 'id', format: 'uuid' })
