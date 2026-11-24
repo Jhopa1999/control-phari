@@ -182,7 +182,9 @@ test.describe('franja de alertas del Portafolio', () => {
     );
     await page.goto('/seguimiento/portafolio');
     await expect(page.getByText('No fue posible calcular los contadores. El listado sigue disponible.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Reintentar' })).toBeVisible();
+    // Acotado al contenido: el menú lateral tiene su propio «Reintentar» si
+    // falla la carga de usuarios.
+    await expect(page.locator('#contenido').getByRole('button', { name: 'Reintentar' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Franja 3' })).toBeVisible();
   });
 });
