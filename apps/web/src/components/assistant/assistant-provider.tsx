@@ -106,6 +106,8 @@ export interface AssistantHistory {
 
 export interface AssistantContextValue {
   availability: AssistantAvailability;
+  /** El modelo está simulado (solo ambientes no productivos). */
+  simulated: boolean;
   refreshAvailability: () => void;
   panelOpen: boolean;
   setPanelOpen: (open: boolean) => void;
@@ -223,6 +225,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
   const [conversationId, setConversationId] = React.useState<string | null>(null);
   const [title, setTitle] = React.useState<string | null>(null);
   const [messages, setMessages] = React.useState<ChatMessageView[]>([]);
+  const [simulated, setSimulated] = React.useState(false);
   const [loadingConversation, setLoadingConversation] = React.useState(false);
   const [loadFailure, setLoadFailure] = React.useState<'not-found' | 'error' | null>(null);
   const [streaming, setStreaming] = React.useState(false);
@@ -267,6 +270,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
         const limits = status.attachments ?? FALLBACK_LIMITS;
         limitsRef.current = limits;
         setAttachmentLimits(limits);
+        setSimulated(status.simulated === true);
         setAvailability(
           status.available
             ? { state: 'available', reason: null }
@@ -831,6 +835,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
   const value = React.useMemo<AssistantContextValue>(
     () => ({
       availability,
+      simulated,
       refreshAvailability,
       panelOpen,
       setPanelOpen,
@@ -872,6 +877,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }): 
     }),
     [
       availability,
+      simulated,
       refreshAvailability,
       panelOpen,
       view,

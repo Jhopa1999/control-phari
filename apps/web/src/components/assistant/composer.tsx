@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { AttachmentButton } from './attachment-button';
 import { AttachmentList } from './attachment-list';
 import { useAssistant } from './assistant-provider';
+import { SimulationBadge } from './simulation-badge';
 import { useAttachmentDropzone } from './use-attachment-dropzone';
 
 export interface ComposerProps {
@@ -53,7 +54,7 @@ export function Composer({
   textareaRef,
   className,
 }: ComposerProps): React.ReactElement {
-  const { announce, attachments, attachmentLimits, addFiles } = useAssistant();
+  const { announce, attachments, attachmentLimits, addFiles, simulated } = useAssistant();
   const attachHelpId = React.useId();
   const reasonId = React.useId();
   const helpId = React.useId();
@@ -138,6 +139,7 @@ export function Composer({
           Suelta los archivos para adjuntarlos
         </div>
       ) : null}
+      {simulated ? <SimulationBadge className="self-start" /> : null}
       <AttachmentList />
       <div className="flex items-end gap-2">
         <AttachmentButton

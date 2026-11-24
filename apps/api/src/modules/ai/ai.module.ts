@@ -10,7 +10,16 @@ import { AiModelCatalogService } from './ai-model-catalog.service';
 import { AiUsageService } from './ai-usage.service';
 import { TriageSuggestionController } from './triage-suggestion.controller';
 import { TriageSuggestionService } from './triage-suggestion.service';
-import { AwsBedrockClient, BEDROCK_CLIENT } from './bedrock.client';
+import {
+  AwsBedrockClient,
+  BEDROCK_CLIENT,
+  type BedrockClient,
+} from './bedrock.client';
+import {
+  isSimulatedModelEnabled,
+  MODEL_SIMULATED,
+  SimulatedBedrockClient,
+} from './simulated-bedrock.client';
 
 /**
  * Modulo de IA (IA Fase 1, FEAT-001). Monolito modular: NO es global.
@@ -30,10 +39,18 @@ import { AwsBedrockClient, BEDROCK_CLIENT } from './bedrock.client';
     AiModelCatalogService,
     AiUsageService,
     TriageSuggestionService,
-    { provide: BEDROCK_CLIENT, useClass: AwsBedrockClient },
+    // Modo de simulación (FEAT-007): solo fuera de producción y con
+    // ASSISTANT_MODEL_PROVIDER=simulated. Una sola evaluación por arranque.
+    { provide: MODEL_SIMULATED, useFactory: () => isSimulatedModelEnabled() },
+    {
+      provide: BEDROCK_CLIENT,
+      useFactory: (simulated: boolean): BedrockClient =>
+        simulated ? new SimulatedBedrockClient() : new AwsBedrockClient(),
+      inject: [MODEL_SIMULATED],
+    },
   ],
   // El asistente (AssistantModule) reutiliza el cliente de Bedrock, el catalogo
   // de modelos y el registro de consumo/presupuesto.
-  exports: [BEDROCK_CLIENT, AiModelCatalogService, AiUsageService],
+  exports: [BEDROCK_CLIENT, MODEL_SIMULATED, AiModelCatalogService, AiUsageService],
 })
 export class AiModule {}

@@ -1043,6 +1043,17 @@
         "docs/design/oleada4-f-mi-trabajo.md"
       ],
       "summary": "Mi trabajo (oleada 4, PR F, BL-060): contadores y Mis tareas primero; Por aprobar, Actividades recurrentes y Compromisos pasan a colas plegables bajo las tareas (cerradas por defecto, con recuento y preferencia recordada; el ancla #por-aprobar las abre). POST /tasks/batch-approve (solo jefe y líder; 1 a 25 tareas; no atómico; omite con motivo las propias, las que ya no están en revisión, las de proyecto cerrado y las no encontradas) con BatchResultDto compartido, selección múltiple y diálogo de confirmación en Por aprobar, y la tool MCP task.batch_approve. Sin migraciones ni parámetros nuevos."
+    },
+    {
+      "timestamp": "2026-11-24T17:00:00Z",
+      "trigger_file": "apps/api/src/modules/assistant/assistant.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/BACKLOG.md",
+        "docs/design/oleada4-g-asistente-simulado.md"
+      ],
+      "summary": "Modo de simulación del modelo del Asistente (FEAT-007, BL-059 P2): GET /assistant/status añade simulated; con ASSISTANT_MODEL_PROVIDER=simulated y NODE_ENV distinto de production la API usa SimulatedBedrockClient (respuesta determinista sin AWS); en producción la variable se ignora y se registra un error. La web muestra la insignia «Modo de simulación» en el estado vacío y el compositor. Sin tool nueva en el MCP, sin migraciones."
     }
   ]
 }
