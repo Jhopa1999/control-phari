@@ -3765,6 +3765,44 @@
         ]
       }
     },
+    "/tasks/batch-approve": {
+      "post": {
+        "operationId": "TaskController_batchApprove",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchApproveTasksDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado por tarea, en el orden pedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lista vacía, con repetidos, de más de 25 ids o con ids inválidos."
+          },
+          "403": {
+            "description": "Rol insuficiente (solo jefe de área y líder de proceso)."
+          }
+        },
+        "summary": "Aprueba tareas en revisión en lote (no atómico). Omite con motivo las propias, las que ya no están en revisión, las de proyectos cerrados y las no encontradas.",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
     "/plans/{planId}/tasks": {
       "get": {
         "operationId": "TaskController_findForPlan",
@@ -14718,6 +14756,25 @@
         "required": [
           "total",
           "items"
+        ]
+      },
+      "BatchApproveTasksDto": {
+        "type": "object",
+        "properties": {
+          "taskIds": {
+            "minItems": 1,
+            "maxItems": 25,
+            "uniqueItems": true,
+            "description": "Ids de las tareas a aprobar (1 a 25, sin repetidos).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "taskIds"
         ]
       },
       "TaskPredecessorDto": {

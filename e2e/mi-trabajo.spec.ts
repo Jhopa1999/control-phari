@@ -195,10 +195,17 @@ const BOARD_CLOSED = item(13, {
 });
 const BOARD_FIXTURE = [OVERDUE, BOARD_TODO, BOARD_WAITING, BOARD_CLOSED];
 
+/** Abre una cola plegable de Mi trabajo si está cerrada. */
+async function expandQueue(page: Page, key: 'por-aprobar' | 'recurrentes' | 'compromisos'): Promise<void> {
+  const toggle = page.locator(`#mt-cola-${key}-toggle`);
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+}
 async function openWith(
   page: Page,
   fixture: MyWorkItem[],
-  { pending = [] as PendingReviewItem[], asMember = false } = {},
+  { pending = [] as PendingReviewItem[], asMember = false, expand = true } = {},
 ): Promise<void> {
   if (asMember) await actAsMember(page);
   await mockPendingReview(page, pending);
@@ -210,6 +217,8 @@ async function openWith(
   });
   await page.goto('/mi-trabajo');
   await expect(page.getByRole('radiogroup', { name: 'Vista' })).toBeVisible();
+  // «Por aprobar» llega plegada y solo existe para quien puede aprobar.
+  if (expand && !asMember) await expandQueue(page, 'por-aprobar');
 }
 
 async function chooseView(page: Page, label: 'Lista' | 'Tablero'): Promise<void> {
@@ -419,6 +428,7 @@ const E3_FIXTURE = [
 function pendingItem(n: number, patch: Partial<PendingReviewItem> = {}): PendingReviewItem {
   return {
     id: `00000000-0000-4000-8000-00000000e0${String(n).padStart(2, '0')}`,
+    code: `PRY-0001-T${String(n).padStart(2, '0')}`,
     title: `Por aprobar ${n}`,
     responsibleUserId: '00000000-0000-4000-8000-00000000e1aa',
     responsibleName: 'Ana Pérez',
@@ -692,6 +702,7 @@ test.describe('«Por aprobar» (jefe de área y líderes)', () => {
       await route.fulfill({ response, json: [OVERDUE] });
     });
     await page.goto('/mi-trabajo');
+    await expandQueue(page, 'por-aprobar');
     const section = page.locator('section#por-aprobar');
     await expect(section.getByText(/No se pudieron cargar las tareas por aprobar/)).toBeVisible();
     await expect(row(page, OVERDUE)).toBeVisible();
@@ -719,7 +730,103 @@ test.describe('«Por aprobar» (jefe de área y líderes)', () => {
     });
     await page.goto('/mi-trabajo');
     await expect(page.getByText('No tienes tareas asignadas.')).toBeVisible();
+    await expandQueue(page, 'por-aprobar');
     await expect(page.locator('section#por-aprobar').locator(`li[data-task-id="${A.id}"]`)).toBeVisible();
+  });
+});
+
+test.describe('colas plegables y aprobar en lote (oleada 4, PR F)', () => {
+  const A = pendingItem(1, { title: 'Documentar reglas de conciliación' });
+  const B = pendingItem(2);
+  const C = pendingItem(3);
+
+  test('los contadores y Mis tareas van primero; las colas llegan plegadas con su recuento y recuerdan la elección', async ({
+    page,
+  }) => {
+    await openWith(page, [OVERDUE], { pending: [A, B], expand: false });
+    const toggle = page.locator('#mt-cola-por-aprobar-toggle');
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle).toContainText('2');
+    await expect(page.locator('section#por-aprobar')).toBeHidden();
+    // Orden: contadores, luego Mis tareas, luego las colas.
+    const counters = await page.getByRole('region', { name: 'Resumen de tu trabajo' }).boundingBox();
+    const myTasks = await page.getByRole('heading', { level: 2, name: 'Vencidas' }).boundingBox();
+    const queue = await toggle.boundingBox();
+    expect(counters && myTasks && queue).toBeTruthy();
+    expect(counters!.y).toBeLessThan(myTasks!.y);
+    expect(myTasks!.y).toBeLessThan(queue!.y);
+    // Abrir se recuerda al recargar.
+    await toggle.click();
+    await expect(page.locator('section#por-aprobar')).toBeVisible();
+    await page.reload();
+    await expect(page.locator('#mt-cola-por-aprobar-toggle')).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('section#por-aprobar')).toBeVisible();
+  });
+
+  test('el enlace /mi-trabajo#por-aprobar abre la sección y enfoca su título', async ({ page }) => {
+    await mockPendingReview(page, [A]);
+    await page.clock.setFixedTime(NOW);
+    await page.route((url) => url.pathname === '/my-work', async (route) => {
+      if (route.request().method() !== 'GET') return route.continue();
+      const response = await route.fetch();
+      await route.fulfill({ response, json: [OVERDUE] });
+    });
+    await page.goto('/mi-trabajo#por-aprobar');
+    const section = page.locator('section#por-aprobar');
+    await expect(section).toBeVisible();
+    await expect(section.getByRole('heading', { level: 2, name: 'Por aprobar' })).toBeFocused();
+  });
+
+  test('selecciona varias, confirma en un diálogo que las lista y muestra el motivo de las omitidas', async ({
+    page,
+  }) => {
+    await openWith(page, [OVERDUE], { pending: [A, B, C] });
+    const bodies: Array<Record<string, unknown>> = [];
+    await page.route('**/tasks/batch-approve', async (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      bodies.push(route.request().postDataJSON() as Record<string, unknown>);
+      await route.fulfill({
+        status: 200,
+        json: {
+          approved: 1,
+          skipped: 1,
+          results: [
+            { id: A.id, code: A.code, status: 'APROBADA', reason: null },
+            { id: B.id, code: B.code, status: 'OMITIDA', reason: 'La tarea ya no está en revisión.' },
+          ],
+        },
+      });
+    });
+    const section = page.locator('section#por-aprobar');
+    await section.getByRole('checkbox', { name: `Seleccionar ${A.code}: ${A.title}` }).check();
+    await section.getByRole('checkbox', { name: `Seleccionar ${B.code}: ${B.title}` }).check();
+    await expect(section).toContainText('2 seleccionadas');
+    await section.getByRole('button', { name: 'Aprobar 2 tareas' }).click();
+    const dialog = page.getByRole('alertdialog');
+    await expect(dialog).toBeVisible();
+    const summary = dialog.getByTestId('por-aprobar-resumen');
+    await expect(summary).toContainText(A.code);
+    await expect(summary).toContainText(A.title);
+    await expect(summary).toContainText(B.code);
+    await expect(summary).not.toContainText(C.code);
+    await dialog.getByRole('button', { name: 'Aprobar 2 tareas' }).click();
+    await expect(dialog).toBeHidden();
+    expect(bodies).toEqual([{ taskIds: [A.id, B.id] }]);
+    const result = page.getByTestId('por-aprobar-resultado');
+    await expect(result).toContainText('1 tarea aprobada · 1 omitida(s)');
+    await expect(result).toContainText('La tarea ya no está en revisión.');
+    await expect(result).toContainText(B.code);
+  });
+
+  test('no se puede seleccionar más de 25 tareas', async ({ page }) => {
+    const many = Array.from({ length: 30 }, (_, i) => pendingItem(i + 20));
+    await openWith(page, [OVERDUE], { pending: many });
+    const section = page.locator('section#por-aprobar');
+    await section.getByRole('button', { name: /Ver las \d+ restantes/ }).click();
+    await section.getByRole('checkbox', { name: /Seleccionar todas/ }).check();
+    await expect(section).toContainText('25 seleccionadas');
+    await expect(section.getByRole('checkbox', { name: new RegExp(`Seleccionar ${many[29].code}`) })).toBeDisabled();
   });
 });
 

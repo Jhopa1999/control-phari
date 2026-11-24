@@ -58,7 +58,8 @@ import {
 } from './mi-trabajo-parts';
 import { findControl, focusControl, restoreFocus, type FocusTarget } from './mi-trabajo-focus';
 import { boardHeadingId, boardTabId, columnLabel, MyWorkBoard } from './my-work-board';
-import { PendingReviewSection } from './pending-review-section';
+import { PendingReviewSection, PENDING_REVIEW_ANCHOR } from './pending-review-section';
+import { QueueFold } from './queue-fold';
 import { CommitmentsSection } from './commitments-section';
 import { RecurringSection } from './recurring-section';
 
@@ -170,6 +171,8 @@ export function MiTrabajoView(): React.ReactElement {
   const [recurringTotal, setRecurringTotal] = React.useState<number | null>(null);
   // Total de compromisos abiertos de la persona (null: cargando o con error).
   const [commitmentsTotal, setCommitmentsTotal] = React.useState<number | null>(null);
+  // Total real de la cola «Por aprobar» (null: cargando o con error).
+  const [pendingTotal, setPendingTotal] = React.useState<number | null>(null);
   // Panel lateral: la URL (?taskId=) manda; estos estados solo recuerdan cómo se abrió.
   const [openedFromList, setOpenedFromList] = React.useState(false);
   const [returnFocusId, setReturnFocusId] = React.useState<string | null>(null);
@@ -543,7 +546,7 @@ export function MiTrabajoView(): React.ReactElement {
           title="No tienes tareas asignadas."
           description={
             (recurringTotal ?? 0) > 0 || (commitmentsTotal ?? 0) > 0
-              ? 'Tus actividades recurrentes y compromisos pendientes aparecen arriba.'
+              ? 'Tus actividades recurrentes y compromisos pendientes aparecen abajo, en sus secciones plegables.'
               : 'Las tareas de las que seas responsable aparecerán aquí.'
           }
         />
@@ -737,16 +740,28 @@ export function MiTrabajoView(): React.ReactElement {
         {state === 'loading' || (state === 'success' && today === '') ? 'Cargando tus tareas…' : announcement}
       </p>
       <div className="@container flex flex-col gap-4" aria-busy={state === 'loading' || undefined}>
-        {canApprove ? (
-          <PendingReviewSection
-            ownInReview={ownInReview}
-            onOpen={(taskId) => openPanel(taskId)}
-            announce={announce}
-          />
-        ) : null}
-        <RecurringSection onTotalChange={setRecurringTotal} announce={announce} />
-        <CommitmentsSection onTotalChange={setCommitmentsTotal} announce={announce} />
         {body}
+        {canApprove ? (
+          <QueueFold
+            foldKey="por-aprobar"
+            title="Por aprobar"
+            count={pendingTotal}
+            openOnHash={PENDING_REVIEW_ANCHOR}
+          >
+            <PendingReviewSection
+              ownInReview={ownInReview}
+              onOpen={(taskId) => openPanel(taskId)}
+              announce={announce}
+              onTotalChange={setPendingTotal}
+            />
+          </QueueFold>
+        ) : null}
+        <QueueFold foldKey="recurrentes" title="Actividades recurrentes" count={recurringTotal} hideWhenEmpty>
+          <RecurringSection onTotalChange={setRecurringTotal} announce={announce} />
+        </QueueFold>
+        <QueueFold foldKey="compromisos" title="Compromisos" count={commitmentsTotal} hideWhenEmpty>
+          <CommitmentsSection onTotalChange={setCommitmentsTotal} announce={announce} />
+        </QueueFold>
       </div>
       <Sheet open={panelTaskId !== null} onOpenChange={(open) => !open && closePanel()}>
         <SheetContent

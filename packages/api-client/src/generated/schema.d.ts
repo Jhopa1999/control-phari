@@ -985,6 +985,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tasks/batch-approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aprueba tareas en revisión en lote (no atómico). Omite con motivo las propias, las que ya no están en revisión, las de proyectos cerrados y las no encontradas. */
+        post: operations["TaskController_batchApprove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/plans/{planId}/tasks": {
         parameters: {
             query?: never;
@@ -4810,6 +4827,10 @@ export interface components {
             total: number;
             /** @description Hasta 100 tareas; las que llevan más tiempo esperando, primero. */
             items: components["schemas"]["PendingReviewTaskDto"][];
+        };
+        BatchApproveTasksDto: {
+            /** @description Ids de las tareas a aprobar (1 a 25, sin repetidos). */
+            taskIds: string[];
         };
         TaskPredecessorDto: {
             /**
@@ -11521,6 +11542,44 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PendingReviewListDto"];
                 };
+            };
+            /** @description Rol insuficiente (solo jefe de área y líder de proceso). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TaskController_batchApprove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchApproveTasksDto"];
+            };
+        };
+        responses: {
+            /** @description Resultado por tarea, en el orden pedido. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchResultDto"];
+                };
+            };
+            /** @description Lista vacía, con repetidos, de más de 25 ids o con ids inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Rol insuficiente (solo jefe de área y líder de proceso). */
             403: {

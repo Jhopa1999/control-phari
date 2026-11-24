@@ -120,8 +120,8 @@ describe('catálogo de tools', () => {
     );
   });
 
-  it('expone 141 tools: las 47 originales, 65 de lectura (incluye el borrador del reporte semanal weekly-report.draft, la búsqueda por texto search.global, las alertas y la ejecución del portafolio portfolio.summary y portfolio.execution, la cola task.pending-review, worklog.options, la resolución por ID visible: code.resolve, request.get_by_code y phase.get_by_code, las vistas de actividades recurrentes: tablero, calendario, mi trabajo, adjuntos y vista previa, y las sugerencias del día y los compromisos de Mi trabajo y de mis reuniones), help.search y 27 de escritura (la aprobación de solicitudes en lote request.batch_approve, coordinación, sugerencias de la bitácora, planes, activos, documentos, actividades recurrentes y el reenvío a triage de una solicitud devuelta)', () => {
-    assert.equal(ALL_SPECS.length, 141);
+  it('expone 142 tools: las 47 originales, 65 de lectura (incluye el borrador del reporte semanal weekly-report.draft, la búsqueda por texto search.global, las alertas y la ejecución del portafolio portfolio.summary y portfolio.execution, la cola task.pending-review, worklog.options, la resolución por ID visible: code.resolve, request.get_by_code y phase.get_by_code, las vistas de actividades recurrentes: tablero, calendario, mi trabajo, adjuntos y vista previa, y las sugerencias del día y los compromisos de Mi trabajo y de mis reuniones), help.search y 28 de escritura (la aprobación de solicitudes en lote request.batch_approve, la aprobación de tareas en lote, coordinación, sugerencias de la bitácora, planes, activos, documentos, actividades recurrentes y el reenvío a triage de una solicitud devuelta)', () => {
+    assert.equal(ALL_SPECS.length, 142);
   });
 });
 

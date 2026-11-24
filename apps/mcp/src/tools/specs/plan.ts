@@ -205,6 +205,21 @@ export const PLAN_SPECS: ReadonlyArray<ToolSpec> = [
       'El backend valida los datos.',
   },
   {
+    name: 'task.batch_approve',
+    operation: 'POST /tasks/batch-approve',
+    access: 'write',
+    description:
+      'Aprueba varias tareas en revisión de una vez (POST /tasks/batch-approve); ' +
+      'solo líder de proceso o jefe de área. Cuerpo: taskIds, de 1 a 25 UUID sin ' +
+      'repetidos. Cada tarea pasa de EN_REVISION a TERMINADA por el mismo camino que ' +
+      'task.status.update. NO es atómico: se omiten con motivo, sin frenar a las demás, ' +
+      'las tareas propias del actor, las que ya no están en revisión, las de proyectos ' +
+      'cerrados y las inexistentes o fuera de alcance (no se distinguen). Devolver una ' +
+      'tarea a En curso se hace de una en una con task.status.update. Para ver qué ' +
+      'tareas esperan aprobación usa task.pending-review. Devuelve results (id, code, ' +
+      'status APROBADA u OMITIDA, reason en español), approved y skipped.',
+  },
+  {
     name: 'task.progress.update',
     operation: 'PATCH /tasks/{id}/progress',
     access: 'write',

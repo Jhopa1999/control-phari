@@ -299,8 +299,9 @@ solo pueden hacerlo `JEFE_AREA` y `LIDER_PROCESO`; un integrante, aunque sea el
 responsable, recibe `403` con un mensaje en español (debe enviarla a revisión y esperar
 la aprobación). Enviar a revisión y devolver siguen siendo del responsable, el líder y el
 jefe, y enviar a revisión exige avance 100 % y la evidencia que pida la tarea (`409`). La
-cola de aprobación `GET /tasks/pending-review` es exclusiva de `JEFE_AREA` y
-`LIDER_PROCESO`. La interfaz solo refleja este permiso con los `roleCodes` del actor; el
+cola de aprobación `GET /tasks/pending-review` y la aprobación en lote
+`POST /tasks/batch-approve` son exclusivas de `JEFE_AREA` y `LIDER_PROCESO` (el integrante
+recibe `403`); en el lote, las tareas cuyo responsable es el propio actor se omiten con motivo. La interfaz solo refleja este permiso con los `roleCodes` del actor; el
 servidor es quien decide.
 
 ## Matriz de módulos (`auth/module-matrix.ts`)

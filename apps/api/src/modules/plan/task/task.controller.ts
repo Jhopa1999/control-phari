@@ -26,6 +26,8 @@ import { UpdateTaskProgressDto } from './dto/update-task-progress.dto';
 import { AcceptTaskDto } from './dto/accept-task.dto';
 import { ListPlanTasksDto } from './dto/list-plan-tasks.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
+import { BatchApproveTasksDto } from './dto/batch-approve-tasks.dto';
+import { BatchResultDto } from '../../../common/batch-result.dto';
 import { MyWorkItemDto } from './dto/my-work-item.dto';
 import { PendingReviewListDto } from './dto/pending-review-task.dto';
 import { TaskHistoryEntryDto } from './dto/task-history-entry.dto';
@@ -70,6 +72,25 @@ export class TaskController {
   @ApiResponse({ status: 403, description: 'Rol insuficiente (solo jefe de área y líder de proceso).' })
   pendingReview(@CurrentActor() actor: CurrentActorType) {
     return this.taskService.pendingReview(actor);
+  }
+
+  // Declarada ANTES de `tasks/:id` (como `tasks/pending-review`).
+  @Post('tasks/batch-approve')
+  @HttpCode(200)
+  @Roles(RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO)
+  @ApiOperation({
+    summary:
+      'Aprueba tareas en revisión en lote (no atómico). Omite con motivo las propias, las que ya no están en revisión, las de proyectos cerrados y las no encontradas.',
+  })
+  @ApiBody({ type: BatchApproveTasksDto })
+  @ApiResponse({ status: 200, description: 'Resultado por tarea, en el orden pedido.', type: BatchResultDto })
+  @ApiResponse({ status: 400, description: 'Lista vacía, con repetidos, de más de 25 ids o con ids inválidos.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente (solo jefe de área y líder de proceso).' })
+  batchApprove(
+    @CurrentActor() actor: CurrentActorType,
+    @Body() dto: BatchApproveTasksDto,
+  ) {
+    return this.taskService.batchApprove(actor, dto.taskIds);
   }
 
   @Get('plans/:planId/tasks')

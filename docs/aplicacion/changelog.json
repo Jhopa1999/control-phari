@@ -1032,6 +1032,17 @@
         "docs/BACKLOG.md"
       ],
       "summary": "Aprobar solicitudes en lote (oleada 4 PR E, D20): nuevo POST /requests/batch-approval (solo JEFE_AREA, 1 a 25 ids únicos, no atómico, resultado por ítem APROBADA/OMITIDA con motivo en español) con DTO de lote compartido; la aprobación individual y la de lote marcan approvedByCreator en la auditoría cuando aprueba quien creó la solicitud (sin cambiar permisos); tool MCP request.batch_approve. Web: selección múltiple, barra y diálogo de confirmación en Aprobaciones y «Aprobada por el creador» en Ver cambio."
+    },
+    {
+      "timestamp": "2026-11-19T12:00:00Z",
+      "trigger_file": "apps/api/src/modules/plan/task/task.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/design/oleada4-f-mi-trabajo.md"
+      ],
+      "summary": "Mi trabajo (oleada 4, PR F, BL-060): contadores y Mis tareas primero; Por aprobar, Actividades recurrentes y Compromisos pasan a colas plegables bajo las tareas (cerradas por defecto, con recuento y preferencia recordada; el ancla #por-aprobar las abre). POST /tasks/batch-approve (solo jefe y líder; 1 a 25 tareas; no atómico; omite con motivo las propias, las que ya no están en revisión, las de proyecto cerrado y las no encontradas) con BatchResultDto compartido, selección múltiple y diálogo de confirmación en Por aprobar, y la tool MCP task.batch_approve. Sin migraciones ni parámetros nuevos."
     }
   ]
 }

@@ -391,6 +391,10 @@ test.describe('Reuniones y compromisos', () => {
     cleanup.commitments.push(commitment.id);
 
     await page.goto('/mi-trabajo');
+    // Las colas de Mi trabajo llegan plegadas: se abre la de compromisos.
+    const toggle = page.locator('#mt-cola-compromisos-toggle');
+    await expect(toggle).toBeVisible();
+    if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click();
     const section = page.getByRole('region', { name: 'Compromisos' });
     await expect(section).toBeVisible();
     const row = section.getByRole('listitem').filter({ hasText: title });
