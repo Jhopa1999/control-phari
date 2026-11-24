@@ -18,6 +18,7 @@ function fakeEvents(count: number, objectType: string): AuditEvent[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
     actorUserId: null,
+    actorName: null,
     action: 'UPDATE',
     objectType,
     objectId: `00000000-0000-4000-9000-${String(i).padStart(12, '0')}`,
@@ -204,4 +205,62 @@ test('«Código del objeto»: uno inválido no consulta; uno válido viaja al se
   await page.getByRole('button', { name: 'Limpiar filtros' }).click();
   await expect(field).toHaveValue('');
   await expect(page.getByText('5 eventos', { exact: true })).toBeVisible();
+});
+
+test('abre ya filtrada por código desde un enlace; fechas, actor y chips funcionan', async ({ page }) => {
+  const queries: URLSearchParams[] = [];
+  await page.route('**/audit-events?**', async (route: Route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const params = new URL(route.request().url()).searchParams;
+    queries.push(params);
+    const response = await route.fetch();
+    const [event] = fakeEvents(1, 'ASSET');
+    await route.fulfill({
+      response,
+      json: {
+        data: [
+          {
+            ...event,
+            actorUserId: '00000000-0000-4000-a000-000000000001',
+            actorName: 'Ana E2E',
+            objectCode: 'ACT-0007',
+            objectLabel: 'E2E Contrato marco',
+          },
+        ],
+        page: 1,
+        pageSize: 25,
+        total: 1,
+        hasMore: false,
+      },
+    });
+  });
+  await page.goto('/gobierno/auditoria?objectCode=act-0007');
+  // El código de la URL llega ya aplicado, con su chip y el nombre del actor (no su UUID).
+  await expect.poll(() => queries.some((q) => q.get('objectCode') === 'ACT-0007')).toBe(true);
+  await expect(page.getByLabel('Código del objeto')).toHaveValue('ACT-0007');
+  const chips = page.getByRole('list', { name: 'Filtros activos' });
+  await expect(chips.getByText('ACT-0007')).toBeVisible();
+  await expect(page.getByRole('row', { name: /E2E Contrato marco/ }).getByText('Ana E2E')).toBeVisible();
+  // Rango invertido: error junto a «Hasta» y ninguna consulta con ese rango.
+  await page.getByLabel('Desde', { exact: true }).fill('2026-03-10');
+  await page.getByLabel('Hasta', { exact: true }).fill('2026-03-01');
+  await expect(page.getByText('La fecha final no puede ser anterior a la inicial.')).toBeVisible();
+  expect(queries.some((q) => q.get('from') === '2026-03-10' && q.get('to') === '2026-03-01')).toBe(false);
+  // Rango válido: viaja from y to, y aparecen sus chips.
+  const ranged = page.waitForRequest((r) => {
+    const q = new URL(r.url()).searchParams;
+    return q.get('from') === '2026-03-01' && q.get('to') === '2026-03-31';
+  });
+  await page.getByLabel('Hasta', { exact: true }).fill('2026-03-31');
+  await page.getByLabel('Desde', { exact: true }).fill('2026-03-01');
+  await ranged;
+  await expect(chips.getByText('Desde:')).toBeVisible();
+  await expect(chips.getByText('Hasta:')).toBeVisible();
+  // Quitar el chip de código vuelve a consultar sin él.
+  const withoutCode = page.waitForRequest(
+    (r) => new URL(r.url()).pathname === '/audit-events' && !new URL(r.url()).searchParams.has('objectCode'),
+  );
+  await page.getByRole('button', { name: /Quitar filtro Código/ }).click();
+  await withoutCode;
+  await expect(page.getByLabel('Código del objeto')).toHaveValue('');
 });

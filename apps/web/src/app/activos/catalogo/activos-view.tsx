@@ -105,7 +105,7 @@ function CodeCell({ code }: { code: string | null | undefined }): React.ReactEle
 }
 
 /** Consecuencia del retiro con dependientes (o sin recuentos). */
-function retireDescription(asset: Asset | null): string {
+export function retireDescription(asset: Asset | null): string {
   if (!asset) return '';
   const requests = typeof asset.requestsCount === 'number' ? asset.requestsCount : null;
   const documents = typeof asset.documentsCount === 'number' ? asset.documentsCount : null;
@@ -118,13 +118,13 @@ function retireDescription(asset: Asset | null): string {
   return `Este activo está asociado a ${parts.join(' y ')}. El retiro no borra ningún dato y puedes recuperarlo cuando quieras.`;
 }
 
-function trimOrUndefined(value: string): string | undefined {
+export function trimOrUndefined(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
 }
 
 /** Transición disponible desde el estado actual (como hoy, §4.1). */
-function transitionOf(status: string): { label: string; target: AssetStatus } | null {
+export function transitionOf(status: string): { label: string; target: AssetStatus } | null {
   if (status === 'BORRADOR') return { label: 'Activar', target: 'ACTIVO' };
   if (status === 'ACTIVO') return { label: 'Retirar', target: 'RETIRADO' };
   if (status === 'RETIRADO') return { label: 'Recuperar', target: 'ACTIVO' };
@@ -395,7 +395,7 @@ export function ActivosView(): React.ReactElement {
       {
         key: 'history',
         label: 'Ver historial',
-        href: `/activos/catalogo/${asset.id}/historial`,
+        href: `/activos/catalogo/${asset.id}?tab=solicitudes`,
         placement: 'menu',
       },
     ];
@@ -592,7 +592,7 @@ export function ActivosView(): React.ReactElement {
                   <CodeCell code={asset.code} />
                 </TableCell>
                 <TableCell className="min-w-56 max-w-[28rem]">
-                  <CellTitle>{asset.name}</CellTitle>
+                  <CellTitle href={`/activos/catalogo/${asset.id}`}>{asset.name}</CellTitle>
                 </TableCell>
                 <TableCell className="min-w-40 max-w-[18rem]">
                   <ProcessRefCell
@@ -643,7 +643,11 @@ export function ActivosView(): React.ReactElement {
           }}
           card={(asset) => ({
             code: <CodeCell code={asset.code} />,
-            title: <CellTitle touch>{asset.name}</CellTitle>,
+            title: (
+              <CellTitle touch href={`/activos/catalogo/${asset.id}`}>
+                {asset.name}
+              </CellTitle>
+            ),
             subtitle: [asset.processName, asset.processCode].filter(Boolean).join(' · '),
             badges: [<StatusBadge key="status" kind="asset" value={asset.status} />],
             meta: [

@@ -27,6 +27,14 @@ export class AuditEventResponseDto {
 
   @ApiProperty({
     type: String,
+    nullable: true,
+    description:
+      'Nombre de quien originó la mutación. Nulo si fue el sistema o si el usuario ya no existe.',
+  })
+  actorName!: string | null;
+
+  @ApiProperty({
+    type: String,
     format: 'uuid',
     nullable: true,
     description: 'Proceso de alcance del evento (null si no aplica).',

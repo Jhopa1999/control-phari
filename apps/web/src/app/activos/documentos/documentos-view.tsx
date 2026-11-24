@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Download, Eye, FileText, Pencil, Plus, RotateCcwClock } from 'lucide-react';
+import { Download, Eye, FileText, History, Pencil, Plus, RotateCcwClock } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   CellTitle,
@@ -533,6 +533,16 @@ export function DocumentosView(): React.ReactElement {
         busyLabel: 'Descargando…',
       },
     ];
+    // Enlace a la Auditoría ya filtrada por el código (solo con acceso al módulo).
+    if (allowedModules.has('audit') && doc.code) {
+      actions.push({
+        key: 'audit',
+        label: 'Ver auditoría',
+        icon: History,
+        href: `/gobierno/auditoria?objectCode=${encodeURIComponent(doc.code)}`,
+        placement: 'menu',
+      });
+    }
     if (canChangeStatus(doc)) {
       const busy = statusBusyId === doc.id;
       for (const transition of transitionsOf(doc, isJefe)) {

@@ -15,8 +15,14 @@ export const AUDIT_SPECS: ReadonlyArray<ToolSpec> = [
       'PASSWORD_CHANGED para la exigencia, el retiro y el cambio de contraseña); page ' +
       '(desde 1) y pageSize (1..100) paginan el resultado. objectCode filtra por ' +
       'el código visible del objeto (PRY-0012, PRY-0012-F2, PRY-0012-T07, ' +
-      'ACT-0007, DOC-0003); un código inexistente devuelve la lista vacía. Cada ' +
-      'evento trae objectCode y objectLabel (código y nombre del objeto; nulos ' +
-      'si no aplica o ya no existe).',
+      'ACT-0007, DOC-0003); un código inexistente devuelve la lista vacía. ' +
+      'actorUserId filtra por quien originó el evento (uuid), processId por el ' +
+      'proceso de alcance (uuid), from y to acotan por fecha (YYYY-MM-DD, ' +
+      'inclusivas; from no puede ser posterior a to y el rango máximo es de 366 ' +
+      'días, si no responde 400). Los filtros solo reducen lo que el rol del ' +
+      'actor ya puede ver, nunca lo amplían. Cada evento trae objectCode y ' +
+      'objectLabel (código y nombre del objeto; nulos si no aplica o ya no ' +
+      'existe) y actorName (nombre de quien actuó; nulo si fue el sistema o el ' +
+      'usuario ya no existe).',
   },
 ];
