@@ -14,7 +14,7 @@ import { type APIRequestContext, expect, test } from '@playwright/test';
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001';
 const ACTOR = 'jefe@demo.local';
 const HEADERS = { 'X-Actor-Id': ACTOR } as const;
-const SEARCH = 'Buscar por código';
+const SEARCH = 'Buscar pantallas, solicitudes o tareas';
 
 async function send(
   api: APIRequestContext,
@@ -79,131 +79,307 @@ test.beforeAll(async ({ request }) => {
   untriagedCode = (await createRequest(request, `E2E sin triage ${ts}`)).code as string;
 });
 
-function search(page: import('@playwright/test').Page) {
-  return page.getByRole('combobox', { name: SEARCH });
+/** En desarrollo, la primera visita a una ruta la compila al vuelo: margen para navegar. */
+const NAV = { timeout: 20_000 } as const;
+
+function palette(page: import('@playwright/test').Page) {
+  return page.getByRole('dialog', { name: 'Buscar en el portal' });
 }
 
-test.describe('Búsqueda global por ID (escritorio)', () => {
+function search(page: import('@playwright/test').Page) {
+  return palette(page).getByRole('combobox', { name: SEARCH });
+}
+
+/** Abre la paleta con el botón de la barra superior; reintenta hasta que la hidratación lo permita. */
+async function openPalette(page: import('@playwright/test').Page): Promise<void> {
+  await expect(async () => {
+    if (!(await search(page).isVisible())) {
+      await page.getByRole('button', { name: 'Buscar… en el portal' }).click({ timeout: 1_000 });
+    }
+    await expect(search(page)).toBeVisible({ timeout: 1_500 });
+  }).toPass({ timeout: 15_000 });
+}
+
+test.describe('Paleta de búsqueda (escritorio)', () => {
   test('PRY-xxxx abre la ficha de la solicitud', async ({ page }) => {
     await page.goto('/inicio');
+    await openPalette(page);
     await search(page).fill(requestCode.toLowerCase());
     const option = page.getByRole('option').first();
     await expect(option).toContainText(`E2E búsqueda ${ts}`);
     await expect(option).toContainText('Solicitud');
     await search(page).press('Enter');
-    await expect(page).toHaveURL(new RegExp(`/demanda/solicitudes/${requestId}`));
+    await expect(page).toHaveURL(new RegExp(`/demanda/solicitudes/${requestId}`), NAV);
+    await expect(palette(page)).toBeHidden();
+    // El foco pasa al contenido nuevo.
+    await expect(page.locator('main#contenido')).toBeFocused();
   });
 
   test('PRY-xxxx-F1 abre el Plan con la fase visible', async ({ page }) => {
     await page.goto('/inicio');
+    await openPalette(page);
     await search(page).fill(`${requestCode}-F1`);
     await expect(page.getByRole('option').first()).toContainText('Fase');
     await search(page).press('Enter');
     await expect(page).toHaveURL(
       new RegExp(`/seguimiento/plan\\?requestId=${requestId}&phaseId=${phaseId}`),
+      NAV,
     );
   });
 
   test('PRY-xxxx-T01 abre el detalle de la tarea', async ({ page }) => {
     await page.goto('/inicio');
+    await openPalette(page);
     await search(page).fill(`${requestCode}-T01`);
     const option = page.getByRole('option').first();
     await expect(option).toContainText(taskTitle);
     await expect(option).toContainText('Tarea');
     await search(page).press('Enter');
-    await expect(page).toHaveURL(/\/seguimiento\/tareas\?taskId=/);
+    await expect(page).toHaveURL(/\/seguimiento\/tareas\?taskId=/, NAV);
   });
 
   test('un código inexistente anuncia «no encontrado»', async ({ page }) => {
     await page.goto('/inicio');
+    await openPalette(page);
     await search(page).fill('PRY-9999-T99');
-    await expect(page.getByText('No encontramos PRY-9999-T99, o no tienes acceso.')).toBeVisible();
-    await expect(page.getByRole('status').filter({ hasText: 'No se encontró PRY-9999-T99' })).toBeAttached();
-    await expect(search(page)).toHaveAttribute('aria-invalid', 'true');
+    await expect(
+      palette(page).getByText(
+        'No encontramos PRY-9999-T99, o no tienes acceso. Revisa que esté completo.',
+      ),
+    ).toBeVisible();
+    await expect(
+      palette(page).getByRole('status').filter({ hasText: 'No encontramos PRY-9999-T99' }),
+    ).toBeAttached();
   });
 
-  test('un texto que no es código avisa de que no es válido al pulsar Intro', async ({ page }) => {
+  test('un texto por título lista solicitudes y tareas y Intro abre la primera', async ({ page }) => {
     await page.goto('/inicio');
-    await search(page).fill('hola mundo');
+    await openPalette(page);
+    await search(page).fill(`E2E búsqueda ${ts}`);
+    const results = palette(page).getByRole('group', { name: 'Solicitudes y tareas' });
+    await expect(results.getByRole('option').first()).toContainText(`E2E búsqueda ${ts}`);
+    await expect(results.getByRole('option').first()).toContainText('Solicitud');
+    await search(page).fill(`Tarea búsqueda ${ts}`);
+    await expect(results.getByRole('option').first()).toContainText(`${requestCode}-T01`);
+    await expect(results.getByRole('option').first()).toContainText('Tarea');
     await search(page).press('Enter');
-    await expect(page.getByText(/No es un código válido/)).toBeVisible();
+    await expect(page).toHaveURL(/\/seguimiento\/tareas\?taskId=/, NAV);
   });
 
-  test('teclado: «/» enfoca la búsqueda, Escape la limpia y no actúa dentro de un campo', async ({ page }) => {
+  test('un solo carácter filtra pantallas y pide al menos 2 para solicitudes y tareas', async ({ page }) => {
     await page.goto('/inicio');
-    await expect(search(page)).toBeVisible();
-    // Reintenta hasta que la hidratación registre el atajo.
+    await openPalette(page);
+    await search(page).fill('s');
+    await expect(
+      palette(page).getByText('Escribe al menos 2 caracteres para buscar solicitudes y tareas.'),
+    ).toBeVisible();
+  });
+
+  test('un texto sin coincidencias muestra «sin resultados»', async ({ page }) => {
+    await page.goto('/inicio');
+    await openPalette(page);
+    await search(page).fill(`zzqx${ts}`);
+    await expect(palette(page).getByText(`No encontramos resultados para «zzqx${ts}»`)).toBeVisible();
+  });
+
+  test('una pantalla se abre desde la paleta', async ({ page }) => {
+    await page.goto('/inicio');
+    await openPalette(page);
+    await search(page).fill('priorizacion');
+    await expect(
+      palette(page).getByRole('group', { name: 'Pantallas' }).getByRole('option'),
+    ).toHaveText([/Priorización/]);
+    await search(page).press('Enter');
+    await expect(page).toHaveURL('/demanda/priorizacion', NAV);
+  });
+
+  test('teclado: Ctrl+K abre, las flechas mueven, Esc cierra y devuelve el foco', async ({ page }) => {
+    await page.goto('/demanda/solicitudes');
+    const q = page.locator('#sol-buscar');
+    await expect(q).toBeVisible();
+    await q.focus();
+    // Reintenta hasta que la hidratación registre el atajo. Ctrl+K funciona incluso dentro de un campo.
     await expect(async () => {
-      await page.keyboard.press('/');
-      await expect(search(page)).toBeFocused({ timeout: 500 });
+      if (!(await search(page).isVisible())) await page.keyboard.press('Control+K');
+      await expect(search(page)).toBeFocused({ timeout: 1_000 });
     }).toPass({ timeout: 10_000 });
-    await search(page).fill(requestCode);
-    await expect(page.getByRole('option').first()).toBeVisible();
-    await page.keyboard.press('Escape'); // cierra el panel
-    await expect(page.getByRole('option')).toHaveCount(0);
-    await page.keyboard.press('Escape'); // limpia el texto
+    const options = palette(page).getByRole('option');
+    await expect(options.first()).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('ArrowDown');
+    await expect(options.nth(1)).toHaveAttribute('aria-selected', 'true');
+    await expect(options.first()).toHaveAttribute('aria-selected', 'false');
+    await page.keyboard.press('ArrowUp');
+    await expect(options.first()).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('Escape');
+    await expect(palette(page)).toBeHidden();
+    await expect(q).toBeFocused();
+    // Ctrl+K con la paleta abierta la cierra.
+    await page.keyboard.press('Control+K');
+    await expect(search(page)).toBeVisible();
+    await page.keyboard.press('Control+K');
+    await expect(palette(page)).toBeHidden();
+  });
+
+  test('teclado: «/» abre la paleta y no actúa dentro de un campo editable', async ({ page }) => {
+    await page.goto('/inicio');
+    await expect(page.getByRole('button', { name: 'Buscar… en el portal' })).toBeVisible();
+    await expect(async () => {
+      if (!(await search(page).isVisible())) await page.keyboard.press('/');
+      await expect(search(page)).toBeFocused({ timeout: 1_000 });
+    }).toPass({ timeout: 10_000 });
     await expect(search(page)).toHaveValue('');
-    // El atajo no roba la «/» a otro campo editable.
+    await page.keyboard.press('Escape');
     await page.goto('/demanda/solicitudes');
     const q = page.locator('#sol-buscar');
     await q.focus();
     await page.keyboard.type('a/b');
     await expect(q).toHaveValue('a/b');
-    await expect(search(page)).not.toBeFocused();
+    await expect(palette(page)).toHaveCount(0);
   });
 
-  test('la cabecera de búsqueda no tiene violaciones serias de accesibilidad', async ({ page }) => {
+  test('Esc cierra y, al reabrir, el campo está vacío', async ({ page }) => {
     await page.goto('/inicio');
-    await expect(search(page)).toBeVisible();
+    await openPalette(page);
+    await search(page).fill('algo');
+    await page.keyboard.press('Escape');
+    await expect(palette(page)).toBeHidden();
+    await openPalette(page);
+    await expect(search(page)).toHaveValue('');
+  });
+
+  test('la paleta no tiene violaciones serias de accesibilidad', async ({ page }) => {
+    await page.goto('/inicio');
+    await openPalette(page);
     for (const scheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: scheme });
       await page.evaluate((s) => document.documentElement.classList.toggle('dark', s === 'dark'), scheme);
-      await search(page).fill(`${requestCode}-T01`);
-      await expect(page.getByRole('option').first()).toBeVisible();
-      const { violations } = await new AxeBuilder({ page })
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-        .include('form[role="search"]')
-        .analyze();
-      expect(
-        violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
-        `axe ${scheme}`,
-      ).toEqual([]);
-      await search(page).fill('PRY-9999');
-      await expect(page.getByText('No encontramos PRY-9999, o no tienes acceso.')).toBeVisible();
-      const notFound = await new AxeBuilder({ page })
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-        .include('form[role="search"]')
-        .analyze();
-      expect(
-        notFound.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
-        `axe no encontrado ${scheme}`,
-      ).toEqual([]);
-      await search(page).fill('');
+      for (const text of [`${requestCode}-T01`, 'PRY-9999', 'priorizacion', `zzqx${ts}`]) {
+        await search(page).fill(text);
+        await expect(palette(page).getByRole('status')).toBeAttached();
+        // Espera a que la búsqueda se asiente (sin esqueleto).
+        await expect(palette(page).locator('[aria-busy="true"]')).toHaveCount(0);
+        await expect(palette(page).locator('[aria-hidden="true"].animate-none')).toHaveCount(0);
+        const { violations } = await new AxeBuilder({ page })
+          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+          .include('[role="dialog"]')
+          .analyze();
+        expect(
+          violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
+          `axe ${scheme} «${text}»`,
+        ).toEqual([]);
+      }
     }
   });
 });
 
-test.describe('Búsqueda global por ID (móvil)', () => {
+test.describe('Paleta de búsqueda (móvil)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('el botón abre el modo búsqueda, resuelve la tarea y navega', async ({ page }) => {
+  test('la lupa abre la paleta a pantalla completa, resuelve la tarea y navega', async ({ page }) => {
     await page.goto('/inicio');
     await expect(search(page)).toHaveCount(0);
-    await page.getByRole('button', { name: SEARCH }).click();
+    const trigger = page.getByRole('button', { name: 'Buscar', exact: true });
+    await expect(async () => {
+      if (!(await search(page).isVisible())) await trigger.click({ timeout: 1_000 });
+      await expect(search(page)).toBeVisible({ timeout: 1_500 });
+    }).toPass({ timeout: 15_000 });
     await expect(search(page)).toBeFocused();
+    // La animación de entrada escala el diálogo: se mide cuando termina.
+    await expect.poll(async () => (await palette(page).boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(389);
     await search(page).fill(`${requestCode}-T01`);
     await expect(page.getByRole('option').first()).toContainText(taskTitle);
     await search(page).press('Enter');
-    await expect(page).toHaveURL(/\/seguimiento\/tareas\?taskId=/);
-    await expect(search(page)).toHaveCount(0);
-    await expect(page.getByRole('button', { name: SEARCH })).toBeVisible();
+    await expect(page).toHaveURL(/\/seguimiento\/tareas\?taskId=/, NAV);
+    await expect(palette(page)).toBeHidden();
+    // La barra no cambia de forma: la lupa sigue visible.
+    await expect(trigger).toBeVisible();
   });
 
-  test('Escape sin texto cierra el modo búsqueda y devuelve el foco al botón', async ({ page }) => {
+  test('Esc cierra la paleta y devuelve el foco a la lupa', async ({ page }) => {
     await page.goto('/inicio');
-    await page.getByRole('button', { name: SEARCH }).click();
+    const trigger = page.getByRole('button', { name: 'Buscar', exact: true });
+    await expect(async () => {
+      if (!(await search(page).isVisible())) await trigger.click({ timeout: 1_000 });
+      await expect(search(page)).toBeVisible({ timeout: 1_500 });
+    }).toPass({ timeout: 15_000 });
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('button', { name: SEARCH })).toBeFocused();
+    await expect(palette(page)).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+
+  test('el campo del cajón del menú abre la paleta', async ({ page }) => {
+    await page.goto('/inicio');
+    const drawer = page.getByRole('dialog', { name: 'Menú principal', exact: true });
+    // Espera a la hidratación (la lupa se monta con el actor) antes de abrir el cajón.
+    await expect(page.getByRole('button', { name: 'Buscar', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
+    await expect(drawer).toBeVisible();
+    await drawer.getByRole('button', { name: 'Buscar…' }).click();
+    await expect(drawer).toBeHidden();
+    await expect(search(page)).toBeVisible();
+  });
+});
+
+test.describe('Búsqueda por texto: el alcance manda', () => {
+  const INTEGRANTE = { 'X-Actor-Id': 'integrante@demo.local' } as const;
+  const scopeTag = `E2E alcance búsqueda ${ts}`;
+  let jefeOnlyId = '';
+  let ownId = '';
+
+  test.beforeAll(async ({ request }) => {
+    // Del jefe y sin proceso: fuera del alcance del integrante.
+    const jefeReq = await request.post(`${API_URL}/requests`, {
+      headers: HEADERS,
+      data: { title: `${scopeTag} del jefe` },
+    });
+    expect(jefeReq.status()).toBe(201);
+    jefeOnlyId = ((await jefeReq.json()) as { id: string }).id;
+    // Creada por el integrante: dentro de su alcance.
+    const own = await request.post(`${API_URL}/requests`, {
+      headers: INTEGRANTE,
+      data: { title: `${scopeTag} propia` },
+    });
+    expect(own.status()).toBe(201);
+    ownId = ((await own.json()) as { id: string }).id;
+  });
+
+  test.afterAll(async ({ request }) => {
+    for (const id of [jefeOnlyId, ownId]) {
+      if (id) await request.delete(`${API_URL}/requests/${id}`, { headers: HEADERS });
+    }
+  });
+
+  test('API: el jefe ve ambas; el integrante solo la suya; q corta o larga da 400', async ({ request }) => {
+    const q = encodeURIComponent(scopeTag);
+    const asJefe = await request.get(`${API_URL}/search?q=${q}`, { headers: HEADERS });
+    expect(asJefe.ok()).toBeTruthy();
+    const jefeBody = (await asJefe.json()) as { requests: Array<{ id: string }>; tasks: unknown[]; truncated: boolean };
+    expect(jefeBody.requests.map((r) => r.id).sort()).toEqual([jefeOnlyId, ownId].sort());
+    const asMember = await request.get(`${API_URL}/search?q=${q}`, { headers: INTEGRANTE });
+    const memberBody = (await asMember.json()) as { requests: Array<{ id: string }> };
+    expect(memberBody.requests.map((r) => r.id)).toEqual([ownId]);
+    expect((await request.get(`${API_URL}/search?q=a`, { headers: HEADERS })).status()).toBe(400);
+    expect(
+      (await request.get(`${API_URL}/search?q=${'a'.repeat(81)}`, { headers: HEADERS })).status(),
+    ).toBe(400);
+    expect((await request.get(`${API_URL}/search?q=ab&limit=21`, { headers: HEADERS })).status()).toBe(400);
+    const limited = await request.get(`${API_URL}/search?q=${q}&limit=1`, { headers: HEADERS });
+    const limitedBody = (await limited.json()) as { requests: unknown[]; truncated: boolean };
+    expect(limitedBody.requests).toHaveLength(1);
+    expect(limitedBody.truncated).toBe(true);
+  });
+
+  test('UI: el integrante no ve en la paleta la solicitud del jefe', async ({ page, context }) => {
+    await context.addInitScript(() => {
+      window.localStorage.setItem('actorId', 'integrante@demo.local');
+    });
+    await page.goto('/inicio');
+    await openPalette(page);
+    await search(page).fill(scopeTag);
+    const results = palette(page).getByRole('group', { name: 'Solicitudes y tareas' });
+    await expect(results.getByRole('option')).toHaveCount(1);
+    await expect(results.getByRole('option').first()).toContainText('propia');
+    await expect(results.getByText('del jefe')).toHaveCount(0);
   });
 });
 

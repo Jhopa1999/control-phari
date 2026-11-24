@@ -126,32 +126,6 @@ test.describe('escritorio 1440×900', () => {
     ).toHaveAttribute('aria-current', 'page');
   });
 
-  test('el buscador de pantallas filtra sin tildes y Enter abre la primera coincidencia', async ({
-    page,
-  }) => {
-    await page.goto('/inicio');
-    const menu = mainNav(page);
-    const search = menu.getByRole('searchbox', { name: 'Buscar pantalla' });
-
-    await search.fill('priorizacion');
-    const results = menu.getByRole('list', { name: 'Resultados de la búsqueda' });
-    await expect(results.getByRole('link')).toHaveText([/Priorización/]);
-    await expect(menu.getByRole('status')).toHaveText('1 pantalla');
-
-    await search.fill('zzz inexistente');
-    await expect(menu.getByText('Ninguna pantalla coincide')).toBeVisible();
-    await expect(menu.getByRole('status')).toHaveText('Sin resultados');
-
-    await search.fill('priorizacion');
-    await search.press('Enter');
-    await expect(page).toHaveURL('/demanda/priorizacion');
-    // Tras navegar, el buscador se limpia y vuelve el menú agrupado.
-    await expect(search).toHaveValue('');
-    await expect(
-      menu.getByRole('link', { name: 'Priorización', exact: true }),
-    ).toHaveAttribute('aria-current', 'page');
-  });
-
   test('el integrante solo ve los módulos que tiene habilitados', async ({
     page,
     context,

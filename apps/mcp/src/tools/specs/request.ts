@@ -52,6 +52,19 @@ export const REQUEST_SPECS: ReadonlyArray<ToolSpec> = [
       'o está fuera del alcance. Úsala primero cuando no sepas qué tipo de ID es.',
   },
   {
+    name: 'search.global',
+    operation: 'GET /search',
+    access: 'read',
+    description:
+      'Busca por texto (GET /search) solicitudes (código, título y solicitante) y ' +
+      'tareas (código y título) dentro del alcance del usuario. q es obligatoria ' +
+      '(de 2 a 80 caracteres), sin distinguir mayúsculas pero sí tildes; limit ' +
+      '(1 a 20, 10 por defecto) es por grupo. Devuelve requests, tasks (mismo ' +
+      'formato que code.resolve) y truncated si hay más resultados; la ' +
+      'coincidencia exacta de código va primero. Úsala cuando el usuario cite ' +
+      'parte de un título o nombre; si ya tiene un ID completo, usa code.resolve.',
+  },
+  {
     name: 'request.create',
     operation: 'POST /requests',
     access: 'write',

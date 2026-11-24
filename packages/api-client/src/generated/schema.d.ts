@@ -2733,6 +2733,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Busca solicitudes (código, título y solicitante) y tareas (código y título) por texto, dentro del alcance del actor. Devuelve hasta `limit` resultados por grupo, con la coincidencia exacta de código primero, y `truncated` si hay más. */
+        get: operations["SearchController_find"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recurring-activities/occurrences": {
         parameters: {
             query?: never;
@@ -7639,6 +7656,14 @@ export interface components {
             query: string;
             /** @description Secciones más relevantes, de mayor a menor; vacío si nada coincide. */
             results: components["schemas"]["HelpMatchDto"][];
+        };
+        SearchResponseDto: {
+            /** @description Solicitudes en alcance del actor. La coincidencia exacta de código va primero; el resto por fecha de registro descendente. */
+            requests: components["schemas"]["CodeResolutionDto"][];
+            /** @description Tareas de solicitudes en alcance del actor. La coincidencia exacta de código va primero; el resto por creación descendente. */
+            tasks: components["schemas"]["CodeResolutionDto"][];
+            /** @description Verdadero si algún grupo tenía más resultados que el límite pedido. */
+            truncated: boolean;
         };
         /**
          * @description Estado de presentacion derivado (PROGRAMADA, PENDIENTE, EN_CURSO, VENCE_HOY, VENCIDA, COMPLETADA, COMPLETADA_TARDE, CANCELADA).
@@ -16762,6 +16787,45 @@ export interface operations {
             };
             /** @description No hay un usuario actual valido. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SearchController_find: {
+        parameters: {
+            query: {
+                /** @description Texto a buscar (de 2 a 80 caracteres tras recortar espacios). Busca sin distinguir mayúsculas, pero distingue tildes. Solicitudes: código, título y solicitante. Tareas: código y título. */
+                q: string;
+                /** @description Máximo de resultados por grupo (solicitudes y tareas). Por defecto 10; tope 20. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resultados por grupo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResponseDto"];
+                };
+            };
+            /** @description Texto de 2 a 80 caracteres o límite de 1 a 20 no válidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

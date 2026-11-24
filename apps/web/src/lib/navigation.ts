@@ -28,7 +28,7 @@ import {
   Workflow,
   type LucideIcon,
 } from 'lucide-react';
-import { matchesSearch } from './table-sort';
+import { matchesSearch, normalizeForSearch } from './table-sort';
 
 /*
  * Arquitectura de información del portal (design §8.5). Ninguna URL cambia:
@@ -431,6 +431,59 @@ export function searchNavItems(groups: readonly NavGroup[], query: string): NavS
       .filter((item) => matchesSearch(`${group.label ?? ''} ${item.label}`, query))
       .map((item) => ({ item, groupLabel: group.label, appId: group.appId })),
   );
+}
+
+/** Pantalla filtrable de la paleta de búsqueda (Ctrl/⌘+K). */
+export interface ScreenEntry {
+  item: NavItem;
+  /** Título del grupo del ítem (null en el grupo de entrada, que no lo tiene). */
+  groupLabel: string | null;
+  /** Nombre de la aplicación del grupo; ausente en los grupos transversales. */
+  appName?: string;
+  /** Texto secundario de la fila: «Grupo», o «Aplicación · Grupo» si hay varias aplicaciones. */
+  hint: string | null;
+}
+
+/**
+ * Pantallas que el actor puede abrir, en el orden del menú. Recibe los grupos ya
+ * filtrados por permisos (`getVisibleNavGroups`) y las aplicaciones visibles. La
+ * aplicación solo se nombra en el texto secundario si hay más de una visible.
+ */
+export function listScreens(
+  groups: readonly NavGroup[],
+  apps: readonly NavApp[],
+): ScreenEntry[] {
+  const showApp = apps.length > 1;
+  return groups.flatMap((group) => {
+    const appName = group.appId ? apps.find((app) => app.id === group.appId)?.name : undefined;
+    const hint = [showApp ? appName : undefined, group.label].filter(Boolean).join(' · ') || null;
+    return group.items.map((item) => ({ item, groupLabel: group.label, appName, hint }));
+  });
+}
+
+/**
+ * Pantallas cuyo nombre, grupo o aplicación contienen TODAS las palabras del
+ * texto, sin distinguir mayúsculas ni tildes. Primero las que empiezan por el
+ * texto; después, el orden del menú. Un texto vacío devuelve todas.
+ */
+export function searchScreens(
+  groups: readonly NavGroup[],
+  apps: readonly NavApp[],
+  query: string,
+): ScreenEntry[] {
+  const all = listScreens(groups, apps);
+  const needle = normalizeForSearch(query);
+  if (needle === '') return all;
+  const words = needle.split(/\s+/);
+  const matches = all.filter((entry) => {
+    const haystack = normalizeForSearch(
+      `${entry.item.label} ${entry.groupLabel ?? ''} ${entry.appName ?? ''}`,
+    );
+    return words.every((word) => haystack.includes(word));
+  });
+  const starts = (entry: ScreenEntry): boolean =>
+    normalizeForSearch(entry.item.label).startsWith(needle);
+  return [...matches.filter(starts), ...matches.filter((entry) => !starts(entry))];
 }
 
 /** El ítem está activo en su ruta, en las de `activeFor` y en sus subrutas. */

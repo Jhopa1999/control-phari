@@ -9981,6 +9981,59 @@
         ]
       }
     },
+    "/search": {
+      "get": {
+        "operationId": "SearchController_find",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Texto a buscar (de 2 a 80 caracteres tras recortar espacios). Busca sin distinguir mayúsculas, pero distingue tildes. Solicitudes: código, título y solicitante. Tareas: código y título.",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 80,
+              "example": "portal",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Máximo de resultados por grupo (solicitudes y tareas). Por defecto 10; tope 20.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 20,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultados por grupo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Texto de 2 a 80 caracteres o límite de 1 a 20 no válidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Busca solicitudes (código, título y solicitante) y tareas (código y título) por texto, dentro del alcance del actor. Devuelve hasta `limit` resultados por grupo, con la coincidencia exacta de código primero, y `truncated` si hay más.",
+        "tags": [
+          "search"
+        ]
+      }
+    },
     "/recurring-activities/occurrences": {
       "get": {
         "operationId": "OccurrenceController_findAll",
@@ -21082,6 +21135,34 @@
         "required": [
           "query",
           "results"
+        ]
+      },
+      "SearchResponseDto": {
+        "type": "object",
+        "properties": {
+          "requests": {
+            "description": "Solicitudes en alcance del actor. La coincidencia exacta de código va primero; el resto por fecha de registro descendente.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeResolutionDto"
+            }
+          },
+          "tasks": {
+            "description": "Tareas de solicitudes en alcance del actor. La coincidencia exacta de código va primero; el resto por creación descendente.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodeResolutionDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "Verdadero si algún grupo tenía más resultados que el límite pedido."
+          }
+        },
+        "required": [
+          "requests",
+          "tasks",
+          "truncated"
         ]
       },
       "OccurrenceDisplayStatus": {

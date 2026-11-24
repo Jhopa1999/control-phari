@@ -53,7 +53,7 @@ puede bajar). El test `src/__tests__/coverage.test.ts` **falla** si una
 operación no tiene tool ni exclusión, si una exclusión está obsoleta, si una
 tool no tiene operación en el contrato, si falta una anotación, si una tool GET
 no es de solo lectura, si un `body` es de forma libre o si hay más pendientes
-que el tope. Hoy hay 136 tools sobre 229 operaciones (45 exclusiones permanentes
+que el tope. Hoy hay 137 tools sobre 230 operaciones (45 exclusiones permanentes
 y 48 pendientes, todas de escritura). Ya están expuestas las de coordinación (crear y editar
 reuniones —con su duración `durationMinutes`— y compromisos, y cambiar el estado de compromisos; los hallazgos se retiraron con el módulo Novedades), las
 sugerencias del día de la Bitácora (`worklog.daily.suggestions` de lectura y `worklog.daily.suggestions.accept`,
@@ -87,6 +87,9 @@ ni exclusiones nuevas.
 > y fase (`phase.get_by_code`, `GET /plan-phases/by-code/{code}`); `code.resolve`
 > (`GET /codes/{code}`) resuelve cualquier código completo y devuelve su tipo.
 > Todas son de solo lectura; solo aceptan la forma completa (no `T07` suelto).
+> `search.global` (`GET /search`, solo lectura) busca por texto (2 a 80 caracteres)
+> solicitudes y tareas dentro del alcance del usuario y devuelve `requests`, `tasks`
+> y `truncated`; sirve cuando el usuario cita parte de un título y no un código.
 > Nota: `audit.events.list` ahora sigue el contrato vigente (`objectType`,
 > `action`, `page`, `pageSize`); el argumento `take` ya no existe en la API.
 

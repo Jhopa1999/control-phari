@@ -978,6 +978,17 @@
         "apps/mcp/README.md"
       ],
       "summary": "Cambio de contraseña obligatorio: columna users.must_change_password (migración aditiva, nadie marcado); POST /users/force-password-change (solo jefe, todos o selección, retirar con enabled=false, auditoría PASSWORD_CHANGE_REQUIRED/CLEARED); POST /auth/change-password (exige la actual, política vigente, distinta, audita PASSWORD_CHANGED); bloqueo 403 PASSWORD_CHANGE_REQUIRED en CurrentUserGuard para cookie y Bearer salvo /me/permissions y change-password; reset-password limpia el indicador; mustChangePassword en /me/permissions y /users; pantalla /cambiar-contrasena y acciones en Equipo y permisos. MCP: dos exclusiones permanentes y mensaje claro para el 403."
+    },
+    {
+      "timestamp": "2026-11-24T02:02:21Z",
+      "trigger_file": "apps/api/src/modules/search/search.controller.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "apps/mcp/README.md"
+      ],
+      "summary": "Búsqueda por texto (D18, oleada 4 PR A): GET /search?q=&limit= (roles jefe, líder e integrante; q de 2 a 80 caracteres, limit 1 a 20 por grupo) sobre el alcance único requestScopeWhere, solicitudes por código, título y solicitante y tareas por código y título, código exacto primero y truncated; tool MCP search.global. Web: paleta Ctrl/⌘+K que unifica «Buscar código» y «Buscar pantalla…» (grupos Pantallas y Solicitudes y tareas); el menú lateral ya no filtra en línea y la barra móvil ya no cambia de forma."
     }
   ]
 }

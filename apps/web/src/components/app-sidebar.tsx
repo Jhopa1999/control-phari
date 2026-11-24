@@ -2,14 +2,14 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { ChevronDown, Info, LayoutGrid, PanelLeftClose, PanelLeftOpen, Search, X } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { ChevronDown, Info, LayoutGrid, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { AppSwitcher } from '@/components/app-switcher';
 import { BrandMark, BrandName } from '@/components/brand';
+import { SidebarSearchTrigger } from '@/components/global-code-search';
+import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -30,7 +30,6 @@ import {
   getWorkspaceGroups,
   isNavItemActive,
   resolveActiveApp,
-  searchNavItems,
   type NavItem,
 } from '@/lib/navigation';
 import { useLastAppId } from '@/lib/use-active-app';
@@ -161,11 +160,8 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
 
   const actorSelectId = isDrawer ? 'drawer-actor-select' : 'actor-select';
   const groupLabelId = (group: string): string => `${isDrawer ? 'drawer-' : ''}nav-g-${group}`;
-  const searchId = isDrawer ? 'drawer-nav-search' : 'nav-search';
 
-  const router = useRouter();
   const { collapsed, toggle, expand } = useCollapsedNavGroups();
-  const [query, setQuery] = React.useState('');
   // Pestaña del grupo ya desplegado para la ruta actual (ver el efecto de abajo).
   const expandedForPathRef = React.useRef<string | null>(null);
 
@@ -251,14 +247,6 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
     if (owner && owner.id !== lastAppId) setLastAppId(owner.id);
   }, [pathname, visibleApps, visibleGroups, lastAppId, setLastAppId]);
 
-  // Con texto en el buscador el menú pasa a una lista plana de coincidencias.
-  // En riel no hay buscador, así que tampoco se filtra.
-  const searching = !isRail && query.trim() !== '';
-  const results = React.useMemo(
-    () => (searching ? searchNavItems(visibleGroups, query) : []),
-    [searching, visibleGroups, query],
-  );
-
   // Al llegar a una pantalla de un grupo plegado (enlace, buscador, URL directa),
   // el grupo se despliega para que la página actual no quede oculta. Solo una
   // vez por ruta: si el usuario pliega después ese grupo, se respeta.
@@ -271,22 +259,6 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
     // Los grupos transversales viven dentro de la sección «workspace».
     if (active) expand(active.appId ? active.id : 'workspace');
   }, [pathname, visibleGroups, expand]);
-
-  function handleNavigate(): void {
-    setQuery('');
-    onNavigate?.();
-  }
-
-  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>): void {
-    if (event.key === 'Escape' && query !== '') {
-      event.preventDefault();
-      setQuery('');
-    } else if (event.key === 'Enter' && results.length > 0) {
-      event.preventDefault();
-      router.push(results[0].item.href);
-      handleNavigate();
-    }
-  }
 
   // Mismas condiciones que antes del rediseño. Mientras la identidad no se ha
   // leído o los permisos aún no empezaron a cargar ('none' con actor), se
@@ -390,73 +362,15 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
       default:
         return (
           <div className="flex flex-col gap-4 rail:gap-2">
-            {/* Buscador de pantallas (BL-027): solo con el menú expandido. */}
-            <div className="flex flex-col gap-1 px-0.5 rail:hidden">
-              <Label htmlFor={searchId} className="sr-only">
-                Buscar pantalla
-              </Label>
-              <div className="relative">
-                <Search
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-sidebar-muted-foreground"
-                />
-                <Input
-                  id={searchId}
-                  type="search"
-                  value={query}
-                  placeholder="Buscar pantalla…"
-                  autoComplete="off"
-                  className="h-8 border-sidebar-field-border bg-sidebar-field pl-8 text-sm text-sidebar-foreground placeholder:text-sidebar-muted-foreground focus-visible:border-sidebar-ring focus-visible:outline-sidebar-ring [&::-webkit-search-cancel-button]:hidden"
-                  onChange={(event) => setQuery(event.target.value)}
-                  onKeyDown={handleSearchKeyDown}
-                />
-                {query !== '' ? (
-                  <Button
-                    type="button"
-                    variant="sidebar"
-                    size="icon-sm"
-                    className="absolute top-1/2 right-0.5 size-7 -translate-y-1/2"
-                    aria-label="Limpiar búsqueda"
-                    onClick={() => setQuery('')}
-                  >
-                    <X aria-hidden="true" />
-                  </Button>
-                ) : null}
-              </div>
-              {/* Región viva: anuncia cuántas pantallas coinciden. */}
-              <p role="status" className="sr-only">
-                {searching
-                  ? results.length === 0
-                    ? 'Sin resultados'
-                    : `${results.length} ${results.length === 1 ? 'pantalla' : 'pantallas'}`
-                  : ''}
-              </p>
+            {/* Buscador: abre la paleta Ctrl/⌘+K (campo expandido; icono en el riel). */}
+            <div className="px-0.5 rail:hidden">
+              <SidebarSearchTrigger variant="field" onBeforeOpen={isDrawer ? onNavigate : undefined} />
             </div>
-
-            {searching ? (
-              results.length === 0 ? (
-                <p className="px-2.5 text-sm text-sidebar-muted-foreground">
-                  Ninguna pantalla coincide con «{query.trim()}». Prueba con otra palabra.
-                </p>
-              ) : (
-                <ul aria-label="Resultados de la búsqueda" className="flex flex-col gap-0.5">
-                  {results.map(({ item, groupLabel, appId }) => (
-                    <NavLink
-                      key={item.href}
-                      item={item}
-                      active={isNavItemActive(item, pathname)}
-                      isRail={isRail}
-                      hint={
-                        appId && activeApp && appId !== activeApp.id
-                          ? `${visibleApps.find((app) => app.id === appId)?.name ?? appId} · ${groupLabel ?? ''}`
-                          : groupLabel
-                      }
-                      onNavigate={handleNavigate}
-                    />
-                  ))}
-                </ul>
-              )
-            ) : (
+            <div className="hidden justify-center rail:flex">
+              <LabelTooltip label="Buscar" side="right">
+                <SidebarSearchTrigger variant="rail" />
+              </LabelTooltip>
+            </div>
               <>
               {appGroups.map((group, index) => {
                 // El grupo de entrada no tiene título y no se pliega. En riel
@@ -521,7 +435,6 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
               })}
               {renderWorkspace()}
               </>
-            )}
           </div>
         );
     }
