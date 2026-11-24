@@ -58,6 +58,24 @@ describe('ListPortfolioDto (seleccion multiple)', () => {
     );
   });
 
+  it.each(['VENCIDA', 'PROXIMA', 'CON_DESVIACION', 'BLOQUEADA'])(
+    'alert acepta %s y se combina con state y band',
+    async (alert) => {
+      const { dto, errors } = await parse({ alert, state: 'EN_EJECUCION', band: 'P1' });
+      expect(errors).toHaveLength(0);
+      expect(dto.alert).toBe(alert);
+      expect(dto.state).toEqual(['EN_EJECUCION']);
+    },
+  );
+
+  it('alert rechaza valores fuera del enum y varios valores', async () => {
+    const bad = await parse({ alert: 'INVENTADA' });
+    expect(bad.errors).toHaveLength(1);
+    expect(bad.errors[0].property).toBe('alert');
+    const many = await parse({ alert: ['VENCIDA', 'BLOQUEADA'] });
+    expect(many.errors).toHaveLength(1);
+  });
+
   it('rechaza una cadena vacia como elemento', async () => {
     const { errors } = await parse({ state: '' });
     expect(errors).toHaveLength(1);

@@ -8963,6 +8963,21 @@
             }
           },
           {
+            "name": "alert",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por una alerta (una sola): VENCIDA (dueStatus VENCIDO), PROXIMA (PROXIMO_A_VENCER), CON_DESVIACION (scheduleVarianceDays mayor que 0) o BLOQUEADA (blocked). Se combina con Y con el resto de filtros y se resuelve antes de paginar: X-Total-Count ya lo descuenta. Sin page ni pageSize se evalúan como máximo 1000 iniciativas.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "VENCIDA",
+                "PROXIMA",
+                "CON_DESVIACION",
+                "BLOQUEADA"
+              ]
+            }
+          },
+          {
             "name": "sort",
             "required": false,
             "in": "query",
@@ -9031,6 +9046,148 @@
           }
         },
         "summary": "Listado del portafolio en alcance, el mismo que Solicitudes: jefe y líder ven todas; el integrante, sus procesos más las que creó. Filtros opcionales de selección múltiple (OR dentro de un filtro, AND entre filtros), búsqueda q en código y título, orden sort/dir y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.",
+        "tags": [
+          "portfolio"
+        ]
+      }
+    },
+    "/portfolio/summary": {
+      "get": {
+        "operationId": "PortfolioController_summary",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado.",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "mainProcessId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por uno o varios procesos principales (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aún por triar). Se repite el parámetro (?mainProcessId=a&mainProcessId=b); los valores se combinan con O. Máximo 50 valores.",
+            "schema": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por uno o varios estados operativos (?state=A&state=B; se combinan con O). Máximo 50 valores.",
+            "schema": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "REGISTRADA",
+                  "EN_TRIAGE",
+                  "DEVUELTA",
+                  "RECHAZADA",
+                  "BACKLOG_PRIORIZADO",
+                  "COMPROMETIDA",
+                  "EN_PLANIFICACION",
+                  "EN_EJECUCION",
+                  "BLOQUEADA",
+                  "EN_VALIDACION",
+                  "LISTA_PARA_LIBERAR",
+                  "EN_ESTABILIZACION",
+                  "OPERATIVA",
+                  "CERRADA",
+                  "RETIRADA"
+                ]
+              }
+            }
+          },
+          {
+            "name": "band",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por una o varias bandas de prioridad (P1..P4) o SIN_PRIORIZAR (?band=P1&band=SIN_PRIORIZAR; se combinan con O). Máximo 50 valores.",
+            "schema": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "P1",
+                  "P2",
+                  "P3",
+                  "P4",
+                  "SIN_PRIORIZAR"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contadores del alcance filtrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioSummaryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros inválidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Contadores de la franja del portafolio (vencidas, próximas a vencer, con desviación y bloqueadas) sobre el mismo alcance y filtros que el listado (q, mainProcessId, state, band), sin alert ni paginación. Cada cifra coincide con X-Total-Count de GET /portfolio con el filtro alert correspondiente. Una iniciativa puede contar en varios grupos. Evalúa como máximo 1000 iniciativas.",
+        "tags": [
+          "portfolio"
+        ]
+      }
+    },
+    "/portfolio/{id}/execution": {
+      "get": {
+        "operationId": "PortfolioController_execution",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ejecución de la iniciativa (sin plan: hasPlan false y fases vacías).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioExecutionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El id no es un UUID."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "No existe o está fuera de alcance."
+          }
+        },
+        "summary": "Ejecución de una iniciativa en solo lectura: estado del plan, línea base, pronóstico, desviación, avance y fases con sus tareas (código, título, estado, avance, fechas, responsable). Para quien tiene Portafolio, sin exigir el módulo de Planificación. Mismo alcance que Solicitudes.",
         "tags": [
           "portfolio"
         ]
@@ -19880,6 +20037,246 @@
           "scheduleVarianceDays",
           "blocked",
           "blockedReason"
+        ]
+      },
+      "PortfolioSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Iniciativas del alcance filtrado (sin alert) que se evaluaron."
+          },
+          "overdue": {
+            "type": "number",
+            "description": "Vencidas: dueStatus VENCIDO (alert=VENCIDA)."
+          },
+          "dueSoon": {
+            "type": "number",
+            "description": "Próximas a vencer: dueStatus PROXIMO_A_VENCER (alert=PROXIMA)."
+          },
+          "withVariance": {
+            "type": "number",
+            "description": "Con desviación: scheduleVarianceDays mayor que 0 (alert=CON_DESVIACION)."
+          },
+          "blocked": {
+            "type": "number",
+            "description": "Bloqueadas: bloqueo activo sin resolver (alert=BLOQUEADA)."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "true si el alcance filtrado superó las 1000 iniciativas y solo se contaron las primeras 1000."
+          }
+        },
+        "required": [
+          "total",
+          "overdue",
+          "dueSoon",
+          "withVariance",
+          "blocked",
+          "truncated"
+        ]
+      },
+      "PortfolioExecutionTaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id de la tarea."
+          },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012-T07",
+            "description": "ID visible de la tarea. Solo lectura."
+          },
+          "title": {
+            "type": "string",
+            "description": "Título de la tarea."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "POR_HACER",
+              "EN_CURSO",
+              "BLOQUEADA",
+              "EN_REVISION",
+              "TERMINADA"
+            ],
+            "description": "Estado de la tarea."
+          },
+          "progress": {
+            "type": "number",
+            "description": "Avance de la tarea (0..100)."
+          },
+          "startDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Inicio (YYYY-MM-DD) o null."
+          },
+          "endDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fin (YYYY-MM-DD) o null."
+          },
+          "responsibleName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del responsable o null."
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "status",
+          "progress",
+          "startDate",
+          "endDate",
+          "responsibleName"
+        ]
+      },
+      "PortfolioExecutionPhaseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id de la fase."
+          },
+          "code": {
+            "type": "string",
+            "example": "PRY-0012-F2",
+            "description": "ID visible de la fase. Solo lectura."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la fase."
+          },
+          "order": {
+            "type": "number",
+            "description": "Posición de la fase en el plan (desde 1)."
+          },
+          "startDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Inicio (YYYY-MM-DD) o null."
+          },
+          "endDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fin (YYYY-MM-DD) o null."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "SIN_TAREAS",
+              "POR_HACER",
+              "EN_CURSO",
+              "TERMINADA"
+            ],
+            "description": "Estado derivado de sus tareas: SIN_TAREAS, TERMINADA (todas terminadas), POR_HACER (ninguna iniciada ni terminada) o EN_CURSO."
+          },
+          "progressPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "Avance de la fase (0..100) según sus tareas; null si no tiene tareas."
+          },
+          "tasksTotal": {
+            "type": "number",
+            "description": "Tareas de la fase."
+          },
+          "tasksDone": {
+            "type": "number",
+            "description": "Tareas terminadas de la fase."
+          },
+          "tasks": {
+            "description": "Tareas de la fase.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioExecutionTaskDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "order",
+          "startDate",
+          "endDate",
+          "status",
+          "progressPercent",
+          "tasksTotal",
+          "tasksDone",
+          "tasks"
+        ]
+      },
+      "PortfolioExecutionResponseDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id de la solicitud."
+          },
+          "requestCode": {
+            "type": "string",
+            "example": "PRY-0012",
+            "description": "ID visible de la solicitud."
+          },
+          "hasPlan": {
+            "type": "boolean",
+            "description": "false si la solicitud aún no tiene plan."
+          },
+          "planStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "BORRADOR",
+              "EN_AUTORIZACION",
+              "AUTORIZADO",
+              "DEVUELTO"
+            ],
+            "description": "Estado del plan o null sin plan."
+          },
+          "baselineDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Línea base (YYYY-MM-DD): compromiso del plan autorizado. Null si el plan no está autorizado o no hay fecha."
+          },
+          "forecastDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Pronóstico de fin (YYYY-MM-DD): mayor fecha fin entre tareas sin terminar, o null."
+          },
+          "scheduleVarianceDays": {
+            "type": "number",
+            "nullable": true,
+            "description": "Desviación en días del pronóstico respecto a la línea base (positivo = se corrió). Null sin plan autorizado o sin tareas abiertas con fecha."
+          },
+          "progressPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "Avance global (0..100) según todas las tareas; null si no hay tareas."
+          },
+          "phases": {
+            "description": "Fases del plan en orden.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioExecutionPhaseDto"
+            }
+          }
+        },
+        "required": [
+          "requestId",
+          "requestCode",
+          "hasPlan",
+          "planStatus",
+          "baselineDate",
+          "forecastDate",
+          "scheduleVarianceDays",
+          "progressPercent",
+          "phases"
         ]
       },
       "SmtpConfigResponseDto": {

@@ -2387,6 +2387,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/portfolio/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Contadores de la franja del portafolio (vencidas, próximas a vencer, con desviación y bloqueadas) sobre el mismo alcance y filtros que el listado (q, mainProcessId, state, band), sin alert ni paginación. Cada cifra coincide con X-Total-Count de GET /portfolio con el filtro alert correspondiente. Una iniciativa puede contar en varios grupos. Evalúa como máximo 1000 iniciativas. */
+        get: operations["PortfolioController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portfolio/{id}/execution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ejecución de una iniciativa en solo lectura: estado del plan, línea base, pronóstico, desviación, avance y fases con sus tareas (código, título, estado, avance, fechas, responsable). Para quien tiene Portafolio, sin exigir el módulo de Planificación. Mismo alcance que Solicitudes. */
+        get: operations["PortfolioController_execution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/smtp-config": {
         parameters: {
             query?: never;
@@ -7170,6 +7204,109 @@ export interface components {
             blocked: boolean;
             /** @description Motivo del bloqueo o null. */
             blockedReason: string | null;
+        };
+        PortfolioSummaryResponseDto: {
+            /** @description Iniciativas del alcance filtrado (sin alert) que se evaluaron. */
+            total: number;
+            /** @description Vencidas: dueStatus VENCIDO (alert=VENCIDA). */
+            overdue: number;
+            /** @description Próximas a vencer: dueStatus PROXIMO_A_VENCER (alert=PROXIMA). */
+            dueSoon: number;
+            /** @description Con desviación: scheduleVarianceDays mayor que 0 (alert=CON_DESVIACION). */
+            withVariance: number;
+            /** @description Bloqueadas: bloqueo activo sin resolver (alert=BLOQUEADA). */
+            blocked: number;
+            /** @description true si el alcance filtrado superó las 1000 iniciativas y solo se contaron las primeras 1000. */
+            truncated: boolean;
+        };
+        PortfolioExecutionTaskDto: {
+            /**
+             * Format: uuid
+             * @description Id de la tarea.
+             */
+            id: string;
+            /**
+             * @description ID visible de la tarea. Solo lectura.
+             * @example PRY-0012-T07
+             */
+            code: string;
+            /** @description Título de la tarea. */
+            title: string;
+            /**
+             * @description Estado de la tarea.
+             * @enum {string}
+             */
+            status: "POR_HACER" | "EN_CURSO" | "BLOQUEADA" | "EN_REVISION" | "TERMINADA";
+            /** @description Avance de la tarea (0..100). */
+            progress: number;
+            /** @description Inicio (YYYY-MM-DD) o null. */
+            startDate: string | null;
+            /** @description Fin (YYYY-MM-DD) o null. */
+            endDate: string | null;
+            /** @description Nombre del responsable o null. */
+            responsibleName: string | null;
+        };
+        PortfolioExecutionPhaseDto: {
+            /**
+             * Format: uuid
+             * @description Id de la fase.
+             */
+            id: string;
+            /**
+             * @description ID visible de la fase. Solo lectura.
+             * @example PRY-0012-F2
+             */
+            code: string;
+            /** @description Nombre de la fase. */
+            name: string;
+            /** @description Posición de la fase en el plan (desde 1). */
+            order: number;
+            /** @description Inicio (YYYY-MM-DD) o null. */
+            startDate: string | null;
+            /** @description Fin (YYYY-MM-DD) o null. */
+            endDate: string | null;
+            /**
+             * @description Estado derivado de sus tareas: SIN_TAREAS, TERMINADA (todas terminadas), POR_HACER (ninguna iniciada ni terminada) o EN_CURSO.
+             * @enum {string}
+             */
+            status: "SIN_TAREAS" | "POR_HACER" | "EN_CURSO" | "TERMINADA";
+            /** @description Avance de la fase (0..100) según sus tareas; null si no tiene tareas. */
+            progressPercent: number | null;
+            /** @description Tareas de la fase. */
+            tasksTotal: number;
+            /** @description Tareas terminadas de la fase. */
+            tasksDone: number;
+            /** @description Tareas de la fase. */
+            tasks: components["schemas"]["PortfolioExecutionTaskDto"][];
+        };
+        PortfolioExecutionResponseDto: {
+            /**
+             * Format: uuid
+             * @description Id de la solicitud.
+             */
+            requestId: string;
+            /**
+             * @description ID visible de la solicitud.
+             * @example PRY-0012
+             */
+            requestCode: string;
+            /** @description false si la solicitud aún no tiene plan. */
+            hasPlan: boolean;
+            /**
+             * @description Estado del plan o null sin plan.
+             * @enum {string|null}
+             */
+            planStatus: "BORRADOR" | "EN_AUTORIZACION" | "AUTORIZADO" | "DEVUELTO" | null;
+            /** @description Línea base (YYYY-MM-DD): compromiso del plan autorizado. Null si el plan no está autorizado o no hay fecha. */
+            baselineDate: string | null;
+            /** @description Pronóstico de fin (YYYY-MM-DD): mayor fecha fin entre tareas sin terminar, o null. */
+            forecastDate: string | null;
+            /** @description Desviación en días del pronóstico respecto a la línea base (positivo = se corrió). Null sin plan autorizado o sin tareas abiertas con fecha. */
+            scheduleVarianceDays: number | null;
+            /** @description Avance global (0..100) según todas las tareas; null si no hay tareas. */
+            progressPercent: number | null;
+            /** @description Fases del plan en orden. */
+            phases: components["schemas"]["PortfolioExecutionPhaseDto"][];
         };
         SmtpConfigResponseDto: {
             /** @description Host SMTP guardado (null si no hay fila). */
@@ -15733,6 +15870,8 @@ export interface operations {
                 state?: ("REGISTRADA" | "EN_TRIAGE" | "DEVUELTA" | "RECHAZADA" | "BACKLOG_PRIORIZADO" | "COMPROMETIDA" | "EN_PLANIFICACION" | "EN_EJECUCION" | "BLOQUEADA" | "EN_VALIDACION" | "LISTA_PARA_LIBERAR" | "EN_ESTABILIZACION" | "OPERATIVA" | "CERRADA" | "RETIRADA")[];
                 /** @description Filtra por una o varias bandas de prioridad (P1..P4) o SIN_PRIORIZAR (?band=P1&band=SIN_PRIORIZAR; se combinan con O). Máximo 50 valores. */
                 band?: ("P1" | "P2" | "P3" | "P4" | "SIN_PRIORIZAR")[];
+                /** @description Filtra por una alerta (una sola): VENCIDA (dueStatus VENCIDO), PROXIMA (PROXIMO_A_VENCER), CON_DESVIACION (scheduleVarianceDays mayor que 0) o BLOQUEADA (blocked). Se combina con Y con el resto de filtros y se resuelve antes de paginar: X-Total-Count ya lo descuenta. Sin page ni pageSize se evalúan como máximo 1000 iniciativas. */
+                alert?: "VENCIDA" | "PROXIMA" | "CON_DESVIACION" | "BLOQUEADA";
                 /** @description Columna de orden: registeredAt (por defecto, descendente), code, title, state (orden del flujo), score (prioridad; sin evaluación al final). Empata por id. */
                 sort?: "registeredAt" | "code" | "title" | "state" | "score";
             };
@@ -15768,6 +15907,92 @@ export interface operations {
             };
             /** @description Rol insuficiente. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PortfolioController_summary: {
+        parameters: {
+            query?: {
+                /** @description Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado. */
+                q?: string;
+                /** @description Filtra por uno o varios procesos principales (UUID) o por el literal SIN_PROCESO para las solicitudes sin proceso asignado (aún por triar). Se repite el parámetro (?mainProcessId=a&mainProcessId=b); los valores se combinan con O. Máximo 50 valores. */
+                mainProcessId?: string[];
+                /** @description Filtra por uno o varios estados operativos (?state=A&state=B; se combinan con O). Máximo 50 valores. */
+                state?: ("REGISTRADA" | "EN_TRIAGE" | "DEVUELTA" | "RECHAZADA" | "BACKLOG_PRIORIZADO" | "COMPROMETIDA" | "EN_PLANIFICACION" | "EN_EJECUCION" | "BLOQUEADA" | "EN_VALIDACION" | "LISTA_PARA_LIBERAR" | "EN_ESTABILIZACION" | "OPERATIVA" | "CERRADA" | "RETIRADA")[];
+                /** @description Filtra por una o varias bandas de prioridad (P1..P4) o SIN_PRIORIZAR (?band=P1&band=SIN_PRIORIZAR; se combinan con O). Máximo 50 valores. */
+                band?: ("P1" | "P2" | "P3" | "P4" | "SIN_PRIORIZAR")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contadores del alcance filtrado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioSummaryResponseDto"];
+                };
+            };
+            /** @description Filtros inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PortfolioController_execution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ejecución de la iniciativa (sin plan: hasPlan false y fases vacías). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioExecutionResponseDto"];
+                };
+            };
+            /** @description El id no es un UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o está fuera de alcance. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

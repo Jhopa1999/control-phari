@@ -23,6 +23,25 @@ describe('PortfolioController (delegacion)', () => {
   } as unknown as PortfolioService;
   const controller = new PortfolioController(svc);
 
+  it('summary y execution delegan en el servicio con el actor', async () => {
+    const a = actor();
+    const summarySvc = {
+      summary: jest.fn().mockResolvedValue({ total: 1 }),
+      execution: jest.fn().mockResolvedValue({ requestId: 'r1' }),
+    } as unknown as PortfolioService;
+    const ctrl = new PortfolioController(summarySvc);
+    const filters = {} as never;
+    await expect(ctrl.summary(a, filters)).resolves.toEqual({ total: 1 });
+    await expect(ctrl.execution(a, 'r1')).resolves.toEqual({ requestId: 'r1' });
+    expect(summarySvc.summary).toHaveBeenCalledWith(a, filters);
+    expect(summarySvc.execution).toHaveBeenCalledWith(a, 'r1');
+  });
+
+  it('summary se declara antes de la ruta con parámetro', () => {
+    const names = Object.getOwnPropertyNames(PortfolioController.prototype);
+    expect(names.indexOf('summary')).toBeLessThan(names.indexOf('execution'));
+  });
+
   it('list delega actor y filtros', async () => {
     const a = actor();
     const filters = {} as never;

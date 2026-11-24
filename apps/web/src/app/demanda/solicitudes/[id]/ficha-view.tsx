@@ -66,6 +66,7 @@ import { FichaStep } from './ficha-step';
 import { SolicitudFormDialog, type SolicitudFormValues } from '../solicitud-form-dialog';
 import { solicitudUpdatePayload } from '../solicitud-payload';
 import { ClosurePanel } from './closure-panel';
+import { EjecucionSection } from './ejecucion-section';
 import {
   approvalStepState,
   governanceStepState,
@@ -393,6 +394,10 @@ export function FichaView({
         data={data}
         allowedModules={allowedModules}
       />
+
+      {allowedModules.has('portfolio') ? (
+        <EjecucionSection requestId={request.id} canOpenPlan={allowedModules.has('plan')} />
+      ) : null}
 
       <ClosurePanel request={request} onChanged={() => void load()} />
 

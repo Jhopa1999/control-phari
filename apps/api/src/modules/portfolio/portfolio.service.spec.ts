@@ -294,6 +294,197 @@ describe('PortfolioService', () => {
     expect(result.truncated).toBe(false);
   });
 
+  describe('franja de alertas (summary y filtro alert)', () => {
+    const day = (offset: number) => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + offset);
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    };
+    // r1 vencida (+ bloqueada), r2 próxima, r3 en tiempo con desviación, r4 sin alertas.
+    beforeEach(() => {
+      (m.prismaObj.request as any).findMany.mockResolvedValue([
+        requestRow({
+          id: 'r1',
+          operationalState: 'EN_EJECUCION',
+          targetDate: day(-3),
+          blockedAt: new Date(),
+        }),
+        requestRow({ id: 'r2', operationalState: 'EN_EJECUCION', targetDate: day(2) }),
+        requestRow({ id: 'r3', operationalState: 'EN_EJECUCION', targetDate: null }),
+        requestRow({ id: 'r4', operationalState: 'EN_EJECUCION', targetDate: day(60) }),
+      ]);
+      (m.prismaObj.plan as any).findMany.mockResolvedValue([
+        {
+          requestId: 'r3',
+          status: 'AUTORIZADO',
+          baselineDate: day(30),
+          commitmentDate: null,
+          periodEnd: null,
+        },
+      ]);
+      (m.prismaObj.task as any).findMany.mockResolvedValue([
+        {
+          status: 'EN_CURSO',
+          progress: 10,
+          endDate: day(35),
+          phase: { plan: { requestId: 'r3' } },
+        },
+      ]);
+    });
+
+    it('los contadores coinciden con el total del listado filtrado por cada alerta', async () => {
+      const summary = await service.summary(jefe(), {});
+      expect(summary).toEqual({
+        total: 4,
+        overdue: 1,
+        dueSoon: 1,
+        withVariance: 1,
+        blocked: 1,
+        truncated: false,
+      });
+      const pairs = [
+        ['VENCIDA', summary.overdue],
+        ['PROXIMA', summary.dueSoon],
+        ['CON_DESVIACION', summary.withVariance],
+        ['BLOQUEADA', summary.blocked],
+      ] as const;
+      for (const [alert, count] of pairs) {
+        const page = await service.list(jefe(), { alert });
+        expect(page.total).toBe(count);
+        expect(page.rows).toHaveLength(count);
+      }
+    });
+
+    it('alert devuelve solo las filas de esa alerta y respeta la paginación', async () => {
+      const page = await service.list(jefe(), { alert: 'VENCIDA', page: 2, pageSize: 1 });
+      expect(page.total).toBe(1);
+      expect(page.rows).toEqual([]);
+      const first = await service.list(jefe(), { alert: 'VENCIDA', page: 1, pageSize: 1 });
+      expect(first.rows.map((r) => r.id)).toEqual(['r1']);
+    });
+
+    it('alert se combina con state y band intersectando el alcance', async () => {
+      (m.prismaObj.priorityEvaluation as any).findMany.mockResolvedValue([
+        { requestId: 'r1', score: 85, evaluatedAt: new Date('2025-03-02') },
+      ]);
+      (m.state.priorityBand as jest.Mock).mockReturnValue('P1');
+      (m.state.priorityLabel as jest.Mock).mockReturnValue('P1');
+      const page = await service.list(lider(['p1']), {
+        alert: 'BLOQUEADA',
+        state: ['EN_EJECUCION'] as any,
+        band: ['P1'],
+      });
+      const and = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND;
+      expect(and[0]).toEqual({
+        deletedAt: null,
+        OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }],
+      });
+      expect(and).toContainEqual({ operationalState: { in: ['EN_EJECUCION'] } });
+      expect(page.rows.map((r) => r.id)).toEqual(['r1']);
+      expect(page.total).toBe(1);
+    });
+
+    it('summary del integrante usa su alcance, no amplía', async () => {
+      await service.summary(lider(['p1']), { state: ['EN_EJECUCION'] as any });
+      const and = (m.prismaObj.request as any).findMany.mock.calls[0][0].where.AND;
+      expect(and[0]).toEqual({
+        deletedAt: null,
+        OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }],
+      });
+    });
+  });
+
+  describe('execution', () => {
+    it('404 único si no existe o está fuera de alcance, con el alcance del actor', async () => {
+      (m.prismaObj.request as any).findFirst = jest.fn().mockResolvedValue(null);
+      await expect(service.execution(lider(['p1']), 'x')).rejects.toThrow(
+        'No se encontró la solicitud.',
+      );
+      const where = (m.prismaObj.request as any).findFirst.mock.calls[0][0].where;
+      expect(where.AND[0]).toEqual({ id: 'x' });
+      expect(where.AND[1]).toEqual({
+        deletedAt: null,
+        OR: [{ mainProcessId: { in: ['p1'] } }, { createdByUserId: 'ul' }],
+      });
+    });
+
+    it('sin plan: hasPlan false y fases vacías', async () => {
+      (m.prismaObj.request as any).findFirst = jest
+        .fn()
+        .mockResolvedValue({ id: 'r1', code: 'PRY-0001', targetDate: null });
+      (m.prismaObj.plan as any).findFirst = jest.fn().mockResolvedValue(null);
+      const result = await service.execution(jefe(), 'r1');
+      expect(result).toMatchObject({ hasPlan: false, planStatus: null, phases: [] });
+    });
+
+    it('arma fases, tareas, avance, pronóstico y desviación', async () => {
+      (m.prismaObj.request as any).findFirst = jest
+        .fn()
+        .mockResolvedValue({ id: 'r1', code: 'PRY-0001', targetDate: null });
+      (m.prismaObj.plan as any).findFirst = jest.fn().mockResolvedValue({
+        status: 'AUTORIZADO',
+        baselineDate: new Date('2026-06-30T00:00:00Z'),
+        commitmentDate: null,
+        periodEnd: null,
+        phases: [
+          {
+            id: 'f1',
+            code: 'PRY-0001-F1',
+            name: 'Descubrimiento',
+            order: 1,
+            startDate: null,
+            endDate: null,
+            tasks: [
+              {
+                id: 't1',
+                code: 'PRY-0001-T01',
+                title: 'A',
+                status: 'TERMINADA',
+                progress: 100,
+                startDate: null,
+                endDate: new Date('2026-06-10T00:00:00Z'),
+                responsible: { name: 'Ana' },
+              },
+            ],
+          },
+          {
+            id: 'f2',
+            code: 'PRY-0001-F2',
+            name: 'Construcción',
+            order: 2,
+            startDate: null,
+            endDate: null,
+            tasks: [
+              {
+                id: 't2',
+                code: 'PRY-0001-T02',
+                title: 'B',
+                status: 'EN_CURSO',
+                progress: 40,
+                startDate: null,
+                endDate: new Date('2026-07-12T00:00:00Z'),
+                responsible: null,
+              },
+            ],
+          },
+          { id: 'f3', code: 'PRY-0001-F3', name: 'Cierre', order: 3, startDate: null, endDate: null, tasks: [] },
+        ],
+      });
+      const result = await service.execution(jefe(), 'r1');
+      expect(result.baselineDate).toBe('2026-06-30');
+      expect(result.forecastDate).toBe('2026-07-12');
+      expect(result.scheduleVarianceDays).toBe(12);
+      expect(result.progressPercent).toBe(70);
+      expect(result.phases.map((p) => p.status)).toEqual(['TERMINADA', 'EN_CURSO', 'SIN_TAREAS']);
+      expect(result.phases[1]).toMatchObject({ progressPercent: 40, tasksTotal: 1, tasksDone: 0 });
+      expect(result.phases[1].tasks[0]).toMatchObject({
+        code: 'PRY-0001-T02',
+        responsibleName: null,
+      });
+      expect(result.phases[0].tasks[0].responsibleName).toBe('Ana');
+    });
+  });
+
   it('"comprometida" se refleja por operationalState explicito (no se infiere)', async () => {
     (m.prismaObj.request as any).findMany.mockResolvedValue([
       requestRow({ operationalState: 'COMPROMETIDA' }),
