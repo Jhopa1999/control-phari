@@ -94,7 +94,7 @@ function search(page: import('@playwright/test').Page) {
 async function openPalette(page: import('@playwright/test').Page): Promise<void> {
   await expect(async () => {
     if (!(await search(page).isVisible())) {
-      await page.getByRole('button', { name: 'Buscar en el portal' }).click({ timeout: 1_000 });
+      await page.getByRole('button', { name: 'Buscar… en el portal' }).click({ timeout: 1_000 });
     }
     await expect(search(page)).toBeVisible({ timeout: 1_500 });
   }).toPass({ timeout: 15_000 });
@@ -222,7 +222,7 @@ test.describe('Paleta de búsqueda (escritorio)', () => {
 
   test('teclado: «/» abre la paleta y no actúa dentro de un campo editable', async ({ page }) => {
     await page.goto('/inicio');
-    await expect(page.getByRole('button', { name: 'Buscar en el portal' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Buscar… en el portal' })).toBeVisible();
     await expect(async () => {
       if (!(await search(page).isVisible())) await page.keyboard.press('/');
       await expect(search(page)).toBeFocused({ timeout: 1_000 });
@@ -284,8 +284,8 @@ test.describe('Paleta de búsqueda (móvil)', () => {
       await expect(search(page)).toBeVisible({ timeout: 1_500 });
     }).toPass({ timeout: 15_000 });
     await expect(search(page)).toBeFocused();
-    const box = await palette(page).boundingBox();
-    expect(box?.width).toBeGreaterThanOrEqual(389);
+    // La animación de entrada escala el diálogo: se mide cuando termina.
+    await expect.poll(async () => (await palette(page).boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(389);
     await search(page).fill(`${requestCode}-T01`);
     await expect(page.getByRole('option').first()).toContainText(taskTitle);
     await search(page).press('Enter');

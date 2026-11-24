@@ -251,14 +251,16 @@ function DesktopTrigger({ onOpen }: { onOpen: () => void }): React.ReactElement 
   return (
     <button
       type="button"
-      aria-label="Buscar en el portal"
       aria-haspopup="dialog"
       aria-keyshortcuts="Control+K Meta+K /"
       onClick={onOpen}
       className="inline-flex h-8 w-56 shrink-0 items-center gap-2 rounded-md border border-input bg-background px-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring pointer-coarse:h-10 xl:w-72"
     >
       <Search aria-hidden="true" className="size-4 shrink-0" />
-      <span className="truncate">Buscar…</span>
+      {/* Nombre desde el contenido («Buscar… en el portal»): empieza por el texto visible (WCAG 2.5.3). */}
+      <span className="truncate">
+        Buscar…<span className="sr-only"> en el portal</span>
+      </span>
       <ShortcutKey />
     </button>
   );
