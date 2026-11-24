@@ -854,6 +854,29 @@ distinguir tildes (el encabezado pesa más que el cuerpo). Excluye las secciones
 quien desarrolla (sincronía de documentación, límites de arquitectura, guards, actor, credenciales por
 correo). Está expuesta en el MCP como la tool `help.search`; el asistente la usa para dudas de uso.
 
+## search — Búsqueda por texto de solicitudes y tareas (oleada 4, PR A)
+
+Búsqueda de solo lectura que alimenta la paleta `Ctrl/⌘+K` de la web (`search.controller.ts`, base
+`/search`, roles `JEFE_AREA`, `LIDER_PROCESO` e `INTEGRANTE`, los mismos de `GET /codes/:code`). No
+registra auditoría.
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| GET | `/search` | `?q=` obligatorio (de 2 a 80 caracteres tras recortar espacios; 400 en español si no) y `limit` (1 a 20, por defecto 10, **por grupo**). Devuelve `SearchResponseDto`: `{ requests: CodeResolutionDto[], tasks: CodeResolutionDto[], truncated }`, con la misma forma que `GET /codes/:code`. |
+
+Reglas:
+
+- **Alcance único**: parte de `requestScopeWhere(actor)` y el texto solo lo intersecta. Solicitudes con
+  `buildRequestWhere(scope, { q }, { searchRequester: true })` (código, título y nombre del solicitante);
+  tareas por código o título con `phase.plan.request` = mismo alcance. Las fases no se buscan por texto
+  (se llega a ellas por su código con `GET /codes/:code`).
+- **Orden**: la coincidencia exacta del código (normalizado como en `GET /codes`) va primero; después,
+  solicitudes por `registeredAt` desc y tareas por creación desc.
+- **Tope**: lee `limit + 1` filas por grupo; `truncated` es `true` si algún grupo tenía más.
+- `contains` sin distinguir mayúsculas, pero **sí distingue tildes** (no se usa la extensión
+  `unaccent`): «diseno» no encuentra «Diseño».
+- Expuesta en el MCP como la tool `search.global` (solo lectura).
+
 ## recurring-activity — Actividades recurrentes (motor de tiempo)
 
 Gestiona las actividades que se repiten con una cadencia (reporte semanal a presidencia,

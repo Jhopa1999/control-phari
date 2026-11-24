@@ -15,6 +15,14 @@ import {
 import { IdChip } from '@/components/id-chip';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useActor } from '@/lib/actor-context';
 import {
   CODE_SEARCH_ROLES,
@@ -22,32 +30,41 @@ import {
   normalizeCode,
   resolveCode,
   resolveDestination,
+  searchText,
+  TEXT_SEARCH_MIN,
   type CodeResolution,
 } from '@/lib/code-search';
+import {
+  getVisibleNavApps,
+  getVisibleNavGroups,
+  searchScreens,
+  type ScreenEntry,
+} from '@/lib/navigation';
 import { useMediaQuery } from '@/lib/use-media-query';
+import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { cn } from '@/lib/utils';
 
 /*
- * Búsqueda global por ID visible (design/busqueda-global-id.md). Campo de
- * resultado único: el usuario escribe un código completo (PRY-0012,
- * PRY-0012-F2, PRY-0012-T07), la API lo resuelve y la fila navega. Solo la
- * instancia visible (escritorio o móvil) se monta (B13).
+ * Paleta de búsqueda Ctrl/⌘+K (design/oleada4-a-busqueda.md). Un solo campo y dos
+ * grupos: «Pantallas» (local, instantáneo) y «Solicitudes y tareas» (API: un
+ * código completo con GET /codes/{code}, otro texto con GET /search). Solo la
+ * instancia visible (escritorio o móvil) se monta; el menú lateral y el atajo
+ * la abren con un evento de ventana.
  */
 
 /** A partir de aquí manda la barra de escritorio (lg); igual que MobileNav. */
 export const DESKTOP_QUERY = '(min-width: 1024px)';
-const DEBOUNCE_MS = 400;
-const SHORTCUT_EVENT = 'code-search:focus';
-const EXAMPLES = 'PRY-0012, PRY-0012-F2 o PRY-0012-T07';
+const DEBOUNCE_MS = 300;
+const OPEN_EVENT = 'search-palette:open';
+const TOGGLE_EVENT = 'search-palette:toggle';
+const PALETTE_ATTR = 'data-search-palette';
+const PLACEHOLDER = 'Buscar pantallas, solicitudes o tareas…';
+const PLACEHOLDER_SCREENS = 'Buscar pantallas…';
 
-type View =
-  | { kind: 'help' }
-  | { kind: 'invalid' }
-  | { kind: 'loading'; code: string }
-  | { kind: 'found'; code: string; resolution: CodeResolution }
-  | { kind: 'not-found'; code: string }
-  | { kind: 'forbidden' }
-  | { kind: 'error'; code: string };
+/** Abre la paleta desde cualquier parte (p. ej. el botón del menú lateral). */
+export function openSearchPalette(): void {
+  window.dispatchEvent(new CustomEvent(OPEN_EVENT));
+}
 
 const TYPE_META = {
   REQUEST: { label: 'Solicitud', icon: FolderKanban },
@@ -55,19 +72,35 @@ const TYPE_META = {
   TASK: { label: 'Tarea', icon: ListChecks },
 } as const;
 
-/** `/` enfoca la búsqueda salvo en campos editables o con un diálogo abierto (B7). */
+function isOtherDialogOpen(): boolean {
+  return Array.from(
+    document.querySelectorAll('[role="dialog"], [role="alertdialog"]'),
+  ).some((dialog) => !dialog.hasAttribute(PALETTE_ATTR));
+}
+
+/**
+ * Atajos globales: `Ctrl+K` / `⌘+K` abre (o cierra) la paleta, también con el
+ * foco en un campo editable; `/` la abre salvo en campos editables. Ninguno
+ * actúa si hay otro diálogo modal abierto.
+ */
 export function CodeSearchShortcut(): null {
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
-      if (event.key !== '/' || event.defaultPrevented) return;
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.defaultPrevented || event.altKey) return;
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'k') {
+        if (isOtherDialogOpen()) return;
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent(TOGGLE_EVENT));
+        return;
+      }
+      if (event.key !== '/' || event.ctrlKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) {
         return;
       }
       if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
       event.preventDefault();
-      window.dispatchEvent(new CustomEvent(SHORTCUT_EVENT));
+      window.dispatchEvent(new CustomEvent(OPEN_EVENT));
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -78,64 +111,48 @@ export function CodeSearchShortcut(): null {
 export interface GlobalCodeSearchProps {
   /** `desktop` en la barra superior; `mobile` dentro de MobileNav. */
   placement: 'desktop' | 'mobile';
-  /** Móvil: avisa a MobileNav de que el modo búsqueda cambió. */
-  onModeChange?: (open: boolean) => void;
 }
 
-export function GlobalCodeSearch(props: GlobalCodeSearchProps): React.ReactElement | null {
-  const { state, permissions } = useActor();
+export function GlobalCodeSearch({ placement }: GlobalCodeSearchProps): React.ReactElement | null {
+  const { state } = useActor();
   const isDesktop = useMediaQuery(DESKTOP_QUERY, true);
-  const allowed =
-    state === 'success' &&
-    (permissions?.roleCodes ?? []).some((role) => CODE_SEARCH_ROLES.includes(role));
-  const active = props.placement === 'desktop' ? isDesktop : !isDesktop;
-  if (!allowed || !active) return null;
-  return <SearchBox {...props} />;
+  const active = placement === 'desktop' ? isDesktop : !isDesktop;
+  // Sin actor resuelto no se monta ningún disparador.
+  if (state !== 'success' || !active) return null;
+  return <PaletteHost placement={placement} />;
 }
 
-function SearchBox({ placement, onModeChange }: GlobalCodeSearchProps): React.ReactElement {
-  const mobile = placement === 'mobile';
+function PaletteHost({ placement }: GlobalCodeSearchProps): React.ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { allowedModules } = useActor();
-  const id = React.useId();
-  const listboxId = `${id}-listbox`;
-  const optionId = `${id}-option`;
-  const helpId = `${id}-help`;
-
-  const formRef = React.useRef<HTMLFormElement>(null);
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const openButtonRef = React.useRef<HTMLButtonElement>(null);
-  const abortRef = React.useRef<AbortController | null>(null);
-  const timerRef = React.useRef<number | null>(null);
+  const [open, setOpen] = React.useState(false);
+  const previousFocusRef = React.useRef<Element | null>(null);
   const pendingFocusRef = React.useRef(false);
-  const navigateOnFoundRef = React.useRef(false);
-  const toggleRef = React.useRef(false);
+  const skipRestoreRef = React.useRef(false);
 
-  const [open, setOpen] = React.useState(!mobile);
-  const [text, setText] = React.useState('');
-  const [view, setView] = React.useState<View>({ kind: 'help' });
-  const [panelOpen, setPanelOpen] = React.useState(false);
-  const [focused, setFocused] = React.useState(false);
-  const [announcement, setAnnouncement] = React.useState('');
-
-  const announce = React.useCallback((message: string) => {
-    // Alterna un carácter invisible para re-anunciar un texto idéntico.
-    toggleRef.current = !toggleRef.current;
-    setAnnouncement(toggleRef.current ? message : `${message}\u200B`);
+  const remember = React.useCallback(() => {
+    previousFocusRef.current = document.activeElement;
   }, []);
 
-  const cancelPending = React.useCallback(() => {
-    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-    timerRef.current = null;
-    abortRef.current?.abort();
-    abortRef.current = null;
-  }, []);
+  React.useEffect(() => {
+    function onOpen(): void {
+      remember();
+      setOpen(true);
+    }
+    function onToggle(): void {
+      remember();
+      setOpen((prev) => !prev);
+    }
+    window.addEventListener(OPEN_EVENT, onOpen);
+    window.addEventListener(TOGGLE_EVENT, onToggle);
+    return () => {
+      window.removeEventListener(OPEN_EVENT, onOpen);
+      window.removeEventListener(TOGGLE_EVENT, onToggle);
+    };
+  }, [remember]);
 
-  React.useEffect(() => cancelPending, [cancelPending]);
-
-  // Foco en el contenido nuevo tras navegar (B11).
+  // Foco en el contenido nuevo tras navegar desde la paleta.
   const searchKey = searchParams.toString();
   React.useEffect(() => {
     if (!pendingFocusRef.current) return;
@@ -143,324 +160,662 @@ function SearchBox({ placement, onModeChange }: GlobalCodeSearchProps): React.Re
     document.getElementById('contenido')?.focus();
   }, [pathname, searchKey]);
 
-  const closeMobile = React.useCallback(
-    (restoreFocus: boolean) => {
-      if (!mobile) return;
+  const navigate = React.useCallback(
+    (href: string) => {
+      const current = `${pathname}${searchKey ? `?${searchKey}` : ''}`;
+      if (href !== current) {
+        pendingFocusRef.current = true;
+        skipRestoreRef.current = true;
+      }
       setOpen(false);
-      onModeChange?.(false);
-      if (restoreFocus) window.setTimeout(() => openButtonRef.current?.focus(), 0);
+      router.push(href);
     },
-    [mobile, onModeChange],
+    [pathname, router, searchKey],
   );
 
-  const reset = React.useCallback(() => {
-    cancelPending();
-    setText('');
-    setView({ kind: 'help' });
-    setPanelOpen(false);
-  }, [cancelPending]);
-
-  // Atajo `/`: enfoca el campo; en móvil abre primero el modo búsqueda.
-  React.useEffect(() => {
-    function onShortcut(): void {
-      if (mobile && !open) {
-        setOpen(true);
-        onModeChange?.(true);
-        return;
-      }
-      inputRef.current?.focus();
-    }
-    window.addEventListener(SHORTCUT_EVENT, onShortcut);
-    return () => window.removeEventListener(SHORTCUT_EVENT, onShortcut);
-  }, [mobile, open, onModeChange]);
-
-  React.useEffect(() => {
-    if (mobile && open) inputRef.current?.focus();
-  }, [mobile, open]);
-
-  const go = React.useCallback(
-    (resolution: CodeResolution): boolean => {
-      const destination = resolveDestination(resolution, allowedModules);
-      if (!destination) {
-        announce('Encontrado, pero tu rol no puede abrirlo.');
-        return false;
-      }
-      pendingFocusRef.current = true;
-      reset();
-      inputRef.current?.blur();
-      closeMobile(false);
-      router.push(destination);
-      return true;
-    },
-    [allowedModules, announce, closeMobile, reset, router],
+  return (
+    <>
+      {placement === 'desktop' ? (
+        <DesktopTrigger
+          onOpen={() => {
+            remember();
+            setOpen(true);
+          }}
+        />
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Buscar"
+          aria-haspopup="dialog"
+          aria-keyshortcuts="Control+K Meta+K /"
+          onClick={() => {
+            remember();
+            setOpen(true);
+          }}
+        >
+          <Search aria-hidden="true" />
+        </Button>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          {...{ [PALETTE_ATTR]: '' }}
+          size="lg"
+          className="left-0 top-0 h-dvh max-h-dvh w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-none border-0 p-0 motion-reduce:animate-none md:top-[12vh] md:left-1/2 md:h-auto md:max-h-[min(34rem,76dvh)] md:w-[calc(100%-2rem)] md:max-w-[640px] md:-translate-x-1/2 md:translate-y-0 md:rounded-xl md:border md:border-border"
+          aria-describedby="search-palette-description"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (skipRestoreRef.current) {
+              skipRestoreRef.current = false;
+              return;
+            }
+            const previous = previousFocusRef.current;
+            if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+          }}
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>Buscar en el portal</DialogTitle>
+            <DialogDescription id="search-palette-description">
+              Escribe para buscar pantallas, solicitudes y tareas. Usa las flechas para moverte e
+              Intro para abrir.
+            </DialogDescription>
+          </DialogHeader>
+          <PaletteBody onNavigate={navigate} />
+        </DialogContent>
+      </Dialog>
+    </>
   );
+}
 
-  const run = React.useCallback(
-    async (raw: string, navigate: boolean) => {
-      cancelPending();
-      const code = normalizeCode(raw);
-      const controller = new AbortController();
-      abortRef.current = controller;
-      navigateOnFoundRef.current = navigate;
-      // Conserva el resultado anterior mientras llega el nuevo (B9).
-      setView((prev) => (prev.kind === 'found' ? prev : { kind: 'loading', code }));
-      setPanelOpen(true);
-      let result;
-      try {
-        result = await resolveCode(code, controller.signal);
-      } catch {
-        return; // petición cancelada: la respuesta tardía se descarta
-      }
-      if (controller.signal.aborted) return;
-      switch (result.kind) {
-        case 'found': {
-          const { resolution } = result;
-          setView({ kind: 'found', code, resolution });
-          if (navigateOnFoundRef.current) {
-            go(resolution);
-          } else {
-            const meta = TYPE_META[resolution.type];
-            announce(
-              `Encontrado: ${meta.label.toLowerCase()} ${resolution.code}, ${resolution.title}. Pulsa Intro para abrir.`,
-            );
-          }
-          break;
-        }
-        case 'not-found':
-          setView({ kind: 'not-found', code });
-          announce(`No se encontró ${code} o no tienes acceso.`);
-          break;
-        case 'invalid':
-          setView({ kind: 'invalid' });
-          announce('Código no válido.');
-          break;
-        case 'forbidden':
-          setView({ kind: 'forbidden' });
-          announce('Tu rol no puede buscar por código.');
-          break;
-        default:
-          setView({ kind: 'error', code });
-          announce('Error al buscar. Inténtalo de nuevo.');
-      }
-    },
-    [announce, cancelPending, go],
+const subscribeNever = (): (() => void) => () => undefined;
+const isMacPlatform = (): boolean => /Mac|iPhone|iPad/i.test(navigator.platform);
+
+function ShortcutKey({ className }: { className?: string }): React.ReactElement {
+  // Se decide tras montar para no desajustar la hidratación (servidor: Ctrl).
+  const mac = React.useSyncExternalStore(subscribeNever, isMacPlatform, () => false);
+  return (
+    <kbd
+      aria-hidden="true"
+      className={cn(
+        'ml-auto rounded border border-border bg-muted px-1.5 font-mono text-meta leading-5 text-muted-foreground pointer-coarse:hidden',
+        className,
+      )}
+    >
+      {mac ? '⌘K' : 'Ctrl K'}
+    </kbd>
   );
+}
 
-  function handleChange(event: React.ChangeEvent<HTMLInputElement>): void {
-    const next = event.target.value;
-    setText(next);
-    cancelPending();
-    if (next.trim() === '') {
-      setView({ kind: 'help' });
-      setPanelOpen(false);
+function DesktopTrigger({ onOpen }: { onOpen: () => void }): React.ReactElement {
+  return (
+    <button
+      type="button"
+      aria-label="Buscar en el portal"
+      aria-haspopup="dialog"
+      aria-keyshortcuts="Control+K Meta+K /"
+      onClick={onOpen}
+      className="inline-flex h-8 w-56 shrink-0 items-center gap-2 rounded-md border border-input bg-background px-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring pointer-coarse:h-10 xl:w-72"
+    >
+      <Search aria-hidden="true" className="size-4 shrink-0" />
+      <span className="truncate">Buscar…</span>
+      <ShortcutKey />
+    </button>
+  );
+}
+
+/** Disparador del menú lateral (expandido o riel). */
+export function SidebarSearchTrigger({
+  variant,
+  onBeforeOpen,
+}: {
+  variant: 'field' | 'rail';
+  /** Cajón móvil: se cierra antes de abrir la paleta para no apilar dos diálogos. */
+  onBeforeOpen?: () => void;
+}): React.ReactElement {
+  function open(): void {
+    if (!onBeforeOpen) {
+      openSearchPalette();
       return;
     }
-    setPanelOpen(true);
-    if (!isVisibleCode(next)) {
-      setView({ kind: 'help' });
-      return;
-    }
-    timerRef.current = window.setTimeout(() => void run(next, false), DEBOUNCE_MS);
+    onBeforeOpen();
+    window.setTimeout(openSearchPalette, 150);
   }
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    if (text.trim() === '') return;
-    if (!isVisibleCode(text)) {
-      cancelPending();
-      setView({ kind: 'invalid' });
-      setPanelOpen(true);
-      announce('Código no válido.');
-      return;
-    }
-    if (view.kind === 'found' && view.code === normalizeCode(text)) {
-      go(view.resolution);
-      return;
-    }
-    void run(text, true);
-  }
-
-  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>): void {
-    if (event.key !== 'Escape') return;
-    event.preventDefault();
-    if (panelOpen) {
-      setPanelOpen(false);
-    } else if (text !== '') {
-      reset();
-    } else {
-      inputRef.current?.blur();
-      closeMobile(true);
-    }
-  }
-
-  function handleBlur(event: React.FocusEvent<HTMLFormElement>): void {
-    if (formRef.current?.contains(event.relatedTarget as Node | null)) return;
-    setFocused(false);
-    setPanelOpen(false);
-  }
-
-  if (mobile && !open) {
+  if (variant === 'rail') {
     return (
       <Button
-        ref={openButtonRef}
         type="button"
-        variant="ghost"
-        size="icon"
-        aria-label="Buscar por código"
-        aria-expanded={false}
-        aria-keyshortcuts="/"
-        onClick={() => {
-          setOpen(true);
-          onModeChange?.(true);
-        }}
+        variant="sidebar"
+        size="icon-sm"
+        aria-label="Buscar (Ctrl K)"
+        aria-haspopup="dialog"
+        aria-keyshortcuts="Control+K Meta+K /"
+        onClick={open}
       >
         <Search aria-hidden="true" />
       </Button>
     );
   }
+  return (
+    <button
+      type="button"
+      aria-haspopup="dialog"
+      aria-keyshortcuts="Control+K Meta+K /"
+      onClick={open}
+      className="inline-flex h-8 w-full items-center gap-2 rounded-md border border-sidebar-field-border bg-sidebar-field px-2.5 text-sm text-sidebar-muted-foreground transition-colors hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-sidebar-ring pointer-coarse:h-10"
+    >
+      <Search aria-hidden="true" className="size-4 shrink-0" />
+      <span className="truncate">Buscar…</span>
+      <ShortcutKey className="border-sidebar-field-border bg-transparent text-sidebar-muted-foreground" />
+    </button>
+  );
+}
 
-  const found = view.kind === 'found' ? view : null;
-  const foundDestination = found ? resolveDestination(found.resolution, allowedModules) : null;
-  const busy = view.kind === 'loading' || (found !== null && found.code !== normalizeCode(text));
-  const showListbox = found !== null && panelOpen;
-  const invalid = view.kind === 'invalid' || view.kind === 'not-found';
-  const showHint = !mobile && !focused && text === '';
+type ApiStatus = 'idle' | 'loading' | 'ready' | 'not-found' | 'error';
+
+type PaletteItem =
+  | { key: string; kind: 'screen'; entry: ScreenEntry }
+  | { key: string; kind: 'result'; resolution: CodeResolution; href: string | null };
+
+function PaletteBody({ onNavigate }: { onNavigate: (href: string) => void }): React.ReactElement {
+  const { permissions, allowedModules } = useActor();
+  const canSearchApi = (permissions?.roleCodes ?? []).some((role) =>
+    CODE_SEARCH_ROLES.includes(role),
+  );
+  const id = React.useId();
+  const listboxId = `${id}-listbox`;
+  const optionId = (index: number): string => `${id}-opt-${index}`;
+  const screensHeadingId = `${id}-g-screens`;
+  const resultsHeadingId = `${id}-g-results`;
+
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const immediateRef = React.useRef(false);
+  const [text, setText] = React.useState('');
+  const [activeKey, setActiveKey] = React.useState<string | null>(null);
+  const [status, setStatus] = React.useState<ApiStatus>('idle');
+  const [items, setItems] = React.useState<CodeResolution[] | null>(null);
+  const [truncated, setTruncated] = React.useState(false);
+  const [forbidden, setForbidden] = React.useState(false);
+  const [retry, setRetry] = React.useState(0);
+  const [notice, setNotice] = React.useState('');
+
+  const trimmed = text.trim();
+  const codeQuery = canSearchApi && isVisibleCode(trimmed);
+  const apiEnabled = canSearchApi && !forbidden && trimmed.length >= TEXT_SEARCH_MIN;
+
+  const visibleGroups = React.useMemo(() => getVisibleNavGroups(allowedModules), [allowedModules]);
+  const visibleApps = React.useMemo(() => getVisibleNavApps(allowedModules), [allowedModules]);
+  const screens = React.useMemo(
+    () => searchScreens(visibleGroups, visibleApps, trimmed),
+    [visibleGroups, visibleApps, trimmed],
+  );
+
+  // Consulta a la API: 300 ms tras la última tecla; cancela la anterior.
+  useResetOnChange([apiEnabled, codeQuery, trimmed, retry], () => {
+    if (apiEnabled) {
+      setStatus('loading');
+    } else {
+      setStatus('idle');
+      setItems(null);
+      setTruncated(false);
+    }
+  });
+  React.useEffect(() => {
+    if (!apiEnabled) return;
+    const controller = new AbortController();
+    const immediate = immediateRef.current;
+    immediateRef.current = false;
+    const timer = window.setTimeout(
+      () => {
+        void (async () => {
+          try {
+            if (codeQuery) {
+              const result = await resolveCode(trimmed, controller.signal);
+              if (controller.signal.aborted) return;
+              if (result.kind === 'found') {
+                setItems([result.resolution]);
+                setTruncated(false);
+                setStatus('ready');
+                if (immediate) {
+                  const href = resolveDestination(result.resolution, allowedModules);
+                  if (href) onNavigate(href);
+                  else setNotice('Encontrado, pero tu rol no puede abrirlo.');
+                }
+              } else if (result.kind === 'not-found') {
+                setItems([]);
+                setStatus('not-found');
+              } else if (result.kind === 'forbidden') {
+                setForbidden(true);
+              } else {
+                setStatus('error');
+              }
+              return;
+            }
+            const result = await searchText(trimmed, controller.signal);
+            if (controller.signal.aborted) return;
+            if (result.kind === 'ok') {
+              setItems([...result.data.requests, ...result.data.tasks]);
+              setTruncated(result.data.truncated);
+              setStatus('ready');
+            } else if (result.kind === 'forbidden') {
+              setForbidden(true);
+            } else {
+              setStatus('error');
+            }
+          } catch {
+            // Petición cancelada: la respuesta tardía se descarta.
+          }
+        })();
+      },
+      immediate ? 0 : DEBOUNCE_MS,
+    );
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [apiEnabled, codeQuery, trimmed, retry, allowedModules, onNavigate]);
+
+  const resultItems = React.useMemo<PaletteItem[]>(
+    () =>
+      status === 'not-found' || items === null
+        ? []
+        : items.map((resolution) => ({
+            key: `r:${resolution.type}:${resolution.id}`,
+            kind: 'result',
+            resolution,
+            href: resolveDestination(resolution, allowedModules),
+          })),
+    [items, status, allowedModules],
+  );
+  const screenItems = React.useMemo<PaletteItem[]>(
+    () => screens.map((entry) => ({ key: `s:${entry.item.href}`, kind: 'screen', entry })),
+    [screens],
+  );
+  const showResultsGroup = canSearchApi;
+  const emptyBlock =
+    trimmed !== '' &&
+    screenItems.length === 0 &&
+    (!canSearchApi || forbidden || (status === 'ready' && resultItems.length === 0));
+  const resultsFirst = codeQuery;
+  const flat = React.useMemo<PaletteItem[]>(
+    () => (resultsFirst ? [...resultItems, ...screenItems] : [...screenItems, ...resultItems]),
+    [resultsFirst, resultItems, screenItems],
+  );
+
+  // La activa se conserva mientras exista; si no, la primera habilitada.
+  const firstEnabled = flat.findIndex((item) => item.kind === 'screen' || item.href !== null);
+  const found = flat.findIndex((item) => item.key === activeKey);
+  const activeIndex = found >= 0 ? found : firstEnabled >= 0 ? firstEnabled : flat.length > 0 ? 0 : -1;
+
+  React.useEffect(() => {
+    if (activeIndex < 0) return;
+    document.getElementById(optionId(activeIndex))?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+    // optionId depende solo de `id`, estable durante la vida del cuerpo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, id]);
+
+  function activate(item: PaletteItem): void {
+    if (item.kind === 'screen') {
+      onNavigate(item.entry.item.href);
+    } else if (item.href) {
+      onNavigate(item.href);
+    } else {
+      setNotice('Encontrado, pero tu rol no puede abrirlo.');
+    }
+  }
+
+  function move(delta: 1 | -1): void {
+    if (flat.length === 0) return;
+    const base = activeIndex < 0 ? (delta === 1 ? -1 : 0) : activeIndex;
+    const next = (base + delta + flat.length) % flat.length;
+    setActiveKey(flat[next].key);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>): void {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      move(1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      move(-1);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      if (event.nativeEvent.isComposing) return;
+      const active = activeIndex >= 0 ? flat[activeIndex] : null;
+      if (codeQuery && status !== 'ready' && status !== 'not-found') {
+        // Código completo sin respuesta todavía: resuelve ya y navega al llegar.
+        immediateRef.current = true;
+        setRetry((n) => n + 1);
+      } else if (active) {
+        activate(active);
+      }
+    }
+  }
+
+  const loadingNoResults = status === 'loading' && items === null;
+  const busy = status === 'loading' && items !== null;
+
+  // Mensaje de la región viva: se anuncia al asentarse la búsqueda, no en cada tecla.
+  const settled = ((): string => {
+    if (trimmed === '') return '';
+    if (status === 'loading') return '';
+    if (status === 'error') return 'No se pudo buscar solicitudes y tareas.';
+    if (status === 'not-found') return `No encontramos ${normalizeCode(trimmed)}, o no tienes acceso.`;
+    const requests = resultItems.filter((i) => i.kind === 'result' && i.resolution.type === 'REQUEST').length;
+    const tasks = resultItems.filter((i) => i.kind === 'result' && i.resolution.type === 'TASK').length;
+    if (flat.length === 0) return 'Sin resultados.';
+    const parts = [
+      `${screenItems.length} ${screenItems.length === 1 ? 'pantalla' : 'pantallas'}`,
+      `${requests} ${requests === 1 ? 'solicitud' : 'solicitudes'}`,
+      `${tasks} ${tasks === 1 ? 'tarea' : 'tareas'}`,
+    ];
+    return `${parts.join(', ')}.${truncated ? ' Hay más resultados.' : ''}`;
+  })();
+
+  function renderScreenGroup(startIndex: number): React.ReactNode {
+    if (screenItems.length === 0) return null;
+    return (
+      <div role="group" aria-labelledby={screensHeadingId} className="mb-1 last:mb-0">
+        <GroupHeading id={screensHeadingId}>Pantallas</GroupHeading>
+        {screenItems.map((item, i) =>
+          item.kind === 'screen' ? (
+            <ScreenRow
+              key={item.key}
+              id={optionId(startIndex + i)}
+              entry={item.entry}
+              active={activeIndex === startIndex + i}
+              onSelect={() => activate(item)}
+              onPointerMove={() => setActiveKey(item.key)}
+            />
+          ) : null,
+        )}
+      </div>
+    );
+  }
+
+  function renderResultsGroup(startIndex: number): React.ReactNode {
+    if (!showResultsGroup) return null;
+    let body: React.ReactNode;
+    if (forbidden) {
+      body = <Note icon>Tu rol no puede buscar solicitudes ni tareas.</Note>;
+    } else if (trimmed === '') {
+      body = <Note>Escribe un código (PRY-0012) o parte del título para buscar solicitudes y tareas.</Note>;
+    } else if (trimmed.length < TEXT_SEARCH_MIN) {
+      body = <Note>Escribe al menos 2 caracteres para buscar solicitudes y tareas.</Note>;
+    } else if (loadingNoResults) {
+      body = (
+        <div aria-hidden="true" className="space-y-1 px-1 py-1">
+          {[0, 1, 2].map((n) => (
+            <Skeleton key={n} className="h-12 rounded-lg animate-none" />
+          ))}
+        </div>
+      );
+    } else if (status === 'error') {
+      body = (
+        <div className="flex items-start gap-2 px-3 py-2 text-sm text-foreground">
+          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <div className="space-y-2">
+            <p>No se pudo buscar solicitudes y tareas. Inténtalo de nuevo.</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setRetry((n) => n + 1);
+                inputRef.current?.focus();
+              }}
+            >
+              Reintentar
+            </Button>
+          </div>
+        </div>
+      );
+    } else if (status === 'not-found') {
+      body = (
+        <Note icon>
+          No encontramos {normalizeCode(trimmed)}, o no tienes acceso. Revisa que esté completo.
+        </Note>
+      );
+    } else if (resultItems.length === 0) {
+      body = <Note>No hay solicitudes ni tareas que coincidan.</Note>;
+    } else {
+      body = (
+        <>
+          {resultItems.map((item, i) =>
+            item.kind === 'result' ? (
+              <ResultRow
+                key={item.key}
+                id={optionId(startIndex + i)}
+                resolution={item.resolution}
+                disabled={item.href === null}
+                active={activeIndex === startIndex + i}
+                onSelect={() => activate(item)}
+                onPointerMove={() => setActiveKey(item.key)}
+              />
+            ) : null,
+          )}
+          {truncated ? <Note>Hay más resultados. Escribe más para acotar.</Note> : null}
+        </>
+      );
+    }
+    return (
+      // Sin opciones no es un grupo del listbox (ARIA): queda como texto de ayuda.
+      <div
+        role={resultItems.length > 0 ? 'group' : undefined}
+        aria-labelledby={resultItems.length > 0 ? resultsHeadingId : undefined}
+        aria-busy={busy || undefined}
+        className="mb-1 last:mb-0"
+      >
+        <GroupHeading id={resultsHeadingId}>Solicitudes y tareas</GroupHeading>
+        {body}
+      </div>
+    );
+  }
+
+  const screensStart = resultsFirst ? resultItems.length : 0;
+  const resultsStart = resultsFirst ? 0 : screenItems.length;
+  const activeId = activeIndex >= 0 ? optionId(activeIndex) : undefined;
 
   return (
-    <form
-      ref={formRef}
-      role="search"
-      aria-label="Búsqueda por código"
-      onSubmit={handleSubmit}
-      onFocus={() => setFocused(true)}
-      onBlur={handleBlur}
-      className={cn(mobile ? 'flex min-w-0 flex-1 items-center gap-2' : 'relative shrink-0')}
-    >
-      <div className={cn('relative', mobile && 'min-w-0 flex-1')}>
+    <>
+      <div className="relative flex h-14 shrink-0 items-center border-b border-border md:h-12">
         <Search
           aria-hidden="true"
-          className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute left-4 size-4 text-muted-foreground"
         />
         <input
           ref={inputRef}
-          type="search"
+          type="text"
           role="combobox"
           value={text}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onFocus={() => text !== '' && setPanelOpen(true)}
-          placeholder="Buscar código"
-          aria-label="Buscar por código"
-          aria-describedby={helpId}
-          aria-keyshortcuts="/"
-          aria-haspopup="listbox"
-          aria-autocomplete="none"
-          aria-expanded={showListbox}
+          autoFocus
+          placeholder={canSearchApi ? PLACEHOLDER : PLACEHOLDER_SCREENS}
+          aria-label={canSearchApi ? 'Buscar pantallas, solicitudes o tareas' : 'Buscar pantallas'}
+          aria-expanded={flat.length > 0}
           aria-controls={listboxId}
-          aria-activedescendant={found && panelOpen ? optionId : undefined}
-          aria-invalid={invalid || undefined}
-          aria-busy={busy || undefined}
+          aria-activedescendant={emptyBlock ? undefined : activeId}
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
           autoComplete="off"
-          autoCapitalize="characters"
+          autoCapitalize="none"
           spellCheck={false}
           enterKeyHint="search"
-          className={cn(
-            '[&::-webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:appearance-none w-full min-w-0 rounded-md border border-input bg-background pl-8 pr-9 text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring aria-invalid:border-danger aria-invalid:focus-visible:outline-danger',
-            mobile ? 'h-11 text-base sm:text-sm' : 'h-8 w-56 text-sm pointer-coarse:h-10 xl:w-72',
-          )}
+          onChange={(event) => {
+            setText(event.target.value);
+            setNotice('');
+          }}
+          onKeyDown={handleKeyDown}
+          className="h-full w-full bg-transparent pl-11 pr-20 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring md:text-sm"
         />
-        {view.kind === 'loading' ? (
+        {busy ? (
           <Loader2
             aria-hidden="true"
-            className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground motion-reduce:animate-none"
+            className="pointer-events-none absolute right-[4.5rem] size-4 animate-spin text-muted-foreground motion-reduce:animate-none"
           />
         ) : text !== '' ? (
           <button
             type="button"
             aria-label="Borrar búsqueda"
             onClick={() => {
-              reset();
+              setText('');
+              setNotice('');
               inputRef.current?.focus();
             }}
-            className="absolute right-1 top-1/2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            className="absolute right-12 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring pointer-coarse:size-10"
           >
             <X aria-hidden="true" className="size-4" />
           </button>
-        ) : showHint ? (
-          <kbd
-            aria-hidden="true"
-            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1.5 font-mono text-meta leading-5 text-muted-foreground"
-          >
-            /
-          </kbd>
         ) : null}
       </div>
-      {mobile ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          aria-label="Cerrar búsqueda"
-          onClick={() => {
-            reset();
-            closeMobile(true);
-          }}
-        >
-          Cerrar
-        </Button>
-      ) : null}
-
-      <span id={helpId} className="sr-only">
-        Escribe un código completo, por ejemplo PRY-0012-T07. Pulsa / para llegar aquí desde
-        cualquier página.
-      </span>
-      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
-        {announcement}
-      </div>
-
-      {panelOpen ? (
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        {emptyBlock ? (
+          <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+            <span className="flex size-10 items-center justify-center rounded-full bg-primary-subtle">
+              <SearchX aria-hidden="true" className="size-5 text-link" />
+            </span>
+            <p className="text-sm font-medium text-foreground">
+              No encontramos resultados para «{trimmed}»
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {canSearchApi
+                ? 'Revisa la ortografía y las tildes, o prueba con otra parte del título. Para ir directo, escribe el código completo.'
+                : 'Revisa la ortografía o prueba con otra parte del nombre de la pantalla.'}
+            </p>
+          </div>
+        ) : null}
         <div
-          className={cn(
-            'absolute top-full mt-1.5 max-h-[min(20rem,60dvh)] overflow-y-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-card',
-            mobile ? 'inset-x-2' : 'right-0 w-[min(28rem,calc(100vw-1.5rem))]',
-          )}
+          id={listboxId}
+          role={flat.length > 0 ? 'listbox' : undefined}
+          aria-label={flat.length > 0 ? 'Resultados' : undefined}
+          hidden={emptyBlock}
         >
-          {found ? (
+          {resultsFirst ? (
             <>
-              <ul id={listboxId} role="listbox" aria-label="Resultado de la búsqueda">
-                <FoundRow
-                  id={optionId}
-                  resolution={found.resolution}
-                  destination={foundDestination}
-                  busy={busy}
-                  onOpen={() => go(found.resolution)}
-                />
-              </ul>
-              {!mobile && foundDestination ? (
-                <p className="px-3 pb-1 text-right text-xs text-muted-foreground">Intro para abrir</p>
-              ) : null}
+              {renderResultsGroup(resultsStart)}
+              {renderScreenGroup(screensStart)}
             </>
           ) : (
-            <Notice view={view} onRetry={() => void run(text, true)} />
+            <>
+              {renderScreenGroup(screensStart)}
+              {renderResultsGroup(resultsStart)}
+            </>
           )}
         </div>
-      ) : null}
-    </form>
+      </div>
+      <div
+        aria-hidden="true"
+        className="hidden shrink-0 items-center gap-3 border-t border-border px-4 py-2 text-xs text-muted-foreground pointer-fine:md:flex"
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <Kbd>↑↓</Kbd> moverse
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Kbd>Intro</Kbd> abrir
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Kbd>Esc</Kbd> cerrar
+        </span>
+      </div>
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {notice || settled}
+      </div>
+    </>
   );
 }
 
-function FoundRow({
+function Kbd({ children }: { children: React.ReactNode }): React.ReactElement {
+  return (
+    <kbd className="rounded border border-border bg-muted px-1.5 font-mono text-meta leading-5 text-muted-foreground">
+      {children}
+    </kbd>
+  );
+}
+
+function GroupHeading({ id, children }: { id: string; children: React.ReactNode }): React.ReactElement {
+  return (
+    <div
+      id={id}
+      className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+    >
+      {children}
+    </div>
+  );
+}
+
+function Note({
+  children,
+  icon = false,
+}: {
+  children: React.ReactNode;
+  icon?: boolean;
+}): React.ReactElement {
+  return (
+    <p className="flex items-start gap-2 px-3 py-2 text-xs text-muted-foreground">
+      {icon ? <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" /> : null}
+      <span>{children}</span>
+    </p>
+  );
+}
+
+const ROW_CLASS =
+  'relative flex min-h-12 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left pointer-coarse:min-h-14 hover:bg-accent data-[active=true]:bg-primary-subtle data-[active=true]:hover:bg-primary-subtle before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full data-[active=true]:before:bg-link aria-disabled:cursor-default forced-colors:data-[active=true]:bg-[Highlight] forced-colors:data-[active=true]:text-[HighlightText]';
+
+function ScreenRow({
+  id,
+  entry,
+  active,
+  onSelect,
+  onPointerMove,
+}: {
+  id: string;
+  entry: ScreenEntry;
+  active: boolean;
+  onSelect: () => void;
+  onPointerMove: () => void;
+}): React.ReactElement {
+  const Icon = entry.item.icon;
+  return (
+    <div
+      id={id}
+      role="option"
+      aria-selected={active}
+      data-active={active}
+      onClick={onSelect}
+      onMouseMove={onPointerMove}
+      className={cn(ROW_CLASS, 'flex-col items-start gap-0.5 md:flex-row md:items-center md:gap-3')}
+    >
+      <span className="flex min-w-0 items-center gap-3">
+        <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+        <span className="truncate text-sm font-medium text-foreground">{entry.item.label}</span>
+      </span>
+      {entry.hint ? (
+        <span className="truncate pl-7 text-xs text-muted-foreground md:ml-auto md:pl-0">
+          {entry.hint}
+        </span>
+      ) : null}
+      {active ? (
+        <span aria-hidden="true" className="hidden shrink-0 text-xs text-muted-foreground md:block pointer-coarse:hidden">
+          Intro
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function ResultRow({
   id,
   resolution,
-  destination,
-  busy,
-  onOpen,
+  disabled,
+  active,
+  onSelect,
+  onPointerMove,
 }: {
   id: string;
   resolution: CodeResolution;
-  destination: string | null;
-  busy: boolean;
-  onOpen: () => void;
+  disabled: boolean;
+  active: boolean;
+  onSelect: () => void;
+  onPointerMove: () => void;
 }): React.ReactElement {
   const meta = TYPE_META[resolution.type];
   const Icon = meta.icon;
@@ -470,100 +825,42 @@ function FoundRow({
       : resolution.type === 'PHASE'
         ? [resolution.requestCode, resolution.requestTitle]
         : [resolution.processName];
+  const noun =
+    resolution.type === 'TASK' ? 'esta tarea' : resolution.type === 'PHASE' ? 'esta fase' : 'esta solicitud';
   return (
-    <li
+    <div
       id={id}
       role="option"
-      aria-selected="true"
-      aria-disabled={destination ? undefined : true}
-      aria-busy={busy || undefined}
-      data-disabled={destination ? undefined : 'true'}
-      data-href={destination ?? undefined}
-      onClick={onOpen}
-      className="relative flex min-h-12 cursor-pointer items-start gap-3 rounded-lg bg-primary-subtle px-3 py-2 text-left before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:rounded-full before:bg-primary data-[disabled=true]:cursor-default"
+      aria-selected={active}
+      aria-disabled={disabled || undefined}
+      data-active={active}
+      onClick={onSelect}
+      onMouseMove={onPointerMove}
+      className={cn(ROW_CLASS, 'items-start')}
     >
       <div className="min-w-0 flex-1 space-y-0.5">
         <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <Icon aria-hidden="true" className="size-3.5" />
+          <Icon aria-hidden="true" className="size-3.5 shrink-0" />
           {meta.label}
           <IdChip code={resolution.code} variant="full" copyable={false} />
         </p>
-        <p className="line-clamp-3 break-words text-sm font-medium text-foreground">
+        <p
+          className={cn(
+            'line-clamp-2 break-words text-sm font-medium md:line-clamp-1',
+            disabled ? 'text-muted-foreground' : 'text-foreground',
+          )}
+        >
           {resolution.title}
         </p>
-        <p className="break-words text-xs text-muted-foreground">
-          {context.filter(Boolean).join(' · ')}
+        <p className="line-clamp-1 break-words text-xs text-muted-foreground">
+          {disabled
+            ? `Tu rol no tiene una pantalla para abrir ${noun}.`
+            : context.filter(Boolean).join(' · ')}
         </p>
-        {destination ? null : (
-          <p className="text-xs text-foreground">
-            Tu rol no tiene una pantalla para abrir {resolution.type === 'TASK' ? 'esta tarea' : resolution.type === 'PHASE' ? 'esta fase' : 'esta solicitud'}.
-          </p>
-        )}
       </div>
       {resolution.type !== 'PHASE' && resolution.status ? (
         <StatusBadge kind={resolution.type === 'TASK' ? 'task' : 'request'} value={resolution.status} />
       ) : null}
-    </li>
+    </div>
   );
-}
-
-function Notice({
-  view,
-  onRetry,
-}: {
-  view: View;
-  onRetry: () => void;
-}): React.ReactElement {
-  const base = 'flex items-start gap-2 px-3 py-2 text-sm text-foreground';
-  switch (view.kind) {
-    case 'loading':
-      return (
-        <p className={base}>
-          <Loader2 aria-hidden="true" className="mt-0.5 size-4 animate-spin motion-reduce:animate-none" />
-          Buscando {view.code}…
-        </p>
-      );
-    case 'invalid':
-      return (
-        <p className={base}>
-          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          No es un código válido. Usa {EXAMPLES}.
-        </p>
-      );
-    case 'not-found':
-      return (
-        <div className={base}>
-          <SearchX aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <div>
-            <p>No encontramos {view.code}, o no tienes acceso.</p>
-            <p className="text-xs text-muted-foreground">Revisa el código; debe escribirse completo.</p>
-          </div>
-        </div>
-      );
-    case 'forbidden':
-      return (
-        <p className={base}>
-          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          Tu rol no puede buscar por código.
-        </p>
-      );
-    case 'error':
-      return (
-        <div className={base}>
-          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <div className="space-y-2">
-            <p>No se pudo buscar. Inténtalo de nuevo.</p>
-            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-              Reintentar
-            </Button>
-          </div>
-        </div>
-      );
-    default:
-      return (
-        <p className="px-3 py-2 text-sm text-muted-foreground">
-          Escribe el código completo. Ejemplos: {EXAMPLES}.
-        </p>
-      );
-  }
 }

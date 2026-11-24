@@ -86,7 +86,9 @@ import {
   getWorkspaceGroups,
   resolveActiveApp,
   isNavItemActive,
+  listScreens,
   searchNavItems,
+  searchScreens,
   type NavItem,
 } from '../apps/web/src/lib/navigation';
 import {

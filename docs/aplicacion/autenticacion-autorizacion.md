@@ -443,6 +443,8 @@ su motivo en la propia solicitud (`currentTriageReason`), sin acceso a
 
 Las lecturas por ID visible (`GET /codes/:code`, `GET /requests/by-code/:code`, `GET /plan-phases/by-code/:code`, junto con `GET /tasks/by-code/:code`) usan esa misma definición (`requestScopeWhere`) y los roles `JEFE_AREA`, `LIDER_PROCESO` e `INTEGRANTE`: un código inexistente o fuera de alcance responde `404` con el mismo mensaje, sin revelar que existe.
 
+La búsqueda por texto (`GET /search`, oleada 4) usa los mismos roles y el mismo alcance: el texto solo intersecta `requestScopeWhere`, así que el integrante encuentra únicamente solicitudes de sus procesos o creadas por él (y las tareas de esas solicitudes). El `ADMIN` recibe `403`; en la web su paleta solo lista pantallas.
+
 ## Bitácora y reporte semanal: escritura y revisión
 
 - **Escribir** (crear, editar, enviar, retirar el envío, eliminar) un diario o un semanal es solo del **autor**; el jefe de área y el líder ya no editan registros ajenos.

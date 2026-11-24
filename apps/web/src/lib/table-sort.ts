@@ -195,7 +195,7 @@ export function paginate<T>(
 }
 
 /** Texto normalizado para buscar: sin espacios en los extremos, minúsculas y sin diacríticos. */
-function normalizeForSearch(value: string): string {
+export function normalizeForSearch(value: string): string {
   return value.trim().toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
 }
 

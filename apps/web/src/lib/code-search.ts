@@ -57,6 +57,39 @@ export async function resolveCode(
   }
 }
 
+/** Resultado de GET /search (tipo derivado del contrato OpenAPI). */
+export type TextSearchResponse = components['schemas']['SearchResponseDto'];
+
+/** Longitud mínima y máxima del texto que acepta GET /search (misma regla que la API). */
+export const TEXT_SEARCH_MIN = 2;
+export const TEXT_SEARCH_MAX = 80;
+
+export type TextSearchResult =
+  | { kind: 'ok'; data: TextSearchResponse }
+  | { kind: 'forbidden' }
+  | { kind: 'error' };
+
+/**
+ * Busca solicitudes y tareas por texto (GET /search). El texto se recorta y se
+ * acota a 80 caracteres para no mostrar un 400 al usuario. Una petición
+ * cancelada propaga el AbortError.
+ */
+export async function searchText(raw: string, signal: AbortSignal): Promise<TextSearchResult> {
+  const q = raw.trim().slice(0, TEXT_SEARCH_MAX).trim();
+  try {
+    const { data, response } = await api.GET('/search', {
+      params: { query: { q } },
+      signal,
+    });
+    if (data) return { kind: 'ok', data };
+    if (response.status === 403) return { kind: 'forbidden' };
+    return { kind: 'error' };
+  } catch (err) {
+    if (signal.aborted) throw err;
+    return { kind: 'error' };
+  }
+}
+
 /**
  * Destino de navegación según los módulos del actor (design §2.6). El primero
  * que cumpla gana; `null` si el actor no tiene pantalla para ese tipo. El
