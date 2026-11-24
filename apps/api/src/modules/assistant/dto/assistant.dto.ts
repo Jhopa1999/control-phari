@@ -151,6 +151,13 @@ export class AssistantStatusDto {
   reason!: string | null;
 
   @ApiProperty({
+    type: Boolean,
+    description:
+      'El modelo está simulado (solo ambientes no productivos): las respuestas no vienen de un modelo real.',
+  })
+  simulated!: boolean;
+
+  @ApiProperty({
     type: AttachmentLimitsDto,
     description: 'Límites de los adjuntos del chat.',
   })

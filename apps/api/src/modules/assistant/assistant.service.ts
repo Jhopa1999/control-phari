@@ -5,12 +5,14 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CurrentActor } from '../auth/current-actor';
 import { AiModelCatalogService } from '../ai/ai-model-catalog.service';
 import { AiUsageService } from '../ai/ai-usage.service';
 import { ASSISTANT_AGENT_CODE } from '../ai/ai-defaults';
+import { MODEL_SIMULATED } from '../ai/simulated-bedrock.client';
 import { resolveAgentCredentials } from './assistant-agent';
 import {
   BEDROCK_CLIENT,
@@ -174,6 +176,8 @@ export class AssistantService {
     private readonly proposals: AssistantProposalsService,
     @Inject(AssistantAttachmentsService)
     private readonly attachments: AssistantAttachmentsService,
+    // Modo de simulación del modelo (FEAT-007); ausente => modelo real.
+    @Optional() @Inject(MODEL_SIMULATED) private readonly simulated: boolean = false,
   ) {}
 
   // ------------------------------------------------------------ disponibilidad
@@ -202,6 +206,7 @@ export class AssistantService {
     return {
       available: reason === null,
       reason,
+      simulated: this.simulated === true,
       attachments: {
         maxFiles: MAX_ATTACHMENTS_PER_MESSAGE,
         maxImageBytes: MAX_IMAGE_BYTES,

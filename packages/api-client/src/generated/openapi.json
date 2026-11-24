@@ -21494,6 +21494,10 @@
             "nullable": true,
             "description": "Motivo legible (en español) cuando no está disponible; null si lo está."
           },
+          "simulated": {
+            "type": "boolean",
+            "description": "El modelo está simulado (solo ambientes no productivos): las respuestas no vienen de un modelo real."
+          },
           "attachments": {
             "description": "Límites de los adjuntos del chat.",
             "allOf": [
@@ -21506,6 +21510,7 @@
         "required": [
           "available",
           "reason",
+          "simulated",
           "attachments"
         ]
       },

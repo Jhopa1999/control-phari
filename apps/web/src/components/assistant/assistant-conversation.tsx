@@ -90,7 +90,13 @@ export function AssistantConversation({
       );
     }
     if (a.messages.length === 0) {
-      return <AssistantEmptyState onPick={a.send} disabled={unavailable || a.streaming} />;
+      return (
+        <AssistantEmptyState
+          onPick={a.send}
+          disabled={unavailable || a.streaming}
+          simulated={a.simulated}
+        />
+      );
     }
     return (
       <ChatThread

@@ -70,6 +70,7 @@ const AGENT = {
 };
 
 interface Opts {
+  simulated?: boolean;
   configured?: boolean;
   globalEnabled?: boolean;
   agentEnabled?: boolean;
@@ -194,7 +195,7 @@ function makeDeps(opts: Opts = {}) {
     byMessage: jest.fn().mockResolvedValue(new Map()),
     removeConversationFiles: jest.fn().mockResolvedValue(undefined),
   } as unknown as AssistantAttachmentsService;
-  const service = new AssistantService(prisma, bedrock, models, usage, gateway, proposals, attachments);
+  const service = new AssistantService(prisma, bedrock, models, usage, gateway, proposals, attachments, opts.simulated ?? false);
   return { service, prisma, converseStream, usage, session, gateway, messagesCreated, proposals, models, attachments };
 }
 
@@ -250,6 +251,19 @@ describe('AssistantService · disponibilidad', () => {
 
   it('disponible => reason null', async () => {
     expect(await makeDeps().service.getStatus()).toMatchObject({ available: true, reason: null });
+  });
+
+  it('informa si el modelo está simulado sin cambiar la disponibilidad', async () => {
+    expect((await makeDeps().service.getStatus()).simulated).toBe(false);
+    expect(await makeDeps({ simulated: true }).service.getStatus()).toMatchObject({
+      simulated: true,
+      available: true,
+      reason: null,
+    });
+    // El MCP, la IA global y el agente siguen siendo requisito.
+    expect(
+      await makeDeps({ simulated: true, configured: false }).service.getStatus(),
+    ).toMatchObject({ simulated: true, available: false });
   });
 
   it('informa los límites de los adjuntos para que la interfaz no los duplique', async () => {

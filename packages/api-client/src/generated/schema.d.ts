@@ -7769,6 +7769,8 @@ export interface components {
             available: boolean;
             /** @description Motivo legible (en español) cuando no está disponible; null si lo está. */
             reason: string | null;
+            /** @description El modelo está simulado (solo ambientes no productivos): las respuestas no vienen de un modelo real. */
+            simulated: boolean;
             /** @description Límites de los adjuntos del chat. */
             attachments: components["schemas"]["AttachmentLimitsDto"];
         };

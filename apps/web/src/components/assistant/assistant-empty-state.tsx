@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SimulationBadge } from './simulation-badge';
 
 /** Preguntas de ejemplo para gestión de demanda (se envían al activarlas). */
 export const SUGGESTED_QUESTIONS: readonly string[] = [
@@ -19,15 +20,19 @@ export const TRUST_NOTE =
 export interface AssistantEmptyStateProps {
   onPick: (question: string) => void;
   disabled?: boolean;
+  /** Muestra la insignia del modo de simulación del modelo. */
+  simulated?: boolean;
 }
 
 /** Estado vacío del chat: invitación y sugerencias que se envían de inmediato. */
 export function AssistantEmptyState({
   onPick,
   disabled = false,
+  simulated = false,
 }: AssistantEmptyStateProps): React.ReactElement {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-6 text-center">
+      {simulated ? <SimulationBadge /> : null}
       <Sparkles className="size-5 text-muted-foreground" aria-hidden="true" />
       <div className="flex flex-col gap-1">
         <h3 className="text-base font-semibold">¿En qué te puedo ayudar?</h3>

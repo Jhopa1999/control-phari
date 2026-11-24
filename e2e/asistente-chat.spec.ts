@@ -61,6 +61,8 @@ interface MockOptions {
   confirm?: 'ok' | 'rechazada' | 'vencida';
   available?: boolean;
   reason?: string | null;
+  /** El modelo está simulado (solo ambientes no productivos). */
+  simulated?: boolean;
   chatStatus?: number;
 }
 
@@ -74,7 +76,11 @@ async function mockAssistant(page: Page, options: MockOptions = {}) {
   await page.route('**/assistant/status', async (route: Route) => {
     await route.fulfill({
       status: 200,
-      json: { available: options.available ?? true, reason: options.reason ?? null },
+      json: {
+        available: options.available ?? true,
+        reason: options.reason ?? null,
+        simulated: options.simulated ?? false,
+      },
     });
   });
 
@@ -184,6 +190,29 @@ test('el panel abre con sugerencias y una pregunta muestra herramientas, tabla y
   // El campo se limpió y el mensaje del usuario quedó en el hilo.
   await expect(panel.getByRole('article', { name: 'Tu mensaje' })).toContainText('¿Cuántas solicitudes hay?');
   expect(calls.chat).toBe(1);
+});
+
+test('con el modelo simulado la insignia aparece en el estado vacío y en el compositor', async ({ page }) => {
+  await mockAssistant(page, { simulated: true });
+  await openPanel(page);
+  const panel = page.getByRole('dialog', { name: 'Asistente' });
+  const badge = panel.getByTestId('assistant-simulation-badge');
+  const text = 'Modo de simulación: las respuestas no vienen de un modelo real';
+  // Estado vacío y compositor: una insignia en cada sitio.
+  await expect(badge).toHaveCount(2);
+  await expect(badge.first()).toHaveText(text);
+  // Tras enviar, el estado vacío desaparece pero el compositor la conserva.
+  const input = panel.getByRole('textbox', { name: 'Mensaje para el asistente' });
+  await input.fill('¿Cuántas solicitudes hay?');
+  await input.press('Enter');
+  await expect(panel.getByRole('article', { name: 'Respuesta del asistente' })).toBeVisible();
+  await expect(badge).toHaveCount(1);
+});
+
+test('sin simulación no hay insignia', async ({ page }) => {
+  await mockAssistant(page);
+  await openPanel(page);
+  await expect(page.getByTestId('assistant-simulation-badge')).toHaveCount(0);
 });
 
 test('Mayús+Enter inserta un salto de línea y no envía', async ({ page }) => {

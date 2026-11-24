@@ -204,6 +204,11 @@ icono en la barra móvil, disponible en todo el portal. Especificación visual:
 | `/asistente/nueva` | Conversación nueva | Estado vacío con cinco preguntas sugeridas que se envían al pulsarlas. Al primer mensaje la URL pasa a `/asistente/{id}` sin recargar. |
 | `/asistente/{id}` | Conversación | Hilo con respuestas en Markdown (tablas desplazables, enlaces a pantallas del portal), fuentes consultadas expandibles, copiar, detener y reintentar. |
 
+**Modo de simulación.** Si `GET /assistant/status` devuelve `simulated: true` (solo ambientes no
+productivos), el estado vacío y el compositor muestran la insignia «Modo de simulación: las respuestas no
+vienen de un modelo real» (icono y texto, tokens de aviso). Especificación:
+`docs/design/oleada4-g-asistente-simulado.md`.
+
 **Adjuntos.** En el campo de mensaje, el botón del clip (también arrastrando archivos sobre el campo
 o pegando una imagen) adjunta imágenes y documentos. Cada archivo se sube al instante y aparece como un
 chip con su estado (subiendo con avance, leyendo el contenido, listo o con error y motivo; en error
