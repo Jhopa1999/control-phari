@@ -26,10 +26,10 @@ export interface Exclusion {
 
 /**
  * Tope (ratchet) de exclusiones PENDIENTES. Las lecturas ya están expuestas
- * (BL-032 F1 entrega 3); quedan 48 pendientes, todas de escritura. Solo puede
+ * (BL-032 F1 entrega 3); quedan 46 pendientes, todas de escritura. Solo puede
  * BAJAR; el objetivo final es 0.
  */
-export const MAX_PENDIENTES = 48;
+export const MAX_PENDIENTES = 46;
 
 function permanente(
   reason: string,
@@ -282,8 +282,6 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
     'escritura · meetings',
     [
       'DELETE /meetings/{id}',
-      'POST /meetings/{id}/close',
-      'POST /meetings/{id}/reopen',
     ],
   ),
   ...pendiente(

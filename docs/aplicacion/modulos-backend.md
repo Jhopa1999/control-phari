@@ -844,7 +844,7 @@ consultar. El agente `ASISTENTE` nace con 8192 tokens de salida (un plan largo n
 **Propuestas de acción (F3).** El asistente nunca escribe datos: solo puede *proponer* con una lista
 cerrada de tools de escritura (`request.create`, `request.update`, `request.triage.create`,
 `request.priority.create`, `plan.create`, `task.create`, `task.update`, `task.status.update`,
-`meeting.create`, `meeting.update`,
+`meeting.create`, `meeting.update`, `meeting.close`, `meeting.reopen`,
 `commitment.create`, `commitment.update`, `commitment.transition`, `plan.update`, `phase.create`,
 `phase.update`, `phase.reorder`, `task.dependency.add`, `asset.create`, `asset.update`,
 `document.create`, `document.update`, `document.version.create` y `plan.import`, que carga un cronograma
