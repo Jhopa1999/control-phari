@@ -1,4 +1,11 @@
 import { expect, test } from '@playwright/test';
+import { AGENDA_MAX, appendAgendaTemplate } from '../apps/web/src/lib/agenda-templates';
+import { listCountText } from '../apps/web/src/lib/list-count';
+import {
+  relatedCreateFields,
+  relatedUpdateFields,
+  relatedValueOf,
+} from '../apps/web/src/lib/related-request-value';
 import {
   ApiError,
   apiErrorFrom,
@@ -2185,5 +2192,50 @@ test.describe('áreas: motivo del bloqueo y recuentos de procesos (oleada 3, PR-
       '../apps/api/src/modules/coordination/coordination-scope.service'
     );
     expect(webMessage).toBe(apiMessage);
+  });
+});
+
+test.describe('Reuniones PR-4: plantillas, contadores y solicitud relacionada', () => {
+  test('la plantilla se agrega al final tras una línea en blanco y nunca reemplaza lo escrito', () => {
+    expect(appendAgendaTemplate('', '1. Tema')).toBe('1. Tema');
+    expect(appendAgendaTemplate('   ', '1. Tema')).toBe('1. Tema');
+    expect(appendAgendaTemplate('Mi agenda  \n', '1. Tema')).toBe('Mi agenda\n\n1. Tema');
+  });
+  test('la plantilla que no cabe en la agenda no se inserta', () => {
+    expect(appendAgendaTemplate('x'.repeat(AGENDA_MAX - 5), '123456789')).toBeNull();
+    expect(appendAgendaTemplate('x'.repeat(AGENDA_MAX - 5), '12345')).toBeNull();
+    expect(appendAgendaTemplate('x'.repeat(AGENDA_MAX - 10), '12345')).not.toBeNull();
+  });
+  test('el contador de la lista dice «N de TOTAL» solo con filtros y total conocido', () => {
+    expect(listCountText(300, 300, false, 'acta', 'actas')).toBe('300 actas');
+    expect(listCountText(1, 1, false, 'acta', 'actas')).toBe('1 acta');
+    expect(listCountText(12, 300, true, 'acta', 'actas')).toBe('12 de 300 actas');
+    expect(listCountText(0, 300, true, 'acta', 'actas')).toBe('0 de 300 actas');
+    expect(listCountText(12, null, true, 'acta', 'actas')).toBe('12 actas');
+    expect(listCountText(0, 0, false, 'compromiso', 'compromisos')).toBe('0 compromisos');
+  });
+  test('la solicitud mostrada es el proyecto relacionado y, si no hay, la solicitud relacionada', () => {
+    const base = { relatedRequestCode: 'PRY-0012', relatedRequestTitle: 'Proyecto' };
+    expect(relatedValueOf({ ...base, relatedProjectRequestId: 'p', relatedRequestId: 'r' })).toEqual({
+      id: 'p',
+      code: 'PRY-0012',
+      title: 'Proyecto',
+    });
+    expect(relatedValueOf({ ...base, relatedProjectRequestId: null, relatedRequestId: 'r' })?.id).toBe('r');
+    expect(
+      relatedValueOf({ relatedRequestCode: null, relatedRequestTitle: null, relatedProjectRequestId: null, relatedRequestId: null }),
+    ).toBeNull();
+  });
+  test('al guardar solo se envía la solicitud si cambió (una no visible no bloquea el guardado)', () => {
+    const a = { id: 'a', code: 'PRY-0001', title: 'A' };
+    const b = { id: 'b', code: 'PRY-0002', title: 'B' };
+    const hidden = { id: 'h', code: null, title: null };
+    expect(relatedCreateFields(null)).toEqual({});
+    expect(relatedCreateFields(a)).toEqual({ relatedProjectRequestId: 'a' });
+    expect(relatedUpdateFields(a, a)).toEqual({});
+    expect(relatedUpdateFields(hidden, hidden)).toEqual({});
+    expect(relatedUpdateFields(a, b)).toEqual({ relatedProjectRequestId: 'b', relatedRequestId: null });
+    expect(relatedUpdateFields(a, null)).toEqual({ relatedProjectRequestId: null, relatedRequestId: null });
+    expect(relatedUpdateFields(null, a)).toEqual({ relatedProjectRequestId: 'a', relatedRequestId: null });
   });
 });

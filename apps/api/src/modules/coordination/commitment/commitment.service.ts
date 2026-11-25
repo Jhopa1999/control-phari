@@ -21,6 +21,27 @@ import { dateStringToDate, dateToString } from '../date';
 import { isMinutesClosed } from '../meeting/minutes';
 import { localToday } from '../local-day';
 import { OPEN_COMMITMENT_STATES, dueStatusOf } from './commitment-due';
+import {
+  COMMITMENT_DUE_DEFAULTS,
+  COMMITMENT_PARAM_CATALOG,
+  COMMITMENT_PARAM_CODES,
+  assertDueDateInRange,
+  dueDateRangeOf,
+  parseYearsParam,
+  type DueDateRange,
+} from './commitment-due-range';
+import {
+  loadRelatedRequests,
+  relatedRequestIdOf,
+  relatedRequestSearchClauses,
+  type RelatedRequestInfo,
+} from '../related-request';
+import {
+  buildPageResult,
+  normalizeSearch,
+  resolvePage,
+  type PageResult,
+} from '../../../common/pagination/pagination';
 import { CommitmentMyWorkDto } from './dto/commitment-my-work.dto';
 import { RecordState } from '../record-state';
 import { CreateCommitmentDto } from './dto/create-commitment.dto';
@@ -81,8 +102,13 @@ export class CommitmentService {
     };
   }
 
-  private toResponse(row: CommitmentWithMeeting): CommitmentResponseDto {
+  private toResponse(
+    row: CommitmentWithMeeting,
+    related: ReadonlyMap<string, RelatedRequestInfo> = new Map(),
+  ): CommitmentResponseDto {
     const due = dueStatusOf(row.dueDate, row.state, localToday());
+    const requestId = relatedRequestIdOf(row);
+    const request = requestId ? related.get(requestId) : undefined;
     return {
       id: row.id,
       processId: row.processId,
@@ -96,6 +122,8 @@ export class CommitmentService {
       responsibleUserId: row.responsibleUserId,
       relatedRequestId: row.relatedRequestId,
       relatedProjectRequestId: row.relatedProjectRequestId,
+      relatedRequestCode: request?.code ?? null,
+      relatedRequestTitle: request?.title ?? null,
       expectedResult: row.expectedResult,
       result: row.result,
       blockers: row.blockers,
@@ -128,19 +156,40 @@ export class CommitmentService {
   }
 
   /** Request relacionada por visibilidad real de Fase 2 (404 fuera). */
-  private async requireRequestVisible(
-    actor: CurrentActor,
-    requestId: string,
-  ): Promise<void> {
-    const request = await this.prisma.request.findFirst({
-      where: {
-        AND: [{ id: requestId }, this.scope.requestVisibilityWhere(actor)],
-      },
-      select: { id: true },
-    });
-    if (!request) {
-      throw new NotFoundException('No se encontró la solicitud.');
+  private requireRequestVisible(actor: CurrentActor, requestId: string): Promise<void> {
+    return this.scope.assertRequestVisible(actor, requestId);
+  }
+
+  /**
+   * Rango aceptado para el vencimiento (D5): años hacia atrás y adelante desde
+   * hoy, de la maestra COMMITMENT_PARAM con valor seguro por defecto.
+   */
+  private async dueRange(): Promise<DueDateRange> {
+    let rows: Array<{ code: string; label: string }> = [];
+    try {
+      rows = await this.prisma.catalogItem.findMany({
+        where: {
+          catalog: COMMITMENT_PARAM_CATALOG,
+          active: true,
+          code: { in: Object.values(COMMITMENT_PARAM_CODES) },
+        },
+        select: { code: true, label: true },
+      });
+    } catch {
+      // Sin acceso a la maestra se aplican los valores por defecto.
     }
+    const byCode = new Map(rows.map((row) => [row.code, row.label]));
+    return dueDateRangeOf(
+      localToday(),
+      parseYearsParam(
+        byCode.get(COMMITMENT_PARAM_CODES.dueYearsBack),
+        COMMITMENT_DUE_DEFAULTS.yearsBack,
+      ),
+      parseYearsParam(
+        byCode.get(COMMITMENT_PARAM_CODES.dueYearsAhead),
+        COMMITMENT_DUE_DEFAULTS.yearsAhead,
+      ),
+    );
   }
 
   /**
@@ -229,7 +278,7 @@ export class CommitmentService {
   async list(
     actor: CurrentActor,
     filters: ListCommitmentsDto,
-  ): Promise<CommitmentResponseDto[]> {
+  ): Promise<PageResult<CommitmentResponseDto>> {
     const where: Prisma.CommitmentWhereInput = {
       AND: [this.scope.commitmentWhere(actor)],
     };
@@ -237,11 +286,28 @@ export class CommitmentService {
     if (filters.state !== undefined) {
       and.push({ state: filters.state });
     }
+    if (filters.view === 'ABIERTOS') {
+      and.push({ state: { in: [...OPEN_COMMITMENT_STATES] } });
+    } else if (filters.view === 'VENCIDOS') {
+      and.push({ state: { in: [...OPEN_COMMITMENT_STATES] }, dueDate: { lt: localToday() } });
+    } else if (filters.view === 'TERMINADOS') {
+      and.push({ state: { notIn: [...OPEN_COMMITMENT_STATES] } });
+    }
     if (filters.processId !== undefined) {
       and.push({ processId: filters.processId });
     }
     if (filters.assignedUserId !== undefined) {
       and.push({ assignedUserId: filters.assignedUserId });
+    }
+    if (filters.personId !== undefined) {
+      and.push({
+        OR: [{ assignedUserId: filters.personId }, { responsibleUserId: filters.personId }],
+      });
+    }
+    if (filters.withoutMeeting === true) {
+      and.push({ sourceMeetingId: null });
+    } else if (filters.meetingId !== undefined) {
+      and.push({ sourceMeetingId: filters.meetingId });
     }
     if (filters.requestId !== undefined) {
       and.push({
@@ -251,13 +317,36 @@ export class CommitmentService {
         ],
       });
     }
+    const q = normalizeSearch(filters.q);
+    if (q !== undefined) {
+      and.push({
+        OR: [
+          { title: { contains: q, mode: 'insensitive' } },
+          { expectedResult: { contains: q, mode: 'insensitive' } },
+          { sourceMeeting: { is: { title: { contains: q, mode: 'insensitive' } } } },
+          ...relatedRequestSearchClauses(actor, q),
+        ],
+      });
+    }
 
-    const rows = await this.prisma.commitment.findMany({
-      where,
-      include: MEETING_REF,
-      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
-    });
-    return rows.map((row) => this.toResponse(row));
+    const window = resolvePage(filters);
+    const dir = filters.dir ?? 'asc';
+    const [rows, total] = await Promise.all([
+      this.prisma.commitment.findMany({
+        where,
+        include: MEETING_REF,
+        orderBy: [{ dueDate: dir }, { createdAt: 'desc' }, { id: 'asc' }],
+        skip: window.skip,
+        take: window.take,
+      }),
+      this.prisma.commitment.count({ where }),
+    ]);
+    const related = await loadRelatedRequests(this.prisma, actor, rows);
+    return buildPageResult(
+      rows.map((row) => this.toResponse(row, related)),
+      total,
+      window,
+    );
   }
 
   /**
@@ -313,6 +402,7 @@ export class CommitmentService {
         sourceMeetingId: row.sourceMeetingId,
         sourceMeetingTitle: row.sourceMeeting?.title ?? null,
         expectedResult: row.expectedResult,
+        blockers: row.blockers,
         canComplete: true,
       };
     });
@@ -329,7 +419,7 @@ export class CommitmentService {
 
   async get(actor: CurrentActor, id: string): Promise<CommitmentResponseDto> {
     const row = await this.requireInScope(actor, id);
-    return this.toResponse(row);
+    return this.toResponse(row, await loadRelatedRequests(this.prisma, actor, [row]));
   }
 
   async create(
@@ -337,6 +427,7 @@ export class CommitmentService {
     dto: CreateCommitmentDto,
   ): Promise<CommitmentResponseDto> {
     const dueDate = dateStringToDate(dto.dueDate);
+    assertDueDateInRange(dueDate, await this.dueRange());
     await this.scope.assertActorInProcess(actor, dto.processId);
     await this.scope.assertPeopleInProcess(dto.processId, [
       dto.assignedUserId,
@@ -396,7 +487,7 @@ export class CommitmentService {
     });
 
     await this.notifyPeople(actor, created, [created.assignedUserId, created.responsibleUserId]);
-    return this.toResponse(created);
+    return this.toResponse(created, await loadRelatedRequests(this.prisma, actor, [created]));
   }
 
   async update(
@@ -407,6 +498,11 @@ export class CommitmentService {
     const existing = await this.requireInScope(actor, id);
     const dueDate =
       dto.dueDate !== undefined ? dateStringToDate(dto.dueDate) : undefined;
+    // El límite de fechas solo aplica cuando la fecha cambia: un compromiso
+    // viejo sigue editable aunque su vencimiento ya quede fuera del rango.
+    if (dueDate !== undefined && dueDate.getTime() !== existing.dueDate.getTime()) {
+      assertDueDateInRange(dueDate, await this.dueRange());
+    }
     // Solo se validan las personas que cambian: reenviar el valor guardado no
     // debe bloquear la edición si esa persona ya salió del proceso.
     await this.scope.assertPeopleInProcess(existing.processId, [
@@ -493,7 +589,7 @@ export class CommitmentService {
       updated.responsibleUserId !== existing.responsibleUserId ? updated.responsibleUserId : null,
     ];
     await this.notifyPeople(actor, updated, newPeople);
-    return this.toResponse(updated);
+    return this.toResponse(updated, await loadRelatedRequests(this.prisma, actor, [updated]));
   }
 
   async transition(
@@ -503,12 +599,18 @@ export class CommitmentService {
   ): Promise<CommitmentResponseDto> {
     const existing = await this.requireInScope(actor, id);
     const toState = this.workflow.assertTransition(existing.state, dto.toState);
+    if (dto.blockedReason !== undefined && toState !== RecordState.BLOQUEADO) {
+      throw new BadRequestException('El motivo del bloqueo solo aplica al marcar el compromiso como bloqueado.');
+    }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.commitment.update({
         where: { id },
         data: {
           state: toState,
+          ...(toState === RecordState.BLOQUEADO && dto.blockedReason !== undefined
+            ? { blockers: dto.blockedReason }
+            : {}),
           // Reabrir permite un nuevo aviso con la nueva realidad.
           ...(toState === RecordState.EN_CURSO &&
           (existing.state === RecordState.COMPLETADO ||
@@ -532,7 +634,7 @@ export class CommitmentService {
       return row;
     });
 
-    return this.toResponse(updated);
+    return this.toResponse(updated, await loadRelatedRequests(this.prisma, actor, [updated]));
   }
 
   async remove(actor: CurrentActor, id: string): Promise<void> {

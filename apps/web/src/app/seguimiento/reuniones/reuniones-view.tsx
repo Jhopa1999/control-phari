@@ -8,9 +8,9 @@ import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import type { Commitment, CoordinationPerson, Meeting, Process } from '@/lib/api-client';
-import { listCommitments } from '@/lib/commitments';
-import { listMeetings, listOpenCommitmentsOfMyMeetings } from '@/lib/meetings';
+import type { CoordinationPerson, Process } from '@/lib/api-client';
+import { countOpenCommitments } from '@/lib/commitments';
+import { countMeetings, listOpenCommitmentsOfMyMeetings } from '@/lib/meetings';
 import { listProcesses } from '@/lib/team';
 import { listCoordinationPeople } from '@/lib/worklog';
 import { ActasPanel } from './actas-panel';
@@ -20,14 +20,15 @@ import { CompromisosPanel } from './compromisos-panel';
 type Tab = 'actas' | 'compromisos' | 'mis-abiertos';
 export type LoadState = 'loading' | 'success' | 'error';
 
-/** Datos compartidos por las dos pestañas (una sola carga). */
+/** Datos compartidos por las pestañas (una sola carga); las listas se piden por página en cada una. */
 export interface CoordinationData {
-  meetings: Meeting[];
-  commitments: Commitment[];
   processes: Process[];
   people: CoordinationPerson[];
+  /** Totales sin búsqueda ni filtros (null si no se pudieron cargar). */
+  totals: { meetings: number | null; openCommitments: number | null };
   state: LoadState;
   error: unknown;
+  /** Vuelve a leer los totales y el conteo de vencidos tras un cambio. */
   reload: () => Promise<void>;
 }
 
@@ -56,8 +57,10 @@ function ReunionesViewContent(): React.ReactElement {
   const [initialMeetingId, setInitialMeetingId] = React.useState<string | null>(null);
   const [initialCommitmentId, setInitialCommitmentId] = React.useState<string | null>(null);
 
-  const [meetings, setMeetings] = React.useState<Meeting[]>([]);
-  const [commitments, setCommitments] = React.useState<Commitment[]>([]);
+  const [totals, setTotals] = React.useState<CoordinationData['totals']>({
+    meetings: null,
+    openCommitments: null,
+  });
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
@@ -81,18 +84,17 @@ function ReunionesViewContent(): React.ReactElement {
 
   const reload = React.useCallback(() => {
     return Promise.all([
-      listMeetings(),
-      listCommitments(),
+      countMeetings().catch(() => null),
+      countOpenCommitments().catch(() => null),
       listProcesses().catch(() => [] as Process[]),
       listCoordinationPeople().catch(() => [] as CoordinationPerson[]),
       listOpenCommitmentsOfMyMeetings()
         .then((res) => res.counts.vencido)
         .catch(() => null),
     ])
-      .then(([mts, cmts, procs, ppl, overdue]) => {
+      .then(([meetingsTotal, openTotal, procs, ppl, overdue]) => {
         setMyOverdue(overdue);
-        setMeetings(mts);
-        setCommitments(cmts);
+        setTotals({ meetings: meetingsTotal, openCommitments: openTotal });
         setProcesses(procs);
         setPeople(ppl);
         setError(null);
@@ -118,10 +120,7 @@ function ReunionesViewContent(): React.ReactElement {
     window.history.replaceState(null, '', url.toString());
   }
 
-  const data: CoordinationData = { meetings, commitments, processes, people, state, error, reload };
-  const openCommitments = commitments.filter(
-    (c) => c.state !== 'COMPLETADO' && c.state !== 'ARCHIVADO',
-  ).length;
+  const data: CoordinationData = { processes, people, totals, state, error, reload };
 
   return (
     <PageLayout>
@@ -138,13 +137,15 @@ function ReunionesViewContent(): React.ReactElement {
           <TabsTrigger value="actas" className={TAB_TRIGGER}>
             <FileText aria-hidden="true" />
             Actas
-            {state === 'success' ? <span className="text-muted-foreground">{` (${meetings.length})`}</span> : null}
+            {totals.meetings !== null ? (
+              <span className="text-muted-foreground">{` (${totals.meetings})`}</span>
+            ) : null}
           </TabsTrigger>
           <TabsTrigger value="compromisos" className={TAB_TRIGGER}>
             <Handshake aria-hidden="true" />
             Compromisos
-            {state === 'success' ? (
-              <span className="text-muted-foreground">{` (${openCommitments} abiertos)`}</span>
+            {totals.openCommitments !== null ? (
+              <span className="text-muted-foreground">{` (${totals.openCommitments} abiertos)`}</span>
             ) : null}
           </TabsTrigger>
           <TabsTrigger value="mis-abiertos" className={TAB_TRIGGER}>

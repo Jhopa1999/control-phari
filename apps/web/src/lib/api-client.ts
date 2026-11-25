@@ -117,6 +117,8 @@ export type CapacityPerson = components['schemas']['CapacityPersonDto'];
 export type CapacitySummaryRow =
   components['schemas']['CapacitySummaryRowDto'];
 // --- Fase 5 (trabajo y coordinacion): tipos derivados del contrato OpenAPI ---
+/** Solicitud o proyecto relacionable con un acta o un compromiso (GET /coordination/requests). */
+export type CoordinationRequest = components['schemas']['CoordinationRequestDto'];
 export type CoordinationPerson =
   components['schemas']['CoordinationPersonDto'];
 export type DailyLog = components['schemas']['DailyLogResponseDto'];

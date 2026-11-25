@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,6 +19,8 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { HeaderResponse, setPaginationHeaders } from '../../../common/pagination/pagination';
+import { PAGINATION_RESPONSE_HEADERS } from '../../../common/pagination/pagination-openapi';
 import { MeetingService } from './meeting.service';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
 import { UpdateMeetingDto } from './dto/update-meeting.dto';
@@ -46,14 +49,26 @@ export class MeetingController {
   constructor(private readonly meetingService: MeetingService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lista reuniones en alcance (filtros opcionales).' })
-  @ApiResponse({ status: 200, description: 'Reuniones.', type: [MeetingResponseDto] })
+  @ApiOperation({
+    summary:
+      'Lista reuniones en alcance con filtros opcionales, búsqueda q (título, responsable, código o título de la solicitud relacionada), orden por fecha (dir) y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Reuniones (la página pedida o hasta 1000 filas).',
+    type: [MeetingResponseDto],
+    headers: PAGINATION_RESPONSE_HEADERS,
+  })
+  @ApiResponse({ status: 400, description: 'Filtros o paginación inválidos.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  list(
+  async list(
     @CurrentActor() actor: CurrentActorType,
     @Query() filters: ListMeetingsDto,
-  ) {
-    return this.meetingService.list(actor, filters);
+    @Res({ passthrough: true }) res: HeaderResponse,
+  ): Promise<MeetingResponseDto[]> {
+    const result = await this.meetingService.list(actor, filters);
+    setPaginationHeaders(res, result);
+    return result.rows;
   }
 
   @Get('commitments-open')

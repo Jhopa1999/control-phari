@@ -38,6 +38,17 @@ export class CommitmentResponseDto {
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   relatedProjectRequestId!: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Codigo (PRY-0012) de la solicitud relacionada que muestra la interfaz (proyecto relacionado o, si no hay, solicitud relacionada). Nulo sin solicitud o si el actor no puede leerla.',
+  })
+  relatedRequestCode!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Titulo de esa solicitud (nulo en los mismos casos).' })
+  relatedRequestTitle!: string | null;
+
   @ApiProperty({ type: String, nullable: true })
   expectedResult!: string | null;
 

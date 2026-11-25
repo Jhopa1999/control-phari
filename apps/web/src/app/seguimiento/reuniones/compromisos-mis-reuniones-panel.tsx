@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Handshake } from 'lucide-react';
+import { BlockedReasonBox, BlockedReasonLine } from '@/components/blocked-reason';
 import { DataCardList } from '@/components/data-card-list';
 import { DueBadge } from '@/components/due-badge';
 import { EmptyState } from '@/components/empty-state';
@@ -27,7 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useActor } from '@/lib/actor-context';
 import type {
   CommitmentFollowUpItem,
   DueStatus,
@@ -71,9 +71,7 @@ export function CompromisosMisReunionesPanel({
   onOpenMeeting: (meetingId: string) => void;
   onOpenCommitment: (commitmentId: string) => void;
 }): React.ReactElement {
-  const { processes, people, meetings } = data;
-  const { permissions } = useActor();
-  const myId = permissions?.userId ?? null;
+  const { processes, people } = data;
   const [assignedFilter, setAssignedFilter] = React.useState(ALL);
   const [meetingFilter, setMeetingFilter] = React.useState(ALL);
   const [processFilter, setProcessFilter] = React.useState(ALL);
@@ -82,6 +80,10 @@ export function CompromisosMisReunionesPanel({
   const [state, setState] = React.useState<LoadState>('loading');
   const [error, setError] = React.useState<unknown>(null);
   const [attempt, setAttempt] = React.useState(0);
+  // Reuniones con compromisos abiertos (para el filtro «Reunión»); se arman con la lista sin filtrar.
+  const [meetingOptions, setMeetingOptions] = React.useState<
+    Array<{ id: string; title: string; meetingDate: string }>
+  >([]);
 
   const filtersActive = assignedFilter !== ALL || meetingFilter !== ALL || processFilter !== ALL;
 
@@ -94,6 +96,19 @@ export function CompromisosMisReunionesPanel({
     })
       .then((res) => {
         if (!active) return;
+        if (meetingFilter === ALL) {
+          const seen = new Map<string, { id: string; title: string; meetingDate: string }>();
+          for (const item of res.items) {
+            if (!seen.has(item.meetingId)) {
+              seen.set(item.meetingId, {
+                id: item.meetingId,
+                title: item.meetingTitle,
+                meetingDate: item.meetingDate,
+              });
+            }
+          }
+          setMeetingOptions(Array.from(seen.values()));
+        }
         setResult(res);
         setError(null);
         setState('success');
@@ -121,10 +136,6 @@ export function CompromisosMisReunionesPanel({
     return dueFilter === 'TODOS' ? all : all.filter((i) => i.dueStatus === dueFilter);
   }, [result, dueFilter]);
 
-  const myMeetings = React.useMemo(
-    () => meetings.filter((m) => m.responsibleUserId === myId),
-    [meetings, myId],
-  );
 
   if (state === 'error') {
     return (
@@ -206,7 +217,7 @@ export function CompromisosMisReunionesPanel({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Todas mis reuniones</SelectItem>
-              {myMeetings.map((m) => (
+              {meetingOptions.map((m) => (
                 <SelectItem key={m.id} value={m.id}>
                   {`${m.title} (${formatDateOnly(m.meetingDate)})`}
                 </SelectItem>
@@ -309,6 +320,7 @@ export function CompromisosMisReunionesPanel({
                           {item.expectedResult}
                         </span>
                       ) : null}
+                      {item.state === 'BLOQUEADO' ? <BlockedReasonLine reason={item.blockers} /> : null}
                     </TableCell>
                     <TableCell>
                       <span className="flex items-center gap-2">
@@ -379,7 +391,15 @@ export function CompromisosMisReunionesPanel({
                   />,
                   <StatusBadge key="state" kind="record" value={item.state} />,
                 ],
-                note: item.expectedResult,
+                note:
+                  item.state === 'BLOQUEADO' ? (
+                    <span className="grid gap-1.5">
+                      {item.expectedResult ? <span>{item.expectedResult}</span> : null}
+                      <BlockedReasonBox reason={item.blockers} />
+                    </span>
+                  ) : (
+                    item.expectedResult
+                  ),
                 meta: [
                   {
                     label: 'Asignado a',

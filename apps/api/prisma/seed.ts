@@ -491,6 +491,25 @@ async function main(): Promise<void> {
       });
     }
   }
+  // Reuniones y compromisos (PR-4): limites de fecha del compromiso (el valor es la
+  // etiqueta, en años) y plantillas de agenda del acta (el texto va en la
+  // descripcion). Tambien los siembra la migracion
+  // 20261127090000_reuniones_calidad_params (seed.ts no corre en produccion).
+  // Solo se crean si no existen: no pisan lo que se cambie desde Maestras.
+  const meetingParams = [
+    { catalog: 'COMMITMENT_PARAM', code: 'DUE_YEARS_BACK', label: '1', description: 'Años hacia atrás, desde hoy, que admite el vencimiento de un compromiso al crearlo o al cambiar su fecha (0 a 50).' },
+    { catalog: 'COMMITMENT_PARAM', code: 'DUE_YEARS_AHEAD', label: '5', description: 'Años hacia adelante, desde hoy, que admite el vencimiento de un compromiso al crearlo o al cambiar su fecha (0 a 50).' },
+    { catalog: 'MEETING_AGENDA_TEMPLATE', code: 'ACTA_SIMPLE', label: 'Acta simple', description: '1. Revisión de compromisos anteriores\n2. Temas a tratar\n3. Acuerdos y responsables\n4. Próximos pasos y fecha de la siguiente reunión' },
+    { catalog: 'MEETING_AGENDA_TEMPLATE', code: 'SEGUIMIENTO', label: 'Reunión de seguimiento', description: '1. Avances desde la última reunión\n2. Bloqueos y riesgos\n3. Decisiones que se necesitan\n4. Compromisos nuevos: quién, qué y para cuándo' },
+  ];
+  for (const [index, param] of meetingParams.entries()) {
+    const where = { catalog: param.catalog, code: param.code };
+    if (!(await prisma.catalogItem.findFirst({ where }))) {
+      await prisma.catalogItem.create({
+        data: { ...where, label: param.label, description: param.description, sortOrder: index + 1 },
+      });
+    }
+  }
   // Politica de contrasenas (D20): lista de contrasenas comunes. Tambien la siembra la
   // migracion 20261125090000_password_policy_params. Solo se crean si no existen.
   for (const [index, word] of DEFAULT_COMMON_PASSWORDS.entries()) {

@@ -58,7 +58,7 @@ y 48 pendientes, todas de escritura). Ya están expuestas las de coordinación (
 reuniones —con su duración `durationMinutes`— y compromisos, y cambiar el estado de compromisos; los hallazgos se retiraron con el módulo Novedades), las
 sugerencias del día de la Bitácora (`worklog.daily.suggestions` de lectura y `worklog.daily.suggestions.accept`,
 `worklog.daily.suggestions.dismiss` y `worklog.daily.suggestions.restore` de escritura, ninguna destructiva: descartar
-es reversible), los compromisos de Mi trabajo (`commitment.my-work`) y de mis reuniones (`meeting.commitments-open`), las de
+es reversible), los compromisos de Mi trabajo (`commitment.my-work`) y de mis reuniones (`meeting.commitments-open`), las solicitudes relacionables con un acta o compromiso (`coordination.requests`; `meeting.list` y `commitment.list` admiten `q` y paginación y `commitment.transition` el motivo del bloqueo `blockedReason`), las de
 planes (editar el plan; crear, editar y reordenar fases; añadir predecesoras a una tarea) y las de
 activos y documentos (crear y editar activos y documentos, y crear versiones de un documento) y las de
 actividades recurrentes (`recurring.occurrence.start`, `recurring.occurrence.complete`, `recurring.create`,

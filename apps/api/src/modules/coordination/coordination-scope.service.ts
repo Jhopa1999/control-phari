@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
@@ -157,6 +158,60 @@ export class CoordinationScopeService {
       return { deletedAt: null };
     }
     return { deletedAt: null, mainProcessId: { in: Array.from(actor.scopedProcessIds) } };
+  }
+
+  /**
+   * Solicitudes que el actor puede relacionar con un acta o un compromiso (las
+   * mismas que acepta `assertRequestVisible`), con búsqueda por código o título.
+   * Devuelve hasta `limit` y avisa si hubo más.
+   */
+  async listLinkableRequests(
+    actor: CurrentActor,
+    q: string | undefined,
+    limit: number,
+  ): Promise<{ rows: Array<{ id: string; code: string; title: string; closed: boolean }>; truncated: boolean }> {
+    const text = q?.trim();
+    const rows = await this.prisma.request.findMany({
+      where: {
+        AND: [
+          this.requestVisibilityWhere(actor),
+          ...(text
+            ? [
+                {
+                  OR: [
+                    { code: { contains: text, mode: 'insensitive' as const } },
+                    { title: { contains: text, mode: 'insensitive' as const } },
+                  ],
+                },
+              ]
+            : []),
+        ],
+      },
+      select: { id: true, code: true, title: true, closedAt: true },
+      orderBy: [{ number: 'desc' }],
+      take: limit + 1,
+    });
+    return {
+      rows: rows
+        .slice(0, limit)
+        .map((r) => ({ id: r.id, code: r.code, title: r.title, closed: r.closedAt !== null })),
+      truncated: rows.length > limit,
+    };
+  }
+
+  /**
+   * Exige que la solicitud relacionada de un acta o un compromiso sea visible
+   * para el actor con la misma regla que lista el selector de la web
+   * (`requestVisibilityWhere`). Fuera -> 404.
+   */
+  async assertRequestVisible(actor: CurrentActor, requestId: string): Promise<void> {
+    const request = await this.prisma.request.findFirst({
+      where: { AND: [{ id: requestId }, this.requestVisibilityWhere(actor)] },
+      select: { id: true },
+    });
+    if (!request) {
+      throw new NotFoundException('No se encontró la solicitud.');
+    }
   }
 
   // --- Proceso del actor en las altas (BL-068) -----------------------------

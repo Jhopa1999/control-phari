@@ -185,6 +185,11 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
 
   // Bitácora y reportes semanales
   lectura(
+    'coordination.requests',
+    'GET /coordination/requests',
+    'Lista las solicitudes y proyectos que el usuario puede relacionar con un acta o un compromiso (GET /coordination/requests), con id, código (PRY-0012), título y si está cerrada. Filtra con q por código o título; devuelve hasta 200. Usa el id como relatedProjectRequestId al crear o editar actas y compromisos.',
+  ),
+  lectura(
     'worklog.people',
     'GET /coordination/people',
     'Lista las personas visibles para coordinación de bitácora (GET /coordination/people). Con processId devuelve los candidatos a responsable y participantes de ese proceso.',
@@ -243,7 +248,7 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   lectura(
     'meeting.list',
     'GET /meetings',
-    'Lista las reuniones (GET /meetings), con filtros opcionales; usa requestId para ver las de un proyecto. Incluye los participantes con nombre y viewerCanEdit (si quien consulta puede editar el acta).',
+    'Lista las reuniones (GET /meetings), con filtros opcionales: processId, state, open (true solo actas abiertas), requestId (las de un proyecto) y q (busca en el título, el responsable y el código o título de la solicitud relacionada). Paginación opcional: page y pageSize (máximo 100); sin ellos devuelve hasta 1000 filas, la más reciente primero (dir ordena por fecha). Incluye los participantes con nombre, viewerCanEdit (si quien consulta puede editar el acta) y relatedRequestCode y relatedRequestTitle (la solicitud relacionada, si puedes leerla).',
   ),
   lectura(
     'meeting.get',
@@ -253,7 +258,7 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   lectura(
     'commitment.list',
     'GET /commitments',
-    'Lista los compromisos (GET /commitments), con filtros opcionales; usa requestId para ver los de un proyecto.',
+    'Lista los compromisos (GET /commitments), con filtros opcionales: state, view (ABIERTOS, VENCIDOS o TERMINADOS), processId, assignedUserId, personId (asignado o responsable), meetingId o withoutMeeting (sin acta), requestId (los de un proyecto) y q (busca en el título, el resultado esperado, el título del acta y el código o título de la solicitud relacionada). Paginación opcional: page y pageSize (máximo 100); sin ellos devuelve hasta 1000 filas, el vencimiento más próximo primero (dir ordena por vencimiento). Cada compromiso trae blockers (motivo del bloqueo), relatedRequestCode y relatedRequestTitle.',
   ),
   lectura(
     'commitment.my-work',

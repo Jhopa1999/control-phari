@@ -21,8 +21,17 @@ import { cn } from '@/lib/utils';
 
 export interface BlockReasonDialogProps {
   open: boolean;
-  /** Título de la tarea que se va a bloquear. */
+  /** Título de la tarea (o compromiso) que se va a bloquear. */
   taskTitle: string;
+  /** Textos propios (compromisos). Sin ellos, los de una tarea. */
+  title?: string;
+  description?: string;
+  placeholder?: string;
+  confirmLabel?: string;
+  /** Texto con el que se abre (p. ej. bloqueos ya escritos). */
+  prefill?: string;
+  /** Línea de ayuda bajo el campo, solo si hay `prefill`. */
+  prefillHelp?: string;
   /** Cierra sin cambiar nada (Esc, Cancelar, cierre). */
   onOpenChange: (open: boolean) => void;
   /**
@@ -45,6 +54,12 @@ export interface BlockReasonDialogProps {
 export function BlockReasonDialog({
   open,
   taskTitle,
+  title = 'Marcar como bloqueada',
+  description = 'Cuéntale al equipo qué la detiene.',
+  placeholder = 'Ej.: falta el acceso al servidor de pruebas',
+  confirmLabel = 'Marcar como bloqueada',
+  prefill = '',
+  prefillHelp,
   onOpenChange,
   onConfirm,
   onClosedAfterSuccess,
@@ -61,12 +76,13 @@ export function BlockReasonDialog({
   const fieldId = React.useId();
   const errorId = `${fieldId}-error`;
   const counterId = `${fieldId}-count`;
+  const helpId = `${fieldId}-help`;
 
   // Cada apertura empieza vacía (ajuste durante el render).
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setReason('');
+      setReason(prefill);
       setFieldError(null);
       setServerError(null);
       setSubmitting(false);
@@ -137,10 +153,10 @@ export function BlockReasonDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle>Marcar como bloqueada</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             <span className="mb-1 block line-clamp-2 wrap-break-word">“{taskTitle}”</span>
-            Cuéntale al equipo qué la detiene.
+            {description}
           </DialogDescription>
         </DialogHeader>
         <form noValidate onSubmit={(event) => void handleSubmit(event)} className="flex min-h-0 flex-1 flex-col">
@@ -153,15 +169,20 @@ export function BlockReasonDialog({
                 rows={4}
                 maxLength={BLOCK_REASON_MAX}
                 value={reason}
-                placeholder="Ej.: falta el acceso al servidor de pruebas"
+                placeholder={placeholder}
                 aria-required="true"
                 aria-invalid={fieldError ? true : undefined}
-                aria-describedby={cn(fieldError && errorId, counterId)}
+                aria-describedby={cn(fieldError && errorId, prefill && prefillHelp && helpId, counterId)}
                 onChange={(event) => {
                   setReason(event.target.value);
                   if (fieldError) setFieldError(null);
                 }}
               />
+              {prefill && prefillHelp ? (
+                <p id={helpId} className="text-meta text-muted-foreground">
+                  {prefillHelp}
+                </p>
+              ) : null}
               <div className="flex items-start justify-between gap-3">
                 {fieldError ? (
                   <p id={errorId} className="flex gap-1 text-meta text-danger">
@@ -200,7 +221,7 @@ export function BlockReasonDialog({
               Cancelar
             </Button>
             <Button type="submit" className="max-sm:min-h-11" loading={submitting}>
-              {submitting ? 'Guardando…' : 'Marcar como bloqueada'}
+              {submitting ? 'Guardando…' : confirmLabel}
             </Button>
           </DialogFooter>
         </form>

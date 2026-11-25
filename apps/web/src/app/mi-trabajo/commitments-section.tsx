@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check, Handshake } from 'lucide-react';
 import { toast } from 'sonner';
+import { BlockedReasonLine } from '@/components/blocked-reason';
 import { DueBadge } from '@/components/due-badge';
 import { InlineNotice } from '@/components/inline-notice';
 import { StatusBadge } from '@/components/status-badge';
@@ -241,6 +242,7 @@ export function CommitmentsSection({
                       .filter(Boolean)
                       .join(' · ')}
                   </span>
+                  {item.state === 'BLOQUEADO' ? <BlockedReasonLine reason={item.blockers} /> : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <DueBadge status={item.dueStatus} daysToDue={item.daysToDue} dueDate={item.dueDate} />

@@ -574,7 +574,9 @@ metadato (mismo patrón que `TaskEvidence`).
 
 Varios atributos se almacenan como **código de maestra** (`CatalogItem`) y se validan en
 el service, por ejemplo: `ACTIVITY_CLASS` (incluye `REUNION` y `RECURRENTE`, sembradas por
-migración), `WORKLOG_PARAM` (`CLOSED_PROJECT_GRACE_DAYS` y `WORKDAY_HOURS`, jornada diaria
+migración), `COMMITMENT_PARAM` (`DUE_YEARS_BACK` y `DUE_YEARS_AHEAD`: años que admite el
+vencimiento de un compromiso, número en la etiqueta; Reuniones PR-4), `MEETING_AGENDA_TEMPLATE`
+(plantillas de agenda del acta: `label` es el nombre y `description` el texto), `WORKLOG_PARAM` (`CLOSED_PROJECT_GRACE_DAYS` y `WORKDAY_HOURS`, jornada diaria
 en horas; 9 por defecto), `AUTH_PARAM` (umbrales del límite de intentos de login y de
 recuperación de contraseña, y `PASSWORD_MIN_LENGTH`), `PASSWORD_COMMON` (contraseñas comunes
 no permitidas; `code` en mayúsculas sin símbolos, `label` legible), `ISSUE_TYPE`, `RECORD_STATE`,
@@ -710,6 +712,10 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     requesters(name_key);` (falla si ya hay homónimos en áreas distintas; habría que
     renombrarlos antes) y `DROP INDEX requesters_name_key_area_id_key, requesters_name_key_idx;`)
 
+
+## Migración de parámetros de Reuniones (PR-4)
+
+`20261127090000_reuniones_calidad_params`: solo datos, aditiva e idempotente (`ON CONFLICT ("catalog", "code") DO NOTHING`, no pisa lo editado en Maestras). Inserta `COMMITMENT_PARAM`/`DUE_YEARS_BACK = 1` y `DUE_YEARS_AHEAD = 5`, y las plantillas `MEETING_AGENDA_TEMPLATE`/`ACTA_SIMPLE` («Acta simple») y `SEGUIMIENTO` («Reunión de seguimiento»). `seed.ts` crea lo mismo en desarrollo, pero no corre en producción: por eso va en migración. Sin cambios de esquema. Verificación: `SELECT catalog, code, label FROM catalog_items WHERE catalog IN ('COMMITMENT_PARAM','MEETING_AGENDA_TEMPLATE') ORDER BY 1,2;` debe dar 4 filas. **Rollback:** `DELETE FROM catalog_items WHERE catalog IN ('COMMITMENT_PARAM','MEETING_AGENDA_TEMPLATE');` (el código vuelve a los valores por defecto 1 y 5 y el selector de plantillas deja de pintarse).
 
 ## Migración de nombres de rol (oleada 5, PR C)
 

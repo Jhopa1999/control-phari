@@ -7485,10 +7485,108 @@
         ]
       }
     },
+    "/coordination/requests": {
+      "get": {
+        "operationId": "CoordinationLookupController_requests",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Busca por código o título, sin distinguir mayúsculas.",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitudes relacionables (hasta 200).",
+            "headers": {
+              "X-Truncated": {
+                "description": "true si había más de 200 coincidencias.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoordinationRequestDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetro inválido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Solicitudes y proyectos que quien consulta puede relacionar con un acta o un compromiso (la misma visibilidad que se valida al guardar), con búsqueda q por código o título. Hasta 200; la cabecera X-Truncated avisa si hubo más.",
+        "tags": [
+          "coordination"
+        ]
+      }
+    },
     "/meetings": {
       "get": {
         "operationId": "MeetingController_list",
         "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated).",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado.",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "dir",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden (asc o desc). Por defecto, el propio de cada listado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
           {
             "name": "processId",
             "required": false,
@@ -7516,6 +7614,15 @@
             }
           },
           {
+            "name": "open",
+            "required": false,
+            "in": "query",
+            "description": "true: solo actas abiertas (no cerradas ni archivadas); false: solo cerradas o archivadas.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "requestId",
             "required": false,
             "in": "query",
@@ -7528,7 +7635,37 @@
         ],
         "responses": {
           "200": {
-            "description": "Reuniones.",
+            "description": "Reuniones (la página pedida o hasta 1000 filas).",
+            "headers": {
+              "X-Total-Count": {
+                "description": "Total de filas tras alcance, filtros y búsqueda (no solo la página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page": {
+                "description": "Página servida (1 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Tamaño de la página servida (1000 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Truncated": {
+                "description": "true si no se pidió página y el listado superó el tope de 1000 filas.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -7540,11 +7677,14 @@
               }
             }
           },
+          "400": {
+            "description": "Filtros o paginación inválidos."
+          },
           "403": {
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Lista reuniones en alcance (filtros opcionales).",
+        "summary": "Lista reuniones en alcance con filtros opcionales, búsqueda q (título, responsable, código o título de la solicitud relacionada), orden por fecha (dir) y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.",
         "tags": [
           "meetings"
         ]
@@ -7869,6 +8009,50 @@
         "operationId": "CommitmentController_list",
         "parameters": [
           {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated).",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado.",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "dir",
+            "required": false,
+            "in": "query",
+            "description": "Sentido del orden (asc o desc). Por defecto, el propio de cada listado.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
             "name": "state",
             "required": false,
             "in": "query",
@@ -7881,6 +8065,20 @@
                 "BLOQUEADO",
                 "COMPLETADO",
                 "ARCHIVADO"
+              ]
+            }
+          },
+          {
+            "name": "view",
+            "required": false,
+            "in": "query",
+            "description": "ABIERTOS: en curso o bloqueados; VENCIDOS: abiertos con vencimiento anterior a hoy; TERMINADOS: completados o archivados.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ABIERTOS",
+                "VENCIDOS",
+                "TERMINADOS"
               ]
             }
           },
@@ -7905,6 +8103,35 @@
             }
           },
           {
+            "name": "personId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por persona: la que tiene el compromiso asignado o es su responsable.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "meetingId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por acta de origen.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "withoutMeeting",
+            "required": false,
+            "in": "query",
+            "description": "true: solo compromisos sin acta de origen. Tiene prioridad sobre meetingId.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "requestId",
             "required": false,
             "in": "query",
@@ -7917,7 +8144,37 @@
         ],
         "responses": {
           "200": {
-            "description": "Compromisos.",
+            "description": "Compromisos (la página pedida o hasta 1000 filas).",
+            "headers": {
+              "X-Total-Count": {
+                "description": "Total de filas tras alcance, filtros y búsqueda (no solo la página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page": {
+                "description": "Página servida (1 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Tamaño de la página servida (1000 si no se pidió página).",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Truncated": {
+                "description": "true si no se pidió página y el listado superó el tope de 1000 filas.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true",
+                    "false"
+                  ]
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -7929,11 +8186,14 @@
               }
             }
           },
+          "400": {
+            "description": "Filtros o paginación inválidos."
+          },
           "403": {
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Lista compromisos en alcance (filtros opcionales).",
+        "summary": "Lista compromisos en alcance con filtros opcionales (estado, vista abiertos/vencidos/terminados, persona, acta, solicitud), búsqueda q (título, resultado esperado, acta o solicitud relacionada), orden por vencimiento (dir) y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.",
         "tags": [
           "commitments"
         ]
@@ -8149,13 +8409,13 @@
             }
           },
           "400": {
-            "description": "Transicion no permitida."
+            "description": "Transicion no permitida o motivo de bloqueo con otro estado."
           },
           "404": {
             "description": "Compromiso fuera de alcance."
           }
         },
-        "summary": "Transiciona el estado de un compromiso (maquina minima).",
+        "summary": "Transiciona el estado de un compromiso (maquina minima). Al pasar a BLOQUEADO admite blockedReason (hasta 500 caracteres), que se guarda en los bloqueos del compromiso.",
         "tags": [
           "commitments"
         ]
@@ -18561,6 +18821,34 @@
           }
         }
       },
+      "CoordinationRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador de la solicitud."
+          },
+          "code": {
+            "type": "string",
+            "description": "Código visible (PRY-0012)."
+          },
+          "title": {
+            "type": "string",
+            "description": "Título de la solicitud."
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "La solicitud ya fue cerrada formalmente."
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "closed"
+        ]
+      },
       "MeetingParticipantDto": {
         "type": "object",
         "properties": {
@@ -18614,6 +18902,11 @@
             "type": "string",
             "nullable": true
           },
+          "blockers": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo del bloqueo o bloqueos registrados."
+          },
           "assignedUserName": {
             "type": "string",
             "nullable": true,
@@ -18650,6 +18943,7 @@
           "responsibleUserId",
           "expectedResult",
           "result",
+          "blockers",
           "assignedUserName",
           "responsibleUserName",
           "dueStatus",
@@ -18738,6 +19032,16 @@
             "format": "uuid",
             "nullable": true
           },
+          "relatedRequestCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Codigo (PRY-0012) de la solicitud relacionada que muestra la interfaz (proyecto relacionado o, si no hay, solicitud relacionada). Nulo sin solicitud o si el actor no puede leerla."
+          },
+          "relatedRequestTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Titulo de esa solicitud (nulo en los mismos casos)."
+          },
           "agenda": {
             "type": "string",
             "nullable": true
@@ -18795,6 +19099,8 @@
           "responsibleUserName",
           "relatedRequestId",
           "relatedProjectRequestId",
+          "relatedRequestCode",
+          "relatedRequestTitle",
           "agenda",
           "decisions",
           "notes",
@@ -19078,12 +19384,14 @@
           "relatedRequestId": {
             "type": "string",
             "format": "uuid",
-            "description": "Solicitud relacionada."
+            "nullable": true,
+            "description": "Solicitud relacionada. null la quita."
           },
           "relatedProjectRequestId": {
             "type": "string",
             "format": "uuid",
-            "description": "\"Proyecto\" (Request) relacionado."
+            "nullable": true,
+            "description": "\"Proyecto\" (Request) relacionado. null lo quita."
           },
           "agenda": {
             "type": "string",
@@ -19161,6 +19469,16 @@
             "format": "uuid",
             "nullable": true
           },
+          "relatedRequestCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Codigo (PRY-0012) de la solicitud relacionada que muestra la interfaz (proyecto relacionado o, si no hay, solicitud relacionada). Nulo sin solicitud o si el actor no puede leerla."
+          },
+          "relatedRequestTitle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Titulo de esa solicitud (nulo en los mismos casos)."
+          },
           "expectedResult": {
             "type": "string",
             "nullable": true
@@ -19211,6 +19529,8 @@
           "responsibleUserId",
           "relatedRequestId",
           "relatedProjectRequestId",
+          "relatedRequestCode",
+          "relatedRequestTitle",
           "expectedResult",
           "result",
           "blockers",
@@ -19339,6 +19659,11 @@
             "type": "string",
             "nullable": true
           },
+          "blockers": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo del bloqueo o bloqueos registrados."
+          },
           "canComplete": {
             "type": "boolean",
             "description": "La persona puede completarlo desde Mi trabajo (transición COMPLETADO)."
@@ -19356,6 +19681,7 @@
           "sourceMeetingId",
           "sourceMeetingTitle",
           "expectedResult",
+          "blockers",
           "canComplete"
         ]
       },
@@ -19430,12 +19756,14 @@
           "relatedRequestId": {
             "type": "string",
             "format": "uuid",
-            "description": "Solicitud relacionada."
+            "nullable": true,
+            "description": "Solicitud relacionada. null la quita."
           },
           "relatedProjectRequestId": {
             "type": "string",
             "format": "uuid",
-            "description": "\"Proyecto\" (Request) relacionado."
+            "nullable": true,
+            "description": "\"Proyecto\" (Request) relacionado. null lo quita."
           },
           "expectedResult": {
             "type": "string",
@@ -19468,6 +19796,11 @@
             ],
             "description": "Estado destino de la transicion.",
             "example": "COMPLETADO"
+          },
+          "blockedReason": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Motivo del bloqueo (1 a 500 caracteres tras recortar). Opcional y solo valido con toState BLOQUEADO; con otro estado se responde 400. Un texto vacio o solo espacios se trata como ausente. Se guarda en los bloqueos del compromiso."
           }
         },
         "required": [

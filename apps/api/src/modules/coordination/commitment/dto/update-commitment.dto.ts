@@ -44,15 +44,15 @@ export class UpdateCommitmentDto {
   @IsUUID()
   responsibleUserId?: string;
 
-  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Solicitud relacionada.' })
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true, description: 'Solicitud relacionada. null la quita.' })
   @IsOptional()
   @IsUUID()
-  relatedRequestId?: string;
+  relatedRequestId?: string | null;
 
-  @ApiPropertyOptional({ type: String, format: 'uuid', description: '"Proyecto" (Request) relacionado.' })
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true, description: '"Proyecto" (Request) relacionado. null lo quita.' })
   @IsOptional()
   @IsUUID()
-  relatedProjectRequestId?: string;
+  relatedProjectRequestId?: string | null;
 
   @ApiPropertyOptional({ type: String, description: 'Resultado esperado.', maxLength: 2000 })
   @IsOptional()

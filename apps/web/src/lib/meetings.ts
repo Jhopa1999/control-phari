@@ -7,6 +7,7 @@ import {
   type MeetingCommitmentsOpenQuery,
   type UpdateMeeting,
 } from './api-client';
+import { readServerPage, type ServerPage } from './pagination';
 
 /**
  * Error de dominio de reuniones con un mensaje ya entendible para el usuario.
@@ -82,18 +83,52 @@ export async function listProcessPeople(processId: string): Promise<Coordination
   }
 }
 
-/** Reuniones en alcance (GET /meetings). El backend filtra por alcance. */
-export async function listMeetings(): Promise<Meeting[]> {
+/** Búsqueda, filtros y página del listado de actas. */
+export interface MeetingPageQuery {
+  q?: string;
+  processId?: string;
+  /** true: solo actas abiertas (no cerradas ni archivadas). */
+  open?: boolean;
+  page: number;
+  pageSize: number;
+}
+
+/**
+ * Una página de actas (GET /meetings con page/pageSize). Busca y filtra el
+ * servidor sobre el alcance único; el total llega en X-Total-Count.
+ */
+export async function listMeetingsPage(
+  query: MeetingPageQuery,
+  signal?: AbortSignal,
+): Promise<ServerPage<Meeting>> {
   try {
-    const { data, error, response } = await api.GET('/meetings');
+    const { data, error, response } = await api.GET('/meetings', {
+      params: {
+        query: {
+          page: query.page,
+          pageSize: query.pageSize,
+          ...(query.q?.trim() ? { q: query.q.trim() } : {}),
+          ...(query.processId ? { processId: query.processId } : {}),
+          ...(query.open !== undefined ? { open: query.open } : {}),
+        },
+      },
+      signal,
+    });
     if (error || !data) {
       throw toMeetingError(response.status, error);
     }
-    return data;
+    return readServerPage(data, response);
   } catch (err) {
     if (err instanceof MeetingError) throw err;
+    if (signal?.aborted) throw err;
     throw toMeetingError(undefined);
   }
+}
+
+/** Total de actas en alcance (sin búsqueda), para el contador de la pestaña. */
+export async function countMeetings(): Promise<number> {
+  const page = await listMeetingsPage({ page: 1, pageSize: 1 });
+  return page.total;
 }
 
 /** Detalle de una reunion con participantes (GET /meetings/:id). */

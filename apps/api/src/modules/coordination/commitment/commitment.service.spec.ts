@@ -20,9 +20,11 @@ function createMocks() {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
     },
     meeting: { findFirst: jest.fn() },
-    request: { findFirst: jest.fn() },
+    request: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+    catalogItem: { findMany: jest.fn().mockResolvedValue([]) },
     user: {
       findMany: jest.fn(),
       // Por defecto todas las personas existen y pertenecen al proceso.
@@ -96,7 +98,26 @@ describe('CommitmentService', () => {
   let m: ReturnType<typeof createMocks>;
 
   beforeEach(() => {
+    // Hoy fijo: los vencimientos de la prueba (marzo de 2025) quedan dentro del rango de D5.
+    jest.useFakeTimers({
+      now: new Date('2025-03-10T12:00:00.000Z'),
+      doNotFake: [
+        'nextTick',
+        'setImmediate',
+        'clearImmediate',
+        'setInterval',
+        'clearInterval',
+        'setTimeout',
+        'clearTimeout',
+        'queueMicrotask',
+        'hrtime',
+        'performance',
+      ],
+    });
     m = createMocks();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('crea con dueDate y audita CREATE COMMITMENT con scopeProcessId del registro', async () => {
@@ -445,6 +466,41 @@ describe('CommitmentService', () => {
   });
 
   describe('list', () => {
+    it('busca q en título, resultado, acta y solicitud relacionada', async () => {
+      m.prismaObj.commitment.findMany.mockResolvedValue([]);
+      await m.service.list(integrante(), { q: 'informe' } as any);
+      const and = m.prismaObj.commitment.findMany.mock.calls[0][0].where.AND;
+      expect(and).toHaveLength(2);
+      const or = and[1].OR;
+      expect(or).toHaveLength(5);
+      expect(or[0]).toEqual({ title: { contains: 'informe', mode: 'insensitive' } });
+      expect(or[2]).toEqual({ sourceMeeting: { is: { title: { contains: 'informe', mode: 'insensitive' } } } });
+    });
+    it('pagina y filtra por vista, persona y acta en el servidor', async () => {
+      m.prismaObj.commitment.findMany.mockResolvedValue([]);
+      m.prismaObj.commitment.count.mockResolvedValue(130);
+      const res = await m.service.list(integrante(), {
+        page: 2,
+        pageSize: 25,
+        view: 'VENCIDOS',
+        personId: 'ui',
+        withoutMeeting: true,
+        meetingId: 'ignorado',
+      } as any);
+      const args = m.prismaObj.commitment.findMany.mock.calls[0][0];
+      expect(args.skip).toBe(25);
+      expect(args.take).toBe(25);
+      expect(res.total).toBe(130);
+      expect(args.where.AND).toContainEqual({
+        state: { in: ['EN_CURSO', 'BLOQUEADO'] },
+        dueDate: { lt: new Date('2025-03-10T00:00:00.000Z') },
+      });
+      expect(args.where.AND).toContainEqual({
+        OR: [{ assignedUserId: 'ui' }, { responsibleUserId: 'ui' }],
+      });
+      expect(args.where.AND).toContainEqual({ sourceMeetingId: null });
+      expect(JSON.stringify(args.where.AND)).not.toContain('ignorado');
+    });
     it('aplica filtros state/processId/assignedUserId', async () => {
       m.prismaObj.commitment.findMany.mockResolvedValue([commitmentRow()]);
       const res = await m.service.list(integrante(), {
@@ -452,7 +508,7 @@ describe('CommitmentService', () => {
         processId: 'p1',
         assignedUserId: 'ui',
       } as any);
-      expect(res).toHaveLength(1);
+      expect(res.rows).toHaveLength(1);
       const and = m.prismaObj.commitment.findMany.mock.calls[0][0].where.AND;
       expect(and).toContainEqual({ state: 'EN_CURSO' });
       expect(and).toContainEqual({ processId: 'p1' });
@@ -472,12 +528,91 @@ describe('CommitmentService', () => {
     it('sin filtros devuelve solo alcance', async () => {
       m.prismaObj.commitment.findMany.mockResolvedValue([]);
       const res = await m.service.list(integrante(), {} as any);
-      expect(res).toEqual([]);
+      expect(res.rows).toEqual([]);
       const and = m.prismaObj.commitment.findMany.mock.calls[0][0].where.AND;
       expect(and).toHaveLength(1);
     });
   });
 
+  describe('límites de fecha (D5)', () => {
+    it('rechaza al crear un vencimiento a más de 5 años', async () => {
+      await expect(
+        m.service.create(integrante(), { processId: 'p1', title: 'X', dueDate: '2030-03-11' }),
+      ).rejects.toThrow('La fecha límite debe estar entre 10/03/2024 y 10/03/2030.');
+      expect(m.prismaObj.commitment.create).not.toHaveBeenCalled();
+    });
+    it('rechaza al crear un vencimiento de hace más de un año', async () => {
+      await expect(
+        m.service.create(integrante(), { processId: 'p1', title: 'X', dueDate: '2024-03-09' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+    it('acepta los extremos del rango', async () => {
+      m.prismaObj.commitment.create.mockImplementation(({ data }: any) =>
+        Promise.resolve(commitmentRow(data)),
+      );
+      await expect(
+        m.service.create(integrante(), { processId: 'p1', title: 'X', dueDate: '2024-03-10' }),
+      ).resolves.toBeDefined();
+      await expect(
+        m.service.create(integrante(), { processId: 'p1', title: 'X', dueDate: '2030-03-10' }),
+      ).resolves.toBeDefined();
+    });
+    it('usa los años de la maestra COMMITMENT_PARAM', async () => {
+      m.prismaObj.catalogItem.findMany.mockResolvedValue([
+        { code: 'DUE_YEARS_AHEAD', label: '2' },
+        { code: 'DUE_YEARS_BACK', label: 'x' },
+      ]);
+      await expect(
+        m.service.create(integrante(), { processId: 'p1', title: 'X', dueDate: '2027-03-11' }),
+      ).rejects.toThrow('entre 10/03/2024 y 10/03/2027');
+    });
+    it('al editar solo valida cuando la fecha cambia', async () => {
+      const viejo = commitmentRow({ dueDate: new Date(Date.UTC(2020, 0, 1)) });
+      m.prismaObj.commitment.findFirst.mockResolvedValue(viejo);
+      m.prismaObj.commitment.update.mockImplementation(({ data }: any) =>
+        Promise.resolve({ ...viejo, ...data }),
+      );
+      // Reenviar la misma fecha antigua no bloquea la edición.
+      await expect(
+        m.service.update(integrante(), 'c1', { title: 'Nuevo', dueDate: '2020-01-01' }),
+      ).resolves.toBeDefined();
+      // Cambiarla a otra fuera de rango sí se rechaza.
+      await expect(
+        m.service.update(integrante(), 'c1', { dueDate: '2019-01-01' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+  describe('motivo del bloqueo', () => {
+    it('guarda blockedReason en los bloqueos al pasar a BLOQUEADO', async () => {
+      m.prismaObj.commitment.findFirst.mockResolvedValue(commitmentRow());
+      m.prismaObj.commitment.update.mockImplementation(({ data }: any) =>
+        Promise.resolve(commitmentRow(data)),
+      );
+      const res = await m.service.transition(integrante(), 'c1', {
+        toState: 'BLOQUEADO',
+        blockedReason: 'Falta la aprobación',
+      });
+      expect(m.prismaObj.commitment.update.mock.calls[0][0].data).toMatchObject({
+        state: 'BLOQUEADO',
+        blockers: 'Falta la aprobación',
+      });
+      expect(res.blockers).toBe('Falta la aprobación');
+    });
+    it('sin motivo no toca los bloqueos existentes', async () => {
+      m.prismaObj.commitment.findFirst.mockResolvedValue(commitmentRow({ blockers: 'previo' }));
+      m.prismaObj.commitment.update.mockImplementation(({ data }: any) =>
+        Promise.resolve(commitmentRow(data)),
+      );
+      await m.service.transition(integrante(), 'c1', { toState: 'BLOQUEADO' });
+      expect(m.prismaObj.commitment.update.mock.calls[0][0].data).not.toHaveProperty('blockers');
+    });
+    it('blockedReason con otro estado -> 400', async () => {
+      m.prismaObj.commitment.findFirst.mockResolvedValue(commitmentRow({ state: 'BLOQUEADO' }));
+      await expect(
+        m.service.transition(integrante(), 'c1', { toState: 'EN_CURSO', blockedReason: 'x' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
   describe('remove', () => {
     it('elimina y audita DELETE con after null', async () => {
       m.prismaObj.commitment.findFirst.mockResolvedValue(commitmentRow());

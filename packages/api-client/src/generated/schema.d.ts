@@ -2006,6 +2006,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/coordination/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Solicitudes y proyectos que quien consulta puede relacionar con un acta o un compromiso (la misma visibilidad que se valida al guardar), con búsqueda q por código o título. Hasta 200; la cabecera X-Truncated avisa si hubo más. */
+        get: operations["CoordinationLookupController_requests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/meetings": {
         parameters: {
             query?: never;
@@ -2013,7 +2030,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista reuniones en alcance (filtros opcionales). */
+        /** Lista reuniones en alcance con filtros opcionales, búsqueda q (título, responsable, código o título de la solicitud relacionada), orden por fecha (dir) y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count. */
         get: operations["MeetingController_list"];
         put?: never;
         /** Crea una reunion (estado inicial BORRADOR). */
@@ -2101,7 +2118,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista compromisos en alcance (filtros opcionales). */
+        /** Lista compromisos en alcance con filtros opcionales (estado, vista abiertos/vencidos/terminados, persona, acta, solicitud), búsqueda q (título, resultado esperado, acta o solicitud relacionada), orden por vencimiento (dir) y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count. */
         get: operations["CommitmentController_list"];
         put?: never;
         /** Crea un compromiso (vencimiento requerido). */
@@ -2157,7 +2174,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Transiciona el estado de un compromiso (maquina minima). */
+        /** Transiciona el estado de un compromiso (maquina minima). Al pasar a BLOQUEADO admite blockedReason (hasta 500 caracteres), que se guarda en los bloqueos del compromiso. */
         post: operations["CommitmentController_transition"];
         delete?: never;
         options?: never;
@@ -6557,6 +6574,19 @@ export interface components {
             /** @description Decisiones para el jefe. */
             decisions?: string;
         };
+        CoordinationRequestDto: {
+            /**
+             * Format: uuid
+             * @description Identificador de la solicitud.
+             */
+            id: string;
+            /** @description Código visible (PRY-0012). */
+            code: string;
+            /** @description Título de la solicitud. */
+            title: string;
+            /** @description La solicitud ya fue cerrada formalmente. */
+            closed: boolean;
+        };
         MeetingParticipantDto: {
             /** Format: uuid */
             id: string;
@@ -6577,6 +6607,8 @@ export interface components {
             responsibleUserId: string | null;
             expectedResult: string | null;
             result: string | null;
+            /** @description Motivo del bloqueo o bloqueos registrados. */
+            blockers: string | null;
             /** @description Nombre de la persona asignada. */
             assignedUserName: string | null;
             /** @description Nombre del responsable del compromiso. */
@@ -6625,6 +6657,10 @@ export interface components {
             relatedRequestId: string | null;
             /** Format: uuid */
             relatedProjectRequestId: string | null;
+            /** @description Codigo (PRY-0012) de la solicitud relacionada que muestra la interfaz (proyecto relacionado o, si no hay, solicitud relacionada). Nulo sin solicitud o si el actor no puede leerla. */
+            relatedRequestCode: string | null;
+            /** @description Titulo de esa solicitud (nulo en los mismos casos). */
+            relatedRequestTitle: string | null;
             agenda: string | null;
             decisions: string | null;
             notes: string | null;
@@ -6752,14 +6788,14 @@ export interface components {
             responsibleUserId?: string;
             /**
              * Format: uuid
-             * @description Solicitud relacionada.
+             * @description Solicitud relacionada. null la quita.
              */
-            relatedRequestId?: string;
+            relatedRequestId?: string | null;
             /**
              * Format: uuid
-             * @description "Proyecto" (Request) relacionado.
+             * @description "Proyecto" (Request) relacionado. null lo quita.
              */
-            relatedProjectRequestId?: string;
+            relatedProjectRequestId?: string | null;
             /** @description Agenda/temas. */
             agenda?: string;
             /** @description Decisiones/acuerdos. */
@@ -6795,6 +6831,10 @@ export interface components {
             relatedRequestId: string | null;
             /** Format: uuid */
             relatedProjectRequestId: string | null;
+            /** @description Codigo (PRY-0012) de la solicitud relacionada que muestra la interfaz (proyecto relacionado o, si no hay, solicitud relacionada). Nulo sin solicitud o si el actor no puede leerla. */
+            relatedRequestCode: string | null;
+            /** @description Titulo de esa solicitud (nulo en los mismos casos). */
+            relatedRequestTitle: string | null;
             expectedResult: string | null;
             result: string | null;
             blockers: string | null;
@@ -6876,6 +6916,8 @@ export interface components {
             /** @description Título del acta de origen. */
             sourceMeetingTitle: string | null;
             expectedResult: string | null;
+            /** @description Motivo del bloqueo o bloqueos registrados. */
+            blockers: string | null;
             /** @description La persona puede completarlo desde Mi trabajo (transición COMPLETADO). */
             canComplete: boolean;
         };
@@ -6915,14 +6957,14 @@ export interface components {
             responsibleUserId?: string;
             /**
              * Format: uuid
-             * @description Solicitud relacionada.
+             * @description Solicitud relacionada. null la quita.
              */
-            relatedRequestId?: string;
+            relatedRequestId?: string | null;
             /**
              * Format: uuid
-             * @description "Proyecto" (Request) relacionado.
+             * @description "Proyecto" (Request) relacionado. null lo quita.
              */
-            relatedProjectRequestId?: string;
+            relatedProjectRequestId?: string | null;
             /** @description Resultado esperado. */
             expectedResult?: string;
             /** @description Resultado/evidencia. */
@@ -6937,6 +6979,8 @@ export interface components {
              * @enum {string}
              */
             toState: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+            /** @description Motivo del bloqueo (1 a 500 caracteres tras recortar). Opcional y solo valido con toState BLOQUEADO; con otro estado se responde 400. Un texto vacio o solo espacios se trata como ausente. Se guarda en los bloqueos del compromiso. */
+            blockedReason?: string;
         };
         GatePendingItemResponseDto: {
             /**
@@ -15005,13 +15049,62 @@ export interface operations {
             };
         };
     };
+    CoordinationLookupController_requests: {
+        parameters: {
+            query?: {
+                /** @description Busca por código o título, sin distinguir mayúsculas. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Solicitudes relacionables (hasta 200). */
+            200: {
+                headers: {
+                    /** @description true si había más de 200 coincidencias. */
+                    "X-Truncated"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoordinationRequestDto"][];
+                };
+            };
+            /** @description Parámetro inválido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     MeetingController_list: {
         parameters: {
             query?: {
+                /** @description Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated). */
+                page?: number;
+                /** @description Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count. */
+                pageSize?: number;
+                /** @description Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado. */
+                q?: string;
+                /** @description Sentido del orden (asc o desc). Por defecto, el propio de cada listado. */
+                dir?: "asc" | "desc";
                 /** @description Filtra por proceso. */
                 processId?: string;
                 /** @description Filtra por estado. */
                 state?: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+                /** @description true: solo actas abiertas (no cerradas ni archivadas); false: solo cerradas o archivadas. */
+                open?: boolean;
                 /** @description Filtra por solicitud (proyecto): relacionada o proyecto relacionado. */
                 requestId?: string;
             };
@@ -15021,14 +15114,29 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Reuniones. */
+            /** @description Reuniones (la página pedida o hasta 1000 filas). */
             200: {
                 headers: {
+                    /** @description Total de filas tras alcance, filtros y búsqueda (no solo la página). */
+                    "X-Total-Count"?: number;
+                    /** @description Página servida (1 si no se pidió página). */
+                    "X-Page"?: number;
+                    /** @description Tamaño de la página servida (1000 si no se pidió página). */
+                    "X-Page-Size"?: number;
+                    /** @description true si no se pidió página y el listado superó el tope de 1000 filas. */
+                    "X-Truncated"?: "true" | "false";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["MeetingResponseDto"][];
                 };
+            };
+            /** @description Filtros o paginación inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Rol insuficiente. */
             403: {
@@ -15344,12 +15452,28 @@ export interface operations {
     CommitmentController_list: {
         parameters: {
             query?: {
+                /** @description Número de página (desde 1). Si se envía sin pageSize, el tamaño es 25. Sin page ni pageSize se devuelve el listado completo con un tope de 1000 filas (cabecera X-Truncated). */
+                page?: number;
+                /** @description Filas por página (1 a 100). El total del listado llega en la cabecera X-Total-Count. */
+                pageSize?: number;
+                /** @description Búsqueda por texto, sin distinguir mayúsculas. Los campos que cubre se indican en cada listado. */
+                q?: string;
+                /** @description Sentido del orden (asc o desc). Por defecto, el propio de cada listado. */
+                dir?: "asc" | "desc";
                 /** @description Filtra por estado. */
                 state?: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+                /** @description ABIERTOS: en curso o bloqueados; VENCIDOS: abiertos con vencimiento anterior a hoy; TERMINADOS: completados o archivados. */
+                view?: "ABIERTOS" | "VENCIDOS" | "TERMINADOS";
                 /** @description Filtra por proceso. */
                 processId?: string;
                 /** @description Filtra por asignado. */
                 assignedUserId?: string;
+                /** @description Filtra por persona: la que tiene el compromiso asignado o es su responsable. */
+                personId?: string;
+                /** @description Filtra por acta de origen. */
+                meetingId?: string;
+                /** @description true: solo compromisos sin acta de origen. Tiene prioridad sobre meetingId. */
+                withoutMeeting?: boolean;
                 /** @description Filtra por solicitud (proyecto): relacionada o proyecto relacionado. */
                 requestId?: string;
             };
@@ -15359,14 +15483,29 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Compromisos. */
+            /** @description Compromisos (la página pedida o hasta 1000 filas). */
             200: {
                 headers: {
+                    /** @description Total de filas tras alcance, filtros y búsqueda (no solo la página). */
+                    "X-Total-Count"?: number;
+                    /** @description Página servida (1 si no se pidió página). */
+                    "X-Page"?: number;
+                    /** @description Tamaño de la página servida (1000 si no se pidió página). */
+                    "X-Page-Size"?: number;
+                    /** @description true si no se pidió página y el listado superó el tope de 1000 filas. */
+                    "X-Truncated"?: "true" | "false";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["CommitmentResponseDto"][];
                 };
+            };
+            /** @description Filtros o paginación inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Rol insuficiente. */
             403: {
@@ -15576,7 +15715,7 @@ export interface operations {
                     "application/json": components["schemas"]["CommitmentResponseDto"];
                 };
             };
-            /** @description Transicion no permitida. */
+            /** @description Transicion no permitida o motivo de bloqueo con otro estado. */
             400: {
                 headers: {
                     [name: string]: unknown;
