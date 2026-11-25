@@ -123,7 +123,7 @@ que ejecutaría y borra la carpeta.
 - **Con una migración que el código anterior no entiende:** revertir el código
   obliga a revertir también la BD con `/opt/backups/control-phari-<TS>-pre.dump`.
   No restaures un dump sin hablarlo con el usuario: se pierden las escrituras
-  posteriores al respaldo. Procedimientos de restauración: `docs/respaldo-restauracion-bd.md`.
+  posteriores al respaldo. Procedimientos de restauración: `docs/respaldo-restauracion-bd.md`. Ensayo local de restauración y su procedimiento: [`restauracion.md`](restauracion.md).
 - **Stack por red:** el dump está en `%USERPROFILE%\control-phari-backups\stack-red-<TS>-pre.dump`.
 
 ## Cambio de contraseña obligatorio (migración `20261119090000_user_must_change_password`)
