@@ -47,6 +47,14 @@ interface RequesterFormDialogProps {
 
 const FORM_ID = 'requester-form';
 
+/** Prefijo del 409 de la API cuando el nombre ya existe en esa area (D23). */
+const DUPLICATE_PREFIX = 'Ya existe un solicitante con ese nombre';
+
+/** true si el mensaje del servidor es el de solicitante duplicado por nombre y area. */
+export function isDuplicateRequesterMessage(message: string | null | undefined): boolean {
+  return Boolean(message && message.startsWith(DUPLICATE_PREFIX));
+}
+
 /** Alta y edición de un solicitante: el área es obligatoria. */
 export function RequesterFormDialog({
   open,
@@ -70,6 +78,9 @@ export function RequesterFormDialog({
   const [nameError, setNameError] = React.useState<string | null>(null);
   const [areaError, setAreaError] = React.useState<string | null>(null);
   const nameRef = React.useRef<HTMLInputElement>(null);
+  const [duplicateDismissed, setDuplicateDismissed] = React.useState(false);
+  const duplicate = isDuplicateRequesterMessage(errorMessage);
+  const showDuplicate = duplicate && !duplicateDismissed;
   const { captureTrigger, handleCloseAutoFocus } = useDialogReturnFocus();
 
   useResetOnChange([open, editing], () => {
@@ -79,6 +90,15 @@ export function RequesterFormDialog({
     setName(editing?.name ?? '');
     setAreaId(editing?.areaId ?? '');
   });
+
+  // Un error nuevo del servidor vuelve a mostrarse aunque el anterior se hubiera descartado.
+  useResetOnChange([errorMessage], () => setDuplicateDismissed(false));
+  React.useEffect(() => {
+    if (showDuplicate) {
+      nameRef.current?.focus();
+      nameRef.current?.select();
+    }
+  }, [showDuplicate]);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -141,7 +161,19 @@ export function RequesterFormDialog({
         <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <DialogBody className="grid gap-4">
             <RequiredHint />
-            <Field id="requester-name" label="Nombre" required error={nameError}>
+            <Field
+              id="requester-name"
+              label="Nombre"
+              required
+              help="El nombre puede repetirse en otra área."
+              error={
+                nameError ??
+                (showDuplicate
+                  ? `${errorMessage} Cambia el nombre, elige otra área o reactiva el existente desde la lista.`
+                  : null)
+              }
+              errorRole="alert"
+            >
               <Input
                 ref={nameRef}
                 autoFocus
@@ -149,6 +181,7 @@ export function RequesterFormDialog({
                 onChange={(e) => {
                   setName(e.target.value);
                   setNameError(null);
+                  setDuplicateDismissed(true);
                 }}
               />
             </Field>
@@ -184,6 +217,7 @@ export function RequesterFormDialog({
                   onValueChange={(v) => {
                     setAreaId(v);
                     setAreaError(null);
+                    setDuplicateDismissed(true);
                   }}
                 >
                   <SelectTrigger {...control}>
@@ -200,7 +234,7 @@ export function RequesterFormDialog({
               )}
             </Field>
 
-            <FormError id={FORM_ID} message={errorMessage} />
+            <FormError id={FORM_ID} message={duplicate ? null : errorMessage} />
           </DialogBody>
 
           <DialogFooter>

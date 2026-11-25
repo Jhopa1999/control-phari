@@ -1066,6 +1066,19 @@
         "docs/design/cambiar-contrasena.md"
       ],
       "summary": "Oleada 5 · PR A, política de contraseñas (D20): mínimo de 10 caracteres y bloqueo de contraseñas comunes en change-password y reset-password (restablecer y activar), gestionables en Maestras (AUTH_PARAM/PASSWORD_MIN_LENGTH y maestra nueva PASSWORD_COMMON) y sembrados por la migración idempotente 20261125090000_password_policy_params; endpoint público GET /auth/password-policy (solo el mínimo), excluido del MCP; la web muestra el mínimo vigente y marca el rechazo en el campo. La variable PASSWORD_MIN_LENGTH deja de leerse. No invalida contraseñas existentes."
+    },
+    {
+      "timestamp": "2026-11-24T20:00:00Z",
+      "trigger_file": "apps/api/src/modules/auth/capability-matrix.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/design/mis-permisos-capacidades.md",
+        "docs/plan-mejora/README.md"
+      ],
+      "summary": "Oleada 5, PR B: (1) solicitantes únicos por nombre y área (D23): migración aditiva e idempotente 20261125100000_solicitantes_unicidad_nombre_area (índice único (name_key, area_id); si hubiera duplicados reales no lo crea y el servicio sigue validando), el servicio comprueba la unicidad también al mover de área y el 409 dice «Ya existe un solicitante con ese nombre en esa área.»; la web lo muestra junto al campo Nombre y el selector de Solicitud añade el área a los homónimos. (2) GET /me/permissions añade capabilities (acciones por rol con allowed y allowedRoles) desde capability-matrix.ts, con prueba de sincronía con los @Roles reales; Mis permisos gana la sección «Qué puedes hacer», avisos para el administrador y sin roles, y solo lista los módulos del menú. (3) Service Desk: se quita «Próximamente» duplicado de las descripciones. MCP: solo cambia la descripción de me.permissions; sin tools ni exclusiones nuevas."
     }
   ]
 }

@@ -58,7 +58,7 @@ por `AUTH_MODE`: `dev-header` (header `X-Actor-Id`) y `jwt` (login real).
 | POST | `/auth/reset-password` | Define una nueva contraseña consumiendo un token de reset o de activación y devuelve la sesión del login para entrar directo y emite también la cookie de sesión (`200` con `LoginResponseDto`; `400` token inválido o contraseña que no cumple la política, sin consumir el token; `410` token caducado/usado). La política exige longitud mínima vigente (maestra `AUTH_PARAM`, `PASSWORD_MIN_LENGTH`, 10 por defecto) y no ser una contraseña común (maestra `PASSWORD_COMMON`). |
 | GET | `/auth/password-policy` | Longitud mínima vigente de la contraseña (`{ minLength }`, `PasswordPolicyResponseDto`). Pública (la usan activar cuenta y restablecer contraseña); no expone la lista de contraseñas comunes. Excluido del MCP. |
 | GET | `/dev/actors` | Lista usuarios activos para el selector de desarrollo (solo con `AUTH_MODE=dev-header`; si no, `404`). |
-| GET | `/me/permissions` | Permisos del usuario actual: rol, alcance, módulos permitidos y `mustChangePassword` (cambio de contraseña obligatorio pendiente). Responde también con el cambio pendiente. |
+| GET | `/me/permissions` | Permisos del usuario actual: rol, alcance, módulos permitidos, `mustChangePassword` (cambio de contraseña obligatorio pendiente) y `capabilities`: las acciones del portal (clave, etiqueta, descripción, grupo, alcance `PROCESS`/`AREA`/`SYSTEM`, `allowed` y `allowedRoles`) con todas las del catálogo en orden fijo, para explicar qué puede hacer la persona y a quién pedir lo que no. Se deriva de `capability-matrix.ts`. Responde también con el cambio pendiente. |
 | POST | `/auth/change-password` | Cambia la contraseña de la sesión actual (Bearer o cookie con `X-Portal-Csrf: 1`). Exige la contraseña actual, que la nueva sea distinta y que cumpla la política de contraseñas (longitud mínima vigente (maestra `AUTH_PARAM`, `PASSWORD_MIN_LENGTH`, 10 por defecto) y no ser una contraseña común (maestra `PASSWORD_COMMON`)). Limpia `mustChangePassword` y audita `PASSWORD_CHANGED`. `204`; `400` actual incorrecta, igual, corta («La contraseña debe tener al menos {N} caracteres.») o común («Esa contraseña es muy común y fácil de adivinar. Elige otra.»); un rechazo por política no suma al límite de intentos ni limpia `mustChangePassword`; `429` con `Retry-After` (mismo límite que el login). Excluido del MCP. |
 
 Cambio de contraseña obligatorio: con `users.must_change_password = true` y en modo
@@ -178,8 +178,8 @@ Administra los solicitantes de las solicitudes; cada uno pertenece obligatoriame
 | --- | --- | --- |
 | GET | `/requesters` | Lista solicitantes (filtros opcionales `active`, `areaId`). |
 | GET | `/requesters/:id` | Consulta un solicitante (`404` si no existe). |
-| POST | `/requesters` | Crea un solicitante (`name` + `areaId` obligatorios; `400` si el área no existe o está inactiva). |
-| PATCH | `/requesters/:id` | Edita nombre/área o activa/inactiva el solicitante. |
+| POST | `/requesters` | Crea un solicitante (`name` + `areaId` obligatorios; `400` si el área no existe o está inactiva; `409` «Ya existe un solicitante con ese nombre en esa área.»: la unicidad es por nombre normalizado **y área**, los inactivos cuentan). |
+| PATCH | `/requesters/:id` | Edita nombre/área o activa/inactiva el solicitante. Si cambia el nombre o el área se vuelve a comprobar la unicidad con los valores resultantes (`409` si mover a otra área choca con un homónimo). |
 Reglas: el nombre es único sin distinguir mayúsculas ni tildes (`409` si se repite). Cada alta/edición se audita como `REQUESTER`. En `POST/PATCH /requests` el campo `requesterId` fija el solicitante y el backend copia su nombre y su área a `requesterName`/`requesterArea`; las solicitudes históricas conservan su texto original.
 
 ## catalog — Maestras genéricas (funcionalidad base)

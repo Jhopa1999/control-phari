@@ -67,4 +67,75 @@ describe('RequesterService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
     expect(tx.requester.create).not.toHaveBeenCalled();
   });
+
+  it('busca el duplicado por nombre y área (mismo nombre en otra área es válido)', async () => {
+    const { service, prisma } = build({});
+    await service.create(actor, { name: 'Ana Pérez', areaId: 'a2' });
+    expect(prisma.requester.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { nameKey: 'ana perez', areaId: 'a2' } }),
+    );
+  });
+
+  it('el mensaje del 409 nombra el área', async () => {
+    const { service } = build({ duplicate: { id: 'other' } });
+    await expect(
+      service.create(actor, { name: 'Ana Pérez', areaId: 'a1' }),
+    ).rejects.toThrow('Ya existe un solicitante con ese nombre en esa área.');
+  });
+
+  describe('update', () => {
+    function buildUpdate(duplicate: { id: string } | null) {
+      const existing = {
+        id: 'r1',
+        name: 'Ana Pérez',
+        nameKey: 'ana perez',
+        areaId: 'a1',
+        active: true,
+      };
+      const row = {
+        ...existing,
+        areaId: 'a2',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        area: { name: 'Otra', active: true },
+      };
+      const tx = { requester: { update: jest.fn().mockResolvedValue(row) } };
+      const prisma = {
+        area: { findFirst: jest.fn().mockResolvedValue({ active: true }) },
+        requester: {
+          findFirst: jest
+            .fn()
+            .mockResolvedValueOnce(existing)
+            .mockResolvedValue(duplicate),
+        },
+        $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
+      };
+      const audit = { record: jest.fn().mockResolvedValue(undefined) };
+      return { service: new RequesterService(prisma as never, audit as never), prisma, tx };
+    }
+
+    it('mover a un área con homónimo responde 409', async () => {
+      const { service, tx } = buildUpdate({ id: 'other' });
+      await expect(service.update(actor, 'r1', { areaId: 'a2' })).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(tx.requester.update).not.toHaveBeenCalled();
+    });
+
+    it('mover a un área sin homónimo comprueba con el nombre actual y el área nueva', async () => {
+      const { service, prisma } = buildUpdate(null);
+      await service.update(actor, 'r1', { areaId: 'a2' });
+      expect(prisma.requester.findFirst).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          where: { nameKey: 'ana perez', areaId: 'a2', id: { not: 'r1' } },
+        }),
+      );
+    });
+
+    it('no comprueba duplicados si no cambian ni nombre ni área', async () => {
+      const { service, prisma } = buildUpdate(null);
+      await service.update(actor, 'r1', { active: false });
+      expect(prisma.requester.findFirst).toHaveBeenCalledTimes(1);
+    });
+  });
 });

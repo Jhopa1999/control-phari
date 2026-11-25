@@ -31,7 +31,8 @@ export function requesterNameKey(name: string): string {
 
 /**
  * Maestro de solicitantes (SOL-02). Cada solicitante pertenece obligatoriamente
- * a un area activa del maestro de areas; el nombre no puede repetirse.
+ * a un area activa del maestro de areas; el nombre no puede repetirse dentro
+ * de la misma area (D23). El mismo nombre en areas distintas esta permitido.
  */
 @Injectable()
 export class RequesterService {
@@ -74,13 +75,17 @@ export class RequesterService {
     }
   }
 
-  private async assertNoDuplicate(nameKey: string, exceptId?: string): Promise<void> {
+  private async assertNoDuplicate(
+    nameKey: string,
+    areaId: string,
+    exceptId?: string,
+  ): Promise<void> {
     const dup = await this.prisma.requester.findFirst({
-      where: { nameKey, ...(exceptId ? { id: { not: exceptId } } : {}) },
+      where: { nameKey, areaId, ...(exceptId ? { id: { not: exceptId } } : {}) },
       select: { id: true },
     });
     if (dup) {
-      throw new ConflictException('Ya existe un solicitante con ese nombre.');
+      throw new ConflictException('Ya existe un solicitante con ese nombre en esa área.');
     }
   }
 
@@ -116,7 +121,7 @@ export class RequesterService {
       throw new BadRequestException('El nombre del solicitante es obligatorio.');
     }
     await this.requireActiveArea(dto.areaId);
-    await this.assertNoDuplicate(nameKey);
+    await this.assertNoDuplicate(nameKey, dto.areaId);
 
     try {
       const created = await this.prisma.$transaction(async (tx) => {
@@ -141,7 +146,7 @@ export class RequesterService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new ConflictException('Ya existe un solicitante con ese nombre.');
+        throw new ConflictException('Ya existe un solicitante con ese nombre en esa área.');
       }
       throw error;
     }
@@ -158,18 +163,24 @@ export class RequesterService {
     }
 
     const data: Prisma.RequesterUncheckedUpdateInput = {};
+    let nameKey = existing.nameKey;
     if (dto.name !== undefined) {
-      const nameKey = requesterNameKey(dto.name);
+      nameKey = requesterNameKey(dto.name);
       if (!nameKey) {
         throw new BadRequestException('El nombre del solicitante es obligatorio.');
       }
-      await this.assertNoDuplicate(nameKey, id);
       data.name = dto.name.trim();
       data.nameKey = nameKey;
     }
-    if (dto.areaId !== undefined && dto.areaId !== existing.areaId) {
-      await this.requireActiveArea(dto.areaId);
-      data.areaId = dto.areaId;
+    const areaChanges = dto.areaId !== undefined && dto.areaId !== existing.areaId;
+    const areaId = areaChanges ? (dto.areaId as string) : existing.areaId;
+    if (areaChanges) {
+      await this.requireActiveArea(areaId);
+      data.areaId = areaId;
+    }
+    // La unicidad es por nombre y area: se evalua si cambia cualquiera de los dos.
+    if (data.nameKey !== undefined || areaChanges) {
+      await this.assertNoDuplicate(nameKey, areaId, id);
     }
     if (dto.active !== undefined) data.active = dto.active;
 
@@ -197,7 +208,7 @@ export class RequesterService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new ConflictException('Ya existe un solicitante con ese nombre.');
+        throw new ConflictException('Ya existe un solicitante con ese nombre en esa área.');
       }
       throw error;
     }

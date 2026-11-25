@@ -67,7 +67,7 @@ export class RequesterController {
   @ApiResponse({ status: 201, type: RequesterResponseDto })
   @ApiResponse({ status: 400, description: 'Datos inválidos o área inexistente/inactiva.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  @ApiResponse({ status: 409, description: 'Solicitante duplicado.' })
+  @ApiResponse({ status: 409, description: 'Solicitante duplicado: ya existe uno con ese nombre en esa área.' })
   create(@CurrentActor() actor: CurrentActorType, @Body() dto: CreateRequesterDto) {
     return this.requesterService.create(actor, dto);
   }
@@ -80,7 +80,7 @@ export class RequesterController {
   @ApiResponse({ status: 200, type: RequesterResponseDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
   @ApiResponse({ status: 404, description: 'No existe.' })
-  @ApiResponse({ status: 409, description: 'Solicitante duplicado.' })
+  @ApiResponse({ status: 409, description: 'Solicitante duplicado: ya existe uno con ese nombre en esa área.' })
   update(
     @CurrentActor() actor: CurrentActorType,
     @Param('id', ParseUUIDPipe) id: string,

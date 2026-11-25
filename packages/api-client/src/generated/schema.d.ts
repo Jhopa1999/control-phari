@@ -3188,6 +3188,51 @@ export interface components {
              */
             roleName: string;
         };
+        /**
+         * @description Clave estable de la acción.
+         * @enum {string}
+         */
+        CapabilityKey: "request.create" | "request.triage" | "request.prioritize" | "request.approve" | "plan.manage" | "plan.authorize" | "task.execute" | "task.review" | "log.record" | "gate.manage" | "closure.approve" | "asset.manage" | "document.review" | "team.manage" | "admin.catalogs" | "admin.structure" | "system.settings";
+        MyCapabilityRoleDto: {
+            /**
+             * @description Código del rol.
+             * @enum {string}
+             */
+            code: "JEFE_AREA" | "LIDER_PROCESO" | "INTEGRANTE" | "ADMIN";
+            /**
+             * @description Nombre visible del rol.
+             * @example Jefe de área
+             */
+            name: string;
+        };
+        MyCapabilityDto: {
+            /**
+             * @description Clave estable de la acción.
+             * @example request.triage
+             */
+            key: components["schemas"]["CapabilityKey"];
+            /**
+             * @description Nombre de la acción.
+             * @example Decidir el triage
+             */
+            label: string;
+            /** @description Qué implica la acción, en una frase. */
+            description: string;
+            /**
+             * @description Agrupador para mostrar.
+             * @example Demanda
+             */
+            group: string;
+            /**
+             * @description Dónde aplica: en los procesos donde tienes rol, en toda el área o en la configuración del sistema.
+             * @enum {string}
+             */
+            scope: "PROCESS" | "AREA" | "SYSTEM";
+            /** @description true si alguno de tus roles la permite. */
+            allowed: boolean;
+            /** @description Roles que pueden hacerla. */
+            allowedRoles: components["schemas"]["MyCapabilityRoleDto"][];
+        };
         MyPermissionsResponseDto: {
             /**
              * Format: uuid
@@ -3222,6 +3267,8 @@ export interface components {
              * @example false
              */
             mustChangePassword: boolean;
+            /** @description Acciones del portal y si las puedes hacer según tus roles. Incluye todas, permitidas o no, en orden fijo. */
+            capabilities: components["schemas"]["MyCapabilityDto"][];
         };
         DevActorResponseDto: {
             /**
@@ -9194,7 +9241,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Solicitante duplicado. */
+            /** @description Solicitante duplicado: ya existe uno con ese nombre en esa área. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -9275,7 +9322,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Solicitante duplicado. */
+            /** @description Solicitante duplicado: ya existe uno con ese nombre en esa área. */
             409: {
                 headers: {
                     [name: string]: unknown;

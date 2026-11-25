@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { RoleCode } from '../role-code';
 import { ModuleKey } from '../module-matrix';
+import { CapabilityKey } from '../capability-matrix';
 
 /** Un grant activo del actor, tal como lo expone /me/permissions. */
 export class MyGrantDto {
@@ -20,6 +21,47 @@ export class MyGrantDto {
   roleName!: string;
 }
 
+/** Rol que puede hacer una acción, para decir a quién pedirla. */
+export class MyCapabilityRoleDto {
+  @ApiProperty({ enum: RoleCode, description: 'Código del rol.' })
+  code!: RoleCode;
+
+  @ApiProperty({ type: String, description: 'Nombre visible del rol.', example: 'Jefe de área' })
+  name!: string;
+}
+
+/** Una acción del portal y si el actor puede hacerla según sus roles. */
+export class MyCapabilityDto {
+  @ApiProperty({
+    enum: CapabilityKey,
+    enumName: 'CapabilityKey',
+    description: 'Clave estable de la acción.',
+    example: 'request.triage',
+  })
+  key!: CapabilityKey;
+
+  @ApiProperty({ type: String, description: 'Nombre de la acción.', example: 'Decidir el triage' })
+  label!: string;
+
+  @ApiProperty({ type: String, description: 'Qué implica la acción, en una frase.' })
+  description!: string;
+
+  @ApiProperty({ type: String, description: 'Agrupador para mostrar.', example: 'Demanda' })
+  group!: string;
+
+  @ApiProperty({
+    enum: ['PROCESS', 'AREA', 'SYSTEM'],
+    description:
+      'Dónde aplica: en los procesos donde tienes rol, en toda el área o en la configuración del sistema.',
+  })
+  scope!: 'PROCESS' | 'AREA' | 'SYSTEM';
+
+  @ApiProperty({ type: Boolean, description: 'true si alguno de tus roles la permite.' })
+  allowed!: boolean;
+
+  @ApiProperty({ type: [MyCapabilityRoleDto], description: 'Roles que pueden hacerla.' })
+  allowedRoles!: MyCapabilityRoleDto[];
+}
 /**
  * Respuesta de GET /me/permissions (design 3.3). Rol(es), procesos con alcance
  * y modulos permitidos derivados de MODULE_MATRIX.
@@ -58,4 +100,11 @@ export class MyPermissionsResponseDto {
     example: false,
   })
   mustChangePassword!: boolean;
+
+  @ApiProperty({
+    type: [MyCapabilityDto],
+    description:
+      'Acciones del portal y si las puedes hacer según tus roles. Incluye todas, permitidas o no, en orden fijo.',
+  })
+  capabilities!: MyCapabilityDto[];
 }
