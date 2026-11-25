@@ -29,6 +29,9 @@ import { ListCommitmentsDto } from './dto/list-commitments.dto';
 import { TransitionDto } from '../dto/transition.dto';
 import { CommitmentResponseDto } from './dto/commitment-response.dto';
 
+/** Tope de filas de `GET /commitments/my-work` (los contadores siguen siendo exactos). */
+export const MY_WORK_COMMITMENTS_LIMIT = 200;
+
 /** Reinicia las marcas de los avisos de vencimiento (permite un aviso nuevo). */
 const CLEAR_NOTICE_MARKS = {
   dueSoonNotifiedAt: null,
@@ -259,62 +262,67 @@ export class CommitmentService {
 
   /**
    * Compromisos abiertos de la persona (asignada; si no hay asignado, la
-   * responsable) para Mi trabajo: vencidos y que vencen hoy, con contadores.
+   * responsable) para Mi trabajo: todos, los más urgentes primero, con tope de
+   * `MY_WORK_COMMITMENTS_LIMIT` filas y contadores exactos. La condición
+   * personal ya es más estricta que el alcance de lectura, así que no se
+   * combina con `commitmentWhere`: un líder conserva los suyos de procesos que
+   * no lidera. El total es la suma de los tres contadores, de modo que nunca
+   * contradice a las filas.
    */
   async myWork(actor: CurrentActor): Promise<CommitmentMyWorkDto> {
-    const rows = await this.prisma.commitment.findMany({
-      where: {
-        AND: [
-          this.scope.commitmentWhere(actor),
-          { state: { in: [...OPEN_COMMITMENT_STATES] } },
-          {
-            OR: [
-              { assignedUserId: actor.userId },
-              { assignedUserId: null, responsibleUserId: actor.userId },
-            ],
-          },
-        ],
-      },
-      include: {
-        ...MEETING_REF,
-        process: { select: { name: true } },
-      },
-      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
-    });
-
     const today = localToday();
-    let overdueCount = 0;
-    let dueTodayCount = 0;
-    let upcomingCount = 0;
-    const items: CommitmentMyWorkDto['items'] = [];
-    for (const row of rows) {
+    const mine: Prisma.CommitmentWhereInput = {
+      state: { in: [...OPEN_COMMITMENT_STATES] },
+      OR: [
+        { assignedUserId: actor.userId },
+        { assignedUserId: null, responsibleUserId: actor.userId },
+      ],
+    };
+    // Lectura consistente: contadores y filas salen del mismo instante, así que
+    // `total` no descuadra con `items` por una escritura concurrente.
+    const [overdueCount, dueTodayCount, upcomingCount, rows] = await this.prisma.$transaction(
+      (tx) =>
+        Promise.all([
+          tx.commitment.count({ where: { AND: [mine, { dueDate: { lt: today } }] } }),
+          tx.commitment.count({ where: { AND: [mine, { dueDate: today }] } }),
+          tx.commitment.count({ where: { AND: [mine, { dueDate: { gt: today } }] } }),
+          tx.commitment.findMany({
+            where: mine,
+            include: {
+              ...MEETING_REF,
+              process: { select: { name: true } },
+            },
+            orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+            take: MY_WORK_COMMITMENTS_LIMIT,
+          }),
+        ]),
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+
+    const items: CommitmentMyWorkDto['items'] = rows.map((row) => {
       const due = dueStatusOf(row.dueDate, row.state, today);
-      if (due.status === 'VENCIDO' || due.status === 'VENCE_HOY') {
-        if (due.status === 'VENCIDO') overdueCount += 1;
-        else dueTodayCount += 1;
-        items.push({
-          id: row.id,
-          title: row.title,
-          state: row.state,
-          dueDate: dateToString(row.dueDate),
-          dueStatus: due.status,
-          daysToDue: due.daysToDue as number,
-          processId: row.processId,
-          processName: row.process.name,
-          sourceMeetingId: row.sourceMeetingId,
-          sourceMeetingTitle: row.sourceMeeting?.title ?? null,
-          expectedResult: row.expectedResult,
-          canComplete: true,
-        });
-      } else {
-        upcomingCount += 1;
-      }
-    }
+      return {
+        id: row.id,
+        title: row.title,
+        state: row.state,
+        dueDate: dateToString(row.dueDate),
+        dueStatus: due.status as string,
+        daysToDue: due.daysToDue as number,
+        processId: row.processId,
+        processName: row.process.name,
+        sourceMeetingId: row.sourceMeetingId,
+        sourceMeetingTitle: row.sourceMeeting?.title ?? null,
+        expectedResult: row.expectedResult,
+        canComplete: true,
+      };
+    });
+    const total = overdueCount + dueTodayCount + upcomingCount;
     return {
-      total: rows.length,
+      total,
       overdueCount,
       dueTodayCount,
       upcomingCount,
+      truncated: total > items.length,
       items,
     };
   }

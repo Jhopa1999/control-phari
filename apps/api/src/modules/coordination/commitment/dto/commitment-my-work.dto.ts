@@ -43,7 +43,7 @@ export class CommitmentMyWorkItemDto {
   canComplete!: boolean;
 }
 
-/** Compromisos de la persona: vencidos y que vencen hoy, más contadores. */
+/** Compromisos abiertos de la persona (con tope de filas), más contadores exactos. */
 export class CommitmentMyWorkDto {
   @ApiProperty({ type: Number, description: 'Compromisos abiertos de la persona (todos).' })
   total!: number;
@@ -58,8 +58,15 @@ export class CommitmentMyWorkDto {
   upcomingCount!: number;
 
   @ApiProperty({
+    type: Boolean,
+    description: 'Hay más compromisos abiertos que filas en `items` (se aplicó el tope).',
+  })
+  truncated!: boolean;
+
+  @ApiProperty({
     type: [CommitmentMyWorkItemDto],
-    description: 'Vencidos (más antiguos primero) y los que vencen hoy.',
+    description:
+      'Abiertos de la persona ordenados por vencimiento (vencidos primero, luego hoy, próximos y posteriores), hasta 200. Cada fila trae `dueStatus` (VENCIDO, VENCE_HOY, PROXIMO hasta 7 días, A_TIEMPO).',
   })
   items!: CommitmentMyWorkItemDto[];
 }
