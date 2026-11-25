@@ -26,8 +26,8 @@ Maestra genérica reutilizable (no es una maestra de negocio concreta).
 - Relaciones: `processes` (1:N con `Process`).
 
 ### Requester (`requesters`)
-- Maestro de solicitantes: `name`, `nameKey` (clave única normalizada, sin tildes ni
-  mayúsculas), `areaId` (FK requerida a `Area`, `onDelete: Restrict`), `active`.
+- Maestro de solicitantes: `name`, `nameKey` (clave normalizada, sin tildes ni
+  mayúsculas; **única junto con `areaId`**: el mismo nombre puede repetirse en otra área, D23), `areaId` (FK requerida a `Area`, `onDelete: Restrict`), `active`.
 - `Request.requesterId` (FK nullable) lo referencia; `requesterName`/`requesterArea` se
   conservan como copia del maestro y como dato histórico.
 
@@ -697,3 +697,15 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     contraseñas existentes. Verificación: `SELECT count(*) FILTER (WHERE catalog='AUTH_PARAM'
     AND code='PASSWORD_MIN_LENGTH'), count(*) FILTER (WHERE catalog='PASSWORD_COMMON') FROM
     catalog_items;` debe dar 1 y al menos 67.)
+55. `20261125100000_solicitantes_unicidad_nombre_area` (oleada 5, PR B; aditiva e
+    idempotente, sin datos: la unicidad de solicitantes pasa de `name_key` global a
+    `(name_key, area_id)`. Comprueba antes si hay filas repetidas en `(name_key, area_id)`: si
+    las hay (hoy no puede haberlas, el índice global lo impedía) **no** crea el índice único ni
+    toca el global, solo crea `requesters_name_key_idx`, y el servicio sigue impidiendo
+    duplicados nuevos. Si no las hay, crea `requesters_name_key_area_id_key` y
+    `requesters_name_key_idx` y después quita `requesters_name_key_key`. No borra ni fusiona
+    nada. Sin parámetros ni variables de entorno. Consulta de verificación (debe dar 0 filas):
+    `SELECT name_key, area_id, count(*) FROM requesters GROUP BY 1,2 HAVING count(*) > 1;`
+    **Rollback:** `CREATE UNIQUE INDEX IF NOT EXISTS requesters_name_key_key ON
+    requesters(name_key);` (falla si ya hay homónimos en áreas distintas; habría que
+    renombrarlos antes) y `DROP INDEX requesters_name_key_area_id_key, requesters_name_key_idx;`)

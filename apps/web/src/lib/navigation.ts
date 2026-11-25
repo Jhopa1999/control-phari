@@ -154,8 +154,8 @@ export const NAV_UPCOMING_APPS: readonly UpcomingApp[] = [
     name: 'Service Desk',
     icon: Headset,
     description:
-      'Mesa de servicio: incidencias, requerimientos y acuerdos de nivel de servicio. Próximamente.',
-    shortDescription: 'Incidencias, requerimientos y SLA. Próximamente.',
+      'Mesa de servicio: incidencias, requerimientos y acuerdos de nivel de servicio.',
+    shortDescription: 'Incidencias, requerimientos y SLA.',
   },
 ];
 

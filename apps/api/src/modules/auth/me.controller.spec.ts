@@ -2,6 +2,7 @@ import { MeController } from './me.controller';
 import { CurrentActor } from './current-actor';
 import { RoleCode } from './role-code';
 import { allowedModulesFor } from './module-matrix';
+import { capabilitiesFor } from './capability-matrix';
 
 function actor(): CurrentActor {
   return {
@@ -48,6 +49,9 @@ describe('MeController (delegacion)', () => {
       allowedModules: allowedModulesFor(a.roleCodes),
       roleCodes: [RoleCode.LIDER_PROCESO],
       mustChangePassword: false,
+      capabilities: capabilitiesFor(a.roleCodes),
     });
+    expect(result.capabilities.find((c) => c.key === 'request.triage')?.allowed).toBe(true);
+    expect(result.capabilities.find((c) => c.key === 'closure.approve')?.allowed).toBe(false);
   });
 });

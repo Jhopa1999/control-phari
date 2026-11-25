@@ -116,7 +116,7 @@ function UpcomingAppCard({
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <h3 className="flex items-center gap-2 text-base font-semibold">
           {app.name}
-          <span className="sr-only">(próximamente, no disponible)</span>
+          <span className="sr-only">(no disponible)</span>
           <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
             Próximamente
           </span>

@@ -4,6 +4,7 @@ import { AllowPasswordChangePending } from './allow-password-change-pending.deco
 import { CurrentActor } from './current-actor.decorator';
 import { CurrentActor as CurrentActorType } from './current-actor';
 import { CurrentUserGuard } from './current-user.guard';
+import { capabilitiesFor } from './capability-matrix';
 import { allowedModulesFor } from './module-matrix';
 import { MyPermissionsResponseDto } from './dto/my-permissions-response.dto';
 
@@ -36,6 +37,7 @@ export class MeController {
       allowedModules: allowedModulesFor(actor.roleCodes),
       roleCodes: Array.from(actor.roleCodes),
       mustChangePassword: actor.mustChangePassword === true,
+      capabilities: capabilitiesFor(actor.roleCodes),
     };
   }
 }

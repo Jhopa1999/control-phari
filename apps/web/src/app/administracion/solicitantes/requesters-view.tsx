@@ -30,7 +30,11 @@ import {
   listRequesters,
   updateRequester,
 } from '@/lib/requesters';
-import { RequesterFormDialog, type RequesterFormValues } from './requester-form-dialog';
+import {
+  RequesterFormDialog,
+  isDuplicateRequesterMessage,
+  type RequesterFormValues,
+} from './requester-form-dialog';
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
 
@@ -119,7 +123,8 @@ export function RequestersView(): React.ReactElement {
     } catch (err) {
       const message = messageOf(err);
       setFormError(message);
-      toast.error(message);
+      // El duplicado se muestra junto al campo Nombre; el toast sobraría.
+      if (!isDuplicateRequesterMessage(message)) toast.error(message);
     } finally {
       setSubmitting(false);
     }

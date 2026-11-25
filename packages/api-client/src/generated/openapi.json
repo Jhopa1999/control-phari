@@ -921,7 +921,7 @@
             "description": "Rol insuficiente."
           },
           "409": {
-            "description": "Solicitante duplicado."
+            "description": "Solicitante duplicado: ya existe uno con ese nombre en esa área."
           }
         },
         "summary": "Crea un solicitante asociado a un área (ADMIN/JEFE_AREA).",
@@ -1008,7 +1008,7 @@
             "description": "No existe."
           },
           "409": {
-            "description": "Solicitante duplicado."
+            "description": "Solicitante duplicado: ya existe uno con ese nombre en esa área."
           }
         },
         "summary": "Edita o activa/inactiva un solicitante (ADMIN/JEFE_AREA).",
@@ -11603,6 +11603,110 @@
           "roleName"
         ]
       },
+      "CapabilityKey": {
+        "type": "string",
+        "enum": [
+          "request.create",
+          "request.triage",
+          "request.prioritize",
+          "request.approve",
+          "plan.manage",
+          "plan.authorize",
+          "task.execute",
+          "task.review",
+          "log.record",
+          "gate.manage",
+          "closure.approve",
+          "asset.manage",
+          "document.review",
+          "team.manage",
+          "admin.catalogs",
+          "admin.structure",
+          "system.settings"
+        ],
+        "description": "Clave estable de la acción."
+      },
+      "MyCapabilityRoleDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "JEFE_AREA",
+              "LIDER_PROCESO",
+              "INTEGRANTE",
+              "ADMIN"
+            ],
+            "description": "Código del rol."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible del rol.",
+            "example": "Jefe de área"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "MyCapabilityDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "description": "Clave estable de la acción.",
+            "example": "request.triage",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CapabilityKey"
+              }
+            ]
+          },
+          "label": {
+            "type": "string",
+            "description": "Nombre de la acción.",
+            "example": "Decidir el triage"
+          },
+          "description": {
+            "type": "string",
+            "description": "Qué implica la acción, en una frase."
+          },
+          "group": {
+            "type": "string",
+            "description": "Agrupador para mostrar.",
+            "example": "Demanda"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "PROCESS",
+              "AREA",
+              "SYSTEM"
+            ],
+            "description": "Dónde aplica: en los procesos donde tienes rol, en toda el área o en la configuración del sistema."
+          },
+          "allowed": {
+            "type": "boolean",
+            "description": "true si alguno de tus roles la permite."
+          },
+          "allowedRoles": {
+            "description": "Roles que pueden hacerla.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyCapabilityRoleDto"
+            }
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "description",
+          "group",
+          "scope",
+          "allowed",
+          "allowedRoles"
+        ]
+      },
       "MyPermissionsResponseDto": {
         "type": "object",
         "properties": {
@@ -11657,6 +11761,13 @@
             "type": "boolean",
             "description": "Si es true, la persona debe cambiar su contraseña antes de usar el portal: toda ruta salvo este endpoint y POST /auth/change-password responde 403 con code PASSWORD_CHANGE_REQUIRED.",
             "example": false
+          },
+          "capabilities": {
+            "description": "Acciones del portal y si las puedes hacer según tus roles. Incluye todas, permitidas o no, en orden fijo.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyCapabilityDto"
+            }
           }
         },
         "required": [
@@ -11666,7 +11777,8 @@
           "grants",
           "allowedModules",
           "roleCodes",
-          "mustChangePassword"
+          "mustChangePassword",
+          "capabilities"
         ]
       },
       "DevActorResponseDto": {

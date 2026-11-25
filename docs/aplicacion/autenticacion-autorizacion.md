@@ -367,6 +367,17 @@ se muestra si alguno de sus roles lo permite. `GET /me/permissions` devuelve rol
 alcance y módulos permitidos; el frontend usa `allowedModules` para esconder ítems del
 menú, pero el servidor sigue validando cada operación.
 
+**Capacidades (`capabilities`).** `GET /me/permissions` añade un arreglo con todas las acciones
+de negocio del catálogo `CAPABILITY_CATALOG` (`apps/api/src/modules/auth/capability-matrix.ts`),
+en orden fijo, cada una con `allowed` (alguno de los roles del actor la permite) y
+`allowedRoles` (quién sí puede, para saber a quién pedirla). `capabilitiesFor(roles)` es una
+función pura y la web no repite reglas por rol. El catálogo reutiliza `MODULE_MATRIX` cuando hay un
+módulo equivalente y declara `enforcedBy` (controlador y handler); la prueba
+`capability-matrix.spec.ts` lee el `@Roles` real de esos handlers y falla si la lista de roles de
+la matriz no coincide, así un cambio de `@Roles` sin actualizar la matriz rompe CI.
+El administrador solo tiene `admin.structure` y `system.settings`: no participa en
+solicitudes ni en planes.
+
 Uso directo de la matriz en la API: `POST /catalog-items` y `PATCH /catalog-items/:id`
 declaran `@Roles(...MODULE_MATRIX.admin)`, de modo que la escritura de Maestras sigue a
 la fila `admin` (hoy solo `JEFE_AREA`; integrante, líder y administrador reciben `403`).

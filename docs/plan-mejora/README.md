@@ -123,7 +123,7 @@ Amarillo (0/1/1). Código: [`aplicaciones-view.tsx`](../../apps/web/src/app/apli
 
 #### 1.4 Placeholder Service Desk
 Verde (0/0/1). Código: [`navigation.ts`](../../apps/web/src/lib/navigation.ts) (`NAV_UPCOMING_APPS`).
-- **P3 · Mejora · S** Quitar la frase final «Próximamente» de `description`; la insignia ya lo dice. Sin decisión.
+- **P3 · Mejora · S** Quitar la frase final «Próximamente» de `description`; la insignia ya lo dice. Sin decisión. **Hecho (oleada 5, PR B).**
 
 #### 1.5 Panel del área
 **Rojo** (2/4/2). Código: [`dashboard-view.tsx`](../../apps/web/src/app/inicio/dashboard-view.tsx), [`attention-section.tsx`](../../apps/web/src/app/inicio/attention-section.tsx), [`area-control.service.ts`](../../apps/api/src/modules/portfolio/area-control.service.ts), [`error-state.tsx`](../../apps/web/src/components/error-state.tsx), [`safe-redirect.ts`](../../apps/web/src/lib/safe-redirect.ts).
@@ -322,9 +322,9 @@ Amarillo (1/3/3). Código: [`auditoria-view.tsx`](../../apps/web/src/app/gobiern
 
 #### 5.5 Mis permisos
 Verde (0/1/2). Código: [`mis-permisos-view.tsx`](../../apps/web/src/app/gobierno/mis-permisos/mis-permisos-view.tsx), [`module-matrix.ts`](../../apps/api/src/modules/auth/module-matrix.ts).
-- **P2 · Mejora · M** Explicar qué puedo hacer, no solo qué puedo abrir, desde un campo `capabilities` en `GET /me/permissions`. Hay que acordar el texto por rol.
+- **P2 · Mejora · M** Explicar qué puedo hacer, no solo qué puedo abrir, desde un campo `capabilities` en `GET /me/permissions`. Hay que acordar el texto por rol. **Hecho (oleada 5, PR B).**
 - **P3 · Mejora · S** Mensaje para el administrador y corregir los nombres de rol «Jefe de área» y «Líder de proceso» con una migración (como BL-026).
-- **P3 · Mejora · S** Mostrar solo los módulos que aparecen en el menú.
+- **P3 · Mejora · S** Mostrar solo los módulos que aparecen en el menú. **Hecho (oleada 5, PR B).**
 
 ### Parte 6. Administración
 
@@ -367,7 +367,7 @@ Amarillo (0/3/1). Código: [`procesos-view.tsx`](../../apps/web/src/app/administ
 
 #### 6.5 Solicitantes
 Verde (0/1/2). Código: [`requesters-view.tsx`](../../apps/web/src/app/administracion/solicitantes/requesters-view.tsx), [`requester.service.ts`](../../apps/api/src/modules/requester/requester.service.ts).
-- **P2 · Mejora · S** Unicidad por (nombre, área). Decisión: D23.
+- **P2 · Mejora · S** Unicidad por (nombre, área). Decisión: D23. **Hecho (oleada 5, PR B).**
 - **P3 · Mejora · S** Búsqueda y paginación cuando crezca la lista.
 - **P3 · Arreglo · S** Mensajes de validación en español.
 

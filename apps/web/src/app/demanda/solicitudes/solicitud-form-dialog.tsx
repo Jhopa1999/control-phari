@@ -42,6 +42,16 @@ import { formatDate, formatDateTime } from '@/lib/format';
 import { EDIT_JUSTIFICATION_MIN_LENGTH, JUSTIFIED_EDIT_STATES } from '@/lib/request-state';
 import { cn } from '@/lib/utils';
 
+/** Misma normalizacion que la API (requesterNameKey): sin tildes, minusculas y espacios colapsados. */
+function normalizeName(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
 export interface SolicitudFormValues {
   title: string;
   /** Solicitante del maestro (el área se asocia automáticamente). */
@@ -266,6 +276,15 @@ export function SolicitudFormDialog({
     () => requesters.filter((r) => r.active || r.id === editing?.requesterId),
     [requesters, editing],
   );
+  // Si dos solicitantes visibles comparten nombre (en areas distintas, D23), el selector muestra el area.
+  const duplicatedNames = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of requesterOptions) {
+      const key = normalizeName(r.name);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return new Set([...counts].filter(([, n]) => n > 1).map(([key]) => key));
+  }, [requesterOptions]);
   const selectedRequester = requesters.find((r) => r.id === values.requesterId);
   let requesterHelp = 'El área se asigna automáticamente según el solicitante.';
   if (selectedRequester) {
@@ -434,6 +453,9 @@ export function SolicitudFormDialog({
                         {requesterOptions.map((r) => (
                           <SelectItem key={r.id} value={r.id}>
                             {r.name}
+                            {duplicatedNames.has(normalizeName(r.name)) ? (
+                              <span className="text-muted-foreground"> · {r.areaName}</span>
+                            ) : null}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -60,7 +60,7 @@ model Area {
 }
 
 /// Maestro de solicitantes (SOL-02): persona/solicitante de una solicitud, siempre
-/// asociado a un area del maestro de areas. El nombre es unico (sin distinguir mayusculas/tildes).
+/// asociado a un area del maestro de areas. El nombre es unico dentro de su area (sin distinguir mayusculas/tildes).
 model Requester {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
@@ -73,7 +73,8 @@ model Requester {
   area     Area      @relation(fields: [areaId], references: [id], onDelete: Restrict)
   requests Request[]
 
-  @@unique([nameKey], name: "requester_name_unique")
+  @@unique([nameKey, areaId])
+  @@index([nameKey])
   @@index([areaId])
   @@index([active])
   @@map("requesters")
