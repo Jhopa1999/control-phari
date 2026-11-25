@@ -10,6 +10,10 @@ import {
 } from './pagination';
 import { nextSort, type SortState } from './table-sort';
 
+// Filas antes de la primera página: siempre la misma referencia, para que quien
+// dependa de `rows` (p. ej. useResetOnChange) no vea un cambio en cada render.
+const NO_ROWS: never[] = [];
+
 /** Parámetros que la vista recibe para pedir una página. */
 export interface ServerTableRequest<K extends string> {
   page: number;
@@ -120,7 +124,7 @@ export function useServerTable<T, K extends string>(
   }, [page, pageSize, sort, filtersKey, nonce]);
 
   const total = data?.total ?? 0;
-  const rows = data?.rows ?? [];
+  const rows: T[] = data?.rows ?? NO_ROWS;
   const range = pageRange(data?.page ?? page, pageSize, total, rows.length);
 
   const setPage = React.useCallback((next: number) => setPageState(Math.max(1, next)), []);
