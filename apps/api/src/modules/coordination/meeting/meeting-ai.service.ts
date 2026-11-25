@@ -23,6 +23,7 @@ import {
 import { CoordinationScopeService } from '../coordination-scope.service';
 import { DATE_PATTERN, dateStringToDate, dateToString } from '../date';
 import {
+  MEETING_AI_MAX_INPUT_CHARS,
   MeetingAiAvailabilityDto,
   MeetingAiCommitmentDto,
   MeetingAiStructureResponseDto,
@@ -35,7 +36,7 @@ import { ModelMeetingOutput } from './meeting-ai-output';
  * (decisión D8): el prompt, el modelo, la temperatura y el timeout viven en el
  * agente `ACTAS` editable desde Administración.
  */
-export const MEETING_AI_MAX_INPUT_CHARS = 12000;
+export { MEETING_AI_MAX_INPUT_CHARS };
 export const MEETING_AI_MAX_COMMITMENTS = 20;
 /** Personas del proceso que se ofrecen al modelo como candidatas a responsable. */
 const MAX_CANDIDATES = 100;

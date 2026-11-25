@@ -8,16 +8,23 @@ import {
   IsString,
   IsUUID,
   Matches,
+  MaxLength,
 } from 'class-validator';
 import { DATE_PATTERN } from '../../date';
+
+/**
+ * Tope del texto que se envía al modelo (control de costo y abuso). Valor por
+ * defecto seguro en código (decisión D8).
+ */
+export const MEETING_AI_MAX_INPUT_CHARS = 12000;
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
 
 /**
  * Entrada de la ayuda de IA del acta. El texto NO se guarda: solo se envía al
- * modelo. El tope de caracteres lo aplica el service (valor por defecto en
- * código, 413 si se excede).
+ * modelo. El tope de caracteres lo valida el DTO (400 si se excede) y el service
+ * lo vuelve a comprobar (413).
  */
 export class StructureMeetingAiDto {
   @ApiProperty({
@@ -39,11 +46,15 @@ export class StructureMeetingAiDto {
 
   @ApiProperty({
     type: String,
+    maxLength: MEETING_AI_MAX_INPUT_CHARS,
     description: 'Notas de la reunión tal como las escribió la persona. No se guardan.',
   })
   @Transform(trim)
   @IsString()
   @IsNotEmpty({ message: 'Escribe o pega el texto de la reunión.' })
+  @MaxLength(MEETING_AI_MAX_INPUT_CHARS, {
+    message: `El texto es demasiado largo: el máximo es de ${MEETING_AI_MAX_INPUT_CHARS} caracteres.`,
+  })
   text!: string;
 
   @ApiPropertyOptional({

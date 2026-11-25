@@ -1,16 +1,24 @@
 import {
   ConflictException,
+  ForbiddenException,
   PayloadTooLargeException,
   ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { PrismaService } from '../../../database/prisma.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
 import { BedrockClient, BedrockTimeoutError } from '../../ai/bedrock.client';
 import { AiModelCatalogService } from '../../ai/ai-model-catalog.service';
 import { AiUsageService } from '../../ai/ai-usage.service';
+import { RolesGuard } from '../../auth/roles.guard';
 import { CoordinationScopeService } from '../coordination-scope.service';
+import { StructureMeetingAiDto } from './dto/meeting-ai.dto';
+import { MeetingAiController } from './meeting-ai.controller';
 import {
   MEETING_AI_MAX_COMMITMENTS,
   MEETING_AI_MAX_INPUT_CHARS,
@@ -179,6 +187,17 @@ describe('MeetingAiService.structure', () => {
     expect(b.converse).not.toHaveBeenCalled();
   });
 
+  it('actor fuera del proceso: 403 sin invocar el modelo ni registrar consumo', async () => {
+    const { service, converse, usage, scope } = makeService();
+    (scope.listProcessPeople as jest.Mock).mockRejectedValue(
+      new ForbiddenException('No perteneces al proceso indicado; elige uno de tus procesos.'),
+    );
+    await expect(service.structure(actor, dto)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(scope.listProcessPeople).toHaveBeenCalledWith(actor, PROCESS_ID);
+    expect(converse).not.toHaveBeenCalled();
+    expect(usage.record).not.toHaveBeenCalled();
+  });
+
   it('presupuesto agotado: 409 sin invocar el modelo', async () => {
     const { service, converse } = makeService({ budgetExceeded: true });
     await expect(service.structure(actor, dto)).rejects.toBeInstanceOf(ConflictException);
@@ -278,6 +297,50 @@ describe('MeetingAiService.structure', () => {
     const { service } = makeService({ invoke: async () => '{}' });
     const res = await service.structure(actor, dto);
     expect(res).toMatchObject({ agenda: '', decisions: '', notes: '', commitments: [], warnings: [] });
+  });
+});
+
+describe('StructureMeetingAiDto', () => {
+  const build = (text: unknown) =>
+    plainToInstance(StructureMeetingAiDto, { ...dto, text });
+
+  it('acepta el texto en el tope y rechaza uno más largo (400)', async () => {
+    expect(await validate(build('x'.repeat(MEETING_AI_MAX_INPUT_CHARS)))).toHaveLength(0);
+    const errors = await validate(build('x'.repeat(MEETING_AI_MAX_INPUT_CHARS + 1)));
+    expect(errors.map((e) => e.property)).toEqual(['text']);
+  });
+
+  it('recorta los espacios antes de medir y rechaza el texto vacío', async () => {
+    expect(
+      await validate(build(`  ${'x'.repeat(MEETING_AI_MAX_INPUT_CHARS)}  `)),
+    ).toHaveLength(0);
+    expect(await validate(build('   '))).not.toHaveLength(0);
+  });
+});
+
+describe('MeetingAiController (roles)', () => {
+  const reflector = new Reflector();
+  const guard = new RolesGuard(reflector);
+  const contextFor = (handler: (...args: never[]) => unknown, roles: RoleCode[]) =>
+    ({
+      getHandler: () => handler,
+      getClass: () => MeetingAiController,
+      switchToHttp: () => ({
+        getRequest: () => ({ actor: { ...actor, roleCodes: new Set(roles) } }),
+      }),
+    }) as unknown as ExecutionContext;
+
+  it.each([
+    ['structure', MeetingAiController.prototype.structure],
+    ['availability', MeetingAiController.prototype.availability],
+  ])('%s: admiten jefe, líder e integrante y rechazan al administrador (403)', (_n, handler) => {
+    const ok = [RoleCode.JEFE_AREA, RoleCode.LIDER_PROCESO, RoleCode.INTEGRANTE];
+    for (const role of ok) {
+      expect(guard.canActivate(contextFor(handler, [role]))).toBe(true);
+    }
+    expect(() => guard.canActivate(contextFor(handler, [RoleCode.ADMIN]))).toThrow(
+      ForbiddenException,
+    );
   });
 });
 

@@ -43,7 +43,7 @@ export class MeetingAiController {
   })
   @ApiBody({ type: StructureMeetingAiDto })
   @ApiResponse({ status: 200, description: 'Propuesta de acta y compromisos.', type: MeetingAiStructureResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos inválidos o proceso inexistente.' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos (incluido un texto más largo que el máximo) o proceso inexistente.' })
   @ApiResponse({ status: 403, description: 'El actor no pertenece al proceso indicado.' })
   @ApiResponse({ status: 409, description: 'La IA o el agente de actas están apagados, mal configurados o sin presupuesto.' })
   @ApiResponse({ status: 413, description: 'El texto supera el máximo permitido.' })

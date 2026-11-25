@@ -9997,7 +9997,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos o proceso inexistente."
+            "description": "Datos inválidos (incluido un texto más largo que el máximo) o proceso inexistente."
           },
           "403": {
             "description": "El actor no pertenece al proceso indicado."
@@ -21768,6 +21768,7 @@
           },
           "text": {
             "type": "string",
+            "maxLength": 12000,
             "description": "Notas de la reunión tal como las escribió la persona. No se guardan."
           },
           "participantUserIds": {

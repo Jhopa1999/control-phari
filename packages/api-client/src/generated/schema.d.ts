@@ -17129,7 +17129,7 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingAiStructureResponseDto"];
                 };
             };
-            /** @description Datos inválidos o proceso inexistente. */
+            /** @description Datos inválidos (incluido un texto más largo que el máximo) o proceso inexistente. */
             400: {
                 headers: {
                     [name: string]: unknown;
