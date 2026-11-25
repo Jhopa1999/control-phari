@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { ChevronDown, Info, LayoutGrid, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { AppSwitcher } from '@/components/app-switcher';
 import { BrandMark, BrandName } from '@/components/brand';
-import { SidebarSearchTrigger } from '@/components/global-code-search';
 import { Label } from '@/components/ui/label';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -24,15 +23,11 @@ import { listDevActors } from '@/lib/dev-actors';
 import {
   findAppForPath,
   getAppGroups,
-  getAppHomeHref,
-  getVisibleNavApps,
-  getVisibleNavGroups,
   getWorkspaceGroups,
   isNavItemActive,
-  resolveActiveApp,
   type NavItem,
 } from '@/lib/navigation';
-import { useLastAppId } from '@/lib/use-active-app';
+import { useWorkspaceApps } from '@/lib/use-workspace-apps';
 import { useCollapsedNavGroups } from '@/lib/use-collapsed-nav-groups';
 import { initialsOf } from '@/lib/user-initials';
 import { useSidebarMode } from '@/lib/use-sidebar-mode';
@@ -146,8 +141,6 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
     authMode,
     actorId,
     setActorId,
-    allowedModules,
-    state: permState,
     reload,
     identityReady,
   } = useActor();
@@ -207,31 +200,23 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
     firstVisible(actorSelectRef.current, collapseRef.current)?.focus();
   }, [mode.pref]);
 
-  const visibleGroups = React.useMemo(
-    () => (permState === 'success' ? getVisibleNavGroups(allowedModules) : []),
-    [permState, allowedModules],
-  );
+  const {
+    permState,
+    visibleGroups,
+    visibleApps,
+    activeApp,
+    lastAppId,
+    setLastAppId,
+    homeHrefFor,
+  } = useWorkspaceApps();
 
   // Workspace: apps visibles, app activa (la dueña de la ruta o la última usada)
   // y grupos transversales (Gobierno y Administración).
-  const [lastAppId, setLastAppId] = useLastAppId();
-  const visibleApps = React.useMemo(
-    () => (permState === 'success' ? getVisibleNavApps(allowedModules) : []),
-    [permState, allowedModules],
-  );
-  const activeApp = React.useMemo(
-    () => resolveActiveApp(pathname, visibleApps, visibleGroups, lastAppId),
-    [pathname, visibleApps, visibleGroups, lastAppId],
-  );
   const appGroups = React.useMemo(
     () => (activeApp ? getAppGroups(visibleGroups, activeApp.id) : []),
     [activeApp, visibleGroups],
   );
   const workspaceGroups = React.useMemo(() => getWorkspaceGroups(visibleGroups), [visibleGroups]);
-  const homeHrefFor = React.useCallback(
-    (app: (typeof visibleApps)[number]) => getAppHomeHref(app, allowedModules),
-    [allowedModules],
-  );
   // Con una sola app, la marca lleva a su inicio; con varias (o ninguna), al
   // inicio del workspace. Mientras cargan los permisos se conserva /inicio.
   const brandHref =
@@ -362,15 +347,6 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
       default:
         return (
           <div className="flex flex-col gap-4 rail:gap-2">
-            {/* Buscador: abre la paleta Ctrl/⌘+K (campo expandido; icono en el riel). */}
-            <div className="px-0.5 rail:hidden">
-              <SidebarSearchTrigger variant="field" onBeforeOpen={isDrawer ? onNavigate : undefined} />
-            </div>
-            <div className="hidden justify-center rail:flex">
-              <LabelTooltip label="Buscar" side="right">
-                <SidebarSearchTrigger variant="rail" />
-              </LabelTooltip>
-            </div>
               <>
               {appGroups.map((group, index) => {
                 // El grupo de entrada no tiene título y no se pliega. En riel
@@ -569,19 +545,23 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
         </Link>
         {/* En riel (solo escritorio) se oculta para no estrechar la columna; el
             control sigue disponible en la barra móvil y en el menú expandido. */}
-        <ThemeToggle tone="sidebar" className="ml-auto rail:hidden" />
+        {isDrawer ? (
+          <div className="ml-auto flex items-center gap-0.5">
+            {menuState === 'ready' && activeApp ? (
+              <AppSwitcher
+                apps={visibleApps}
+                activeApp={activeApp}
+                homeHrefFor={homeHrefFor}
+                placement="drawer"
+                onNavigate={onNavigate}
+              />
+            ) : null}
+            <ThemeToggle tone="sidebar" />
+          </div>
+        ) : (
+          <ThemeToggle tone="sidebar" className="ml-auto rail:hidden" />
+        )}
       </div>
-
-      {menuState === 'ready' && activeApp ? (
-        <AppSwitcher
-          apps={visibleApps}
-          activeApp={activeApp}
-          homeHrefFor={homeHrefFor}
-          isRail={isRail}
-          variant={variant}
-          onNavigate={onNavigate}
-        />
-      ) : null}
 
       <nav
         aria-label="Navegación principal"

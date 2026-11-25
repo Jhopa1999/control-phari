@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LabelTooltip } from '@/components/ui/tooltip';
 import { useActor } from '@/lib/actor-context';
 import {
   CODE_SEARCH_ROLES,
@@ -48,8 +49,8 @@ import { cn } from '@/lib/utils';
  * Paleta de búsqueda Ctrl/⌘+K (design/oleada4-a-busqueda.md). Un solo campo y dos
  * grupos: «Pantallas» (local, instantáneo) y «Solicitudes y tareas» (API: un
  * código completo con GET /codes/{code}, otro texto con GET /search). Solo la
- * instancia visible (escritorio o móvil) se monta; el menú lateral y el atajo
- * la abren con un evento de ventana.
+ * instancia visible (escritorio o móvil) se monta; el atajo la abre con un evento
+ * de ventana.
  */
 
 /** A partir de aquí manda la barra de escritorio (lg); igual que MobileNav. */
@@ -61,10 +62,6 @@ const PALETTE_ATTR = 'data-search-palette';
 const PLACEHOLDER = 'Buscar pantallas, solicitudes o tareas…';
 const PLACEHOLDER_SCREENS = 'Buscar pantallas…';
 
-/** Abre la paleta desde cualquier parte (p. ej. el botón del menú lateral). */
-export function openSearchPalette(): void {
-  window.dispatchEvent(new CustomEvent(OPEN_EVENT));
-}
 
 const TYPE_META = {
   REQUEST: { label: 'Solicitud', icon: FolderKanban },
@@ -248,68 +245,21 @@ function ShortcutKey({ className }: { className?: string }): React.ReactElement 
 }
 
 function DesktopTrigger({ onOpen }: { onOpen: () => void }): React.ReactElement {
+  const mac = React.useSyncExternalStore(subscribeNever, isMacPlatform, () => false);
   return (
-    <button
-      type="button"
-      aria-haspopup="dialog"
-      aria-keyshortcuts="Control+K Meta+K /"
-      onClick={onOpen}
-      className="inline-flex h-8 w-56 shrink-0 items-center gap-2 rounded-md border border-input bg-background px-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring pointer-coarse:h-10 xl:w-72"
-    >
-      <Search aria-hidden="true" className="size-4 shrink-0" />
-      {/* Nombre desde el contenido («Buscar… en el portal»): empieza por el texto visible (WCAG 2.5.3). */}
-      <span className="truncate">
-        Buscar…<span className="sr-only"> en el portal</span>
-      </span>
-      <ShortcutKey />
-    </button>
-  );
-}
-
-/** Disparador del menú lateral (expandido o riel). */
-export function SidebarSearchTrigger({
-  variant,
-  onBeforeOpen,
-}: {
-  variant: 'field' | 'rail';
-  /** Cajón móvil: se cierra antes de abrir la paleta para no apilar dos diálogos. */
-  onBeforeOpen?: () => void;
-}): React.ReactElement {
-  function open(): void {
-    if (!onBeforeOpen) {
-      openSearchPalette();
-      return;
-    }
-    onBeforeOpen();
-    window.setTimeout(openSearchPalette, 150);
-  }
-  if (variant === 'rail') {
-    return (
-      <Button
+    <LabelTooltip label="Buscar en el portal" side="bottom">
+      <button
         type="button"
-        variant="sidebar"
-        size="icon-sm"
-        aria-label="Buscar (Ctrl K)"
+        aria-label={`Buscar en el portal, ${mac ? '⌘K' : 'Ctrl K'}`}
         aria-haspopup="dialog"
         aria-keyshortcuts="Control+K Meta+K /"
-        onClick={open}
+        onClick={onOpen}
+        className="inline-flex h-8 shrink-0 items-center gap-2 rounded-md border border-input bg-background px-2.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring pointer-coarse:h-10 pointer-coarse:min-w-10 pointer-coarse:justify-center"
       >
-        <Search aria-hidden="true" />
-      </Button>
-    );
-  }
-  return (
-    <button
-      type="button"
-      aria-haspopup="dialog"
-      aria-keyshortcuts="Control+K Meta+K /"
-      onClick={open}
-      className="inline-flex h-8 w-full items-center gap-2 rounded-md border border-sidebar-field-border bg-sidebar-field px-2.5 text-sm text-sidebar-muted-foreground transition-colors hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-sidebar-ring pointer-coarse:h-10"
-    >
-      <Search aria-hidden="true" className="size-4 shrink-0" />
-      <span className="truncate">Buscar…</span>
-      <ShortcutKey className="border-sidebar-field-border bg-transparent text-sidebar-muted-foreground" />
-    </button>
+        <Search aria-hidden="true" className="size-4 shrink-0" />
+        <ShortcutKey className="ml-0" />
+      </button>
+    </LabelTooltip>
   );
 }
 

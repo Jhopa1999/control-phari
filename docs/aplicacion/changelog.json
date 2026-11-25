@@ -1090,6 +1090,14 @@
         "docs/plan-mejora/README.md"
       ],
       "summary": "Oleada 5 PR C (P3 vigentes): textos y detalles de presentación en Panel, Mi trabajo, Tarea, Triage, Planificación, Capacidad, Actividades recurrentes y Áreas; el 400 de ciclo de dependencias y el de tipo de actividad inválido llevan mensajes específicos; migración de datos con tildes en los nombres de rol. Sin cambios de contrato ni de MCP."
+    },
+    {
+      "timestamp": "2026-11-25T12:00:00Z",
+      "trigger_file": "apps/web/src/components/app-shell.tsx",
+      "updated_docs": [
+        "docs/aplicacion/frontend-pantallas.md"
+      ],
+      "summary": "Cromo más discreto: el selector de aplicaciones pasa a un botón-icono «Aplicaciones» en la barra superior (y en la cabecera del cajón móvil) y el buscador de escritorio queda como un único botón compacto con lupa y «Ctrl K»; el menú lateral ya no lleva selector ni buscador y gana altura para la navegación. Sin cambios de API, contrato ni MCP."
     }
   ]
 }

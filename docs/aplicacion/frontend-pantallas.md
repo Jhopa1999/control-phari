@@ -12,9 +12,12 @@ reúne los grupos *Entrada* (sin título), *Demanda*, *Ejecución*, *Seguimiento
 (no pertenecen a ninguna app) y se muestran en la sección plegable **Workspace** al final
 del menú (plegada por defecto; se abre sola al llegar a una de sus pantallas, y en el riel
 se ven siempre como iconos). La pertenencia a una app se declara en `navigation.ts`
-(`NAV_APPS` y `appId` en cada grupo); **las URLs no cambian**. Bajo la marca del menú hay un
-**selector de aplicaciones** (`app-switcher.tsx`, un menú desplegable con enlaces): muestra
-la app activa, las apps visibles para el usuario (las que tienen al menos un módulo
+(`NAV_APPS` y `appId` en cada grupo); **las URLs no cambian**. El **selector de
+aplicaciones** (`app-switcher.tsx`, un menú desplegable con enlaces) es un botón-icono
+«Aplicaciones» (rejilla) con tooltip, al inicio de la barra superior de escritorio, justo
+antes de las migas (`header-app-switcher.tsx`; vale también con el menú en riel), y en el
+cajón móvil, en su cabecera junto al logo. Ya no hay selector ni buscador en el menú lateral
+(expandido, riel o cajón). El panel lista las apps visibles para el usuario (las que tienen al menos un módulo
 permitido) y el acceso a *Inicio del workspace* (`/aplicaciones`). La app activa es la dueña
 de la ruta; en una pantalla transversal o en `/aplicaciones` se conserva la última usada
 (`localStorage`, clave `activeAppId`). El logo lleva al inicio de la única app visible, o a
@@ -28,9 +31,9 @@ estado de la app real (Demanda sigue siendo la tarjeta destacada del launcher).
 El menú lateral se define en `apps/web/src/lib/navigation.ts`: 7 grupos y 27 ítems.
 Con el menú expandido (no en el riel de iconos), cada grupo con título se puede
 plegar con su encabezado; el navegador recuerda los grupos plegados y un grupo se
-vuelve a abrir al llegar a una de sus pantallas. Arriba hay un buscador de
-pantallas que filtra por nombre o por grupo sin distinguir tildes ni mayúsculas
-(Enter abre la primera coincidencia, Esc limpia el texto).
+vuelve a abrir al llegar a una de sus pantallas. La búsqueda de pantallas, solicitudes y
+tareas es la paleta `Ctrl/⌘+K` (ver «IDs visibles»); el menú no lleva campo de búsqueda, así
+que su zona con desplazamiento tiene más altura para los ítems.
 Cada ítem declara una `moduleKey` que coincide con las claves de `MODULE_MATRIX` del
 backend; el menú se filtra de forma **cosmética** según `allowedModules` de
 `GET /me/permissions`. El control real de acceso lo hace siempre el servidor. Ver
@@ -115,7 +118,7 @@ Solicitud (`PRY-0012`), fase (`PRY-0012-F2`) y tarea (`PRY-0012-T07`) llevan un 
 - **Paleta de búsqueda `Ctrl/⌘+K`** (oleada 4, PR A; `components/global-code-search.tsx`, lógica en `lib/code-search.ts` y `lib/navigation.ts`): sustituye al campo «Buscar código» de la cabecera y al filtro «Buscar pantalla…» del menú lateral. Es un diálogo con un solo campo y dos grupos:
   - **Pantallas**: las que el actor puede abrir (`listScreens`/`searchScreens` sobre `getVisibleNavGroups`), filtradas al instante por palabras sin distinguir mayúsculas ni tildes, primero las que empiezan por el texto.
   - **Solicitudes y tareas** (solo `JEFE_AREA`, `LIDER_PROCESO` e `INTEGRANTE`; el `ADMIN` solo ve pantallas): un código completo (`PRY-0012`, `PRY-0012-F2`, `PRY-0012-T07`) se resuelve con `GET /codes/{code}` y ese grupo va primero; otro texto de 2 o más caracteres consulta `GET /search` tras 300 ms (cancela la petición anterior). Cada fila muestra tipo, `IdChip` completo, título, contexto y estado; navega con `resolveDestination` (solicitud → ficha, portafolio o Plan; fase → Plan con `?requestId=&phaseId=`; tarea → `/seguimiento/tareas?taskId=`). Si el rol no tiene pantalla, la fila queda deshabilitada y lo explica. Con `truncated` avisa «Hay más resultados».
-  - **Abrir**: `Ctrl+K` / `⌘+K` desde cualquier pantalla (también dentro de un campo; con la paleta abierta, la cierra), `/` fuera de campos editables, el botón «Buscar…» de la cabecera de escritorio, el botón «Buscar…» del menú lateral (en riel, icono con «Buscar (Ctrl K)») y la lupa de la barra móvil (pantalla completa; la barra ya no cambia de forma). Desde el cajón móvil, el botón cierra el cajón y abre la paleta.
+  - **Abrir**: `Ctrl+K` / `⌘+K` desde cualquier pantalla (también dentro de un campo; con la paleta abierta, la cierra), `/` fuera de campos editables, el botón compacto de la barra superior de escritorio (lupa y pista «Ctrl K», nombre accesible «Buscar en el portal»; es el único disparador de escritorio) y la lupa de la barra móvil (pantalla completa; la barra ya no cambia de forma). El menú lateral y el cajón no tienen disparador de búsqueda.
   - **Teclado**: flechas para moverse (dan la vuelta), Intro abre la opción activa (con un código aún sin respuesta, resuelve y navega al llegar), `Esc` cierra y devuelve el foco a donde estaba; al reabrir, el campo está vacío. Al navegar, el foco pasa a `main#contenido`.
   - **Estados** dentro de la paleta (nunca toast): ayuda inicial, «al menos 2 caracteres», cargando (esqueleto o resultados previos con `aria-busy`), sin resultados, código no encontrado, error con «Reintentar» y rol sin permiso; una región `aria-live` anuncia el recuento al asentarse la búsqueda. Especificación en `docs/design/oleada4-a-busqueda.md` (antes `busqueda-global-id.md`).
 - Pendiente: BL-043 (conservar el código al reimportar un plan) y BL-046 (asistente).

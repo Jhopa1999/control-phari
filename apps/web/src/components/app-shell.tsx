@@ -3,6 +3,7 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { AssistantPanel } from '@/components/assistant/assistant-panel';
 import { AssistantProvider } from '@/components/assistant/assistant-provider';
 import { AssistantTrigger } from '@/components/assistant/assistant-trigger';
+import { HeaderAppSwitcher } from '@/components/header-app-switcher';
 import { CodeSearchShortcut, GlobalCodeSearch } from '@/components/global-code-search';
 import { MobileNav } from '@/components/mobile-nav';
 import { NotificationBell } from '@/components/notification-bell';
@@ -28,7 +29,8 @@ export function AppShell({ children }: { children: React.ReactNode }): React.Rea
           <MobileNav />
           {/* Barra superior de escritorio: centro de notificaciones (NOT-01). */}
           <div className="sticky top-0 z-30 hidden h-12 items-center justify-between gap-4 bg-card/90 px-4 backdrop-blur lg:flex md:px-6 xl:px-8 print:hidden">
-            <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <HeaderAppSwitcher />
               <WorkspaceCrumbs />
             </div>
             <React.Suspense fallback={null}>
