@@ -166,4 +166,47 @@ test.describe('Reuniones · participantes', () => {
     const visibleToLider = await api<{ id: string }[]>(request, LIDER, 'get', '/meetings');
     expect(visibleToLider.some((m) => m.id === meeting.id)).toBe(true);
   });
+
+  test('un integrante que crea un acta sin responsable queda como responsable y la sigue viendo', async ({
+    request,
+  }) => {
+    const created = await api<{ id: string; responsibleUserId: string | null }>(request, INTEGRANTE, 'post', '/meetings', {
+      processId: fibiId,
+      title: `E2E acta sin responsable explícito ${ts}`,
+      meetingDate: '2026-01-18',
+    });
+    meetings.push(created.id);
+    expect(created.responsibleUserId).toBe(integrante.id);
+    // Antes del arreglo el detalle daba 404 y el acta no salía en el listado.
+    const detail = await api<{ id: string; viewerCanEdit: boolean }>(request, INTEGRANTE, 'get', `/meetings/${created.id}`);
+    expect(detail.viewerCanEdit).toBe(true);
+    const list = await api<{ id: string }[]>(request, INTEGRANTE, 'get', '/meetings');
+    expect(list.some((m) => m.id === created.id)).toBe(true);
+    // Puede crear compromisos en su acta y, al bloquearlos, debe indicar el motivo.
+    const due = new Date();
+    due.setDate(due.getDate() + 7);
+    const dueDate = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+    const commitment = await api<{ id: string }>(request, INTEGRANTE, 'post', '/commitments', {
+      processId: fibiId,
+      title: `E2E compromiso para bloquear ${ts}`,
+      dueDate,
+      sourceMeetingId: created.id,
+    });
+    try {
+      const transition = `/commitments/${commitment.id}/transition`;
+      await api(request, INTEGRANTE, 'post', transition, { toState: 'BLOQUEADO' }, 400);
+      await api(request, INTEGRANTE, 'post', transition, { toState: 'BLOQUEADO', blockedReason: '   ' }, 400);
+      const blocked = await api<{ state: string; blockers: string | null }>(request, INTEGRANTE, 'post', transition, {
+        toState: 'BLOQUEADO',
+        blockedReason: 'Falta la aprobación',
+      });
+      expect(blocked).toMatchObject({ state: 'BLOQUEADO', blockers: 'Falta la aprobación' });
+      // Ya bloqueado, no se puede vaciar el motivo.
+      await api(request, INTEGRANTE, 'patch', `/commitments/${commitment.id}`, { blockers: '' }, 400);
+    } finally {
+      await request
+        .delete(`${API_URL}/commitments/${commitment.id}`, { headers: { 'X-Actor-Id': JEFE } })
+        .catch(() => undefined);
+    }
+  });
 });

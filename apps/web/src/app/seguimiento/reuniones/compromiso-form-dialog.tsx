@@ -451,8 +451,12 @@ export function CompromisoFormDialog({
 
             <Field
               id="com-blockers"
-              label="Bloqueos"
-              help="Si el compromiso está detenido, explica por qué. Se muestra junto al compromiso."
+              label={editing?.state === 'BLOQUEADO' ? 'Bloqueos (obligatorio)' : 'Bloqueos'}
+              help={
+                editing?.state === 'BLOQUEADO'
+                  ? 'El compromiso está bloqueado: no se puede dejar sin motivo. Para quitar el bloqueo, cámbialo de estado.'
+                  : 'Si el compromiso está detenido, explica por qué. Se muestra junto al compromiso. Para marcarlo como bloqueado usa la acción «Bloquear», que pide el motivo.'
+              }
             >
               <Textarea value={blockers} onChange={(e) => setBlockers(e.target.value)} />
             </Field>

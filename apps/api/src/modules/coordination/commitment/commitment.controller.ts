@@ -134,12 +134,12 @@ export class CommitmentController {
   @Post(':id/transition')
   @ApiOperation({
     summary:
-      'Transiciona el estado de un compromiso (maquina minima). Al pasar a BLOQUEADO admite blockedReason (hasta 500 caracteres), que se guarda en los bloqueos del compromiso.',
+      'Transiciona el estado de un compromiso (maquina minima). Al pasar a BLOQUEADO exige blockedReason (obligatorio, hasta 500 caracteres), que se guarda en los bloqueos del compromiso.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: TransitionDto })
   @ApiResponse({ status: 200, description: 'Estado actualizado.', type: CommitmentResponseDto })
-  @ApiResponse({ status: 400, description: 'Transicion no permitida o motivo de bloqueo con otro estado.' })
+  @ApiResponse({ status: 400, description: 'Transicion no permitida, BLOQUEADO sin motivo o motivo de bloqueo con otro estado.' })
   @ApiResponse({ status: 404, description: 'Compromiso fuera de alcance.' })
   transition(
     @CurrentActor() actor: CurrentActorType,

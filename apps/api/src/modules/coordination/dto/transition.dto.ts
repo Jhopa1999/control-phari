@@ -22,7 +22,7 @@ export class TransitionDto {
     type: String,
     maxLength: 500,
     description:
-      'Motivo del bloqueo (1 a 500 caracteres tras recortar). Opcional y solo valido con toState BLOQUEADO; con otro estado se responde 400. Un texto vacio o solo espacios se trata como ausente. Se guarda en los bloqueos del compromiso.',
+      'Motivo del bloqueo (1 a 500 caracteres tras recortar). OBLIGATORIO con toState BLOQUEADO (sin motivo se responde 400) y solo valido con ese estado (con otro se responde 400). Un texto vacio o solo espacios se trata como ausente. Se guarda en los bloqueos del compromiso.',
   })
   @IsOptional()
   @Transform(({ value }: { value: unknown }): unknown => {

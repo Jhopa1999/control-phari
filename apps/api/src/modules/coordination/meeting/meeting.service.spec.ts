@@ -47,7 +47,7 @@ function createMocks() {
   const service = new MeetingService(prisma, audit, scope, {
     notify,
   } as unknown as NotificationService);
-  return { prismaObj, auditRecord, service, notify };
+  return { prismaObj, auditRecord, service, notify, scope };
 }
 function integrante(userId = 'ui', processId = 'p1'): CurrentActor {
   return {
@@ -193,7 +193,57 @@ describe('MeetingService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('create sin participantes (lista vacia) no consulta personas', async () => {
+  it('create sin responsable: quien crea queda como responsable y ve el acta', async () => {
+    m.prismaObj.meeting.create.mockImplementation(({ data }: any) =>
+      Promise.resolve(meetingRow({ ...data, participants: [] })),
+    );
+    const res = await m.service.create(integrante('ui', 'p1'), {
+      processId: 'p1',
+      title: 'Sync',
+      meetingDate: '2025-03-10',
+    });
+    expect(m.prismaObj.meeting.create.mock.calls[0][0].data.responsibleUserId).toBe('ui');
+    expect(res.responsibleUserId).toBe('ui');
+    // El alcance del integrante incluye las actas donde es responsable.
+    const where = JSON.stringify(m.scope.meetingWhere(integrante('ui', 'p1')));
+    expect(where).toContain('responsibleUserId');
+  });
+  it('create con responsable explícito lo respeta y lo valida contra el proceso', async () => {
+    m.prismaObj.meeting.create.mockImplementation(({ data }: any) =>
+      Promise.resolve(meetingRow({ ...data, participants: [] })),
+    );
+    await m.service.create(integrante('ui', 'p1'), {
+      processId: 'p1',
+      title: 'Sync',
+      meetingDate: '2025-03-10',
+      responsibleUserId: 'uA',
+    });
+    expect(m.prismaObj.meeting.create.mock.calls[0][0].data.responsibleUserId).toBe('uA');
+    m.prismaObj.user.count.mockResolvedValue(0);
+    await expect(
+      m.service.create(integrante('ui', 'p1'), {
+        processId: 'p1',
+        title: 'Sync',
+        meetingDate: '2025-03-10',
+        responsibleUserId: 'intruso',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+  it('create de un jefe sin pertenencia al proceso deja el responsable vacío y no falla', async () => {
+    m.prismaObj.user.count.mockResolvedValue(0);
+    m.prismaObj.meeting.create.mockImplementation(({ data }: any) =>
+      Promise.resolve(meetingRow({ ...data, participants: [] })),
+    );
+    const jefe: CurrentActor = { ...lider(['p1']), userId: 'uj', isJefeArea: true };
+    const res = await m.service.create(jefe, {
+      processId: 'p1',
+      title: 'Sync',
+      meetingDate: '2025-03-10',
+    });
+    expect(m.prismaObj.meeting.create.mock.calls[0][0].data).not.toHaveProperty('responsibleUserId');
+    expect(res.responsibleUserId).toBeNull();
+  });
+  it('create sin participantes (lista vacia) no valida participantes', async () => {
     m.prismaObj.meeting.create.mockImplementation(({ data }: any) =>
       Promise.resolve(meetingRow({ ...data, participants: [] })),
     );
@@ -203,7 +253,8 @@ describe('MeetingService', () => {
       meetingDate: '2025-03-10',
     });
     expect(res.participantUserIds).toEqual([]);
-    expect(m.prismaObj.user.count).not.toHaveBeenCalled();
+    // Solo la comprobación del responsable por defecto (quien crea), ninguna de participantes.
+    expect(m.prismaObj.user.count).toHaveBeenCalledTimes(1);
     expect(m.notify).not.toHaveBeenCalled();
   });
 

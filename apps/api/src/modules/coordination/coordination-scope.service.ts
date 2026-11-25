@@ -270,6 +270,18 @@ export class CoordinationScopeService {
     }
   }
   /**
+   * Indica (sin lanzar) si la persona pertenece al proceso con la misma regla de
+   * assertPeopleInProcess. Sirve para aplicar valores por defecto que no deben
+   * hacer fallar la operación.
+   */
+  async isPersonInProcess(processId: string, userId: string): Promise<boolean> {
+    const found = await this.prisma.user.count({
+      where: { id: userId, ...this.processPeopleWhere(processId) },
+    });
+    return found > 0;
+  }
+
+  /**
    * Personas del proceso: activas, con grant activo en él o grant activo de jefe
    * de área. Misma regla para validar y para ofrecer candidatos.
    */

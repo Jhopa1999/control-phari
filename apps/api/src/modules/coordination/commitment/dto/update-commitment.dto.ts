@@ -68,7 +68,7 @@ export class UpdateCommitmentDto {
   @MaxLength(2000)
   result?: string;
 
-  @ApiPropertyOptional({ type: String, description: 'Bloqueos.', maxLength: 2000 })
+  @ApiPropertyOptional({ type: String, description: 'Bloqueos. En un compromiso BLOQUEADO no puede quedar vacio (400); para bloquear usa la transicion con motivo.', maxLength: 2000 })
   @IsOptional()
   @Transform(trim)
   @IsString()

@@ -71,7 +71,7 @@ export class CreateMeetingDto {
   @IsUUID('all', { each: true })
   participantUserIds?: string[];
 
-  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Responsable.' })
+  @ApiPropertyOptional({ type: String, format: 'uuid', description: 'Responsable. Si se omite, es quien crea el acta (cuando pertenece al proceso); asi el integrante conserva la vista de su acta.' })
   @IsOptional()
   @IsUUID()
   responsibleUserId?: string;

@@ -139,6 +139,8 @@ export function ReunionFormDialog({
   const [duration, setDuration] = React.useState<DuracionParts>(EMPTY_DURATION);
   const [participantUserIds, setParticipantUserIds] = React.useState<string[]>([]);
   const [responsibleUserId, setResponsibleUserId] = React.useState('');
+  // Si la persona ya eligió responsable (o «Sin responsable»), no se le propone el suyo.
+  const [responsibleTouched, setResponsibleTouched] = React.useState(false);
   const [agenda, setAgenda] = React.useState('');
   const [related, setRelated] = React.useState<RelatedRequestValue | null>(null);
   const [templates, setTemplates] = React.useState<AgendaTemplate[]>([]);
@@ -223,6 +225,7 @@ export function ReunionFormDialog({
       setDuration(EMPTY_DURATION);
       setParticipantUserIds([]);
       setResponsibleUserId('');
+      setResponsibleTouched(false);
       setAgenda('');
       setDecisions('');
       setNotes('');
@@ -314,7 +317,14 @@ export function ReunionFormDialog({
     const inProcess = new Set(people.map((p) => p.id));
     const keep = participantUserIds.filter((id) => inProcess.has(id));
     const removedParticipants = participantUserIds.length - keep.length;
-    const removedResponsible = responsibleUserId !== '' && !inProcess.has(responsibleUserId);
+    // Valor inicial: quien crea el acta es su responsable (la API aplica la misma regla
+    // si no se indica uno). Solo si pertenece al proceso y no eligió otra cosa.
+    if (!responsibleTouched) {
+      const mine = myId && inProcess.has(myId) ? myId : '';
+      if (responsibleUserId !== mine) setResponsibleUserId(mine);
+    }
+    const removedResponsible =
+      responsibleTouched && responsibleUserId !== '' && !inProcess.has(responsibleUserId);
     if (removedParticipants === 0 && !removedResponsible) return;
     setParticipantUserIds(keep);
     if (removedResponsible) setResponsibleUserId('');
@@ -626,7 +636,7 @@ export function ReunionFormDialog({
               error={person.personError}
               help={
                 processId
-                  ? 'Dirige la reunión y puede editar y cerrar el acta.'
+                  ? 'Dirige la reunión y puede editar y cerrar el acta. Si lo dejas vacío, el acta queda a tu nombre cuando perteneces al proceso.'
                   : 'Elige primero un proceso.'
               }
             >
@@ -636,6 +646,7 @@ export function ReunionFormDialog({
                   disabled={!processId || peopleState === 'loading'}
                   onValueChange={(v) => {
                     setResponsibleUserId(v === SIN_VALOR ? '' : v);
+                    setResponsibleTouched(true);
                     setRemovedNotice(null);
                     person.dismiss();
                   }}
