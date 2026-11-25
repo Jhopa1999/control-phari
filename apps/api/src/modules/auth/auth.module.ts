@@ -18,6 +18,8 @@ import { AuthResetService } from './auth-reset.service';
 import { AuthPasswordController } from './auth-password.controller';
 import { AuthPasswordService } from './auth-password.service';
 import { AuthTokenService } from './auth-token.service';
+import { PasswordPolicyController } from './password-policy.controller';
+import { PasswordPolicyService } from './password-policy.service';
 import { SessionCookieService } from './session-cookie.service';
 
 const JWT_MODE_AUTH = 'jwt';
@@ -65,6 +67,7 @@ function resolveJwtSecret(): string | undefined {
     AuthLoginController,
     AuthResetController,
     AuthPasswordController,
+    PasswordPolicyController,
   ],
   providers: [
     DevActorResolver,
@@ -74,6 +77,7 @@ function resolveJwtSecret(): string | undefined {
     AuthTokenService,
     AuthResetService,
     AuthPasswordService,
+    PasswordPolicyService,
     SessionCookieService,
     {
       provide: ACTOR_RESOLVER,
@@ -85,6 +89,6 @@ function resolveJwtSecret(): string | undefined {
     RolesGuard,
   ],
   // AuthTokenService se exporta para que UserModule (invitacion) lo consuma.
-  exports: [ACTOR_RESOLVER, CurrentUserGuard, RolesGuard, AuthTokenService],
+  exports: [ACTOR_RESOLVER, CurrentUserGuard, RolesGuard, AuthTokenService, PasswordPolicyService],
 })
 export class AuthModule {}

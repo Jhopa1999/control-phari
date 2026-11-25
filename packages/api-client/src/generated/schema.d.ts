@@ -157,6 +157,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/password-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve la longitud mínima vigente de la contraseña. Pública: se usa al activar la cuenta o restablecer la contraseña. */
+        get: operations["PasswordPolicyController_getPolicy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit-events": {
         parameters: {
             query?: never;
@@ -3272,7 +3289,7 @@ export interface components {
              */
             token: string;
             /**
-             * @description Nueva contrasena en claro (minimo 8 caracteres).
+             * @description Nueva contraseña en claro. El servicio aplica la política vigente (GET /auth/password-policy): longitud mínima y no ser una contraseña común.
              * @example nueva-contrasena-123
              */
             newPassword: string;
@@ -3280,8 +3297,15 @@ export interface components {
         ChangePasswordDto: {
             /** @description Contraseña actual de la persona. */
             currentPassword: string;
-            /** @description Contraseña nueva (mínimo 8 caracteres, o PASSWORD_MIN_LENGTH si es mayor) y distinta de la actual. */
+            /** @description Contraseña nueva, distinta de la actual. El servicio aplica la política vigente (GET /auth/password-policy): longitud mínima y no ser una contraseña común. */
             newPassword: string;
+        };
+        PasswordPolicyResponseDto: {
+            /**
+             * @description Longitud mínima vigente de una contraseña nueva. La lista de contraseñas comunes no se expone.
+             * @example 10
+             */
+            minLength: number;
         };
         AuditEventResponseDto: {
             /**
@@ -8637,7 +8661,7 @@ export interface operations {
                     "application/json": components["schemas"]["LoginResponseDto"];
                 };
             };
-            /** @description Token invalido o contrasena demasiado corta. */
+            /** @description Token inválido, contraseña demasiado corta o contraseña común (la política no consume el token). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8705,6 +8729,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    PasswordPolicyController_getPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasswordPolicyResponseDto"];
+                };
             };
         };
     };

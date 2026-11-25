@@ -1,7 +1,7 @@
 import { api } from './api-client';
 import type { LoginResponse } from './api-client';
 import type { components } from '@plantilla-portales/api-client';
-import { ApiError, toApiError } from './api-error';
+import { ApiError, apiErrorFrom, toApiError } from './api-error';
 
 export { ApiError };
 
@@ -57,7 +57,8 @@ export async function setPasswordWithToken(
       body: input,
     });
     if (error || !data) {
-      throw toApiError(response?.status);
+      // Conserva el texto del servidor (p. ej. contraseña débil) para marcar el campo.
+      throw apiErrorFrom(response?.status, error);
     }
     return data;
   } catch (err) {

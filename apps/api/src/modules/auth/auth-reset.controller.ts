@@ -51,7 +51,7 @@ export class AuthResetController {
     type: LoginResponseDto,
     headers: { 'Set-Cookie': { description: SET_COOKIE_DESCRIPTION, schema: { type: 'string' } } },
   })
-  @ApiResponse({ status: 400, description: 'Token invalido o contrasena demasiado corta.' })
+  @ApiResponse({ status: 400, description: 'Token inválido, contraseña demasiado corta o contraseña común (la política no consume el token).' })
   @ApiResponse({ status: 410, description: 'Token caducado o ya utilizado.' })
   async resetPassword(
     @Body() dto: ResetPasswordDto,

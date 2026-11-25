@@ -15,15 +15,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { useActor } from '@/lib/actor-context';
 import { getAuthMode } from '@/lib/auth-mode';
+import { isPasswordPolicyMessage } from '@/lib/password-messages';
+import { getPasswordPolicy } from '@/lib/password-policy';
 import { ApiError, setPasswordWithToken } from '@/lib/password-reset';
 import { resolvePostLoginHref } from '@/lib/post-login';
-
-/**
- * Longitud minima de contrasena validada en el cliente. Coincide con el minimo
- * fijo del contrato (ResetPasswordDto: newPassword >= 8). El backend sigue
- * siendo la autoridad: re-valida y responde 400 si no cumple.
- */
-const MIN_PASSWORD_LENGTH = 8;
 
 /** Id del formulario: el FormError lleva `set-password-error`. */
 const FORM_ID = 'set-password';
@@ -75,13 +70,27 @@ export function SetPasswordForm({ copy }: { copy: SetPasswordCopy }): React.Reac
   const [submitting, setSubmitting] = React.useState(false);
   // En el camino feliz no se vuelve a «hecho»: el formulario esta navegando.
   const [redirecting, setRedirecting] = React.useState(false);
+  // El servidor rechazó la contraseña por la política: el enlace no se consumió.
+  const [serverRejected, setServerRejected] = React.useState(false);
+  // Mínimo vigente (GET /auth/password-policy); null mientras carga o si falla.
+  const [minLength, setMinLength] = React.useState<number | null>(null);
   const newPasswordRef = React.useRef<HTMLInputElement>(null);
   const confirmPasswordRef = React.useRef<HTMLInputElement>(null);
 
+  React.useEffect(() => {
+    let active = true;
+    void getPasswordPolicy().then((value) => {
+      if (active) setMinLength(value);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   function validate(): FieldErrors {
     const errors: FieldErrors = {};
-    if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      errors.newPassword = `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+    if (minLength !== null && newPassword.length < minLength) {
+      errors.newPassword = `La contraseña debe tener al menos ${minLength} caracteres.`;
     }
     if (confirmPassword !== newPassword) {
       errors.confirmPassword = 'Las contraseñas no coinciden.';
@@ -94,6 +103,7 @@ export function SetPasswordForm({ copy }: { copy: SetPasswordCopy }): React.Reac
   ): Promise<void> {
     event.preventDefault();
     setFormError(null);
+    setServerRejected(false);
     const errors = validate();
     setFieldErrors(errors);
     if (errors.newPassword || errors.confirmPassword) {
@@ -118,7 +128,14 @@ export function SetPasswordForm({ copy }: { copy: SetPasswordCopy }): React.Reac
         router.replace('/inicio');
       }
     } catch (err) {
-      if (err instanceof ApiError && err.status === 410) {
+      if (err instanceof ApiError && err.status === 400 && isPasswordPolicyMessage(err.message)) {
+        // La política no consume el enlace: se marca el campo y se conserva lo escrito.
+        setFieldErrors({ newPassword: err.message });
+        setServerRejected(true);
+        setConfirmPassword('');
+        newPasswordRef.current?.focus();
+        newPasswordRef.current?.select();
+      } else if (err instanceof ApiError && err.status === 410) {
         setFormError('El enlace ha caducado o ya fue utilizado. Solicita uno nuevo.');
       } else if (err instanceof ApiError && err.status === 400) {
         setFormError('El enlace no es válido o la contraseña no cumple los requisitos.');
@@ -161,7 +178,11 @@ export function SetPasswordForm({ copy }: { copy: SetPasswordCopy }): React.Reac
               label="Nueva contraseña"
               error={fieldErrors.newPassword}
               errorRole="alert"
-              help={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres.`}
+              help={
+                minLength === null
+                  ? 'Elige una contraseña segura y distinta de la actual.'
+                  : `Mínimo ${minLength} caracteres y no demasiado común (por ejemplo «123456» o «password»).`
+              }
             >
               <Input
                 ref={newPasswordRef}
@@ -171,6 +192,7 @@ export function SetPasswordForm({ copy }: { copy: SetPasswordCopy }): React.Reac
                 value={newPassword}
                 onChange={(e) => {
                   setNewPassword(e.target.value);
+                  setServerRejected(false);
                   if (fieldErrors.newPassword) {
                     setFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
                   }
@@ -199,6 +221,11 @@ export function SetPasswordForm({ copy }: { copy: SetPasswordCopy }): React.Reac
                 disabled={submitting}
               />
             </Field>
+            {serverRejected && fieldErrors.newPassword ? (
+              <p className="text-meta text-muted-foreground">
+                Tu enlace sigue activo. Corrige la contraseña y vuelve a enviar.
+              </p>
+            ) : null}
             <FormError id={FORM_ID} message={formError} />
             <Button type="submit" size="lg" loading={submitting} className="w-full">
               {submitting ? copy.submittingLabel : copy.submitLabel}

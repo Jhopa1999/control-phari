@@ -1,13 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
-import { RESET_PASSWORD_MIN_LENGTH } from '../password-policy';
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
 
-export { RESET_PASSWORD_MIN_LENGTH };
 
 /**
  * Cuerpo de POST /auth/reset-password. Lo usan tanto el reset de contrasena
@@ -30,14 +28,12 @@ export class ResetPasswordDto {
 
   @ApiProperty({
     type: String,
-    description: 'Nueva contrasena en claro (minimo 8 caracteres).',
+    description: 'Nueva contraseña en claro. El servicio aplica la política vigente (GET /auth/password-policy): longitud mínima y no ser una contraseña común.',
     example: 'nueva-contrasena-123',
-    minLength: RESET_PASSWORD_MIN_LENGTH,
     maxLength: 255,
   })
   @IsString()
   @IsNotEmpty()
-  @MinLength(RESET_PASSWORD_MIN_LENGTH)
   @MaxLength(255)
   newPassword!: string;
 }

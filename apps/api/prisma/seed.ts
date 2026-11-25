@@ -20,6 +20,11 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { hashPassword } from '../src/modules/auth/password-hash';
 import { DEFAULT_AGENT_CONFIGS } from '../src/modules/ai/ai-defaults';
+import {
+  DEFAULT_COMMON_PASSWORDS,
+  PASSWORD_COMMON_CATALOG,
+  passwordCommonCode,
+} from '../src/modules/auth/password-policy';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 loadEnv({ path: path.resolve(here, '../../../.env') });
@@ -476,12 +481,28 @@ async function main(): Promise<void> {
     { code: 'LOGIN_MAX_PER_IP', label: '30', description: 'Intentos fallidos de inicio de sesión permitidos por IP dentro de la ventana.' },
     { code: 'FORGOT_MAX_ATTEMPTS', label: '3', description: 'Solicitudes de «olvidé mi contraseña» permitidas por identificador dentro de la ventana; las demás se ignoran sin avisar.' },
     { code: 'FORGOT_WINDOW_MINUTES', label: '60', description: 'Ventana, en minutos, del límite de «olvidé mi contraseña».' },
+    { code: 'PASSWORD_MIN_LENGTH', label: '10', description: 'Longitud mínima de una contraseña nueva (entre 8 y 64). Aplica al cambiar, restablecer y activar; no invalida contraseñas existentes.' },
   ];
   for (const [index, param] of authParams.entries()) {
     const where = { catalog: 'AUTH_PARAM', code: param.code };
     if (!(await prisma.catalogItem.findFirst({ where }))) {
       await prisma.catalogItem.create({
         data: { ...where, label: param.label, description: param.description, sortOrder: index + 1 },
+      });
+    }
+  }
+  // Politica de contrasenas (D20): lista de contrasenas comunes. Tambien la siembra la
+  // migracion 20261125090000_password_policy_params. Solo se crean si no existen.
+  for (const [index, word] of DEFAULT_COMMON_PASSWORDS.entries()) {
+    const where = { catalog: PASSWORD_COMMON_CATALOG, code: passwordCommonCode(word) };
+    if (!(await prisma.catalogItem.findFirst({ where }))) {
+      await prisma.catalogItem.create({
+        data: {
+          ...where,
+          label: word,
+          description: 'Contraseña común no permitida. El código es el texto en mayúsculas, sin símbolos.',
+          sortOrder: index + 1,
+        },
       });
     }
   }

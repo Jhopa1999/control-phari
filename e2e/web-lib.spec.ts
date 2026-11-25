@@ -1743,6 +1743,9 @@ import {
   describeChangePasswordFailure,
   describeForceFailure,
   describeForceResult,
+  isPasswordPolicyMessage,
+  PASSWORD_COMMON_MESSAGE,
+  PASSWORD_TOO_SHORT_PREFIX,
 } from '../apps/web/src/lib/password-messages';
 
 test.describe('password-gate (cambio de contraseña obligatorio)', () => {
@@ -1790,6 +1793,21 @@ test.describe('password-messages', () => {
     expect(describeChangePasswordFailure(400, {}).message).toBe(
       'La contraseña no cumple los requisitos. Elige otra.',
     );
+  });
+
+  test('la política de contraseñas marca el campo de la contraseña nueva', () => {
+    const short = `${PASSWORD_TOO_SHORT_PREFIX}10 caracteres.`;
+    expect(describeChangePasswordFailure(400, { message: short })).toEqual({
+      field: 'newPassword',
+      message: short,
+    });
+    expect(describeChangePasswordFailure(400, { message: PASSWORD_COMMON_MESSAGE }).field).toBe(
+      'newPassword',
+    );
+    expect(isPasswordPolicyMessage(short)).toBe(true);
+    expect(isPasswordPolicyMessage(PASSWORD_COMMON_MESSAGE)).toBe(true);
+    expect(isPasswordPolicyMessage('Otro texto.')).toBe(false);
+    expect(isPasswordPolicyMessage(undefined)).toBe(false);
   });
 
   test('429 informa la espera; red y 5xx dan el genérico sin códigos', () => {

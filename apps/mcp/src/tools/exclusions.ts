@@ -69,6 +69,7 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
       'POST /auth/forgot-password',
       'POST /auth/reset-password',
       'POST /auth/change-password',
+      'GET /auth/password-policy',
     ],
   ),
   ...permanente(

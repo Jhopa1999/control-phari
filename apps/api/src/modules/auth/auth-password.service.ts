@@ -5,10 +5,9 @@ import { AuthThrottleService } from './auth-throttle.service';
 import { CurrentActor } from './current-actor';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { hashPassword, verifyPassword } from './password-hash';
-import { passwordMinLength } from './password-policy';
+import { PasswordPolicyService } from './password-policy.service';
 
 const WRONG_CURRENT = 'La contraseña actual no es correcta.';
-const TOO_SHORT = 'La contraseña no cumple la longitud mínima.';
 const SAME_AS_CURRENT = 'La contraseña nueva debe ser distinta de la actual.';
 
 /**
@@ -22,6 +21,7 @@ export class AuthPasswordService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly throttle: AuthThrottleService,
+    private readonly policy: PasswordPolicyService,
   ) {}
 
   async changePassword(
@@ -44,9 +44,9 @@ export class AuthPasswordService {
       // 400 y no 401: la web interpreta 401 como sesión caducada.
       throw new BadRequestException(WRONG_CURRENT);
     }
-    if (dto.newPassword.length < passwordMinLength()) {
-      throw new BadRequestException(TOO_SHORT);
-    }
+    // Política D20 (mínimo y contraseñas comunes). Un 400 no suma al límite de intentos
+    // y deja `mustChangePassword` activo.
+    await this.policy.assertAcceptable(dto.newPassword);
     if (dto.newPassword === dto.currentPassword) {
       throw new BadRequestException(SAME_AS_CURRENT);
     }
