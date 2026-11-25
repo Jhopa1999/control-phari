@@ -10,6 +10,12 @@
 --   2. Si no hay duplicados, se crea primero el índice único nuevo y después se
 --      quita el global (name_key solo), así nunca queda la tabla sin protección.
 --      Hoy no puede haberlos: el índice global ya impedía repetir name_key.
+--
+-- El esquema (`@@unique([nameKey, areaId])` y `@@index([nameKey])` en
+-- `Requester`) coincide con la rama 2. Si alguna vez se tomara la rama 1, la
+-- base quedaría distinta del esquema: hay que resolver los duplicados a mano y
+-- crear después `requesters_name_key_area_id_key` y quitar
+-- `requesters_name_key_key` para reconciliarla.
 DO $$
 BEGIN
   IF EXISTS (
