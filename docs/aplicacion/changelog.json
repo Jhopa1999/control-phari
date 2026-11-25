@@ -1054,6 +1054,18 @@
         "docs/design/oleada4-g-asistente-simulado.md"
       ],
       "summary": "Modo de simulación del modelo del Asistente (FEAT-007, BL-059 P2): GET /assistant/status añade simulated; con ASSISTANT_MODEL_PROVIDER=simulated y NODE_ENV distinto de production la API usa SimulatedBedrockClient (respuesta determinista sin AWS); en producción la variable se ignora y se registra un error. La web muestra la insignia «Modo de simulación» en el estado vacío y el compositor. Sin tool nueva en el MCP, sin migraciones."
+    },
+    {
+      "timestamp": "2026-11-25T00:29:47Z",
+      "trigger_file": "apps/api/src/modules/auth/password-policy.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/autenticacion-autorizacion.md",
+        "docs/aplicacion/modelo-datos.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/design/cambiar-contrasena.md"
+      ],
+      "summary": "Oleada 5 · PR A, política de contraseñas (D20): mínimo de 10 caracteres y bloqueo de contraseñas comunes en change-password y reset-password (restablecer y activar), gestionables en Maestras (AUTH_PARAM/PASSWORD_MIN_LENGTH y maestra nueva PASSWORD_COMMON) y sembrados por la migración idempotente 20261125090000_password_policy_params; endpoint público GET /auth/password-policy (solo el mínimo), excluido del MCP; la web muestra el mínimo vigente y marca el rechazo en el campo. La variable PASSWORD_MIN_LENGTH deja de leerse. No invalida contraseñas existentes."
     }
   ]
 }

@@ -576,7 +576,8 @@ Varios atributos se almacenan como **código de maestra** (`CatalogItem`) y se v
 el service, por ejemplo: `ACTIVITY_CLASS` (incluye `REUNION` y `RECURRENTE`, sembradas por
 migración), `WORKLOG_PARAM` (`CLOSED_PROJECT_GRACE_DAYS` y `WORKDAY_HOURS`, jornada diaria
 en horas; 9 por defecto), `AUTH_PARAM` (umbrales del límite de intentos de login y de
-recuperación de contraseña), `ISSUE_TYPE`, `RECORD_STATE`,
+recuperación de contraseña, y `PASSWORD_MIN_LENGTH`), `PASSWORD_COMMON` (contraseñas comunes
+no permitidas; `code` en mayúsculas sin símbolos, `label` legible), `ISSUE_TYPE`, `RECORD_STATE`,
 `GOVERNANCE_ROUTE`, `RECURRING_ACTIVITY_TYPE` y los tipos/tecnologías/fuentes/frecuencias
 de los activos.
 (Las familias de activos antes consumidas por el triage ya no tienen consumidores
@@ -690,3 +691,9 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     `DROP SEQUENCE IF EXISTS assets_number_seq, documents_number_seq;` y quitar la fila de
     `_prisma_migrations`; el código anterior sigue funcionando sin las columnas. Antes de
     desplegar, respaldar con `pg_dump`.)
+54. `20261125090000_password_policy_params` (oleada 5, PR A; datos, idempotente: inserta
+    `AUTH_PARAM`/`PASSWORD_MIN_LENGTH = 10` y 67 ítems de la maestra `PASSWORD_COMMON`;
+    `ON CONFLICT ("catalog", "code") DO NOTHING`, no pisa ediciones de Maestras ni toca
+    contraseñas existentes. Verificación: `SELECT count(*) FILTER (WHERE catalog='AUTH_PARAM'
+    AND code='PASSWORD_MIN_LENGTH'), count(*) FILTER (WHERE catalog='PASSWORD_COMMON') FROM
+    catalog_items;` debe dar 1 y al menos 67.)

@@ -161,7 +161,13 @@ test('marcar → login → pantalla obligatoria → cambiar → acceso normal', 
   await page.locator('#newPassword').fill('corta');
   await page.locator('#confirmPassword').fill('corta');
   await page.getByRole('button', { name: 'Cambiar contraseña' }).click();
-  await expect(page.getByText('La contraseña debe tener al menos 8 caracteres.')).toBeVisible();
+  await expect(page.getByText('La contraseña debe tener al menos 10 caracteres.')).toBeVisible();
+  // Contraseña común: el servidor la rechaza junto al campo y la persona sigue bloqueada.
+  await page.locator('#newPassword').fill('Password2026*');
+  await page.locator('#confirmPassword').fill('Password2026*');
+  await page.getByRole('button', { name: 'Cambiar contraseña' }).click();
+  await expect(page.getByText('Esa contraseña es muy común y fácil de adivinar. Elige otra.')).toBeVisible();
+  await expect(changeHeading(page)).toBeVisible();
 
   // Cambio válido: sale al portal con el menú y la API vuelve a responder.
   await page.locator('#newPassword').fill(NEW_PASSWORD);

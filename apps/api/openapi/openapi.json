@@ -252,7 +252,7 @@
             }
           },
           "400": {
-            "description": "Token invalido o contrasena demasiado corta."
+            "description": "Token inválido, contraseña demasiado corta o contraseña común (la política no consume el token)."
           },
           "410": {
             "description": "Token caducado o ya utilizado."
@@ -314,6 +314,28 @@
           }
         },
         "summary": "Cambia la contraseña de la persona autenticada (exige la actual) y limpia la exigencia de cambio obligatorio.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password-policy": {
+      "get": {
+        "operationId": "PasswordPolicyController_getPolicy",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordPolicyResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Devuelve la longitud mínima vigente de la contraseña. Pública: se usa al activar la cuenta o restablecer la contraseña.",
         "tags": [
           "auth"
         ]
@@ -11762,9 +11784,8 @@
           },
           "newPassword": {
             "type": "string",
-            "description": "Nueva contrasena en claro (minimo 8 caracteres).",
+            "description": "Nueva contraseña en claro. El servicio aplica la política vigente (GET /auth/password-policy): longitud mínima y no ser una contraseña común.",
             "example": "nueva-contrasena-123",
-            "minLength": 8,
             "maxLength": 255
           }
         },
@@ -11783,14 +11804,26 @@
           },
           "newPassword": {
             "type": "string",
-            "description": "Contraseña nueva (mínimo 8 caracteres, o PASSWORD_MIN_LENGTH si es mayor) y distinta de la actual.",
-            "minLength": 8,
+            "description": "Contraseña nueva, distinta de la actual. El servicio aplica la política vigente (GET /auth/password-policy): longitud mínima y no ser una contraseña común.",
             "maxLength": 255
           }
         },
         "required": [
           "currentPassword",
           "newPassword"
+        ]
+      },
+      "PasswordPolicyResponseDto": {
+        "type": "object",
+        "properties": {
+          "minLength": {
+            "type": "number",
+            "description": "Longitud mínima vigente de una contraseña nueva. La lista de contraseñas comunes no se expone.",
+            "example": 10
+          }
+        },
+        "required": [
+          "minLength"
         ]
       },
       "AuditEventResponseDto": {

@@ -12,12 +12,10 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { hashPassword, verifyPassword } from './password-hash';
-import { passwordMinLength } from './password-policy';
+import { PasswordPolicyService } from './password-policy.service';
 
 /** TTL por defecto del token de reset si no se configura PASSWORD_RESET_TTL. */
 const DEFAULT_PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hora
-/** Mensaje de contrasena demasiado corta (400). */
-const PASSWORD_TOO_SHORT = 'La contrasena no cumple la longitud minima.';
 /** La nueva contraseña no puede repetir la actual (usuario marcado). */
 const SAME_AS_CURRENT = 'La contraseña nueva debe ser distinta de la actual.';
 /** Purposes que /auth/reset-password acepta: reset y activacion por invitacion. */
@@ -50,6 +48,7 @@ export class AuthResetService {
     private readonly authTokenService: AuthTokenService,
     private readonly authLoginService: AuthLoginService,
     private readonly throttle: AuthThrottleService,
+    private readonly policy: PasswordPolicyService,
   ) {}
 
   /** Vigencia configurada del token de reset, en milisegundos. */
@@ -146,9 +145,8 @@ export class AuthResetService {
    * (mismo criterio que el envio SMTP en forgotPassword).
    */
   async resetPassword(dto: ResetPasswordDto): Promise<LoginResponseDto> {
-    if (dto.newPassword.length < passwordMinLength()) {
-      throw new BadRequestException(PASSWORD_TOO_SHORT);
-    }
+    // Antes de abrir la transacción: una contraseña débil no consume el token.
+    await this.policy.assertAcceptable(dto.newPassword);
 
     const passwordHash = await hashPassword(dto.newPassword);
 

@@ -31,6 +31,12 @@ dev-actor.resolver.ts`):
   `FORGOT_WINDOW_MINUTES`; valor en la etiqueta), sembrada por la migración
   `20261117090000_auth_param_catalog_seed`. Valores ausentes o inválidos usan los de
   D1, definidos en el código.
+- **Política de contraseñas (D20):** al cambiar, restablecer o activar, la contraseña
+  nueva debe tener la longitud mínima vigente (`AUTH_PARAM`/`PASSWORD_MIN_LENGTH`, 10 por
+  defecto, piso de 8 en el código) y no ser una contraseña común (maestra
+  `PASSWORD_COMMON`). Ambas se editan en Maestras y las siembra la migración
+  `20261125090000_password_policy_params`. `GET /auth/password-policy` (pública) devuelve
+  solo el mínimo. No invalida contraseñas existentes: el login no la consulta.
 - **Auditoría:** cada fallo de login deja un `AuditEvent` `LOGIN_FAILED` sobre `USER`
   con `after = { reason, ip, blocked }` (`reason`: `USUARIO_INEXISTENTE`,
   `USUARIO_INACTIVO`, `SIN_CONTRASENA` o `CONTRASENA_INCORRECTA`). Con usuario
@@ -134,7 +140,7 @@ claro viaja solo en el correo y en BD se guarda únicamente su SHA-256
   (`LoginResponseDto`: `{ accessToken, expiresIn, user }`), reutilizando la emisión de JWT
   del login, de modo que el usuario queda autenticado y entra directo sin volver a iniciar
   sesión. Token inválido/purpose no permitido → `400`; token caducado o ya usado → `410`;
-  contraseña por debajo del mínimo → `400`.
+  contraseña que no cumple la política (mínimo o común) → `400`, sin consumir el token.
 - `POST /users/{id}/invite` (`204`): protegido por `JEFE_AREA`. Emite un token
   `USER_INVITATION` y envía la invitación con el enlace `APP_WEB_URL/activar-cuenta?
   token=...`. El reenvío invalida el token previo no usado (queda un único enlace
@@ -143,9 +149,9 @@ claro viaja solo en el correo y en BD se guarda únicamente su SHA-256
 El token se emite/consume dentro de una transacción junto con la auditoría
 (`AuditEvent`, acción `UPDATE` sobre `USER`, sin incluir nunca el token) y la
 actualización del `passwordHash`; el envío del correo ocurre **fuera** de la
-transacción. Vigencias y mínimo configurables por entorno: `PASSWORD_RESET_TTL`
-(default `1h`), `USER_INVITATION_TTL` (default `72h`), `PASSWORD_MIN_LENGTH` (default
-`8`, compartido en `auth/password-policy.ts`).
+transacción. Vigencias configurables por entorno: `PASSWORD_RESET_TTL`
+(default `1h`) y `USER_INVITATION_TTL` (default `72h`). El mínimo de contraseña vive en la
+maestra `AUTH_PARAM` (ver «Política de contraseñas»).
 
 ## Cambio de contraseña obligatorio
 
@@ -165,7 +171,7 @@ ninguna migración ni el seed marcan a nadie: la activación es manual).
   `code`); marcado `403` con `code`; después el rol. En `dev-header` el indicador se
   ignora.
 - **Salida.** `POST /auth/change-password` (Bearer o cookie con `X-Portal-Csrf: 1`) exige
-  la contraseña actual, aplica `PASSWORD_MIN_LENGTH` y que la nueva sea distinta, y
+  la contraseña actual, aplica la política de contraseñas y que la nueva sea distinta, y
   limpia el indicador en la misma transacción. Reutiliza el límite de intentos del
   login (`429` con `Retry-After`). La contraseña actual incorrecta da `400` (no `401`,
   que la web interpreta como sesión caducada). La sesión y los JWT emitidos siguen

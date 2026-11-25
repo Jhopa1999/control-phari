@@ -66,7 +66,7 @@ Todos con `required` en `Field` (asterisco `aria-hidden` + `aria-required`, nunc
 | Orden | `id` / `name` | Etiqueta | `autoComplete` | Ayuda | `Input` |
 |-------|---------------|----------|----------------|-------|---------|
 | 1 | `currentPassword` | Contraseña actual | `current-password` | — | `type="password"` |
-| 2 | `newPassword` | Nueva contraseña | `new-password` | «Mínimo 8 caracteres y distinta de la actual.» | `type="password"` |
+| 2 | `newPassword` | Nueva contraseña | `new-password` | «Mínimo {N} caracteres, distinta de la actual y no demasiado común (por ejemplo «123456» o «password»).» con `N` de `GET /auth/password-policy`; mientras carga o si falla: «Elige una contraseña segura y distinta de la actual.» | `type="password"` |
 | 3 | `confirmPassword` | Confirmar contraseña nueva | `new-password` | — | `type="password"` |
 
 - Todos los `Field` con `errorRole="alert"` (patrón del login y de `SetPasswordForm`).
@@ -104,11 +104,11 @@ Mensajes junto al campo, en este orden de comprobación; se muestran todos los q
 | Campo | Condición | Mensaje |
 |-------|-----------|---------|
 | `currentPassword` | vacío | «Escribe tu contraseña actual.» |
-| `newPassword` | longitud < 8 | «La contraseña debe tener al menos 8 caracteres.» |
+| `newPassword` | política cargada y longitud < `N` | «La contraseña debe tener al menos {N} caracteres.» (sin política cargada no se valida la longitud en el cliente) |
 | `newPassword` | igual a la actual (y la actual no vacía) | «La contraseña nueva debe ser distinta de la actual.» |
 | `confirmPassword` | distinta de la nueva | «Las contraseñas no coinciden.» |
 
-El 8 es el piso del contrato; el servidor sigue siendo la autoridad (puede exigir más con `PASSWORD_MIN_LENGTH`). Si la nueva falla por longitud, no se muestra además «distinta de la actual».
+`N` es el mínimo vigente (maestra `AUTH_PARAM`, 10 por defecto); el servidor sigue siendo la autoridad y es el único que comprueba las contraseñas comunes. Si la nueva falla por longitud, no se muestra además «distinta de la actual».
 
 ### A.6 Errores del servidor
 
@@ -116,7 +116,8 @@ El 8 es el piso del contrato; el servidor sigue siendo la autoridad (puede exigi
 |-----------|-------|-------|------|
 | `400` «La contraseña actual no es correcta.» | `error` del campo `currentPassword` (excepción por texto exacto, como las ya previstas en `field.tsx`) | el texto del servidor | `currentPassword`, con el contenido seleccionado |
 | `400` «La contraseña nueva debe ser distinta de la actual.» | `error` de `newPassword` | el texto del servidor | `newPassword` |
-| `400` longitud / otro mensaje del servidor | `FormError` | el texto del servidor, o «La contraseña no cumple los requisitos. Elige otra.» si llega vacío | `newPassword` |
+| `400` «La contraseña debe tener al menos {N} caracteres.» o «Esa contraseña es muy común y fácil de adivinar. Elige otra.» | `error` de `newPassword`; se vacía la confirmación | el texto del servidor | `newPassword`, con el contenido seleccionado |
+| `400` otro mensaje del servidor | `FormError` | el texto del servidor, o «La contraseña no cumple los requisitos. Elige otra.» si llega vacío | `newPassword` |
 | `429` | `FormError` | «Demasiados intentos. Espera unos minutos e inténtalo de nuevo.» (con minutos si hay `Retry-After`: «Espera {n} min e inténtalo de nuevo.») | ninguno (el aviso es `role="alert"`) |
 | `401` | flujo global de sesión caducada | no se trata aquí | — |
 | Red / `5xx` / `403` CSRF | `FormError` | «No fue posible cambiar la contraseña. Inténtalo de nuevo.» | ninguno |

@@ -8,6 +8,7 @@ import { AuthResetService } from './auth-reset.service';
 import { AuthTokenPurpose } from './auth-token-purpose';
 import { AuthTokenService } from './auth-token.service';
 import * as passwordHash from './password-hash';
+import { PasswordPolicyService } from './password-policy.service';
 
 type UserDelegateMock = {
   findFirst: jest.Mock;
@@ -23,7 +24,7 @@ function createMocks() {
   };
   const prismaObj: Record<string, unknown> = {
     user,
-    catalogItem: { findMany: jest.fn().mockResolvedValue([]) },
+    catalogItem: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
   };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) =>
     cb(prismaObj),
@@ -92,10 +93,10 @@ describe('AuthResetService', () => {
       mocks.authTokenService,
       mocks.authLoginService,
       mocks.throttle,
+      new PasswordPolicyService(mocks.prisma),
     );
     process.env.APP_WEB_URL = 'http://localhost:3000';
     delete process.env.PASSWORD_RESET_TTL;
-    delete process.env.PASSWORD_MIN_LENGTH;
     jest
       .spyOn(passwordHash, 'hashPassword')
       .mockResolvedValue('hashed-password');
@@ -329,5 +330,11 @@ describe('AuthResetService', () => {
       expect(mocks.user.update).not.toHaveBeenCalled();
       expect(mocks.issueSessionForUser).not.toHaveBeenCalled();
     });
-  });
+    it('contraseña común lanza 400 sin consumir token ni emitir sesión', async () => {
+      await expect(
+        service.resetPassword({ token: 'plain-token', newPassword: 'Password123!' }),
+      ).rejects.toThrow('Esa contraseña es muy común y fácil de adivinar. Elige otra.');
+      expect(mocks.consume).not.toHaveBeenCalled();
+      expect(mocks.issueSessionForUser).not.toHaveBeenCalled();
+    });  });
 });

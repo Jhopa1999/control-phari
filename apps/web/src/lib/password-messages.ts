@@ -7,8 +7,19 @@
 export const WRONG_CURRENT_MESSAGE = 'La contraseña actual no es correcta.';
 export const SAME_PASSWORD_MESSAGE = 'La contraseña nueva debe ser distinta de la actual.';
 
+/** La API informa el mínimo vigente: «La contraseña debe tener al menos N caracteres.» */
+export const PASSWORD_TOO_SHORT_PREFIX = 'La contraseña debe tener al menos ';
+export const PASSWORD_COMMON_MESSAGE = 'Esa contraseña es muy común y fácil de adivinar. Elige otra.';
 const REQUIREMENTS_MESSAGE = 'La contraseña no cumple los requisitos. Elige otra.';
 const GENERIC_CHANGE_MESSAGE = 'No fue posible cambiar la contraseña. Inténtalo de nuevo.';
+
+/** Indica si el texto es un rechazo de la política de contraseñas (mínimo o común). */
+export function isPasswordPolicyMessage(message: string | undefined): message is string {
+  return (
+    message !== undefined &&
+    (message === PASSWORD_COMMON_MESSAGE || message.startsWith(PASSWORD_TOO_SHORT_PREFIX))
+  );
+}
 
 export interface ChangePasswordFailure {
   /** Campo al que pertenece el error; sin campo va al aviso del formulario. */
@@ -41,7 +52,9 @@ export function describeChangePasswordFailure(
   if (status === 400) {
     const message = bodyMessage(body);
     if (message === WRONG_CURRENT_MESSAGE) return { field: 'currentPassword', message };
-    if (message === SAME_PASSWORD_MESSAGE) return { field: 'newPassword', message };
+    if (message === SAME_PASSWORD_MESSAGE || isPasswordPolicyMessage(message)) {
+      return { field: 'newPassword', message };
+    }
     return { message: message ?? REQUIREMENTS_MESSAGE };
   }
   if (status === 429) {

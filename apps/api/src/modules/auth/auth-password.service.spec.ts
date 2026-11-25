@@ -4,6 +4,7 @@ import { AuditService } from '../audit/audit.service';
 import { AuthPasswordService } from './auth-password.service';
 import { AuthThrottleService } from './auth-throttle.service';
 import { CurrentActor } from './current-actor';
+import { PasswordPolicyService } from './password-policy.service';
 import { TooManyAttemptsException } from './too-many-attempts.exception';
 import * as passwordHash from './password-hash';
 
@@ -11,7 +12,10 @@ const actor = { userId: 'u1', identifier: 'p@demo.local' } as unknown as Current
 
 function setup() {
   const user = { findUnique: jest.fn(), update: jest.fn().mockResolvedValue({}) };
-  const prismaObj: Record<string, unknown> = { user };
+  const prismaObj: Record<string, unknown> = {
+    user,
+    catalogItem: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
+  };
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaObj));
   const audit = { record: jest.fn() };
   const throttle = {
@@ -23,23 +27,19 @@ function setup() {
     prismaObj as unknown as PrismaService,
     audit as unknown as AuditService,
     throttle as unknown as AuthThrottleService,
+    new PasswordPolicyService(prismaObj as unknown as PrismaService),
   );
   return { service, user, audit, throttle };
 }
 
 describe('AuthPasswordService', () => {
-  let original: string | undefined;
   beforeEach(() => {
-    original = process.env.PASSWORD_MIN_LENGTH;
-    delete process.env.PASSWORD_MIN_LENGTH;
     jest.spyOn(passwordHash, 'hashPassword').mockResolvedValue('hash-nuevo');
     jest
       .spyOn(passwordHash, 'verifyPassword')
       .mockImplementation(async (plain) => plain === 'actual-correcta');
   });
   afterEach(() => {
-    if (original === undefined) delete process.env.PASSWORD_MIN_LENGTH;
-    else process.env.PASSWORD_MIN_LENGTH = original;
     jest.restoreAllMocks();
   });
 
@@ -89,16 +89,25 @@ describe('AuthPasswordService', () => {
     expect(m.user.update).not.toHaveBeenCalled();
   });
 
-  it('nueva más corta que PASSWORD_MIN_LENGTH: 400', async () => {
-    process.env.PASSWORD_MIN_LENGTH = '12';
+  it('nueva más corta que el mínimo (10): 400, no escribe ni cuenta fallo', async () => {
     const m = setup();
     m.user.findUnique.mockResolvedValue({ id: 'u1', passwordHash: 'hash-actual' });
     await expect(
-      m.service.changePassword(actor, { currentPassword: 'actual-correcta', newPassword: 'once-chars!' }),
-    ).rejects.toThrow('La contraseña no cumple la longitud mínima.');
+      m.service.changePassword(actor, { currentPassword: 'actual-correcta', newPassword: 'nueve-ch9' }),
+    ).rejects.toThrow('La contraseña debe tener al menos 10 caracteres.');
     expect(m.user.update).not.toHaveBeenCalled();
+    expect(m.throttle.recordLoginFailure).not.toHaveBeenCalled();
   });
 
+  it('contraseña común: 400 y no se limpia el indicador de cambio obligatorio', async () => {
+    const m = setup();
+    m.user.findUnique.mockResolvedValue({ id: 'u1', passwordHash: 'hash-actual' });
+    await expect(
+      m.service.changePassword(actor, { currentPassword: 'actual-correcta', newPassword: 'Password2026*' }),
+    ).rejects.toThrow('Esa contraseña es muy común y fácil de adivinar. Elige otra.');
+    expect(m.user.update).not.toHaveBeenCalled();
+    expect(m.throttle.recordLoginFailure).not.toHaveBeenCalled();
+  });
   it('límite de intentos superado: 429 sin leer el usuario', async () => {
     const m = setup();
     m.throttle.assertLoginAllowed.mockRejectedValue(new TooManyAttemptsException(60));

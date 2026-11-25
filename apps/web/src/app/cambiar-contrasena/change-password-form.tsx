@@ -15,12 +15,8 @@ import { Input } from '@/components/ui/input';
 import { useActor } from '@/lib/actor-context';
 import { resolvePostLoginHref } from '@/lib/post-login';
 import { ChangePasswordError, changePassword } from '@/lib/password';
+import { getPasswordPolicy } from '@/lib/password-policy';
 
-/**
- * Longitud mínima validada en el cliente: el piso del contrato (8). El servidor
- * sigue siendo la autoridad y puede exigir más con PASSWORD_MIN_LENGTH.
- */
-const MIN_PASSWORD_LENGTH = 8;
 const FORM_ID = 'change-password';
 
 interface FieldErrors {
@@ -30,11 +26,16 @@ interface FieldErrors {
 }
 
 /** Errores locales al enviar, en el orden de la especificación (todos a la vez). */
-function validate(current: string, next: string, confirm: string): FieldErrors {
+function validate(
+  current: string,
+  next: string,
+  confirm: string,
+  minLength: number | null,
+): FieldErrors {
   const errors: FieldErrors = {};
   if (current.length === 0) errors.currentPassword = 'Escribe tu contraseña actual.';
-  if (next.length < MIN_PASSWORD_LENGTH) {
-    errors.newPassword = `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+  if (minLength !== null && next.length < minLength) {
+    errors.newPassword = `La contraseña debe tener al menos ${minLength} caracteres.`;
   } else if (current.length > 0 && next === current) {
     errors.newPassword = 'La contraseña nueva debe ser distinta de la actual.';
   }
@@ -69,6 +70,18 @@ export function ChangePasswordForm(): React.ReactElement {
     currentRef.current?.focus();
   }, []);
 
+  // Mínimo vigente (GET /auth/password-policy); null mientras carga o si falla.
+  const [minLength, setMinLength] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    let active = true;
+    void getPasswordPolicy().then((value) => {
+      if (active) setMinLength(value);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   function clearError(field: keyof FieldErrors): void {
     if (fieldErrors[field]) setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   }
@@ -76,7 +89,7 @@ export function ChangePasswordForm(): React.ReactElement {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setFormError(null);
-    const errors = validate(currentPassword, newPassword, confirmPassword);
+    const errors = validate(currentPassword, newPassword, confirmPassword, minLength);
     setFieldErrors(errors);
     if (errors.currentPassword || errors.newPassword || errors.confirmPassword) {
       const first = errors.currentPassword
@@ -105,7 +118,9 @@ export function ChangePasswordForm(): React.ReactElement {
         currentRef.current?.select();
       } else if ('field' in failure && failure.field === 'newPassword') {
         setFieldErrors({ newPassword: failure.message });
+        setConfirmPassword('');
         newRef.current?.focus();
+        newRef.current?.select();
       } else {
         setFormError(failure.message);
         if (err instanceof ChangePasswordError && err.status === 400) newRef.current?.focus();
@@ -168,7 +183,11 @@ export function ChangePasswordForm(): React.ReactElement {
                 required
                 error={fieldErrors.newPassword}
                 errorRole="alert"
-                help={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres y distinta de la actual.`}
+                help={
+                  minLength === null
+                    ? 'Elige una contraseña segura y distinta de la actual.'
+                    : `Mínimo ${minLength} caracteres, distinta de la actual y no demasiado común (por ejemplo «123456» o «password»).`
+                }
               >
                 <Input
                   ref={newRef}

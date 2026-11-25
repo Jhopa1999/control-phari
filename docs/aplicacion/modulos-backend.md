@@ -55,10 +55,11 @@ por `AUTH_MODE`: `dev-header` (header `X-Actor-Id`) y `jwt` (login real).
 | POST | `/auth/login` | Autentica por `identifier` y contraseña, devuelve un JWT y emite la cookie de sesión `portal_session` (`HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` según `COOKIE_SECURE`, `Cache-Control: no-store`) (ruta pública). Límite de intentos (D1): con 5 fallos en 15 minutos por identificador o 30 por IP responde `429` con mensaje en español y cabecera `Retry-After` (segundos), aunque la contraseña sea correcta; cada fallo se audita como `LOGIN_FAILED`. |
 | POST | `/auth/logout` | Cierra la sesión del navegador borrando la cookie; `204`, idempotente; con la cookie presente exige la cabecera `X-Portal-Csrf: 1` (`403` si falta). No revoca Bearer (ruta pública; excluido del MCP). |
 | POST | `/auth/forgot-password` | Solicita el reestablecimiento de contraseña; responde `204` exista o no el usuario (ruta pública). Desde la 4.ª solicitud en una hora por identificador no emite token ni correo, sigue respondiendo `204` y audita una vez por ventana `PASSWORD_RESET_THROTTLED`. |
-| POST | `/auth/reset-password` | Define una nueva contraseña consumiendo un token de reset o de activación y devuelve la sesión del login para entrar directo y emite también la cookie de sesión (`200` con `LoginResponseDto`; `400` token/contraseña inválidos, `410` token caducado/usado). |
+| POST | `/auth/reset-password` | Define una nueva contraseña consumiendo un token de reset o de activación y devuelve la sesión del login para entrar directo y emite también la cookie de sesión (`200` con `LoginResponseDto`; `400` token inválido o contraseña que no cumple la política, sin consumir el token; `410` token caducado/usado). La política exige longitud mínima vigente (maestra `AUTH_PARAM`, `PASSWORD_MIN_LENGTH`, 10 por defecto) y no ser una contraseña común (maestra `PASSWORD_COMMON`). |
+| GET | `/auth/password-policy` | Longitud mínima vigente de la contraseña (`{ minLength }`, `PasswordPolicyResponseDto`). Pública (la usan activar cuenta y restablecer contraseña); no expone la lista de contraseñas comunes. Excluido del MCP. |
 | GET | `/dev/actors` | Lista usuarios activos para el selector de desarrollo (solo con `AUTH_MODE=dev-header`; si no, `404`). |
 | GET | `/me/permissions` | Permisos del usuario actual: rol, alcance, módulos permitidos y `mustChangePassword` (cambio de contraseña obligatorio pendiente). Responde también con el cambio pendiente. |
-| POST | `/auth/change-password` | Cambia la contraseña de la sesión actual (Bearer o cookie con `X-Portal-Csrf: 1`). Exige la contraseña actual, cumple `PASSWORD_MIN_LENGTH` y la nueva debe ser distinta. Limpia `mustChangePassword` y audita `PASSWORD_CHANGED`. `204`; `400` actual incorrecta, corta o igual; `429` con `Retry-After` (mismo límite que el login). Excluido del MCP. |
+| POST | `/auth/change-password` | Cambia la contraseña de la sesión actual (Bearer o cookie con `X-Portal-Csrf: 1`). Exige la contraseña actual, que la nueva sea distinta y que cumpla la política de contraseñas (longitud mínima vigente (maestra `AUTH_PARAM`, `PASSWORD_MIN_LENGTH`, 10 por defecto) y no ser una contraseña común (maestra `PASSWORD_COMMON`)). Limpia `mustChangePassword` y audita `PASSWORD_CHANGED`. `204`; `400` actual incorrecta, igual, corta («La contraseña debe tener al menos {N} caracteres.») o común («Esa contraseña es muy común y fácil de adivinar. Elige otra.»); un rechazo por política no suma al límite de intentos ni limpia `mustChangePassword`; `429` con `Retry-After` (mismo límite que el login). Excluido del MCP. |
 
 Cambio de contraseña obligatorio: con `users.must_change_password = true` y en modo
 `jwt`, `CurrentUserGuard` responde `403` con `code: "PASSWORD_CHANGE_REQUIRED"` en toda
@@ -85,6 +86,17 @@ en modo `dev-header`. La lógica de carga del actor y sus grants es común a amb
 solo uso (`AuthToken`): el valor en claro solo viaja en el correo y en BD se guarda su
 SHA-256; el envío del correo ocurre fuera de la transacción (ver
 `autenticacion-autorizacion.md`).
+
+Política de contraseñas (D20, `auth/password-policy.service.ts` y `auth/password-policy.ts`):
+se aplica en `change-password` y `reset-password` (restablecer y activar cuenta; `POST /users`
+no recibe contraseña). Mínimo en `AUTH_PARAM`/`PASSWORD_MIN_LENGTH` (valor en la etiqueta,
+entero de 8 a 64; ausente, inactivo o fuera de rango usa 10). Lista de comunes en la maestra
+`PASSWORD_COMMON` (un ítem por contraseña; `code` es la clave en mayúsculas sin símbolos):
+se compara la contraseña en minúsculas, sin tildes ni símbolos, y también sin los dígitos
+finales si la base tiene al menos 4 caracteres (`Password2026*` cae por `password`). Sin ítems
+activos o si la lectura falla se usa la lista del código. Caché de 30 s. Solo se evalúa al
+fijar una contraseña: el login no la consulta y las contraseñas existentes siguen valiendo.
+La variable de entorno `PASSWORD_MIN_LENGTH` ya no se lee.
 
 Límite de intentos (`auth/auth-throttle.service.ts`, `auth/auth-attempt-window.ts`):
 ventana deslizante **en memoria del proceso** de la API, contada por identificador
