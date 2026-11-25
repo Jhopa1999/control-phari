@@ -10,8 +10,11 @@ import {
   DEFAULT_AGENT_CONFIGS,
   MEETINGS_AGENT_CODE,
   MEETINGS_BASE_PROMPT,
+  MEETINGS_OUTPUT_CONTRACT,
   TRIAGE_AGENT_CODE,
   TRIAGE_BASE_PROMPT,
+  TRIAGE_OUTPUT_CONTRACT,
+  composeStructuredPrompt,
 } from './ai-defaults';
 import { AiModelCatalogService } from './ai-model-catalog.service';
 import {
@@ -344,10 +347,28 @@ describe('AiConfigService', () => {
       expect(arg.create.displayName).toBe('Agente de actas');
       expect(arg.create.basePrompt).toBe(MEETINGS_BASE_PROMPT);
     });
-    it('el prompt de actas trata las notas como datos y limita el responsable a los alias', () => {
-      expect(MEETINGS_BASE_PROMPT).toMatch(/datos/i);
-      expect(MEETINGS_BASE_PROMPT).toMatch(/alias/i);
-      expect(MEETINGS_BASE_PROMPT).toMatch(/inventes/i);
+    it('el contrato de actas trata las notas como datos y limita el responsable a los alias', () => {
+      expect(MEETINGS_OUTPUT_CONTRACT).toMatch(/datos/i);
+      expect(MEETINGS_OUTPUT_CONTRACT).toMatch(/alias/i);
+      expect(MEETINGS_OUTPUT_CONTRACT).toMatch(/inventes/i);
+      expect(MEETINGS_OUTPUT_CONTRACT).toMatch(/JSON valido/);
+    });
+    it('las semillas de actas y triage no repiten el contrato de salida', () => {
+      expect(MEETINGS_BASE_PROMPT).not.toContain('JSON');
+      expect(TRIAGE_BASE_PROMPT).not.toContain('JSON');
+      expect(TRIAGE_OUTPUT_CONTRACT).toMatch(/JSON valido/);
+      expect(TRIAGE_OUTPUT_CONTRACT).toMatch(/inventes/i);
+    });
+    it('composeStructuredPrompt ordena prompt editable, contrato y contexto; en blanco usa el default', () => {
+      const ctx = { a: 1 };
+      const p = composeStructuredPrompt('Solo una frase.', 'DEFAULT', 'CONTRATO', ctx);
+      expect(p.indexOf('Solo una frase.')).toBeLessThan(p.indexOf('CONTRATO'));
+      expect(p.indexOf('CONTRATO')).toBeLessThan(p.indexOf('Contexto (JSON):'));
+      expect(p.indexOf('Contexto (JSON):')).toBeLessThan(p.indexOf('{"a":1}'));
+      for (const blank of ['', '   \n', null, undefined]) {
+        const q = composeStructuredPrompt(blank, 'DEFAULT', 'CONTRATO', ctx);
+        expect(q.startsWith('DEFAULT\n')).toBe(true);
+      }
     });
     it('el prompt del asistente exige usar tools y proponer (no ejecutar) cambios', () => {
       expect(ASSISTANT_BASE_PROMPT).toMatch(/herramientas/i);

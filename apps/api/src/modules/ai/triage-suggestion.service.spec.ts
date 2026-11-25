@@ -11,6 +11,7 @@ import { TriageSuggestionService } from './triage-suggestion.service';
 import { BedrockClient, BedrockTimeoutError } from './bedrock.client';
 import { AiModelCatalogService } from './ai-model-catalog.service';
 import { AiUsageService } from './ai-usage.service';
+import { TRIAGE_BASE_PROMPT, TRIAGE_OUTPUT_CONTRACT } from './ai-defaults';
 
 /**
  * Pruebas del agente de sugerencia de triage: SUGIERE sin persistir y degrada
@@ -205,6 +206,26 @@ describe('TriageSuggestionService', () => {
     expect(entry.usage.inputTokens).toBe(100);
   });
 
+  it('un prompt editable de una sola frase no quita el contrato de salida: va despues y antes del contexto', async () => {
+    const sentence = 'Sugiere el triage de forma amable.';
+    const { service, bedrock } = makeDeps({
+      agent: { id: 'a-1', code: 'TRIAGE', enabled: true, region: 'us-east-2', model: 'm', basePrompt: sentence, temperature: 0.2, maxTokens: 1024, timeoutMs: 20000 },
+    });
+    await service.suggest(jefeActor(), REQUEST_ID);
+    const sent = (bedrock.converse as jest.Mock).mock.calls[0][0].messages[0].content[0].text as string;
+    expect(sent).toContain(TRIAGE_OUTPUT_CONTRACT);
+    expect(sent.indexOf(sentence)).toBeLessThan(sent.indexOf(TRIAGE_OUTPUT_CONTRACT));
+    expect(sent.indexOf(TRIAGE_OUTPUT_CONTRACT)).toBeLessThan(sent.indexOf('Contexto (JSON):'));
+  });
+  it('con el prompt base vacio se usa el valor por defecto de codigo, con el contrato', async () => {
+    const { service, bedrock } = makeDeps({
+      agent: { id: 'a-1', code: 'TRIAGE', enabled: true, region: 'us-east-2', model: 'm', basePrompt: '', temperature: 0.2, maxTokens: 1024, timeoutMs: 20000 },
+    });
+    await service.suggest(jefeActor(), REQUEST_ID);
+    const sent = (bedrock.converse as jest.Mock).mock.calls[0][0].messages[0].content[0].text as string;
+    expect(sent.startsWith(TRIAGE_BASE_PROMPT)).toBe(true);
+    expect(sent).toContain(TRIAGE_OUTPUT_CONTRACT);
+  });
   it('modelo que no soporta temperature => se invoca SIN temperature', async () => {
     const { service, bedrock } = makeDeps({ supportsTemperature: false });
     await service.suggest(jefeActor(), REQUEST_ID);

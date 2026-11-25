@@ -14,7 +14,12 @@ import { extractJsonObject } from '../../ai/ai-json';
 import { decryptSecret } from '../../ai/ai-crypto';
 import { AiModelCatalogService } from '../../ai/ai-model-catalog.service';
 import { AiUsageService } from '../../ai/ai-usage.service';
-import { MEETINGS_AGENT_CODE } from '../../ai/ai-defaults';
+import {
+  MEETINGS_AGENT_CODE,
+  MEETINGS_BASE_PROMPT,
+  MEETINGS_OUTPUT_CONTRACT,
+  composeStructuredPrompt,
+} from '../../ai/ai-defaults';
 import {
   BEDROCK_CLIENT,
   BedrockClient,
@@ -133,7 +138,13 @@ export class MeetingAiService {
       })),
       notasDeLaReunion: text,
     };
-    const prompt = [agent.basePrompt, '', 'Contexto (JSON):', JSON.stringify(context)].join('\n');
+    // Prompt editable + contrato de salida fijo + contexto (ver ai-defaults.ts).
+    const prompt = composeStructuredPrompt(
+      agent.basePrompt,
+      MEETINGS_BASE_PROMPT,
+      MEETINGS_OUTPUT_CONTRACT,
+      context,
+    );
 
     // 4) Credenciales (access-keys): descifrar justo antes de invocar.
     let credentials: { accessKeyId: string; secretAccessKey: string } | undefined;

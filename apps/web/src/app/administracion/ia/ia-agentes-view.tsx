@@ -583,7 +583,15 @@ function AgentCard({ agent, models, onSaved }: AgentCardProps): React.ReactEleme
         </Field>
       </div>
 
-      <Field id={`${prefix}-prompt`} label="Prompt base">
+      <Field
+        id={`${prefix}-prompt`}
+        label="Prompt base"
+        help={
+          agent.code === 'ACTAS' || agent.code === 'TRIAGE'
+            ? 'El formato de respuesta y las reglas de seguridad las añade el sistema y no hace falta escribirlas. Aquí se ajusta el rol, el tono y el criterio.'
+            : undefined
+        }
+      >
         <Textarea
           value={basePrompt}
           onChange={(e) => setBasePrompt(e.target.value)}

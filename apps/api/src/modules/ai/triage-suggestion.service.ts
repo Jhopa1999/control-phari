@@ -15,6 +15,11 @@ import { AiModelCatalogService } from './ai-model-catalog.service';
 import { AiUsageService } from './ai-usage.service';
 import { extractJsonObject } from './ai-json';
 import {
+  TRIAGE_BASE_PROMPT,
+  TRIAGE_OUTPUT_CONTRACT,
+  composeStructuredPrompt,
+} from './ai-defaults';
+import {
   BEDROCK_CLIENT,
   BedrockClient,
   BedrockTimeoutError,
@@ -281,7 +286,7 @@ export class TriageSuggestionService {
   }
 
   /**
-   * Arma el prompt enviado a Bedrock: el basePrompt configurable + la ficha de
+   * Arma el prompt enviado a Bedrock: el basePrompt configurable + el contrato de salida fijo + la ficha de
    * la solicitud + las opciones (code/label) de las cinco maestras + las
    * solicitudes candidatas a duplicado. Todo como contexto estructurado para que
    * la IA solo elija codes provistos y solo referencie requestId del contexto.
@@ -316,11 +321,11 @@ export class TriageSuggestionService {
       duplicateCandidates: inScopeRequests,
     };
 
-    return [
+    return composeStructuredPrompt(
       basePrompt,
-      '',
-      'Contexto (JSON):',
-      JSON.stringify(context),
-    ].join('\n');
+      TRIAGE_BASE_PROMPT,
+      TRIAGE_OUTPUT_CONTRACT,
+      context,
+    );
   }
 }
