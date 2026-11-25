@@ -54,6 +54,9 @@ import { CommitmentResponseDto } from './dto/commitment-response.dto';
 export const MY_WORK_COMMITMENTS_LIMIT = 200;
 
 /** Reinicia las marcas de los avisos de vencimiento (permite un aviso nuevo). */
+/** Al bloquear un compromiso el motivo es obligatorio (no vacío, hasta 500 caracteres). */
+const BLOCK_REASON_REQUIRED_MESSAGE =
+  'Indica el motivo del bloqueo: es obligatorio al marcar el compromiso como bloqueado.';
 const CLEAR_NOTICE_MARKS = {
   dueSoonNotifiedAt: null,
   dueTodayNotifiedAt: null,
@@ -503,6 +506,11 @@ export class CommitmentService {
     if (dueDate !== undefined && dueDate.getTime() !== existing.dueDate.getTime()) {
       assertDueDateInRange(dueDate, await this.dueRange());
     }
+    // Un compromiso bloqueado no puede quedarse sin motivo: vaciar los bloqueos
+    // al editarlo se rechaza. Editar otros campos no exige el motivo.
+    if (existing.state === RecordState.BLOQUEADO && dto.blockers !== undefined && dto.blockers.trim() === '') {
+      throw new BadRequestException(BLOCK_REASON_REQUIRED_MESSAGE);
+    }
     // Solo se validan las personas que cambian: reenviar el valor guardado no
     // debe bloquear la edición si esa persona ya salió del proceso.
     await this.scope.assertPeopleInProcess(existing.processId, [
@@ -603,12 +611,15 @@ export class CommitmentService {
       throw new BadRequestException('El motivo del bloqueo solo aplica al marcar el compromiso como bloqueado.');
     }
 
+    if (toState === RecordState.BLOQUEADO && dto.blockedReason === undefined) {
+      throw new BadRequestException(BLOCK_REASON_REQUIRED_MESSAGE);
+    }
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.commitment.update({
         where: { id },
         data: {
           state: toState,
-          ...(toState === RecordState.BLOQUEADO && dto.blockedReason !== undefined
+          ...(toState === RecordState.BLOQUEADO
             ? { blockers: dto.blockedReason }
             : {}),
           // Reabrir permite un nuevo aviso con la nueva realidad.

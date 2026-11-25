@@ -280,6 +280,7 @@ describe('CommitmentService', () => {
       );
       const res = await m.service.transition(integrante(), 'c1', {
         toState: 'BLOQUEADO',
+        blockedReason: 'Falta la aprobación',
       });
       expect(res.state).toBe('BLOQUEADO');
     });
@@ -598,13 +599,42 @@ describe('CommitmentService', () => {
       });
       expect(res.blockers).toBe('Falta la aprobación');
     });
-    it('sin motivo no toca los bloqueos existentes', async () => {
+    it('pasar a BLOQUEADO sin motivo -> 400 aunque ya hubiera bloqueos escritos', async () => {
       m.prismaObj.commitment.findFirst.mockResolvedValue(commitmentRow({ blockers: 'previo' }));
+      await expect(
+        m.service.transition(integrante(), 'c1', { toState: 'BLOQUEADO' }),
+      ).rejects.toThrow('motivo del bloqueo');
+      expect(m.prismaObj.commitment.update).not.toHaveBeenCalled();
+    });
+    it('otras transiciones no exigen motivo ni tocan los bloqueos', async () => {
+      m.prismaObj.commitment.findFirst.mockResolvedValue(
+        commitmentRow({ state: 'BLOQUEADO', blockers: 'previo' }),
+      );
       m.prismaObj.commitment.update.mockImplementation(({ data }: any) =>
         Promise.resolve(commitmentRow(data)),
       );
-      await m.service.transition(integrante(), 'c1', { toState: 'BLOQUEADO' });
+      await m.service.transition(integrante(), 'c1', { toState: 'EN_CURSO' });
       expect(m.prismaObj.commitment.update.mock.calls[0][0].data).not.toHaveProperty('blockers');
+    });
+    it('update de un compromiso BLOQUEADO que vacía los bloqueos -> 400', async () => {
+      m.prismaObj.commitment.findFirst.mockResolvedValue(
+        commitmentRow({ state: 'BLOQUEADO', blockers: 'previo' }),
+      );
+      await expect(
+        m.service.update(integrante(), 'c1', { blockers: '' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(m.prismaObj.commitment.update).not.toHaveBeenCalled();
+    });
+    it('update de un compromiso BLOQUEADO por otros campos no exige motivo', async () => {
+      m.prismaObj.commitment.findFirst.mockResolvedValue(
+        commitmentRow({ state: 'BLOQUEADO', blockers: null }),
+      );
+      m.prismaObj.commitment.update.mockImplementation(({ data }: any) =>
+        Promise.resolve(commitmentRow({ state: 'BLOQUEADO', ...data })),
+      );
+      await expect(
+        m.service.update(integrante(), 'c1', { title: 'Nuevo título' }),
+      ).resolves.toBeDefined();
     });
     it('blockedReason con otro estado -> 400', async () => {
       m.prismaObj.commitment.findFirst.mockResolvedValue(commitmentRow({ state: 'BLOQUEADO' }));

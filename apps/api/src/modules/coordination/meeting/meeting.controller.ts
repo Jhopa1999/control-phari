@@ -85,7 +85,7 @@ export class MeetingController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Crea una reunion (estado inicial BORRADOR).' })
+  @ApiOperation({ summary: 'Crea una reunion (estado inicial BORRADOR). Si no se indica responsable, lo es quien crea el acta cuando pertenece al proceso.' })
   @ApiBody({ type: CreateMeetingDto })
   @ApiResponse({ status: 201, description: 'Reunion creada.', type: MeetingResponseDto })
   @ApiResponse({ status: 400, description: 'Datos inválidos, participante que no es del proceso de la reunión o proceso inexistente (jefe de área).' })

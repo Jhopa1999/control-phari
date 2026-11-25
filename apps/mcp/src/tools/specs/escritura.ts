@@ -41,7 +41,7 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   escritura(
     'meeting.create',
     'POST /meetings',
-    'Registra una reunión (POST /meetings), con duración opcional en minutos (durationMinutes, múltiplo de 15). El cuerpo debe cumplir el DTO de creación; el backend valida los datos. El processId debe ser uno de tus procesos (403 si no perteneces a él; 400 si el jefe de área indica un proceso inexistente). Los participantes (participantUserIds) deben ser personas del proceso (400 si no); cada uno recibe un aviso con el enlace al acta.',
+    'Registra una reunión (POST /meetings), con duración opcional en minutos (durationMinutes, múltiplo de 15). El cuerpo debe cumplir el DTO de creación; el backend valida los datos. El processId debe ser uno de tus procesos (403 si no perteneces a él; 400 si el jefe de área indica un proceso inexistente). Si no indicas responsibleUserId, el responsable es quien crea el acta (cuando pertenece al proceso; si no, queda sin responsable). Los participantes (participantUserIds) deben ser personas del proceso (400 si no); cada uno recibe un aviso con el enlace al acta.',
   ),
   escritura(
     'meeting.update',
@@ -68,12 +68,12 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   escritura(
     'commitment.update',
     'PATCH /commitments/{id}',
-    'Actualiza los datos de un compromiso (PATCH /commitments/{id}). El backend valida los datos. Si el compromiso nace de un acta, solo el responsable del acta, el líder del proceso o el jefe cambian sus datos (403 a los demás); el asignado puede registrar result y blockers.',
+    'Actualiza los datos de un compromiso (PATCH /commitments/{id}). El backend valida los datos. Si el compromiso nace de un acta, solo el responsable del acta, el líder del proceso o el jefe cambian sus datos (403 a los demás); el asignado puede registrar result y blockers. En un compromiso ya BLOQUEADO, blockers no puede quedar vacío (400); para bloquear usa commitment.transition con blockedReason.',
   ),
   escritura(
     'commitment.transition',
     'POST /commitments/{id}/transition',
-    'Cambia el estado de un compromiso (POST /commitments/{id}/transition). El backend valida la transición. Al pasar a BLOQUEADO conviene enviar blockedReason (hasta 500 caracteres) con el motivo: se guarda en los bloqueos del compromiso y lo ve el equipo; con otro estado se responde 400.',
+    'Cambia el estado de un compromiso (POST /commitments/{id}/transition). El backend valida la transición. Al pasar a BLOQUEADO blockedReason es OBLIGATORIO (texto no vacío, hasta 500 caracteres): sin él se responde 400; se guarda en los bloqueos del compromiso y lo ve el equipo. Con otro estado destino, enviar blockedReason también responde 400.',
   ),
 
   // Planes, fases y dependencias

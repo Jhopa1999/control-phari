@@ -7723,7 +7723,7 @@
             "description": "Referencia fuera de alcance."
           }
         },
-        "summary": "Crea una reunion (estado inicial BORRADOR).",
+        "summary": "Crea una reunion (estado inicial BORRADOR). Si no se indica responsable, lo es quien crea el acta cuando pertenece al proceso.",
         "tags": [
           "meetings"
         ]
@@ -8409,13 +8409,13 @@
             }
           },
           "400": {
-            "description": "Transicion no permitida o motivo de bloqueo con otro estado."
+            "description": "Transicion no permitida, BLOQUEADO sin motivo o motivo de bloqueo con otro estado."
           },
           "404": {
             "description": "Compromiso fuera de alcance."
           }
         },
-        "summary": "Transiciona el estado de un compromiso (maquina minima). Al pasar a BLOQUEADO admite blockedReason (hasta 500 caracteres), que se guarda en los bloqueos del compromiso.",
+        "summary": "Transiciona el estado de un compromiso (maquina minima). Al pasar a BLOQUEADO exige blockedReason (obligatorio, hasta 500 caracteres), que se guarda en los bloqueos del compromiso.",
         "tags": [
           "commitments"
         ]
@@ -19297,7 +19297,7 @@
           "responsibleUserId": {
             "type": "string",
             "format": "uuid",
-            "description": "Responsable."
+            "description": "Responsable. Si se omite, es quien crea el acta (cuando pertenece al proceso); asi el integrante conserva la vista de su acta."
           },
           "relatedRequestId": {
             "type": "string",
@@ -19777,7 +19777,7 @@
           },
           "blockers": {
             "type": "string",
-            "description": "Bloqueos.",
+            "description": "Bloqueos. En un compromiso BLOQUEADO no puede quedar vacio (400); para bloquear usa la transicion con motivo.",
             "maxLength": 2000
           }
         }
@@ -19800,7 +19800,7 @@
           "blockedReason": {
             "type": "string",
             "maxLength": 500,
-            "description": "Motivo del bloqueo (1 a 500 caracteres tras recortar). Opcional y solo valido con toState BLOQUEADO; con otro estado se responde 400. Un texto vacio o solo espacios se trata como ausente. Se guarda en los bloqueos del compromiso."
+            "description": "Motivo del bloqueo (1 a 500 caracteres tras recortar). OBLIGATORIO con toState BLOQUEADO (sin motivo se responde 400) y solo valido con ese estado (con otro se responde 400). Un texto vacio o solo espacios se trata como ausente. Se guarda en los bloqueos del compromiso."
           }
         },
         "required": [

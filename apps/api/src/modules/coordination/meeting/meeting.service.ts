@@ -387,6 +387,15 @@ export class MeetingService {
     const meetingDate = dateStringToDate(dto.meetingDate);
     await this.scope.assertActorInProcess(actor, dto.processId);
     await this.scope.assertPeopleInProcess(dto.processId, [dto.responsibleUserId]);
+    // Sin responsable indicado, quien crea el acta lo es: así el integrante no
+    // pierde de vista su propia acta (su alcance es «participante o responsable»).
+    // Si quien crea no pertenece al proceso como miembro (p. ej. un jefe), el
+    // acta queda sin responsable: el jefe y los líderes del proceso ya la ven.
+    const responsibleUserId =
+      dto.responsibleUserId ??
+      ((await this.scope.isPersonInProcess(dto.processId, actor.userId))
+        ? actor.userId
+        : undefined);
     // De-duplicar por si el cliente repite. Quien crea puede invitar a cualquier
     // persona del proceso, también a un integrante.
     const uniqueIds = Array.from(new Set(dto.participantUserIds ?? []));
@@ -407,9 +416,7 @@ export class MeetingService {
           ...(dto.durationMinutes !== undefined
             ? { durationMinutes: dto.durationMinutes }
             : {}),
-          ...(dto.responsibleUserId !== undefined
-            ? { responsibleUserId: dto.responsibleUserId }
-            : {}),
+          ...(responsibleUserId !== undefined ? { responsibleUserId } : {}),
           ...(dto.relatedRequestId !== undefined
             ? { relatedRequestId: dto.relatedRequestId }
             : {}),

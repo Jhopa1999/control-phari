@@ -41,7 +41,7 @@ export function BlockCommitmentDialog({
       open={target !== null}
       taskTitle={shown?.title ?? ''}
       title="Marcar como bloqueado"
-      description="Cuéntale al equipo qué lo detiene."
+      description="Cuéntale al equipo qué lo detiene. El motivo es obligatorio."
       placeholder="Ej.: falta la aprobación del área financiera"
       confirmLabel="Marcar como bloqueado"
       prefill={shown?.blockers ?? ''}

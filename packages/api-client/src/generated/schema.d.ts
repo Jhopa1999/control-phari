@@ -2033,7 +2033,7 @@ export interface paths {
         /** Lista reuniones en alcance con filtros opcionales, búsqueda q (título, responsable, código o título de la solicitud relacionada), orden por fecha (dir) y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count. */
         get: operations["MeetingController_list"];
         put?: never;
-        /** Crea una reunion (estado inicial BORRADOR). */
+        /** Crea una reunion (estado inicial BORRADOR). Si no se indica responsable, lo es quien crea el acta cuando pertenece al proceso. */
         post: operations["MeetingController_create"];
         delete?: never;
         options?: never;
@@ -2174,7 +2174,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Transiciona el estado de un compromiso (maquina minima). Al pasar a BLOQUEADO admite blockedReason (hasta 500 caracteres), que se guarda en los bloqueos del compromiso. */
+        /** Transiciona el estado de un compromiso (maquina minima). Al pasar a BLOQUEADO exige blockedReason (obligatorio, hasta 500 caracteres), que se guarda en los bloqueos del compromiso. */
         post: operations["CommitmentController_transition"];
         delete?: never;
         options?: never;
@@ -6745,7 +6745,7 @@ export interface components {
             participantUserIds?: string[];
             /**
              * Format: uuid
-             * @description Responsable.
+             * @description Responsable. Si se omite, es quien crea el acta (cuando pertenece al proceso); asi el integrante conserva la vista de su acta.
              */
             responsibleUserId?: string;
             /**
@@ -6969,7 +6969,7 @@ export interface components {
             expectedResult?: string;
             /** @description Resultado/evidencia. */
             result?: string;
-            /** @description Bloqueos. */
+            /** @description Bloqueos. En un compromiso BLOQUEADO no puede quedar vacio (400); para bloquear usa la transicion con motivo. */
             blockers?: string;
         };
         TransitionDto: {
@@ -6979,7 +6979,7 @@ export interface components {
              * @enum {string}
              */
             toState: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
-            /** @description Motivo del bloqueo (1 a 500 caracteres tras recortar). Opcional y solo valido con toState BLOQUEADO; con otro estado se responde 400. Un texto vacio o solo espacios se trata como ausente. Se guarda en los bloqueos del compromiso. */
+            /** @description Motivo del bloqueo (1 a 500 caracteres tras recortar). OBLIGATORIO con toState BLOQUEADO (sin motivo se responde 400) y solo valido con ese estado (con otro se responde 400). Un texto vacio o solo espacios se trata como ausente. Se guarda en los bloqueos del compromiso. */
             blockedReason?: string;
         };
         GatePendingItemResponseDto: {
@@ -15715,7 +15715,7 @@ export interface operations {
                     "application/json": components["schemas"]["CommitmentResponseDto"];
                 };
             };
-            /** @description Transicion no permitida o motivo de bloqueo con otro estado. */
+            /** @description Transicion no permitida, BLOQUEADO sin motivo o motivo de bloqueo con otro estado. */
             400: {
                 headers: {
                     [name: string]: unknown;
