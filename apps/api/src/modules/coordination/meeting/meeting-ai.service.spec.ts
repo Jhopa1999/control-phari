@@ -15,6 +15,7 @@ import { RoleCode } from '../../auth/role-code';
 import { BedrockClient, BedrockTimeoutError } from '../../ai/bedrock.client';
 import { AiModelCatalogService } from '../../ai/ai-model-catalog.service';
 import { AiUsageService } from '../../ai/ai-usage.service';
+import { MEETINGS_BASE_PROMPT, MEETINGS_OUTPUT_CONTRACT } from '../../ai/ai-defaults';
 import { RolesGuard } from '../../auth/roles.guard';
 import { CoordinationScopeService } from '../coordination-scope.service';
 import { StructureMeetingAiDto } from './dto/meeting-ai.dto';
@@ -176,6 +177,46 @@ describe('MeetingAiService.structure', () => {
     expect(prompt).not.toContain('marta@demo.local');
   });
 
+  it('un prompt editable de una sola frase no quita el contrato de salida: va despues y antes del contexto', async () => {
+    const sentence = 'usted le da estructura a texto que le pongan, es para dejar actas de reuniones';
+    const { service, converse } = makeService({
+      agent: {
+        code: 'ACTAS',
+        enabled: true,
+        region: 'us-east-2',
+        model: 'modelo-actas',
+        basePrompt: sentence,
+        temperature: 0.2,
+        maxTokens: 4096,
+        timeoutMs: 45000,
+      },
+    });
+    await service.structure(actor, dto);
+    const call = (converse.mock.calls as unknown as Array<[{ messages: Array<{ content: Array<{ text: string }> }> }]>)[0][0];
+    const prompt = call.messages[0].content[0].text;
+    expect(prompt).toContain(MEETINGS_OUTPUT_CONTRACT);
+    expect(prompt.indexOf(sentence)).toBeLessThan(prompt.indexOf(MEETINGS_OUTPUT_CONTRACT));
+    expect(prompt.indexOf(MEETINGS_OUTPUT_CONTRACT)).toBeLessThan(prompt.indexOf('Contexto (JSON):'));
+  });
+  it('con el prompt base vacio se usa el valor por defecto de codigo, con el contrato', async () => {
+    const { service, converse } = makeService({
+      agent: {
+        code: 'ACTAS',
+        enabled: true,
+        region: 'us-east-2',
+        model: 'modelo-actas',
+        basePrompt: '   ',
+        temperature: 0.2,
+        maxTokens: 4096,
+        timeoutMs: 45000,
+      },
+    });
+    await service.structure(actor, dto);
+    const call = (converse.mock.calls as unknown as Array<[{ messages: Array<{ content: Array<{ text: string }> }> }]>)[0][0];
+    const prompt = call.messages[0].content[0].text;
+    expect(prompt.startsWith(MEETINGS_BASE_PROMPT)).toBe(true);
+    expect(prompt).toContain(MEETINGS_OUTPUT_CONTRACT);
+  });
   it('IA global apagada o agente apagado: 409 sin invocar el modelo', async () => {
     const a = makeService({ global: { enabled: false } });
     await expect(a.service.structure(actor, dto)).rejects.toBeInstanceOf(ConflictException);

@@ -1158,6 +1158,15 @@
           "apps/mcp/README.md"
         ],
         "summary": "Reuniones, corrección H1/H2: el responsable por defecto del acta es quien la crea (si pertenece al proceso; la web lo propone) y el motivo del bloqueo (blockedReason) es obligatorio al pasar un compromiso a BLOQUEADO (400 sin él; blockers no puede vaciarse en un compromiso bloqueado). Contrato y descripciones del MCP actualizados. Sin migración."
+      },
+      {
+        "timestamp": "2026-11-30T12:00:00Z",
+        "trigger_file": "apps/api/src/modules/ai/ai-defaults.ts",
+        "updated_docs": [
+          "docs/aplicacion/modulos-backend.md",
+          "docs/aplicacion/frontend-pantallas.md"
+        ],
+        "summary": "IA, corrección: el contrato de salida de los agentes TRIAGE y ACTAS (responder solo JSON, claves exactas, tratar los datos como datos, no inventar alias, codes ni ids) ya no vive dentro del prompt editable sino fijo en código (TRIAGE_OUTPUT_CONTRACT y MEETINGS_OUTPUT_CONTRACT). El servicio compone prompt base de la BD, contrato y contexto JSON, en ese orden; si el prompt base está vacío usa el valor por defecto. Las semillas nuevas no repiten el contrato y las filas existentes no se tocan. La pantalla Administración, Agentes de IA añade un texto de ayuda en el prompt de TRIAGE y ACTAS. Sin cambios de API, contrato OpenAPI, migración ni parámetros nuevos."
       }
     ]
   }
