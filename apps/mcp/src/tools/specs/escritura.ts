@@ -2,8 +2,7 @@
  * Tools de ESCRITURA que el asistente puede proponer: coordinación (hallazgos,
  * reuniones y compromisos), planes, fases, dependencias, activos y documentos.
  * Crean, editan o cambian de estado lo no decisorio. Quedan fuera el borrado,
- * el cierre o reapertura de reuniones, el cambio de estado de activos y
- * documentos, y la aprobación. El backend valida los datos y los permisos; aquí
+ * el cambio de estado de activos y documentos, y la aprobación. El backend valida los datos y los permisos; aquí
  * solo se declara el nombre, la operación y la descripción.
  */
 import type { ToolSpec } from '../spec.js';
@@ -50,6 +49,16 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
     'Actualiza los datos de una reunión (PATCH /meetings/{id}), incluida la duración en minutos (durationMinutes, múltiplo de 15; obligatoria para cerrar el acta). Sobre un acta cerrada solo se admite completar la duración. Solo el responsable, el líder del proceso o el jefe de área editan el acta (403 para otros participantes); los participantes nuevos deben ser del proceso y reciben un aviso. El backend valida los datos.',
   ),
 
+  escritura(
+    'meeting.close',
+    'POST /meetings/{id}/close',
+    'Cierra el acta de una reunión (POST /meetings/{id}/close): pasa a COMPLETADO y queda de solo lectura. Solo el responsable, el líder del proceso o el jefe de área (403 a los demás). Responde 400 si falta la duración (durationMinutes) y 409 si el acta ya está cerrada o si no tiene decisiones ni compromisos. No lleva cuerpo. Es reversible con meeting.reopen.',
+  ),
+  escritura(
+    'meeting.reopen',
+    'POST /meetings/{id}/reopen',
+    'Reabre un acta cerrada (POST /meetings/{id}/reopen): vuelve a BORRADOR y se puede editar. Solo el líder del proceso o el jefe de área (403 a los demás); 409 si el acta no está cerrada. No lleva cuerpo.',
+  ),
   // Compromisos
   escritura(
     'commitment.create',

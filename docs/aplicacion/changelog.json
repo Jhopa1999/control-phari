@@ -1139,6 +1139,15 @@
           "apps/mcp/README.md"
         ],
       "summary": "Reuniones PR-4: búsqueda y paginación de actas y compromisos (q, page, pageSize, X-Total-Count), filtros view/personId/meetingId/withoutMeeting, GET /coordination/requests, solicitud relacionada con código y título en acta y compromiso, límites de fecha D5 (COMMITMENT_PARAM), motivo de bloqueo en la transición (blockedReason), plantillas de agenda (MEETING_AGENDA_TEMPLATE, migración 20261127090000) y resumen del acta."
+      },
+      {
+        "timestamp": "2026-11-28T12:00:00Z",
+        "trigger_file": "apps/mcp/src/tools/specs/escritura.ts",
+        "updated_docs": [
+          "docs/aplicacion/modulos-backend.md",
+          "apps/mcp/README.md"
+        ],
+        "summary": "Reuniones PR-5: el MCP expone meeting.close y meeting.reopen (escritura, no destructivas) y el asistente puede proponerlas con confirmación; meeting.list y commitment.list documentan q y paginación. Sin cambios de API, contrato, migración ni parámetros nuevos."
       }
     ]
   }
