@@ -15309,7 +15309,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description El actor no pertenece al proceso indicado. */
+            /** @description El actor no pertenece al proceso indicado, o ligó el compromiso a un acta que no dirige (responsable, líder del proceso o jefe). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -15434,6 +15434,13 @@ export interface operations {
             };
             /** @description Datos invalidos. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Compromiso de un acta que el actor no dirige: solo puede registrar resultado y bloqueos. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

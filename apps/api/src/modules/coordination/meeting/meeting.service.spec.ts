@@ -229,6 +229,63 @@ describe('MeetingService', () => {
     expect(res.participantUserIds).toEqual(['uA']);
   });
 
+  it('create avisa a los participantes, excluye al autor y enlaza el acta', async () => {
+    m.prismaObj.meeting.create.mockImplementation(({ data }: any) =>
+      Promise.resolve(
+        meetingRow({
+          ...data,
+          participants: (data.participants?.create ?? []).map((p: any) =>
+            participant(p.userId),
+          ),
+        }),
+      ),
+    );
+    await m.service.create(lider(['p1']), {
+      processId: 'p1',
+      title: 'Sync',
+      meetingDate: '2025-03-10',
+      participantUserIds: ['uA', 'uA', 'uB'],
+    });
+    expect(m.notify).toHaveBeenCalledTimes(1);
+    expect(m.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userIds: ['uA', 'uB'],
+        excludeUserId: 'ul',
+        type: 'MEETING_PARTICIPANT_ADDED',
+        link: '/seguimiento/reuniones?meetingId=mt1',
+      }),
+    );
+  });
+  it('create sin participantes no envía avisos', async () => {
+    m.prismaObj.meeting.create.mockImplementation(({ data }: any) =>
+      Promise.resolve(meetingRow({ ...data, participants: [] })),
+    );
+    await m.service.create(lider(['p1']), {
+      processId: 'p1',
+      title: 'Sync',
+      meetingDate: '2025-03-10',
+    });
+    expect(m.notify).not.toHaveBeenCalled();
+  });
+  describe('viewerCanEdit', () => {
+    const jefe = (): CurrentActor => ({ ...lider(['p1']), userId: 'uj', isJefeArea: true });
+    it.each([
+      ['responsable', () => integrante('ur'), true],
+      ['líder del proceso', () => lider(['p1']), true],
+      ['jefe de área', jefe, true],
+      ['participante', () => integrante('ui'), false],
+      ['líder de otro proceso', () => lider(['p2']), false],
+    ])('%s -> %s', async (_n, actor, expected) => {
+      m.prismaObj.meeting.findFirst.mockResolvedValue(
+        meetingRow({
+          responsibleUserId: 'ur',
+          participants: [participant('ui'), participant('ul')],
+        }),
+      );
+      const res = await m.service.get((actor as () => CurrentActor)(), 'mt1');
+      expect(res.viewerCanEdit).toBe(expected);
+    });
+  });
   describe('update', () => {
     it('actualiza campos escalares y audita UPDATE', async () => {
       m.prismaObj.meeting.findFirst.mockResolvedValue(meetingRow());
@@ -301,6 +358,59 @@ describe('MeetingService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
+    it('un participante que no dirige el acta no la edita (403) y no se guarda nada', async () => {
+      m.prismaObj.meeting.findFirst.mockResolvedValue(
+        meetingRow({ responsibleUserId: 'ur', participants: [participant('ui')] }),
+      );
+      await expect(
+        m.service.update(integrante('ui'), 'mt1', { title: 'Cambio' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(m.prismaObj.meeting.update).not.toHaveBeenCalled();
+      expect(m.notify).not.toHaveBeenCalled();
+    });
+    it('avisa solo a los participantes nuevos, sin el autor y con enlace al acta', async () => {
+      m.prismaObj.meeting.findFirst.mockResolvedValue(
+        meetingRow({ participants: [participant('uA')] }),
+      );
+      m.prismaObj.meeting.update.mockResolvedValue(
+        meetingRow({ participants: [participant('uA'), participant('uB')] }),
+      );
+      await m.service.update(lider(['p1']), 'mt1', {
+        participantUserIds: ['uA', 'uB'],
+      });
+      expect(m.notify).toHaveBeenCalledTimes(1);
+      expect(m.notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userIds: ['uB'],
+          excludeUserId: 'ul',
+          type: 'MEETING_PARTICIPANT_ADDED',
+          link: '/seguimiento/reuniones?meetingId=mt1',
+        }),
+      );
+    });
+    it('sin participantes nuevos no avisa a nadie', async () => {
+      m.prismaObj.meeting.findFirst.mockResolvedValue(
+        meetingRow({ participants: [participant('uA')] }),
+      );
+      m.prismaObj.meeting.update.mockResolvedValue(
+        meetingRow({ participants: [participant('uA')] }),
+      );
+      await m.service.update(lider(['p1']), 'mt1', { participantUserIds: ['uA'] });
+      expect(m.notify).not.toHaveBeenCalled();
+    });
+    it('reenviar un participante guardado que dejó el proceso no da 400', async () => {
+      m.prismaObj.meeting.findFirst.mockResolvedValue(
+        meetingRow({ participants: [participant('uViejo')] }),
+      );
+      m.prismaObj.user.count.mockResolvedValue(0);
+      m.prismaObj.meeting.update.mockResolvedValue(
+        meetingRow({ participants: [participant('uViejo')] }),
+      );
+      await expect(
+        m.service.update(lider(['p1']), 'mt1', { participantUserIds: ['uViejo'] }),
+      ).resolves.toBeDefined();
+      expect(m.prismaObj.user.count).not.toHaveBeenCalled();
+    });
     it(':id fuera de alcance -> 404', async () => {
       m.prismaObj.meeting.findFirst.mockResolvedValue(null);
       await expect(

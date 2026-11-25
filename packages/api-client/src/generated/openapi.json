@@ -7966,7 +7966,7 @@
             "description": "Datos inválidos o proceso inexistente (jefe de área)."
           },
           "403": {
-            "description": "El actor no pertenece al proceso indicado."
+            "description": "El actor no pertenece al proceso indicado, o ligó el compromiso a un acta que no dirige (responsable, líder del proceso o jefe)."
           },
           "404": {
             "description": "Proceso o referencia fuera de alcance."
@@ -8073,6 +8073,9 @@
           },
           "400": {
             "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Compromiso de un acta que el actor no dirige: solo puede registrar resultado y bloqueos."
           },
           "404": {
             "description": "Compromiso o referencia fuera de alcance."

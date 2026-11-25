@@ -54,12 +54,12 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   escritura(
     'commitment.create',
     'POST /commitments',
-    'Registra un compromiso (POST /commitments). El cuerpo debe cumplir el DTO de creación; el backend valida los datos. El processId debe ser uno de tus procesos (403 si no perteneces a él; 400 si el jefe de área indica un proceso inexistente).',
+    'Registra un compromiso (POST /commitments). El cuerpo debe cumplir el DTO de creación; el backend valida los datos. El processId debe ser uno de tus procesos (403 si no perteneces a él; 400 si el jefe de área indica un proceso inexistente). Con sourceMeetingId solo el responsable del acta, el líder del proceso o el jefe pueden agregar compromisos (403 a los demás participantes).',
   ),
   escritura(
     'commitment.update',
     'PATCH /commitments/{id}',
-    'Actualiza los datos de un compromiso (PATCH /commitments/{id}). El backend valida los datos.',
+    'Actualiza los datos de un compromiso (PATCH /commitments/{id}). El backend valida los datos. Si el compromiso nace de un acta, solo el responsable del acta, el líder del proceso o el jefe cambian sus datos (403 a los demás); el asignado puede registrar result y blockers.',
   ),
   escritura(
     'commitment.transition',

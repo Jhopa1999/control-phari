@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,6 +10,7 @@ import { Prisma } from '../../../generated/prisma/client';
 import type { CommitmentModel } from '../../../generated/prisma/models/Commitment';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
+import { RoleCode } from '../../auth/role-code';
 import {
   NotificationService,
   NotificationType,
@@ -149,11 +151,12 @@ export class CommitmentService {
   ): Promise<void> {
     const meeting = await this.prisma.meeting.findFirst({
       where: { AND: [{ id: meetingId }, this.scope.meetingWhere(actor)] },
-      select: { id: true, state: true, processId: true },
+      select: { id: true, state: true, processId: true, responsibleUserId: true },
     });
     if (!meeting) {
       throw new NotFoundException('No se encontró la reunión.');
     }
+    this.assertCanEditMinutes(actor, meeting);
     if (isMinutesClosed(meeting.state)) {
       throw new ConflictException(
         'El acta está cerrada; no se le pueden agregar compromisos. Reábrela si es necesario.',
@@ -162,6 +165,28 @@ export class CommitmentService {
     if (meeting.processId !== processId) {
       throw new BadRequestException(
         'El compromiso debe pertenecer al mismo proceso que su acta de origen.',
+      );
+    }
+  }
+
+  /**
+   * Agregar o cambiar compromisos del acta lo hace quien la dirige: responsable,
+   * líder del proceso o jefe de área. Un participante solo da seguimiento a los
+   * compromisos asignados a él (completar, transicionar, resultado, bloqueos).
+   */
+  private assertCanEditMinutes(
+    actor: CurrentActor,
+    meeting: { processId: string; responsibleUserId: string | null },
+  ): void {
+    const canEdit =
+      actor.isJefeArea ||
+      meeting.responsibleUserId === actor.userId ||
+      actor.grants.some(
+        (g) => g.roleCode === RoleCode.LIDER_PROCESO && g.processId === meeting.processId,
+      );
+    if (!canEdit) {
+      throw new ForbiddenException(
+        'Solo el responsable del acta, el líder del proceso o el jefe de área pueden agregar o cambiar los compromisos del acta.',
       );
     }
   }
@@ -382,6 +407,23 @@ export class CommitmentService {
         ? dto.responsibleUserId
         : undefined,
     ]);
+    // Los campos de seguimiento (resultado, bloqueos) los puede trabajar quien
+    // tiene asignado el compromiso; el resto del compromiso de un acta lo
+    // cambia quien la dirige.
+    if (
+      existing.sourceMeetingId &&
+      Object.entries(dto).some(
+        ([key, value]) => value !== undefined && key !== 'result' && key !== 'blockers',
+      )
+    ) {
+      const source = await this.prisma.meeting.findFirst({
+        where: { id: existing.sourceMeetingId },
+        select: { processId: true, responsibleUserId: true },
+      });
+      if (source) {
+        this.assertCanEditMinutes(actor, source);
+      }
+    }
     // Solo se valida el acta si el compromiso se liga a OTRA acta: los
     // compromisos de un acta cerrada siguen editables (seguimiento).
     if (dto.sourceMeetingId && dto.sourceMeetingId !== existing.sourceMeetingId) {

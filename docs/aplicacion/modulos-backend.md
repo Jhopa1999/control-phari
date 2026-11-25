@@ -488,10 +488,10 @@ Duración de la reunión: `durationMinutes` entero, múltiplo de 15, entre 15 y 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/commitments` | Lista compromisos en alcance (filtros opcionales: `state`, `processId`, `assignedUserId`, `requestId` = solicitud relacionada o proyecto relacionado). |
-| POST | `/commitments` | Crea un compromiso (vencimiento requerido). El `processId` debe ser un proceso del actor (`403` si no; `400` si el jefe indica uno inexistente). `assignedUserId` y `responsibleUserId` (también en el PATCH) se validan igual que el responsable de una reunión: `400` «La persona indicada no existe o no pertenece al proceso.» (antes `500`). |
+| POST | `/commitments` | Crea un compromiso (vencimiento requerido). El `processId` debe ser un proceso del actor (`403` si no; `400` si el jefe indica uno inexistente). `assignedUserId` y `responsibleUserId` (también en el PATCH) se validan igual que el responsable de una reunión: `400` «La persona indicada no existe o no pertenece al proceso.» (antes `500`). Con `sourceMeetingId`, solo el responsable del acta, el líder del proceso o el jefe pueden agregar compromisos (`403` a los demás participantes). |
 | GET | `/commitments/my-work` | Compromisos de Mi trabajo: abiertos (`EN_CURSO`/`BLOQUEADO`) del actor (asignado; si no hay asignado, responsable) que están **vencidos o vencen hoy** (vencidos primero), con `total`, `overdueCount`, `dueTodayCount`, `upcomingCount` y `canComplete`. Completar usa la transición existente (`POST /commitments/:id/transition` con `COMPLETADO`). |
 | GET | `/commitments/:id` | Detalle de un compromiso. |
-| PATCH | `/commitments/:id` | Edita un compromiso. |
+| PATCH | `/commitments/:id` | Edita un compromiso. Si nace de un acta, solo el responsable del acta, el líder del proceso o el jefe cambian sus datos o lo ligan a otra acta (`403` a los demás); el asignado sigue registrando `result` y `blockers` y completando el compromiso con `/transition`. |
 | POST | `/commitments/:id/transition` | Transiciona el estado (máquina mínima). |
 | DELETE | `/commitments/:id` | Borra un compromiso en alcance. |
 
