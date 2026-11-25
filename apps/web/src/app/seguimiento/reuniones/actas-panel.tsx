@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
-import { Download, Lock, LockOpen, Plus, Printer, Trash2 } from 'lucide-react';
+import { Download, Eye, Lock, LockOpen, Plus, Printer, Trash2, UserCheck, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DescriptionList } from '@/components/description-list';
@@ -12,7 +12,6 @@ import { DueBadge } from '@/components/due-badge';
 import { InlineNotice } from '@/components/inline-notice';
 import { MasterDetail, SelectableList } from '@/components/master-detail';
 import { StatusBadge } from '@/components/status-badge';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,6 +30,7 @@ import {
 } from '@/lib/format';
 import {
   MeetingError,
+  PARTICIPANT_NOT_IN_PROCESS_MESSAGE,
   closeMeeting,
   createMeeting,
   deleteMeeting,
@@ -47,6 +47,10 @@ import type { CoordinationData } from './reuniones-view';
 
 const OUT_OF_SCOPE_PROCESS = 'Proceso fuera de tu alcance';
 const OUT_OF_SCOPE_PERSON = 'Persona fuera de tu alcance';
+/** Con más participantes que esto, el resto queda tras «Ver los N restantes». */
+const PARTICIPANTS_VISIBLE = 8;
+const FIRST_OWN_COMMITMENT_ID = 'acta-compromiso-propio';
+const ROLE_CHIP = 'inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium';
 
 function messageOf(err: unknown): string {
   return err instanceof MeetingError || err instanceof CommitmentError
@@ -104,6 +108,7 @@ export function ActasPanel({
   // Aviso del cierre rechazado (p. ej. falta la duración): se muestra en el acta.
   const [closeError, setCloseError] = React.useState<string | null>(null);
   const [focusDuration, setFocusDuration] = React.useState(false);
+  const [showAllParticipants, setShowAllParticipants] = React.useState(false);
   const [durationOpen, setDurationOpen] = React.useState(false);
   const listHeadingRef = React.useRef<HTMLHeadingElement>(null);
   const detailHeadingRef = React.useRef<HTMLHeadingElement>(null);
@@ -119,14 +124,28 @@ export function ActasPanel({
   });
 
   // Cambiar de acta descarta el aviso de un cierre rechazado.
-  useResetOnChange([selectedId], () => setCloseError(null));
+  useResetOnChange([selectedId], () => {
+    setCloseError(null);
+    setShowAllParticipants(false);
+  });
 
   const selected = meetings.find((m) => m.id === selectedId) ?? null;
   const processName = (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS;
+  const meetingProcessName = (m: Meeting) => m.processName || processName(m.processId);
   const personName = (id: string | null) =>
     id ? (people.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PERSON) : 'Sin asignar';
+  /** Nombre de una persona del acta: los datos del acta primero, luego la lista de personas. */
+  const meetingPersonName = (m: Meeting, id: string | null): string => {
+    if (!id) return 'Sin asignar';
+    const fromMeeting =
+      m.participants.find((p) => p.id === id)?.name ??
+      (m.responsibleUserId === id ? m.responsibleUserName : null) ??
+      m.commitments.find((c) => c.assignedUserId === id)?.assignedUserName ??
+      m.commitments.find((c) => c.responsibleUserId === id)?.responsibleUserName;
+    return fromMeeting ?? personName(id);
+  };
   const meetingMeta = (m: Meeting) =>
-    [formatDateOnly(m.meetingDate), meetingSchedule(m), processName(m.processId)]
+    [formatDateOnly(m.meetingDate), meetingSchedule(m), meetingProcessName(m)]
       .filter(Boolean)
       .join(' · ');
   const editingCommitment = editingCommitmentId
@@ -141,23 +160,37 @@ export function ActasPanel({
         title: values.title,
         meetingDate: values.meetingDate,
         meetingTime: trimOrUndefined(values.meetingTime),
-        participantUserIds: values.participantUserIds,
         responsibleUserId: trimOrUndefined(values.responsibleUserId),
         agenda: trimOrUndefined(values.agenda),
         decisions: trimOrUndefined(values.decisions),
         notes: trimOrUndefined(values.notes),
       };
       if (editing) {
-        // En la edición, null borra la duración registrada.
-        await updateMeeting(editing.id, { ...body, durationMinutes: values.durationMinutes });
+        // Los participantes solo se reenvían si cambiaron: reenviar el set guardado no debe fallar.
+        const saved = new Set(editing.participantUserIds);
+        const participantsChanged =
+          values.participantUserIds.length !== saved.size ||
+          values.participantUserIds.some((id) => !saved.has(id));
+        await updateMeeting(editing.id, {
+          ...body,
+          ...(participantsChanged ? { participantUserIds: values.participantUserIds } : {}),
+          // En la edición, null borra la duración registrada.
+          durationMinutes: values.durationMinutes,
+        });
         toast.success('Acta actualizada.');
       } else {
         const created = await createMeeting({
           processId: values.processId,
           ...body,
+          participantUserIds: values.participantUserIds,
           durationMinutes: values.durationMinutes ?? undefined,
         });
-        toast.success('Acta creada. Registra ahora los compromisos acordados.');
+        const notified = created.participantUserIds.filter((id) => id !== myId).length;
+        toast.success(
+          notified > 0
+            ? `Acta creada. Se avisó a ${notified} ${notified === 1 ? 'participante' : 'participantes'}.`
+            : 'Acta creada. Registra ahora los compromisos acordados.',
+        );
         setSelectedId(created.id);
       }
       setMeetingOpen(false);
@@ -167,7 +200,9 @@ export function ActasPanel({
       const message = messageOf(err);
       setFormError(message);
       // La persona fuera de alcance se muestra junto al selector, sin toast.
-      if (message !== PERSON_NOT_IN_PROCESS_MESSAGE) toast.error(message);
+      if (message !== PERSON_NOT_IN_PROCESS_MESSAGE && message !== PARTICIPANT_NOT_IN_PROCESS_MESSAGE) {
+        toast.error(message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -204,7 +239,9 @@ export function ActasPanel({
       const message = messageOf(err);
       setFormError(message);
       // La persona fuera de alcance se muestra junto al selector, sin toast.
-      if (message !== PERSON_NOT_IN_PROCESS_MESSAGE) toast.error(message);
+      if (message !== PERSON_NOT_IN_PROCESS_MESSAGE && message !== PARTICIPANT_NOT_IN_PROCESS_MESSAGE) {
+        toast.error(message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -252,14 +289,16 @@ export function ActasPanel({
       const message = messageOf(err);
       setFormError(message);
       // La persona fuera de alcance se muestra junto al selector, sin toast.
-      if (message !== PERSON_NOT_IN_PROCESS_MESSAGE) toast.error(message);
+      if (message !== PERSON_NOT_IN_PROCESS_MESSAGE && message !== PARTICIPANT_NOT_IN_PROCESS_MESSAGE) {
+        toast.error(message);
+      }
     } finally {
       setSubmitting(false);
     }
   }
 
   function exportCtx(m: Meeting) {
-    return { processName: processName(m.processId), personName };
+    return { processName: meetingProcessName(m), personName: (id: string | null) => meetingPersonName(m, id) };
   }
 
   function renderCommitments(m: Meeting): React.ReactNode {
@@ -269,7 +308,7 @@ export function ActasPanel({
           <h3 className="text-sm font-semibold">
             {`Compromisos (${m.commitmentsTotal}${m.commitmentsTotal > 0 ? ` · ${m.commitmentsOpen} abiertos` : ''})`}
           </h3>
-          {!m.closed ? (
+          {!m.closed && m.viewerCanEdit ? (
             <Button
               type="button"
               size="sm"
@@ -293,9 +332,16 @@ export function ActasPanel({
           <ul className="flex flex-col gap-2" aria-label="Compromisos del acta">
             {m.commitments.map((c) => {
               const full = commitments.find((x) => x.id === c.id);
+              const isMine = c.assignedUserId === myId || c.responsibleUserId === myId;
+              const isFirstMine = isMine && m.commitments.find((x) => x.assignedUserId === myId || x.responsibleUserId === myId)?.id === c.id;
 
               return (
-                <li key={c.id} className="flex flex-col gap-2 rounded-md border px-3 py-2">
+                <li
+                  key={c.id}
+                  id={isFirstMine ? FIRST_OWN_COMMITMENT_ID : undefined}
+                  tabIndex={isFirstMine ? -1 : undefined}
+                  className="flex flex-col gap-2 rounded-md border px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
@@ -309,9 +355,9 @@ export function ActasPanel({
                     <DueBadge status={c.dueStatus} daysToDue={c.daysToDue} dueDate={c.dueDate} />
                   </div>
                   <p className="text-meta text-muted-foreground">
-                    {`Asignado: ${c.assignedUserName ?? personName(c.assignedUserId)} · Vence ${formatDateOnly(c.dueDate)}`}
+                    {`Asignado: ${c.assignedUserName ?? meetingPersonName(m, c.assignedUserId)} · Vence ${formatDateOnly(c.dueDate)}`}
                     {c.responsibleUserId
-                      ? ` · Responsable: ${c.responsibleUserName ?? personName(c.responsibleUserId)}`
+                      ? ` · Responsable: ${c.responsibleUserName ?? meetingPersonName(m, c.responsibleUserId)}`
                       : ''}
                   </p>
                   {full ? (
@@ -357,6 +403,72 @@ export function ActasPanel({
     );
   }
 
+  /** Quienes participan, con su nombre; el responsable va primero. */
+  function renderParticipants(m: Meeting): React.ReactNode {
+    const responsible =
+      m.responsibleUserId && !m.participants.some((p) => p.id === m.responsibleUserId)
+        ? [{ id: m.responsibleUserId, name: m.responsibleUserName ?? 'Responsable' }]
+        : [];
+    const ordered = [...responsible, ...m.participants].sort(
+      (a, b) =>
+        Number(b.id === m.responsibleUserId) - Number(a.id === m.responsibleUserId) ||
+        a.name.localeCompare(b.name, 'es'),
+    );
+    const visible = showAllParticipants ? ordered : ordered.slice(0, PARTICIPANTS_VISIBLE);
+    const hidden = ordered.length - PARTICIPANTS_VISIBLE;
+    return (
+      <section aria-labelledby="acta-participantes" className="flex flex-col gap-2">
+        <h3 id="acta-participantes" className="text-sm font-semibold">
+          {`Participantes (${ordered.length})`}
+        </h3>
+        {ordered.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nadie más participa en esta acta.</p>
+        ) : (
+          <>
+            <ul id="acta-participantes-lista" className="flex flex-wrap gap-2">
+              {visible.map((person) => (
+                <li
+                  key={person.id}
+                  className="inline-flex min-h-8 max-w-full items-center gap-2 rounded-full bg-muted py-1 pl-1 pr-3 text-sm text-foreground"
+                >
+                  <span
+                    className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-subtle text-[0.6875rem] font-semibold text-link"
+                    aria-hidden="true"
+                  >
+                    {person.name.trim().slice(0, 1).toUpperCase() || '?'}
+                  </span>
+                  <span className="max-w-[16rem] truncate" title={person.name}>
+                    {person.name}
+                    {person.id === myId ? <span className="text-muted-foreground"> (tú)</span> : null}
+                  </span>
+                  {person.id === m.responsibleUserId ? (
+                    <span className={`${ROLE_CHIP} border-info-border bg-info-subtle text-info`}>
+                      <UserCheck className="size-3" aria-hidden="true" />
+                      Responsable
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            {hidden > 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="self-start"
+                aria-expanded={showAllParticipants}
+                aria-controls="acta-participantes-lista"
+                onClick={() => setShowAllParticipants((v) => !v)}
+              >
+                {showAllParticipants ? 'Ver menos' : `Ver los ${hidden} restantes`}
+              </Button>
+            ) : null}
+          </>
+        )}
+      </section>
+    );
+  }
+
   function renderDetail(): React.ReactNode {
     if (state === 'loading' && !selected) {
       return (
@@ -378,6 +490,11 @@ export function ActasPanel({
       );
     }
     const m = selected;
+    // Quién edita lo decide la API (`viewerCanEdit`); aquí solo se muestran o no los botones.
+    const canEdit = m.viewerCanEdit;
+    const hasOwnCommitment = m.commitments.some(
+      (c) => c.assignedUserId === myId || c.responsibleUserId === myId,
+    );
     const canClose = !m.closed && (m.responsibleUserId === myId || isManagerOf(m.processId));
     const canReopen = m.closed && isManagerOf(m.processId);
     // Sobre un acta cerrada la API admite solo la duración, a cargo del responsable, el líder o el jefe.
@@ -395,6 +512,12 @@ export function ActasPanel({
                 {m.title}
               </h2>
               <StatusBadge kind="minutes" value={m.state} />
+              {!canEdit ? (
+                <span className={`${ROLE_CHIP} border-neutral-border bg-neutral-subtle text-neutral`}>
+                  <Eye className="size-3" aria-hidden="true" />
+                  Solo lectura
+                </span>
+              ) : null}
             </div>
             <p className="text-meta text-muted-foreground">{meetingMeta(m)}</p>
           </div>
@@ -416,7 +539,7 @@ export function ActasPanel({
               <Printer aria-hidden="true" />
               Imprimir / PDF
             </Button>
-            {!m.closed ? (
+            {!m.closed && canEdit ? (
               <Button
                 type="button"
                 variant="outline"
@@ -449,7 +572,7 @@ export function ActasPanel({
                 Reabrir acta
               </Button>
             ) : null}
-            {!m.closed && m.commitmentsTotal === 0 ? (
+            {!m.closed && canEdit && m.commitmentsTotal === 0 ? (
               <Button
                 type="button"
                 variant="ghost-destructive"
@@ -489,29 +612,42 @@ export function ActasPanel({
               {closeError}
             </InlineNotice>
           ) : null}
-          {m.closed ? (
+          {!canEdit ? (
+            <InlineNotice
+              tone="neutral"
+              icon={Eye}
+              title={m.closed ? 'Acta cerrada, solo lectura' : 'Solo puedes leer esta acta'}
+              action={
+                hasOwnCommitment ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const target = document.getElementById(FIRST_OWN_COMMITMENT_ID);
+                      target?.scrollIntoView({ block: 'center' });
+                      target?.focus();
+                    }}
+                  >
+                    Ver mis compromisos de esta acta
+                  </Button>
+                ) : undefined
+              }
+            >
+              {m.closed
+                ? 'El acta está cerrada y tú participas en ella. Puedes leerla y descargarla.'
+                : 'Participas en esta reunión. Solo el responsable, el líder del proceso y la jefatura pueden editarla. Tus compromisos los actualizas desde esta pantalla o desde Mi trabajo.'}
+            </InlineNotice>
+          ) : m.closed ? (
             <InlineNotice tone="info">
               El acta está cerrada y queda como registro. Sus compromisos siguen su propio seguimiento.
             </InlineNotice>
           ) : null}
-          <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-semibold">Participantes</h3>
-            {m.participantUserIds.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin participantes registrados.</p>
-            ) : (
-              <ul aria-label="Participantes" className="flex flex-wrap gap-2">
-                {m.participantUserIds.map((id) => (
-                  <li key={id}>
-                    <Badge variant="outline">{personName(id)}</Badge>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          {renderParticipants(m)}
           <DescriptionList
             className="border-t pt-4"
             items={[
-              { term: 'Responsable', value: m.responsibleUserId ? personName(m.responsibleUserId) : null },
+              { term: 'Responsable', value: m.responsibleUserId ? meetingPersonName(m, m.responsibleUserId) : null },
               {
                 term: 'Horario',
                 value: formatTimeRange(m.meetingTime, m.meetingEndTime) ?? m.meetingTime,
@@ -594,7 +730,22 @@ export function ActasPanel({
                   id: m.id,
                   title: m.title,
                   meta: `${meetingMeta(m)} · ${m.commitmentsTotal} compromiso${m.commitmentsTotal === 1 ? '' : 's'}${m.commitmentsOpen > 0 ? ` (${m.commitmentsOpen} abiertos)` : ''}`,
-                  badge: <StatusBadge kind="minutes" value={m.state} />,
+                  badge: (
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <StatusBadge kind="minutes" value={m.state} />
+                      {m.responsibleUserId === myId ? (
+                        <span className={`${ROLE_CHIP} border-info-border bg-info-subtle text-info`}>
+                          <UserCheck className="size-3" aria-hidden="true" />
+                          Responsable
+                        </span>
+                      ) : !m.viewerCanEdit ? (
+                        <span className={`${ROLE_CHIP} border-neutral-border bg-neutral-subtle text-neutral`}>
+                          <Users className="size-3" aria-hidden="true" />
+                          Participante
+                        </span>
+                      ) : null}
+                    </span>
+                  ),
                 }))}
                 empty={{
                   title: 'Aún no hay actas.',
@@ -619,7 +770,7 @@ export function ActasPanel({
         }}
         editing={editing}
         processes={processes}
-        people={people}
+        myId={myId}
         focusDuration={focusDuration}
         submitting={submitting}
         errorMessage={formError}

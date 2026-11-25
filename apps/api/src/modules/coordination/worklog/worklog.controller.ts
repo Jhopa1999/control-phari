@@ -56,6 +56,7 @@ import {
   WeeklyReportDraftQueryDto,
 } from './dto/weekly-report-draft.dto';
 import { CoordinationPersonDto } from '../dto/coordination-person.dto';
+import { ListPeopleDto } from '../dto/list-people.dto';
 import { CurrentActor } from '../../auth/current-actor.decorator';
 import { CurrentActor as CurrentActorType } from '../../auth/current-actor';
 import { CurrentUserGuard } from '../../auth/current-user.guard';
@@ -86,11 +87,20 @@ export class WorklogController {
   // --- Personas en alcance (selectores) -----------------------------------
 
   @Get('coordination/people')
-  @ApiOperation({ summary: 'Personas en alcance para los selectores de Fase 5.' })
+  @ApiOperation({
+    summary:
+      'Personas en alcance para los selectores de Fase 5; con `processId`, los candidatos del proceso para responsable y participantes.',
+  })
   @ApiResponse({ status: 200, description: 'Personas visibles.', type: [CoordinationPersonDto] })
-  @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  people(@CurrentActor() actor: CurrentActorType) {
-    return this.scopeService.listPeople(actor);
+  @ApiResponse({ status: 400, description: 'Proceso inexistente (jefe de área) o parámetro inválido.' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente o el actor no pertenece al proceso indicado.' })
+  people(
+    @CurrentActor() actor: CurrentActorType,
+    @Query() query: ListPeopleDto,
+  ) {
+    return query.processId === undefined
+      ? this.scopeService.listPeople(actor)
+      : this.scopeService.listProcessPeople(actor, query.processId);
   }
 
   // --- Opciones de imputación ----------------------------------------------

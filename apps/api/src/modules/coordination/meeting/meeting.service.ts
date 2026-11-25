@@ -11,7 +11,14 @@ import type { MeetingModel } from '../../../generated/prisma/models/Meeting';
 import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
-import { CoordinationScopeService } from '../coordination-scope.service';
+import {
+  NotificationService,
+  NotificationType,
+} from '../../notification/notification.service';
+import {
+  CoordinationScopeService,
+  PARTICIPANT_NOT_IN_PROCESS_MESSAGE,
+} from '../coordination-scope.service';
 import { dateStringToDate, dateToString } from '../date';
 import { localToday } from '../local-day';
 import { OPEN_COMMITMENT_STATES, dueStatusOf } from '../commitment/commitment-due';
@@ -44,7 +51,9 @@ const COMMITMENT_SELECT = {
 const COMMITMENTS_OPEN_LIMIT = 500;
 
 const MEETING_INCLUDE = {
-  participants: { select: { userId: true } },
+  process: { select: { name: true } },
+  responsible: { select: { name: true } },
+  participants: { select: { userId: true, user: { select: { name: true } } } },
   commitments: {
     select: COMMITMENT_SELECT,
     orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
@@ -68,6 +77,7 @@ export class MeetingService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly scope: CoordinationScopeService,
+    private readonly notifications: NotificationService,
   ) {}
 
   private snapshot(
@@ -92,11 +102,12 @@ export class MeetingService {
     };
   }
 
-  private toResponse(row: MeetingWithRelations): MeetingResponseDto {
+  private toResponse(row: MeetingWithRelations, actor: CurrentActor): MeetingResponseDto {
     const today = localToday();
     return {
       id: row.id,
       processId: row.processId,
+      processName: row.process.name,
       title: row.title,
       state: row.state,
       meetingDate: dateToString(row.meetingDate),
@@ -104,7 +115,12 @@ export class MeetingService {
       durationMinutes: row.durationMinutes,
       meetingEndTime: meetingEndTimeOf(row.meetingTime, row.durationMinutes),
       participantUserIds: row.participants.map((p) => p.userId),
+      participants: row.participants
+        .map((p) => ({ id: p.userId, name: p.user.name }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'es')),
+      viewerCanEdit: this.canEditMinutes(actor, row),
       responsibleUserId: row.responsibleUserId,
+      responsibleUserName: row.responsible?.name ?? null,
       relatedRequestId: row.relatedRequestId,
       relatedProjectRequestId: row.relatedProjectRequestId,
       agenda: row.agenda,
@@ -135,29 +151,48 @@ export class MeetingService {
     };
   }
 
+
   /**
-   * Valida que todos los participantes esten en el alcance del actor
-   * (listPeople). Fuera -> 400 (dato de entrada invalido: el cliente no deberia
-   * ofrecer personas fuera del selector).
+   * Los participantes deben ser personas del proceso de la reunión (las mismas
+   * que acepta el responsable). Fuera -> 400: el cliente solo ofrece candidatos
+   * del proceso.
    */
-  private async assertParticipantsInScope(
-    actor: CurrentActor,
+  private async assertParticipantsInProcess(
+    processId: string,
     userIds: string[],
   ): Promise<void> {
-    if (userIds.length === 0) {
-      return;
-    }
-    const people = await this.scope.listPeople(actor);
-    const allowed = new Set(people.map((p) => p.id));
-    for (const id of userIds) {
-      if (!allowed.has(id)) {
-        throw new BadRequestException(
-          'Un participante está fuera de tu alcance.',
-        );
-      }
-    }
+    await this.scope.assertPeopleInProcess(
+      processId,
+      userIds,
+      PARTICIPANT_NOT_IN_PROCESS_MESSAGE,
+    );
   }
-
+  /** Avisa a las personas incluidas como participantes (no al autor). */
+  private async notifyParticipants(
+    actor: CurrentActor,
+    row: MeetingWithRelations,
+    userIds: string[],
+  ): Promise<void> {
+    if (userIds.length === 0) return;
+    await this.notifications.notify({
+      userIds,
+      excludeUserId: actor.userId,
+      type: NotificationType.MEETING_PARTICIPANT_ADDED,
+      title: 'Te incluyeron en una reunión',
+      message: `Participas en «${row.title}» (${dateToString(row.meetingDate)}). Puedes leer el acta completa.`,
+      link: `/seguimiento/reuniones?meetingId=${encodeURIComponent(row.id)}`,
+    });
+  }
+  /**
+   * Edita el contenido del acta quien la dirige: responsable, líder del proceso
+   * o jefe de área. Los demás participantes la leen y trabajan sus compromisos.
+   */
+  private canEditMinutes(actor: CurrentActor, row: MeetingModel): boolean {
+    return (
+      row.responsibleUserId === actor.userId ||
+      this.isManager(actor, row.processId)
+    );
+  }
   private async requireInScope(
     actor: CurrentActor,
     id: string,
@@ -218,7 +253,7 @@ export class MeetingService {
       include: MEETING_INCLUDE,
       orderBy: [{ meetingDate: 'desc' }, { createdAt: 'desc' }],
     });
-    return rows.map((row) => this.toResponse(row));
+    return rows.map((row) => this.toResponse(row, actor));
   }
 
   /**
@@ -288,7 +323,7 @@ export class MeetingService {
 
   async get(actor: CurrentActor, id: string): Promise<MeetingResponseDto> {
     const row = await this.requireInScope(actor, id);
-    return this.toResponse(row);
+    return this.toResponse(row, actor);
   }
 
   async create(
@@ -298,10 +333,10 @@ export class MeetingService {
     const meetingDate = dateStringToDate(dto.meetingDate);
     await this.scope.assertActorInProcess(actor, dto.processId);
     await this.scope.assertPeopleInProcess(dto.processId, [dto.responsibleUserId]);
-    const participantIds = dto.participantUserIds ?? [];
-    await this.assertParticipantsInScope(actor, participantIds);
-    // De-duplicar por si el cliente repite.
-    const uniqueIds = Array.from(new Set(participantIds));
+    // De-duplicar por si el cliente repite. Quien crea puede invitar a cualquier
+    // persona del proceso, también a un integrante.
+    const uniqueIds = Array.from(new Set(dto.participantUserIds ?? []));
+    await this.assertParticipantsInProcess(dto.processId, uniqueIds);
 
     const created = await this.prisma.$transaction(async (tx) => {
       const row = await tx.meeting.create({
@@ -354,7 +389,8 @@ export class MeetingService {
       return row;
     });
 
-    return this.toResponse(created);
+    await this.notifyParticipants(actor, created, uniqueIds);
+    return this.toResponse(created, actor);
   }
 
   async update(
@@ -385,6 +421,10 @@ export class MeetingService {
           'Solo el responsable de la reunión, el líder del proceso o el jefe de área pueden ajustar la duración de un acta cerrada.',
         );
       }
+    } else if (!this.canEditMinutes(actor, existing)) {
+      throw new ForbiddenException(
+        'Solo el responsable de la reunión, el líder del proceso o el jefe de área pueden editar el acta. Como participante puedes leerla y completar tus compromisos.',
+      );
     }
     if (dto.state !== undefined && isMinutesClosed(dto.state)) {
       throw new BadRequestException(
@@ -401,9 +441,14 @@ export class MeetingService {
       dto.responsibleUserId !== existing.responsibleUserId ? dto.responsibleUserId : undefined,
     ]);
     let uniqueIds: string[] | undefined;
+    let addedIds: string[] = [];
     if (dto.participantUserIds !== undefined) {
-      await this.assertParticipantsInScope(actor, dto.participantUserIds);
       uniqueIds = Array.from(new Set(dto.participantUserIds));
+      // Solo se validan las personas nuevas: quien ya participa no bloquea el
+      // guardado aunque haya dejado el proceso.
+      const current = new Set(existing.participants.map((p) => p.userId));
+      addedIds = uniqueIds.filter((id) => !current.has(id));
+      await this.assertParticipantsInProcess(existing.processId, addedIds);
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -464,7 +509,8 @@ export class MeetingService {
       return row;
     });
 
-    return this.toResponse(updated);
+    await this.notifyParticipants(actor, updated, addedIds);
+    return this.toResponse(updated, actor);
   }
 
   /**
@@ -532,12 +578,17 @@ export class MeetingService {
       });
       return row;
     });
-    return this.toResponse(updated);
+    return this.toResponse(updated, actor);
   }
 
   async remove(actor: CurrentActor, id: string): Promise<void> {
     const existing = await this.requireInScope(actor, id);
     this.assertOpen(existing);
+    if (!this.canEditMinutes(actor, existing)) {
+      throw new ForbiddenException(
+        'Solo el responsable de la reunión, el líder del proceso o el jefe de área pueden eliminar el acta.',
+      );
+    }
     if (existing.commitments.length > 0) {
       throw new ConflictException(
         'No se puede eliminar un acta con compromisos registrados; elimina o reasigna primero sus compromisos.',

@@ -44,13 +44,22 @@ export class MeetingCommitmentDto {
   daysToDue!: number | null;
 }
 
-/** Contrato HTTP de una reunion (design §3.4). Incluye los ids de participantes. */
+/** Participante del acta: id y nombre, visibles para quien ve el acta. */
+export class MeetingParticipantDto {
+  @ApiProperty({ type: String, format: 'uuid' })
+  id!: string;
+  @ApiProperty({ type: String, description: 'Nombre de la persona.' })
+  name!: string;
+}
+/** Contrato HTTP de una reunion (design §3.4). Incluye los participantes con su nombre. */
 export class MeetingResponseDto {
   @ApiProperty({ type: String, format: 'uuid' })
   id!: string;
 
   @ApiProperty({ type: String, format: 'uuid', description: 'Proceso de la reunion.' })
   processId!: string;
+  @ApiProperty({ type: String, description: 'Nombre del proceso de la reunión.' })
+  processName!: string;
 
   @ApiProperty({ type: String, description: 'Titulo.' })
   title!: string;
@@ -72,9 +81,23 @@ export class MeetingResponseDto {
 
   @ApiProperty({ type: [String], format: 'uuid', description: 'Participantes.' })
   participantUserIds!: string[];
+  @ApiProperty({
+    type: [MeetingParticipantDto],
+    description: 'Participantes con su nombre, por orden alfabético. Los ve quien ve el acta.',
+  })
+  participants!: MeetingParticipantDto[];
+  @ApiProperty({
+    type: Boolean,
+    description:
+      'Quien consulta puede editar el acta: es su responsable, líder del proceso o jefe de área. Los demás participantes la leen y completan sus compromisos.',
+  })
+  viewerCanEdit!: boolean;
 
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   responsibleUserId!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Nombre del responsable de la reunión.' })
+  responsibleUserName!: string | null;
 
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   relatedRequestId!: string | null;

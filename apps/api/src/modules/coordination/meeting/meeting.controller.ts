@@ -36,7 +36,7 @@ import { RoleCode } from '../../auth/role-code';
 
 /**
  * API REST de reuniones (design §3). Los 3 roles tienen el modulo; alcance en el
- * service (404 fuera). Participantes limitados al alcance (400 si fuera).
+ * service (404 fuera). Participantes limitados a las personas del proceso de la reunión (400 si no lo son).
  */
 @ApiTags('meetings')
 @Controller('meetings')
@@ -73,7 +73,7 @@ export class MeetingController {
   @ApiOperation({ summary: 'Crea una reunion (estado inicial BORRADOR).' })
   @ApiBody({ type: CreateMeetingDto })
   @ApiResponse({ status: 201, description: 'Reunion creada.', type: MeetingResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos inválidos, participante fuera de alcance o proceso inexistente (jefe de área).' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos, participante que no es del proceso de la reunión o proceso inexistente (jefe de área).' })
   @ApiResponse({ status: 403, description: 'El actor no pertenece al proceso indicado.' })
   @ApiResponse({ status: 404, description: 'Referencia fuera de alcance.' })
   create(
@@ -100,7 +100,8 @@ export class MeetingController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: UpdateMeetingDto })
   @ApiResponse({ status: 200, description: 'Reunion actualizada.', type: MeetingResponseDto })
-  @ApiResponse({ status: 400, description: 'Datos invalidos o participante fuera de alcance.' })
+  @ApiResponse({ status: 400, description: 'Datos invalidos o participante que no es del proceso de la reunión.' })
+  @ApiResponse({ status: 403, description: 'Solo el responsable, el líder del proceso o el jefe de área editan el acta.' })
   @ApiResponse({ status: 404, description: 'Reunion fuera de alcance.' })
   @ApiResponse({ status: 409, description: 'El acta está cerrada.' })
   update(
@@ -148,6 +149,7 @@ export class MeetingController {
   @ApiOperation({ summary: 'Borra un acta abierta sin compromisos (cascade de participantes).' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Reunion borrada.' })
+  @ApiResponse({ status: 403, description: 'Solo el responsable, el líder del proceso o el jefe de área eliminan el acta.' })
   @ApiResponse({ status: 404, description: 'Reunion fuera de alcance.' })
   @ApiResponse({ status: 409, description: 'Acta cerrada, con compromisos o con tiempo registrado en una bitácora.' })
   remove(

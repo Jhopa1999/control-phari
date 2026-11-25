@@ -4,6 +4,7 @@ import { AuditService } from '../../audit/audit.service';
 import { CurrentActor } from '../../auth/current-actor';
 import { RoleCode } from '../../auth/role-code';
 import { CoordinationScopeService } from '../coordination-scope.service';
+import { NotificationService } from '../../notification/notification.service';
 import { MeetingService } from './meeting.service';
 
 function actor(role: RoleCode, userId = 'u1'): CurrentActor {
@@ -38,7 +39,9 @@ function row(overrides: Record<string, unknown> = {}) {
     notes: null,
     createdAt: now,
     updatedAt: now,
-    participants: [{ userId: 'u1' }],
+    process: { name: 'Proceso' },
+    responsible: null,
+    participants: [{ userId: 'u1', user: { name: 'Uno' } }],
     commitments: [],
     ...overrides,
   };
@@ -59,7 +62,12 @@ function build(current: ReturnType<typeof row>) {
   prismaObj.$transaction = jest.fn((cb: (tx: unknown) => unknown) => cb(prismaObj));
   const prisma = prismaObj as unknown as PrismaService;
   const audit = { record: jest.fn() } as unknown as AuditService;
-  const service = new MeetingService(prisma, audit, new CoordinationScopeService(prisma));
+  const service = new MeetingService(
+    prisma,
+    audit,
+    new CoordinationScopeService(prisma),
+    { notify: jest.fn() } as unknown as NotificationService,
+  );
   return { service, prismaObj };
 }
 

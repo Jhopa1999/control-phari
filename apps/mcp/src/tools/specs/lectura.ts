@@ -187,7 +187,7 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   lectura(
     'worklog.people',
     'GET /coordination/people',
-    'Lista las personas visibles para coordinación de bitácora (GET /coordination/people).',
+    'Lista las personas visibles para coordinación de bitácora (GET /coordination/people). Con processId devuelve los candidatos a responsable y participantes de ese proceso.',
   ),
   lectura(
     'worklog.daily.list',
@@ -243,9 +243,13 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   lectura(
     'meeting.list',
     'GET /meetings',
-    'Lista las reuniones (GET /meetings), con filtros opcionales; usa requestId para ver las de un proyecto.',
+    'Lista las reuniones (GET /meetings), con filtros opcionales; usa requestId para ver las de un proyecto. Incluye los participantes con nombre y viewerCanEdit (si quien consulta puede editar el acta).',
   ),
-  lectura('meeting.get', 'GET /meetings/{id}', 'Obtiene una reunión por id (GET /meetings/{id}).'),
+  lectura(
+    'meeting.get',
+    'GET /meetings/{id}',
+    'Obtiene una reunión por id (GET /meetings/{id}), con participantes (id y nombre) y viewerCanEdit.',
+  ),
   lectura(
     'commitment.list',
     'GET /commitments',
