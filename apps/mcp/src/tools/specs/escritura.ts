@@ -52,7 +52,7 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   escritura(
     'meeting.close',
     'POST /meetings/{id}/close',
-    'Cierra el acta de una reunión (POST /meetings/{id}/close): pasa a COMPLETADO y queda de solo lectura. Solo el responsable, el líder del proceso o el jefe de área (403 a los demás). Responde 409 si el acta ya está cerrada, si falta la duración (durationMinutes) o si no tiene decisiones ni compromisos. No lleva cuerpo. Es reversible con meeting.reopen.',
+    'Cierra el acta de una reunión (POST /meetings/{id}/close): pasa a COMPLETADO y queda de solo lectura. Solo el responsable, el líder del proceso o el jefe de área (403 a los demás). Responde 400 si falta la duración (durationMinutes) y 409 si el acta ya está cerrada o si no tiene decisiones ni compromisos. No lleva cuerpo. Es reversible con meeting.reopen.',
   ),
   escritura(
     'meeting.reopen',

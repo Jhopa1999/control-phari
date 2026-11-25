@@ -12,6 +12,8 @@ describe('herramientas del asistente', () => {
   it('las de escritura solo se ofrecen si están en la lista de propuestas y no son destructivas', () => {
     expect(isToolAllowed('request.create', false)).toBe(true);
     expect(isToolAllowed('task.status.update', false)).toBe(true);
+    expect(isToolAllowed('meeting.close', false)).toBe(true);
+    expect(isToolAllowed('meeting.reopen', false)).toBe(true);
     // Decisiones, borrado y administración quedan fuera.
     const forbidden = [
       'request.approval.create',
