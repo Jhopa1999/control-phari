@@ -24,8 +24,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { CoordinationPerson, Meeting, Process } from '@/lib/api-client';
-import { localDateInputValue } from '@/lib/format';
+import { Sparkles, X } from 'lucide-react';
+import type { CoordinationPerson, Meeting, MeetingAiProposal, Process } from '@/lib/api-client';
+import { formatDateOnly, localDateInputValue } from '@/lib/format';
+import { getMeetingAiAvailability, type MeetingAiUiStatus } from '@/lib/meetings-ai';
 import {
   PARTICIPANT_NOT_IN_PROCESS_COPY,
   PARTICIPANT_NOT_IN_PROCESS_MESSAGE,
@@ -40,6 +42,10 @@ import {
   type DuracionParts,
 } from './duracion-field';
 import { ParticipantesField, type PeopleLoadState } from './participantes-field';
+import { ActaIaPanel } from './acta-ia-panel';
+import { ActaIaPreview, type AppliedProposal, type PendingCommitment } from './acta-ia-preview';
+
+export type { PendingCommitment } from './acta-ia-preview';
 
 export interface ReunionFormValues {
   processId: string;
@@ -53,6 +59,8 @@ export interface ReunionFormValues {
   agenda: string;
   decisions: string;
   notes: string;
+  /** Compromisos aceptados desde la propuesta de IA; se crean después de guardar el acta. */
+  pendingCommitments: PendingCommitment[];
 }
 
 interface ReunionFormDialogProps {
@@ -131,6 +139,17 @@ export function ReunionFormDialog({
   const [reloadKey, setReloadKey] = React.useState(0);
   // Aviso de lo que se quitó al cambiar de proceso (solo al crear).
   const [removedNotice, setRemovedNotice] = React.useState<string | null>(null);
+  // Ayuda de IA: disponibilidad, notas, propuesta en revisión y compromisos aceptados.
+  const [iaStatus, setIaStatus] = React.useState<MeetingAiUiStatus>('checking');
+  const [iaMessage, setIaMessage] = React.useState<string | undefined>(undefined);
+  const [iaText, setIaText] = React.useState('');
+  const [proposal, setProposal] = React.useState<MeetingAiProposal | null>(null);
+  const [view, setView] = React.useState<'form' | 'preview'>('form');
+  const [discardRequest, setDiscardRequest] = React.useState(0);
+  const [cancelSignal, setCancelSignal] = React.useState(0);
+  const [appliedNotice, setAppliedNotice] = React.useState<string | null>(null);
+  const [pending, setPending] = React.useState<PendingCommitment[]>([]);
+  const iaButtonRef = React.useRef<HTMLButtonElement>(null);
   const processRef = React.useRef<HTMLButtonElement>(null);
   const titleRef = React.useRef<HTMLInputElement>(null);
   const dateRef = React.useRef<HTMLInputElement>(null);
@@ -158,6 +177,13 @@ export function ReunionFormDialog({
   useResetOnChange([open, editing], () => {
     if (!open) return;
     setFieldErrors({});
+    setIaStatus('checking');
+    setIaMessage(undefined);
+    setIaText('');
+    setProposal(null);
+    setView('form');
+    setAppliedNotice(null);
+    setPending([]);
     if (editing) {
       setProcessId(editing.processId);
       setTitle(editing.title);
@@ -183,6 +209,21 @@ export function ReunionFormDialog({
       setNotes('');
     }
   });
+
+  // Disponibilidad de la ayuda de IA al abrir (un acta cerrada no la usa).
+  const iaApplies = !(editing?.closed ?? false);
+  React.useEffect(() => {
+    if (!open || !iaApplies) return;
+    let cancelled = false;
+    void getMeetingAiAvailability().then((result) => {
+      if (cancelled) return;
+      setIaStatus(result.status);
+      setIaMessage(result.message);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, iaApplies]);
 
   // Al abrir, al cambiar de proceso o al reintentar se vuelve a cargar a las personas del proceso.
   useResetOnChange([open, processId, reloadKey], () => {
@@ -234,8 +275,68 @@ export function ReunionFormDialog({
     setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
   }
 
+  function focusSoon(id: string) {
+    window.setTimeout(() => document.getElementById(id)?.focus(), 50);
+  }
+
+  function handleProposal(next: MeetingAiProposal) {
+    setProposal(next);
+    setAppliedNotice(null);
+    setView('preview');
+  }
+
+  function discardProposal() {
+    setView('form');
+    setProposal(null);
+    window.setTimeout(() => iaButtonRef.current?.focus(), 50);
+  }
+
+  function applyProposal(applied: AppliedProposal) {
+    const filled: string[] = [];
+    if (applied.fields.agenda !== undefined) {
+      setAgenda(applied.fields.agenda);
+      filled.push('Agenda');
+    }
+    if (applied.fields.decisions !== undefined) {
+      setDecisions(applied.fields.decisions);
+      filled.push('Decisiones y acuerdos');
+    }
+    if (applied.fields.notes !== undefined) {
+      setNotes(applied.fields.notes);
+      filled.push('Observaciones');
+    }
+    if (applied.commitments.length > 0) {
+      setPending((prev) => [...prev, ...applied.commitments]);
+    }
+    const parts = [...filled];
+    if (applied.commitments.length > 0) {
+      parts.push(
+        applied.commitments.length === 1
+          ? '1 compromiso pendiente'
+          : `${applied.commitments.length} compromisos pendientes`,
+      );
+    }
+    const joined = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} y ${parts[parts.length - 1]}` : parts[0];
+    setAppliedNotice(`Se aplicó la propuesta: ${joined}. Revisa todo antes de guardar.`);
+    setProposal(null);
+    setView('form');
+    if (applied.fields.agenda !== undefined) focusSoon('reu-agenda');
+    else if (applied.fields.decisions !== undefined) focusSoon('reu-decisions');
+    else if (applied.fields.notes !== undefined) focusSoon('reu-notes');
+    else window.setTimeout(() => iaButtonRef.current?.focus(), 50);
+  }
+
+  function removePending(index: number) {
+    const remaining = pending.length - 1;
+    setPending((prev) => prev.filter((_, i) => i !== index));
+    if (remaining === 0) window.setTimeout(() => iaButtonRef.current?.focus(), 50);
+    else focusSoon(`reu-pend-remove-${Math.min(index, remaining - 1)}`);
+  }
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    // El acta no depende de la IA: se cancela cualquier petición en curso.
+    setCancelSignal((n) => n + 1);
     const durationMinutes = partsToMinutes(duration);
     const errors = validate({ processId, title, meetingDate, meetingTime, durationMinutes }, isEdit);
     setFieldErrors(errors);
@@ -259,6 +360,7 @@ export function ReunionFormDialog({
       agenda,
       decisions,
       notes,
+      pendingCommitments: pending,
     });
   }
 
@@ -273,6 +375,18 @@ export function ReunionFormDialog({
       ? PARTICIPANT_NOT_IN_PROCESS_COPY
       : person.formMessage;
 
+  const inPreview = view === 'preview' && proposal !== null;
+  const pendingSuffix =
+    pending.length === 0 ? '' : pending.length === 1 ? ' y 1 compromiso' : ` y ${pending.length} compromisos`;
+  const submitLabel =
+    pending.length === 0
+      ? isEdit
+        ? 'Guardar cambios'
+        : 'Crear acta'
+      : isEdit
+        ? `Guardar cambios y crear ${pending.length === 1 ? '1 compromiso' : `${pending.length} compromisos`}`
+        : `Crear acta${pendingSuffix}`;
+
   // Sin códigos internos visibles (design §13.1).
   const processName = (id: string) =>
     processes.find((p) => p.id === id)?.name ?? 'Proceso fuera de tu alcance';
@@ -283,16 +397,44 @@ export function ReunionFormDialog({
         size="md"
         onOpenAutoFocus={captureTrigger}
         onCloseAutoFocus={handleCloseAutoFocus}
+        // En la vista previa, Escape y el clic fuera no cierran el diálogo: Escape
+        // vuelve al formulario (pide confirmar si se editó la propuesta).
+        onEscapeKeyDown={(event) => {
+          if (inPreview) {
+            event.preventDefault();
+            setDiscardRequest((n) => n + 1);
+          }
+        }}
+        onInteractOutside={(event) => {
+          if (inPreview) event.preventDefault();
+        }}
       >
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Editar acta' : 'Nueva acta de reunión'}</DialogTitle>
-          <DialogDescription>
-            Registra los datos de la reunión, quiénes asistieron, la agenda y lo decidido. Los
-            compromisos se agregan desde el acta.
-          </DialogDescription>
-        </DialogHeader>
+        {inPreview && proposal ? (
+          <ActaIaPreview
+            proposal={proposal}
+            people={people}
+            current={{ agenda, decisions, notes }}
+            discardRequest={discardRequest}
+            onDiscard={discardProposal}
+            onApply={applyProposal}
+          />
+        ) : (
+          <DialogHeader>
+            <DialogTitle>{isEdit ? 'Editar acta' : 'Nueva acta de reunión'}</DialogTitle>
+            <DialogDescription>
+              Registra los datos de la reunión, quiénes asistieron, la agenda y lo decidido. Los
+              compromisos se agregan desde el acta.
+            </DialogDescription>
+          </DialogHeader>
+        )}
 
-        <form id={FORM_ID} noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <form
+          id={FORM_ID}
+          noValidate
+          onSubmit={handleSubmit}
+          // El formulario se oculta (no se desmonta) mientras se revisa la propuesta.
+          className={inPreview ? 'hidden' : 'flex min-h-0 flex-1 flex-col'}
+        >
           <DialogBody className="grid gap-4">
             <RequiredHint />
             <Field id="reu-process" label="Proceso" required={!isEdit} error={fieldErrors.processId}>
@@ -305,6 +447,11 @@ export function ReunionFormDialog({
                     onValueChange={(value) => {
                       setProcessId(value);
                       setRemovedNotice(null);
+                      // Los responsables propuestos eran de otro proceso: se descartan.
+                      if (pending.length > 0) {
+                        setPending([]);
+                        setAppliedNotice(null);
+                      }
                       clearError('processId');
                     }}
                   >
@@ -441,6 +588,27 @@ export function ReunionFormDialog({
               </InlineNotice>
             ) : null}
 
+            {iaApplies ? (
+              <ActaIaPanel
+                status={iaStatus}
+                unavailableMessage={iaMessage}
+                processId={processId}
+                meetingDate={meetingDate}
+                participantUserIds={participantUserIds}
+                text={iaText}
+                onTextChange={(value) => {
+                  setIaText(value);
+                  setAppliedNotice(null);
+                }}
+                appliedNotice={appliedNotice}
+                onProposal={handleProposal}
+                onBlocked={() => setIaStatus('unavailable')}
+                cancelSignal={cancelSignal}
+                disabled={submitting}
+                buttonRef={iaButtonRef}
+              />
+            ) : null}
+
             <Field id="reu-agenda" label="Agenda">
               <Textarea value={agenda} onChange={(e) => setAgenda(e.target.value)} />
             </Field>
@@ -452,6 +620,50 @@ export function ReunionFormDialog({
             <Field id="reu-notes" label="Observaciones">
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
             </Field>
+
+            {pending.length > 0 ? (
+              <section aria-labelledby="reu-pend-title" className="grid gap-2">
+                <h3 id="reu-pend-title" className="text-sm font-semibold text-foreground">
+                  Compromisos que se crearán al guardar ({pending.length})
+                </h3>
+                <p className="text-meta text-muted-foreground">
+                  Primero se guarda el acta y luego se crean estos compromisos. Cada persona recibe su
+                  aviso.
+                </p>
+                <ul className="grid gap-2">
+                  {pending.map((c, index) => (
+                    <li
+                      key={c.key}
+                      className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card p-3"
+                    >
+                      <div className="grid min-w-0 gap-1">
+                        <p className="min-w-0 break-words text-sm font-medium text-foreground">{c.title}</p>
+                        <p className="text-meta text-muted-foreground break-words">
+                          Responsable: {c.assignedUserName || 'Sin responsable'} · Vence{' '}
+                          {formatDateOnly(c.dueDate)}
+                        </p>
+                        <span className="inline-flex w-fit items-center gap-1 rounded-full border border-info-border bg-info-subtle px-2 py-0.5 text-xs font-medium text-info">
+                          <Sparkles className="size-3" aria-hidden="true" />
+                          Propuesto por IA
+                        </span>
+                      </div>
+                      <Button
+                        id={`reu-pend-remove-${index}`}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="pointer-coarse:min-h-11"
+                        aria-label={`Quitar el compromiso: ${c.title}`}
+                        onClick={() => removePending(index)}
+                      >
+                        <X className="size-3.5" aria-hidden="true" />
+                        Quitar
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
 
             <FormError id={FORM_ID} message={formMessage} />
           </DialogBody>
@@ -466,7 +678,7 @@ export function ReunionFormDialog({
               Cancelar
             </Button>
             <Button type="submit" loading={submitting}>
-              {submitting ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear acta'}
+              {submitting ? 'Guardando…' : submitLabel}
             </Button>
           </DialogFooter>
         </form>

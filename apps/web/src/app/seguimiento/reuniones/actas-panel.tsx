@@ -42,7 +42,11 @@ import { nextStates, stateLabel } from '@/lib/record-state';
 import { PERSON_NOT_IN_PROCESS_MESSAGE } from '@/lib/use-person-error';
 import { CompromisoFormDialog, type CompromisoFormValues } from './compromiso-form-dialog';
 import { RegistrarDuracionDialog } from './registrar-duracion-dialog';
-import { ReunionFormDialog, type ReunionFormValues } from './reunion-form-dialog';
+import {
+  ReunionFormDialog,
+  type PendingCommitment,
+  type ReunionFormValues,
+} from './reunion-form-dialog';
 import type { CoordinationData } from './reuniones-view';
 
 const OUT_OF_SCOPE_PROCESS = 'Proceso fuera de tu alcance';
@@ -152,6 +156,47 @@ export function ActasPanel({
     ? (commitments.find((c) => c.id === editingCommitmentId) ?? null)
     : null;
 
+  /**
+   * Crea, con el POST /commitments de siempre, los compromisos que la persona
+   * aceptó de la propuesta de IA. Devuelve los títulos que no se pudieron crear.
+   */
+  async function createPendingCommitments(
+    meetingId: string,
+    processId: string,
+    list: PendingCommitment[],
+  ): Promise<string[]> {
+    const failed: string[] = [];
+    for (const item of list) {
+      try {
+        await createCommitment({
+          title: item.title,
+          dueDate: item.dueDate,
+          assignedUserId: trimOrUndefined(item.assignedUserId),
+          expectedResult: trimOrUndefined(item.expectedResult),
+          processId,
+          sourceMeetingId: meetingId,
+        });
+      } catch {
+        failed.push(item.title);
+      }
+    }
+    return failed;
+  }
+
+  function notifyCommitmentsResult(base: string, total: number, failed: string[]): void {
+    if (total === 0) {
+      toast.success(`${base}.`);
+    } else if (failed.length === 0) {
+      toast.success(
+        `${base} con ${total === 1 ? '1 compromiso' : `${total} compromisos`}. Se avisó a las personas asignadas.`,
+      );
+    } else {
+      toast.warning(
+        `${base}. ${failed.length} de ${total} compromisos no se pudo crear: «${failed.join('», «')}». Agrégalo desde el acta.`,
+      );
+    }
+  }
+
   async function handleMeetingSubmit(values: ReunionFormValues): Promise<void> {
     setSubmitting(true);
     setFormError(null);
@@ -177,7 +222,12 @@ export function ActasPanel({
           // En la edición, null borra la duración registrada.
           durationMinutes: values.durationMinutes,
         });
-        toast.success('Acta actualizada.');
+        const failed = await createPendingCommitments(
+          editing.id,
+          editing.processId,
+          values.pendingCommitments,
+        );
+        notifyCommitmentsResult('Acta actualizada', values.pendingCommitments.length, failed);
       } else {
         const created = await createMeeting({
           processId: values.processId,
@@ -186,11 +236,20 @@ export function ActasPanel({
           durationMinutes: values.durationMinutes ?? undefined,
         });
         const notified = created.participantUserIds.filter((id) => id !== myId).length;
-        toast.success(
-          notified > 0
-            ? `Acta creada. Se avisó a ${notified} ${notified === 1 ? 'participante' : 'participantes'}.`
-            : 'Acta creada. Registra ahora los compromisos acordados.',
-        );
+        if (values.pendingCommitments.length > 0) {
+          const failed = await createPendingCommitments(
+            created.id,
+            created.processId,
+            values.pendingCommitments,
+          );
+          notifyCommitmentsResult('Acta creada', values.pendingCommitments.length, failed);
+        } else {
+          toast.success(
+            notified > 0
+              ? `Acta creada. Se avisó a ${notified} ${notified === 1 ? 'participante' : 'participantes'}.`
+              : 'Acta creada. Registra ahora los compromisos acordados.',
+          );
+        }
         setSelectedId(created.id);
       }
       setMeetingOpen(false);

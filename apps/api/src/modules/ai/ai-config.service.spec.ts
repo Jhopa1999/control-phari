@@ -8,6 +8,8 @@ import {
   ASSISTANT_AGENT_CODE,
   ASSISTANT_BASE_PROMPT,
   DEFAULT_AGENT_CONFIGS,
+  MEETINGS_AGENT_CODE,
+  MEETINGS_BASE_PROMPT,
   TRIAGE_AGENT_CODE,
   TRIAGE_BASE_PROMPT,
 } from './ai-defaults';
@@ -329,6 +331,24 @@ describe('AiConfigService', () => {
       expect(arg.create.timeoutMs).toBeLessThanOrEqual(60000);
     });
 
+    it('ensureDefaultAgents crea el agente de actas apagado, sin pisar lo que edite el admin', async () => {
+      const { service, prisma } = makeDeps({});
+      await service.ensureDefaultAgents();
+      const upsert = prisma.aiAgentConfig.upsert as jest.Mock;
+      const arg = upsert.mock.calls
+        .map((c) => c[0])
+        .find((a) => a.where.code === MEETINGS_AGENT_CODE);
+      expect(arg).toBeDefined();
+      expect(arg.update).toEqual({});
+      expect(arg.create.enabled).toBe(false);
+      expect(arg.create.displayName).toBe('Agente de actas');
+      expect(arg.create.basePrompt).toBe(MEETINGS_BASE_PROMPT);
+    });
+    it('el prompt de actas trata las notas como datos y limita el responsable a los alias', () => {
+      expect(MEETINGS_BASE_PROMPT).toMatch(/datos/i);
+      expect(MEETINGS_BASE_PROMPT).toMatch(/alias/i);
+      expect(MEETINGS_BASE_PROMPT).toMatch(/inventes/i);
+    });
     it('el prompt del asistente exige usar tools y proponer (no ejecutar) cambios', () => {
       expect(ASSISTANT_BASE_PROMPT).toMatch(/herramientas/i);
       expect(ASSISTANT_BASE_PROMPT).toMatch(/propones|proponer/i);

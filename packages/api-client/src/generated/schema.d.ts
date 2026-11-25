@@ -2006,6 +2006,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/meetings/ai/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Indica si la ayuda de IA del acta está disponible (lista, apagada o sin presupuesto). */
+        get: operations["MeetingAiController_availability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meetings/ai/structure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Propone (no persiste) un acta reestructurada y compromisos a partir de las notas de la reunión, con IA. */
+        post: operations["MeetingAiController_structure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/meetings": {
         parameters: {
             query?: never;
@@ -2159,6 +2193,128 @@ export interface paths {
         put?: never;
         /** Transiciona el estado de un compromiso (maquina minima). */
         post: operations["CommitmentController_transition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ai/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consumo de IA del mes (llamadas, tokens, costo estimado, por agente y modelo) y estado del presupuesto (solo ADMIN). */
+        get: operations["AiConfigController_getUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ai/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Estado de la configuracion de IA (solo ADMIN): global + agentes. Nunca incluye secretos. */
+        get: operations["AiConfigController_getConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Actualiza la configuracion global de IA (solo ADMIN). Reglas del secret: ausente conserva, no vacio cifra, "" invalido, clearCredentials limpia. */
+        patch: operations["AiConfigController_updateConfig"];
+        trace?: never;
+    };
+    "/admin/ai/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalogo completo de modelos de IA con sus capacidades, incluidos los deshabilitados (solo ADMIN). */
+        get: operations["AiConfigController_listModels"];
+        put?: never;
+        /** Da de alta un modelo de IA en el catalogo (solo ADMIN). */
+        post: operations["AiConfigController_createModel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ai/models/{modelId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edita un modelo del catalogo: nombre, capacidades, habilitado (solo ADMIN). */
+        patch: operations["AiConfigController_updateModel"];
+        trace?: never;
+    };
+    "/admin/ai/agents/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Configuracion de un agente de IA por code (solo ADMIN). */
+        get: operations["AiConfigController_getAgent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Actualiza un agente de IA (solo ADMIN). Valida el modelo contra el catalogo permitido. */
+        patch: operations["AiConfigController_updateAgent"];
+        trace?: never;
+    };
+    "/admin/ai/agents/{code}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prueba la conexion del agente con Bedrock (solo ADMIN). Devuelve { ok, message } sin secretos ni stack. */
+        post: operations["AiConfigController_testAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/ai/triage-suggestion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sugiere (no persiste) campos de triage, banda de prioridad y posibles duplicados con IA. Degrada si la IA esta apagada o falla. */
+        post: operations["TriageSuggestionController_suggest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2556,128 +2712,6 @@ export interface paths {
         head?: never;
         /** Promueve/degrada a un usuario como ADMIN de sistema (solo ADMIN). No permite degradar al ultimo admin activo. */
         patch: operations["AdminUsersController_setAdminFlag"];
-        trace?: never;
-    };
-    "/admin/ai/usage": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Consumo de IA del mes (llamadas, tokens, costo estimado, por agente y modelo) y estado del presupuesto (solo ADMIN). */
-        get: operations["AiConfigController_getUsage"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/ai/config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Estado de la configuracion de IA (solo ADMIN): global + agentes. Nunca incluye secretos. */
-        get: operations["AiConfigController_getConfig"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Actualiza la configuracion global de IA (solo ADMIN). Reglas del secret: ausente conserva, no vacio cifra, "" invalido, clearCredentials limpia. */
-        patch: operations["AiConfigController_updateConfig"];
-        trace?: never;
-    };
-    "/admin/ai/models": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Catalogo completo de modelos de IA con sus capacidades, incluidos los deshabilitados (solo ADMIN). */
-        get: operations["AiConfigController_listModels"];
-        put?: never;
-        /** Da de alta un modelo de IA en el catalogo (solo ADMIN). */
-        post: operations["AiConfigController_createModel"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/ai/models/{modelId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Edita un modelo del catalogo: nombre, capacidades, habilitado (solo ADMIN). */
-        patch: operations["AiConfigController_updateModel"];
-        trace?: never;
-    };
-    "/admin/ai/agents/{code}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Configuracion de un agente de IA por code (solo ADMIN). */
-        get: operations["AiConfigController_getAgent"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Actualiza un agente de IA (solo ADMIN). Valida el modelo contra el catalogo permitido. */
-        patch: operations["AiConfigController_updateAgent"];
-        trace?: never;
-    };
-    "/admin/ai/agents/{code}/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Prueba la conexion del agente con Bedrock (solo ADMIN). Devuelve { ok, message } sin secretos ni stack. */
-        post: operations["AiConfigController_testAgent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/requests/{id}/ai/triage-suggestion": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Sugiere (no persiste) campos de triage, banda de prioridad y posibles duplicados con IA. Degrada si la IA esta apagada o falla. */
-        post: operations["TriageSuggestionController_suggest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/assistant/status": {
@@ -6523,6 +6557,67 @@ export interface components {
             /** @description Decisiones para el jefe. */
             decisions?: string;
         };
+        MeetingAiAvailabilityDto: {
+            /**
+             * @description available: lista para usar. off: IA global o agente de actas apagados. unavailable: sin presupuesto mensual.
+             * @enum {string}
+             */
+            status: "available" | "off" | "unavailable";
+            /** @description Motivo legible cuando no está disponible. */
+            message?: string;
+        };
+        StructureMeetingAiDto: {
+            /**
+             * Format: uuid
+             * @description Proceso de la reunión; acota las personas candidatas a responsable.
+             */
+            processId: string;
+            /**
+             * @description Fecha de la reunión (YYYY-MM-DD); referencia para resolver «el viernes».
+             * @example 2025-03-10
+             */
+            meetingDate: string;
+            /** @description Notas de la reunión tal como las escribió la persona. No se guardan. */
+            text: string;
+            /** @description Participantes ya elegidos; solo se usan para indicarle al modelo quiénes asistieron. */
+            participantUserIds?: string[];
+        };
+        MeetingAiCommitmentDto: {
+            /** @description Título propuesto. */
+            title: string;
+            /**
+             * Format: uuid
+             * @description Persona del proceso propuesta como responsable; null si no se reconoció.
+             */
+            assignedUserId: string | null;
+            /** @description Nombre tal como aparece en las notas (para que la persona elija a quién asignar). */
+            assigneeText: string | null;
+            /** @description Fecha límite propuesta (YYYY-MM-DD); null si no hay o no es válida. */
+            dueDate: string | null;
+            /** @description Resultado esperado. */
+            expectedResult: string | null;
+            /** @description Frase de las notas que origina el compromiso. */
+            sourceQuote: string;
+        };
+        MeetingAiStructureResponseDto: {
+            /** @description Agenda propuesta (vacía si no hay). */
+            agenda: string;
+            /** @description Decisiones y acuerdos propuestos. */
+            decisions: string;
+            /** @description Observaciones propuestas. */
+            notes: string;
+            /** @description Compromisos propuestos. */
+            commitments: components["schemas"]["MeetingAiCommitmentDto"][];
+            /** @description Dudas y ajustes hechos por el sistema (fechas descartadas, responsables no reconocidos, recortes). */
+            warnings: string[];
+            /** @description Modelo que respondió (lo fija el backend). */
+            model: string;
+            /**
+             * @description Agente que respondió (lo fija el backend).
+             * @example ACTAS
+             */
+            agentCode: string;
+        };
         MeetingParticipantDto: {
             /** Format: uuid */
             id: string;
@@ -6903,6 +6998,272 @@ export interface components {
              * @enum {string}
              */
             toState: "BORRADOR" | "EN_CURSO" | "BLOQUEADO" | "COMPLETADO" | "ARCHIVADO";
+        };
+        AiUsageBreakdownDto: {
+            /** @description Agente (p. ej. TRIAGE) o id del modelo. */
+            key: string;
+            /** @description Llamadas. */
+            calls: number;
+            /** @description Tokens de entrada. */
+            inputTokens: number;
+            /** @description Tokens de salida. */
+            outputTokens: number;
+            /** @description Costo estimado en USD (solo llamadas con precio). */
+            costUsd: number;
+        };
+        AiBudgetStatusDto: {
+            /** @description Mes (YYYY-MM, UTC) al que corresponde. */
+            month: string;
+            /** @description Tope mensual en USD, o null si no hay tope. */
+            budgetUsd: number | null;
+            /** @description Porcentaje del tope a partir del cual hay alerta. */
+            alertPct: number;
+            /** @description Gasto estimado del mes en USD. */
+            spentUsd: number;
+            /** @description Porcentaje del tope consumido, o null si no hay tope. */
+            usedPct: number | null;
+            /** @description Se alcanzo el umbral de alerta. */
+            alert: boolean;
+            /** @description Se agoto el tope: las llamadas de IA se rechazan hasta el mes siguiente o hasta subir el tope. */
+            exceeded: boolean;
+        };
+        AiUsageSummaryDto: {
+            /** @description Mes (YYYY-MM, UTC). */
+            month: string;
+            /** @description Llamadas al modelo en el mes. */
+            calls: number;
+            /** @description Tokens de entrada del mes. */
+            inputTokens: number;
+            /** @description Tokens de salida del mes. */
+            outputTokens: number;
+            /** @description Costo estimado del mes en USD. */
+            costUsd: number;
+            /** @description Llamadas de modelos sin precio configurado (no suman al costo). */
+            unpricedCalls: number;
+            /** @description Consumo por agente. */
+            byAgent: components["schemas"]["AiUsageBreakdownDto"][];
+            /** @description Consumo por modelo. */
+            byModel: components["schemas"]["AiUsageBreakdownDto"][];
+            /** @description Estado del presupuesto del mes. */
+            budget: components["schemas"]["AiBudgetStatusDto"];
+        };
+        AiGlobalConfigResponseDto: {
+            /** @description IA encendida globalmente. */
+            enabled: boolean;
+            /**
+             * @description Modo de credenciales efectivo.
+             * @enum {string}
+             */
+            credentialMode: "iam-role" | "access-keys";
+            /** @description Hay un secret de AWS guardado (nunca se devuelve el valor). */
+            secretSet: boolean;
+            /** @description Ultimos 4 caracteres del AWS Access Key ID guardado, o null. */
+            accessKeyIdLast4: string | null;
+            /** @description Tope de gasto mensual de IA en USD, o null si no hay tope. */
+            monthlyBudgetUsd: number | null;
+            /** @description Porcentaje del tope a partir del cual se avisa. */
+            budgetAlertPct: number;
+            /** @description Ultima actualizacion (ISO) o null. */
+            updatedAt: string | null;
+        };
+        AiAgentConfigResponseDto: {
+            /** @description Code estable del agente (p. ej. TRIAGE). */
+            code: string;
+            /** @description Nombre visible del agente. */
+            displayName: string;
+            /** @description Agente encendido. */
+            enabled: boolean;
+            /** @description Region de AWS del agente. */
+            region: string;
+            /** @description ID del modelo de Bedrock en uso. */
+            model: string;
+            /** @description Prompt base del agente. */
+            basePrompt: string;
+            /** @description Temperatura de muestreo (0..1). */
+            temperature: number;
+            /** @description Maximo de tokens de salida. */
+            maxTokens: number;
+            /** @description Timeout de invocacion en ms. */
+            timeoutMs: number;
+            /** @description Ultima actualizacion (ISO) o null. */
+            updatedAt: string | null;
+        };
+        AiModelCatalogEntryDto: {
+            /** @description ID del modelo de Bedrock (perfil de inferencia) invocable por el agente. */
+            id: string;
+            /** @description Nombre legible del modelo para el selector. */
+            label: string;
+            /**
+             * @description Categoria orientativa: default (recomendado), premium (mayor calidad) u other.
+             * @enum {string}
+             */
+            tier: "default" | "premium" | "other";
+            /** @description Si el modelo esta disponible para asignarse a agentes. */
+            enabled: boolean;
+            /** @description Si el modelo acepta el parametro temperature. */
+            supportsTemperature: boolean;
+            /** @description Si el modelo soporta tool use. */
+            supportsTools: boolean;
+            /** @description Si el modelo acepta imagenes. */
+            supportsVision: boolean;
+            /** @description Si el modelo acepta documentos. */
+            supportsDocuments: boolean;
+            /** @description Si el modelo acepta puntos de cache de prompt. */
+            supportsPromptCache: boolean;
+            /** @description Precio en USD por millon de tokens de entrada, o null si no se conoce. */
+            inputUsdPerMTok: number | null;
+            /** @description Precio en USD por millon de tokens de salida, o null si no se conoce. */
+            outputUsdPerMTok: number | null;
+            /** @description Orden en el selector y el catalogo (menor primero). */
+            sortOrder: number;
+        };
+        AiConfigResponseDto: {
+            /** @description Estado global de IA (encendido, modo de credenciales, secretSet, last4). */
+            global: components["schemas"]["AiGlobalConfigResponseDto"];
+            /** @description Agentes de IA configurados (Fase 1: TRIAGE). */
+            agents: components["schemas"]["AiAgentConfigResponseDto"][];
+            /** @description Catalogo cerrado de modelos de Bedrock permitidos para el selector del Admin. */
+            models: components["schemas"]["AiModelCatalogEntryDto"][];
+        };
+        UpdateAiGlobalConfigDto: {
+            /** @description Enciende/apaga globalmente la IA. Por defecto arranca apagada. */
+            enabled?: boolean;
+            /**
+             * @description Modo de credenciales: 'iam-role' (rol de la instancia) o 'access-keys' (claves guardadas).
+             * @enum {string}
+             */
+            credentialMode?: "iam-role" | "access-keys";
+            /** @description AWS Access Key ID (solo modo access-keys). */
+            awsAccessKeyId?: string;
+            /** @description AWS Secret Access Key (write-only). Ausente conserva; no vacio cifra y reemplaza; cadena vacia es invalida (usar clearCredentials). */
+            awsSecretAccessKey?: string;
+            /** @description true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio. */
+            clearCredentials?: boolean;
+            /** @description Tope de gasto mensual de IA en USD. null quita el tope; ausente lo conserva. Al alcanzarlo las llamadas de IA se rechazan. */
+            monthlyBudgetUsd?: number | null;
+            /** @description Porcentaje del tope a partir del cual se avisa (1..100). */
+            budgetAlertPct?: number;
+        };
+        CreateAiModelDto: {
+            /** @description Nombre legible. */
+            label?: string;
+            /**
+             * @description Categoria orientativa.
+             * @enum {string}
+             */
+            tier?: "default" | "premium" | "other";
+            /** @description Disponible para asignarse a agentes. */
+            enabled?: boolean;
+            /** @description Acepta temperature. */
+            supportsTemperature?: boolean;
+            /** @description Soporta tool use. */
+            supportsTools?: boolean;
+            /** @description Acepta imagenes. */
+            supportsVision?: boolean;
+            /** @description Acepta documentos. */
+            supportsDocuments?: boolean;
+            /** @description Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente. */
+            supportsPromptCache?: boolean;
+            /** @description Orden en el selector (menor primero). */
+            sortOrder?: number;
+            /** @description USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo). */
+            inputUsdPerMTok?: number | null;
+            /** @description USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo). */
+            outputUsdPerMTok?: number | null;
+            /** @description ID invocable en Bedrock (perfil de inferencia, p. ej. us.anthropic.claude-...). */
+            modelId: string;
+        };
+        UpdateAiModelDto: {
+            /** @description Nombre legible. */
+            label?: string;
+            /**
+             * @description Categoria orientativa.
+             * @enum {string}
+             */
+            tier?: "default" | "premium" | "other";
+            /** @description Disponible para asignarse a agentes. */
+            enabled?: boolean;
+            /** @description Acepta temperature. */
+            supportsTemperature?: boolean;
+            /** @description Soporta tool use. */
+            supportsTools?: boolean;
+            /** @description Acepta imagenes. */
+            supportsVision?: boolean;
+            /** @description Acepta documentos. */
+            supportsDocuments?: boolean;
+            /** @description Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente. */
+            supportsPromptCache?: boolean;
+            /** @description Orden en el selector (menor primero). */
+            sortOrder?: number;
+            /** @description USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo). */
+            inputUsdPerMTok?: number | null;
+            /** @description USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo). */
+            outputUsdPerMTok?: number | null;
+        };
+        UpdateAiAgentConfigDto: {
+            /** @description Enciende/apaga este agente. */
+            enabled?: boolean;
+            /** @description Region de AWS (p. ej. us-east-2). */
+            region?: string;
+            /** @description ID del modelo de Bedrock (debe estar en el catalogo permitido). */
+            model?: string;
+            /** @description Prompt base del agente. */
+            basePrompt?: string;
+            /** @description Temperatura 0..1. */
+            temperature?: number;
+            /** @description Maximo de tokens 1..8192. */
+            maxTokens?: number;
+            /** @description Timeout de invocacion en ms (1000..60000). */
+            timeoutMs?: number;
+        };
+        AiConnectionTestDto: {
+            /** @description La prueba de conexion fue exitosa. */
+            ok: boolean;
+            /** @description Mensaje legible del resultado (sin secretos ni stack). */
+            message: string;
+        };
+        DuplicateCandidateDto: {
+            /**
+             * Format: uuid
+             * @description ID de la solicitud candidata a duplicado.
+             */
+            requestId: string;
+            /** @description Titulo de la solicitud candidata. */
+            title: string;
+            /** @description Confianza del parecido (0..1). */
+            confidence: number;
+            /** @description Motivo breve del parecido. */
+            reason: string;
+        };
+        TriageSuggestionResponseDto: {
+            /**
+             * Format: uuid
+             * @description ID del proceso principal sugerido (proceso activo de tipo PROCESS) o null. Solo se sugiere si la solicitud aun no tiene proceso principal; reemplaza a la antigua ruta.
+             */
+            suggestedMainProcessId: string | null;
+            /** @description Code sugerido de DEMAND_TYPE o null. */
+            suggestedDemandTypeCode: string | null;
+            /** @description Code sugerido de CRITICALITY o null. */
+            suggestedCriticalityCode: string | null;
+            /** @description Code sugerido de TRIAGE_SIZE o null. */
+            suggestedSizeCode: string | null;
+            /** @description Code sugerido de DATA_AVAILABILITY o null. */
+            suggestedDataAvailabilityCode: string | null;
+            /**
+             * @description Banda de prioridad tentativa (P1..P4) o null. Señal, no score oficial.
+             * @enum {string|null}
+             */
+            tentativePriorityBand: "P1" | "P2" | "P3" | "P4" | null;
+            /** @description Justificacion breve de la banda. */
+            priorityRationale: string;
+            /** @description Posibles duplicados sugeridos. */
+            possibleDuplicates: components["schemas"]["DuplicateCandidateDto"][];
+            /** @description Informacion faltante detectada (y notas de codes no validos). */
+            missingInformation: string[];
+            /** @description ID del modelo que genero la sugerencia. */
+            model: string;
+            /** @description Code del agente que genero la sugerencia. */
+            agentCode: string;
         };
         GatePendingItemResponseDto: {
             /**
@@ -7570,272 +7931,6 @@ export interface components {
         SetAdminFlagDto: {
             /** @description true promueve a ADMIN de sistema; false degrada. */
             isAdmin: boolean;
-        };
-        AiUsageBreakdownDto: {
-            /** @description Agente (p. ej. TRIAGE) o id del modelo. */
-            key: string;
-            /** @description Llamadas. */
-            calls: number;
-            /** @description Tokens de entrada. */
-            inputTokens: number;
-            /** @description Tokens de salida. */
-            outputTokens: number;
-            /** @description Costo estimado en USD (solo llamadas con precio). */
-            costUsd: number;
-        };
-        AiBudgetStatusDto: {
-            /** @description Mes (YYYY-MM, UTC) al que corresponde. */
-            month: string;
-            /** @description Tope mensual en USD, o null si no hay tope. */
-            budgetUsd: number | null;
-            /** @description Porcentaje del tope a partir del cual hay alerta. */
-            alertPct: number;
-            /** @description Gasto estimado del mes en USD. */
-            spentUsd: number;
-            /** @description Porcentaje del tope consumido, o null si no hay tope. */
-            usedPct: number | null;
-            /** @description Se alcanzo el umbral de alerta. */
-            alert: boolean;
-            /** @description Se agoto el tope: las llamadas de IA se rechazan hasta el mes siguiente o hasta subir el tope. */
-            exceeded: boolean;
-        };
-        AiUsageSummaryDto: {
-            /** @description Mes (YYYY-MM, UTC). */
-            month: string;
-            /** @description Llamadas al modelo en el mes. */
-            calls: number;
-            /** @description Tokens de entrada del mes. */
-            inputTokens: number;
-            /** @description Tokens de salida del mes. */
-            outputTokens: number;
-            /** @description Costo estimado del mes en USD. */
-            costUsd: number;
-            /** @description Llamadas de modelos sin precio configurado (no suman al costo). */
-            unpricedCalls: number;
-            /** @description Consumo por agente. */
-            byAgent: components["schemas"]["AiUsageBreakdownDto"][];
-            /** @description Consumo por modelo. */
-            byModel: components["schemas"]["AiUsageBreakdownDto"][];
-            /** @description Estado del presupuesto del mes. */
-            budget: components["schemas"]["AiBudgetStatusDto"];
-        };
-        AiGlobalConfigResponseDto: {
-            /** @description IA encendida globalmente. */
-            enabled: boolean;
-            /**
-             * @description Modo de credenciales efectivo.
-             * @enum {string}
-             */
-            credentialMode: "iam-role" | "access-keys";
-            /** @description Hay un secret de AWS guardado (nunca se devuelve el valor). */
-            secretSet: boolean;
-            /** @description Ultimos 4 caracteres del AWS Access Key ID guardado, o null. */
-            accessKeyIdLast4: string | null;
-            /** @description Tope de gasto mensual de IA en USD, o null si no hay tope. */
-            monthlyBudgetUsd: number | null;
-            /** @description Porcentaje del tope a partir del cual se avisa. */
-            budgetAlertPct: number;
-            /** @description Ultima actualizacion (ISO) o null. */
-            updatedAt: string | null;
-        };
-        AiAgentConfigResponseDto: {
-            /** @description Code estable del agente (p. ej. TRIAGE). */
-            code: string;
-            /** @description Nombre visible del agente. */
-            displayName: string;
-            /** @description Agente encendido. */
-            enabled: boolean;
-            /** @description Region de AWS del agente. */
-            region: string;
-            /** @description ID del modelo de Bedrock en uso. */
-            model: string;
-            /** @description Prompt base del agente. */
-            basePrompt: string;
-            /** @description Temperatura de muestreo (0..1). */
-            temperature: number;
-            /** @description Maximo de tokens de salida. */
-            maxTokens: number;
-            /** @description Timeout de invocacion en ms. */
-            timeoutMs: number;
-            /** @description Ultima actualizacion (ISO) o null. */
-            updatedAt: string | null;
-        };
-        AiModelCatalogEntryDto: {
-            /** @description ID del modelo de Bedrock (perfil de inferencia) invocable por el agente. */
-            id: string;
-            /** @description Nombre legible del modelo para el selector. */
-            label: string;
-            /**
-             * @description Categoria orientativa: default (recomendado), premium (mayor calidad) u other.
-             * @enum {string}
-             */
-            tier: "default" | "premium" | "other";
-            /** @description Si el modelo esta disponible para asignarse a agentes. */
-            enabled: boolean;
-            /** @description Si el modelo acepta el parametro temperature. */
-            supportsTemperature: boolean;
-            /** @description Si el modelo soporta tool use. */
-            supportsTools: boolean;
-            /** @description Si el modelo acepta imagenes. */
-            supportsVision: boolean;
-            /** @description Si el modelo acepta documentos. */
-            supportsDocuments: boolean;
-            /** @description Si el modelo acepta puntos de cache de prompt. */
-            supportsPromptCache: boolean;
-            /** @description Precio en USD por millon de tokens de entrada, o null si no se conoce. */
-            inputUsdPerMTok: number | null;
-            /** @description Precio en USD por millon de tokens de salida, o null si no se conoce. */
-            outputUsdPerMTok: number | null;
-            /** @description Orden en el selector y el catalogo (menor primero). */
-            sortOrder: number;
-        };
-        AiConfigResponseDto: {
-            /** @description Estado global de IA (encendido, modo de credenciales, secretSet, last4). */
-            global: components["schemas"]["AiGlobalConfigResponseDto"];
-            /** @description Agentes de IA configurados (Fase 1: TRIAGE). */
-            agents: components["schemas"]["AiAgentConfigResponseDto"][];
-            /** @description Catalogo cerrado de modelos de Bedrock permitidos para el selector del Admin. */
-            models: components["schemas"]["AiModelCatalogEntryDto"][];
-        };
-        UpdateAiGlobalConfigDto: {
-            /** @description Enciende/apaga globalmente la IA. Por defecto arranca apagada. */
-            enabled?: boolean;
-            /**
-             * @description Modo de credenciales: 'iam-role' (rol de la instancia) o 'access-keys' (claves guardadas).
-             * @enum {string}
-             */
-            credentialMode?: "iam-role" | "access-keys";
-            /** @description AWS Access Key ID (solo modo access-keys). */
-            awsAccessKeyId?: string;
-            /** @description AWS Secret Access Key (write-only). Ausente conserva; no vacio cifra y reemplaza; cadena vacia es invalida (usar clearCredentials). */
-            awsSecretAccessKey?: string;
-            /** @description true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio. */
-            clearCredentials?: boolean;
-            /** @description Tope de gasto mensual de IA en USD. null quita el tope; ausente lo conserva. Al alcanzarlo las llamadas de IA se rechazan. */
-            monthlyBudgetUsd?: number | null;
-            /** @description Porcentaje del tope a partir del cual se avisa (1..100). */
-            budgetAlertPct?: number;
-        };
-        CreateAiModelDto: {
-            /** @description Nombre legible. */
-            label?: string;
-            /**
-             * @description Categoria orientativa.
-             * @enum {string}
-             */
-            tier?: "default" | "premium" | "other";
-            /** @description Disponible para asignarse a agentes. */
-            enabled?: boolean;
-            /** @description Acepta temperature. */
-            supportsTemperature?: boolean;
-            /** @description Soporta tool use. */
-            supportsTools?: boolean;
-            /** @description Acepta imagenes. */
-            supportsVision?: boolean;
-            /** @description Acepta documentos. */
-            supportsDocuments?: boolean;
-            /** @description Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente. */
-            supportsPromptCache?: boolean;
-            /** @description Orden en el selector (menor primero). */
-            sortOrder?: number;
-            /** @description USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo). */
-            inputUsdPerMTok?: number | null;
-            /** @description USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo). */
-            outputUsdPerMTok?: number | null;
-            /** @description ID invocable en Bedrock (perfil de inferencia, p. ej. us.anthropic.claude-...). */
-            modelId: string;
-        };
-        UpdateAiModelDto: {
-            /** @description Nombre legible. */
-            label?: string;
-            /**
-             * @description Categoria orientativa.
-             * @enum {string}
-             */
-            tier?: "default" | "premium" | "other";
-            /** @description Disponible para asignarse a agentes. */
-            enabled?: boolean;
-            /** @description Acepta temperature. */
-            supportsTemperature?: boolean;
-            /** @description Soporta tool use. */
-            supportsTools?: boolean;
-            /** @description Acepta imagenes. */
-            supportsVision?: boolean;
-            /** @description Acepta documentos. */
-            supportsDocuments?: boolean;
-            /** @description Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente. */
-            supportsPromptCache?: boolean;
-            /** @description Orden en el selector (menor primero). */
-            sortOrder?: number;
-            /** @description USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo). */
-            inputUsdPerMTok?: number | null;
-            /** @description USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo). */
-            outputUsdPerMTok?: number | null;
-        };
-        UpdateAiAgentConfigDto: {
-            /** @description Enciende/apaga este agente. */
-            enabled?: boolean;
-            /** @description Region de AWS (p. ej. us-east-2). */
-            region?: string;
-            /** @description ID del modelo de Bedrock (debe estar en el catalogo permitido). */
-            model?: string;
-            /** @description Prompt base del agente. */
-            basePrompt?: string;
-            /** @description Temperatura 0..1. */
-            temperature?: number;
-            /** @description Maximo de tokens 1..8192. */
-            maxTokens?: number;
-            /** @description Timeout de invocacion en ms (1000..60000). */
-            timeoutMs?: number;
-        };
-        AiConnectionTestDto: {
-            /** @description La prueba de conexion fue exitosa. */
-            ok: boolean;
-            /** @description Mensaje legible del resultado (sin secretos ni stack). */
-            message: string;
-        };
-        DuplicateCandidateDto: {
-            /**
-             * Format: uuid
-             * @description ID de la solicitud candidata a duplicado.
-             */
-            requestId: string;
-            /** @description Titulo de la solicitud candidata. */
-            title: string;
-            /** @description Confianza del parecido (0..1). */
-            confidence: number;
-            /** @description Motivo breve del parecido. */
-            reason: string;
-        };
-        TriageSuggestionResponseDto: {
-            /**
-             * Format: uuid
-             * @description ID del proceso principal sugerido (proceso activo de tipo PROCESS) o null. Solo se sugiere si la solicitud aun no tiene proceso principal; reemplaza a la antigua ruta.
-             */
-            suggestedMainProcessId: string | null;
-            /** @description Code sugerido de DEMAND_TYPE o null. */
-            suggestedDemandTypeCode: string | null;
-            /** @description Code sugerido de CRITICALITY o null. */
-            suggestedCriticalityCode: string | null;
-            /** @description Code sugerido de TRIAGE_SIZE o null. */
-            suggestedSizeCode: string | null;
-            /** @description Code sugerido de DATA_AVAILABILITY o null. */
-            suggestedDataAvailabilityCode: string | null;
-            /**
-             * @description Banda de prioridad tentativa (P1..P4) o null. Señal, no score oficial.
-             * @enum {string|null}
-             */
-            tentativePriorityBand: "P1" | "P2" | "P3" | "P4" | null;
-            /** @description Justificacion breve de la banda. */
-            priorityRationale: string;
-            /** @description Posibles duplicados sugeridos. */
-            possibleDuplicates: components["schemas"]["DuplicateCandidateDto"][];
-            /** @description Informacion faltante detectada (y notas de codes no validos). */
-            missingInformation: string[];
-            /** @description ID del modelo que genero la sugerencia. */
-            model: string;
-            /** @description Code del agente que genero la sugerencia. */
-            agentCode: string;
         };
         AttachmentLimitsDto: {
             /** @description Archivos por mensaje. */
@@ -14910,6 +15005,99 @@ export interface operations {
             };
         };
     };
+    MeetingAiController_availability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disponibilidad. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingAiAvailabilityDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeetingAiController_structure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StructureMeetingAiDto"];
+            };
+        };
+        responses: {
+            /** @description Propuesta de acta y compromisos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingAiStructureResponseDto"];
+                };
+            };
+            /** @description Datos inválidos o proceso inexistente. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El actor no pertenece al proceso indicado. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La IA o el agente de actas están apagados, mal configurados o sin presupuesto. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El texto supera el máximo permitido. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La IA devolvió una salida no interpretable. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La IA no respondió a tiempo o no está disponible. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     MeetingController_list: {
         parameters: {
             query?: {
@@ -15490,6 +15678,421 @@ export interface operations {
             };
             /** @description Compromiso fuera de alcance. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_getUsage: {
+        parameters: {
+            query?: {
+                /** @description Mes a consultar en formato YYYY-MM (UTC). Por defecto, el mes actual. */
+                month?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumen de consumo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiUsageSummaryDto"];
+                };
+            };
+            /** @description Mes con formato invalido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_getConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estado de IA. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConfigResponseDto"];
+                };
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_updateConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAiGlobalConfigDto"];
+            };
+        };
+        responses: {
+            /** @description Configuracion global guardada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiGlobalConfigResponseDto"];
+                };
+            };
+            /** @description Datos invalidos o combinacion secret/clearCredentials no permitida. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No hay un usuario actual valido. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_listModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Modelos del catalogo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModelCatalogEntryDto"][];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_createModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAiModelDto"];
+            };
+        };
+        responses: {
+            /** @description Modelo creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModelCatalogEntryDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe un modelo con ese id. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_updateModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID invocable del modelo en Bedrock. */
+                modelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAiModelDto"];
+            };
+        };
+        responses: {
+            /** @description Modelo actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModelCatalogEntryDto"];
+                };
+            };
+            /** @description Datos invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Modelo no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_getAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Code del agente (p. ej. TRIAGE). */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Configuracion del agente. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiAgentConfigResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Agente no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_updateAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Code del agente (p. ej. TRIAGE). */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAiAgentConfigDto"];
+            };
+        };
+        responses: {
+            /** @description Agente guardado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiAgentConfigResponseDto"];
+                };
+            };
+            /** @description Datos invalidos o modelo fuera del catalogo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Agente no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiConfigController_testAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Code del agente (p. ej. TRIAGE). */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resultado de la prueba. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionTestDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Agente no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TriageSuggestionController_suggest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sugerencia de triage. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageSuggestionResponseDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitud fuera de alcance. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La sugerencia de IA esta desactivada o mal configurada. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La IA devolvio una salida no interpretable. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La IA no respondio a tiempo o no esta disponible. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16563,421 +17166,6 @@ export interface operations {
             };
             /** @description Usuario no encontrado. */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiConfigController_getUsage: {
-        parameters: {
-            query?: {
-                /** @description Mes a consultar en formato YYYY-MM (UTC). Por defecto, el mes actual. */
-                month?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Resumen de consumo. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AiUsageSummaryDto"];
-                };
-            };
-            /** @description Mes con formato invalido. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiConfigController_getConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Estado de IA. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AiConfigResponseDto"];
-                };
-            };
-            /** @description No hay un usuario actual valido. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiConfigController_updateConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateAiGlobalConfigDto"];
-            };
-        };
-        responses: {
-            /** @description Configuracion global guardada. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AiGlobalConfigResponseDto"];
-                };
-            };
-            /** @description Datos invalidos o combinacion secret/clearCredentials no permitida. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No hay un usuario actual valido. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiConfigController_listModels: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Modelos del catalogo. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AiModelCatalogEntryDto"][];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiConfigController_createModel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateAiModelDto"];
-            };
-        };
-        responses: {
-            /** @description Modelo creado. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AiModelCatalogEntryDto"];
-                };
-            };
-            /** @description Datos invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Ya existe un modelo con ese id. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiConfigController_updateModel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description ID invocable del modelo en Bedrock. */
-                modelId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateAiModelDto"];
-            };
-        };
-        responses: {
-            /** @description Modelo actualizado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AiModelCatalogEntryDto"];
-                };
-            };
-            /** @description Datos invalidos. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Modelo no encontrado. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiConfigController_getAgent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Code del agente (p. ej. TRIAGE). */
-                code: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Configuracion del agente. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AiAgentConfigResponseDto"];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Agente no encontrado. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiConfigController_updateAgent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Code del agente (p. ej. TRIAGE). */
-                code: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateAiAgentConfigDto"];
-            };
-        };
-        responses: {
-            /** @description Agente guardado. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AiAgentConfigResponseDto"];
-                };
-            };
-            /** @description Datos invalidos o modelo fuera del catalogo. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Agente no encontrado. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiConfigController_testAgent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Code del agente (p. ej. TRIAGE). */
-                code: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Resultado de la prueba. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AiConnectionTestDto"];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Agente no encontrado. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    TriageSuggestionController_suggest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Sugerencia de triage. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TriageSuggestionResponseDto"];
-                };
-            };
-            /** @description Rol insuficiente. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Solicitud fuera de alcance. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description La sugerencia de IA esta desactivada o mal configurada. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description La IA devolvio una salida no interpretable. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description La IA no respondio a tiempo o no esta disponible. */
-            503: {
                 headers: {
                     [name: string]: unknown;
                 };

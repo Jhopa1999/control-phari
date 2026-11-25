@@ -9,6 +9,9 @@ import { WorklogService } from './worklog/worklog.service';
 import { WorklogEligibilityService } from './worklog/worklog-eligibility.service';
 import { WorklogSuggestionService } from './worklog/worklog-suggestion.service';
 import { RequestModule } from '../request/request.module';
+import { AiModule } from '../ai/ai.module';
+import { MeetingAiController } from './meeting/meeting-ai.controller';
+import { MeetingAiService } from './meeting/meeting-ai.service';
 import { MeetingController } from './meeting/meeting.controller';
 import { MeetingService } from './meeting/meeting.service';
 import { CommitmentController } from './commitment/commitment.controller';
@@ -30,9 +33,10 @@ import { CommitmentNoticeScheduler } from './commitment/commitment-notice.schedu
  * registra primero por precaucion, replicando plan.module.ts.
  */
 @Module({
-  imports: [PrismaModule, AuthModule, AuditModule, RequestModule],
+  imports: [PrismaModule, AuthModule, AuditModule, RequestModule, AiModule],
   controllers: [
     WorklogController,
+    MeetingAiController,
     MeetingController,
     CommitmentController,
   ],
@@ -43,6 +47,7 @@ import { CommitmentNoticeScheduler } from './commitment/commitment-notice.schedu
     WorklogEligibilityService,
     WorklogSuggestionService,
     MeetingService,
+    MeetingAiService,
     CommitmentService,
     CommitmentNoticeService,
     CommitmentNoticeScheduler,
