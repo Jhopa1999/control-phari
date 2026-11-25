@@ -6,6 +6,7 @@ import {
   type Transition,
   type UpdateCommitment,
 } from './api-client';
+import { readServerPage, type ServerPage } from './pagination';
 
 /**
  * Error de dominio de compromisos con un mensaje ya entendible para el usuario.
@@ -50,18 +51,62 @@ function toCommitmentError(status: number | undefined, body?: unknown): Commitme
   return new CommitmentError(messageForStatus(status), status);
 }
 
-/** Compromisos en alcance (GET /commitments). El backend filtra por alcance. */
-export async function listCommitments(): Promise<Commitment[]> {
+/** Vistas de seguimiento que filtra el servidor. */
+export type CommitmentView = 'ABIERTOS' | 'VENCIDOS' | 'TERMINADOS';
+
+/** Búsqueda, filtros y página del listado de compromisos. */
+export interface CommitmentPageQuery {
+  q?: string;
+  view?: CommitmentView;
+  /** Asignado o responsable. */
+  personId?: string;
+  meetingId?: string;
+  withoutMeeting?: boolean;
+  page: number;
+  pageSize: number;
+}
+
+/**
+ * Una página de compromisos (GET /commitments con page/pageSize). Busca y
+ * filtra el servidor sobre el alcance único; el total llega en X-Total-Count.
+ */
+export async function listCommitmentsPage(
+  query: CommitmentPageQuery,
+  signal?: AbortSignal,
+): Promise<ServerPage<Commitment>> {
   try {
-    const { data, error, response } = await api.GET('/commitments');
+    const { data, error, response } = await api.GET('/commitments', {
+      params: {
+        query: {
+          page: query.page,
+          pageSize: query.pageSize,
+          ...(query.q?.trim() ? { q: query.q.trim() } : {}),
+          ...(query.view ? { view: query.view } : {}),
+          ...(query.personId ? { personId: query.personId } : {}),
+          ...(query.withoutMeeting
+            ? { withoutMeeting: true }
+            : query.meetingId
+              ? { meetingId: query.meetingId }
+              : {}),
+        },
+      },
+      signal,
+    });
     if (error || !data) {
       throw toCommitmentError(response.status, error);
     }
-    return data;
+    return readServerPage(data, response);
   } catch (err) {
     if (err instanceof CommitmentError) throw err;
+    if (signal?.aborted) throw err;
     throw toCommitmentError(undefined);
   }
+}
+
+/** Total de compromisos abiertos en alcance (sin búsqueda), para el contador de la pestaña. */
+export async function countOpenCommitments(): Promise<number> {
+  const page = await listCommitmentsPage({ view: 'ABIERTOS', page: 1, pageSize: 1 });
+  return page.total;
 }
 
 /** Detalle de un compromiso (GET /commitments/:id). */

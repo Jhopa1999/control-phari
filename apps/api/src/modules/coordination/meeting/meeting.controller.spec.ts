@@ -19,7 +19,7 @@ function actor(): CurrentActor {
 
 describe('MeetingController (delegacion)', () => {
   const svc = {
-    list: jest.fn().mockResolvedValue('list'),
+    list: jest.fn().mockResolvedValue({ rows: ['list'], total: 7, truncated: false, window: { paginated: true, page: 1, pageSize: 25, skip: 0, take: 25 } }),
     create: jest.fn().mockResolvedValue('create'),
     get: jest.fn().mockResolvedValue('get'),
     update: jest.fn().mockResolvedValue('update'),
@@ -30,8 +30,10 @@ describe('MeetingController (delegacion)', () => {
 
   it('list delega actor y filtros', async () => {
     const filters = {} as never;
-    await expect(controller.list(a, filters)).resolves.toBe('list');
+    const res = { setHeader: jest.fn() };
+    await expect(controller.list(a, filters, res)).resolves.toEqual(['list']);
     expect(svc.list).toHaveBeenCalledWith(a, filters);
+    expect(res.setHeader).toHaveBeenCalledWith('X-Total-Count', '7');
   });
 
   it('create delega actor y dto', async () => {

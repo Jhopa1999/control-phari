@@ -25,6 +25,8 @@ export class MeetingCommitmentDto {
 
   @ApiProperty({ type: String, nullable: true })
   result!: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Motivo del bloqueo o bloqueos registrados.' })
+  blockers!: string | null;
 
   @ApiProperty({ type: String, nullable: true, description: 'Nombre de la persona asignada.' })
   assignedUserName!: string | null;
@@ -104,6 +106,17 @@ export class MeetingResponseDto {
 
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   relatedProjectRequestId!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'Codigo (PRY-0012) de la solicitud relacionada que muestra la interfaz (proyecto relacionado o, si no hay, solicitud relacionada). Nulo sin solicitud o si el actor no puede leerla.',
+  })
+  relatedRequestCode!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'Titulo de esa solicitud (nulo en los mismos casos).' })
+  relatedRequestTitle!: string | null;
 
   @ApiProperty({ type: String, nullable: true })
   agenda!: string | null;

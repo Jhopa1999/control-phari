@@ -3,7 +3,13 @@
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Download, Eye, Lock, LockOpen, Plus, Printer, Trash2, UserCheck, Users } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
+import { BlockedReasonLine } from '@/components/blocked-reason';
+import { IdChip } from '@/components/id-chip';
+import { ListPager } from '@/components/list-pager';
+import { ListSearchBar } from '@/components/list-search-bar';
+import { ServerListBody } from '@/components/server-list';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DescriptionList } from '@/components/description-list';
 import { EmptyState } from '@/components/empty-state';
@@ -16,13 +22,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActor } from '@/lib/actor-context';
-import type { Meeting, RecordState } from '@/lib/api-client';
+import type { Commitment, Meeting, RecordState } from '@/lib/api-client';
 import {
   CommitmentError,
   createCommitment,
+  getCommitment,
   transitionCommitment,
   updateCommitment,
 } from '@/lib/commitments';
+import { listCountText } from '@/lib/list-count';
+import {
+  relatedCreateFields,
+  relatedUpdateFields,
+  relatedValueOf,
+  type RelatedRequestValue,
+} from '@/lib/related-request-value';
+import { useDebouncedValue, useServerTable } from '@/lib/use-server-table';
 import {
   formatDateOnly,
   formatDuration,
@@ -34,12 +49,16 @@ import {
   closeMeeting,
   createMeeting,
   deleteMeeting,
+  getMeeting,
+  listMeetingsPage,
   reopenMeeting,
   updateMeeting,
 } from '@/lib/meetings';
 import { downloadMinutes, printMinutes } from '@/lib/minutes';
 import { nextStates, stateLabel } from '@/lib/record-state';
 import { PERSON_NOT_IN_PROCESS_MESSAGE } from '@/lib/use-person-error';
+import { ActaResumen } from './acta-resumen';
+import { BlockCommitmentDialog, type BlockTarget } from './bloquear-compromiso-dialog';
 import { CompromisoFormDialog, type CompromisoFormValues } from './compromiso-form-dialog';
 import { RegistrarDuracionDialog } from './registrar-duracion-dialog';
 import {
@@ -91,7 +110,7 @@ export function ActasPanel({
   initialMeetingId: string | null;
   onOpenCommitment: (commitmentId: string) => void;
 }): React.ReactElement {
-  const { meetings, commitments, processes, people, state, error, reload } = data;
+  const { processes, people, totals } = data;
   const { permissions } = useActor();
   const myId = permissions?.userId ?? null;
   const grants = permissions?.grants ?? [];
@@ -100,10 +119,26 @@ export function ActasPanel({
     isJefe || grants.some((g) => g.roleCode === 'LIDER_PROCESO' && g.processId === processId);
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [search, setSearch] = React.useState('');
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  const table = useServerTable<Meeting, 'none'>({
+    fetchPage: ({ page, pageSize, signal }) =>
+      listMeetingsPage({ q: debouncedSearch, page, pageSize }, signal),
+    filtersKey: debouncedSearch,
+    defaultSort: null,
+  });
+  const meetings = table.rows;
+  // Estado de la lista (la primera carga o su fallo; las recargas conservan las filas).
+  const state: 'loading' | 'success' | 'error' =
+    table.status === 'error' ? 'error' : table.status === 'loading' ? 'loading' : 'success';
+  // Acta abierta desde fuera de la página visible (notificación o pestaña Compromisos).
+  const [external, setExternal] = React.useState<Meeting | null>(null);
+  const [externalMissing, setExternalMissing] = React.useState(false);
+  const [detailNonce, setDetailNonce] = React.useState(0);
+  const [blockTarget, setBlockTarget] = React.useState<BlockTarget | null>(null);
   const [meetingOpen, setMeetingOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Meeting | null>(null);
   const [commitmentOpen, setCommitmentOpen] = React.useState(false);
-  const [editingCommitmentId, setEditingCommitmentId] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -116,16 +151,56 @@ export function ActasPanel({
   const [durationOpen, setDurationOpen] = React.useState(false);
   const listHeadingRef = React.useRef<HTMLHeadingElement>(null);
   const detailHeadingRef = React.useRef<HTMLHeadingElement>(null);
+  const searchRef = React.useRef<HTMLInputElement>(null);
+  const listBodyRef = React.useRef<HTMLDivElement>(null);
+  const validatedKey = React.useRef<string | null>(null);
+  const [pinnedId, setPinnedId] = React.useState<string | null>(initialMeetingId);
 
-  // Selección: la de la URL (notificación o pestaña Compromisos) o la primera.
-  useResetOnChange([state, meetings, initialMeetingId], () => {
-    if (state !== 'success') return;
+  /** Recarga la lista, los totales y el detalle abierto desde fuera de la página. */
+  const reload = React.useCallback(async (): Promise<void> => {
+    table.reload();
+    setDetailNonce((n) => n + 1);
+    await data.reload();
+  }, [table, data]);
+
+  // La URL o la pestaña Compromisos piden un acta concreta: se abre aunque no esté en la página.
+  useResetOnChange([initialMeetingId], () => {
+    if (!initialMeetingId) return;
+    setSelectedId(initialMeetingId);
+    setPinnedId(initialMeetingId);
+  });
+
+  // Con una búsqueda o carga nueva, si la selección no está en la lista se elige la primera.
+  // Cambiar de página no cambia el detalle abierto.
+  useResetOnChange([table.status, table.rows, debouncedSearch], () => {
+    if (table.status !== 'ready' || validatedKey.current === debouncedSearch) return;
+    validatedKey.current = debouncedSearch;
     setSelectedId((prev) => {
-      if (initialMeetingId && meetings.some((m) => m.id === initialMeetingId)) return initialMeetingId;
-      if (prev && meetings.some((m) => m.id === prev)) return prev;
+      if (prev && (prev === pinnedId || meetings.some((m) => m.id === prev))) return prev;
       return meetings[0]?.id ?? null;
     });
   });
+
+  // Detalle por id si el acta seleccionada no está en la página visible.
+  const inPage = selectedId !== null && meetings.some((m) => m.id === selectedId);
+  React.useEffect(() => {
+    if (!selectedId || inPage) return;
+    let cancelled = false;
+    getMeeting(selectedId)
+      .then((m) => {
+        if (cancelled) return;
+        setExternal(m);
+        setExternalMissing(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setExternal(null);
+        setExternalMissing(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, inPage, detailNonce]);
 
   // Cambiar de acta descarta el aviso de un cierre rechazado.
   useResetOnChange([selectedId], () => {
@@ -133,7 +208,10 @@ export function ActasPanel({
     setShowAllParticipants(false);
   });
 
-  const selected = meetings.find((m) => m.id === selectedId) ?? null;
+  const selected =
+    meetings.find((m) => m.id === selectedId) ??
+    (external && external.id === selectedId ? external : null);
+  const searching = debouncedSearch !== '';
   const processName = (id: string) => processes.find((p) => p.id === id)?.name ?? OUT_OF_SCOPE_PROCESS;
   const meetingProcessName = (m: Meeting) => m.processName || processName(m.processId);
   const personName = (id: string | null) =>
@@ -152,9 +230,28 @@ export function ActasPanel({
     [formatDateOnly(m.meetingDate), meetingSchedule(m), meetingProcessName(m)]
       .filter(Boolean)
       .join(' · ');
-  const editingCommitment = editingCommitmentId
-    ? (commitments.find((c) => c.id === editingCommitmentId) ?? null)
-    : null;
+  const [editingCommitment, setEditingCommitment] = React.useState<Commitment | null>(null);
+
+  /** Abre el formulario de un compromiso del acta con todos sus datos (se piden por id). */
+  async function openEditCommitment(id: string): Promise<void> {
+    try {
+      const full = await getCommitment(id);
+      setEditingCommitment(full);
+      setFormError(null);
+      setCommitmentOpen(true);
+    } catch (err) {
+      toast.error(messageOf(err));
+    }
+  }
+
+  /** «Bloqueado» pide el motivo; los demás estados cambian al instante. */
+  function requestTransition(c: { id: string; title: string; blockers: string | null }, to: RecordState): void {
+    if (to === 'BLOQUEADO') {
+      setBlockTarget({ id: c.id, title: c.title, blockers: c.blockers });
+      return;
+    }
+    void run(() => transitionCommitment(c.id, { toState: to }), `Compromiso movido a ${stateLabel(to)}.`);
+  }
 
   /**
    * Crea, con el POST /commitments de siempre, los compromisos que la persona
@@ -164,6 +261,7 @@ export function ActasPanel({
     meetingId: string,
     processId: string,
     list: PendingCommitment[],
+    related: RelatedRequestValue | null,
   ): Promise<string[]> {
     const failed: string[] = [];
     for (const item of list) {
@@ -175,6 +273,7 @@ export function ActasPanel({
           expectedResult: trimOrUndefined(item.expectedResult),
           processId,
           sourceMeetingId: meetingId,
+          ...relatedCreateFields(related),
         });
       } catch {
         failed.push(item.title);
@@ -221,11 +320,13 @@ export function ActasPanel({
           ...(participantsChanged ? { participantUserIds: values.participantUserIds } : {}),
           // En la edición, null borra la duración registrada.
           durationMinutes: values.durationMinutes,
+          ...relatedUpdateFields(relatedValueOf(editing), values.related),
         });
         const failed = await createPendingCommitments(
           editing.id,
           editing.processId,
           values.pendingCommitments,
+          values.related,
         );
         notifyCommitmentsResult('Acta actualizada', values.pendingCommitments.length, failed);
       } else {
@@ -234,6 +335,7 @@ export function ActasPanel({
           ...body,
           participantUserIds: values.participantUserIds,
           durationMinutes: values.durationMinutes ?? undefined,
+          ...relatedCreateFields(values.related),
         });
         const notified = created.participantUserIds.filter((id) => id !== myId).length;
         if (values.pendingCommitments.length > 0) {
@@ -241,6 +343,7 @@ export function ActasPanel({
             created.id,
             created.processId,
             values.pendingCommitments,
+            values.related,
           );
           notifyCommitmentsResult('Acta creada', values.pendingCommitments.length, failed);
         } else {
@@ -251,6 +354,7 @@ export function ActasPanel({
           );
         }
         setSelectedId(created.id);
+        setPinnedId(created.id);
       }
       setMeetingOpen(false);
       setEditing(null);
@@ -281,18 +385,22 @@ export function ActasPanel({
         blockers: trimOrUndefined(values.blockers),
       };
       if (editingCommitment) {
-        await updateCommitment(editingCommitment.id, body);
+        await updateCommitment(editingCommitment.id, {
+          ...body,
+          ...relatedUpdateFields(relatedValueOf(editingCommitment), values.related),
+        });
         toast.success('Compromiso actualizado.');
       } else {
         await createCommitment({
           ...body,
           processId: selected.processId,
           sourceMeetingId: selected.id,
+          ...relatedCreateFields(values.related),
         });
         toast.success('Compromiso agregado al acta.');
       }
       setCommitmentOpen(false);
-      setEditingCommitmentId(null);
+      setEditingCommitment(null);
       await reload();
     } catch (err) {
       const message = messageOf(err);
@@ -373,7 +481,7 @@ export function ActasPanel({
               size="sm"
               variant="outline"
               onClick={() => {
-                setEditingCommitmentId(null);
+                setEditingCommitment(null);
                 setFormError(null);
                 setCommitmentOpen(true);
               }}
@@ -390,7 +498,6 @@ export function ActasPanel({
         ) : (
           <ul className="flex flex-col gap-2" aria-label="Compromisos del acta">
             {m.commitments.map((c) => {
-              const full = commitments.find((x) => x.id === c.id);
               const isMine = c.assignedUserId === myId || c.responsibleUserId === myId;
               const isFirstMine = isMine && m.commitments.find((x) => x.assignedUserId === myId || x.responsibleUserId === myId)?.id === c.id;
 
@@ -405,7 +512,6 @@ export function ActasPanel({
                     <button
                       type="button"
                       className="text-left text-sm font-medium underline-offset-4 hover:underline disabled:no-underline"
-                      disabled={!full}
                       onClick={() => onOpenCommitment(c.id)}
                     >
                       {c.title}
@@ -419,18 +525,15 @@ export function ActasPanel({
                       ? ` · Responsable: ${c.responsibleUserName ?? meetingPersonName(m, c.responsibleUserId)}`
                       : ''}
                   </p>
-                  {full ? (
+                  {c.state === 'BLOQUEADO' ? <BlockedReasonLine reason={c.blockers} /> : null}
+                  {m.viewerCanEdit || isMine ? (
                     <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
                         size="sm"
                         variant="ghost"
                         disabled={busy}
-                        onClick={() => {
-                          setEditingCommitmentId(c.id);
-                          setFormError(null);
-                          setCommitmentOpen(true);
-                        }}
+                        onClick={() => void openEditCommitment(c.id)}
                       >
                         Editar
                       </Button>
@@ -441,12 +544,8 @@ export function ActasPanel({
                           size="sm"
                           variant="outline"
                           disabled={busy}
-                          onClick={() =>
-                            void run(
-                              () => transitionCommitment(c.id, { toState: to }),
-                              `Compromiso movido a ${stateLabel(to)}.`,
-                            )
-                          }
+                          aria-haspopup={to === 'BLOQUEADO' ? 'dialog' : undefined}
+                          onClick={() => requestTransition(c, to)}
                         >
                           {stateLabel(to)}
                         </Button>
@@ -528,13 +627,48 @@ export function ActasPanel({
     );
   }
 
+  /** Solicitud o proyecto relacionado: código copiable y título como enlace. */
+  function renderRelatedRequest(m: Meeting): React.ReactNode {
+    const requestId = m.relatedProjectRequestId ?? m.relatedRequestId;
+    if (!requestId) {
+      return (
+        <>
+          <span aria-hidden="true">—</span>
+          <span className="sr-only">Sin solicitud relacionada</span>
+        </>
+      );
+    }
+    if (!m.relatedRequestCode) return <span className="text-muted-foreground">No disponible</span>;
+    return (
+      <span className="flex flex-wrap items-center gap-2">
+        <IdChip code={m.relatedRequestCode} variant="full" />
+        <Link
+          href={`/demanda/solicitudes/${requestId}`}
+          className="min-w-0 text-link underline-offset-4 wrap-break-word hover:underline"
+        >
+          {m.relatedRequestTitle}
+        </Link>
+      </span>
+    );
+  }
+
   function renderDetail(): React.ReactNode {
-    if (state === 'loading' && !selected) {
+    if ((state === 'loading' || (selectedId && !selected && !externalMissing)) && !selected) {
       return (
         <Card aria-hidden="true" className="flex flex-col gap-4 p-4">
           <Skeleton className="h-6 w-1/2" />
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-24 w-full" />
+        </Card>
+      );
+    }
+    if (!selected && externalMissing && selectedId) {
+      return (
+        <Card>
+          <EmptyState
+            title="No encontramos esta acta"
+            description="Puede que se haya eliminado o que ya no tengas acceso a ella."
+          />
         </Card>
       );
     }
@@ -702,11 +836,16 @@ export function ActasPanel({
               El acta está cerrada y queda como registro. Sus compromisos siguen su propio seguimiento.
             </InlineNotice>
           ) : null}
+          <ActaResumen meeting={m} personName={(id) => meetingPersonName(m, id)} />
           {renderParticipants(m)}
           <DescriptionList
             className="border-t pt-4"
             items={[
               { term: 'Responsable', value: m.responsibleUserId ? meetingPersonName(m, m.responsibleUserId) : null },
+              {
+                term: 'Solicitud relacionada',
+                value: renderRelatedRequest(m),
+              },
               {
                 term: 'Horario',
                 value: formatTimeRange(m.meetingTime, m.meetingEndTime) ?? m.meetingTime,
@@ -768,8 +907,8 @@ export function ActasPanel({
         <div className="rounded-lg border bg-card">
           <ErrorState
             title="No fue posible cargar las actas."
-            error={error}
-            onRetry={() => void reload()}
+            error={table.error}
+            onRetry={table.reload}
           />
         </div>
       ) : (
@@ -780,38 +919,107 @@ export function ActasPanel({
             listHeadingRef={listHeadingRef}
             detailHeadingRef={detailHeadingRef}
             list={
-              <SelectableList
-                label="Actas"
-                loading={state === 'loading' && meetings.length === 0}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                items={meetings.map((m) => ({
-                  id: m.id,
-                  title: m.title,
-                  meta: `${meetingMeta(m)} · ${m.commitmentsTotal} compromiso${m.commitmentsTotal === 1 ? '' : 's'}${m.commitmentsOpen > 0 ? ` (${m.commitmentsOpen} abiertos)` : ''}`,
-                  badge: (
-                    <span className="flex flex-wrap items-center gap-1.5">
-                      <StatusBadge kind="minutes" value={m.state} />
-                      {m.responsibleUserId === myId ? (
-                        <span className={`${ROLE_CHIP} border-info-border bg-info-subtle text-info`}>
-                          <UserCheck className="size-3" aria-hidden="true" />
-                          Responsable
+              <>
+                <ListSearchBar
+                  label="Buscar actas"
+                  placeholder="Buscar por título, responsable o solicitud"
+                  value={search}
+                  onChange={setSearch}
+                  busy={table.busy && table.status !== 'loading'}
+                  disabled={state === 'loading'}
+                  inputRef={searchRef}
+                  countText={
+                    state === 'loading'
+                      ? 'Cargando actas…'
+                      : listCountText(table.total, totals.meetings, searching, 'acta', 'actas')
+                  }
+                />
+                <ServerListBody
+                  reloading={table.status === 'reloading'}
+                  reloadFailed={table.status === 'reload-error'}
+                  onRetry={table.reload}
+                  truncated={table.truncated}
+                  containerRef={listBodyRef}
+                >
+                  <SelectableList
+                    label="Actas"
+                    loading={state === 'loading'}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                    items={meetings.map((m) => ({
+                      id: m.id,
+                      title: m.title,
+                      meta: (
+                        <>
+                          {`${meetingMeta(m)} · ${m.commitmentsTotal} compromiso${m.commitmentsTotal === 1 ? '' : 's'}${m.commitmentsOpen > 0 ? ` (${m.commitmentsOpen} abiertos)` : ''}`}
+                          {m.relatedRequestCode ? (
+                            <IdChip
+                              code={m.relatedRequestCode}
+                              variant="full"
+                              copyable={false}
+                              className="ml-1 align-middle"
+                            />
+                          ) : null}
+                        </>
+                      ),
+                      badge: (
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <StatusBadge kind="minutes" value={m.state} />
+                          {m.responsibleUserId === myId ? (
+                            <span className={`${ROLE_CHIP} border-info-border bg-info-subtle text-info`}>
+                              <UserCheck className="size-3" aria-hidden="true" />
+                              Responsable
+                            </span>
+                          ) : !m.viewerCanEdit ? (
+                            <span className={`${ROLE_CHIP} border-neutral-border bg-neutral-subtle text-neutral`}>
+                              <Users className="size-3" aria-hidden="true" />
+                              Participante
+                            </span>
+                          ) : null}
                         </span>
-                      ) : !m.viewerCanEdit ? (
-                        <span className={`${ROLE_CHIP} border-neutral-border bg-neutral-subtle text-neutral`}>
-                          <Users className="size-3" aria-hidden="true" />
-                          Participante
-                        </span>
-                      ) : null}
-                    </span>
-                  ),
-                }))}
-                empty={{
-                  title: 'Aún no hay actas.',
-                  description: 'Registra una reunión con su agenda, participantes, decisiones y compromisos.',
-                  action: newButton,
-                }}
-              />
+                      ),
+                    }))}
+                    empty={
+                      searching
+                        ? {
+                            title: 'Sin resultados',
+                            description: 'Ninguna acta coincide con la búsqueda.',
+                            action: (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSearch('');
+                                  searchRef.current?.focus();
+                                }}
+                              >
+                                Limpiar búsqueda
+                              </Button>
+                            ),
+                          }
+                        : {
+                            title: 'Aún no hay actas.',
+                            description: 'Registra una reunión con su agenda, participantes, decisiones y compromisos.',
+                            action: newButton,
+                          }
+                    }
+                  />
+                </ServerListBody>
+                <ListPager
+                  label="Paginación de actas"
+                  page={table.page}
+                  pageCount={table.pageCount}
+                  from={table.from}
+                  to={table.to}
+                  total={table.total}
+                  busy={table.busy}
+                  onPageChange={(p) => {
+                    table.setPage(p);
+                    listBodyRef.current?.scrollIntoView({ block: 'nearest' });
+                  }}
+                />
+              </>
             }
             detail={renderDetail()}
           />
@@ -853,18 +1061,26 @@ export function ActasPanel({
         onOpenChange={(o) => {
           setCommitmentOpen(o);
           if (!o) {
-            setEditingCommitmentId(null);
+            setEditingCommitment(null);
             setFormError(null);
           }
         }}
         editing={editingCommitment}
         processes={processes}
         people={people}
-        meetings={meetings}
         fixedMeeting={selected}
         submitting={submitting}
         errorMessage={formError}
         onSubmit={handleCommitmentSubmit}
+      />
+
+      <BlockCommitmentDialog
+        target={blockTarget}
+        onClose={() => setBlockTarget(null)}
+        onDone={async () => {
+          await reload();
+        }}
+        onClosedAfterSuccess={() => detailHeadingRef.current?.focus()}
       />
 
       <ConfirmDialog

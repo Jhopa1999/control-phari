@@ -64,7 +64,7 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   escritura(
     'commitment.transition',
     'POST /commitments/{id}/transition',
-    'Cambia el estado de un compromiso (POST /commitments/{id}/transition). El backend valida la transición.',
+    'Cambia el estado de un compromiso (POST /commitments/{id}/transition). El backend valida la transición. Al pasar a BLOQUEADO conviene enviar blockedReason (hasta 500 caracteres) con el motivo: se guarda en los bloqueos del compromiso y lo ve el equipo; con otro estado se responde 400.',
   ),
 
   // Planes, fases y dependencias

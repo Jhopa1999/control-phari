@@ -28,6 +28,18 @@ import {
   MeetingCommitmentsOpenDto,
 } from './dto/meeting-commitments-open.dto';
 import { RecordState } from '../record-state';
+import {
+  loadRelatedRequests,
+  relatedRequestIdOf,
+  relatedRequestSearchClauses,
+  type RelatedRequestInfo,
+} from '../related-request';
+import {
+  buildPageResult,
+  normalizeSearch,
+  resolvePage,
+  type PageResult,
+} from '../../../common/pagination/pagination';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
 import { UpdateMeetingDto } from './dto/update-meeting.dto';
 import { ListMeetingsDto } from './dto/list-meetings.dto';
@@ -43,6 +55,7 @@ const COMMITMENT_SELECT = {
   responsibleUserId: true,
   expectedResult: true,
   result: true,
+  blockers: true,
   assigned: { select: { name: true } },
   responsible: { select: { name: true } },
 } as const;
@@ -102,8 +115,19 @@ export class MeetingService {
     };
   }
 
-  private toResponse(row: MeetingWithRelations, actor: CurrentActor): MeetingResponseDto {
+  /** Respuesta de una sola acta, con el código y título de su solicitud relacionada. */
+  private async respond(row: MeetingWithRelations, actor: CurrentActor): Promise<MeetingResponseDto> {
+    return this.toResponse(row, actor, await loadRelatedRequests(this.prisma, actor, [row]));
+  }
+
+  private toResponse(
+    row: MeetingWithRelations,
+    actor: CurrentActor,
+    related: ReadonlyMap<string, RelatedRequestInfo>,
+  ): MeetingResponseDto {
     const today = localToday();
+    const requestId = relatedRequestIdOf(row);
+    const request = requestId ? related.get(requestId) : undefined;
     return {
       id: row.id,
       processId: row.processId,
@@ -123,6 +147,8 @@ export class MeetingService {
       responsibleUserName: row.responsible?.name ?? null,
       relatedRequestId: row.relatedRequestId,
       relatedProjectRequestId: row.relatedProjectRequestId,
+      relatedRequestCode: request?.code ?? null,
+      relatedRequestTitle: request?.title ?? null,
       agenda: row.agenda,
       decisions: row.decisions,
       notes: row.notes,
@@ -140,6 +166,7 @@ export class MeetingService {
           responsibleUserId: c.responsibleUserId,
           expectedResult: c.expectedResult,
           result: c.result,
+          blockers: c.blockers,
           assignedUserName: c.assigned?.name ?? null,
           responsibleUserName: c.responsible?.name ?? null,
           dueStatus: due.status,
@@ -228,7 +255,7 @@ export class MeetingService {
   async list(
     actor: CurrentActor,
     filters: ListMeetingsDto,
-  ): Promise<MeetingResponseDto[]> {
+  ): Promise<PageResult<MeetingResponseDto>> {
     const where: Prisma.MeetingWhereInput = {
       AND: [this.scope.meetingWhere(actor)],
     };
@@ -239,6 +266,11 @@ export class MeetingService {
     if (filters.state !== undefined) {
       and.push({ state: filters.state });
     }
+    if (filters.open === true) {
+      and.push({ state: { notIn: [RecordState.COMPLETADO, RecordState.ARCHIVADO] } });
+    } else if (filters.open === false) {
+      and.push({ state: { in: [RecordState.COMPLETADO, RecordState.ARCHIVADO] } });
+    }
     if (filters.requestId !== undefined) {
       and.push({
         OR: [
@@ -247,13 +279,35 @@ export class MeetingService {
         ],
       });
     }
+    const q = normalizeSearch(filters.q);
+    if (q !== undefined) {
+      and.push({
+        OR: [
+          { title: { contains: q, mode: 'insensitive' } },
+          { responsible: { is: { name: { contains: q, mode: 'insensitive' } } } },
+          ...relatedRequestSearchClauses(actor, q),
+        ],
+      });
+    }
 
-    const rows = await this.prisma.meeting.findMany({
-      where,
-      include: MEETING_INCLUDE,
-      orderBy: [{ meetingDate: 'desc' }, { createdAt: 'desc' }],
-    });
-    return rows.map((row) => this.toResponse(row, actor));
+    const window = resolvePage(filters);
+    const dir = filters.dir ?? 'desc';
+    const [rows, total] = await Promise.all([
+      this.prisma.meeting.findMany({
+        where,
+        include: MEETING_INCLUDE,
+        orderBy: [{ meetingDate: dir }, { createdAt: 'desc' }, { id: 'asc' }],
+        skip: window.skip,
+        take: window.take,
+      }),
+      this.prisma.meeting.count({ where }),
+    ]);
+    const related = await loadRelatedRequests(this.prisma, actor, rows);
+    return buildPageResult(
+      rows.map((row) => this.toResponse(row, actor, related)),
+      total,
+      window,
+    );
   }
 
   /**
@@ -323,7 +377,7 @@ export class MeetingService {
 
   async get(actor: CurrentActor, id: string): Promise<MeetingResponseDto> {
     const row = await this.requireInScope(actor, id);
-    return this.toResponse(row, actor);
+    return this.respond(row, actor);
   }
 
   async create(
@@ -337,6 +391,9 @@ export class MeetingService {
     // persona del proceso, también a un integrante.
     const uniqueIds = Array.from(new Set(dto.participantUserIds ?? []));
     await this.assertParticipantsInProcess(dto.processId, uniqueIds);
+    for (const requestId of [dto.relatedRequestId, dto.relatedProjectRequestId]) {
+      if (requestId) await this.scope.assertRequestVisible(actor, requestId);
+    }
 
     const created = await this.prisma.$transaction(async (tx) => {
       const row = await tx.meeting.create({
@@ -390,7 +447,7 @@ export class MeetingService {
     });
 
     await this.notifyParticipants(actor, created, uniqueIds);
-    return this.toResponse(created, actor);
+    return this.respond(created, actor);
   }
 
   async update(
@@ -440,6 +497,15 @@ export class MeetingService {
     await this.scope.assertPeopleInProcess(existing.processId, [
       dto.responsibleUserId !== existing.responsibleUserId ? dto.responsibleUserId : undefined,
     ]);
+    if (dto.relatedRequestId && dto.relatedRequestId !== existing.relatedRequestId) {
+      await this.scope.assertRequestVisible(actor, dto.relatedRequestId);
+    }
+    if (
+      dto.relatedProjectRequestId &&
+      dto.relatedProjectRequestId !== existing.relatedProjectRequestId
+    ) {
+      await this.scope.assertRequestVisible(actor, dto.relatedProjectRequestId);
+    }
     let uniqueIds: string[] | undefined;
     let addedIds: string[] = [];
     if (dto.participantUserIds !== undefined) {
@@ -510,7 +576,7 @@ export class MeetingService {
     });
 
     await this.notifyParticipants(actor, updated, addedIds);
-    return this.toResponse(updated, actor);
+    return this.respond(updated, actor);
   }
 
   /**
@@ -578,7 +644,7 @@ export class MeetingService {
       });
       return row;
     });
-    return this.toResponse(updated, actor);
+    return this.respond(updated, actor);
   }
 
   async remove(actor: CurrentActor, id: string): Promise<void> {

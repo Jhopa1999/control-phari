@@ -9,6 +9,7 @@ import { WorklogService } from './worklog/worklog.service';
 import { WorklogEligibilityService } from './worklog/worklog-eligibility.service';
 import { WorklogSuggestionService } from './worklog/worklog-suggestion.service';
 import { RequestModule } from '../request/request.module';
+import { CoordinationLookupController } from './coordination-lookup.controller';
 import { MeetingController } from './meeting/meeting.controller';
 import { MeetingService } from './meeting/meeting.service';
 import { CommitmentController } from './commitment/commitment.controller';
@@ -33,6 +34,7 @@ import { CommitmentNoticeScheduler } from './commitment/commitment-notice.schedu
   imports: [PrismaModule, AuthModule, AuditModule, RequestModule],
   controllers: [
     WorklogController,
+    CoordinationLookupController,
     MeetingController,
     CommitmentController,
   ],

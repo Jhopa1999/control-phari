@@ -36,6 +36,9 @@ export class CommitmentMyWorkItemDto {
   @ApiProperty({ type: String, nullable: true })
   expectedResult!: string | null;
 
+  @ApiProperty({ type: String, nullable: true, description: 'Motivo del bloqueo o bloqueos registrados.' })
+  blockers!: string | null;
+
   @ApiProperty({
     type: Boolean,
     description: 'La persona puede completarlo desde Mi trabajo (transición COMPLETADO).',

@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,6 +19,8 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { HeaderResponse, setPaginationHeaders } from '../../../common/pagination/pagination';
+import { PAGINATION_RESPONSE_HEADERS } from '../../../common/pagination/pagination-openapi';
 import { CommitmentService } from './commitment.service';
 import { CreateCommitmentDto } from './dto/create-commitment.dto';
 import { UpdateCommitmentDto } from './dto/update-commitment.dto';
@@ -45,14 +48,26 @@ export class CommitmentController {
   constructor(private readonly commitmentService: CommitmentService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lista compromisos en alcance (filtros opcionales).' })
-  @ApiResponse({ status: 200, description: 'Compromisos.', type: [CommitmentResponseDto] })
+  @ApiOperation({
+    summary:
+      'Lista compromisos en alcance con filtros opcionales (estado, vista abiertos/vencidos/terminados, persona, acta, solicitud), búsqueda q (título, resultado esperado, acta o solicitud relacionada), orden por vencimiento (dir) y paginación page/pageSize. Sin page ni pageSize devuelve el listado completo con un tope de 1000 filas. La respuesta es siempre un arreglo; el total tras filtros llega en la cabecera X-Total-Count.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Compromisos (la página pedida o hasta 1000 filas).',
+    type: [CommitmentResponseDto],
+    headers: PAGINATION_RESPONSE_HEADERS,
+  })
+  @ApiResponse({ status: 400, description: 'Filtros o paginación inválidos.' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
-  list(
+  async list(
     @CurrentActor() actor: CurrentActorType,
     @Query() filters: ListCommitmentsDto,
-  ) {
-    return this.commitmentService.list(actor, filters);
+    @Res({ passthrough: true }) res: HeaderResponse,
+  ): Promise<CommitmentResponseDto[]> {
+    const result = await this.commitmentService.list(actor, filters);
+    setPaginationHeaders(res, result);
+    return result.rows;
   }
 
   @Post()
@@ -117,11 +132,14 @@ export class CommitmentController {
   }
 
   @Post(':id/transition')
-  @ApiOperation({ summary: 'Transiciona el estado de un compromiso (maquina minima).' })
+  @ApiOperation({
+    summary:
+      'Transiciona el estado de un compromiso (maquina minima). Al pasar a BLOQUEADO admite blockedReason (hasta 500 caracteres), que se guarda en los bloqueos del compromiso.',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ type: TransitionDto })
   @ApiResponse({ status: 200, description: 'Estado actualizado.', type: CommitmentResponseDto })
-  @ApiResponse({ status: 400, description: 'Transicion no permitida.' })
+  @ApiResponse({ status: 400, description: 'Transicion no permitida o motivo de bloqueo con otro estado.' })
   @ApiResponse({ status: 404, description: 'Compromiso fuera de alcance.' })
   transition(
     @CurrentActor() actor: CurrentActorType,

@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { InlineNotice } from '@/components/inline-notice';
+import { SearchableSelect, type SearchableOption } from '@/components/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import type {
   Commitment,
@@ -30,7 +32,10 @@ import type {
   Process,
 } from '@/lib/api-client';
 import { formatDateOnly, localDateInputValue } from '@/lib/format';
+import { listMeetingsPage } from '@/lib/meetings';
+import { relatedValueOf, type RelatedRequestValue } from '@/lib/related-request-value';
 import { usePersonError } from '@/lib/use-person-error';
+import { RelatedRequestField } from './solicitud-field';
 
 export interface CompromisoFormValues {
   processId: string;
@@ -39,6 +44,8 @@ export interface CompromisoFormValues {
   assignedUserId: string;
   responsibleUserId: string;
   sourceMeetingId: string;
+  /** Solicitud o proyecto relacionado (opcional). */
+  related: RelatedRequestValue | null;
   expectedResult: string;
   blockers: string;
 }
@@ -49,7 +56,6 @@ interface CompromisoFormDialogProps {
   editing?: Commitment | null;
   processes: Process[];
   people: CoordinationPerson[];
-  meetings: Meeting[];
   /**
    * Acta desde la que se registra el compromiso: fija el proceso y el acta de
    * origen (no se pueden cambiar en el formulario).
@@ -62,6 +68,14 @@ interface CompromisoFormDialogProps {
 }
 
 const SIN_VALOR = '__none__';
+const NO_REQUEST_ACCESS_COPY = 'No tienes acceso a la solicitud elegida. Quítala o elige otra.';
+/** Los errores de fecha de la API empiezan así; van junto al campo Vencimiento. */
+const DUE_RANGE_ERROR_PREFIX = 'La fecha límite debe estar entre';
+
+function meetingOption(m: { id: string; title: string; meetingDate: string }): SearchableOption {
+  const date = formatDateOnly(m.meetingDate);
+  return { value: m.id, label: m.title, secondary: date, summary: `${m.title} (${date})` };
+}
 
 type FieldKey = 'processId' | 'title' | 'dueDate';
 type FieldErrors = Partial<Record<FieldKey, string>>;
@@ -90,7 +104,6 @@ export function CompromisoFormDialog({
   editing,
   processes,
   people,
-  meetings,
   fixedMeeting,
   submitting,
   errorMessage,
@@ -105,6 +118,11 @@ export function CompromisoFormDialog({
   const [sourceMeetingId, setSourceMeetingId] = React.useState('');
   const [expectedResult, setExpectedResult] = React.useState('');
   const [blockers, setBlockers] = React.useState('');
+  const [related, setRelated] = React.useState<RelatedRequestValue | null>(null);
+  const [meetingSel, setMeetingSel] = React.useState<SearchableOption | null>(null);
+  const [meetingOptions, setMeetingOptions] = React.useState<SearchableOption[]>([]);
+  const [meetingTruncated, setMeetingTruncated] = React.useState(false);
+  const [meetingQuery, setMeetingQuery] = React.useState('');
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
   const processRef = React.useRef<HTMLButtonElement>(null);
   const titleRef = React.useRef<HTMLInputElement>(null);
@@ -137,6 +155,16 @@ export function CompromisoFormDialog({
       setSourceMeetingId(editing.sourceMeetingId ?? '');
       setExpectedResult(editing.expectedResult ?? '');
       setBlockers(editing.blockers ?? '');
+      setRelated(relatedValueOf(editing));
+      setMeetingSel(
+        editing.sourceMeetingId && editing.sourceMeetingTitle
+          ? meetingOption({
+              id: editing.sourceMeetingId,
+              title: editing.sourceMeetingTitle,
+              meetingDate: editing.sourceMeetingDate ?? '',
+            })
+          : null,
+      );
     } else {
       setProcessId(fixedMeeting?.processId ?? '');
       setTitle('');
@@ -147,20 +175,34 @@ export function CompromisoFormDialog({
       setSourceMeetingId(fixedMeeting?.id ?? '');
       setExpectedResult('');
       setBlockers('');
+      // El compromiso nacido de un acta hereda su solicitud; la persona puede cambiarla.
+      setRelated(fixedMeeting ? relatedValueOf(fixedMeeting) : null);
+      setMeetingSel(null);
     }
+    setMeetingQuery('');
   });
 
-  // Actas a las que se puede ligar: abiertas y del mismo proceso (más la actual).
-  const meetingOptions = React.useMemo(
-    () =>
-      meetings.filter(
-        (m) =>
-          m.id === (editing?.sourceMeetingId ?? '') ||
-          (!m.closed && (!processId || m.processId === processId)),
-      ),
-    [meetings, editing, processId],
-  );
   const lockedToMeeting = Boolean(fixedMeeting);
+
+  // Actas a las que se puede ligar: abiertas y del mismo proceso, buscadas en el servidor.
+  React.useEffect(() => {
+    if (!open || lockedToMeeting || !processId) return;
+    const controller = new AbortController();
+    listMeetingsPage(
+      { open: true, processId, q: meetingQuery, page: 1, pageSize: 25 },
+      controller.signal,
+    )
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        setMeetingOptions(result.rows.map(meetingOption));
+        setMeetingTruncated(result.total > result.rows.length);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setMeetingOptions([]);
+      });
+    return () => controller.abort();
+  }, [open, lockedToMeeting, processId, meetingQuery]);
 
   function clearError(key: FieldKey) {
     setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
@@ -183,11 +225,23 @@ export function CompromisoFormDialog({
       dueDate,
       assignedUserId,
       responsibleUserId,
-      sourceMeetingId,
+      sourceMeetingId: meetingSel?.value ?? sourceMeetingId,
+      related,
       expectedResult,
       blockers,
     });
   }
+
+  const dueServerError = person.formMessage?.startsWith(DUE_RANGE_ERROR_PREFIX)
+    ? person.formMessage
+    : null;
+  const relatedServerError =
+    person.formMessage === 'No se encontró la solicitud.' ? NO_REQUEST_ACCESS_COPY : null;
+  const generalMessage = dueServerError || relatedServerError ? null : person.formMessage;
+  React.useEffect(() => {
+    if (open && dueServerError) dueRef.current?.focus();
+  }, [open, dueServerError]);
+  const noPeople = !assignedUserId && !responsibleUserId;
 
   // Sin códigos internos visibles (design §13.1).
   const processName = (id: string) =>
@@ -239,7 +293,13 @@ export function CompromisoFormDialog({
               }
             </Field>
 
-            <Field id="com-title" label="Título" required error={fieldErrors.title}>
+            <Field
+              id="com-title"
+              label="Título"
+              required
+              error={fieldErrors.title}
+              help="Qué se compromete, empezando por un verbo. Por ejemplo: Enviar el informe de cierre."
+            >
               <Input
                 ref={titleRef}
                 value={title}
@@ -251,7 +311,13 @@ export function CompromisoFormDialog({
               />
             </Field>
 
-            <Field id="com-due" label="Vencimiento" required error={fieldErrors.dueDate}>
+            <Field
+              id="com-due"
+              label="Vencimiento"
+              required
+              error={fieldErrors.dueDate ?? dueServerError}
+              help="Avisamos a la persona asignada (o a la responsable si no hay asignada) un día antes, el mismo día y si se vence."
+            >
               <Input
                 ref={dueRef}
                 type="date"
@@ -268,6 +334,7 @@ export function CompromisoFormDialog({
               <Field
                 id="com-assigned"
                 label="Asignado"
+                help="Quien hace el trabajo."
                 error={assignedUserId ? person.personError : null}
               >
                 {(control) => (
@@ -295,6 +362,7 @@ export function CompromisoFormDialog({
               <Field
                 id="com-responsible"
                 label="Responsable"
+                help="Quien responde porque se cumpla. Si no eliges asignado, a esta persona se le avisa."
                 error={responsibleUserId ? person.personError : null}
               >
                 {(control) => (
@@ -321,6 +389,12 @@ export function CompromisoFormDialog({
               </Field>
             </div>
 
+            {noPeople ? (
+              <InlineNotice tone="warning" role="note">
+                Sin asignado ni responsable, nadie verá este compromiso en Mi trabajo ni recibirá avisos.
+              </InlineNotice>
+            ) : null}
+
             <Field
               id="com-meeting"
               label="Acta de origen"
@@ -334,37 +408,56 @@ export function CompromisoFormDialog({
                   value={`${fixedMeeting.title} (${formatDateOnly(fixedMeeting.meetingDate)})`}
                 />
               ) : (
-                <Select
-                  value={sourceMeetingId || SIN_VALOR}
-                  onValueChange={(v) => setSourceMeetingId(v === SIN_VALOR ? '' : v)}
-                >
-                  <SelectTrigger {...control}>
-                    <SelectValue placeholder="Sin acta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={SIN_VALOR}>Sin acta</SelectItem>
-                    {meetingOptions.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {`${m.title} (${formatDateOnly(m.meetingDate)})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  {...control}
+                  options={meetingOptions}
+                  selected={meetingSel}
+                  onSelect={(option) => {
+                    setMeetingSel(option);
+                    setSourceMeetingId(option?.value ?? '');
+                  }}
+                  placeholder="Buscar acta por título"
+                  listLabel="Actas abiertas"
+                  clearLabel="Quitar acta de origen"
+                  clearSearchLabel="Borrar búsqueda"
+                  truncated={meetingTruncated}
+                  truncatedMessage="Mostrando las primeras 25. Escribe para acotar."
+                  onSearch={setMeetingQuery}
+                  emptyContent="No hay actas abiertas en este proceso."
+                  disabled={!processId}
+                />
               )}
             </Field>
 
-            <Field id="com-result" label="Resultado esperado">
+            <RelatedRequestField
+              id="com-solicitud"
+              value={related}
+              onChange={setRelated}
+              active={open}
+              help="Opcional. Si registras el compromiso desde un acta con solicitud, se toma de ella y puedes cambiarla."
+              error={relatedServerError}
+            />
+
+            <Field
+              id="com-result"
+              label="Resultado esperado"
+              help="Qué debe quedar hecho para dar el compromiso por cumplido."
+            >
               <Textarea
                 value={expectedResult}
                 onChange={(e) => setExpectedResult(e.target.value)}
               />
             </Field>
 
-            <Field id="com-blockers" label="Bloqueos">
+            <Field
+              id="com-blockers"
+              label="Bloqueos"
+              help="Si el compromiso está detenido, explica por qué. Se muestra junto al compromiso."
+            >
               <Textarea value={blockers} onChange={(e) => setBlockers(e.target.value)} />
             </Field>
 
-            <FormError id={FORM_ID} message={person.formMessage} />
+            <FormError id={FORM_ID} message={generalMessage} />
           </DialogBody>
 
           <DialogFooter>

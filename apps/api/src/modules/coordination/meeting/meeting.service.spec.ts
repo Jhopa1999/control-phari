@@ -13,9 +13,11 @@ import { MeetingService } from './meeting.service';
 
 function createMocks() {
   const prismaObj: Record<string, any> = {
+    request: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
     meeting: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -420,13 +422,51 @@ describe('MeetingService', () => {
   });
 
   describe('list', () => {
+    it('busca q en título, responsable y solicitud relacionada (solo las legibles)', async () => {
+      m.prismaObj.meeting.findMany.mockResolvedValue([]);
+      await m.service.list(lider(['p1']), { q: ' PRY-0012 ' } as any);
+      const and = m.prismaObj.meeting.findMany.mock.calls[0][0].where.AND;
+      expect(and).toHaveLength(2);
+      const or = and[1].OR;
+      expect(or[0]).toEqual({ title: { contains: 'PRY-0012', mode: 'insensitive' } });
+      expect(or[1]).toEqual({ responsible: { is: { name: { contains: 'PRY-0012', mode: 'insensitive' } } } });
+      expect(or).toHaveLength(4);
+      expect(JSON.stringify(or[2])).toContain('deletedAt');
+    });
+    it('pagina: page/pageSize van a skip/take y el total sale del conteo', async () => {
+      m.prismaObj.meeting.findMany.mockResolvedValue([meetingRow()]);
+      m.prismaObj.meeting.count.mockResolvedValue(60);
+      const res = await m.service.list(lider(['p1']), { page: 3, pageSize: 25 } as any);
+      const args = m.prismaObj.meeting.findMany.mock.calls[0][0];
+      expect(args.skip).toBe(50);
+      expect(args.take).toBe(25);
+      expect(res.total).toBe(60);
+      expect(res.window.page).toBe(3);
+    });
+    it('open=true excluye actas cerradas y archivadas', async () => {
+      m.prismaObj.meeting.findMany.mockResolvedValue([]);
+      await m.service.list(lider(['p1']), { open: true } as any);
+      const and = m.prismaObj.meeting.findMany.mock.calls[0][0].where.AND;
+      expect(and).toContainEqual({ state: { notIn: ['COMPLETADO', 'ARCHIVADO'] } });
+    });
+    it('devuelve código y título de la solicitud relacionada que el actor puede leer', async () => {
+      m.prismaObj.meeting.findMany.mockResolvedValue([
+        meetingRow({ relatedProjectRequestId: 'r1' }),
+        meetingRow({ id: 'm2', relatedRequestId: 'r2' }),
+      ]);
+      m.prismaObj.request.findMany.mockResolvedValue([{ id: 'r1', code: 'PRY-0012', title: 'Proyecto uno' }]);
+      const res = await m.service.list(lider(['p1']), {} as any);
+      expect(res.rows[0]).toMatchObject({ relatedRequestCode: 'PRY-0012', relatedRequestTitle: 'Proyecto uno' });
+      // r2 no es legible: sin código ni título (la web dice «No disponible»).
+      expect(res.rows[1]).toMatchObject({ relatedRequestCode: null, relatedRequestTitle: null });
+    });
     it('aplica filtros processId/state', async () => {
       m.prismaObj.meeting.findMany.mockResolvedValue([meetingRow()]);
       const res = await m.service.list(lider(['p1']), {
         processId: 'p1',
         state: 'BORRADOR',
       } as any);
-      expect(res).toHaveLength(1);
+      expect(res.rows).toHaveLength(1);
       const and = m.prismaObj.meeting.findMany.mock.calls[0][0].where.AND;
       expect(and).toContainEqual({ processId: 'p1' });
       expect(and).toContainEqual({ state: 'BORRADOR' });
@@ -445,7 +485,8 @@ describe('MeetingService', () => {
     it('sin filtros devuelve solo alcance', async () => {
       m.prismaObj.meeting.findMany.mockResolvedValue([]);
       const res = await m.service.list(lider(['p1']), {} as any);
-      expect(res).toEqual([]);
+      expect(res.rows).toEqual([]);
+      expect(res.truncated).toBe(false);
       const and = m.prismaObj.meeting.findMany.mock.calls[0][0].where.AND;
       expect(and).toHaveLength(1);
     });

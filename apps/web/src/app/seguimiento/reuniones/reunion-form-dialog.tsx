@@ -27,6 +27,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sparkles, X } from 'lucide-react';
 import type { CoordinationPerson, Meeting, MeetingAiProposal, Process } from '@/lib/api-client';
 import { formatDateOnly, localDateInputValue } from '@/lib/format';
+import {
+  appendAgendaTemplate,
+  listAgendaTemplates,
+  type AgendaTemplate,
+} from '@/lib/agenda-templates';
+import { relatedValueOf, type RelatedRequestValue } from '@/lib/related-request-value';
 import { getMeetingAiAvailability, type MeetingAiUiStatus } from '@/lib/meetings-ai';
 import {
   PARTICIPANT_NOT_IN_PROCESS_COPY,
@@ -42,6 +48,7 @@ import {
   type DuracionParts,
 } from './duracion-field';
 import { ParticipantesField, type PeopleLoadState } from './participantes-field';
+import { RelatedRequestField } from './solicitud-field';
 import { ActaIaPanel } from './acta-ia-panel';
 import { ActaIaPreview, type AppliedProposal, type PendingCommitment } from './acta-ia-preview';
 
@@ -56,6 +63,8 @@ export interface ReunionFormValues {
   durationMinutes: number | null;
   participantUserIds: string[];
   responsibleUserId: string;
+  /** Solicitud o proyecto relacionado (opcional). */
+  related: RelatedRequestValue | null;
   agenda: string;
   decisions: string;
   notes: string;
@@ -79,6 +88,7 @@ interface ReunionFormDialogProps {
 }
 
 const SIN_VALOR = '__none__';
+const NO_REQUEST_ACCESS_COPY = 'No tienes acceso a la solicitud elegida. Quítala o elige otra.';
 
 type FieldKey = 'processId' | 'title' | 'meetingDate' | 'meetingTime' | 'duration';
 type FieldErrors = Partial<Record<FieldKey, string>>;
@@ -130,6 +140,11 @@ export function ReunionFormDialog({
   const [participantUserIds, setParticipantUserIds] = React.useState<string[]>([]);
   const [responsibleUserId, setResponsibleUserId] = React.useState('');
   const [agenda, setAgenda] = React.useState('');
+  const [related, setRelated] = React.useState<RelatedRequestValue | null>(null);
+  const [templates, setTemplates] = React.useState<AgendaTemplate[]>([]);
+  // Plantilla recién insertada: permite deshacer hasta que se edite la agenda.
+  const [templateUndo, setTemplateUndo] = React.useState<{ previous: string; name: string } | null>(null);
+  const [templateError, setTemplateError] = React.useState<string | null>(null);
   const [decisions, setDecisions] = React.useState('');
   const [notes, setNotes] = React.useState('');
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
@@ -184,7 +199,10 @@ export function ReunionFormDialog({
     setView('form');
     setAppliedNotice(null);
     setPending([]);
+    setTemplateUndo(null);
+    setTemplateError(null);
     if (editing) {
+      setRelated(relatedValueOf(editing));
       setProcessId(editing.processId);
       setTitle(editing.title);
       setMeetingDate(editing.meetingDate);
@@ -196,6 +214,7 @@ export function ReunionFormDialog({
       setDecisions(editing.decisions ?? '');
       setNotes(editing.notes ?? '');
     } else {
+      setRelated(null);
       setProcessId('');
       setTitle('');
       // Hoy en el calendario local del usuario (design §7.9, regla 2).
@@ -209,6 +228,44 @@ export function ReunionFormDialog({
       setNotes('');
     }
   });
+
+  // Plantillas de agenda (ayuda opcional): solo si el acta está abierta.
+  React.useEffect(() => {
+    if (!open || (editing?.closed ?? false)) return;
+    let cancelled = false;
+    void listAgendaTemplates().then((list) => {
+      if (!cancelled) setTemplates(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, editing]);
+
+  function insertTemplate(code: string): void {
+    const template = templates.find((t) => t.code === code);
+    if (!template) return;
+    const next = appendAgendaTemplate(agenda, template.text);
+    if (next === null) {
+      setTemplateUndo(null);
+      setTemplateError('La agenda ya es muy larga para agregar la plantilla.');
+      return;
+    }
+    setTemplateError(null);
+    setTemplateUndo({ previous: agenda, name: template.name });
+    setAgenda(next);
+    window.setTimeout(() => {
+      const area = document.getElementById('reu-agenda') as HTMLTextAreaElement | null;
+      area?.focus();
+      area?.setSelectionRange(next.length, next.length);
+    }, 50);
+  }
+
+  function undoTemplate(): void {
+    if (!templateUndo) return;
+    setAgenda(templateUndo.previous);
+    setTemplateUndo(null);
+    window.setTimeout(() => document.getElementById('reu-agenda')?.focus(), 50);
+  }
 
   // Disponibilidad de la ayuda de IA al abrir (un acta cerrada no la usa).
   const iaApplies = !(editing?.closed ?? false);
@@ -357,6 +414,7 @@ export function ReunionFormDialog({
       durationMinutes,
       participantUserIds,
       responsibleUserId,
+      related,
       agenda,
       decisions,
       notes,
@@ -374,6 +432,10 @@ export function ReunionFormDialog({
     person.formMessage === PARTICIPANT_NOT_IN_PROCESS_MESSAGE
       ? PARTICIPANT_NOT_IN_PROCESS_COPY
       : person.formMessage;
+
+  // 404 por la solicitud elegida: error junto al campo, sin duplicarlo abajo.
+  const relatedError = formMessage === 'No se encontró la solicitud.' ? NO_REQUEST_ACCESS_COPY : null;
+  const generalMessage = relatedError ? null : formMessage;
 
   const inPreview = view === 'preview' && proposal !== null;
   const pendingSuffix =
@@ -437,7 +499,13 @@ export function ReunionFormDialog({
         >
           <DialogBody className="grid gap-4">
             <RequiredHint />
-            <Field id="reu-process" label="Proceso" required={!isEdit} error={fieldErrors.processId}>
+            <Field
+              id="reu-process"
+              label="Proceso"
+              required={!isEdit}
+              error={fieldErrors.processId}
+              help="Define quién puede ser responsable y participante."
+            >
               {(control) =>
                 isEdit ? (
                   <Input {...control} readOnly disabled value={processName(processId)} />
@@ -470,7 +538,13 @@ export function ReunionFormDialog({
               }
             </Field>
 
-            <Field id="reu-title" label="Título" required error={fieldErrors.title}>
+            <Field
+              id="reu-title"
+              label="Título"
+              required
+              error={fieldErrors.title}
+              help="Un nombre corto que se entienda solo. Por ejemplo: Seguimiento semanal de soporte."
+            >
               <Input
                 ref={titleRef}
                 value={title}
@@ -483,7 +557,13 @@ export function ReunionFormDialog({
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="reu-date" label="Fecha" required error={fieldErrors.meetingDate}>
+              <Field
+                id="reu-date"
+                label="Fecha"
+                required
+                error={fieldErrors.meetingDate}
+                help="Día en que ocurrió o va a ocurrir la reunión."
+              >
                 <Input
                   ref={dateRef}
                   type="date"
@@ -494,7 +574,12 @@ export function ReunionFormDialog({
                   }}
                 />
               </Field>
-              <Field id="reu-time" label="Hora (HH:mm)" error={fieldErrors.meetingTime}>
+              <Field
+                id="reu-time"
+                label="Hora (HH:mm)"
+                error={fieldErrors.meetingTime}
+                help="Formato de 24 horas, por ejemplo 14:30."
+              >
                 <Input
                   ref={timeRef}
                   type="time"
@@ -517,6 +602,16 @@ export function ReunionFormDialog({
               meetingTime={meetingTime}
               error={fieldErrors.duration}
               hoursRef={durationRef}
+              help="En minutos, de 15 en 15. Hace falta para cerrar el acta y se usa para proponer el tiempo en la bitácora de los participantes."
+            />
+
+            <RelatedRequestField
+              id="reu-solicitud"
+              value={related}
+              onChange={setRelated}
+              active={open}
+              help="Opcional. Búscala por código (PRY-0012) o por título. Sirve para encontrar la reunión después por su solicitud."
+              error={relatedError}
             />
 
             {removedNotice ? (
@@ -609,15 +704,68 @@ export function ReunionFormDialog({
               />
             ) : null}
 
-            <Field id="reu-agenda" label="Agenda">
-              <Textarea value={agenda} onChange={(e) => setAgenda(e.target.value)} />
-            </Field>
+            <div className="grid gap-1.5">
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <span aria-hidden="true" className="text-sm leading-none font-medium text-foreground">
+                  Agenda
+                </span>
+                {templates.length > 0 ? (
+                  <Select value="" onValueChange={insertTemplate}>
+                    <SelectTrigger
+                      aria-label="Insertar plantilla de agenda"
+                      className="h-8 w-full sm:w-56 max-md:h-11"
+                    >
+                      <SelectValue placeholder="Usar una plantilla" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map((t) => (
+                        <SelectItem key={t.code} value={t.code}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+              </div>
+              <Field
+                id="reu-agenda"
+                label="Agenda"
+                labelHidden
+                help="Los temas a tratar. Puedes preparar el acta antes de la reunión: queda abierta hasta que la cierres."
+              >
+                <Textarea
+                  value={agenda}
+                  onChange={(e) => {
+                    setAgenda(e.target.value);
+                    setTemplateUndo(null);
+                    setTemplateError(null);
+                  }}
+                />
+              </Field>
+              {templateError ? (
+                <p role="alert" className="text-meta text-danger">
+                  {templateError}
+                </p>
+              ) : null}
+              {templateUndo ? (
+                <p role="status" className="flex flex-wrap items-center gap-2 text-meta text-muted-foreground">
+                  <span>{`Se insertó la plantilla “${templateUndo.name}”.`}</span>
+                  <Button type="button" variant="link" size="sm" className="text-link" onClick={undoTemplate}>
+                    Deshacer
+                  </Button>
+                </p>
+              ) : null}
+            </div>
 
-            <Field id="reu-decisions" label="Decisiones y acuerdos">
+            <Field
+              id="reu-decisions"
+              label="Decisiones y acuerdos"
+              help="Lo que se decidió. Para cerrar el acta hace falta al menos una decisión o un compromiso."
+            >
               <Textarea value={decisions} onChange={(e) => setDecisions(e.target.value)} />
             </Field>
 
-            <Field id="reu-notes" label="Observaciones">
+            <Field id="reu-notes" label="Observaciones" help="Notas que no son decisiones ni compromisos.">
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
             </Field>
 
@@ -665,7 +813,7 @@ export function ReunionFormDialog({
               </section>
             ) : null}
 
-            <FormError id={FORM_ID} message={formMessage} />
+            <FormError id={FORM_ID} message={generalMessage} />
           </DialogBody>
 
           <DialogFooter>
