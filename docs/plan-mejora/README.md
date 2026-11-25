@@ -409,3 +409,48 @@ Se resuelven una sola vez y benefician a varios módulos; la fila [BL-080](../BA
 | Navegación | Rutas que no coinciden con el grupo del menú (Aprobaciones, Controles, Capacidad, Equipo); alias; dos buscadores. La validación del agrupamiento está en [BL-030](../BACKLOG.md) | 1.6, 2.5, 3.2, 5.3, 6.1 |
 
 Pendientes que ya existen y no se duplican: [BL-014](../BACKLOG.md) (dividir vistas grandes), [BL-028](../BACKLOG.md) (Auditoría y Maestras legibles), [BL-029](../BACKLOG.md) (acciones de fila), [BL-030](../BACKLOG.md) (agrupación del menú), [BL-032](../BACKLOG.md) (Asistente), [BL-038](../BACKLOG.md) y [BL-039](../BACKLOG.md) (filtros), [BL-040](../BACKLOG.md) (seed), [BL-041](../BACKLOG.md) (alcance), [BL-046](../BACKLOG.md) (Asistente cita IDs), [BL-050](../BACKLOG.md) (datos de Novedades), [BL-051](../BACKLOG.md) y [BL-052](../BACKLOG.md) (compromiso del plan), [BL-053](../BACKLOG.md) (Portafolio «Entrega») y [BL-054](../BACKLOG.md) (datos de referencia).
+
+## Estado de los P3 tras la oleada 5
+
+Resultado de la verificación contra el código de `main` (609deb0): **19 ya resueltos** por las oleadas 1-4, **13 hechos en el PR C**, **3 en los PR A y B** (1.2-1, 1.4-1, 5.5-2; 5.5-1 va en dos partes) y **34 requieren decisión de producto** y no se implementan.
+
+Detalle completo de cada P3 en `.agents/tasks/oleada-5/p3-pendientes.md`. Los que requieren decisión se dejan sin implementar:
+
+| Id | P3 | Estado | Nota |
+|---|---|---|---|
+| 1.1-1 | Acceso con OIDC | requiere decisión | D20: SSO fuera de alcance |
+| 1.3-1 | Paso intermedio del selector con una app | requiere decisión | plan: «sin trabajo» hasta la segunda app |
+| 1.5-2 | Comparativo con periodo anterior | requiere decisión | plan: posponer; depende de D2 camino B |
+| 1.7-1 | Preguntas sugeridas gestionables | requiere decisión | plan: tras BL-032 |
+| 2.2-1 | Formulario de solicitud más corto | requiere decisión | depende de BL-051 |
+| 2.3-1 | Regla del activo en dos sitios | requiere decisión | `request/triage/triage.service.ts:32` (`ASSET_ASSOCIABLE_STATES`); exigir activo en `POST /triage` rechazaría datos hoy válidos |
+| 2.3-2 | Dividir `triage-view.tsx` y e2e | requiere decisión | 1406 líneas; BL-014; hay `e2e/flujo-demanda-feliz.spec.ts` |
+| 2.4-1 | Justificación al re-evaluar | requiere decisión | regla nueva que rechaza datos; D20 sin respuesta explícita |
+| 3.2-2 | Cargar solicitudes y personas bajo demanda | requiere decisión | M; cambia flujo de datos del diálogo |
+| 3.3-2 | Doble `GET /portfolio` al abrir | requiere decisión | solo verificable en compilación de producción; sin evidencia en el código |
+| 3.3-3 | Exportar a Excel | requiere decisión | formato y alcance sin definir; sin dependencias nuevas |
+| 3.4-1 | Etiqueta «S» en «Por complejidad» | requiere decisión | La etiqueta del catálogo `TRIAGE_SIZE` es literalmente «S»; mostrar otro nombre exige decidir el texto del catálogo (dato de Maestras), no un cambio de código. |
+| 3.4-3 | «Hasta» exclusivo mostrado como inclusivo | requiere decisión | semántica del periodo en la API sin confirmar |
+| 4.1-1 | Revisar bitácoras en lote | requiere decisión | M, flujo nuevo |
+| 4.1-3 | Copiar actividades de ayer | requiere decisión | M, vista nueva |
+| 4.2-1 | Nombre del proceso en el DTO del semanal | requiere decisión | cambia contrato; BL-081 |
+| 4.3-1 | Límites de fecha del compromiso | requiere decisión | rechazaría datos hoy válidos; avisar al equipo |
+| 4.3-2 | Búsqueda y paginación en Actas | requiere decisión | BL-081 |
+| 4.4-2 | Cumplimiento del equipo para el líder | requiere decisión | cambia roles del endpoint `compliance`; BL-054 |
+| 4.4-3 | Reconciliar ocurrencias de definiciones pausadas | requiere decisión | cambia el comportamiento del cron; `recurring-activity.service.ts:1068-1089` |
+| 5.1-1 | Filtros de servidor y selector de solicitud con búsqueda | requiere decisión | M, selector nuevo (`disenador`) |
+| 5.1-3 | Acciones de fila de Activos | requiere decisión | plan: se resuelve con BL-029 |
+| 5.2-1 | Contexto, comparación y restauración de versiones | requiere decisión | M, vista nueva |
+| 5.2-2 | Acciones principales visibles por estado | requiere decisión | BL-029 |
+| 5.2-3 | Proyecto y `PRY-XXXX` en Documentos | requiere decisión | BL-038 y BL-014 |
+| 5.3-1 | Bandeja de Controles con filtros y paginación | requiere decisión | M |
+| 5.3-2 | Alias `/gobierno/controles` | requiere decisión | la ruta real es `/administracion/frameworks` (`web/lib/navigation.ts:244`); depende de BL-030 |
+| 5.4-2 | Exportar Auditoría a CSV | requiere decisión | formato y alcance sin definir |
+| 6.2-1 | Retirar maestras de funciones retiradas | requiere decisión | `TRIAGE_ROUTE` e `ISSUE_TYPE` aún en `prisma/catalog-descriptions.ts`; borrar datos |
+| 6.2-2 | Eliminar la ruta alias `/catalogs` | requiere decisión | `web/app/catalogs/page.tsx` aún existe; puede haber enlaces externos |
+| 6.4-1 | «Marco» como lista de maestras | requiere decisión | cambia modelo de datos del proceso |
+| 6.5-1 | Búsqueda y paginación en Solicitantes | requiere decisión | el plan la condiciona a que la lista crezca |
+| 6.7-1 | Dividir la vista de IA | requiere decisión | `web/app/administracion/ia/ia-agentes-view.tsx` (663 líneas); BL-014 |
+| 6.7-2 | Proveedor y costo estimado por triage | requiere decisión | el dato no está en la respuesta del triage; contrato |
+
+Hechos en el PR C: 1.5-1, 2.1-1, 2.1-2, 2.3-3, 3.1-1, 3.1-2, 3.1-3, 3.2-1, 4.4-1, 4.4-4, 5.4-3, 5.5-1, 6.3-1. En los PR A y B: 1.2-1, 1.4-1, 5.5-1 (mensaje), 5.5-2.

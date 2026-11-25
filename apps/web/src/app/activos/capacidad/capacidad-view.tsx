@@ -4,7 +4,7 @@ import { ModuleGate } from '@/components/module-gate';
 import { NO_ACCESS_COPY } from '@/components/no-access-notice';
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
-import { CalendarClock, ChevronRight, Plus, Users } from 'lucide-react';
+import { CalendarClock, ChevronLeft, ChevronRight, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataCardList } from '@/components/data-card-list';
@@ -89,6 +89,14 @@ const SIGNAL_DESCRIPTIONS: Record<CapacitySummaryRow['estado'], string | undefin
 
 function messageOf(err: unknown): string {
   return err instanceof CapacityError ? err.message : 'Ocurrió un error inesperado.';
+}
+
+/** Desplaza un mes `YYYY-MM` por aritmética de enteros (sin zonas horarias). */
+function shiftMonth(value: string, delta: number): string {
+  const [year, month] = value.split('-').map(Number);
+  if (!year || !month) return value;
+  const index = year * 12 + (month - 1) + delta;
+  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
 }
 
 /**
@@ -445,15 +453,44 @@ function CapacidadViewContent(): React.ReactElement {
         <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="capacidad-month">Mes</Label>
           {month ? (
-            <Input
-              id="capacidad-month"
-              type="month"
-              className="w-full sm:w-44"
-              value={month}
-              onChange={(e) => {
-                if (e.target.value) setMonth(e.target.value);
-              }}
-            />
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Mes anterior"
+                onClick={() => setMonth((v) => shiftMonth(v, -1))}
+              >
+                <ChevronLeft aria-hidden="true" />
+              </Button>
+              <Input
+                id="capacidad-month"
+                type="month"
+                className="w-full sm:w-44"
+                value={month}
+                onChange={(e) => {
+                  if (e.target.value) setMonth(e.target.value);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Mes siguiente"
+                onClick={() => setMonth((v) => shiftMonth(v, 1))}
+              >
+                <ChevronRight aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={month === localMonthInputValue()}
+                onClick={() => setMonth(localMonthInputValue())}
+              >
+                Mes actual
+              </Button>
+            </div>
           ) : (
             <Skeleton className="h-9 w-full sm:w-44" />
           )}

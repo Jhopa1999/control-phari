@@ -175,12 +175,14 @@ export function RequestSummary({
             );
           case 'priority':
             return (
-              <PriorityBadge
-                key={item}
-                variant="compact"
-                score={request.currentScore}
-                label={request.priorityLabel}
-              />
+              <span key={item} className="inline-flex items-center gap-1.5">
+                <span className="text-meta text-muted-foreground">Prioridad</span>
+                <PriorityBadge
+                  variant="compact"
+                  score={request.currentScore}
+                  label={request.priorityLabel}
+                />
+              </span>
             );
           case 'resubmitted':
             // Registrada con una decisión anterior de devolución: se reenvió a triage.

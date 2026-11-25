@@ -768,7 +768,9 @@ export class RecurringActivityService {
       select: { id: true },
     });
     if (!item) {
-      throw new BadRequestException('Revisa los datos ingresados.');
+      throw new BadRequestException(
+        'El tipo de actividad no existe o está inactivo. Elige uno del catálogo.',
+      );
     }
   }
 

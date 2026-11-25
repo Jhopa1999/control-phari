@@ -256,3 +256,16 @@ estado de envío (ver el *steering* de frontend). Esos detalles viven en cada
 - **`ErrorState`** recibe `error` (el fallo del wrapper) y lo clasifica con `classifyError` (`lib/api-error.ts`): 403 → `forbidden` (icono `Lock`, `role="status"`, mensaje del servidor, **sin «Reintentar»**); sin respuesta (red, timeout, aborto) → `network` («Revisa tu conexión…» y «Reintentar»); 404 → `notFound`; 401 → `unauthorized` («Tu sesión caducó», enlace «Iniciar sesión»); el resto → `server` (mensaje del servidor y «Reintentar»). `title` y `message` explícitos ganan al texto calculado. El 401 de la identidad y de los permisos lo sigue resolviendo `actor-context` (limpia la sesión y `route-guard` redirige a `/login`). «Revisa tu conexión» solo aparece en el tipo `network`.
 - Los wrappers de `lib/*.ts` conservan el `status` y el mensaje del cuerpo de la API (`messageFromBody`, `apiErrorFrom`), y las vistas guardan el error recibido (no solo su texto) para pasarlo a `ErrorState`.
 - Selector de apps: el administrador del sistema sin aplicaciones ve «No tienes aplicaciones de área habilitadas» y «Ir a mi inicio»; los demás, «Pide acceso al jefe de área». Mi trabajo y el asistente distinguen 403, red y servidor en sus avisos.
+
+## Pulido de la oleada 5 (PR C, P3 del plan de mejora)
+
+Cambios pequeños de presentación, sin contrato nuevo:
+
+- **Panel (1.5-1):** las tarjetas de *Requiere tu atención* van en dos columnas desde el móvil, con menos relleno por debajo de `sm`.
+- **Mi trabajo (2.1-1):** si la primera carga falla solo se muestra el `ErrorState`; el aviso emergente queda para fallos de recarga con datos ya cargados.
+- **Tarea (2.1-2):** la ayuda de *Siguiente paso* no repite el texto de espera de aprobación mientras el motivo del bloqueo está visible.
+- **Triage (2.3-3):** se quita el encabezado repetido «Procesos que intervienen»; queda la leyenda del grupo de casillas.
+- **Planificación (3.1-1, 3.1-3):** con el plan en autorización y el módulo *Aprobaciones*, el resumen ofrece «Ir a Aprobaciones»; el resumen de prioridad de la bandeja lleva la etiqueta «Prioridad».
+- **Capacidad (3.2-1):** el selector de mes añade «Mes anterior», «Mes siguiente» y «Mes actual».
+- **Actividades recurrentes (4.4-1):** la *Fecha de inicio* avisa que no se generan ocurrencias anteriores.
+- **Áreas (6.3-1):** el campo *Orden* explica que las áreas con número menor aparecen primero.

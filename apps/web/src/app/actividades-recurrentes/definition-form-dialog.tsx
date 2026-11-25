@@ -518,7 +518,13 @@ export function DefinitionFormDialog({
               </fieldset>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field id="def-start" label="Fecha de inicio" required error={errors.startDate}>
+                <Field
+                  id="def-start"
+                  label="Fecha de inicio"
+                  required
+                  help="No se generan ocurrencias anteriores a esta fecha."
+                  error={errors.startDate}
+                >
                   <Input
                     type="date"
                     value={values.startDate}

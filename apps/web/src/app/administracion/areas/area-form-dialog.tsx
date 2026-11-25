@@ -185,7 +185,11 @@ export function AreaFormDialog({
               />
             </Field>
 
-            <Field id="area-sort-order" label="Orden">
+            <Field
+              id="area-sort-order"
+              label="Orden"
+              help="Posición del área en las listas: las de número menor aparecen primero."
+            >
               <Input
                 type="number"
                 min={0}

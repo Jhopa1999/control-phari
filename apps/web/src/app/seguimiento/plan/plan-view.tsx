@@ -1640,6 +1640,14 @@ export function PlanView(): React.ReactElement {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-meta text-muted-foreground">Estado del plan</span>
                 <StatusBadge kind="plan" value={plan.status} />
+                {plan.status === 'EN_AUTORIZACION' && allowedModules.has('review') ? (
+                  <Link
+                    href="/administracion/revision"
+                    className="text-meta rounded-sm font-medium text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    Ir a Aprobaciones
+                  </Link>
+                ) : null}
               </div>
             ) : null
           }

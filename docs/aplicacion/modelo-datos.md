@@ -709,3 +709,8 @@ tras el activo generico; permanecen sembradas por compatibilidad.)
     **Rollback:** `CREATE UNIQUE INDEX IF NOT EXISTS requesters_name_key_key ON
     requesters(name_key);` (falla si ya hay homónimos en áreas distintas; habría que
     renombrarlos antes) y `DROP INDEX requesters_name_key_area_id_key, requesters_name_key_idx;`)
+
+
+## Migración de nombres de rol (oleada 5, PR C)
+
+`20261126090000_roles_nombres_con_tildes`: solo datos, idempotente. Cambia `roles.name` de «Jefe de area» a «Jefe de área» y de «Lider de proceso» a «Líder de proceso» solo si todavía tienen el nombre anterior. No toca los códigos. Verificación: `SELECT code, name FROM roles ORDER BY code;`.

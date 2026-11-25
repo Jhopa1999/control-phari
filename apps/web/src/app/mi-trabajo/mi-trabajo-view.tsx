@@ -176,6 +176,7 @@ export function MiTrabajoView(): React.ReactElement {
   // Panel lateral: la URL (?taskId=) manda; estos estados solo recuerdan cómo se abrió.
   const [openedFromList, setOpenedFromList] = React.useState(false);
   const [returnFocusId, setReturnFocusId] = React.useState<string | null>(null);
+  const hasLoadedRef = React.useRef(false);
   const searchRef = React.useRef<HTMLInputElement>(null);
   const pendingFocus = React.useRef<FocusTarget | null>(null);
   // Destino del foco tras confirmar el diálogo de motivo (se aplica al cerrarse).
@@ -201,6 +202,7 @@ export function MiTrabajoView(): React.ReactElement {
     return listMyWork()
       .then((data) => {
         setItems(data);
+        hasLoadedRef.current = true;
         setState('success');
         setRefreshFailed(false);
       })
@@ -209,7 +211,8 @@ export function MiTrabajoView(): React.ReactElement {
         setRefreshFailed(true);
         // Con datos ya cargados se conservan; sin ellos se muestra el error.
         setState((prev) => (prev === 'success' ? 'success' : 'error'));
-        toast.error(refreshErrorText(err));
+        // Sin datos cargados el ErrorState ya muestra el fallo: no se repite en un aviso.
+        if (hasLoadedRef.current) toast.error(refreshErrorText(err));
       });
   }, []);
 
