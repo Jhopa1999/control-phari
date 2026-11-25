@@ -158,6 +158,13 @@ export const EXCLUSIONS: ReadonlyArray<Exclusion> = [
       'POST /requests/{id}/ai/triage-suggestion',
     ],
   ),
+  ...permanente(
+    'Asistencia de interfaz del formulario del acta: estructura el texto que la persona pega y propone compromisos que ella revisa. Consume el modelo del agente ACTAS y no persiste nada; el asistente del portal ya redacta actas y compromisos con las tools de reuniones y compromisos, y sus escrituras pasan por propuesta con confirmación.',
+    [
+      'POST /meetings/ai/structure',
+      'GET /meetings/ai/availability',
+    ],
+  ),
 
   // ------------------------------------------ pendientes: escritura (posterior)
   ...pendiente(

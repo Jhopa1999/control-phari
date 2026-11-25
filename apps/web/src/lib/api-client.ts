@@ -180,6 +180,10 @@ export type CommitmentMyWorkItem = components['schemas']['CommitmentMyWorkItemDt
 export type Meeting = components['schemas']['MeetingResponseDto'];
 export type CreateMeeting = components['schemas']['CreateMeetingDto'];
 export type UpdateMeeting = components['schemas']['UpdateMeetingDto'];
+/** Ayuda de IA del acta: propuesta (POST /meetings/ai/structure) y disponibilidad. */
+export type MeetingAiProposal = components['schemas']['MeetingAiStructureResponseDto'];
+export type MeetingAiCommitment = components['schemas']['MeetingAiCommitmentDto'];
+export type MeetingAiAvailability = components['schemas']['MeetingAiAvailabilityDto'];
 export type Commitment = components['schemas']['CommitmentResponseDto'];
 export type CreateCommitment = components['schemas']['CreateCommitmentDto'];
 export type UpdateCommitment = components['schemas']['UpdateCommitmentDto'];

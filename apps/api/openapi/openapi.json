@@ -9946,6 +9946,81 @@
         ]
       }
     },
+    "/meetings/ai/availability": {
+      "get": {
+        "operationId": "MeetingAiController_availability",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Disponibilidad.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingAiAvailabilityDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Indica si la ayuda de IA del acta está disponible (lista, apagada o sin presupuesto).",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
+    "/meetings/ai/structure": {
+      "post": {
+        "operationId": "MeetingAiController_structure",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StructureMeetingAiDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Propuesta de acta y compromisos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingAiStructureResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (incluido un texto más largo que el máximo) o proceso inexistente."
+          },
+          "403": {
+            "description": "El actor no pertenece al proceso indicado."
+          },
+          "409": {
+            "description": "La IA o el agente de actas están apagados, mal configurados o sin presupuesto."
+          },
+          "413": {
+            "description": "El texto supera el máximo permitido."
+          },
+          "422": {
+            "description": "La IA devolvió una salida no interpretable."
+          },
+          "503": {
+            "description": "La IA no respondió a tiempo o no está disponible."
+          }
+        },
+        "summary": "Propone (no persiste) un acta reestructurada y compromisos a partir de las notas de la reunión, con IA.",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
     "/assistant/status": {
       "get": {
         "operationId": "AssistantController_getStatus",
@@ -21652,6 +21727,158 @@
           "priorityRationale",
           "possibleDuplicates",
           "missingInformation",
+          "model",
+          "agentCode"
+        ]
+      },
+      "MeetingAiAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "off",
+              "unavailable"
+            ],
+            "description": "available: lista para usar. off: IA global o agente de actas apagados. unavailable: sin presupuesto mensual."
+          },
+          "message": {
+            "type": "string",
+            "description": "Motivo legible cuando no está disponible."
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "StructureMeetingAiDto": {
+        "type": "object",
+        "properties": {
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso de la reunión; acota las personas candidatas a responsable."
+          },
+          "meetingDate": {
+            "type": "string",
+            "description": "Fecha de la reunión (YYYY-MM-DD); referencia para resolver «el viernes».",
+            "example": "2025-03-10",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 12000,
+            "description": "Notas de la reunión tal como las escribió la persona. No se guardan."
+          },
+          "participantUserIds": {
+            "description": "Participantes ya elegidos; solo se usan para indicarle al modelo quiénes asistieron.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "processId",
+          "meetingDate",
+          "text"
+        ]
+      },
+      "MeetingAiCommitmentDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "Título propuesto."
+          },
+          "assignedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Persona del proceso propuesta como responsable; null si no se reconoció."
+          },
+          "assigneeText": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre tal como aparece en las notas (para que la persona elija a quién asignar)."
+          },
+          "dueDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fecha límite propuesta (YYYY-MM-DD); null si no hay o no es válida.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "expectedResult": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "Resultado esperado."
+          },
+          "sourceQuote": {
+            "type": "string",
+            "description": "Frase de las notas que origina el compromiso."
+          }
+        },
+        "required": [
+          "title",
+          "assignedUserId",
+          "assigneeText",
+          "dueDate",
+          "expectedResult",
+          "sourceQuote"
+        ]
+      },
+      "MeetingAiStructureResponseDto": {
+        "type": "object",
+        "properties": {
+          "agenda": {
+            "type": "string",
+            "maxLength": 5000,
+            "description": "Agenda propuesta (vacía si no hay)."
+          },
+          "decisions": {
+            "type": "string",
+            "maxLength": 5000,
+            "description": "Decisiones y acuerdos propuestos."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 5000,
+            "description": "Observaciones propuestas."
+          },
+          "commitments": {
+            "description": "Compromisos propuestos.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeetingAiCommitmentDto"
+            }
+          },
+          "warnings": {
+            "description": "Dudas y ajustes hechos por el sistema (fechas descartadas, responsables no reconocidos, recortes).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "model": {
+            "type": "string",
+            "description": "Modelo que respondió (lo fija el backend)."
+          },
+          "agentCode": {
+            "type": "string",
+            "description": "Agente que respondió (lo fija el backend).",
+            "example": "ACTAS"
+          }
+        },
+        "required": [
+          "agenda",
+          "decisions",
+          "notes",
+          "commitments",
+          "warnings",
           "model",
           "agentCode"
         ]

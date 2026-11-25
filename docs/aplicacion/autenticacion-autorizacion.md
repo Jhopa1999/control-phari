@@ -480,4 +480,6 @@ La búsqueda por texto (`GET /search`, oleada 4) usa los mismos roles y el mismo
 
 ### Reuniones: lectura y edición del acta (PR-1)
 
+`POST /meetings/ai/structure` y `GET /meetings/ai/availability` (ayuda de IA del acta) usan los mismos roles del módulo (jefe de área, líder de proceso e integrante). El actor debe pertenecer al proceso indicado (`403` si no; el jefe actúa sobre todos). El agente `ACTAS` y la IA global se encienden desde Administración (solo `ADMIN`). El MCP no expone ninguno de los dos.
+
 Todos los participantes de una reunión (y quien tiene un compromiso asignado) la ven; el líder la ve también en procesos que no lidera si participa. Editan el acta abierta, la eliminan y agregan o quitan participantes solo el responsable, el líder del proceso y el jefe de área; el participante lee y completa sus propios compromisos. Al crear, quien crea puede invitar a cualquier persona del proceso.

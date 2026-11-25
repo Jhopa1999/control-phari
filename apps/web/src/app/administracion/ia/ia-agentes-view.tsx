@@ -67,7 +67,7 @@ function messageOf(err: unknown): string {
 /**
  * Configuración de agentes de IA (solo ADMIN): estado global de IA, credenciales
  * de AWS (el secret es write-only, como el password SMTP), y la configuración de
- * cada agente (hoy TRIAGE) con su modelo, región, prompt e inputs numéricos.
+ * cada agente (TRIAGE, ASISTENTE, ACTAS) con su modelo, región, prompt e inputs numéricos.
  * El modelo se elige del catálogo que expone el backend; nada se hardcodea en el
  * frontend. Calca ConfiguracionSmtpView: estados loading/success/error/forbidden
  * y el patrón conservar/definir/limpiar del secret.
@@ -221,7 +221,8 @@ export function IaAgentesView(): React.ReactElement {
               <div className="flex min-w-0 flex-col gap-1">
                 <span className="font-medium">IA encendida</span>
                 <span className="text-meta text-muted-foreground">
-                  Con la IA apagada, la mesa de triage no ofrece sugerencias.
+                  Con la IA apagada, la mesa de triage, el asistente y la ayuda del acta no ofrecen
+                  sugerencias.
                 </span>
               </div>
               <Switch

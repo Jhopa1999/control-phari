@@ -2680,6 +2680,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/meetings/ai/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Indica si la ayuda de IA del acta está disponible (lista, apagada o sin presupuesto). */
+        get: operations["MeetingAiController_availability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meetings/ai/structure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Propone (no persiste) un acta reestructurada y compromisos a partir de las notas de la reunión, con IA. */
+        post: operations["MeetingAiController_structure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/assistant/status": {
         parameters: {
             query?: never;
@@ -7835,6 +7869,67 @@ export interface components {
             /** @description ID del modelo que genero la sugerencia. */
             model: string;
             /** @description Code del agente que genero la sugerencia. */
+            agentCode: string;
+        };
+        MeetingAiAvailabilityDto: {
+            /**
+             * @description available: lista para usar. off: IA global o agente de actas apagados. unavailable: sin presupuesto mensual.
+             * @enum {string}
+             */
+            status: "available" | "off" | "unavailable";
+            /** @description Motivo legible cuando no está disponible. */
+            message?: string;
+        };
+        StructureMeetingAiDto: {
+            /**
+             * Format: uuid
+             * @description Proceso de la reunión; acota las personas candidatas a responsable.
+             */
+            processId: string;
+            /**
+             * @description Fecha de la reunión (YYYY-MM-DD); referencia para resolver «el viernes».
+             * @example 2025-03-10
+             */
+            meetingDate: string;
+            /** @description Notas de la reunión tal como las escribió la persona. No se guardan. */
+            text: string;
+            /** @description Participantes ya elegidos; solo se usan para indicarle al modelo quiénes asistieron. */
+            participantUserIds?: string[];
+        };
+        MeetingAiCommitmentDto: {
+            /** @description Título propuesto. */
+            title: string;
+            /**
+             * Format: uuid
+             * @description Persona del proceso propuesta como responsable; null si no se reconoció.
+             */
+            assignedUserId: string | null;
+            /** @description Nombre tal como aparece en las notas (para que la persona elija a quién asignar). */
+            assigneeText: string | null;
+            /** @description Fecha límite propuesta (YYYY-MM-DD); null si no hay o no es válida. */
+            dueDate: string | null;
+            /** @description Resultado esperado. */
+            expectedResult: string | null;
+            /** @description Frase de las notas que origina el compromiso. */
+            sourceQuote: string;
+        };
+        MeetingAiStructureResponseDto: {
+            /** @description Agenda propuesta (vacía si no hay). */
+            agenda: string;
+            /** @description Decisiones y acuerdos propuestos. */
+            decisions: string;
+            /** @description Observaciones propuestas. */
+            notes: string;
+            /** @description Compromisos propuestos. */
+            commitments: components["schemas"]["MeetingAiCommitmentDto"][];
+            /** @description Dudas y ajustes hechos por el sistema (fechas descartadas, responsables no reconocidos, recortes). */
+            warnings: string[];
+            /** @description Modelo que respondió (lo fija el backend). */
+            model: string;
+            /**
+             * @description Agente que respondió (lo fija el backend).
+             * @example ACTAS
+             */
             agentCode: string;
         };
         AttachmentLimitsDto: {
@@ -16977,6 +17072,99 @@ export interface operations {
                 content?: never;
             };
             /** @description La IA no respondio a tiempo o no esta disponible. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeetingAiController_availability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disponibilidad. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingAiAvailabilityDto"];
+                };
+            };
+            /** @description Rol insuficiente. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeetingAiController_structure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StructureMeetingAiDto"];
+            };
+        };
+        responses: {
+            /** @description Propuesta de acta y compromisos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingAiStructureResponseDto"];
+                };
+            };
+            /** @description Datos inválidos (incluido un texto más largo que el máximo) o proceso inexistente. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El actor no pertenece al proceso indicado. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La IA o el agente de actas están apagados, mal configurados o sin presupuesto. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El texto supera el máximo permitido. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La IA devolvió una salida no interpretable. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La IA no respondió a tiempo o no está disponible. */
             503: {
                 headers: {
                     [name: string]: unknown;
