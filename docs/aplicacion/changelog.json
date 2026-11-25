@@ -1108,6 +1108,16 @@
         "docs/aplicacion/autenticacion-autorizacion.md"
       ],
       "summary": "Reuniones PR-1: alcance de reuniones y compromisos con OR de líder, participantes validados por el proceso, participants con nombre y viewerCanEdit, edición del acta solo para responsable, líder y jefe, candidatos por proceso en GET /coordination/people y aviso MEETING_PARTICIPANT_ADDED. La API tambi?n impide que un participante que no es responsable, l?der ni jefe cree o cambie compromisos del acta (403); sigue completando y dando seguimiento (estado, resultado y bloqueos) a los asignados a ?l."
+    },
+    {
+      "timestamp": "2026-11-26T12:00:00Z",
+      "trigger_file": "apps/api/src/modules/coordination/commitment/commitment.service.ts",
+      "updated_docs": [
+        "docs/aplicacion/modulos-backend.md",
+        "docs/aplicacion/frontend-pantallas.md",
+        "docs/aplicacion/autenticacion-autorizacion.md"
+      ],
+      "summary": "Reuniones PR-2 (Mi trabajo): GET /commitments/my-work devuelve todos los compromisos abiertos de la persona (no solo vencidos y de hoy), ordenados por vencimiento, con tope de 200 filas, contadores exactos y el campo truncated; ya no se combina con el alcance de líder, así que un líder conserva los suyos de otros procesos. La cola «Compromisos» de Mi trabajo agrupa en Vencidos, Vencen hoy, Próximos 7 días y Después, con «Ver las N restantes», y el recuento de la cola y de la sección salen del mismo total. Contrato OpenAPI y cliente regenerados; descripción de la tool commitment.my-work actualizada. Sin migración ni parámetros nuevos."
     }
   ]
 }

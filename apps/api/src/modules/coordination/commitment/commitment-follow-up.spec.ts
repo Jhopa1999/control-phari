@@ -66,6 +66,7 @@ function build() {
     commitment: {
       findFirst: jest.fn(),
       findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
       update: jest.fn().mockImplementation(async ({ data }: any) => ({ ...row(), ...data })),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
@@ -96,28 +97,63 @@ describe('Compromisos en Mi trabajo', () => {
     const m = build();
     await m.commitments.myWork(actor());
     const where = m.prismaObj.commitment.findMany.mock.calls[0][0].where;
-    expect(where.AND).toEqual(
-      expect.arrayContaining([
-        { state: { in: ['EN_CURSO', 'BLOQUEADO'] } },
-        { OR: [{ assignedUserId: 'ui' }, { assignedUserId: null, responsibleUserId: 'ui' }] },
-      ]),
-    );
+    expect(where).toEqual({
+      state: { in: ['EN_CURSO', 'BLOQUEADO'] },
+      OR: [{ assignedUserId: 'ui' }, { assignedUserId: null, responsibleUserId: 'ui' }],
+    });
   });
 
-  it('lista vencidos y los que vencen hoy, y cuenta los próximos', async () => {
+  it('no se restringe por el alcance de líder: conserva los compromisos propios de otros procesos', async () => {
+    const m = build();
+    const lider = { ...actor(), isLiderProceso: true };
+    lider.grants = [
+      { processId: 'p9', processCode: 'P9', processName: 'P9', roleCode: RoleCode.LIDER_PROCESO, roleName: 'L' },
+    ];
+    await m.commitments.myWork(lider);
+    const where = m.prismaObj.commitment.findMany.mock.calls[0][0].where;
+    expect(JSON.stringify(where)).not.toContain('p9');
+  });
+
+  it('lista todos los abiertos en orden de vencimiento, con semáforo y contadores', async () => {
     const m = build();
     m.prismaObj.commitment.findMany.mockResolvedValue([
       row({ id: 'v', dueDate: day(3) }),
       row({ id: 'h', dueDate: day(10) }),
       row({ id: 'p', dueDate: day(12) }),
+      row({ id: 'a', dueDate: day(25) }),
     ]);
+    m.prismaObj.commitment.count
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(2);
     const res = await m.commitments.myWork(actor());
-    expect(res).toMatchObject({ total: 3, overdueCount: 1, dueTodayCount: 1, upcomingCount: 1 });
+    expect(res).toMatchObject({
+      total: 4,
+      overdueCount: 1,
+      dueTodayCount: 1,
+      upcomingCount: 2,
+      truncated: false,
+    });
     expect(res.items.map((i) => [i.id, i.dueStatus])).toEqual([
       ['v', 'VENCIDO'],
       ['h', 'VENCE_HOY'],
+      ['p', 'PROXIMO'],
+      ['a', 'A_TIEMPO'],
     ]);
     expect(res.items[0]).toMatchObject({ daysToDue: -7, processName: 'Proceso 1', canComplete: true });
+    expect(res.items[3].daysToDue).toBe(15);
+  });
+
+  it('aplica el tope de filas y marca truncated sin alterar los contadores', async () => {
+    const m = build();
+    m.prismaObj.commitment.findMany.mockResolvedValue([row({ id: 'v', dueDate: day(3) })]);
+    m.prismaObj.commitment.count
+      .mockResolvedValueOnce(150)
+      .mockResolvedValueOnce(20)
+      .mockResolvedValueOnce(60);
+    const res = await m.commitments.myWork(actor());
+    expect(m.prismaObj.commitment.findMany.mock.calls[0][0].take).toBe(200);
+    expect(res).toMatchObject({ total: 230, upcomingCount: 60, truncated: true });
   });
 
   it('la respuesta general del compromiso trae el semáforo', async () => {

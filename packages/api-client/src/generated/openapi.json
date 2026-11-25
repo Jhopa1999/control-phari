@@ -7997,7 +7997,7 @@
             "description": "Rol insuficiente."
           }
         },
-        "summary": "Compromisos abiertos de la persona (vencidos y que vencen hoy) para Mi trabajo.",
+        "summary": "Compromisos abiertos de la persona (vencidos, de hoy, próximos y posteriores) para Mi trabajo.",
         "tags": [
           "commitments"
         ]
@@ -19303,8 +19303,12 @@
             "type": "number",
             "description": "Abiertos con vencimiento posterior a hoy."
           },
+          "truncated": {
+            "type": "boolean",
+            "description": "Hay más compromisos abiertos que filas en `items` (se aplicó el tope)."
+          },
           "items": {
-            "description": "Vencidos (más antiguos primero) y los que vencen hoy.",
+            "description": "Abiertos de la persona ordenados por vencimiento (vencidos primero, luego hoy, próximos y posteriores), hasta 200. Cada fila trae `dueStatus` (VENCIDO, VENCE_HOY, PROXIMO hasta 7 días, A_TIEMPO).",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CommitmentMyWorkItemDto"
@@ -19316,6 +19320,7 @@
           "overdueCount",
           "dueTodayCount",
           "upcomingCount",
+          "truncated",
           "items"
         ]
       },

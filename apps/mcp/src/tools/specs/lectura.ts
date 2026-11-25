@@ -258,7 +258,7 @@ export const LECTURA_SPECS: ReadonlyArray<ToolSpec> = [
   lectura(
     'commitment.my-work',
     'GET /commitments/my-work',
-    'Compromisos abiertos del usuario (asignado, o responsable si no hay asignado) que están vencidos o vencen hoy, con contadores de vencidos, de hoy y próximos (GET /commitments/my-work).',
+    'Todos los compromisos abiertos del usuario (asignado, o responsable si no hay asignado), ordenados por vencimiento y con semáforo (vencido, vence hoy, próximo hasta 7 días, a tiempo), hasta 200 filas; `total` y los contadores de vencidos, de hoy y posteriores son exactos y `truncated` indica si hay más filas. Si solo necesitas un resumen, usa `total` y los contadores sin recorrer las filas (GET /commitments/my-work).',
   ),
   lectura(
     'meeting.commitments-open',

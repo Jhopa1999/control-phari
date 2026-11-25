@@ -2119,7 +2119,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Compromisos abiertos de la persona (vencidos y que vencen hoy) para Mi trabajo. */
+        /** Compromisos abiertos de la persona (vencidos, de hoy, próximos y posteriores) para Mi trabajo. */
         get: operations["CommitmentController_myWork"];
         put?: never;
         post?: never;
@@ -6854,7 +6854,9 @@ export interface components {
             dueTodayCount: number;
             /** @description Abiertos con vencimiento posterior a hoy. */
             upcomingCount: number;
-            /** @description Vencidos (más antiguos primero) y los que vencen hoy. */
+            /** @description Hay más compromisos abiertos que filas en `items` (se aplicó el tope). */
+            truncated: boolean;
+            /** @description Abiertos de la persona ordenados por vencimiento (vencidos primero, luego hoy, próximos y posteriores), hasta 200. Cada fila trae `dueStatus` (VENCIDO, VENCE_HOY, PROXIMO hasta 7 días, A_TIEMPO). */
             items: components["schemas"]["CommitmentMyWorkItemDto"][];
         };
         UpdateCommitmentDto: {

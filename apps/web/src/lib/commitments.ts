@@ -157,9 +157,9 @@ export async function deleteCommitment(id: string): Promise<void> {
 }
 
 /**
- * Compromisos del actor para Mi trabajo (GET /commitments/my-work): abiertos
- * vencidos o que vencen hoy. La API decide cuáles son, su orden y si se pueden
- * completar.
+ * Compromisos del actor para Mi trabajo (GET /commitments/my-work): todos
+ * los abiertos (con tope de 200). La API decide cuáles son, su orden, el
+ * semáforo y si se pueden completar.
  */
 export async function loadMyWorkCommitments(): Promise<CommitmentMyWork> {
   try {

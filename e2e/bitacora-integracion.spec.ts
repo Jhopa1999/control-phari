@@ -406,4 +406,48 @@ test.describe('Reuniones y compromisos', () => {
     const after = await api<{ state: string }>(request, JEFE, 'get', `/commitments/${commitment.id}`);
     expect(after.state).toBe('COMPLETADO');
   });
+
+  test('un compromiso futuro aparece en Mi trabajo, agrupado, y el recuento de la cola coincide con la sección', async ({
+    page,
+    request,
+  }) => {
+    const soon = `E2E compromiso próximo ${ts}`;
+    const later = `E2E compromiso posterior ${ts}`;
+    for (const [title, days] of [
+      [soon, 3],
+      [later, 30],
+    ] as const) {
+      const created = await api<{ id: string }>(request, JEFE, 'post', '/commitments', {
+        processId: ids.fibiId,
+        title,
+        dueDate: pastDate(-days),
+        assignedUserId: ids.jefeId,
+      });
+      cleanup.commitments.push(created.id);
+    }
+    const mine = await api<{ total: number; items: Array<{ title: string; dueStatus: string }> }>(
+      request,
+      JEFE,
+      'get',
+      '/commitments/my-work',
+    );
+    expect(mine.items.find((i) => i.title === soon)?.dueStatus).toBe('PROXIMO');
+    expect(mine.items.find((i) => i.title === later)?.dueStatus).toBe('A_TIEMPO');
+
+    await page.goto('/mi-trabajo');
+    const toggle = page.locator('#mt-cola-compromisos-toggle');
+    await expect(toggle).toBeVisible();
+    if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click();
+    const section = page.getByRole('region', { name: 'Compromisos' });
+    await expect(section).toBeVisible();
+    // La cola nunca muestra un recuento con la sección vacía: ambos números son el mismo total.
+    await expect(toggle).toContainText(String(mine.total));
+    await expect(section.getByRole('heading', { level: 2 })).toContainText('Compromisos');
+    const more = section.getByRole('button', { name: /^Ver las \d+ restantes$/ });
+    if (await more.count()) await more.click();
+    await expect(section.getByRole('heading', { level: 3, name: 'Próximos 7 días' })).toBeVisible();
+    await expect(section.getByRole('heading', { level: 3, name: 'Después' })).toBeVisible();
+    await expect(section.getByRole('listitem').filter({ hasText: soon })).toBeVisible();
+    await expect(section.getByRole('listitem').filter({ hasText: later })).toBeVisible();
+  });
 });

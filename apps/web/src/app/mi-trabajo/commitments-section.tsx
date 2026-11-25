@@ -27,6 +27,30 @@ const MODULE_HREF = '/seguimiento/reuniones?tab=compromisos';
 /** Filas visibles antes de «Ver las N restantes». */
 const VISIBLE_LIMIT = 5;
 
+/** Grupos por urgencia, en el orden en que la API entrega las filas (por vencimiento). */
+const GROUPS: ReadonlyArray<{ status: string; label: string }> = [
+  { status: 'VENCIDO', label: 'Vencidos' },
+  { status: 'VENCE_HOY', label: 'Vencen hoy' },
+  { status: 'PROXIMO', label: 'Próximos 7 días' },
+  { status: 'A_TIEMPO', label: 'Después' },
+];
+
+interface IndexedItem {
+  item: CommitmentMyWorkItem;
+  index: number;
+}
+
+/** Agrupa las filas por semáforo conservando el orden; omite los grupos vacíos. */
+function groupItems(
+  items: CommitmentMyWorkItem[],
+): Array<{ status: string; label: string; entries: IndexedItem[] }> {
+  const indexed = items.map((item, index) => ({ item, index }));
+  return GROUPS.map((group) => ({
+    ...group,
+    entries: indexed.filter(({ item }) => item.dueStatus === group.status),
+  })).filter((group) => group.entries.length > 0);
+}
+
 export interface CommitmentsSectionProps {
   /** Informa el total cargado (null mientras carga o si falló) para matizar el vacío de la página. */
   onTotalChange?: (total: number | null) => void;
@@ -35,12 +59,14 @@ export interface CommitmentsSectionProps {
 }
 
 /**
- * «Compromisos» en Mi trabajo: los abiertos de la persona (asignados a ella o,
- * sin asignado, de los que es responsable) que vencen hoy o están vencidos
- * (GET /commitments/my-work). Carga y error propios: un fallo aquí no bloquea
- * las tareas. Completar usa la transición existente del compromiso; la API
- * decide cuáles se pueden completar (`canComplete`). Sin compromisos que
- * mostrar, la sección no se renderiza.
+ * «Compromisos» en Mi trabajo: todos los abiertos de la persona (asignados a
+ * ella o, sin asignado, de los que es responsable), agrupados en vencidos,
+ * hoy, próximos 7 días y después (GET /commitments/my-work). Muestra los
+ * primeros y «Ver las N restantes» despliega el resto. El recuento del
+ * encabezado y el de la cola plegable salen del mismo `total` de la API, y la
+ * sección se pinta siempre que ese total sea mayor que cero. Carga y error
+ * propios: un fallo aquí no bloquea las tareas. Completar usa la transición
+ * existente; la API decide cuáles se pueden completar (`canComplete`).
  */
 export function CommitmentsSection({
   onTotalChange,
@@ -150,10 +176,11 @@ export function CommitmentsSection({
       </InlineNotice>
     );
   }
-  if (!data || data.items.length === 0) return null;
+  if (!data || data.total === 0) return null;
 
   const visible = expanded ? data.items : data.items.slice(0, VISIBLE_LIMIT);
   const hidden = data.items.length - visible.length;
+  const groups = groupItems(visible);
   const hasOverdue = data.overdueCount > 0;
 
   return (
@@ -176,7 +203,7 @@ export function CommitmentsSection({
             Compromisos
           </h2>
           <Badge variant="neutral" className="tabular-nums">
-            {data.items.length}
+            {data.total}
           </Badge>
         </div>
         <Link
@@ -187,66 +214,71 @@ export function CommitmentsSection({
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       </div>
-      {data.upcomingCount > 0 ? (
-        <p className="-mt-1 text-meta text-muted-foreground">
-          {`y ${data.upcomingCount} más con vencimiento posterior`}
-        </p>
-      ) : null}
       {failure ? (
         <InlineNotice tone="warning" role="alert">
           {failure}
         </InlineNotice>
       ) : null}
-      <ul aria-label="Compromisos pendientes" className="flex flex-col gap-2">
-        {visible.map((item, index) => (
-          <li
-            key={item.id}
-            className="flex flex-col gap-2 rounded-lg bg-surface-subtle px-3 py-2 sm:flex-row sm:items-center sm:gap-4"
-          >
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate font-medium" title={item.title}>
-                {item.title}
-              </span>
-              <span className="text-meta text-muted-foreground">
-                {[
-                  item.sourceMeetingTitle ? `De la reunión «${item.sourceMeetingTitle}»` : null,
-                  item.processName,
-                  `Vence ${formatDateOnly(item.dueDate)}`,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <DueBadge status={item.dueStatus} daysToDue={item.daysToDue} dueDate={item.dueDate} />
-              {item.state === 'BLOQUEADO' ? <StatusBadge kind="record" value={item.state} /> : null}
-            </div>
-            <div className="flex flex-wrap gap-2 max-sm:[&>button]:flex-1">
-              {item.canComplete ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  data-commitment-complete=""
-                  className="pointer-coarse:min-h-11 max-sm:min-h-11"
-                  loading={busyId === item.id}
-                  disabled={busyId !== null && busyId !== item.id}
-                  aria-label={`Completar compromiso: ${item.title}`}
-                  onClick={() => void handleComplete(item, index)}
-                >
-                  <Check aria-hidden="true" />
-                  Completar
-                </Button>
-              ) : null}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {groups.map((group) => (
+        <div key={group.status} className="flex flex-col gap-2">
+          <h3 className="text-meta font-semibold text-muted-foreground">{group.label}</h3>
+          <ul aria-label={`Compromisos: ${group.label.toLowerCase()}`} className="flex flex-col gap-2">
+            {group.entries.map(({ item, index }) => (
+              <li
+                key={item.id}
+                className="flex flex-col gap-2 rounded-lg bg-surface-subtle px-3 py-2 sm:flex-row sm:items-center sm:gap-4"
+              >
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate font-medium" title={item.title}>
+                    {item.title}
+                  </span>
+                  <span className="text-meta text-muted-foreground">
+                    {[
+                      item.sourceMeetingTitle ? `De la reunión «${item.sourceMeetingTitle}»` : null,
+                      item.processName,
+                      `Vence ${formatDateOnly(item.dueDate)}`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <DueBadge status={item.dueStatus} daysToDue={item.daysToDue} dueDate={item.dueDate} />
+                  {item.state === 'BLOQUEADO' ? <StatusBadge kind="record" value={item.state} /> : null}
+                </div>
+                <div className="flex flex-wrap gap-2 max-sm:[&>button]:flex-1">
+                  {item.canComplete ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      data-commitment-complete=""
+                      className="pointer-coarse:min-h-11 max-sm:min-h-11"
+                      loading={busyId === item.id}
+                      disabled={busyId !== null && busyId !== item.id}
+                      aria-label={`Completar compromiso: ${item.title}`}
+                      onClick={() => void handleComplete(item, index)}
+                    >
+                      <Check aria-hidden="true" />
+                      Completar
+                    </Button>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
       {hidden > 0 ? (
         <div className="flex justify-end">
           <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(true)}>
             Ver las {hidden} restantes
           </Button>
         </div>
+      ) : null}
+      {data.truncated && hidden === 0 ? (
+        <p className="text-meta text-muted-foreground">
+          {`Se muestran los primeros ${data.items.length} de ${data.total}. El resto está en Reuniones y compromisos.`}
+        </p>
       ) : null}
     </section>
   );

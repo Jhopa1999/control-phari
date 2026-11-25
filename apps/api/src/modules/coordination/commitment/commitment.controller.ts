@@ -76,7 +76,7 @@ export class CommitmentController {
   @Get('my-work')
   @ApiOperation({
     summary:
-      'Compromisos abiertos de la persona (vencidos y que vencen hoy) para Mi trabajo.',
+      'Compromisos abiertos de la persona (vencidos, de hoy, próximos y posteriores) para Mi trabajo.',
   })
   @ApiResponse({ status: 200, description: 'Compromisos de Mi trabajo.', type: CommitmentMyWorkDto })
   @ApiResponse({ status: 403, description: 'Rol insuficiente.' })
