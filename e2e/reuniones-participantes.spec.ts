@@ -191,6 +191,8 @@ test.describe('Reuniones · participantes', () => {
       title: `E2E compromiso para bloquear ${ts}`,
       dueDate,
       sourceMeetingId: created.id,
+      // El integrante ve compromisos asignados a él o de los que es responsable.
+      assignedUserId: integrante.id,
     });
     try {
       const transition = `/commitments/${commitment.id}/transition`;
