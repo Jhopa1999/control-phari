@@ -30,9 +30,10 @@ function createMocks() {
     user: {
       findMany: jest.fn(),
       // Por defecto todas las personas existen y pertenecen al proceso.
-      count: jest.fn((args: { where: { id: { in: string[] } } }) =>
-        Promise.resolve(args.where.id.in.length),
-      ),
+      count: jest.fn((args: { where: { id: string | { in: string[] } } }) => {
+        const id = args.where.id;
+        return Promise.resolve(typeof id === 'string' ? 1 : id.in.length);
+      }),
     },
     grant: { findMany: jest.fn() },
   };
@@ -231,6 +232,10 @@ describe('MeetingService', () => {
   });
   it('create de un jefe sin pertenencia al proceso deja el responsable vacío y no falla', async () => {
     m.prismaObj.user.count.mockResolvedValue(0);
+    // El jefe valida que el proceso exista (assertActorInProcess).
+    (m.prismaObj as unknown as { process: { findFirst: jest.Mock } }).process = {
+      findFirst: jest.fn().mockResolvedValue({ id: 'p1' }),
+    };
     m.prismaObj.meeting.create.mockImplementation(({ data }: any) =>
       Promise.resolve(meetingRow({ ...data, participants: [] })),
     );
