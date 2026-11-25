@@ -6030,7 +6030,18 @@
     "/coordination/people": {
       "get": {
         "operationId": "WorklogController_people",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "processId",
+            "required": false,
+            "in": "query",
+            "description": "Proceso del que se piden los candidatos a responsable y participantes (personas con acceso al proceso, las mismas que acepta la validación). Sin él, las personas en alcance del actor.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Personas visibles.",
@@ -6045,11 +6056,14 @@
               }
             }
           },
+          "400": {
+            "description": "Proceso inexistente (jefe de área) o parámetro inválido."
+          },
           "403": {
-            "description": "Rol insuficiente."
+            "description": "Rol insuficiente o el actor no pertenece al proceso indicado."
           }
         },
-        "summary": "Personas en alcance para los selectores de Fase 5.",
+        "summary": "Personas en alcance para los selectores de Fase 5; con `processId`, los candidatos del proceso para responsable y participantes.",
         "tags": [
           "worklog"
         ]
@@ -7560,7 +7574,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos, participante fuera de alcance o proceso inexistente (jefe de área)."
+            "description": "Datos inválidos, participante que no es del proceso de la reunión o proceso inexistente (jefe de área)."
           },
           "403": {
             "description": "El actor no pertenece al proceso indicado."
@@ -7715,7 +7729,10 @@
             }
           },
           "400": {
-            "description": "Datos invalidos o participante fuera de alcance."
+            "description": "Datos invalidos o participante que no es del proceso de la reunión."
+          },
+          "403": {
+            "description": "Solo el responsable, el líder del proceso o el jefe de área editan el acta."
           },
           "404": {
             "description": "Reunion fuera de alcance."
@@ -7745,6 +7762,9 @@
         "responses": {
           "204": {
             "description": "Reunion borrada."
+          },
+          "403": {
+            "description": "Solo el responsable, el líder del proceso o el jefe de área eliminan el acta."
           },
           "404": {
             "description": "Reunion fuera de alcance."
@@ -7946,7 +7966,7 @@
             "description": "Datos inválidos o proceso inexistente (jefe de área)."
           },
           "403": {
-            "description": "El actor no pertenece al proceso indicado."
+            "description": "El actor no pertenece al proceso indicado, o ligó el compromiso a un acta que no dirige (responsable, líder del proceso o jefe)."
           },
           "404": {
             "description": "Proceso o referencia fuera de alcance."
@@ -8053,6 +8073,9 @@
           },
           "400": {
             "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Compromiso de un acta que el actor no dirige: solo puede registrar resultado y bloqueos."
           },
           "404": {
             "description": "Compromiso o referencia fuera de alcance."
@@ -18463,6 +18486,23 @@
           }
         }
       },
+      "MeetingParticipantDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de la persona."
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
       "MeetingCommitmentDto": {
         "type": "object",
         "properties": {
@@ -18553,6 +18593,10 @@
             "format": "uuid",
             "description": "Proceso de la reunion."
           },
+          "processName": {
+            "type": "string",
+            "description": "Nombre del proceso de la reunión."
+          },
           "title": {
             "type": "string",
             "description": "Titulo."
@@ -18588,10 +18632,26 @@
               "format": "uuid"
             }
           },
+          "participants": {
+            "description": "Participantes con su nombre, por orden alfabético. Los ve quien ve el acta.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeetingParticipantDto"
+            }
+          },
+          "viewerCanEdit": {
+            "type": "boolean",
+            "description": "Quien consulta puede editar el acta: es su responsable, líder del proceso o jefe de área. Los demás participantes la leen y completan sus compromisos."
+          },
           "responsibleUserId": {
             "type": "string",
             "format": "uuid",
             "nullable": true
+          },
+          "responsibleUserName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre del responsable de la reunión."
           },
           "relatedRequestId": {
             "type": "string",
@@ -18646,6 +18706,7 @@
         "required": [
           "id",
           "processId",
+          "processName",
           "title",
           "state",
           "meetingDate",
@@ -18653,7 +18714,10 @@
           "durationMinutes",
           "meetingEndTime",
           "participantUserIds",
+          "participants",
+          "viewerCanEdit",
           "responsibleUserId",
+          "responsibleUserName",
           "relatedRequestId",
           "relatedProjectRequestId",
           "agenda",

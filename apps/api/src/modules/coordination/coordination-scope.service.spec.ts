@@ -1,3 +1,4 @@
+import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CurrentActor } from '../auth/current-actor';
 import { RoleCode } from '../auth/role-code';
@@ -111,6 +112,30 @@ describe('CoordinationScopeService', () => {
     });
   });
 
+  describe('alcance por rol: líder participante de otro proceso', () => {
+    it('meeting lider -> OR proceso que lidera / responsable / participa', () => {
+      expect(scope.meetingWhere(lider(['p1']))).toEqual({
+        OR: [
+          { processId: { in: ['p1'] } },
+          { responsibleUserId: 'ul' },
+          { participants: { some: { userId: 'ul' } } },
+        ],
+      });
+    });
+    it('commitment lider -> OR proceso que lidera / asignado / responsable', () => {
+      expect(scope.commitmentWhere(lider(['p1']))).toEqual({
+        OR: [
+          { processId: { in: ['p1'] } },
+          { assignedUserId: 'ul' },
+          { responsibleUserId: 'ul' },
+        ],
+      });
+    });
+    it('jefe -> {} en reuniones y compromisos', () => {
+      expect(scope.meetingWhere(jefe())).toEqual({});
+      expect(scope.commitmentWhere(jefe())).toEqual({});
+    });
+  });
   describe('requestVisibilityWhere (HIGH-2, scopedProcessIds)', () => {
     it('jefe -> {}', () => {
       expect(scope.requestVisibilityWhere(jefe())).toEqual({ deletedAt: null });
@@ -123,6 +148,30 @@ describe('CoordinationScopeService', () => {
     });
   });
 
+  describe('listProcessPeople (candidatos de un proceso)', () => {
+    it('integrante del proceso -> personas activas con grant en el proceso o jefe', async () => {
+      prismaObj.user.findMany.mockResolvedValue([
+        { id: 'u1', name: 'Ana', identifier: 'ana@demo.local' },
+      ]);
+      const people = await scope.listProcessPeople(integranteConProceso('p1'), 'p1');
+      expect(people).toEqual([{ id: 'u1', name: 'Ana', identifier: 'ana@demo.local' }]);
+      expect(prismaObj.user.findMany.mock.calls[0][0].where).toEqual({
+        active: true,
+        grants: {
+          some: {
+            active: true,
+            OR: [{ processId: 'p1' }, { role: { code: RoleCode.JEFE_AREA } }],
+          },
+        },
+      });
+    });
+    it('quien no pertenece al proceso recibe 403 y no consulta personas', async () => {
+      await expect(
+        scope.listProcessPeople(integranteConProceso('p1'), 'p2'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prismaObj.user.findMany).not.toHaveBeenCalled();
+    });
+  });
   describe('listPeople', () => {
     it('jefe -> User.active = true', async () => {
       await scope.listPeople(jefe());

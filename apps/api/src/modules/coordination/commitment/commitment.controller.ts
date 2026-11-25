@@ -60,7 +60,11 @@ export class CommitmentController {
   @ApiBody({ type: CreateCommitmentDto })
   @ApiResponse({ status: 201, description: 'Compromiso creado.', type: CommitmentResponseDto })
   @ApiResponse({ status: 400, description: 'Datos inválidos o proceso inexistente (jefe de área).' })
-  @ApiResponse({ status: 403, description: 'El actor no pertenece al proceso indicado.' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'El actor no pertenece al proceso indicado, o ligó el compromiso a un acta que no dirige (responsable, líder del proceso o jefe).',
+  })
   @ApiResponse({ status: 404, description: 'Proceso o referencia fuera de alcance.' })
   create(
     @CurrentActor() actor: CurrentActorType,
@@ -98,6 +102,11 @@ export class CommitmentController {
   @ApiBody({ type: UpdateCommitmentDto })
   @ApiResponse({ status: 200, description: 'Compromiso actualizado.', type: CommitmentResponseDto })
   @ApiResponse({ status: 400, description: 'Datos invalidos.' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Compromiso de un acta que el actor no dirige: solo puede registrar resultado y bloqueos.',
+  })
   @ApiResponse({ status: 404, description: 'Compromiso o referencia fuera de alcance.' })
   update(
     @CurrentActor() actor: CurrentActorType,

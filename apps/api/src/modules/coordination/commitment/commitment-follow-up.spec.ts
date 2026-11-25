@@ -86,7 +86,7 @@ function build() {
     prismaObj,
     notifications,
     commitments: new CommitmentService(prisma, audit, scope, new WorkflowStateService(), notifications as never),
-    meetings: new MeetingService(prisma, audit, scope),
+    meetings: new MeetingService(prisma, audit, scope, notifications as never),
     notices: new CommitmentNoticeService(prisma, notifications as never),
   };
 }

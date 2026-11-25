@@ -1,5 +1,6 @@
 import {
   api,
+  type CoordinationPerson,
   type CreateMeeting,
   type Meeting,
   type MeetingCommitmentsOpen,
@@ -48,6 +49,37 @@ function toMeetingError(status: number | undefined, body?: unknown): MeetingErro
     return new MeetingError(server, status);
   }
   return new MeetingError(messageForStatus(status), status);
+}
+
+/**
+ * Texto que devuelve la API (400) cuando un participante no existe o no es del
+ * proceso de la reunión. Se reconoce por texto exacto, como el de la persona.
+ */
+export const PARTICIPANT_NOT_IN_PROCESS_MESSAGE =
+  'Un participante no existe o no pertenece al proceso de la reunión.';
+
+/** Mensaje entendible para el 400 de participantes que la API devuelve en crudo. */
+export const PARTICIPANT_NOT_IN_PROCESS_COPY =
+  'Uno de los participantes no pertenece al proceso. Quítalo e intenta de nuevo.';
+
+/**
+ * Candidatos a responsable y participantes de un proceso
+ * (GET /coordination/people?processId=). Son las mismas personas que acepta la
+ * validación de la API al guardar el acta.
+ */
+export async function listProcessPeople(processId: string): Promise<CoordinationPerson[]> {
+  try {
+    const { data, error, response } = await api.GET('/coordination/people', {
+      params: { query: { processId } },
+    });
+    if (error || !data) {
+      throw toMeetingError(response.status, error);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof MeetingError) throw err;
+    throw toMeetingError(undefined);
+  }
 }
 
 /** Reuniones en alcance (GET /meetings). El backend filtra por alcance. */

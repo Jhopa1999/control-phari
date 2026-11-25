@@ -3,9 +3,9 @@
 import * as React from 'react';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { useDialogReturnFocus } from '@/components/confirm-dialog';
-import { Field, FieldSet, FormError, RequiredHint } from '@/components/field';
+import { Field, FormError, RequiredHint } from '@/components/field';
+import { InlineNotice } from '@/components/inline-notice';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogBody,
@@ -26,6 +26,11 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import type { CoordinationPerson, Meeting, Process } from '@/lib/api-client';
 import { localDateInputValue } from '@/lib/format';
+import {
+  PARTICIPANT_NOT_IN_PROCESS_COPY,
+  PARTICIPANT_NOT_IN_PROCESS_MESSAGE,
+  listProcessPeople,
+} from '@/lib/meetings';
 import { usePersonError } from '@/lib/use-person-error';
 import {
   DuracionField,
@@ -34,6 +39,7 @@ import {
   partsToMinutes,
   type DuracionParts,
 } from './duracion-field';
+import { ParticipantesField, type PeopleLoadState } from './participantes-field';
 
 export interface ReunionFormValues {
   processId: string;
@@ -54,7 +60,8 @@ interface ReunionFormDialogProps {
   onOpenChange: (open: boolean) => void;
   editing?: Meeting | null;
   processes: Process[];
-  people: CoordinationPerson[];
+  /** Persona que usa el formulario (marca «(tú)» en la lista). */
+  myId: string | null;
   /** Al abrir, el foco va al campo de duración (p. ej. tras un cierre sin duración). */
   focusDuration?: boolean;
   submitting: boolean;
@@ -100,7 +107,7 @@ export function ReunionFormDialog({
   onOpenChange,
   editing,
   processes,
-  people,
+  myId,
   focusDuration = false,
   submitting,
   errorMessage,
@@ -118,6 +125,12 @@ export function ReunionFormDialog({
   const [decisions, setDecisions] = React.useState('');
   const [notes, setNotes] = React.useState('');
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrors>({});
+  // Candidatos del proceso elegido (responsable y participantes), los mismos que acepta la API.
+  const [people, setPeople] = React.useState<CoordinationPerson[]>([]);
+  const [peopleState, setPeopleState] = React.useState<PeopleLoadState>('idle');
+  const [reloadKey, setReloadKey] = React.useState(0);
+  // Aviso de lo que se quitó al cambiar de proceso (solo al crear).
+  const [removedNotice, setRemovedNotice] = React.useState<string | null>(null);
   const processRef = React.useRef<HTMLButtonElement>(null);
   const titleRef = React.useRef<HTMLInputElement>(null);
   const dateRef = React.useRef<HTMLInputElement>(null);
@@ -171,14 +184,54 @@ export function ReunionFormDialog({
     }
   });
 
+  // Al abrir, al cambiar de proceso o al reintentar se vuelve a cargar a las personas del proceso.
+  useResetOnChange([open, processId, reloadKey], () => {
+    const wanted = open && processId !== '';
+    setPeopleState(wanted ? 'loading' : 'idle');
+    if (!wanted) setPeople([]);
+  });
+
+  React.useEffect(() => {
+    if (!open || !processId) return;
+    let cancelled = false;
+    listProcessPeople(processId)
+      .then((list) => {
+        if (cancelled) return;
+        setPeople(list);
+        setPeopleState('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPeople([]);
+        setPeopleState('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, processId, reloadKey]);
+
+  // Al crear, lo marcado de otro proceso que no está en el nuevo se quita y se avisa.
+  useResetOnChange([people], () => {
+    if (isEdit || peopleState !== 'ready') return;
+    const inProcess = new Set(people.map((p) => p.id));
+    const keep = participantUserIds.filter((id) => inProcess.has(id));
+    const removedParticipants = participantUserIds.length - keep.length;
+    const removedResponsible = responsibleUserId !== '' && !inProcess.has(responsibleUserId);
+    if (removedParticipants === 0 && !removedResponsible) return;
+    setParticipantUserIds(keep);
+    if (removedResponsible) setResponsibleUserId('');
+    const parts: string[] = [];
+    if (removedParticipants > 0) {
+      parts.push(removedParticipants === 1 ? '1 participante' : `${removedParticipants} participantes`);
+    }
+    if (removedResponsible) parts.push('el responsable');
+    setRemovedNotice(
+      `Se quitó ${parts.join(' y ')} porque no pertenece al proceso elegido. Revisa la lista.`,
+    );
+  });
+
   function clearError(key: FieldKey) {
     setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
-  }
-
-  function toggleParticipant(id: string) {
-    setParticipantUserIds((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
-    );
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -208,6 +261,17 @@ export function ReunionFormDialog({
       notes,
     });
   }
+
+  // Aviso de visibilidad: al crear, con participantes; al editar, solo si se suman personas nuevas.
+  const savedIds = new Set(editing?.participantUserIds ?? []);
+  const showVisibilityNotice = isEdit
+    ? participantUserIds.some((id) => !savedIds.has(id))
+    : participantUserIds.length > 0;
+  // El 400 en crudo de participantes se traduce a qué hacer.
+  const formMessage =
+    person.formMessage === PARTICIPANT_NOT_IN_PROCESS_MESSAGE
+      ? PARTICIPANT_NOT_IN_PROCESS_COPY
+      : person.formMessage;
 
   // Sin códigos internos visibles (design §13.1).
   const processName = (id: string) =>
@@ -240,6 +304,7 @@ export function ReunionFormDialog({
                     value={processId}
                     onValueChange={(value) => {
                       setProcessId(value);
+                      setRemovedNotice(null);
                       clearError('processId');
                     }}
                   >
@@ -307,20 +372,44 @@ export function ReunionFormDialog({
               hoursRef={durationRef}
             />
 
-            <Field id="reu-responsible" label="Responsable" error={person.personError}>
+            {removedNotice ? (
+              <InlineNotice tone="warning" role="status">
+                {removedNotice}
+              </InlineNotice>
+            ) : null}
+
+            <Field
+              id="reu-responsible"
+              label="Responsable"
+              error={person.personError}
+              help={
+                processId
+                  ? 'Dirige la reunión y puede editar y cerrar el acta.'
+                  : 'Elige primero un proceso.'
+              }
+            >
               {(control) => (
                 <Select
                   value={responsibleUserId || SIN_VALOR}
+                  disabled={!processId || peopleState === 'loading'}
                   onValueChange={(v) => {
                     setResponsibleUserId(v === SIN_VALOR ? '' : v);
+                    setRemovedNotice(null);
                     person.dismiss();
                   }}
                 >
                   <SelectTrigger ref={responsibleRef} {...control}>
-                    <SelectValue placeholder="Sin responsable" />
+                    <SelectValue
+                      placeholder={peopleState === 'loading' ? 'Cargando personas…' : 'Sin responsable'}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={SIN_VALOR}>Sin responsable</SelectItem>
+                    {responsibleUserId && !people.some((p) => p.id === responsibleUserId) ? (
+                      <SelectItem value={responsibleUserId}>
+                        {editing?.responsibleUserName ?? 'Responsable actual'}
+                      </SelectItem>
+                    ) : null}
                     {people.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
@@ -331,27 +420,26 @@ export function ReunionFormDialog({
               )}
             </Field>
 
-            <FieldSet id="reu-participants" legend="Participantes" kind="checkbox">
-              {people.length === 0 ? (
-                <p className="text-meta text-muted-foreground">
-                  No hay personas en tu alcance para agregar.
-                </p>
-              ) : (
-                <ul className="flex max-h-48 flex-col overflow-y-auto rounded-md border px-2 py-1">
-                  {people.map((p) => (
-                    <li key={p.id}>
-                      <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={participantUserIds.includes(p.id)}
-                          onChange={() => toggleParticipant(p.id)}
-                        />
-                        <span>{p.name}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </FieldSet>
+            <ParticipantesField
+              loadState={peopleState}
+              people={people}
+              selectedIds={participantUserIds}
+              onChange={(ids) => {
+                setParticipantUserIds(ids);
+                setRemovedNotice(null);
+              }}
+              responsibleUserId={responsibleUserId}
+              myId={myId}
+              saved={editing?.participants ?? []}
+              onRetry={() => setReloadKey((k) => k + 1)}
+            />
+
+            {showVisibilityNotice ? (
+              <InlineNotice tone="info" role="note">
+                Cada participante recibirá una notificación y podrá leer el acta completa: agenda,
+                decisiones y compromisos de todos.
+              </InlineNotice>
+            ) : null}
 
             <Field id="reu-agenda" label="Agenda">
               <Textarea value={agenda} onChange={(e) => setAgenda(e.target.value)} />
@@ -365,7 +453,7 @@ export function ReunionFormDialog({
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
             </Field>
 
-            <FormError id={FORM_ID} message={person.formMessage} />
+            <FormError id={FORM_ID} message={formMessage} />
           </DialogBody>
 
           <DialogFooter>

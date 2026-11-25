@@ -56,6 +56,8 @@ export enum NotificationType {
   COMMITMENT_DUE_TODAY = 'COMMITMENT_DUE_TODAY',
   /** Un compromiso quedó vencido sin completarse. */
   COMMITMENT_OVERDUE = 'COMMITMENT_OVERDUE',
+  /** Una persona fue incluida como participante de una reunión (enlace al acta). */
+  MEETING_PARTICIPANT_ADDED = 'MEETING_PARTICIPANT_ADDED',
 }
 
 export interface NotifyInput {

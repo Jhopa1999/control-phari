@@ -2178,4 +2178,12 @@ test.describe('áreas: motivo del bloqueo y recuentos de procesos (oleada 3, PR-
     );
     expect(PERSON_NOT_IN_PROCESS_MESSAGE).toBe(apiMessage);
   });
+
+  test('el texto del 400 de participantes coincide con el de la API', async () => {
+    const { PARTICIPANT_NOT_IN_PROCESS_MESSAGE: webMessage } = await import('../apps/web/src/lib/meetings');
+    const { PARTICIPANT_NOT_IN_PROCESS_MESSAGE: apiMessage } = await import(
+      '../apps/api/src/modules/coordination/coordination-scope.service'
+    );
+    expect(webMessage).toBe(apiMessage);
+  });
 });

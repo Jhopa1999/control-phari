@@ -42,24 +42,24 @@ export const ESCRITURA_SPECS: ReadonlyArray<ToolSpec> = [
   escritura(
     'meeting.create',
     'POST /meetings',
-    'Registra una reunión (POST /meetings), con duración opcional en minutos (durationMinutes, múltiplo de 15). El cuerpo debe cumplir el DTO de creación; el backend valida los datos. El processId debe ser uno de tus procesos (403 si no perteneces a él; 400 si el jefe de área indica un proceso inexistente).',
+    'Registra una reunión (POST /meetings), con duración opcional en minutos (durationMinutes, múltiplo de 15). El cuerpo debe cumplir el DTO de creación; el backend valida los datos. El processId debe ser uno de tus procesos (403 si no perteneces a él; 400 si el jefe de área indica un proceso inexistente). Los participantes (participantUserIds) deben ser personas del proceso (400 si no); cada uno recibe un aviso con el enlace al acta.',
   ),
   escritura(
     'meeting.update',
     'PATCH /meetings/{id}',
-    'Actualiza los datos de una reunión (PATCH /meetings/{id}), incluida la duración en minutos (durationMinutes, múltiplo de 15; obligatoria para cerrar el acta). Sobre un acta cerrada solo se admite completar la duración. El backend valida los datos.',
+    'Actualiza los datos de una reunión (PATCH /meetings/{id}), incluida la duración en minutos (durationMinutes, múltiplo de 15; obligatoria para cerrar el acta). Sobre un acta cerrada solo se admite completar la duración. Solo el responsable, el líder del proceso o el jefe de área editan el acta (403 para otros participantes); los participantes nuevos deben ser del proceso y reciben un aviso. El backend valida los datos.',
   ),
 
   // Compromisos
   escritura(
     'commitment.create',
     'POST /commitments',
-    'Registra un compromiso (POST /commitments). El cuerpo debe cumplir el DTO de creación; el backend valida los datos. El processId debe ser uno de tus procesos (403 si no perteneces a él; 400 si el jefe de área indica un proceso inexistente).',
+    'Registra un compromiso (POST /commitments). El cuerpo debe cumplir el DTO de creación; el backend valida los datos. El processId debe ser uno de tus procesos (403 si no perteneces a él; 400 si el jefe de área indica un proceso inexistente). Con sourceMeetingId solo el responsable del acta, el líder del proceso o el jefe pueden agregar compromisos (403 a los demás participantes).',
   ),
   escritura(
     'commitment.update',
     'PATCH /commitments/{id}',
-    'Actualiza los datos de un compromiso (PATCH /commitments/{id}). El backend valida los datos.',
+    'Actualiza los datos de un compromiso (PATCH /commitments/{id}). El backend valida los datos. Si el compromiso nace de un acta, solo el responsable del acta, el líder del proceso o el jefe cambian sus datos (403 a los demás); el asignado puede registrar result y blockers.',
   ),
   escritura(
     'commitment.transition',

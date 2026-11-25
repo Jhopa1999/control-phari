@@ -405,7 +405,7 @@ Agrupa tres submódulos: bitácora/semanal (worklog), reuniones
 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/coordination/people` | Personas en alcance para los selectores. |
+| GET | `/coordination/people` | Personas en alcance para los selectores; con `processId`, los candidatos a responsable y participantes de ese proceso. |
 | GET | `/worklog/daily` | Lista **paginada** (`{ data, page, pageSize, total, hasMore }`, 25 por defecto, máx. 100) de diarios en alcance. Filtros: `from`, `to`, `date`, `processId`, `authorUserId`, `status`, `classificationCode` (contiene al menos una actividad), `q` (notas, descripción, resultado, activo, solicitante y nombre del autor), `sort` y `page`/`pageSize`. Cada diario trae `authorName`, `processName`, `returned` y `actions` (qué puede hacer quien consulta). |
 | GET | `/worklog/daily/summary` | Resumen con los mismos filtros: diarios, horas, totales por estado, por clasificación y por persona. |
 | GET | `/worklog/options` | Proyectos y tareas que quien consulta puede **imputar** en el diario de un proceso y una fecha (misma regla que aplica al guardar). Query: `processId` (obligatorio), `date` (AAAA-MM-DD; referencia de la ventana de gracia, por defecto hoy), `q`, `includeTerminated`, `scope` (`mine` por defecto o `all`). Devuelve `projects` (`id, code, title, state, closedAt, hasMyTasks`), `tasks` (`id, code, title, status, phaseName, requestId, requestCode, requestTitle, isMine, responsibleName`) y `projectsTruncated`/`tasksTruncated` (tope de 200 por lista). |
@@ -475,6 +475,12 @@ Reglas: la **escritura** de diarios y semanales es solo del autor (el jefe y el 
 | POST | `/meetings/:id/reopen` | Reabre un acta cerrada (líder del proceso o jefe). |
 | DELETE | `/meetings/:id` | Borra un acta abierta sin compromisos (cascade de participantes); `409` si no, o si tiene tiempo registrado en una bitácora («La reunión tiene tiempo registrado en una bitácora.»). |
 
+**Visibilidad y participantes (Reuniones PR-1).** `CoordinationScopeService.meetingWhere` y `commitmentWhere` son el único alcance: el jefe ve todo; el líder suma por `OR` los procesos que lidera a la regla personal (responsable o participante en reuniones; asignado o responsable en compromisos), de modo que un líder participante de otro proceso ve esa reunión y los compromisos asignados a él. Todos los participantes leen el acta completa. Los participantes se validan contra el **proceso de la reunión** (misma regla que el responsable); fuera, `400` «Un participante no existe o no pertenece al proceso de la reunión.». Al crear, quien crea invita a cualquier persona del proceso (también a un integrante). Al editar, solo se validan los participantes **nuevos**.
+
+**Quién edita el acta abierta.** Solo el responsable, el líder del proceso y el jefe (`PATCH` y `DELETE` dan `403` a los demás participantes, que leen y completan sus propios compromisos). La respuesta trae `participants: [{ id, name }]`, `responsibleUserName`, `processName` y `viewerCanEdit` (lo calcula la API). `GET /coordination/people?processId=` devuelve los candidatos del proceso (`403` si el actor no pertenece a él).
+
+**Notificación.** Al crear la reunión o sumar participantes se avisa a las personas nuevas (no al autor) con el tipo `MEETING_PARTICIPANT_ADDED` y enlace `/seguimiento/reuniones?meetingId=…`. Sin migración ni parámetro nuevo (el tipo es una cadena).
+
 Duración de la reunión: `durationMinutes` entero, múltiplo de 15, entre 15 y 1440 (coincide con el paso de 0,25 h de la Bitácora). Las reuniones anteriores quedan sin duración (sin backfill) y su sugerencia de bitácora sale sin horas. `meetingEndTime` (HH:mm) lo calcula la API como hora + duración; es `null` si falta alguna o si cruza la medianoche.
 
 ### Commitments — Compromisos (`commitment/commitment.controller.ts`)
@@ -482,10 +488,10 @@ Duración de la reunión: `durationMinutes` entero, múltiplo de 15, entre 15 y 
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/commitments` | Lista compromisos en alcance (filtros opcionales: `state`, `processId`, `assignedUserId`, `requestId` = solicitud relacionada o proyecto relacionado). |
-| POST | `/commitments` | Crea un compromiso (vencimiento requerido). El `processId` debe ser un proceso del actor (`403` si no; `400` si el jefe indica uno inexistente). `assignedUserId` y `responsibleUserId` (también en el PATCH) se validan igual que el responsable de una reunión: `400` «La persona indicada no existe o no pertenece al proceso.» (antes `500`). |
+| POST | `/commitments` | Crea un compromiso (vencimiento requerido). El `processId` debe ser un proceso del actor (`403` si no; `400` si el jefe indica uno inexistente). `assignedUserId` y `responsibleUserId` (también en el PATCH) se validan igual que el responsable de una reunión: `400` «La persona indicada no existe o no pertenece al proceso.» (antes `500`). Con `sourceMeetingId`, solo el responsable del acta, el líder del proceso o el jefe pueden agregar compromisos (`403` a los demás participantes). |
 | GET | `/commitments/my-work` | Compromisos de Mi trabajo: abiertos (`EN_CURSO`/`BLOQUEADO`) del actor (asignado; si no hay asignado, responsable) que están **vencidos o vencen hoy** (vencidos primero), con `total`, `overdueCount`, `dueTodayCount`, `upcomingCount` y `canComplete`. Completar usa la transición existente (`POST /commitments/:id/transition` con `COMPLETADO`). |
 | GET | `/commitments/:id` | Detalle de un compromiso. |
-| PATCH | `/commitments/:id` | Edita un compromiso. |
+| PATCH | `/commitments/:id` | Edita un compromiso. Si nace de un acta, solo el responsable del acta, el líder del proceso o el jefe cambian sus datos o lo ligan a otra acta (`403` a los demás); el asignado sigue registrando `result` y `blockers` y completando el compromiso con `/transition`. |
 | POST | `/commitments/:id/transition` | Transiciona el estado (máquina mínima). |
 | DELETE | `/commitments/:id` | Borra un compromiso en alcance. |
 

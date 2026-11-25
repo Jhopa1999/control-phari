@@ -40,6 +40,7 @@ describe('WorklogController (delegacion)', () => {
   } as unknown as WorklogService;
   const scopeService = {
     listPeople: jest.fn().mockResolvedValue('people'),
+    listProcessPeople: jest.fn().mockResolvedValue('process-people'),
   } as unknown as CoordinationScopeService;
   const eligibility = {
     listOptions: jest.fn().mockResolvedValue('options'),
@@ -68,8 +69,12 @@ describe('WorklogController (delegacion)', () => {
   });
 
   it('people delega en scopeService', async () => {
-    await expect(controller.people(a)).resolves.toBe('people');
+    await expect(controller.people(a, {})).resolves.toBe('people');
     expect(scopeService.listPeople).toHaveBeenCalledWith(a);
+  });
+  it('people con processId devuelve los candidatos del proceso', async () => {
+    await expect(controller.people(a, { processId: 'p1' })).resolves.toBe('process-people');
+    expect(scopeService.listProcessPeople).toHaveBeenCalledWith(a, 'p1');
   });
 
   it('listOptions delega actor y query en el servicio de elegibilidad', async () => {

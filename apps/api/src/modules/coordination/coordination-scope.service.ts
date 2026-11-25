@@ -13,6 +13,9 @@ import { CoordinationPersonDto } from './dto/coordination-person.dto';
 export const PERSON_NOT_IN_PROCESS_MESSAGE =
   'La persona indicada no existe o no pertenece al proceso.';
 
+/** Texto del 400 cuando un participante no es del proceso de la reunión. */
+export const PARTICIPANT_NOT_IN_PROCESS_MESSAGE =
+  'Un participante no existe o no pertenece al proceso de la reunión.';
 /**
  * Fuente unica de verdad del alcance por rol de Fase 5 (design §2.2, leccion 1).
  * NO reutiliza el `scopeWhere` privado de `request.service.ts` (que filtra por
@@ -97,19 +100,20 @@ export class CoordinationScopeService {
   // --- Meeting ------------------------------------------------------------
 
   /**
-   * Alcance de Meeting (design §2.2): jefe `{}`; lider por proceso; integrante
-   * por participacion O responsable (specs/10 "Reuniones: Participar").
+   * Alcance de Meeting (design §2.2): jefe `{}`; lider por proceso MAS la regla
+   * personal; integrante por participacion O responsable (specs/10 "Reuniones:
+   * Participar"). Es el unico where de alcance de reuniones.
    */
   meetingWhere(actor: CurrentActor): Prisma.MeetingWhereInput {
     if (actor.isJefeArea) {
       return {};
     }
     const leaderIds = this.leaderProcessIds(actor);
-    if (leaderIds.length > 0) {
-      return { processId: { in: leaderIds } };
-    }
+    // El líder suma su plano por proceso a la regla personal: una reunión de
+    // otro proceso donde es responsable o participante también la ve.
     return {
       OR: [
+        ...(leaderIds.length > 0 ? [{ processId: { in: leaderIds } }] : []),
         { responsibleUserId: actor.userId },
         { participants: { some: { userId: actor.userId } } },
       ],
@@ -119,19 +123,20 @@ export class CoordinationScopeService {
   // --- Commitment ---------------------------------------------------------
 
   /**
-   * Alcance de Commitment (design §2.2): jefe `{}`; lider por proceso;
-   * integrante por `assignedUserId` O `responsibleUserId` propios.
+   * Alcance de Commitment (design §2.2): jefe `{}`; lider por proceso MAS la
+   * regla personal; integrante por `assignedUserId` O `responsibleUserId`
+   * propios. Es el unico where de alcance de compromisos.
    */
   commitmentWhere(actor: CurrentActor): Prisma.CommitmentWhereInput {
     if (actor.isJefeArea) {
       return {};
     }
     const leaderIds = this.leaderProcessIds(actor);
-    if (leaderIds.length > 0) {
-      return { processId: { in: leaderIds } };
-    }
+    // El líder suma su plano por proceso a la regla personal: un compromiso
+    // asignado a él en un proceso que no lidera también lo ve.
     return {
       OR: [
+        ...(leaderIds.length > 0 ? [{ processId: { in: leaderIds } }] : []),
         { assignedUserId: actor.userId },
         { responsibleUserId: actor.userId },
       ],
@@ -194,6 +199,7 @@ export class CoordinationScopeService {
   async assertPeopleInProcess(
     processId: string,
     userIds: ReadonlyArray<string | null | undefined>,
+    message: string = PERSON_NOT_IN_PROCESS_MESSAGE,
   ): Promise<void> {
     const ids = Array.from(
       new Set(userIds.filter((id): id is string => typeof id === 'string')),
@@ -202,23 +208,47 @@ export class CoordinationScopeService {
       return;
     }
     const found = await this.prisma.user.count({
-      where: {
-        id: { in: ids },
-        active: true,
-        grants: {
-          some: {
-            active: true,
-            OR: [
-              { processId },
-              { role: { code: RoleCode.JEFE_AREA } },
-            ],
-          },
-        },
-      },
+      where: { id: { in: ids }, ...this.processPeopleWhere(processId) },
     });
     if (found !== ids.length) {
-      throw new BadRequestException(PERSON_NOT_IN_PROCESS_MESSAGE);
+      throw new BadRequestException(message);
     }
+  }
+  /**
+   * Personas del proceso: activas, con grant activo en él o grant activo de jefe
+   * de área. Misma regla para validar y para ofrecer candidatos.
+   */
+  private processPeopleWhere(processId: string): Prisma.UserWhereInput {
+    return {
+      active: true,
+      grants: {
+        some: {
+          active: true,
+          OR: [{ processId }, { role: { code: RoleCode.JEFE_AREA } }],
+        },
+      },
+    };
+  }
+  /**
+   * Candidatos de un proceso para responsable y participantes: exactamente las
+   * personas que acepta `assertPeopleInProcess`. El actor debe pertenecer al
+   * proceso (el jefe actúa sobre todos); si no, 403.
+   */
+  async listProcessPeople(
+    actor: CurrentActor,
+    processId: string,
+  ): Promise<CoordinationPersonDto[]> {
+    await this.assertActorInProcess(actor, processId);
+    const users = await this.prisma.user.findMany({
+      where: this.processPeopleWhere(processId),
+      select: { id: true, name: true, identifier: true },
+      orderBy: { name: 'asc' },
+    });
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      identifier: user.identifier,
+    }));
   }
 
   // --- Personas en alcance (selectores) -----------------------------------

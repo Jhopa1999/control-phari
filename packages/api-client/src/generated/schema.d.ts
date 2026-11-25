@@ -1650,7 +1650,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Personas en alcance para los selectores de Fase 5. */
+        /** Personas en alcance para los selectores de Fase 5; con `processId`, los candidatos del proceso para responsable y participantes. */
         get: operations["WorklogController_people"];
         put?: never;
         post?: never;
@@ -6523,6 +6523,12 @@ export interface components {
             /** @description Decisiones para el jefe. */
             decisions?: string;
         };
+        MeetingParticipantDto: {
+            /** Format: uuid */
+            id: string;
+            /** @description Nombre de la persona. */
+            name: string;
+        };
         MeetingCommitmentDto: {
             /** Format: uuid */
             id: string;
@@ -6557,6 +6563,8 @@ export interface components {
              * @description Proceso de la reunion.
              */
             processId: string;
+            /** @description Nombre del proceso de la reunión. */
+            processName: string;
             /** @description Titulo. */
             title: string;
             /** @description Estado (maestra RECORD_STATE). */
@@ -6571,8 +6579,14 @@ export interface components {
             meetingEndTime: string | null;
             /** @description Participantes. */
             participantUserIds: string[];
+            /** @description Participantes con su nombre, por orden alfabético. Los ve quien ve el acta. */
+            participants: components["schemas"]["MeetingParticipantDto"][];
+            /** @description Quien consulta puede editar el acta: es su responsable, líder del proceso o jefe de área. Los demás participantes la leen y completan sus compromisos. */
+            viewerCanEdit: boolean;
             /** Format: uuid */
             responsibleUserId: string | null;
+            /** @description Nombre del responsable de la reunión. */
+            responsibleUserName: string | null;
             /** Format: uuid */
             relatedRequestId: string | null;
             /** Format: uuid */
@@ -13734,7 +13748,10 @@ export interface operations {
     };
     WorklogController_people: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Proceso del que se piden los candidatos a responsable y participantes (personas con acceso al proceso, las mismas que acepta la validación). Sin él, las personas en alcance del actor. */
+                processId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -13750,7 +13767,14 @@ export interface operations {
                     "application/json": components["schemas"]["CoordinationPersonDto"][];
                 };
             };
-            /** @description Rol insuficiente. */
+            /** @description Proceso inexistente (jefe de área) o parámetro inválido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol insuficiente o el actor no pertenece al proceso indicado. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -14940,7 +14964,7 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingResponseDto"];
                 };
             };
-            /** @description Datos inválidos, participante fuera de alcance o proceso inexistente (jefe de área). */
+            /** @description Datos inválidos, participante que no es del proceso de la reunión o proceso inexistente (jefe de área). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -15046,6 +15070,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Solo el responsable, el líder del proceso o el jefe de área eliminan el acta. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Reunion fuera de alcance. */
             404: {
                 headers: {
@@ -15086,8 +15117,15 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingResponseDto"];
                 };
             };
-            /** @description Datos invalidos o participante fuera de alcance. */
+            /** @description Datos invalidos o participante que no es del proceso de la reunión. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solo el responsable, el líder del proceso o el jefe de área editan el acta. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15271,7 +15309,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description El actor no pertenece al proceso indicado. */
+            /** @description El actor no pertenece al proceso indicado, o ligó el compromiso a un acta que no dirige (responsable, líder del proceso o jefe). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -15396,6 +15434,13 @@ export interface operations {
             };
             /** @description Datos invalidos. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Compromiso de un acta que el actor no dirige: solo puede registrar resultado y bloqueos. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

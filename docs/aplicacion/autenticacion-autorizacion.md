@@ -477,3 +477,7 @@ La búsqueda por texto (`GET /search`, oleada 4) usa los mismos roles y el mismo
 - **Duración de un acta cerrada**: el PATCH que solo completa `durationMinutes` lo pueden hacer el responsable de la reunión, el líder del proceso o el jefe de área (403 a otros). Cualquier otro cambio sobre un acta cerrada sigue en 409.
 - **Compromisos abiertos de mis reuniones** (`GET /meetings/commitments-open`): cada persona ve solo los compromisos de las reuniones donde es **responsable**; no amplía la visibilidad de nadie (el seguimiento general sigue en `GET /commitments`, con su alcance por rol).
 - **Compromisos de Mi trabajo** (`GET /commitments/my-work`): los del propio actor (asignado, o responsable si no hay asignado) dentro de su alcance; completarlos usa la transición existente.
+
+### Reuniones: lectura y edición del acta (PR-1)
+
+Todos los participantes de una reunión (y quien tiene un compromiso asignado) la ven; el líder la ve también en procesos que no lidera si participa. Editan el acta abierta, la eliminan y agregan o quitan participantes solo el responsable, el líder del proceso y el jefe de área; el participante lee y completa sus propios compromisos. Al crear, quien crea puede invitar a cualquier persona del proceso.

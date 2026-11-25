@@ -55,7 +55,7 @@ function build(existingProcessIds: string[] = ['p1', 'p2']) {
   const audit = { record: jest.fn() } as unknown as AuditService;
   const notifier = { notify: jest.fn() } as never;
   const worklog = new WorklogService(prisma, audit, scope, notifier, {} as never);
-  const meeting = new MeetingService(prisma, audit, scope);
+  const meeting = new MeetingService(prisma, audit, scope, notifier);
   const commitment = new CommitmentService(prisma, audit, scope, {} as never, notifier);
   return { scope, worklog, meeting, commitment, dailyCreate, weeklyCreate, meetingCreate, commitmentCreate };
 }
@@ -158,7 +158,7 @@ describe('Personas indicadas en reuniones y compromisos (4.3)', () => {
     return {
       scope,
       userCount,
-      meeting: new MeetingService(prisma, audit, scope),
+      meeting: new MeetingService(prisma, audit, scope, notifier),
       commitment: new CommitmentService(prisma, audit, scope, {} as never, notifier),
       meetingCreate: m.meetingCreate,
       commitmentCreate: m.commitmentCreate,
