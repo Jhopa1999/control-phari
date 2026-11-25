@@ -245,11 +245,12 @@ function ShortcutKey({ className }: { className?: string }): React.ReactElement 
 }
 
 function DesktopTrigger({ onOpen }: { onOpen: () => void }): React.ReactElement {
+  const mac = React.useSyncExternalStore(subscribeNever, isMacPlatform, () => false);
   return (
     <LabelTooltip label="Buscar en el portal" side="bottom">
       <button
         type="button"
-        aria-label="Buscar en el portal"
+        aria-label={`Buscar en el portal, ${mac ? '⌘K' : 'Ctrl K'}`}
         aria-haspopup="dialog"
         aria-keyshortcuts="Control+K Meta+K /"
         onClick={onOpen}

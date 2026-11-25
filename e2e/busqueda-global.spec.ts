@@ -94,7 +94,7 @@ function search(page: import('@playwright/test').Page) {
 async function openPalette(page: import('@playwright/test').Page): Promise<void> {
   await expect(async () => {
     if (!(await search(page).isVisible())) {
-      await page.getByRole('button', { name: 'Buscar en el portal', exact: true }).click({ timeout: 1_000 });
+      await page.getByRole('button', { name: /^Buscar en el portal/ }).click({ timeout: 1_000 });
     }
     await expect(search(page)).toBeVisible({ timeout: 1_500 });
   }).toPass({ timeout: 15_000 });
@@ -222,7 +222,7 @@ test.describe('Paleta de búsqueda (escritorio)', () => {
 
   test('teclado: «/» abre la paleta y no actúa dentro de un campo editable', async ({ page }) => {
     await page.goto('/inicio');
-    await expect(page.getByRole('button', { name: 'Buscar en el portal', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Buscar en el portal/ })).toBeVisible();
     await expect(async () => {
       if (!(await search(page).isVisible())) await page.keyboard.press('/');
       await expect(search(page)).toBeFocused({ timeout: 1_000 });
