@@ -7485,81 +7485,6 @@
         ]
       }
     },
-    "/meetings/ai/availability": {
-      "get": {
-        "operationId": "MeetingAiController_availability",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Disponibilidad.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MeetingAiAvailabilityDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          }
-        },
-        "summary": "Indica si la ayuda de IA del acta está disponible (lista, apagada o sin presupuesto).",
-        "tags": [
-          "meetings"
-        ]
-      }
-    },
-    "/meetings/ai/structure": {
-      "post": {
-        "operationId": "MeetingAiController_structure",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StructureMeetingAiDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Propuesta de acta y compromisos.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MeetingAiStructureResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos inválidos o proceso inexistente."
-          },
-          "403": {
-            "description": "El actor no pertenece al proceso indicado."
-          },
-          "409": {
-            "description": "La IA o el agente de actas están apagados, mal configurados o sin presupuesto."
-          },
-          "413": {
-            "description": "El texto supera el máximo permitido."
-          },
-          "422": {
-            "description": "La IA devolvió una salida no interpretable."
-          },
-          "503": {
-            "description": "La IA no respondió a tiempo o no está disponible."
-          }
-        },
-        "summary": "Propone (no persiste) un acta reestructurada y compromisos a partir de las notas de la reunión, con IA.",
-        "tags": [
-          "meetings"
-        ]
-      }
-    },
     "/meetings": {
       "get": {
         "operationId": "MeetingController_list",
@@ -8233,402 +8158,6 @@
         "summary": "Transiciona el estado de un compromiso (maquina minima).",
         "tags": [
           "commitments"
-        ]
-      }
-    },
-    "/admin/ai/usage": {
-      "get": {
-        "operationId": "AiConfigController_getUsage",
-        "parameters": [
-          {
-            "name": "month",
-            "required": false,
-            "in": "query",
-            "description": "Mes a consultar en formato YYYY-MM (UTC). Por defecto, el mes actual.",
-            "schema": {
-              "example": "2026-11",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Resumen de consumo.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiUsageSummaryDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Mes con formato invalido."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          }
-        },
-        "summary": "Consumo de IA del mes (llamadas, tokens, costo estimado, por agente y modelo) y estado del presupuesto (solo ADMIN).",
-        "tags": [
-          "admin-ai"
-        ]
-      }
-    },
-    "/admin/ai/config": {
-      "get": {
-        "operationId": "AiConfigController_getConfig",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Estado de IA.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiConfigResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No hay un usuario actual valido."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          }
-        },
-        "summary": "Estado de la configuracion de IA (solo ADMIN): global + agentes. Nunca incluye secretos.",
-        "tags": [
-          "admin-ai"
-        ]
-      },
-      "patch": {
-        "operationId": "AiConfigController_updateConfig",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAiGlobalConfigDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Configuracion global guardada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiGlobalConfigResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos o combinacion secret/clearCredentials no permitida."
-          },
-          "401": {
-            "description": "No hay un usuario actual valido."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          }
-        },
-        "summary": "Actualiza la configuracion global de IA (solo ADMIN). Reglas del secret: ausente conserva, no vacio cifra, \"\" invalido, clearCredentials limpia.",
-        "tags": [
-          "admin-ai"
-        ]
-      }
-    },
-    "/admin/ai/models": {
-      "get": {
-        "operationId": "AiConfigController_listModels",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Modelos del catalogo.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AiModelCatalogEntryDto"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          }
-        },
-        "summary": "Catalogo completo de modelos de IA con sus capacidades, incluidos los deshabilitados (solo ADMIN).",
-        "tags": [
-          "admin-ai"
-        ]
-      },
-      "post": {
-        "operationId": "AiConfigController_createModel",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAiModelDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Modelo creado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiModelCatalogEntryDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "409": {
-            "description": "Ya existe un modelo con ese id."
-          }
-        },
-        "summary": "Da de alta un modelo de IA en el catalogo (solo ADMIN).",
-        "tags": [
-          "admin-ai"
-        ]
-      }
-    },
-    "/admin/ai/models/{modelId}": {
-      "patch": {
-        "operationId": "AiConfigController_updateModel",
-        "parameters": [
-          {
-            "name": "modelId",
-            "required": true,
-            "in": "path",
-            "description": "ID invocable del modelo en Bedrock.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAiModelDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Modelo actualizado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiModelCatalogEntryDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Modelo no encontrado."
-          }
-        },
-        "summary": "Edita un modelo del catalogo: nombre, capacidades, habilitado (solo ADMIN).",
-        "tags": [
-          "admin-ai"
-        ]
-      }
-    },
-    "/admin/ai/agents/{code}": {
-      "get": {
-        "operationId": "AiConfigController_getAgent",
-        "parameters": [
-          {
-            "name": "code",
-            "required": true,
-            "in": "path",
-            "description": "Code del agente (p. ej. TRIAGE).",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Configuracion del agente.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiAgentConfigResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Agente no encontrado."
-          }
-        },
-        "summary": "Configuracion de un agente de IA por code (solo ADMIN).",
-        "tags": [
-          "admin-ai"
-        ]
-      },
-      "patch": {
-        "operationId": "AiConfigController_updateAgent",
-        "parameters": [
-          {
-            "name": "code",
-            "required": true,
-            "in": "path",
-            "description": "Code del agente (p. ej. TRIAGE).",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAiAgentConfigDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Agente guardado.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiAgentConfigResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos invalidos o modelo fuera del catalogo."
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Agente no encontrado."
-          }
-        },
-        "summary": "Actualiza un agente de IA (solo ADMIN). Valida el modelo contra el catalogo permitido.",
-        "tags": [
-          "admin-ai"
-        ]
-      }
-    },
-    "/admin/ai/agents/{code}/test": {
-      "post": {
-        "operationId": "AiConfigController_testAgent",
-        "parameters": [
-          {
-            "name": "code",
-            "required": true,
-            "in": "path",
-            "description": "Code del agente (p. ej. TRIAGE).",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Resultado de la prueba.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiConnectionTestDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Agente no encontrado."
-          }
-        },
-        "summary": "Prueba la conexion del agente con Bedrock (solo ADMIN). Devuelve { ok, message } sin secretos ni stack.",
-        "tags": [
-          "admin-ai"
-        ]
-      }
-    },
-    "/requests/{id}/ai/triage-suggestion": {
-      "post": {
-        "operationId": "TriageSuggestionController_suggest",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Sugerencia de triage.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TriageSuggestionResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Rol insuficiente."
-          },
-          "404": {
-            "description": "Solicitud fuera de alcance."
-          },
-          "409": {
-            "description": "La sugerencia de IA esta desactivada o mal configurada."
-          },
-          "422": {
-            "description": "La IA devolvio una salida no interpretable."
-          },
-          "503": {
-            "description": "La IA no respondio a tiempo o no esta disponible."
-          }
-        },
-        "summary": "Sugiere (no persiste) campos de triage, banda de prioridad y posibles duplicados con IA. Degrada si la IA esta apagada o falla.",
-        "tags": [
-          "ai-triage"
         ]
       }
     },
@@ -10018,6 +9547,477 @@
         "summary": "Promueve/degrada a un usuario como ADMIN de sistema (solo ADMIN). No permite degradar al ultimo admin activo.",
         "tags": [
           "admin-users"
+        ]
+      }
+    },
+    "/admin/ai/usage": {
+      "get": {
+        "operationId": "AiConfigController_getUsage",
+        "parameters": [
+          {
+            "name": "month",
+            "required": false,
+            "in": "query",
+            "description": "Mes a consultar en formato YYYY-MM (UTC). Por defecto, el mes actual.",
+            "schema": {
+              "example": "2026-11",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen de consumo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiUsageSummaryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mes con formato invalido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Consumo de IA del mes (llamadas, tokens, costo estimado, por agente y modelo) y estado del presupuesto (solo ADMIN).",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/admin/ai/config": {
+      "get": {
+        "operationId": "AiConfigController_getConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Estado de IA.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConfigResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Estado de la configuracion de IA (solo ADMIN): global + agentes. Nunca incluye secretos.",
+        "tags": [
+          "admin-ai"
+        ]
+      },
+      "patch": {
+        "operationId": "AiConfigController_updateConfig",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAiGlobalConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuracion global guardada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiGlobalConfigResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o combinacion secret/clearCredentials no permitida."
+          },
+          "401": {
+            "description": "No hay un usuario actual valido."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Actualiza la configuracion global de IA (solo ADMIN). Reglas del secret: ausente conserva, no vacio cifra, \"\" invalido, clearCredentials limpia.",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/admin/ai/models": {
+      "get": {
+        "operationId": "AiConfigController_listModels",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Modelos del catalogo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AiModelCatalogEntryDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Catalogo completo de modelos de IA con sus capacidades, incluidos los deshabilitados (solo ADMIN).",
+        "tags": [
+          "admin-ai"
+        ]
+      },
+      "post": {
+        "operationId": "AiConfigController_createModel",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAiModelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Modelo creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiModelCatalogEntryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "409": {
+            "description": "Ya existe un modelo con ese id."
+          }
+        },
+        "summary": "Da de alta un modelo de IA en el catalogo (solo ADMIN).",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/admin/ai/models/{modelId}": {
+      "patch": {
+        "operationId": "AiConfigController_updateModel",
+        "parameters": [
+          {
+            "name": "modelId",
+            "required": true,
+            "in": "path",
+            "description": "ID invocable del modelo en Bedrock.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAiModelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Modelo actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiModelCatalogEntryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Modelo no encontrado."
+          }
+        },
+        "summary": "Edita un modelo del catalogo: nombre, capacidades, habilitado (solo ADMIN).",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/admin/ai/agents/{code}": {
+      "get": {
+        "operationId": "AiConfigController_getAgent",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Code del agente (p. ej. TRIAGE).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuracion del agente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiAgentConfigResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Agente no encontrado."
+          }
+        },
+        "summary": "Configuracion de un agente de IA por code (solo ADMIN).",
+        "tags": [
+          "admin-ai"
+        ]
+      },
+      "patch": {
+        "operationId": "AiConfigController_updateAgent",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Code del agente (p. ej. TRIAGE).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAiAgentConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agente guardado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiAgentConfigResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos invalidos o modelo fuera del catalogo."
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Agente no encontrado."
+          }
+        },
+        "summary": "Actualiza un agente de IA (solo ADMIN). Valida el modelo contra el catalogo permitido.",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/admin/ai/agents/{code}/test": {
+      "post": {
+        "operationId": "AiConfigController_testAgent",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Code del agente (p. ej. TRIAGE).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Resultado de la prueba.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConnectionTestDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Agente no encontrado."
+          }
+        },
+        "summary": "Prueba la conexion del agente con Bedrock (solo ADMIN). Devuelve { ok, message } sin secretos ni stack.",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/requests/{id}/ai/triage-suggestion": {
+      "post": {
+        "operationId": "TriageSuggestionController_suggest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sugerencia de triage.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriageSuggestionResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          },
+          "404": {
+            "description": "Solicitud fuera de alcance."
+          },
+          "409": {
+            "description": "La sugerencia de IA esta desactivada o mal configurada."
+          },
+          "422": {
+            "description": "La IA devolvio una salida no interpretable."
+          },
+          "503": {
+            "description": "La IA no respondio a tiempo o no esta disponible."
+          }
+        },
+        "summary": "Sugiere (no persiste) campos de triage, banda de prioridad y posibles duplicados con IA. Degrada si la IA esta apagada o falla.",
+        "tags": [
+          "ai-triage"
+        ]
+      }
+    },
+    "/meetings/ai/availability": {
+      "get": {
+        "operationId": "MeetingAiController_availability",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Disponibilidad.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingAiAvailabilityDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rol insuficiente."
+          }
+        },
+        "summary": "Indica si la ayuda de IA del acta está disponible (lista, apagada o sin presupuesto).",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
+    "/meetings/ai/structure": {
+      "post": {
+        "operationId": "MeetingAiController_structure",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StructureMeetingAiDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Propuesta de acta y compromisos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingAiStructureResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos o proceso inexistente."
+          },
+          "403": {
+            "description": "El actor no pertenece al proceso indicado."
+          },
+          "409": {
+            "description": "La IA o el agente de actas están apagados, mal configurados o sin presupuesto."
+          },
+          "413": {
+            "description": "El texto supera el máximo permitido."
+          },
+          "422": {
+            "description": "La IA devolvió una salida no interpretable."
+          },
+          "503": {
+            "description": "La IA no respondió a tiempo o no está disponible."
+          }
+        },
+        "summary": "Propone (no persiste) un acta reestructurada y compromisos a partir de las notas de la reunión, con IA.",
+        "tags": [
+          "meetings"
         ]
       }
     },
@@ -18561,157 +18561,6 @@
           }
         }
       },
-      "MeetingAiAvailabilityDto": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "available",
-              "off",
-              "unavailable"
-            ],
-            "description": "available: lista para usar. off: IA global o agente de actas apagados. unavailable: sin presupuesto mensual."
-          },
-          "message": {
-            "type": "string",
-            "description": "Motivo legible cuando no está disponible."
-          }
-        },
-        "required": [
-          "status"
-        ]
-      },
-      "StructureMeetingAiDto": {
-        "type": "object",
-        "properties": {
-          "processId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Proceso de la reunión; acota las personas candidatas a responsable."
-          },
-          "meetingDate": {
-            "type": "string",
-            "description": "Fecha de la reunión (YYYY-MM-DD); referencia para resolver «el viernes».",
-            "example": "2025-03-10",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-          },
-          "text": {
-            "type": "string",
-            "description": "Notas de la reunión tal como las escribió la persona. No se guardan."
-          },
-          "participantUserIds": {
-            "description": "Participantes ya elegidos; solo se usan para indicarle al modelo quiénes asistieron.",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        },
-        "required": [
-          "processId",
-          "meetingDate",
-          "text"
-        ]
-      },
-      "MeetingAiCommitmentDto": {
-        "type": "object",
-        "properties": {
-          "title": {
-            "type": "string",
-            "maxLength": 300,
-            "description": "Título propuesto."
-          },
-          "assignedUserId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true,
-            "description": "Persona del proceso propuesta como responsable; null si no se reconoció."
-          },
-          "assigneeText": {
-            "type": "string",
-            "nullable": true,
-            "description": "Nombre tal como aparece en las notas (para que la persona elija a quién asignar)."
-          },
-          "dueDate": {
-            "type": "string",
-            "nullable": true,
-            "description": "Fecha límite propuesta (YYYY-MM-DD); null si no hay o no es válida.",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-          },
-          "expectedResult": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 2000,
-            "description": "Resultado esperado."
-          },
-          "sourceQuote": {
-            "type": "string",
-            "description": "Frase de las notas que origina el compromiso."
-          }
-        },
-        "required": [
-          "title",
-          "assignedUserId",
-          "assigneeText",
-          "dueDate",
-          "expectedResult",
-          "sourceQuote"
-        ]
-      },
-      "MeetingAiStructureResponseDto": {
-        "type": "object",
-        "properties": {
-          "agenda": {
-            "type": "string",
-            "maxLength": 5000,
-            "description": "Agenda propuesta (vacía si no hay)."
-          },
-          "decisions": {
-            "type": "string",
-            "maxLength": 5000,
-            "description": "Decisiones y acuerdos propuestos."
-          },
-          "notes": {
-            "type": "string",
-            "maxLength": 5000,
-            "description": "Observaciones propuestas."
-          },
-          "commitments": {
-            "description": "Compromisos propuestos.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MeetingAiCommitmentDto"
-            }
-          },
-          "warnings": {
-            "description": "Dudas y ajustes hechos por el sistema (fechas descartadas, responsables no reconocidos, recortes).",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "model": {
-            "type": "string",
-            "description": "Modelo que respondió (lo fija el backend)."
-          },
-          "agentCode": {
-            "type": "string",
-            "description": "Agente que respondió (lo fija el backend).",
-            "example": "ACTAS"
-          }
-        },
-        "required": [
-          "agenda",
-          "decisions",
-          "notes",
-          "commitments",
-          "warnings",
-          "model",
-          "agentCode"
-        ]
-      },
       "MeetingParticipantDto": {
         "type": "object",
         "properties": {
@@ -19623,700 +19472,6 @@
         },
         "required": [
           "toState"
-        ]
-      },
-      "AiUsageBreakdownDto": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "description": "Agente (p. ej. TRIAGE) o id del modelo."
-          },
-          "calls": {
-            "type": "number",
-            "description": "Llamadas."
-          },
-          "inputTokens": {
-            "type": "number",
-            "description": "Tokens de entrada."
-          },
-          "outputTokens": {
-            "type": "number",
-            "description": "Tokens de salida."
-          },
-          "costUsd": {
-            "type": "number",
-            "description": "Costo estimado en USD (solo llamadas con precio)."
-          }
-        },
-        "required": [
-          "key",
-          "calls",
-          "inputTokens",
-          "outputTokens",
-          "costUsd"
-        ]
-      },
-      "AiBudgetStatusDto": {
-        "type": "object",
-        "properties": {
-          "month": {
-            "type": "string",
-            "description": "Mes (YYYY-MM, UTC) al que corresponde."
-          },
-          "budgetUsd": {
-            "type": "number",
-            "nullable": true,
-            "description": "Tope mensual en USD, o null si no hay tope."
-          },
-          "alertPct": {
-            "type": "number",
-            "description": "Porcentaje del tope a partir del cual hay alerta."
-          },
-          "spentUsd": {
-            "type": "number",
-            "description": "Gasto estimado del mes en USD."
-          },
-          "usedPct": {
-            "type": "number",
-            "nullable": true,
-            "description": "Porcentaje del tope consumido, o null si no hay tope."
-          },
-          "alert": {
-            "type": "boolean",
-            "description": "Se alcanzo el umbral de alerta."
-          },
-          "exceeded": {
-            "type": "boolean",
-            "description": "Se agoto el tope: las llamadas de IA se rechazan hasta el mes siguiente o hasta subir el tope."
-          }
-        },
-        "required": [
-          "month",
-          "budgetUsd",
-          "alertPct",
-          "spentUsd",
-          "usedPct",
-          "alert",
-          "exceeded"
-        ]
-      },
-      "AiUsageSummaryDto": {
-        "type": "object",
-        "properties": {
-          "month": {
-            "type": "string",
-            "description": "Mes (YYYY-MM, UTC)."
-          },
-          "calls": {
-            "type": "number",
-            "description": "Llamadas al modelo en el mes."
-          },
-          "inputTokens": {
-            "type": "number",
-            "description": "Tokens de entrada del mes."
-          },
-          "outputTokens": {
-            "type": "number",
-            "description": "Tokens de salida del mes."
-          },
-          "costUsd": {
-            "type": "number",
-            "description": "Costo estimado del mes en USD."
-          },
-          "unpricedCalls": {
-            "type": "number",
-            "description": "Llamadas de modelos sin precio configurado (no suman al costo)."
-          },
-          "byAgent": {
-            "description": "Consumo por agente.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AiUsageBreakdownDto"
-            }
-          },
-          "byModel": {
-            "description": "Consumo por modelo.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AiUsageBreakdownDto"
-            }
-          },
-          "budget": {
-            "description": "Estado del presupuesto del mes.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AiBudgetStatusDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "month",
-          "calls",
-          "inputTokens",
-          "outputTokens",
-          "costUsd",
-          "unpricedCalls",
-          "byAgent",
-          "byModel",
-          "budget"
-        ]
-      },
-      "AiGlobalConfigResponseDto": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean",
-            "description": "IA encendida globalmente."
-          },
-          "credentialMode": {
-            "type": "string",
-            "enum": [
-              "iam-role",
-              "access-keys"
-            ],
-            "description": "Modo de credenciales efectivo."
-          },
-          "secretSet": {
-            "type": "boolean",
-            "description": "Hay un secret de AWS guardado (nunca se devuelve el valor)."
-          },
-          "accessKeyIdLast4": {
-            "type": "string",
-            "nullable": true,
-            "description": "Ultimos 4 caracteres del AWS Access Key ID guardado, o null."
-          },
-          "monthlyBudgetUsd": {
-            "type": "number",
-            "nullable": true,
-            "description": "Tope de gasto mensual de IA en USD, o null si no hay tope."
-          },
-          "budgetAlertPct": {
-            "type": "number",
-            "description": "Porcentaje del tope a partir del cual se avisa."
-          },
-          "updatedAt": {
-            "type": "string",
-            "nullable": true,
-            "description": "Ultima actualizacion (ISO) o null."
-          }
-        },
-        "required": [
-          "enabled",
-          "credentialMode",
-          "secretSet",
-          "accessKeyIdLast4",
-          "monthlyBudgetUsd",
-          "budgetAlertPct",
-          "updatedAt"
-        ]
-      },
-      "AiAgentConfigResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "description": "Code estable del agente (p. ej. TRIAGE)."
-          },
-          "displayName": {
-            "type": "string",
-            "description": "Nombre visible del agente."
-          },
-          "enabled": {
-            "type": "boolean",
-            "description": "Agente encendido."
-          },
-          "region": {
-            "type": "string",
-            "description": "Region de AWS del agente."
-          },
-          "model": {
-            "type": "string",
-            "description": "ID del modelo de Bedrock en uso."
-          },
-          "basePrompt": {
-            "type": "string",
-            "description": "Prompt base del agente."
-          },
-          "temperature": {
-            "type": "number",
-            "description": "Temperatura de muestreo (0..1)."
-          },
-          "maxTokens": {
-            "type": "number",
-            "description": "Maximo de tokens de salida."
-          },
-          "timeoutMs": {
-            "type": "number",
-            "description": "Timeout de invocacion en ms."
-          },
-          "updatedAt": {
-            "type": "string",
-            "nullable": true,
-            "description": "Ultima actualizacion (ISO) o null."
-          }
-        },
-        "required": [
-          "code",
-          "displayName",
-          "enabled",
-          "region",
-          "model",
-          "basePrompt",
-          "temperature",
-          "maxTokens",
-          "timeoutMs",
-          "updatedAt"
-        ]
-      },
-      "AiModelCatalogEntryDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "ID del modelo de Bedrock (perfil de inferencia) invocable por el agente."
-          },
-          "label": {
-            "type": "string",
-            "description": "Nombre legible del modelo para el selector."
-          },
-          "tier": {
-            "type": "string",
-            "enum": [
-              "default",
-              "premium",
-              "other"
-            ],
-            "description": "Categoria orientativa: default (recomendado), premium (mayor calidad) u other."
-          },
-          "enabled": {
-            "type": "boolean",
-            "description": "Si el modelo esta disponible para asignarse a agentes."
-          },
-          "supportsTemperature": {
-            "type": "boolean",
-            "description": "Si el modelo acepta el parametro temperature."
-          },
-          "supportsTools": {
-            "type": "boolean",
-            "description": "Si el modelo soporta tool use."
-          },
-          "supportsVision": {
-            "type": "boolean",
-            "description": "Si el modelo acepta imagenes."
-          },
-          "supportsDocuments": {
-            "type": "boolean",
-            "description": "Si el modelo acepta documentos."
-          },
-          "supportsPromptCache": {
-            "type": "boolean",
-            "description": "Si el modelo acepta puntos de cache de prompt."
-          },
-          "inputUsdPerMTok": {
-            "type": "number",
-            "nullable": true,
-            "description": "Precio en USD por millon de tokens de entrada, o null si no se conoce."
-          },
-          "outputUsdPerMTok": {
-            "type": "number",
-            "nullable": true,
-            "description": "Precio en USD por millon de tokens de salida, o null si no se conoce."
-          },
-          "sortOrder": {
-            "type": "number",
-            "description": "Orden en el selector y el catalogo (menor primero)."
-          }
-        },
-        "required": [
-          "id",
-          "label",
-          "tier",
-          "enabled",
-          "supportsTemperature",
-          "supportsTools",
-          "supportsVision",
-          "supportsDocuments",
-          "supportsPromptCache",
-          "inputUsdPerMTok",
-          "outputUsdPerMTok",
-          "sortOrder"
-        ]
-      },
-      "AiConfigResponseDto": {
-        "type": "object",
-        "properties": {
-          "global": {
-            "description": "Estado global de IA (encendido, modo de credenciales, secretSet, last4).",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AiGlobalConfigResponseDto"
-              }
-            ]
-          },
-          "agents": {
-            "description": "Agentes de IA configurados (Fase 1: TRIAGE).",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AiAgentConfigResponseDto"
-            }
-          },
-          "models": {
-            "description": "Catalogo cerrado de modelos de Bedrock permitidos para el selector del Admin.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AiModelCatalogEntryDto"
-            }
-          }
-        },
-        "required": [
-          "global",
-          "agents",
-          "models"
-        ]
-      },
-      "UpdateAiGlobalConfigDto": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean",
-            "description": "Enciende/apaga globalmente la IA. Por defecto arranca apagada."
-          },
-          "credentialMode": {
-            "type": "string",
-            "enum": [
-              "iam-role",
-              "access-keys"
-            ],
-            "description": "Modo de credenciales: 'iam-role' (rol de la instancia) o 'access-keys' (claves guardadas)."
-          },
-          "awsAccessKeyId": {
-            "type": "string",
-            "description": "AWS Access Key ID (solo modo access-keys).",
-            "maxLength": 128
-          },
-          "awsSecretAccessKey": {
-            "type": "string",
-            "description": "AWS Secret Access Key (write-only). Ausente conserva; no vacio cifra y reemplaza; cadena vacia es invalida (usar clearCredentials)."
-          },
-          "clearCredentials": {
-            "type": "boolean",
-            "description": "true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio."
-          },
-          "monthlyBudgetUsd": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 0,
-            "description": "Tope de gasto mensual de IA en USD. null quita el tope; ausente lo conserva. Al alcanzarlo las llamadas de IA se rechazan."
-          },
-          "budgetAlertPct": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 100,
-            "description": "Porcentaje del tope a partir del cual se avisa (1..100)."
-          }
-        }
-      },
-      "CreateAiModelDto": {
-        "type": "object",
-        "properties": {
-          "label": {
-            "type": "string",
-            "description": "Nombre legible.",
-            "maxLength": 120
-          },
-          "tier": {
-            "type": "string",
-            "enum": [
-              "default",
-              "premium",
-              "other"
-            ],
-            "description": "Categoria orientativa."
-          },
-          "enabled": {
-            "type": "boolean",
-            "description": "Disponible para asignarse a agentes."
-          },
-          "supportsTemperature": {
-            "type": "boolean",
-            "description": "Acepta temperature."
-          },
-          "supportsTools": {
-            "type": "boolean",
-            "description": "Soporta tool use."
-          },
-          "supportsVision": {
-            "type": "boolean",
-            "description": "Acepta imagenes."
-          },
-          "supportsDocuments": {
-            "type": "boolean",
-            "description": "Acepta documentos."
-          },
-          "supportsPromptCache": {
-            "type": "boolean",
-            "description": "Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente."
-          },
-          "sortOrder": {
-            "type": "number",
-            "description": "Orden en el selector (menor primero).",
-            "minimum": 0
-          },
-          "inputUsdPerMTok": {
-            "type": "number",
-            "nullable": true,
-            "description": "USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo).",
-            "minimum": 0
-          },
-          "outputUsdPerMTok": {
-            "type": "number",
-            "nullable": true,
-            "description": "USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo).",
-            "minimum": 0
-          },
-          "modelId": {
-            "type": "string",
-            "description": "ID invocable en Bedrock (perfil de inferencia, p. ej. us.anthropic.claude-...).",
-            "maxLength": 200
-          }
-        },
-        "required": [
-          "modelId"
-        ]
-      },
-      "UpdateAiModelDto": {
-        "type": "object",
-        "properties": {
-          "label": {
-            "type": "string",
-            "description": "Nombre legible.",
-            "maxLength": 120
-          },
-          "tier": {
-            "type": "string",
-            "enum": [
-              "default",
-              "premium",
-              "other"
-            ],
-            "description": "Categoria orientativa."
-          },
-          "enabled": {
-            "type": "boolean",
-            "description": "Disponible para asignarse a agentes."
-          },
-          "supportsTemperature": {
-            "type": "boolean",
-            "description": "Acepta temperature."
-          },
-          "supportsTools": {
-            "type": "boolean",
-            "description": "Soporta tool use."
-          },
-          "supportsVision": {
-            "type": "boolean",
-            "description": "Acepta imagenes."
-          },
-          "supportsDocuments": {
-            "type": "boolean",
-            "description": "Acepta documentos."
-          },
-          "supportsPromptCache": {
-            "type": "boolean",
-            "description": "Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente."
-          },
-          "sortOrder": {
-            "type": "number",
-            "description": "Orden en el selector (menor primero).",
-            "minimum": 0
-          },
-          "inputUsdPerMTok": {
-            "type": "number",
-            "nullable": true,
-            "description": "USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo).",
-            "minimum": 0
-          },
-          "outputUsdPerMTok": {
-            "type": "number",
-            "nullable": true,
-            "description": "USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo).",
-            "minimum": 0
-          }
-        }
-      },
-      "UpdateAiAgentConfigDto": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean",
-            "description": "Enciende/apaga este agente."
-          },
-          "region": {
-            "type": "string",
-            "description": "Region de AWS (p. ej. us-east-2).",
-            "maxLength": 32
-          },
-          "model": {
-            "type": "string",
-            "description": "ID del modelo de Bedrock (debe estar en el catalogo permitido).",
-            "maxLength": 128
-          },
-          "basePrompt": {
-            "type": "string",
-            "description": "Prompt base del agente.",
-            "maxLength": 8000
-          },
-          "temperature": {
-            "type": "number",
-            "description": "Temperatura 0..1.",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "maxTokens": {
-            "type": "number",
-            "description": "Maximo de tokens 1..8192.",
-            "minimum": 1,
-            "maximum": 8192
-          },
-          "timeoutMs": {
-            "type": "number",
-            "description": "Timeout de invocacion en ms (1000..60000).",
-            "minimum": 1000,
-            "maximum": 60000
-          }
-        }
-      },
-      "AiConnectionTestDto": {
-        "type": "object",
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "description": "La prueba de conexion fue exitosa."
-          },
-          "message": {
-            "type": "string",
-            "description": "Mensaje legible del resultado (sin secretos ni stack)."
-          }
-        },
-        "required": [
-          "ok",
-          "message"
-        ]
-      },
-      "DuplicateCandidateDto": {
-        "type": "object",
-        "properties": {
-          "requestId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "ID de la solicitud candidata a duplicado."
-          },
-          "title": {
-            "type": "string",
-            "description": "Titulo de la solicitud candidata.",
-            "maxLength": 255
-          },
-          "confidence": {
-            "type": "number",
-            "description": "Confianza del parecido (0..1).",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "reason": {
-            "type": "string",
-            "description": "Motivo breve del parecido.",
-            "maxLength": 500
-          }
-        },
-        "required": [
-          "requestId",
-          "title",
-          "confidence",
-          "reason"
-        ]
-      },
-      "TriageSuggestionResponseDto": {
-        "type": "object",
-        "properties": {
-          "suggestedMainProcessId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true,
-            "description": "ID del proceso principal sugerido (proceso activo de tipo PROCESS) o null. Solo se sugiere si la solicitud aun no tiene proceso principal; reemplaza a la antigua ruta."
-          },
-          "suggestedDemandTypeCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Code sugerido de DEMAND_TYPE o null."
-          },
-          "suggestedCriticalityCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Code sugerido de CRITICALITY o null."
-          },
-          "suggestedSizeCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Code sugerido de TRIAGE_SIZE o null."
-          },
-          "suggestedDataAvailabilityCode": {
-            "type": "string",
-            "nullable": true,
-            "description": "Code sugerido de DATA_AVAILABILITY o null."
-          },
-          "tentativePriorityBand": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "P1",
-              "P2",
-              "P3",
-              "P4"
-            ],
-            "description": "Banda de prioridad tentativa (P1..P4) o null. Señal, no score oficial."
-          },
-          "priorityRationale": {
-            "type": "string",
-            "description": "Justificacion breve de la banda.",
-            "maxLength": 600
-          },
-          "possibleDuplicates": {
-            "description": "Posibles duplicados sugeridos.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DuplicateCandidateDto"
-            }
-          },
-          "missingInformation": {
-            "description": "Informacion faltante detectada (y notas de codes no validos).",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "model": {
-            "type": "string",
-            "description": "ID del modelo que genero la sugerencia."
-          },
-          "agentCode": {
-            "type": "string",
-            "description": "Code del agente que genero la sugerencia."
-          }
-        },
-        "required": [
-          "suggestedMainProcessId",
-          "suggestedDemandTypeCode",
-          "suggestedCriticalityCode",
-          "suggestedSizeCode",
-          "suggestedDataAvailabilityCode",
-          "tentativePriorityBand",
-          "priorityRationale",
-          "possibleDuplicates",
-          "missingInformation",
-          "model",
-          "agentCode"
         ]
       },
       "GatePendingItemResponseDto": {
@@ -21880,6 +21035,851 @@
         },
         "required": [
           "isAdmin"
+        ]
+      },
+      "AiUsageBreakdownDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Agente (p. ej. TRIAGE) o id del modelo."
+          },
+          "calls": {
+            "type": "number",
+            "description": "Llamadas."
+          },
+          "inputTokens": {
+            "type": "number",
+            "description": "Tokens de entrada."
+          },
+          "outputTokens": {
+            "type": "number",
+            "description": "Tokens de salida."
+          },
+          "costUsd": {
+            "type": "number",
+            "description": "Costo estimado en USD (solo llamadas con precio)."
+          }
+        },
+        "required": [
+          "key",
+          "calls",
+          "inputTokens",
+          "outputTokens",
+          "costUsd"
+        ]
+      },
+      "AiBudgetStatusDto": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "Mes (YYYY-MM, UTC) al que corresponde."
+          },
+          "budgetUsd": {
+            "type": "number",
+            "nullable": true,
+            "description": "Tope mensual en USD, o null si no hay tope."
+          },
+          "alertPct": {
+            "type": "number",
+            "description": "Porcentaje del tope a partir del cual hay alerta."
+          },
+          "spentUsd": {
+            "type": "number",
+            "description": "Gasto estimado del mes en USD."
+          },
+          "usedPct": {
+            "type": "number",
+            "nullable": true,
+            "description": "Porcentaje del tope consumido, o null si no hay tope."
+          },
+          "alert": {
+            "type": "boolean",
+            "description": "Se alcanzo el umbral de alerta."
+          },
+          "exceeded": {
+            "type": "boolean",
+            "description": "Se agoto el tope: las llamadas de IA se rechazan hasta el mes siguiente o hasta subir el tope."
+          }
+        },
+        "required": [
+          "month",
+          "budgetUsd",
+          "alertPct",
+          "spentUsd",
+          "usedPct",
+          "alert",
+          "exceeded"
+        ]
+      },
+      "AiUsageSummaryDto": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "Mes (YYYY-MM, UTC)."
+          },
+          "calls": {
+            "type": "number",
+            "description": "Llamadas al modelo en el mes."
+          },
+          "inputTokens": {
+            "type": "number",
+            "description": "Tokens de entrada del mes."
+          },
+          "outputTokens": {
+            "type": "number",
+            "description": "Tokens de salida del mes."
+          },
+          "costUsd": {
+            "type": "number",
+            "description": "Costo estimado del mes en USD."
+          },
+          "unpricedCalls": {
+            "type": "number",
+            "description": "Llamadas de modelos sin precio configurado (no suman al costo)."
+          },
+          "byAgent": {
+            "description": "Consumo por agente.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiUsageBreakdownDto"
+            }
+          },
+          "byModel": {
+            "description": "Consumo por modelo.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiUsageBreakdownDto"
+            }
+          },
+          "budget": {
+            "description": "Estado del presupuesto del mes.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AiBudgetStatusDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "month",
+          "calls",
+          "inputTokens",
+          "outputTokens",
+          "costUsd",
+          "unpricedCalls",
+          "byAgent",
+          "byModel",
+          "budget"
+        ]
+      },
+      "AiGlobalConfigResponseDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "IA encendida globalmente."
+          },
+          "credentialMode": {
+            "type": "string",
+            "enum": [
+              "iam-role",
+              "access-keys"
+            ],
+            "description": "Modo de credenciales efectivo."
+          },
+          "secretSet": {
+            "type": "boolean",
+            "description": "Hay un secret de AWS guardado (nunca se devuelve el valor)."
+          },
+          "accessKeyIdLast4": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ultimos 4 caracteres del AWS Access Key ID guardado, o null."
+          },
+          "monthlyBudgetUsd": {
+            "type": "number",
+            "nullable": true,
+            "description": "Tope de gasto mensual de IA en USD, o null si no hay tope."
+          },
+          "budgetAlertPct": {
+            "type": "number",
+            "description": "Porcentaje del tope a partir del cual se avisa."
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ultima actualizacion (ISO) o null."
+          }
+        },
+        "required": [
+          "enabled",
+          "credentialMode",
+          "secretSet",
+          "accessKeyIdLast4",
+          "monthlyBudgetUsd",
+          "budgetAlertPct",
+          "updatedAt"
+        ]
+      },
+      "AiAgentConfigResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Code estable del agente (p. ej. TRIAGE)."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Nombre visible del agente."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Agente encendido."
+          },
+          "region": {
+            "type": "string",
+            "description": "Region de AWS del agente."
+          },
+          "model": {
+            "type": "string",
+            "description": "ID del modelo de Bedrock en uso."
+          },
+          "basePrompt": {
+            "type": "string",
+            "description": "Prompt base del agente."
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Temperatura de muestreo (0..1)."
+          },
+          "maxTokens": {
+            "type": "number",
+            "description": "Maximo de tokens de salida."
+          },
+          "timeoutMs": {
+            "type": "number",
+            "description": "Timeout de invocacion en ms."
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ultima actualizacion (ISO) o null."
+          }
+        },
+        "required": [
+          "code",
+          "displayName",
+          "enabled",
+          "region",
+          "model",
+          "basePrompt",
+          "temperature",
+          "maxTokens",
+          "timeoutMs",
+          "updatedAt"
+        ]
+      },
+      "AiModelCatalogEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID del modelo de Bedrock (perfil de inferencia) invocable por el agente."
+          },
+          "label": {
+            "type": "string",
+            "description": "Nombre legible del modelo para el selector."
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "default",
+              "premium",
+              "other"
+            ],
+            "description": "Categoria orientativa: default (recomendado), premium (mayor calidad) u other."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Si el modelo esta disponible para asignarse a agentes."
+          },
+          "supportsTemperature": {
+            "type": "boolean",
+            "description": "Si el modelo acepta el parametro temperature."
+          },
+          "supportsTools": {
+            "type": "boolean",
+            "description": "Si el modelo soporta tool use."
+          },
+          "supportsVision": {
+            "type": "boolean",
+            "description": "Si el modelo acepta imagenes."
+          },
+          "supportsDocuments": {
+            "type": "boolean",
+            "description": "Si el modelo acepta documentos."
+          },
+          "supportsPromptCache": {
+            "type": "boolean",
+            "description": "Si el modelo acepta puntos de cache de prompt."
+          },
+          "inputUsdPerMTok": {
+            "type": "number",
+            "nullable": true,
+            "description": "Precio en USD por millon de tokens de entrada, o null si no se conoce."
+          },
+          "outputUsdPerMTok": {
+            "type": "number",
+            "nullable": true,
+            "description": "Precio en USD por millon de tokens de salida, o null si no se conoce."
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden en el selector y el catalogo (menor primero)."
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "tier",
+          "enabled",
+          "supportsTemperature",
+          "supportsTools",
+          "supportsVision",
+          "supportsDocuments",
+          "supportsPromptCache",
+          "inputUsdPerMTok",
+          "outputUsdPerMTok",
+          "sortOrder"
+        ]
+      },
+      "AiConfigResponseDto": {
+        "type": "object",
+        "properties": {
+          "global": {
+            "description": "Estado global de IA (encendido, modo de credenciales, secretSet, last4).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AiGlobalConfigResponseDto"
+              }
+            ]
+          },
+          "agents": {
+            "description": "Agentes de IA configurados (Fase 1: TRIAGE).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiAgentConfigResponseDto"
+            }
+          },
+          "models": {
+            "description": "Catalogo cerrado de modelos de Bedrock permitidos para el selector del Admin.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiModelCatalogEntryDto"
+            }
+          }
+        },
+        "required": [
+          "global",
+          "agents",
+          "models"
+        ]
+      },
+      "UpdateAiGlobalConfigDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Enciende/apaga globalmente la IA. Por defecto arranca apagada."
+          },
+          "credentialMode": {
+            "type": "string",
+            "enum": [
+              "iam-role",
+              "access-keys"
+            ],
+            "description": "Modo de credenciales: 'iam-role' (rol de la instancia) o 'access-keys' (claves guardadas)."
+          },
+          "awsAccessKeyId": {
+            "type": "string",
+            "description": "AWS Access Key ID (solo modo access-keys).",
+            "maxLength": 128
+          },
+          "awsSecretAccessKey": {
+            "type": "string",
+            "description": "AWS Secret Access Key (write-only). Ausente conserva; no vacio cifra y reemplaza; cadena vacia es invalida (usar clearCredentials)."
+          },
+          "clearCredentials": {
+            "type": "boolean",
+            "description": "true limpia las credenciales guardadas (access key id y secret). No combinar con un secret no vacio."
+          },
+          "monthlyBudgetUsd": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Tope de gasto mensual de IA en USD. null quita el tope; ausente lo conserva. Al alcanzarlo las llamadas de IA se rechazan."
+          },
+          "budgetAlertPct": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Porcentaje del tope a partir del cual se avisa (1..100)."
+          }
+        }
+      },
+      "CreateAiModelDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Nombre legible.",
+            "maxLength": 120
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "default",
+              "premium",
+              "other"
+            ],
+            "description": "Categoria orientativa."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Disponible para asignarse a agentes."
+          },
+          "supportsTemperature": {
+            "type": "boolean",
+            "description": "Acepta temperature."
+          },
+          "supportsTools": {
+            "type": "boolean",
+            "description": "Soporta tool use."
+          },
+          "supportsVision": {
+            "type": "boolean",
+            "description": "Acepta imagenes."
+          },
+          "supportsDocuments": {
+            "type": "boolean",
+            "description": "Acepta documentos."
+          },
+          "supportsPromptCache": {
+            "type": "boolean",
+            "description": "Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente."
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden en el selector (menor primero).",
+            "minimum": 0
+          },
+          "inputUsdPerMTok": {
+            "type": "number",
+            "nullable": true,
+            "description": "USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo).",
+            "minimum": 0
+          },
+          "outputUsdPerMTok": {
+            "type": "number",
+            "nullable": true,
+            "description": "USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo).",
+            "minimum": 0
+          },
+          "modelId": {
+            "type": "string",
+            "description": "ID invocable en Bedrock (perfil de inferencia, p. ej. us.anthropic.claude-...).",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "modelId"
+        ]
+      },
+      "UpdateAiModelDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Nombre legible.",
+            "maxLength": 120
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "default",
+              "premium",
+              "other"
+            ],
+            "description": "Categoria orientativa."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Disponible para asignarse a agentes."
+          },
+          "supportsTemperature": {
+            "type": "boolean",
+            "description": "Acepta temperature."
+          },
+          "supportsTools": {
+            "type": "boolean",
+            "description": "Soporta tool use."
+          },
+          "supportsVision": {
+            "type": "boolean",
+            "description": "Acepta imagenes."
+          },
+          "supportsDocuments": {
+            "type": "boolean",
+            "description": "Acepta documentos."
+          },
+          "supportsPromptCache": {
+            "type": "boolean",
+            "description": "Acepta puntos de cache de prompt (cachePoint): reduce el costo del asistente."
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Orden en el selector (menor primero).",
+            "minimum": 0
+          },
+          "inputUsdPerMTok": {
+            "type": "number",
+            "nullable": true,
+            "description": "USD por millon de tokens de entrada. null quita el precio (el consumo del modelo deja de sumar al costo).",
+            "minimum": 0
+          },
+          "outputUsdPerMTok": {
+            "type": "number",
+            "nullable": true,
+            "description": "USD por millon de tokens de salida. null quita el precio (el consumo del modelo deja de sumar al costo).",
+            "minimum": 0
+          }
+        }
+      },
+      "UpdateAiAgentConfigDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Enciende/apaga este agente."
+          },
+          "region": {
+            "type": "string",
+            "description": "Region de AWS (p. ej. us-east-2).",
+            "maxLength": 32
+          },
+          "model": {
+            "type": "string",
+            "description": "ID del modelo de Bedrock (debe estar en el catalogo permitido).",
+            "maxLength": 128
+          },
+          "basePrompt": {
+            "type": "string",
+            "description": "Prompt base del agente.",
+            "maxLength": 8000
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Temperatura 0..1.",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "maxTokens": {
+            "type": "number",
+            "description": "Maximo de tokens 1..8192.",
+            "minimum": 1,
+            "maximum": 8192
+          },
+          "timeoutMs": {
+            "type": "number",
+            "description": "Timeout de invocacion en ms (1000..60000).",
+            "minimum": 1000,
+            "maximum": 60000
+          }
+        }
+      },
+      "AiConnectionTestDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "La prueba de conexion fue exitosa."
+          },
+          "message": {
+            "type": "string",
+            "description": "Mensaje legible del resultado (sin secretos ni stack)."
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ]
+      },
+      "DuplicateCandidateDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID de la solicitud candidata a duplicado."
+          },
+          "title": {
+            "type": "string",
+            "description": "Titulo de la solicitud candidata.",
+            "maxLength": 255
+          },
+          "confidence": {
+            "type": "number",
+            "description": "Confianza del parecido (0..1).",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "reason": {
+            "type": "string",
+            "description": "Motivo breve del parecido.",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "requestId",
+          "title",
+          "confidence",
+          "reason"
+        ]
+      },
+      "TriageSuggestionResponseDto": {
+        "type": "object",
+        "properties": {
+          "suggestedMainProcessId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "ID del proceso principal sugerido (proceso activo de tipo PROCESS) o null. Solo se sugiere si la solicitud aun no tiene proceso principal; reemplaza a la antigua ruta."
+          },
+          "suggestedDemandTypeCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Code sugerido de DEMAND_TYPE o null."
+          },
+          "suggestedCriticalityCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Code sugerido de CRITICALITY o null."
+          },
+          "suggestedSizeCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Code sugerido de TRIAGE_SIZE o null."
+          },
+          "suggestedDataAvailabilityCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Code sugerido de DATA_AVAILABILITY o null."
+          },
+          "tentativePriorityBand": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "P1",
+              "P2",
+              "P3",
+              "P4"
+            ],
+            "description": "Banda de prioridad tentativa (P1..P4) o null. Señal, no score oficial."
+          },
+          "priorityRationale": {
+            "type": "string",
+            "description": "Justificacion breve de la banda.",
+            "maxLength": 600
+          },
+          "possibleDuplicates": {
+            "description": "Posibles duplicados sugeridos.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateCandidateDto"
+            }
+          },
+          "missingInformation": {
+            "description": "Informacion faltante detectada (y notas de codes no validos).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "model": {
+            "type": "string",
+            "description": "ID del modelo que genero la sugerencia."
+          },
+          "agentCode": {
+            "type": "string",
+            "description": "Code del agente que genero la sugerencia."
+          }
+        },
+        "required": [
+          "suggestedMainProcessId",
+          "suggestedDemandTypeCode",
+          "suggestedCriticalityCode",
+          "suggestedSizeCode",
+          "suggestedDataAvailabilityCode",
+          "tentativePriorityBand",
+          "priorityRationale",
+          "possibleDuplicates",
+          "missingInformation",
+          "model",
+          "agentCode"
+        ]
+      },
+      "MeetingAiAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "off",
+              "unavailable"
+            ],
+            "description": "available: lista para usar. off: IA global o agente de actas apagados. unavailable: sin presupuesto mensual."
+          },
+          "message": {
+            "type": "string",
+            "description": "Motivo legible cuando no está disponible."
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "StructureMeetingAiDto": {
+        "type": "object",
+        "properties": {
+          "processId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Proceso de la reunión; acota las personas candidatas a responsable."
+          },
+          "meetingDate": {
+            "type": "string",
+            "description": "Fecha de la reunión (YYYY-MM-DD); referencia para resolver «el viernes».",
+            "example": "2025-03-10",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "text": {
+            "type": "string",
+            "description": "Notas de la reunión tal como las escribió la persona. No se guardan."
+          },
+          "participantUserIds": {
+            "description": "Participantes ya elegidos; solo se usan para indicarle al modelo quiénes asistieron.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "processId",
+          "meetingDate",
+          "text"
+        ]
+      },
+      "MeetingAiCommitmentDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "Título propuesto."
+          },
+          "assignedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Persona del proceso propuesta como responsable; null si no se reconoció."
+          },
+          "assigneeText": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nombre tal como aparece en las notas (para que la persona elija a quién asignar)."
+          },
+          "dueDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fecha límite propuesta (YYYY-MM-DD); null si no hay o no es válida.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "expectedResult": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "Resultado esperado."
+          },
+          "sourceQuote": {
+            "type": "string",
+            "description": "Frase de las notas que origina el compromiso."
+          }
+        },
+        "required": [
+          "title",
+          "assignedUserId",
+          "assigneeText",
+          "dueDate",
+          "expectedResult",
+          "sourceQuote"
+        ]
+      },
+      "MeetingAiStructureResponseDto": {
+        "type": "object",
+        "properties": {
+          "agenda": {
+            "type": "string",
+            "maxLength": 5000,
+            "description": "Agenda propuesta (vacía si no hay)."
+          },
+          "decisions": {
+            "type": "string",
+            "maxLength": 5000,
+            "description": "Decisiones y acuerdos propuestos."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 5000,
+            "description": "Observaciones propuestas."
+          },
+          "commitments": {
+            "description": "Compromisos propuestos.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeetingAiCommitmentDto"
+            }
+          },
+          "warnings": {
+            "description": "Dudas y ajustes hechos por el sistema (fechas descartadas, responsables no reconocidos, recortes).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "model": {
+            "type": "string",
+            "description": "Modelo que respondió (lo fija el backend)."
+          },
+          "agentCode": {
+            "type": "string",
+            "description": "Agente que respondió (lo fija el backend).",
+            "example": "ACTAS"
+          }
+        },
+        "required": [
+          "agenda",
+          "decisions",
+          "notes",
+          "commitments",
+          "warnings",
+          "model",
+          "agentCode"
         ]
       },
       "AttachmentLimitsDto": {

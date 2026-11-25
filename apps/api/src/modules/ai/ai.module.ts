@@ -10,6 +10,9 @@ import { AiModelCatalogService } from './ai-model-catalog.service';
 import { AiUsageService } from './ai-usage.service';
 import { TriageSuggestionController } from './triage-suggestion.controller';
 import { TriageSuggestionService } from './triage-suggestion.service';
+import { CoordinationScopeService } from '../coordination/coordination-scope.service';
+import { MeetingAiController } from '../coordination/meeting/meeting-ai.controller';
+import { MeetingAiService } from '../coordination/meeting/meeting-ai.service';
 import {
   AwsBedrockClient,
   BEDROCK_CLIENT,
@@ -28,17 +31,29 @@ import {
  * - AuditModule aporta AuditService (auditoria AI_CONFIG).
  * - RequestModule exporta RequestStateService (requireInScope para la
  *   sugerencia de triage).
+ * - CoordinationScopeService (personas del proceso) sirve a la ayuda de IA del
+ *   acta, `MeetingAiController`.
  * - El cliente de Bedrock se inyecta por el token BEDROCK_CLIENT para poder
  *   sustituirlo por un doble en tests; la impl real es AwsBedrockClient.
  */
 @Module({
-  imports: [PrismaModule, AuthModule, AuditModule, RequestModule, NotificationModule],
-  controllers: [AiConfigController, TriageSuggestionController],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    AuditModule,
+    RequestModule,
+    NotificationModule,
+  ],
+  controllers: [AiConfigController, TriageSuggestionController, MeetingAiController],
   providers: [
     AiConfigService,
     AiModelCatalogService,
     AiUsageService,
     TriageSuggestionService,
+    MeetingAiService,
+    // Sin estado y solo con Prisma: se registra aquí en vez de importar
+    // CoordinationModule (arrastra @nestjs/schedule, ESM, a las pruebas de la IA).
+    CoordinationScopeService,
     // Modo de simulación (FEAT-007): solo fuera de producción y con
     // ASSISTANT_MODEL_PROVIDER=simulated. Una sola evaluación por arranque.
     { provide: MODEL_SIMULATED, useFactory: () => isSimulatedModelEnabled() },
