@@ -599,7 +599,7 @@ export function TaskDetail({
         label="Siguiente paso"
         error={fieldErrors.nextStatus}
         help={
-          awaitingApproval
+          awaitingApproval && !statusLocked
             ? 'Esta tarea espera la aprobación de un líder o del jefe de área.'
             : `Ahora: ${statusLabel}.`
         }

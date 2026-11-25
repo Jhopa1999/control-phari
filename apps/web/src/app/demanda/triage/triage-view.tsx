@@ -1127,7 +1127,6 @@ function TriageViewContent(): React.ReactElement {
             </p>
           )}
 
-          <h3 className="text-sm font-semibold">Procesos que intervienen</h3>
           <FieldSet
             id="triage-participants"
             kind="checkbox"

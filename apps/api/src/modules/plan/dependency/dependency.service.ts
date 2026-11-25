@@ -211,8 +211,14 @@ export class DependencyService {
       predecessorRef: row.predecessorTaskId,
     }));
     if (reaches(edges, predecessorTaskId, dependentTaskId)) {
+      // El mensaje nombra las tareas por su código visible (PRY-0012-T01), nunca por UUID.
+      const tasks = await this.prisma.task.findMany({
+        where: { id: { in: [dependentTaskId, predecessorTaskId] } },
+        select: { id: true, code: true },
+      });
+      const codeOf = (id: string): string => tasks.find((t) => t.id === id)?.code ?? 'otra tarea';
       throw new BadRequestException(
-        'La dependencia crearía un ciclo entre las tareas.',
+        `La dependencia crearía un ciclo: ${codeOf(predecessorTaskId)} ya depende, directa o indirectamente, de ${codeOf(dependentTaskId)}.`,
       );
     }
   }

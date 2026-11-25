@@ -8,7 +8,7 @@ import { DependencyService } from './dependency.service';
 
 function createMocks() {
   const prismaObj: Record<string, unknown> = {
-    task: { findFirst: jest.fn() },
+    task: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
     taskDependency: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
@@ -101,9 +101,14 @@ describe('DependencyService (design §2.3)', () => {
 
     // Intentar A(t1) depende de B(t2): dependent=t1, predecessor=t2. DFS desde
     // t2 alcanza t1 -> ciclo.
-    await expect(
-      service.add(lider(), 't1', { predecessorTaskId: 't2' }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    (m.prismaObj.task as any).findMany.mockResolvedValue([
+      { id: 't1', code: 'PRY-0001-T01' },
+      { id: 't2', code: 'PRY-0001-T02' },
+    ]);
+    const attempt = service.add(lider(), 't1', { predecessorTaskId: 't2' });
+    await expect(attempt).rejects.toBeInstanceOf(BadRequestException);
+    // El mensaje usa los códigos visibles, no los UUID.
+    await expect(attempt).rejects.toThrow(/PRY-0001-T02.*PRY-0001-T01/);
     expect((m.prismaObj.taskDependency as any).create).not.toHaveBeenCalled();
   });
 

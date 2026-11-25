@@ -124,7 +124,7 @@ export function AttentionSection(): React.ReactElement {
   let content: React.ReactNode;
   if (state === 'loading') {
     content = (
-      <div aria-busy="true" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div aria-busy="true" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-20 w-full rounded-xl" />
         ))}
@@ -149,14 +149,14 @@ export function AttentionSection(): React.ReactElement {
     );
   } else {
     content = (
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {visible.map((item) => {
           const count = data[item.key];
           return (
             <li key={item.key}>
               <Link
                 href={item.href}
-                className="group flex h-full items-center justify-between gap-3 rounded-xl bg-card p-4 shadow-card transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
+                className="group flex h-full items-center justify-between gap-2 rounded-xl bg-card p-3 shadow-card sm:gap-3 sm:p-4 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
               >
                 <span className="flex min-w-0 flex-col gap-1">
                   <span

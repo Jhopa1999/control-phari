@@ -49,8 +49,8 @@ const DEV_PASSWORD = 'Prueba2026*';
 // --- Datos sinteticos -------------------------------------------------------
 
 const ROLES: Array<{ code: string; name: string }> = [
-  { code: 'JEFE_AREA', name: 'Jefe de area' },
-  { code: 'LIDER_PROCESO', name: 'Lider de proceso' },
+  { code: 'JEFE_AREA', name: 'Jefe de área' },
+  { code: 'LIDER_PROCESO', name: 'Líder de proceso' },
   { code: 'INTEGRANTE', name: 'Integrante' },
 ];
 

@@ -334,7 +334,7 @@ Validaciones de fechas (backend y formularios): la fecha de fin de una fase o ta
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | GET | `/tasks/:id/dependencies` | Lista las predecesoras de una tarea. |
-| POST | `/tasks/:id/dependencies` | Añade una predecesora (valida auto/mismo-plan/ciclo/duplicado). |
+| POST | `/tasks/:id/dependencies` | Añade una predecesora (valida auto/mismo-plan/ciclo/duplicado). El 400 por ciclo nombra las tareas por su código visible. |
 | DELETE | `/tasks/:id/dependencies/:predecessorTaskId` | Quita una predecesora. |
 
 Reglas clave: el envío del plan exige la guía sin pendientes; la transición de una
