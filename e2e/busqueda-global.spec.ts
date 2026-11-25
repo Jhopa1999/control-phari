@@ -94,7 +94,7 @@ function search(page: import('@playwright/test').Page) {
 async function openPalette(page: import('@playwright/test').Page): Promise<void> {
   await expect(async () => {
     if (!(await search(page).isVisible())) {
-      await page.getByRole('button', { name: 'Buscar… en el portal' }).click({ timeout: 1_000 });
+      await page.getByRole('button', { name: 'Buscar en el portal', exact: true }).click({ timeout: 1_000 });
     }
     await expect(search(page)).toBeVisible({ timeout: 1_500 });
   }).toPass({ timeout: 15_000 });
@@ -222,7 +222,7 @@ test.describe('Paleta de búsqueda (escritorio)', () => {
 
   test('teclado: «/» abre la paleta y no actúa dentro de un campo editable', async ({ page }) => {
     await page.goto('/inicio');
-    await expect(page.getByRole('button', { name: 'Buscar… en el portal' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Buscar en el portal', exact: true })).toBeVisible();
     await expect(async () => {
       if (!(await search(page).isVisible())) await page.keyboard.press('/');
       await expect(search(page)).toBeFocused({ timeout: 1_000 });
@@ -307,16 +307,21 @@ test.describe('Paleta de búsqueda (móvil)', () => {
     await expect(trigger).toBeFocused();
   });
 
-  test('el campo del cajón del menú abre la paleta', async ({ page }) => {
+  test('el cajón del menú no duplica el buscador: la lupa de la barra abre la paleta', async ({ page }) => {
     await page.goto('/inicio');
     const drawer = page.getByRole('dialog', { name: 'Menú principal', exact: true });
+    const trigger = page.getByRole('button', { name: 'Buscar', exact: true });
     // Espera a la hidratación (la lupa se monta con el actor) antes de abrir el cajón.
-    await expect(page.getByRole('button', { name: 'Buscar', exact: true })).toBeVisible();
+    await expect(trigger).toBeVisible();
     await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
     await expect(drawer).toBeVisible();
-    await drawer.getByRole('button', { name: 'Buscar…' }).click();
+    await expect(drawer.getByRole('button', { name: /Buscar/ })).toHaveCount(0);
+    await page.keyboard.press('Escape');
     await expect(drawer).toBeHidden();
-    await expect(search(page)).toBeVisible();
+    await expect(async () => {
+      if (!(await search(page).isVisible())) await trigger.click({ timeout: 1_000 });
+      await expect(search(page)).toBeVisible({ timeout: 1_500 });
+    }).toPass({ timeout: 15_000 });
   });
 });
 

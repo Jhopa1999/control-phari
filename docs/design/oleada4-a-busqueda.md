@@ -1,5 +1,7 @@
 # Oleada 4 · PR A. Paleta de búsqueda `Ctrl/⌘+K`. Especificación visual
 
+> **Nota:** los disparadores del menú lateral (campo y lupa del riel) se retiraron; ver [ux-cromo-discreto.md](./ux-cromo-discreto.md). Queda un único botón compacto en la barra superior de escritorio.
+
 Especificación (rol Director de Arte Frontend) de la **paleta de búsqueda única** del FEAT-001 (D18). Sustituye a dos
 controles: el campo «Buscar código» de la barra superior (`global-code-search.tsx`, `busqueda-global-id.md`) y el campo
 «Buscar pantalla…» del menú lateral (`app-sidebar.tsx`). Reglas vigentes: `25-marca-gibo.md`, `20-frontend-nextjs.md`,

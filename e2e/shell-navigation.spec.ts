@@ -184,8 +184,11 @@ test.describe('workspace y aplicaciones 1440×900', () => {
   }) => {
     await page.goto('/inicio');
     const aside = page.getByRole('complementary', { name: 'Menú lateral' });
-    const trigger = aside.getByRole('button', { name: /Aplicación\s+Demanda/ });
+    const trigger = page.getByRole('button', { name: 'Aplicaciones', exact: true });
     await expect(trigger).toBeVisible();
+    // El menú lateral ya no lleva selector de aplicaciones ni buscador.
+    await expect(aside.getByRole('button', { name: 'Aplicaciones', exact: true })).toHaveCount(0);
+    await expect(aside.getByRole('button', { name: /Buscar/ })).toHaveCount(0);
 
     await trigger.focus();
     await page.keyboard.press('Enter');
@@ -262,6 +265,21 @@ test.describe('móvil 390×844', () => {
     await expect(menuButton(page)).toBeFocused();
   });
 
+  test('el cajón lleva el botón «Aplicaciones» en su cabecera y elegir una app lo cierra', async ({
+    page,
+  }) => {
+    await page.goto('/inicio');
+    await menuButton(page).click();
+    await expect(drawer(page)).toBeVisible();
+
+    const apps = drawer(page).getByRole('button', { name: 'Aplicaciones', exact: true });
+    await expect(apps).toBeVisible();
+    await expect(drawer(page).getByRole('button', { name: /Buscar/ })).toHaveCount(0);
+    await apps.click();
+    await page.getByRole('menuitem', { name: /^Demanda\s*, aplicación actual$/ }).click();
+    await expect(drawer(page)).toHaveCount(0);
+  });
+
   test('con la preferencia de riel guardada, el cajón no abre tooltips', async ({
     page,
     context,
@@ -317,6 +335,39 @@ test.describe('riel 1100×800', () => {
     await page.reload();
     await expect(collapse).toBeVisible();
     await expect(expand).toHaveCount(0);
+  });
+});
+
+test.describe('barra superior con el menú en riel 1100×800', () => {
+  test.use({ viewport: { width: 1100, height: 800 } });
+
+  test('el selector de aplicaciones sigue en la barra superior con el menú en riel', async ({
+    page,
+  }) => {
+    await page.goto('/inicio');
+    const aside = page.getByRole('complementary', { name: 'Menú lateral' });
+    await expect(aside.getByRole('button', { name: 'Aplicaciones', exact: true })).toHaveCount(0);
+    await expect(aside.getByRole('button', { name: /Buscar/ })).toHaveCount(0);
+
+    const trigger = page.getByRole('button', { name: 'Aplicaciones', exact: true });
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+    await expect(page.getByRole('menuitem', { name: 'Inicio del workspace' })).toBeVisible();
+  });
+});
+
+test.describe('altura reducida 1280×640', () => {
+  test.use({ viewport: { width: 1280, height: 640 } });
+
+  test('con el menú expandido se llega al último enlace de Workspace', async ({ page }) => {
+    await page.goto('/inicio');
+    const menu = mainNav(page);
+    const workspace = menu.getByRole('button', { name: 'Workspace', exact: true });
+    await expect(workspace).toHaveAttribute('aria-expanded', 'false');
+    await workspace.click();
+    const last = menu.getByRole('link').last();
+    await last.scrollIntoViewIfNeeded();
+    await expect(last).toBeInViewport();
   });
 });
 

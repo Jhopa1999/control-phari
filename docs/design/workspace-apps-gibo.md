@@ -1,5 +1,7 @@
 # Workspace GIBO con selector de aplicaciones
 
+> **Nota:** la ubicación del selector de aplicaciones (§3.1, §3.3, §3.4 y §5.1) quedó sustituida por [ux-cromo-discreto.md](./ux-cromo-discreto.md): ahora es un botón-icono en la barra superior (y en la cabecera del cajón).
+
 Especificación visual (rol Diseñador). No toca código de la aplicación. Introduce el «workspace GIBO»:
 un portal único con selector de aplicaciones donde cada app tiene su menú. La app actual pasa a ser la
 primera, **Demanda**. Más adelante vendrán Service Desk y otras, así que el diseño debe verse bien con
