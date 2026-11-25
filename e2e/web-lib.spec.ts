@@ -1796,7 +1796,7 @@ test.describe('password-messages', () => {
   });
 
   test('la política de contraseñas marca el campo de la contraseña nueva', () => {
-    const short = `10 caracteres.`;
+    const short = `${PASSWORD_TOO_SHORT_PREFIX}10 caracteres.`;
     expect(describeChangePasswordFailure(400, { message: short })).toEqual({
       field: 'newPassword',
       message: short,
