@@ -6,14 +6,14 @@ import { createLocalPrefStore } from './local-pref-store';
 /**
  * Grupos del menú lateral que el usuario plegó (BL-027). Se recuerda por
  * navegador en localStorage, como la preferencia del riel: sin valor = los
- * grupos plegados por defecto (hoy solo la sección «workspace»). El valor
+ * grupos plegados por defecto (la sección «workspace» y el grupo «activos»). El valor
  * guardado es la lista de ids separada por comas (un primitivo, para que el
  * snapshot de useSyncExternalStore sea estable); `-` significa «ninguno
  * plegado» (el usuario abrió todo), distinto de «sin valor».
  */
 const STORAGE_KEY = 'navCollapsedGroups';
 /** Grupos plegados mientras el usuario no haya elegido nada. */
-const DEFAULT_COLLAPSED = ['workspace'];
+const DEFAULT_COLLAPSED = ['workspace', 'activos'];
 const NONE = '-';
 
 const store = createLocalPrefStore<string>(readRaw, writeRaw, '');

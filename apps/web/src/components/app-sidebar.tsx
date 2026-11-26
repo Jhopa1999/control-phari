@@ -346,7 +346,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
         return renderNotice('No tienes módulos habilitados. Pide acceso al jefe de área.');
       default:
         return (
-          <div className="flex flex-col gap-4 rail:gap-2">
+          <div className="flex flex-col gap-2 rail:gap-2">
               <>
               {appGroups.map((group, index) => {
                 // El grupo de entrada no tiene título y no se pliega. En riel
@@ -367,7 +367,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
                           aria-expanded={!isCollapsed}
                           aria-controls={listId}
                           onClick={() => toggle(group.id)}
-                          className="flex w-full items-center justify-between rounded-md px-2.5 py-1 text-left text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sidebar-ring pointer-coarse:min-h-10"
+                          className="flex h-7 w-full items-center justify-between rounded-md px-2.5 text-left text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sidebar-ring pointer-coarse:min-h-10"
                         >
                           {group.label}
                           <ChevronDown
@@ -381,7 +381,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
                       ) : (
                         <span
                           id={groupLabelId(group.id)}
-                          className="block px-2.5 text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase rail:sr-only"
+                          className="flex h-7 items-center px-2.5 text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase rail:sr-only"
                         >
                           {group.label}
                         </span>
@@ -392,7 +392,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
                       aria-labelledby={group.label ? groupLabelId(group.id) : undefined}
                       className={cn(
                         'flex flex-col gap-0.5',
-                        group.label && 'mt-1 rail:mt-0',
+                        group.label && 'rail:mt-0',
                         isCollapsed && 'hidden',
                       )}
                     >
@@ -437,7 +437,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
       <div
         role={isRail ? 'group' : undefined}
         aria-label={isRail ? 'Workspace' : undefined}
-        className="mt-1 border-t border-sidebar-border pt-3 rail:mt-0 rail:pt-2"
+        className="border-t border-sidebar-border pt-2 rail:mt-0 rail:pt-2"
       >
         {foldable ? (
           <button
@@ -446,7 +446,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
             aria-expanded={!isCollapsed}
             aria-controls={listId}
             onClick={() => toggle('workspace')}
-            className="flex w-full items-center justify-between rounded-md px-2.5 py-1 text-left text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sidebar-ring pointer-coarse:min-h-10"
+            className="flex h-7 w-full items-center justify-between rounded-md px-2.5 text-left text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sidebar-ring pointer-coarse:min-h-10"
           >
             {title}
             <ChevronDown
@@ -460,7 +460,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
         ) : (
           <span
             id={headerId}
-            className="block px-2.5 text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase rail:sr-only"
+            className="flex h-7 items-center px-2.5 text-xs font-semibold tracking-wider text-sidebar-muted-foreground uppercase rail:sr-only"
           >
             {title}
           </span>
@@ -470,7 +470,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
             <div key={group.id} className="rail:border-t rail:border-sidebar-border rail:pt-2 rail:first:border-t-0 rail:first:pt-0">
               <span
                 id={groupLabelId(group.id)}
-                className="block px-2.5 pt-2 pb-1 text-xs font-medium text-sidebar-muted-foreground rail:sr-only"
+                className="flex h-7 items-center px-2.5 text-xs font-medium text-sidebar-muted-foreground rail:sr-only"
               >
                 {group.label}
               </span>
@@ -534,7 +534,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
 
   const content = (
     <>
-      <div className={cn('flex h-14 shrink-0 items-center px-3 rail:justify-center rail:px-0', isDrawer && 'pr-12')}>
+      <div className={cn('flex h-12 shrink-0 items-center px-3 rail:justify-center rail:px-0', isDrawer && 'pr-12')}>
         <Link
           href={brandHref}
           onClick={onNavigate}
@@ -565,12 +565,12 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
 
       <nav
         aria-label="Navegación principal"
-        className="nav-scroll-shadow no-scrollbar min-h-0 flex-1 overflow-y-auto px-2 py-3"
+        className="nav-scroll-shadow no-scrollbar min-h-0 flex-1 overflow-y-auto px-2 py-2"
       >
         {renderMenu()}
       </nav>
 
-      <div className={cn('flex flex-col gap-1 border-t border-sidebar-border p-2 rail:items-center', isDrawer && isJwt && 'hidden')}>
+      <div className={cn('flex flex-col gap-0.5 border-t border-sidebar-border p-1.5 rail:items-center', isDrawer && isJwt && 'hidden')}>
         <div className="flex w-full items-center gap-1 rail:flex-col">
           <span className="flex-1 rail:hidden" />
           {footerControls}
@@ -578,7 +578,7 @@ export function AppSidebar({ variant, onNavigate }: AppSidebarProps): React.Reac
 
         {isJwt ? null : (
           <>
-            <div className="flex w-full flex-col gap-1.5 px-1 pb-1 pt-1.5 rail:hidden">
+            <div className="flex w-full flex-col gap-1 px-1 pb-1 rail:hidden">
               <Label htmlFor={actorSelectId} className="text-xs text-sidebar-foreground">
                 Usuario actual (dev)
               </Label>

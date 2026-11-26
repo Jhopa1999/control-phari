@@ -274,3 +274,29 @@ Cambios pequeños de presentación, sin contrato nuevo:
 - **Capacidad (3.2-1):** el selector de mes añade «Mes anterior», «Mes siguiente» y «Mes actual».
 - **Actividades recurrentes (4.4-1):** la *Fecha de inicio* avisa que no se generan ocurrencias anteriores.
 - **Áreas (6.3-1):** el campo *Orden* explica que las áreas con número menor aparecen primero.
+
+## Base de escritorio (interfaz de escritorio, PR A)
+
+Cambios compartidos que heredan todas las vistas (especificación en
+`docs/design/design-system-desktop.md`):
+
+- **Cabecera de página** (`PageHeader`): 56 px sin migas. Título y acciones en
+  una fila, descripción de una línea en `text-meta` (`max-w-3xl`) y trazo de
+  marca de 2 px pegado al borde inferior. El `h1` no cambia.
+- **Ancho y ritmo** (`PageLayout`): propiedad `width` con `fluid` (1760 px, por
+  defecto), `form` (960 px) y `reading` (720 px), estos dos alineados a la
+  izquierda. Separación entre bloques de 24 px y de 16 px desde `lg`. El `main`
+  usa `py-4`.
+- **Menú lateral** (`AppSidebar`): cabeceras de grupo de 28 px; «Activos y
+  conocimiento» y «Workspace» (Gobierno y Administración) llegan plegados la
+  primera vez, y el grupo de la ruta activa se despliega al llegar a ella. La
+  elección del usuario se sigue recordando por navegador. Pie y marca más
+  compactos.
+- **Indicadores** (`StatTile` y `StatStrip`): tile de 64 px con valor de 20 px;
+  un valor 0 se muestra atenuado y sin tono; la pista va en la línea del valor;
+  la propiedad `href` convierte el tile en enlace con chevron y foco visible. La
+  franja queda en una sola fila desde `xl`. Las variantes propias de Panel, Mi
+  trabajo, Portafolio, Resumen y Bitácora se migran en el PR E.
+- **Maestro-detalle** (`MasterDetail`): lista de 320, 340 y 380 px según el
+  ancho, fija con `lg:top-16`, ítems de 52 px con el título en una línea (el
+  texto completo en `title`).

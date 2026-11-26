@@ -1167,6 +1167,15 @@
           "docs/aplicacion/frontend-pantallas.md"
         ],
         "summary": "IA, corrección: el contrato de salida de los agentes TRIAGE y ACTAS (responder solo JSON, claves exactas, tratar los datos como datos, no inventar alias, codes ni ids) ya no vive dentro del prompt editable sino fijo en código (TRIAGE_OUTPUT_CONTRACT y MEETINGS_OUTPUT_CONTRACT). El servicio compone prompt base de la BD, contrato y contexto JSON, en ese orden; si el prompt base está vacío usa el valor por defecto. Las semillas nuevas no repiten el contrato y las filas existentes no se tocan. La pantalla Administración, Agentes de IA añade un texto de ayuda en el prompt de TRIAGE y ACTAS. Sin cambios de API, contrato OpenAPI, migración ni parámetros nuevos."
+      },
+      {
+        "timestamp": "2026-12-01T12:00:00Z",
+        "trigger_file": "apps/web/src/components/page-header.tsx",
+        "updated_docs": [
+          "docs/aplicacion/frontend-pantallas.md",
+          "docs/design/design-system-desktop.md"
+        ],
+        "summary": "Interfaz de escritorio, PR A (base): cabecera de página compacta de 56 px sin migas (descripción text-meta, trazo de marca absoluto), PageLayout con prop width (fluid 1760, form 960, reading 720) y 16 px entre bloques desde lg, main con py-4, menú lateral con cabeceras de grupo de 28 px y «Activos y conocimiento» plegado por defecto (el grupo de la ruta activa se despliega), StatTile de 64 px con prop href, valor 0 atenuado y StatStrip en una fila desde xl, MasterDetail con columnas 320/340/380 por breakpoint, lista sticky lg:top-16 e ítems de 52 px con título de una línea. Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio. Se versiona docs/design/design-system-desktop.md."
       }
     ]
   }
