@@ -11,12 +11,11 @@ import {
 } from '@/components/data-table';
 import { DataCardList } from '@/components/data-card-list';
 import { DataView, type DataViewState } from '@/components/data-view';
-import { Field } from '@/components/field';
 import { IdChip } from '@/components/id-chip';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActionsCell } from '@/components/row-actions';
-import { Toolbar } from '@/components/toolbar';
+import { FilterField, Toolbar } from '@/components/toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -383,6 +382,67 @@ function AuditoriaViewContent(): React.ReactElement {
       <PageHeader title="Auditoría" description="Cambios registrados dentro de tu alcance." />
       <Toolbar
         label="Filtros de auditoría"
+        moreActiveCount={
+          (filters.from !== '' ? 1 : 0) + (filters.to !== '' ? 1 : 0) + (filters.process !== ALL ? 1 : 0)
+        }
+        more={
+          <>
+            <FilterField
+              id="aud-filtro-desde"
+              label="Desde"
+              help="Incluye todo el día."
+              className="sm:w-52"
+            >
+              {(control) => (
+                <Input
+                  {...control}
+                  type="date"
+                  value={filters.from}
+                  max={filters.to || today}
+                  onChange={(event) => update({ from: event.target.value })}
+                />
+              )}
+            </FilterField>
+            <FilterField
+              id="aud-filtro-hasta"
+              label="Hasta"
+              help="Incluye todo el día."
+              error={rangeError}
+              className="sm:w-52"
+            >
+              {(control) => (
+                <Input
+                  {...control}
+                  type="date"
+                  value={filters.to}
+                  min={filters.from || undefined}
+                  max={today}
+                  onChange={(event) => update({ to: event.target.value })}
+                />
+              )}
+            </FilterField>
+            <FilterField id="aud-filtro-proceso" label="Proceso" className="sm:w-64">
+              {(control) => (
+                <Select value={filters.process} onValueChange={(value) => update({ process: value })}>
+                  <SelectTrigger {...control}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>Todos</SelectItem>
+                    {processMissing ? (
+                      <SelectItem value={filters.process}>{OUT_OF_SCOPE_PROCESS}</SelectItem>
+                    ) : null}
+                    {processes.map((process) => (
+                      <SelectItem key={process.id} value={process.id}>
+                        {`${process.name} (${process.code})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </FilterField>
+          </>
+        }
         end={
           state !== 'error' ? (
             <ResultCount
@@ -394,17 +454,13 @@ function AuditoriaViewContent(): React.ReactElement {
           ) : null
         }
       >
-        <Field
-          id="aud-filtro-objeto"
-          label="Objeto"
-          className="w-full sm:w-auto sm:self-start"
-        >
+        <FilterField id="aud-filtro-objeto" label="Objeto" className="sm:w-52">
           {(control) => (
             <Select
               value={filters.objectType}
               onValueChange={(value) => update({ objectType: isObjectType(value) ? value : ALL })}
             >
-              <SelectTrigger ref={objectFilterRef} {...control} className="w-full sm:w-52">
+              <SelectTrigger ref={objectFilterRef} {...control}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -417,18 +473,14 @@ function AuditoriaViewContent(): React.ReactElement {
               </SelectContent>
             </Select>
           )}
-        </Field>
-        <Field
-          id="aud-filtro-accion"
-          label="Acción"
-          className="w-full sm:w-auto sm:self-start"
-        >
+        </FilterField>
+        <FilterField id="aud-filtro-accion" label="Acción" className="sm:w-40">
           {(control) => (
             <Select
               value={filters.action}
               onValueChange={(value) => update({ action: isAction(value) ? value : ALL })}
             >
-              <SelectTrigger {...control} className="w-full sm:w-44">
+              <SelectTrigger {...control}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -441,13 +493,13 @@ function AuditoriaViewContent(): React.ReactElement {
               </SelectContent>
             </Select>
           )}
-        </Field>
-        <Field
+        </FilterField>
+        <FilterField
           id="aud-filtro-codigo"
           label="Código del objeto"
           help={CODE_HELP}
           error={codeError}
-          className="w-full sm:w-auto sm:self-start"
+          className="sm:w-48"
         >
           {(control) => (
             <Input
@@ -464,7 +516,7 @@ function AuditoriaViewContent(): React.ReactElement {
                   applyCode(codeInput, true);
                 }
               }}
-              className="w-full sm:w-52"
+
               autoComplete="off"
               autoCapitalize="characters"
               spellCheck={false}
@@ -472,11 +524,11 @@ function AuditoriaViewContent(): React.ReactElement {
               placeholder="PRY-0012"
             />
           )}
-        </Field>
-        <Field id="aud-filtro-actor" label="Actor" className="w-full sm:w-auto sm:self-start">
+        </FilterField>
+        <FilterField id="aud-filtro-actor" label="Actor" className="sm:w-48">
           {(control) => (
             <Select value={filters.actor} onValueChange={(value) => update({ actor: value })}>
-              <SelectTrigger {...control} className="w-full sm:w-56">
+              <SelectTrigger {...control}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -492,63 +544,7 @@ function AuditoriaViewContent(): React.ReactElement {
               </SelectContent>
             </Select>
           )}
-        </Field>
-        <Field
-          id="aud-filtro-desde"
-          label="Desde"
-          help="Incluye todo el día."
-          className="w-full sm:w-auto sm:self-start"
-        >
-          {(control) => (
-            <Input
-              {...control}
-              type="date"
-              value={filters.from}
-              max={filters.to || today}
-              onChange={(event) => update({ from: event.target.value })}
-              className="w-full sm:w-44 max-md:h-11"
-            />
-          )}
-        </Field>
-        <Field
-          id="aud-filtro-hasta"
-          label="Hasta"
-          help="Incluye todo el día."
-          error={rangeError}
-          className="w-full sm:w-auto sm:self-start"
-        >
-          {(control) => (
-            <Input
-              {...control}
-              type="date"
-              value={filters.to}
-              min={filters.from || undefined}
-              max={today}
-              onChange={(event) => update({ to: event.target.value })}
-              className="w-full sm:w-44 max-md:h-11"
-            />
-          )}
-        </Field>
-        <Field id="aud-filtro-proceso" label="Proceso" className="w-full sm:w-auto sm:self-start">
-          {(control) => (
-            <Select value={filters.process} onValueChange={(value) => update({ process: value })}>
-              <SelectTrigger {...control} className="w-full sm:w-56">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todos</SelectItem>
-                {processMissing ? (
-                  <SelectItem value={filters.process}>{OUT_OF_SCOPE_PROCESS}</SelectItem>
-                ) : null}
-                {processes.map((process) => (
-                  <SelectItem key={process.id} value={process.id}>
-                    {`${process.name} (${process.code})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </Field>
+        </FilterField>
       </Toolbar>
       {chips.length > 0 ? (
         <ul aria-label="Filtros activos" className="flex flex-wrap items-center gap-2">
@@ -603,7 +599,7 @@ function AuditoriaViewContent(): React.ReactElement {
             <TableRow>
               <TableHead>Fecha</TableHead>
               <TableHead>Actor</TableHead>
-              <TableHead>Proceso</TableHead>
+              <TableHead className="hidden @4xl:table-cell">Proceso</TableHead>
               <TableHead>Acción</TableHead>
               <TableHead>Objeto</TableHead>
               <TableHead className="text-right">Cambio</TableHead>
@@ -618,22 +614,24 @@ function AuditoriaViewContent(): React.ReactElement {
                 <TableCell className="whitespace-nowrap">
                   <ActorCell event={event} />
                 </TableCell>
-                <TableCell className="min-w-40">{processLabel(event.scopeProcessId)}</TableCell>
+                <TableCell className="hidden @4xl:table-cell max-w-[14rem]">
+                  <span className="line-clamp-1" title={processLabel(event.scopeProcessId)}>
+                    {processLabel(event.scopeProcessId)}
+                  </span>
+                </TableCell>
                 <TableCell className="whitespace-nowrap">{auditActionLabel(event.action)}</TableCell>
                 <TableCell className="min-w-64 max-w-[26rem]">
-                  {event.objectCode || event.objectLabel ? (
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <IdChip code={event.objectCode} />
-                      {event.objectLabel ? (
-                        <span className="line-clamp-2 wrap-break-word text-foreground">
-                          {event.objectLabel}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  <span className="block text-meta text-muted-foreground">
-                    {auditObjectLabel(event.objectType)}
-                  </span>
+                  <div className="flex items-center gap-x-2">
+                    <IdChip code={event.objectCode} />
+                    {event.objectLabel ? (
+                      <span className="line-clamp-1 text-foreground" title={event.objectLabel}>
+                        {event.objectLabel}
+                      </span>
+                    ) : null}
+                    <span className="shrink-0 text-meta whitespace-nowrap text-muted-foreground">
+                      {auditObjectLabel(event.objectType)}
+                    </span>
+                  </div>
                 </TableCell>
                 <RowActionsCell>
                   <Button

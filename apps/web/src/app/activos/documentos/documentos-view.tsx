@@ -20,9 +20,8 @@ import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { ReasonDialog } from '@/components/reason-dialog';
 import { StatusBadge } from '@/components/status-badge';
-import { SearchInput, Toolbar } from '@/components/toolbar';
+import { FilterField, SearchInput, Toolbar } from '@/components/toolbar';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -608,6 +607,47 @@ export function DocumentosView(): React.ReactElement {
       <Toolbar
         label="Filtros de documentos"
         collapseOnMobile
+        moreActiveCount={(requestFilter !== ALL ? 1 : 0) + (assetFilter !== ALL ? 1 : 0)}
+        more={
+          <>
+            <FilterField id="doc-filtro-solicitud" label="Solicitud" className="sm:w-56">
+              <Select value={requestFilter} onValueChange={setRequestFilter}>
+                <SelectTrigger id="doc-filtro-solicitud">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Todas</SelectItem>
+                  {requests.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.code} · {r.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FilterField>
+            <FilterField id="doc-filtro-activo" label="Activo" className="sm:w-56">
+              <Select value={assetFilter} onValueChange={setAssetFilter}>
+                <SelectTrigger id="doc-filtro-activo">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Todos</SelectItem>
+                  {assets.map((a) => (
+                    <SelectItem key={a.id} value={a.id} textValue={`${a.code ?? ''} ${a.name}`.trim()}>
+                      {a.code ? (
+                        <span className="font-mono text-xs tabular-nums">{a.code}</span>
+                      ) : null}
+                      <span>
+                        {a.code ? ' · ' : ''}
+                        {a.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FilterField>
+          </>
+        }
         end={
           <>
             {table.status !== 'error' ? (
@@ -641,10 +681,9 @@ export function DocumentosView(): React.ReactElement {
             if (event.key === 'Escape' && search !== '') setSearch('');
           }}
         />
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="doc-filtro-proceso">Proceso</Label>
+        <FilterField id="doc-filtro-proceso" label="Proceso" className="sm:w-48">
           <Select value={processFilter} onValueChange={setProcessFilter}>
-            <SelectTrigger id="doc-filtro-proceso" className="w-full sm:w-40">
+            <SelectTrigger id="doc-filtro-proceso">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -656,49 +695,10 @@ export function DocumentosView(): React.ReactElement {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="doc-filtro-solicitud">Solicitud</Label>
-          <Select value={requestFilter} onValueChange={setRequestFilter}>
-            <SelectTrigger id="doc-filtro-solicitud" className="w-full sm:w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Todas</SelectItem>
-              {requests.map((r) => (
-                <SelectItem key={r.id} value={r.id}>
-                  {r.code} · {r.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="doc-filtro-activo">Activo</Label>
-          <Select value={assetFilter} onValueChange={setAssetFilter}>
-            <SelectTrigger id="doc-filtro-activo" className="w-full sm:w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Todos</SelectItem>
-              {assets.map((a) => (
-                <SelectItem key={a.id} value={a.id} textValue={`${a.code ?? ''} ${a.name}`.trim()}>
-                  {a.code ? (
-                    <span className="font-mono text-xs tabular-nums">{a.code}</span>
-                  ) : null}
-                  <span>
-                    {a.code ? ' · ' : ''}
-                    {a.name}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="doc-filtro-estado">Estado</Label>
+        </FilterField>
+        <FilterField id="doc-filtro-estado" label="Estado" className="sm:w-44">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger id="doc-filtro-estado" className="w-full sm:w-36">
+            <SelectTrigger id="doc-filtro-estado">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -710,7 +710,7 @@ export function DocumentosView(): React.ReactElement {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FilterField>
       </Toolbar>
 
       <DataView
@@ -755,7 +755,7 @@ export function DocumentosView(): React.ReactElement {
           truncated={table.truncated}
         >
         <div className="hidden md:block">
-        <Table scrollLabel="Tabla de documentos">
+        <Table density="twoline" scrollLabel="Tabla de documentos">
           <TableHeader>
             <TableRow>
               <TableHead className="w-28">Código</TableHead>
@@ -765,10 +765,10 @@ export function DocumentosView(): React.ReactElement {
                 sort={table.sort}
                 onSort={table.toggleSort}
               />
-              <TableHead>Activo</TableHead>
-              <TableHead>Proceso</TableHead>
-              <TableHead>Solicitud</TableHead>
-              <TableHead className="text-right">Versión</TableHead>
+              <TableHead className="hidden @4xl:table-cell">Activo</TableHead>
+              <TableHead className="hidden @[1100px]:table-cell">Proceso</TableHead>
+              <TableHead className="hidden @[1100px]:table-cell">Solicitud</TableHead>
+              <TableHead className="hidden @4xl:table-cell text-right">Versión</TableHead>
               <SortableTableHead
                 label="Estado"
                 sortKey="status"
@@ -799,22 +799,22 @@ export function DocumentosView(): React.ReactElement {
                       {doc.title}
                     </CellTitle>
                   </TableCell>
-                  <TableCell className="min-w-40 max-w-[18rem]">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <TableCell className="hidden @4xl:table-cell min-w-40 max-w-[18rem]">
+                    <div className="flex items-center gap-x-2">
                       <CodeCell code={assetCodeOf(doc)} />
                       <span className="line-clamp-1" title={doc.assetName}>
                         {doc.assetName}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="min-w-32 max-w-[18rem]">
+                  <TableCell className="hidden @[1100px]:table-cell min-w-32 max-w-[18rem]">
                     <ProcessRefCell
                       name={asset ? processName(asset.processId) : null}
                       code={null}
                       missingLabel="Proceso no disponible"
                     />
                   </TableCell>
-                  <TableCell className="min-w-40 max-w-[18rem]">
+                  <TableCell className="hidden @[1100px]:table-cell min-w-40 max-w-[18rem]">
                     <RequestRefCell
                       code={doc.requestCode}
                       title={doc.requestTitle}
@@ -822,7 +822,7 @@ export function DocumentosView(): React.ReactElement {
                       missingLabel="Sin solicitud"
                     />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums text-muted-foreground">
+                  <TableCell className="hidden @4xl:table-cell text-right tabular-nums text-muted-foreground">
                     {doc.currentVersion ? (
                       `v${doc.currentVersion.versionNumber}`
                     ) : (

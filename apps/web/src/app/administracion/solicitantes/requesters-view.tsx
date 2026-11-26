@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Plus, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
+import { DataTablePagination } from '@/components/data-table';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
@@ -22,6 +23,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useActor } from '@/lib/actor-context';
+import { compareText, type Comparator } from '@/lib/table-sort';
+import { useClientTable } from '@/lib/use-client-table';
 import type { Area, Requester } from '@/lib/api-client';
 import { listAreas } from '@/lib/areas';
 import {
@@ -37,6 +40,68 @@ import {
 } from './requester-form-dialog';
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
+
+const NOUN = { one: 'solicitante', other: 'solicitantes' };
+// Sin orden elegido: se conserva el de la API; el comparador habilita la paginación.
+const COMPARATORS: Record<'name', Comparator<Requester>> = {
+  name: (a, b, d) => compareText(a.name, b.name, d),
+};
+
+/** Tabla de solicitantes de una línea por fila, con paginación en cliente. */
+function RequestersTable({
+  requesters,
+  rowActions,
+}: {
+  requesters: readonly Requester[];
+  rowActions: (requester: Requester) => RowAction[];
+}): React.ReactElement {
+  const table = useClientTable({
+    rows: requesters,
+    comparators: COMPARATORS,
+    defaultSort: null,
+    pageSize: 25,
+  });
+  return (
+    <>
+      <Table density="compact" scrollLabel="Tabla de solicitantes">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nombre</TableHead>
+            <TableHead className="hidden @4xl:table-cell">Área</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {table.pageRows.map((r) => (
+            <TableRow key={r.id}>
+              <TableCell className="min-w-40 font-medium">{r.name}</TableCell>
+              <TableCell className="hidden @4xl:table-cell min-w-40">{r.areaName}</TableCell>
+              <TableCell className="whitespace-nowrap">
+                <StatusBadge kind="active" value={String(r.active)} />
+              </TableCell>
+              <RowActionsCell>
+                <RowActions rowLabel={r.name} actions={rowActions(r)} />
+              </RowActionsCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <DataTablePagination
+        id="sq-paginacion"
+        page={table.page}
+        pageCount={table.pageCount}
+        from={table.from}
+        to={table.to}
+        filtered={table.filtered}
+        pageSize={table.pageSize ?? 25}
+        onPageChange={table.setPage}
+        onPageSizeChange={table.setPageSize}
+        noun={NOUN}
+      />
+    </>
+  );
+}
 
 function messageOf(err: unknown): string {
   return err instanceof ApiError ? err.message : 'Ocurrió un error inesperado.';
@@ -199,30 +264,7 @@ export function RequestersView(): React.ReactElement {
               action={newButton}
             />
           ) : (
-            <Table scrollLabel="Tabla de solicitantes">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Área</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {requesters.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="min-w-40 font-medium">{r.name}</TableCell>
-                    <TableCell className="min-w-40">{r.areaName}</TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <StatusBadge kind="active" value={String(r.active)} />
-                    </TableCell>
-                    <RowActionsCell>
-                      <RowActions rowLabel={r.name} actions={rowActions(r)} />
-                    </RowActionsCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <RequestersTable requesters={requesters} rowActions={rowActions} />
           )}
         </div>
       </Section>

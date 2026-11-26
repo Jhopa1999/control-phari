@@ -107,8 +107,9 @@ export function NotificationBell({ className }: { className?: string }): React.R
     }
   }
 
-  const label =
-    unread > 0 ? `Notificaciones: ${unread} sin leer` : 'Notificaciones: no hay pendientes';
+  // El nombre accesible contiene el texto visible de la insignia («99+» con más
+  // de 99), como pide WCAG 2.5.3 (axe label-content-name-mismatch).
+  const label = unread > 0 ? `Notificaciones, ${unread > 99 ? '99+' : unread} sin leer` : 'Notificaciones';
 
   return (
     <DropdownMenu onOpenChange={(isOpen) => (isOpen ? void load() : undefined)}>

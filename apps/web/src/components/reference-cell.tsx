@@ -40,11 +40,12 @@ export function ProcessRefCell({
     );
   }
   return (
-    <span className="flex min-w-0 flex-col">
+    // Una línea: nombre y código en la misma fila, para no pasar de la altura de fila (design §3.1).
+    <span className="flex min-w-0 items-baseline gap-1.5">
       <span className="line-clamp-1" title={name}>
         {name}
       </span>
-      {code ? <span className="text-meta text-muted-foreground">{code}</span> : null}
+      {code ? <span className="shrink-0 text-meta whitespace-nowrap text-muted-foreground">{code}</span> : null}
     </span>
   );
 }
@@ -72,7 +73,8 @@ export function RequestRefCell({
     );
   }
   return (
-    <span className="flex min-w-0 flex-col items-start gap-0.5">
+    // Código y título en una línea (design §3.1): la fila no pasa de 52 px.
+    <span className="flex min-w-0 items-center gap-2">
       <IdChip code={code} />
       {title ? (
         <span className="line-clamp-1 text-meta text-muted-foreground" title={title}>

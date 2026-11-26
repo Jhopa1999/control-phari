@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ChevronDown, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
@@ -112,19 +112,22 @@ export function PriorityBadge({
  * porque un badge no es enfocable.
  */
 export function PriorityLegend({ className }: { className?: string }): React.ReactElement {
-  // Desplegable nativo (<details>): una sola línea cerrada, accesible por teclado
-  // sin JavaScript. Antes la leyenda ocupaba dos líneas encima de cada tabla.
+  // Desplegable nativo (<details>): accesible por teclado sin JavaScript. El
+  // panel flota bajo el icono para no ocupar una fila de la barra de filtros
+  // (design §6, notas largas fuera de la fila). Enter o Espacio lo abren y cierran.
   return (
-    <details className={cn('group text-meta text-muted-foreground', className)}>
-      <summary className="inline-flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-sm underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
-        <Info aria-hidden="true" className="size-3.5" />
-        ¿Qué significan P1 a P4?
-        <ChevronDown
-          aria-hidden="true"
-          className="size-3.5 transition-transform group-open:rotate-180 motion-reduce:transition-none"
-        />
+    <details className={cn('group relative text-meta text-muted-foreground', className)}>
+      <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-md px-2 hover:bg-muted/60 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring pointer-coarse:h-10 [&::-webkit-details-marker]:hidden">
+        <Info aria-hidden="true" className="size-4" />
+        {/* Texto visible corto; el nombre accesible completo lo contiene (WCAG 2.5.3). */}
+        <span className="sr-only">¿Qué significan </span>
+        P1–P4
+        <span className="sr-only">?</span>
       </summary>
-      <ul aria-label="Bandas de prioridad" className="mt-2 flex flex-col gap-1.5">
+      <ul
+        aria-label="Bandas de prioridad"
+        className="absolute right-0 top-full z-20 mt-1 flex w-max max-w-[min(22rem,calc(100vw-2rem))] flex-col gap-1.5 rounded-lg border bg-popover p-3 text-popover-foreground shadow-md"
+      >
         {(['P1', 'P2', 'P3', 'P4'] as const).map((band) => (
           <li key={band} className="flex items-center gap-1.5">
             <StatusBadge kind="band" value={band} />

@@ -36,7 +36,7 @@ import { RequestContextBar, type RequestPickerGroup } from '@/components/request
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
-import { SearchInput, Toolbar } from '@/components/toolbar';
+import { FilterField, SearchInput, Toolbar } from '@/components/toolbar';
 import { BlockedReasonLine } from '@/components/blocked-reason';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -1037,10 +1037,9 @@ export function PlanView(): React.ReactElement {
             value={q}
             onChange={(event) => setQ(event.target.value)}
           />
-          <div className="grid w-full gap-1.5 sm:w-auto">
-            <Label htmlFor="task-status">Estado</Label>
+          <FilterField id="task-status" label="Estado" className="sm:w-48">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger id="task-status" className="w-full sm:w-40">
+              <SelectTrigger id="task-status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1052,11 +1051,10 @@ export function PlanView(): React.ReactElement {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="grid w-full gap-1.5 sm:w-auto">
-            <Label htmlFor="task-phase">Fase</Label>
+          </FilterField>
+          <FilterField id="task-phase" label="Fase" className="sm:w-56">
             <Select value={phaseFilter} onValueChange={setPhaseFilter}>
-              <SelectTrigger id="task-phase" className="w-full sm:w-48">
+              <SelectTrigger id="task-phase">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1068,7 +1066,7 @@ export function PlanView(): React.ReactElement {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FilterField>
           <div className="flex h-9 w-full items-center gap-2 sm:w-auto">
             <Switch
               id="task-mine"

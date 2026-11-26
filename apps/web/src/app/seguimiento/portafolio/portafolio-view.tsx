@@ -424,6 +424,7 @@ export function PortafolioView(): React.ReactElement {
         collapseOnMobile
         end={
           <>
+            <PriorityLegend />
             {table.status !== 'error' ? (
               <ResultCount
                 loading={table.busy}
@@ -514,7 +515,6 @@ export function PortafolioView(): React.ReactElement {
           : 'Solo iniciativas comprometidas, desde «Comprometida» hasta «Cerrada». Activa «Incluir pendientes de decisión» para ver también las solicitudes que aún no se comprometen.'}
       </p>
 
-      <PriorityLegend />
 
       <DataView
         state={viewState}

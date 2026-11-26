@@ -8,7 +8,7 @@ import { CalendarClock, ChevronLeft, ChevronRight, Plus, Users } from 'lucide-re
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataCardList } from '@/components/data-card-list';
-import { SortableTableHead } from '@/components/data-table';
+import { DataTablePagination, SortableTableHead } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { IdChip } from '@/components/id-chip';
 import { PageHeader } from '@/components/page-header';
@@ -71,6 +71,17 @@ import {
 
 type LoadState = 'loading' | 'success' | 'error';
 type SummarySortKey = 'person' | 'utilization' | 'planUtilization';
+
+const PERSON_NOUN = { one: 'persona', other: 'personas' };
+const AVAILABILITY_NOUN = { one: 'registro de disponibilidad', other: 'registros de disponibilidad' };
+const ASSIGNMENT_NOUN = { one: 'asignación', other: 'asignaciones' };
+
+const AVAILABILITY_COMPARATORS: Record<'hours', Comparator<Availability>> = {
+  hours: (a, b, d) => compareNumber(a.availableHours, b.availableHours, d),
+};
+const ASSIGNMENT_COMPARATORS: Record<'hours', Comparator<Assignment>> = {
+  hours: (a, b, d) => compareNumber(a.committedHours, b.committedHours, d),
+};
 
 const SUMMARY_COMPARATORS: Record<SummarySortKey, Comparator<CapacitySummaryRow>> = {
   person: (a, b, direction) => compareText(a.userName, b.userName, direction),
@@ -257,13 +268,26 @@ function CapacidadViewContent(): React.ReactElement {
   );
   const filterRef = React.useRef<HTMLInputElement>(null);
 
-  // Resumen: todas las personas (pageSize null, §24.1), orden de la API por defecto.
+  // Resumen: orden de la API por defecto y 25 personas por página (design §3.6).
   const summaryTable = useClientTable({
     rows: summary,
     filter: relevantFilter,
     comparators: SUMMARY_COMPARATORS,
     defaultSort: null,
-    pageSize: null,
+    pageSize: 25,
+  });
+  // Disponibilidad y asignaciones: orden de la API; el comparador solo habilita la paginación.
+  const availabilityTable = useClientTable({
+    rows: availability,
+    comparators: AVAILABILITY_COMPARATORS,
+    defaultSort: null,
+    pageSize: 25,
+  });
+  const assignmentsTable = useClientTable({
+    rows: assignments,
+    comparators: ASSIGNMENT_COMPARATORS,
+    defaultSort: null,
+    pageSize: 25,
   });
 
   const signals = React.useMemo(() => countSignals(summary), [summary]);
@@ -450,7 +474,7 @@ function CapacidadViewContent(): React.ReactElement {
           ) : undefined
         }
       >
-        <div className="grid w-full gap-1.5 sm:w-auto">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <Label htmlFor="capacidad-month">Mes</Label>
           {month ? (
             <div className="flex items-center gap-1.5">
@@ -817,6 +841,18 @@ function CapacidadViewContent(): React.ReactElement {
               };
             }}
           />
+          <DataTablePagination
+            id="cap-resumen-paginacion"
+            page={summaryTable.page}
+            pageCount={summaryTable.pageCount}
+            from={summaryTable.from}
+            to={summaryTable.to}
+            filtered={summaryTable.filtered}
+            pageSize={summaryTable.pageSize ?? 25}
+            onPageChange={summaryTable.setPage}
+            onPageSizeChange={summaryTable.setPageSize}
+            noun={PERSON_NOUN}
+          />
         </DataView>
       </Section>
 
@@ -845,7 +881,7 @@ function CapacidadViewContent(): React.ReactElement {
           }}
         >
           <div className="hidden md:block">
-          <Table scrollLabel="Tabla de disponibilidad">
+          <Table density="compact" scrollLabel="Tabla de disponibilidad">
             <TableCaption>
               {`Disponibilidad registrada para ${month ? formatMonth(month) : 'el mes elegido'}.`}
             </TableCaption>
@@ -861,7 +897,7 @@ function CapacidadViewContent(): React.ReactElement {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {availability.map((row) => (
+              {availabilityTable.pageRows.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell className="min-w-40 font-medium">{personName(row.userId)}</TableCell>
                   <TableCell className="text-right whitespace-nowrap tabular-nums">
@@ -882,7 +918,7 @@ function CapacidadViewContent(): React.ReactElement {
           </div>
           <DataCardList
             label="Disponibilidad del mes"
-            rows={availability}
+            rows={availabilityTable.pageRows}
             getKey={(row) => row.id}
             card={(row) => ({
               title: <span className="inline-flex min-h-11 items-center font-medium">{personName(row.userId)}</span>,
@@ -895,6 +931,18 @@ function CapacidadViewContent(): React.ReactElement {
                 />
               ),
             })}
+          />
+          <DataTablePagination
+            id="cap-disp-paginacion"
+            page={availabilityTable.page}
+            pageCount={availabilityTable.pageCount}
+            from={availabilityTable.from}
+            to={availabilityTable.to}
+            filtered={availabilityTable.filtered}
+            pageSize={availabilityTable.pageSize ?? 25}
+            onPageChange={availabilityTable.setPage}
+            onPageSizeChange={availabilityTable.setPageSize}
+            noun={AVAILABILITY_NOUN}
           />
         </DataView>
       </Section>
@@ -925,33 +973,33 @@ function CapacidadViewContent(): React.ReactElement {
           }}
         >
           <div className="hidden md:block">
-          <Table scrollLabel="Tabla de asignaciones">
+          <Table density="compact" scrollLabel="Tabla de asignaciones">
             <TableCaption>
               {`Asignaciones de horas para ${month ? formatMonth(month) : 'el mes elegido'}.`}
             </TableCaption>
             <TableHeader>
               <TableRow>
                 <TableHead scope="col">Persona</TableHead>
-                <TableHead scope="col">Proceso</TableHead>
+                <TableHead scope="col" className="hidden @4xl:table-cell">Proceso</TableHead>
                 <TableHead scope="col">Solicitud</TableHead>
                 <TableHead scope="col" className="text-right tabular-nums">
                   Horas
                 </TableHead>
-                <TableHead scope="col">Descripción</TableHead>
+                <TableHead scope="col" className="hidden @[1100px]:table-cell">Descripción</TableHead>
                 <TableHead scope="col" className="text-right">
                   Acciones
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {assignments.map((row) => (
+              {assignmentsTable.pageRows.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell className="min-w-40 font-medium">{personName(row.userId)}</TableCell>
-                  <TableCell className="min-w-32">{processName(row.processId)}</TableCell>
+                  <TableCell className="hidden @4xl:table-cell min-w-32">{processName(row.processId)}</TableCell>
                   <TableCell className="min-w-48 max-w-[24rem]">
-                    <span className="flex flex-col items-start gap-0.5">
+                    <span className="flex items-center gap-2">
                       <IdChip code={row.requestCode} />
-                      <span className="line-clamp-2" title={row.requestTitle ?? requestTitle(row.requestId)}>
+                      <span className="line-clamp-1" title={row.requestTitle ?? requestTitle(row.requestId)}>
                         {row.requestTitle ?? requestTitle(row.requestId)}
                       </span>
                     </span>
@@ -959,7 +1007,7 @@ function CapacidadViewContent(): React.ReactElement {
                   <TableCell className="text-right whitespace-nowrap tabular-nums">
                     {formatHours(row.committedHours)}
                   </TableCell>
-                  <TableCell className="max-w-xs truncate text-muted-foreground">
+                  <TableCell className="hidden @[1100px]:table-cell max-w-xs truncate text-muted-foreground">
                     <span title={row.description ?? undefined}>{orDash(row.description)}</span>
                   </TableCell>
                   <RowActionsCell>
@@ -990,7 +1038,7 @@ function CapacidadViewContent(): React.ReactElement {
           </div>
           <DataCardList
             label="Asignaciones del mes"
-            rows={assignments}
+            rows={assignmentsTable.pageRows}
             getKey={(row) => row.id}
             card={(row) => {
               const solicitud = row.requestTitle ?? requestTitle(row.requestId);
@@ -1039,6 +1087,18 @@ function CapacidadViewContent(): React.ReactElement {
                 ),
               };
             }}
+          />
+          <DataTablePagination
+            id="cap-asig-paginacion"
+            page={assignmentsTable.page}
+            pageCount={assignmentsTable.pageCount}
+            from={assignmentsTable.from}
+            to={assignmentsTable.to}
+            filtered={assignmentsTable.filtered}
+            pageSize={assignmentsTable.pageSize ?? 25}
+            onPageChange={assignmentsTable.setPage}
+            onPageSizeChange={assignmentsTable.setPageSize}
+            noun={ASSIGNMENT_NOUN}
           />
         </DataView>
       </Section>

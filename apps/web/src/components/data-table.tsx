@@ -315,7 +315,7 @@ export interface CellTitleProps {
 }
 
 const CELL_TITLE_CONTROL =
-  'inline-block min-h-6 max-w-full rounded-sm text-left font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+  'inline-block min-h-6 max-w-full rounded-sm [[data-density=twoline]_&]:min-h-5 text-left font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 /**
  * Celda de título: identificador legible y acción principal de la fila. El
@@ -331,7 +331,20 @@ export function CellTitle({
   meta,
   touch = false,
 }: CellTitleProps): React.ReactElement {
-  const text = <span className="line-clamp-2 wrap-break-word">{children}</span>;
+  // Una línea en las tablas (design §3.3); dos líneas en tarjetas móviles y en
+  // la densidad twoline cuando no hay segunda línea propia.
+  const hasMeta = meta !== undefined && meta !== null;
+  const text = (
+    <span
+      className={cn(
+        'wrap-break-word',
+        touch ? 'line-clamp-2' : 'line-clamp-1',
+        !hasMeta && '[[data-density=twoline]_&]:line-clamp-2',
+      )}
+    >
+      {children}
+    </span>
+  );
   const controlClass = cn(CELL_TITLE_CONTROL, touch && 'inline-flex min-h-11 items-center');
   let control: React.ReactElement;
   if (onOpen) {
@@ -357,7 +370,7 @@ export function CellTitle({
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       {control}
-      <span className="text-meta text-muted-foreground">{meta}</span>
+      <span className="line-clamp-1 text-meta text-muted-foreground">{meta}</span>
     </div>
   );
 }

@@ -198,7 +198,7 @@ pueda crecer; se pasa `scrollLabel`):
   (16) + barra de filtros (48) + paginación (49) + margen: afinar en el PR para
   que la paginación quede siempre a la vista.
 - Contraste (estimado con L³ de OKLCH; medir en el PR): `text-muted-foreground`
-  sobre `surface-subtle` ≈ 6,5:1 en claro y ≈ 8,2:1 en oscuro; mínimo exigido 4,5:1.
+  sobre `surface-subtle` ≈ 6,5:1 en claro y ≈ 8,2:1 en oscuro; mínimo exigido 4,5:1. Medido en el PR B (OKLCH a sRGB): 6,64:1 en claro y 8,20:1 en oscuro; la etiqueta de `FilterField` (`text-muted-foreground` sobre `background`) mide 6,22:1 y 8,47:1.
 
 Cabecera: `text-xs font-medium text-muted-foreground`, `SortableTableHead` sin
 cambio (botón de 36 px, `aria-sort` solo en la columna activa).
