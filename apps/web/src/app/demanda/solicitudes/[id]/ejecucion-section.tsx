@@ -64,7 +64,7 @@ function ProgressBar({
       >
         <div className="h-full bg-primary" style={{ width: `${value}%` }} />
       </div>
-      <span className="text-meta tabular-nums">{`${value} %`}</span>
+      <span className="shrink-0 whitespace-nowrap text-meta tabular-nums">{`${value} %`}</span>
     </div>
   );
 }

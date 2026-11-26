@@ -31,7 +31,7 @@ marca (`.kiro/steering/25-marca-gibo.md`).
 | Espaciado vertical | `gap-4` entre bloques desde `lg` (hoy `gap-6`); `py-4` en el `main`. |
 | Anchos | Tres anchos de contenido: `fluid` (1760 px), `form` (960 px) y `reading` (720 px). |
 | Tablas | Tres densidades: compacta 32, estándar 40 (por defecto), dos líneas 52. Cabecera fija. Todas las listas largas paginan a 25. |
-| Columnas | Prioridad P1/P2/P3 con consultas de contenedor (`@4xl`, `@[1100px]`), no con el ancho de ventana. |
+| Columnas | Prioridad P1/P2/P3 con consultas de contenedor (`@4xl`, `@[1200px]`), no con el ancho de ventana. |
 | Filtros | `FilterBar` de una fila, con la etiqueta visible dentro del campo. Notas en un icono con tooltip. |
 | KPI | `StatTile` compacto de 64 px, una sola fila en `xl`, valor 0 en tono atenuado. |
 | Maestro-detalle | Lista 320 px (`xl`: 340, `2xl`: 380) + detalle, primera pendiente preseleccionada. |
@@ -110,7 +110,7 @@ siendo preferencia del usuario).
 | Rango | Ancho de ventana | Contenido útil | Layout |
 | --- | --- | --- | --- |
 | `lg` | 1024 a 1279 | 720 a 975 px | Una columna. Maestro-detalle de 320 px + detalle. KPI en 3 columnas. Columnas P3 ocultas. |
-| `xl` | 1280 a 1535 (cubre 1366 y 1440) | 1008 a 1263 px | Una columna principal; panel lateral derecho de 320 px cuando la vista lo pide. KPI en una sola fila. Columnas P2 visibles; P3 desde 1100 px de contenedor. |
+| `xl` | 1280 a 1535 (cubre 1366 y 1440) | 1008 a 1263 px | Una columna principal; panel lateral derecho de 320 px cuando la vista lo pide. KPI en una sola fila. Columnas P2 visibles; P3 desde 1200 px de contenedor. |
 | `2xl` | ≥ 1536 (cubre 1920) | ≥ 1296 px | Maestro-detalle con lista de 380 px; panel lateral de 360 px; todas las columnas. |
 
 Panel lateral derecho (resumen, historial, ayuda de la vista):
@@ -219,7 +219,7 @@ plugin). Cada columna declara su prioridad:
 | --- | --- | --- |
 | P1 (identidad, estado, acción) | ninguna | siempre |
 | P2 (proceso, responsable, fecha) | `hidden @4xl:table-cell` | contenedor ≥ 896 px |
-| P3 (activo, decisión de triage, registro, creado por) | `hidden @[1100px]:table-cell` | contenedor ≥ 1100 px |
+| P3 (activo, decisión de triage, registro, creado por) | `hidden @[1200px]:table-cell` | contenedor ≥ 1200 px |
 
 Con el ancho de contenido de la auditoría: 1062 px (1366) muestra P1 y P2; 1136 px
 (1440) y 1600 px (1920) muestran P1, P2 y P3. Lo que se oculta sigue accesible en
@@ -697,3 +697,8 @@ Medidas objetivo a verificar con capturas antes y después, a 1366×768, 1440×9
 7. Menú lateral con al menos 4 de 5 grupos visibles sin desplazar a 1366×768.
 8. Contraste AA en los dos temas, foco visible y navegación por teclado
    comprobados; axe sin errores nuevos; sin regresión a 390×844.
+
+## 16. Pendientes para el PR E
+
+- **Detalle de solicitud** (/demanda/solicitudes/[id]): decisión aprobada en el PR D: no se pliega ni se oculta nada, porque el usuario quiere ver siempre el detalle de solo lectura de cada etapa registrada. *Ejecución* y *Cierre del proyecto* van en dos columnas desde lg, las tarjetas de etapa usan p-3 y los controles GC1–GC5 en dos columnas por contenedor. Mide 2,19 pantallas a 1366×768 (antes 2,74 en el PR D iteración 1 y 3,35 al inicio), 1,85 a 1440×900 y 1,45 a 1920×1080. El objetivo de esta vista pasa de 1,5 a ≤2,2 sin ocultar información.
+- **Alta de solicitud como página** (PageLayout width="form") y medición en navegador de los vacíos de Bitácora y Reporte semanal: se resuelven en el PR E.

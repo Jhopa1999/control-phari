@@ -311,8 +311,8 @@ secciones 3 y 6):
   `scrollLabel`, la tabla se desplaza dentro de una región de alto
   `calc(100dvh - 15rem)` y la cabecera queda fija con fondo opaco
   (`bg-surface-subtle`). El contenedor es `@container`: las columnas P2 se ven desde
-  896 px de ancho de tabla (`hidden @4xl:table-cell`) y las P3 desde 1100 px
-  (`hidden @[1100px]:table-cell`). Lo que se oculta sigue en el detalle.
+  896 px de ancho de tabla (`hidden @4xl:table-cell`) y las P3 desde 1200 px
+  (`hidden @[1200px]:table-cell`). Lo que se oculta sigue en el detalle.
 - **Celda de título** (`CellTitle`): una línea en las tablas (texto completo en
   `title`); dos líneas en tarjetas móviles y en `twoline` sin segunda línea propia.
   La referencia a proceso (`ProcessRefCell`) va en una línea: nombre y código.
@@ -364,3 +364,33 @@ secciones 3 y 6):
   altura máxima de 128 px, una barra de acciones por formulario (IA global, presupuesto
   y cada agente), tablas de consumo y catálogo compactas; «Por modelo» y «Catálogo de
   modelos» van plegados por defecto. A 1366×768 la página pasa de 4,6 a 2,9 pantallas.
+
+## Demanda y Aprobaciones (interfaz de escritorio, PR D)
+- **Maestro-detalle de solicitudes** (`components/request-workbench.tsx`, `RequestWorkbench`):
+  Triage, Priorización y Planificación muestran desde `lg` la lista agrupada de
+  solicitudes a la izquierda (`MasterDetail` + `SelectableList`, ítem de 52 px con
+  `IdChip`, título de una línea y «estado · registro») y el detalle a la derecha. La
+  primera solicitud pendiente del grupo principal queda preseleccionada en estado
+  local (sin tocar la URL ni el foco); si la URL trae `?requestId=`, manda la URL. La
+  barra superior del detalle (pegajosa) lleva código, título, resumen, «Ver ficha
+  completa» y la acción principal («Guardar triage», «Guardar evaluación»), que usa
+  el atributo `form` del formulario. Debajo de `lg` se mantiene el selector, el
+  resumen y la bandeja de siempre (la acción principal sigue al pie del formulario).
+  Mismos datos, permisos y botones. El panel lateral (ficha, activo base, sugerencia
+  de IA) pasa a segunda columna solo desde 1800 px; antes va debajo del formulario.
+- **Aprobaciones**: el texto informativo y la leyenda P1–P4 comparten una línea; la
+  barra de lote es una franja `bg-primary-subtle` fija bajo la barra superior
+  (`role="region"` «Acciones sobre la selección», «N solicitudes seleccionadas» en
+  `role="status"`). A 1366×768 se ven 11 filas de la cola (antes 6) y 14 a 1440×900.
+- **Ficha de la solicitud**: datos en 4 columnas por contenedor, campos vacíos en una
+  línea «Sin datos: …» (`DescriptionList collapseEmpty`), tira horizontal de etapas
+  con enlaces (desde `lg`) y tarjetas de etapa en dos columnas (tres desde 1800 px).
+  Las valoraciones de prioridad pasan a filas cortas. *Ejecución* y *Cierre del proyecto*
+  van en dos columnas desde `lg`, los controles GC1–GC5 en dos columnas cuando la tarjeta
+  lo permite y las tarjetas de etapa son más compactas; no se oculta ningún dato. Mide 2,19
+  pantallas a 1366×768 (antes 3,35). Debajo de `lg` se conserva el recorrido vertical.
+- **Administración › IA**: el selector *Modo de credenciales* ocupa el ancho completo del formulario y deja de truncar el texto.
+- **`DescriptionList`**: `columns` admite 3 y 4 (siguen el ancho del contenedor) y
+  `collapseEmpty` agrupa los vacíos. `RequestFacts` los usa.
+- **Tablas**: las columnas P3 pasan de 1100 a 1200 px de contenedor para que a
+  1440×900 la tabla de Solicitudes no desplace en horizontal.

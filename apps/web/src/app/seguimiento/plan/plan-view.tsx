@@ -31,8 +31,8 @@ import { InlineNotice } from '@/components/inline-notice';
 import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
-import { RequestInbox } from '@/components/request-inbox';
-import { RequestContextBar, type RequestPickerGroup } from '@/components/request-context-bar';
+import { type RequestPickerGroup } from '@/components/request-context-bar';
+import { RequestWorkbench } from '@/components/request-workbench';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
@@ -1627,12 +1627,17 @@ export function PlanView(): React.ReactElement {
   } else {
     content = (
       <>
-        <RequestContextBar
+        <RequestWorkbench
           id="plan-request"
           requests={requests}
+          groups={GROUPS}
           value={selectedId}
           onValueChange={handlePick}
-          groups={GROUPS}
+          onAutoSelect={selectRequest}
+          autoSelect={!urlId}
+          selected={selected}
+          notice={notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
+          inboxShow={['state', 'priority', 'registered']}
           summary={
             plan && planState === 'success' ? (
               <div className="flex flex-wrap items-center gap-2">
@@ -1659,19 +1664,12 @@ export function PlanView(): React.ReactElement {
               </Link>
             ) : null
           }
-        />
-        {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
-        {selected ? (
-          // eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render.
-          renderPlan()
-        ) : (
-          <RequestInbox
-            requests={requests}
-            groups={GROUPS}
-            show={['state', 'priority', 'registered']}
-            onPick={handlePick}
-          />
-        )}
+        >
+          {selected ? (
+            // eslint-disable-next-line react-hooks/refs -- falso positivo: la función solo lee el ref dentro de un manejador o callback, nunca durante el render.
+            <div className="flex min-w-0 flex-col gap-4">{renderPlan()}</div>
+          ) : null}
+        </RequestWorkbench>
       </>
     );
   }

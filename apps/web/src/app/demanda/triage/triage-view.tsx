@@ -13,13 +13,12 @@ import { Field, FieldSet, FormError, RequiredHint } from '@/components/field';
 import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
-import { RequestInbox } from '@/components/request-inbox';
 import {
-  RequestContextBar,
   RequestFacts,
   RequestSummary,
   type RequestPickerGroup,
 } from '@/components/request-context-bar';
+import { RequestWorkbench, useWorkbenchDesktop } from '@/components/request-workbench';
 import { RequirementsPanel, type RequirementItem } from '@/components/requirements-panel';
 import { DescriptionList, type DescriptionItem } from '@/components/description-list';
 import { StatusBadge } from '@/components/status-badge';
@@ -203,6 +202,7 @@ function TriageViewContent(): React.ReactElement {
   const router = useRouter();
   const { allowedModules } = useActor();
   const { requestId: urlId, setRequestId } = useRequestIdParam();
+  const isDesktop = useWorkbenchDesktop();
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [assets, setAssets] = React.useState<Asset[]>([]);
@@ -950,6 +950,27 @@ function TriageViewContent(): React.ReactElement {
     );
   }
 
+  /** Botón de envío del formulario; en escritorio se pinta en la barra del detalle (atributo form). */
+  function renderSubmitButton(): React.ReactElement {
+    return (
+      <Button
+        type="submit"
+        form={FORM_ID}
+        size={isDesktop ? 'sm' : 'default'}
+        loading={submitting}
+        variant={form.decision === 'RECHAZAR' ? 'destructive' : 'default'}
+      >
+        {submitting
+          ? 'Guardando…'
+          : form.decision === 'RECHAZAR'
+            ? 'Rechazar solicitud'
+            : form.decision === 'DEVOLVER'
+              ? 'Devolver solicitud'
+              : 'Guardar triage'}
+      </Button>
+    );
+  }
+
   function renderForm(): React.ReactElement {
     // Textos del campo «Responsable principal» según el estado del proceso.
     const responsibleHelp = !effectiveMainProcessId
@@ -1259,21 +1280,10 @@ function TriageViewContent(): React.ReactElement {
 
         <FormError id={FORM_ID} message={formError} />
 
-        <div className="flex justify-end border-t pt-4">
-          <Button
-            type="submit"
-            loading={submitting}
-            variant={form.decision === 'RECHAZAR' ? 'destructive' : 'default'}
-          >
-            {submitting
-              ? 'Guardando…'
-              : form.decision === 'RECHAZAR'
-                ? 'Rechazar solicitud'
-                : form.decision === 'DEVOLVER'
-                  ? 'Devolver solicitud'
-                  : 'Guardar triage'}
-          </Button>
-        </div>
+        {/* En escritorio el botón vive en la barra superior del detalle. */}
+        {isDesktop ? null : (
+          <div className="flex justify-end border-t pt-4">{renderSubmitButton()}</div>
+        )}
       </form>
     );
   }
@@ -1316,12 +1326,18 @@ function TriageViewContent(): React.ReactElement {
   } else {
     content = (
       <>
-        <RequestContextBar
+        <RequestWorkbench
           id="triage-request"
           requests={requests}
+          groups={GROUPS}
           value={selectedId}
           onValueChange={handlePick}
-          groups={GROUPS}
+          onAutoSelect={selectRequest}
+          autoSelect={!urlId}
+          selected={selected}
+          primaryAction={selected && isTriageable(selected) ? renderSubmitButton() : null}
+          notice={notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
+          inboxShow={['state', 'resubmitted', 'registered']}
           helper={formatCount(pendingCount, PENDING_NOUN)}
           summary={selected ? <RequestSummary request={selected} show={['state', 'resubmitted', 'registered']} /> : null}
           actions={
@@ -1334,10 +1350,9 @@ function TriageViewContent(): React.ReactElement {
               </Link>
             ) : null
           }
-        />
-        {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
-        {selected ? (
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,45rem)_minmax(18rem,1fr)] xl:items-start">
+        >
+          {selected ? (
+          <div className="grid gap-4 min-[1800px]:grid-cols-[minmax(0,45rem)_minmax(18rem,1fr)] min-[1800px]:items-start">
             <div className="min-w-0">{isTriageable(selected) ? renderForm() : renderBlock(selected)}</div>
             <div className="flex min-w-0 flex-col gap-6">
               <section
@@ -1371,14 +1386,8 @@ function TriageViewContent(): React.ReactElement {
               {isTriageable(selected) ? renderSuggestionPanel() : null}
             </div>
           </div>
-        ) : (
-          <RequestInbox
-            requests={requests}
-            groups={GROUPS}
-            show={['state', 'resubmitted', 'registered']}
-            onPick={handlePick}
-          />
-        )}
+          ) : null}
+        </RequestWorkbench>
       </>
     );
   }

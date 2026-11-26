@@ -13,12 +13,8 @@ import { Field, FormError } from '@/components/field';
 import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
-import { RequestInbox } from '@/components/request-inbox';
-import {
-  RequestContextBar,
-  RequestFacts,
-  type RequestPickerGroup,
-} from '@/components/request-context-bar';
+import { RequestFacts, type RequestPickerGroup } from '@/components/request-context-bar';
+import { RequestWorkbench, useWorkbenchDesktop } from '@/components/request-workbench';
 import { RequirementsPanel, type RequirementItem } from '@/components/requirements-panel';
 import { DescriptionList, type DescriptionItem } from '@/components/description-list';
 import { PriorityBadge, StatusBadge } from '@/components/status-badge';
@@ -113,6 +109,7 @@ function PriorizacionViewContent(): React.ReactElement {
   const router = useRouter();
   const { allowedModules } = useActor();
   const { requestId: urlId, setRequestId } = useRequestIdParam();
+  const isDesktop = useWorkbenchDesktop();
   const [requests, setRequests] = React.useState<Request[]>([]);
   const [processes, setProcesses] = React.useState<Process[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
@@ -365,6 +362,15 @@ function PriorizacionViewContent(): React.ReactElement {
     );
   }
 
+  /** Botón de envío; en escritorio se pinta en la barra superior del detalle (atributo form). */
+  function renderSubmitButton(): React.ReactElement {
+    return (
+      <Button type="submit" form={FORM_ID} size={isDesktop ? 'sm' : 'default'} loading={submitting}>
+        {submitting ? 'Guardando…' : 'Guardar evaluación'}
+      </Button>
+    );
+  }
+
   function renderForm(): React.ReactElement {
     const evaluatedCount = CRITERIA.filter((c) => scores[c.key] !== null).length;
     return (
@@ -409,7 +415,7 @@ function PriorizacionViewContent(): React.ReactElement {
                 <div
                   key={c.key}
                   className={cn(
-                    'grid gap-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center',
+                    'grid gap-2 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center',
                     error && 'border-l-2 border-danger bg-danger-subtle/40',
                   )}
                 >
@@ -485,11 +491,10 @@ function PriorizacionViewContent(): React.ReactElement {
 
         <FormError id={FORM_ID} message={formError} />
 
-        <div className="flex justify-end border-t pt-4">
-          <Button type="submit" loading={submitting}>
-            {submitting ? 'Guardando…' : 'Guardar evaluación'}
-          </Button>
-        </div>
+        {/* En escritorio el botón vive en la barra superior del detalle. */}
+        {isDesktop ? null : (
+          <div className="flex justify-end border-t pt-4">{renderSubmitButton()}</div>
+        )}
       </form>
     );
   }
@@ -525,12 +530,18 @@ function PriorizacionViewContent(): React.ReactElement {
   } else {
     content = (
       <>
-        <RequestContextBar
+        <RequestWorkbench
           id="priority-request"
           requests={requests}
+          groups={GROUPS}
           value={selectedId}
           onValueChange={handlePick}
-          groups={GROUPS}
+          onAutoSelect={selectRequest}
+          autoSelect={!urlId}
+          selected={selected}
+          primaryAction={selected && isPrioritizable(selected) ? renderSubmitButton() : null}
+          notice={notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
+          inboxShow={['state', 'triage', 'registered']}
           helper={formatCount(readyCount, READY_NOUN)}
           summary={
             selected ? (
@@ -559,11 +570,10 @@ function PriorizacionViewContent(): React.ReactElement {
               </Link>
             ) : null
           }
-        />
-        {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
-        {selected ? (
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,45rem)_minmax(18rem,1fr)] xl:items-start">
-            <div className="flex min-w-0 flex-col gap-6">
+        >
+          {selected ? (
+          <div className="grid gap-4 min-[1800px]:grid-cols-[minmax(0,45rem)_minmax(18rem,1fr)] min-[1800px]:items-start">
+            <div className="flex min-w-0 flex-col gap-4">
               {isPrioritizable(selected) ? renderForm() : renderBlock(selected)}
               {/* El detalle solo aparece cuando ya se cargó la evaluación vigente
                   de esta solicitud. */}
@@ -581,14 +591,8 @@ function PriorizacionViewContent(): React.ReactElement {
               <RequestFacts request={selected} processName={processName} />
             </section>
           </div>
-        ) : (
-          <RequestInbox
-            requests={requests}
-            groups={GROUPS}
-            show={['state', 'triage', 'registered']}
-            onPick={handlePick}
-          />
-        )}
+          ) : null}
+        </RequestWorkbench>
       </>
     );
   }

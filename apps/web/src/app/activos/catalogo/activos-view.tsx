@@ -570,7 +570,7 @@ export function ActivosView(): React.ReactElement {
                 onSort={table.toggleSort}
               />
               <TableHead className="hidden @4xl:table-cell">Proceso</TableHead>
-              <TableHead className="hidden @[1100px]:table-cell">Solicitud</TableHead>
+              <TableHead className="hidden @[1200px]:table-cell">Solicitud</TableHead>
               <TableHead className="hidden @4xl:table-cell">Responsable</TableHead>
               <SortableTableHead
                 label="Estado"
@@ -597,7 +597,7 @@ export function ActivosView(): React.ReactElement {
                     missingLabel="Sin proceso"
                   />
                 </TableCell>
-                <TableCell className="hidden @[1100px]:table-cell min-w-40 max-w-[18rem]">
+                <TableCell className="hidden @[1200px]:table-cell min-w-40 max-w-[18rem]">
                   <RequestRefCell
                     code={asset.requestCode}
                     title={asset.requestTitle}

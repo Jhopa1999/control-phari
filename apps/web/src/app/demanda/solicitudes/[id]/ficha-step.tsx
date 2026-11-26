@@ -56,8 +56,8 @@ export function FichaStep({
 }: FichaStepProps): React.ReactElement {
   const Icon = MARKER_ICON[state];
   return (
-    <li className="flex gap-4">
-      <div className="flex flex-col items-center">
+    <li className="flex gap-4 lg:mb-3 lg:break-inside-avoid lg:gap-0 lg:rounded-xl lg:border lg:bg-card lg:p-3 lg:shadow-card">
+      <div className="flex flex-col items-center lg:hidden">
         <span
           className={cn(
             'flex size-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold tabular-nums',
@@ -72,9 +72,18 @@ export function FichaStep({
       </div>
       <section
         aria-labelledby={headingId}
-        className={cn('flex min-w-0 flex-1 flex-col gap-3', last ? 'pb-0' : 'pb-8')}
+        className={cn('flex min-w-0 flex-1 flex-col gap-3 lg:gap-2', last ? 'pb-0' : 'pb-8 lg:pb-0')}
       >
         <div className="flex flex-wrap items-center gap-2">
+          <span
+            aria-hidden="true"
+            className={cn(
+              'hidden size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums lg:flex',
+              MARKER_TONE[state],
+            )}
+          >
+            {index}
+          </span>
           <h2 id={headingId} className="text-base font-semibold">
             {title}
           </h2>
@@ -90,9 +99,52 @@ export function FichaStep({
           <span className="sr-only">{`Estado del paso: ${STEP_STATE_LABELS[state]}.`}</span>
           {stateBadge ? <span className="flex items-center gap-2">{stateBadge}</span> : null}
         </div>
-        <div className="flex flex-col gap-3">{children}</div>
+        <div className="flex flex-col gap-3 lg:gap-2">{children}</div>
         {actionSlot ? <div className="flex flex-col gap-2">{actionSlot}</div> : null}
       </section>
     </li>
+  );
+}
+
+export interface FichaStripStep {
+  title: string;
+  headingId: string;
+  state: StepState;
+}
+
+/**
+ * Recorrido horizontal de la solicitud (solo desde lg): una línea con las
+ * etapas y su estado; cada una enlaza con su tarjeta. En pantallas menores el
+ * stepper vertical ya muestra el mismo recorrido.
+ */
+export function FichaStrip({ steps }: { steps: FichaStripStep[] }): React.ReactElement {
+  return (
+    <nav aria-label="Etapas de la solicitud" className="hidden lg:block">
+      <ol className="flex items-stretch divide-x overflow-hidden rounded-xl border bg-card shadow-card">
+        {steps.map((step, index) => {
+          const Icon = MARKER_ICON[step.state];
+          return (
+            <li key={step.headingId} className="min-w-0 flex-1">
+              <a
+                href={`#${step.headingId}`}
+                className="flex min-h-9 items-center justify-center gap-1.5 px-2 text-sm hover:bg-muted/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+              >
+                <Icon
+                  className={cn(
+                    'size-4 shrink-0',
+                    step.state === 'completado' && 'text-success',
+                    step.state === 'en-curso' && 'text-info',
+                    step.state === 'pendiente' && 'text-muted-foreground',
+                  )}
+                  aria-hidden="true"
+                />
+                <span className="truncate">{`${index + 1}. ${step.title}`}</span>
+                <span className="sr-only">{`Estado: ${STEP_STATE_LABELS[step.state]}.`}</span>
+              </a>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }

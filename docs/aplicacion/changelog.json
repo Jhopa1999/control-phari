@@ -1192,6 +1192,24 @@
           "docs/aplicacion/frontend-pantallas.md"
         ],
         "summary": "Interfaz de escritorio, PR C (formularios, diálogos y estados vacíos): diálogos con rounded-xl, cabecera compacta y pie con filete; Field con ayuda larga opcional en tooltip (helpInTooltip); EmptyState más bajo y sin botón duplicado en Bitácora y Reporte semanal; nuevo form-sections.tsx (navegación interna por anclas, tarjeta de sección y barra de acciones fija con «Cambios sin guardar»); Configuración del sistema y Agentes de IA con rejilla de dos columnas, administradores paginados, agentes en dos columnas y secciones secundarias plegadas. Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio."
+      },
+      {
+        "timestamp": "2026-12-03T12:00:00Z",
+        "trigger_file": "apps/web/src/components/request-workbench.tsx",
+        "updated_docs": [
+          "docs/aplicacion/frontend-pantallas.md",
+          "docs/design/design-system-desktop.md"
+        ],
+        "summary": "Interfaz de escritorio, PR D (Demanda y Aprobaciones): Triage, Priorización y Planificación pasan a maestro-detalle desde lg (lista de solicitudes a la izquierda, primera pendiente preseleccionada, barra superior del detalle con la acción principal); debajo de lg se conserva el selector y la bandeja. Aprobaciones con texto informativo y leyenda en una línea y barra de lote fija (§3.7). Ficha de detalle con datos en 4 columnas, campos vacíos agrupados en «Sin datos», recorrido horizontal de etapas y tarjetas en dos columnas. DescriptionList admite 3 y 4 columnas por contenedor y collapseEmpty. Las columnas P3 de las tablas aparecen desde 1200 px de contenedor (antes 1100). Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio."
+      },
+      {
+        "timestamp": "2026-12-03T15:00:00Z",
+        "trigger_file": "apps/web/src/app/demanda/solicitudes/[id]/ficha-view.tsx",
+        "updated_docs": [
+          "docs/aplicacion/frontend-pantallas.md",
+          "docs/design/design-system-desktop.md"
+        ],
+        "summary": "PR D, iteración 2: en la ficha de la solicitud, Ejecución y Cierre del proyecto van en dos columnas desde lg, las tarjetas de etapa son más compactas y los controles GC1–GC5 se muestran en dos columnas por contenedor; no se oculta ningún dato (2,19 pantallas a 1366×768, antes 2,74). El selector Modo de credenciales de Administración › IA ocupa el ancho completo y ya no trunca el texto. Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio."
       }
     ]
   }

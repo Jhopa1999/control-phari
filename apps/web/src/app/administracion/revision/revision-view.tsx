@@ -316,12 +316,14 @@ export function RevisionView(): React.ReactElement {
         count={state === 'success' ? queue.length : undefined}
         headingRef={headingRef}
       >
-        <InlineNotice tone="info" className="py-2">
-          {canDecide
-            ? 'Aprobar pide confirmación y lleva la solicitud a Comprometida. Puedes marcar varias y aprobarlas juntas (hasta 25). Devolver se hace de una en una, con un motivo (el triage ya registrado se conserva).'
-            : 'Solo el jefe de área puede aprobar o devolver. Aquí puedes consultar las solicitudes priorizadas pendientes de decisión.'}
-        </InlineNotice>
-        <PriorityLegend />
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <p className="min-w-0 flex-1 text-meta text-muted-foreground">
+            {canDecide
+              ? 'Aprobar pide confirmación y lleva la solicitud a Comprometida. Marca varias para aprobarlas juntas (hasta 25). Devolver se hace una a una, con motivo.'
+              : 'Solo el jefe de área puede aprobar o devolver. Aquí consultas las solicitudes priorizadas pendientes de decisión.'}
+          </p>
+          <PriorityLegend />
+        </div>
         {canDecide && batchResult ? (
           <div ref={resultRef} tabIndex={-1} className="outline-none" data-testid="approve-batch-result">
             <InlineNotice
@@ -359,15 +361,15 @@ export function RevisionView(): React.ReactElement {
           <div
             role="region"
             aria-label="Acciones sobre la selección"
-            className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-xl border border-primary/30 bg-card px-4 py-3 shadow-card sm:flex-row sm:items-center sm:justify-between md:static md:bottom-auto"
+            className="sticky top-14 z-20 flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg bg-primary-subtle px-3 py-1 text-sm"
           >
-            <div className="text-sm font-medium" aria-live="polite" aria-atomic="true">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 font-medium" role="status" aria-atomic="true">
               <p>
                 {selectedCount} {selectedCount === 1 ? 'solicitud seleccionada' : 'solicitudes seleccionadas'}
                 <span className="font-normal text-muted-foreground"> · máximo {MAX_BATCH}</span>
               </p>
               {atLimit ? (
-                <p id="tope-lote" className="mt-1 flex items-center gap-1.5 text-warning">
+                <p id="tope-lote" className="flex items-center gap-1.5 font-normal text-foreground">
                   <Info className="size-4 shrink-0" aria-hidden="true" />
                   Llegaste al máximo de {MAX_BATCH}. Aprueba este lote y selecciona el resto.
                 </p>
@@ -377,7 +379,7 @@ export function RevisionView(): React.ReactElement {
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full sm:w-auto"
+                size="sm"
                 disabled={batchBusy}
                 onClick={() => {
                   setSelected(new Set());
@@ -390,7 +392,7 @@ export function RevisionView(): React.ReactElement {
                 ref={batchButtonRef}
                 type="button"
                 variant="default"
-                className="w-full sm:w-auto"
+                size="sm"
                 disabled={batchBusy}
                 onClick={() => setBatchOpen(true)}
               >

@@ -257,6 +257,7 @@ export function IaAgentesView(): React.ReactElement {
             <Field
               id="ai-credential-mode"
               label="Modo de credenciales"
+              className="lg:col-span-2"
               help="En producción se recomienda el rol IAM de la instancia; las claves solo se guardan en modo access-keys."
               helpInTooltip
             >

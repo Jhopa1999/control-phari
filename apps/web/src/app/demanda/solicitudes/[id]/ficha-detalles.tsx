@@ -98,7 +98,7 @@ export function TriageDetalle({
       : []),
     { term: 'Observaciones', value: triage.notes, span: 2 },
   ];
-  return <DescriptionList items={items} columns={2} />;
+  return <DescriptionList items={items} columns={3} collapseEmpty />;
 }
 
 /** Etiquetas legibles de las 8 valoraciones de prioridad (1–5). */
@@ -124,14 +124,9 @@ export function PrioridadDetalle({
   evaluation: PriorityEvaluation;
   request: Pick<Request, 'currentScore' | 'priorityLabel'>;
 }): React.ReactElement {
-  const criterios: DescriptionItem[] = PRIORITY_CRITERIA.map((criterio) => ({
-    term: criterio.label,
-    value: `${evaluation[criterio.key] as number} / 5`,
-  }));
   const items: DescriptionItem[] = [
     { term: 'Fecha', value: formatDateTime(evaluation.evaluatedAt) },
     { term: 'Evaluado por', value: evaluation.evaluatedByName },
-    ...criterios,
     { term: 'Justificación', value: evaluation.justification, span: 2 },
   ];
   return (
@@ -141,7 +136,16 @@ export function PrioridadDetalle({
         score={request.currentScore ?? evaluation.score}
         label={request.priorityLabel ?? evaluation.thresholdLabel}
       />
-      <DescriptionList items={items} columns={2} />
+      <DescriptionList items={items} columns={3} collapseEmpty />
+      {/* Las ocho valoraciones, en filas cortas (término a la izquierda, valor a la derecha). */}
+      <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+        {PRIORITY_CRITERIA.map((criterio) => (
+          <div key={criterio.key} className="flex items-baseline justify-between gap-2 border-b border-dashed py-0.5">
+            <dt className="text-meta text-muted-foreground">{criterio.label}</dt>
+            <dd className="tabular-nums">{`${evaluation[criterio.key] as number} / 5`}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }
@@ -191,7 +195,7 @@ export function AprobacionDetalle({
         }
         return (
           <li key={approval.id} className="rounded-lg border bg-surface-subtle p-3">
-            <DescriptionList items={items} columns={2} />
+            <DescriptionList items={items} columns={3} collapseEmpty />
           </li>
         );
       })}
@@ -229,7 +233,7 @@ export function PlanDetalle({ plan }: { plan: Plan }): React.ReactElement {
   }
   if (plan.risks) items.push({ term: 'Riesgos', value: plan.risks, span: 2 });
   if (plan.mitigations) items.push({ term: 'Mitigaciones', value: plan.mitigations, span: 2 });
-  return <DescriptionList items={items} columns={2} />;
+  return <DescriptionList items={items} columns={3} collapseEmpty />;
 }
 
 function gateTitle(gate: GateCheck): string {
@@ -264,7 +268,7 @@ export function GobiernoDetalle({
   return (
     <div className="flex flex-col gap-4">
       <DescriptionList
-        columns={2}
+        columns={3} collapseEmpty
         items={[
           {
             term: 'Ruta proporcional',
@@ -286,9 +290,9 @@ export function GobiernoDetalle({
         </InlineNotice>
       ) : null}
 
-      <div className="flex flex-col gap-2">
+      <div className="@container flex flex-col gap-2">
         <h3 className="text-sm font-semibold">Controles GC1–GC5</h3>
-        <ul className="flex flex-col gap-2">
+        <ul className="grid grid-cols-1 gap-2 @md:grid-cols-2">
           {board.gates.map((gate) => (
             <li
               key={gate.gateCode}
@@ -354,7 +358,7 @@ export function GobiernoDetalle({
               }
               return (
                 <li key={record.id} className="rounded-lg border bg-surface-subtle p-3">
-                  <DescriptionList items={items} columns={2} />
+                  <DescriptionList items={items} columns={3} collapseEmpty />
                 </li>
               );
             })}
@@ -434,7 +438,7 @@ export function TriageResumen({
   ];
   return (
     <div className="flex flex-col gap-2">
-      <DescriptionList items={items} columns={2} />
+      <DescriptionList items={items} columns={3} collapseEmpty />
       <p className="text-meta text-muted-foreground">
         Verás aquí la decisión y su motivo. Las notas internas del equipo no se muestran.
       </p>
