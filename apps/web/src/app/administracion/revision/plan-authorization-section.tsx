@@ -235,7 +235,7 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
             {rows.map((row, index) => (
               <TableRow key={row.plan.id}>
                 <TableCell className="min-w-56 max-w-[28rem]">
-                  <CellTitle href={planAllowed ? `/seguimiento/plan?requestId=${encodeURIComponent(row.request.id)}` : undefined} meta={<IdChip code={row.request.code} />}>
+                  <CellTitle href={planAllowed ? `/seguimiento/plan?requestId=${encodeURIComponent(row.request.id)}` : undefined} meta={<span className="flex h-5 items-center"><IdChip code={row.request.code} /></span>}>
                     {row.request.title}
                   </CellTitle>
                 </TableCell>

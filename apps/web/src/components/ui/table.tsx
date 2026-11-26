@@ -12,10 +12,15 @@ interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
    * enfocable para desplazarla con el teclado (WCAG 2.1.1).
    */
   scrollLabel?: string;
+  /**
+   * Clases extra de la región desplazable (p. ej. un max-h menor cuando hay
+   * contenido fijo encima y la paginación debe quedar a la vista).
+   */
+  regionClassName?: string;
 }
 
 const Table = React.forwardRef<HTMLTableElement, TableProps>(
-  ({ className, density = 'default', scrollLabel, ...props }, ref) => (
+  ({ className, density = 'default', scrollLabel, regionClassName, ...props }, ref) => (
     <div
       className={cn(
         '@container relative w-full overflow-x-auto',
@@ -23,6 +28,7 @@ const Table = React.forwardRef<HTMLTableElement, TableProps>(
         // bg-surface-subtle es opaco: las filas no se ven bajo la cabecera.
         scrollLabel &&
           'max-h-[calc(100dvh-15rem)] overflow-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-surface-subtle',
+        scrollLabel && regionClassName,
       )}
       role={scrollLabel ? 'region' : undefined}
       aria-label={scrollLabel}

@@ -222,7 +222,7 @@ export function PendingReviewsSections(): React.ReactElement | null {
                     <CellTitle
                       href={`/demanda/solicitudes/${encodeURIComponent(c.requestId)}`}
                       meta={
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex h-5 items-center gap-1.5">
                     <IdChip code={c.requestCode} />
                     {c.requestedByName ? <span className="line-clamp-1">{`Solicitado por ${c.requestedByName}`}</span> : null}
                   </span>

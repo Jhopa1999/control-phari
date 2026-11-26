@@ -630,7 +630,7 @@ function CapacidadViewContent(): React.ReactElement {
           }
         >
           <div className="hidden md:block">
-          <Table scrollLabel="Tabla del resumen de carga">
+          <Table scrollLabel="Tabla del resumen de carga" regionClassName="max-h-[calc(100dvh-25rem)]">
             <TableCaption>
               {`Resumen de carga por persona para ${month ? formatMonth(month) : 'el mes elegido'}. Incluye las horas comprometidas (asignaciones registradas a mano) y las horas planificadas (estimación de las tareas de planes autorizados en solicitudes vivas).`}
             </TableCaption>
