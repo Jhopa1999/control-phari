@@ -1176,6 +1176,14 @@
           "docs/design/design-system-desktop.md"
         ],
         "summary": "Interfaz de escritorio, PR A (base): cabecera de página compacta de 56 px sin migas (descripción text-meta, trazo de marca absoluto), PageLayout con prop width (fluid 1760, form 960, reading 720) y 16 px entre bloques desde lg, main con py-4, menú lateral con cabeceras de grupo de 28 px y «Activos y conocimiento» plegado por defecto (el grupo de la ruta activa se despliega), StatTile de 64 px con prop href, valor 0 atenuado y StatStrip en una fila desde xl, MasterDetail con columnas 320/340/380 por breakpoint, lista sticky lg:top-16 e ítems de 52 px con título de una línea. Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio. Se versiona docs/design/design-system-desktop.md."
+      },
+      {
+        "timestamp": "2026-12-02T12:00:00Z",
+        "trigger_file": "apps/web/src/components/toolbar.tsx",
+        "updated_docs": [
+          "docs/aplicacion/frontend-pantallas.md"
+        ],
+        "summary": "Interfaz de escritorio, PR B (tablas y filtros): Table con densidad twoline (52 px), cabecera fija opaca y región desplazable con scrollLabel, contenedor @container y columnas P2/P3 por ancho de tabla; CellTitle y ProcessRefCell de una línea; Toolbar de una fila con FilterField (etiqueta visible dentro del campo), «Más filtros» en línea con contador y búsqueda con etiqueta para lector de pantalla; Section plegable con conteo; paginación en cliente (25) en Capacidad, Equipo y permisos, Mis permisos, Solicitantes y Aprobaciones; adopción en Solicitudes, Documentos, Catálogo de activos, Auditoría, Áreas, Maestras y Aprobaciones. La campana de notificaciones usa «Notificaciones, 99+ sin leer» (el nombre accesible contiene el texto visible). Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio."
       }
     ]
   }

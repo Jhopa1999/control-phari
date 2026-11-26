@@ -5,6 +5,7 @@ import { KeyRound, LockOpen, Mail, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataCardList } from '@/components/data-card-list';
+import { DataTablePagination } from '@/components/data-table';
 import { DisabledReason } from '@/components/disabled-reason';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -28,6 +29,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useActor } from '@/lib/actor-context';
+import { compareNumber, compareText, type Comparator } from '@/lib/table-sort';
+import { useClientTable } from '@/lib/use-client-table';
 import type { Grant, Process, User } from '@/lib/api-client';
 import {
   ApiError,
@@ -55,6 +58,18 @@ const ROLE_LABELS: Record<RoleCode, string> = {
 };
 
 const ASSIGN_REASON_ID = 'asignar-rol-motivo';
+
+const USER_NOUN = { one: 'usuario', other: 'usuarios' };
+const GRANT_NOUN = { one: 'rol asignado', other: 'roles asignados' };
+
+// Sin orden elegido por la persona: la lista conserva el orden de la API; los
+// comparadores solo habilitan la paginación en cliente.
+const USER_COMPARATORS: Record<'name', Comparator<User>> = {
+  name: (a, b, d) => compareText(a.name, b.name, d),
+};
+const GRANT_COMPARATORS: Record<'active', Comparator<Grant>> = {
+  active: (a, b, d) => compareNumber(Number(a.active), Number(b.active), d),
+};
 
 function messageOf(err: unknown): string {
   return err instanceof ApiError ? err.message : 'Ocurrió un error inesperado.';
@@ -237,6 +252,18 @@ export function EquipoView(): React.ReactElement {
     }
   }
 
+  const usersTable = useClientTable({
+    rows: users,
+    comparators: USER_COMPARATORS,
+    defaultSort: null,
+    pageSize: 25,
+  });
+  const grantsTable = useClientTable({
+    rows: grants,
+    comparators: GRANT_COMPARATORS,
+    defaultSort: null,
+    pageSize: 25,
+  });
   const usersById = React.useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
   const processesById = React.useMemo(() => new Map(processes.map((p) => [p.id, p])), [processes]);
 
@@ -576,7 +603,7 @@ export function EquipoView(): React.ReactElement {
                   <TableRow>
                     {isJefe ? (
                       <TableHead className="w-10">
-                        <label className="flex min-h-8 cursor-pointer items-center">
+                        <label className="flex min-h-7 cursor-pointer items-center">
                           <Checkbox
                             ref={selectAllRef}
                             checked={allSelected}
@@ -587,17 +614,17 @@ export function EquipoView(): React.ReactElement {
                       </TableHead>
                     ) : null}
                     <TableHead>Nombre</TableHead>
-                    <TableHead>Identificador</TableHead>
+                    <TableHead className="hidden @4xl:table-cell">Identificador</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user) => (
+                  {usersTable.pageRows.map((user) => (
                     <TableRow key={user.id}>
                       {isJefe ? (
                         <TableCell className="w-10">
-                          <label className="flex min-h-8 cursor-pointer items-center">
+                          <label className="flex min-h-7 cursor-pointer items-center">
                             <Checkbox
                               checked={selected.has(user.id)}
                               onChange={(e) => toggleUser(user.id, e.target.checked)}
@@ -607,7 +634,7 @@ export function EquipoView(): React.ReactElement {
                         </TableCell>
                       ) : null}
                       <TableCell className="min-w-40 font-medium">{user.name}</TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                      <TableCell className="hidden whitespace-nowrap text-muted-foreground @4xl:table-cell">
                         {user.identifier}
                       </TableCell>
                       <TableCell>
@@ -651,7 +678,7 @@ export function EquipoView(): React.ReactElement {
               </div>
               <DataCardList
                 label="Usuarios"
-                rows={users}
+                rows={usersTable.pageRows}
                 getKey={(user) => user.id}
                 card={(user) => ({
                   title: isJefe ? (
@@ -698,12 +725,29 @@ export function EquipoView(): React.ReactElement {
                   ),
                 })}
               />
+              <DataTablePagination
+                id="eq-usuarios-paginacion"
+                page={usersTable.page}
+                pageCount={usersTable.pageCount}
+                from={usersTable.from}
+                to={usersTable.to}
+                filtered={usersTable.filtered}
+                pageSize={usersTable.pageSize ?? 25}
+                onPageChange={usersTable.setPage}
+                onPageSizeChange={usersTable.setPageSize}
+                noun={USER_NOUN}
+              />
               </>
             )}
           </div>
         </Section>
 
-        <Section title="Roles asignados" count={grants.length} headingRef={grantsHeadingRef}>
+        <Section
+          title="Roles asignados"
+          count={grants.length}
+          headingRef={grantsHeadingRef}
+          collapsible
+        >
           <div className="overflow-hidden rounded-lg border bg-card">
             {grants.length === 0 ? (
               <EmptyState
@@ -724,7 +768,7 @@ export function EquipoView(): React.ReactElement {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {grants.map((grant) => (
+                  {grantsTable.pageRows.map((grant) => (
                     <TableRow key={grant.id}>
                       <TableCell className="min-w-40 font-medium">{userName(grant.userId)}</TableCell>
                       <TableCell className="min-w-40">{processName(grant.processId)}</TableCell>
@@ -754,7 +798,7 @@ export function EquipoView(): React.ReactElement {
               </div>
               <DataCardList
                 label="Roles asignados"
-                rows={grants}
+                rows={grantsTable.pageRows}
                 getKey={(grant) => grant.id}
                 card={(grant) => ({
                   title: (
@@ -780,6 +824,18 @@ export function EquipoView(): React.ReactElement {
                     </Button>
                   ) : undefined,
                 })}
+              />
+              <DataTablePagination
+                id="eq-roles-paginacion"
+                page={grantsTable.page}
+                pageCount={grantsTable.pageCount}
+                from={grantsTable.from}
+                to={grantsTable.to}
+                filtered={grantsTable.filtered}
+                pageSize={grantsTable.pageSize ?? 25}
+                onPageChange={grantsTable.setPage}
+                onPageSizeChange={grantsTable.setPageSize}
+                noun={GRANT_NOUN}
               />
               </>
             )}

@@ -10,9 +10,8 @@ import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { ResultCount } from '@/components/data-table';
-import { SearchInput, Toolbar } from '@/components/toolbar';
+import { FilterField, SearchInput, Toolbar } from '@/components/toolbar';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -622,10 +621,9 @@ export function MiTrabajoView(): React.ReactElement {
             onChange={(event) => setQuery(event.target.value)}
           />
           {boardMode ? null : (
-          <div className="grid w-full gap-1.5 sm:w-auto">
-            <Label htmlFor="mt-filtro-estado">Estado</Label>
+          <FilterField id="mt-filtro-estado" label="Estado" className="sm:w-52">
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger id="mt-filtro-estado" className="w-full sm:w-44">
+              <SelectTrigger id="mt-filtro-estado">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -637,7 +635,7 @@ export function MiTrabajoView(): React.ReactElement {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FilterField>
           )}
         </Toolbar>
 

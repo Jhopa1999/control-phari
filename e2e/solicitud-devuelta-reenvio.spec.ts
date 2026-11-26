@@ -62,12 +62,8 @@ async function actAs(page: Page, identifier: string): Promise<void> {
 }
 
 async function axeViolations(page: Page): Promise<string[]> {
-  // Se excluye la campana del encabezado: con más de 99 avisos sin leer muestra
-  // «99+» y su nombre accesible dice el número real (label-content-name-mismatch,
-  // preexistente y ajeno a esta pantalla; anotado en el PR).
   const result = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    .exclude('[aria-label^="Notificaciones"]')
     .analyze();
   return result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`);
 }

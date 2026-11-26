@@ -9,12 +9,11 @@ import { toast } from 'sonner';
 import { DataCardList } from '@/components/data-card-list';
 import { DataTablePagination, ResultCount } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
-import { Field } from '@/components/field';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { StatTile, StatStrip } from '@/components/stat-tile';
 import { StatusBadge } from '@/components/status-badge';
-import { Toolbar, SearchInput } from '@/components/toolbar';
+import { FilterField, Toolbar, SearchInput } from '@/components/toolbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -435,10 +434,10 @@ function BitacoraViewContent(): React.ReactElement {
           value={qInput}
           onChange={(e) => setQInput(e.target.value)}
         />
-        <Field id="bit-rango" label="Fechas" className="w-full sm:w-auto">
+        <FilterField id="bit-rango" label="Fechas" className="sm:w-52">
           {(control) => (
             <Select value={url.preset} onValueChange={(v) => setParams({ rango: v, desde: null, hasta: null })}>
-              <SelectTrigger {...control} className="w-full sm:w-44">
+              <SelectTrigger {...control}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -450,10 +449,10 @@ function BitacoraViewContent(): React.ReactElement {
               </SelectContent>
             </Select>
           )}
-        </Field>
+        </FilterField>
         {url.preset === 'personalizado' ? (
           <>
-            <Field id="bit-desde" label="Desde" className="w-full sm:w-auto">
+            <FilterField id="bit-desde" label="Desde" className="sm:w-48">
               {(control) => (
                 <Input
                   {...control}
@@ -461,11 +460,10 @@ function BitacoraViewContent(): React.ReactElement {
                   value={url.desde}
                   max={url.hasta || undefined}
                   onChange={(e) => setParams({ desde: e.target.value })}
-                  className="w-full sm:w-40"
                 />
               )}
-            </Field>
-            <Field id="bit-hasta" label="Hasta" className="w-full sm:w-auto">
+            </FilterField>
+            <FilterField id="bit-hasta" label="Hasta" className="sm:w-48">
               {(control) => (
                 <Input
                   {...control}
@@ -473,20 +471,19 @@ function BitacoraViewContent(): React.ReactElement {
                   value={url.hasta}
                   min={url.desde || undefined}
                   onChange={(e) => setParams({ hasta: e.target.value })}
-                  className="w-full sm:w-40"
                 />
               )}
-            </Field>
+            </FilterField>
           </>
         ) : null}
         {showPerson ? (
-          <Field id="bit-persona" label="Persona" className="w-full sm:w-auto">
+          <FilterField id="bit-persona" label="Persona" className="sm:w-56">
             {(control) => (
               <Select
                 value={url.persona || ALL}
                 onValueChange={(v) => setParams({ persona: v === ALL ? null : v })}
               >
-                <SelectTrigger {...control} className="w-full sm:w-48">
+                <SelectTrigger {...control}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -499,16 +496,16 @@ function BitacoraViewContent(): React.ReactElement {
                 </SelectContent>
               </Select>
             )}
-          </Field>
+          </FilterField>
         ) : null}
         {processes.length > 1 ? (
-          <Field id="bit-proceso" label="Proceso" className="w-full sm:w-auto">
+          <FilterField id="bit-proceso" label="Proceso" className="sm:w-52">
             {(control) => (
               <Select
                 value={url.proceso || ALL}
                 onValueChange={(v) => setParams({ proceso: v === ALL ? null : v })}
               >
-                <SelectTrigger {...control} className="w-full sm:w-44">
+                <SelectTrigger {...control}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -521,15 +518,15 @@ function BitacoraViewContent(): React.ReactElement {
                 </SelectContent>
               </Select>
             )}
-          </Field>
+          </FilterField>
         ) : null}
-        <Field id="bit-estado" label="Estado" className="w-full sm:w-auto">
+        <FilterField id="bit-estado" label="Estado" className="sm:w-44">
           {(control) => (
             <Select
               value={url.estado || ALL}
               onValueChange={(v) => setParams({ estado: v === ALL ? null : v })}
             >
-              <SelectTrigger {...control} className="w-full sm:w-36">
+              <SelectTrigger {...control}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -542,14 +539,14 @@ function BitacoraViewContent(): React.ReactElement {
               </SelectContent>
             </Select>
           )}
-        </Field>
-        <Field id="bit-clase" label="Clasificación" className="w-full sm:w-auto">
+        </FilterField>
+        <FilterField id="bit-clase" label="Clasificación" className="sm:w-52">
           {(control) => (
             <Select
               value={url.clase || ALL}
               onValueChange={(v) => setParams({ clase: v === ALL ? null : v })}
             >
-              <SelectTrigger {...control} className="w-full sm:w-44">
+              <SelectTrigger {...control}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -562,7 +559,7 @@ function BitacoraViewContent(): React.ReactElement {
               </SelectContent>
             </Select>
           )}
-        </Field>
+        </FilterField>
       </Toolbar>
 
       <DataView

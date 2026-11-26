@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { KeyRound, UserRound } from 'lucide-react';
 import { DescriptionList } from '@/components/description-list';
+import { DataTablePagination } from '@/components/data-table';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { InlineNotice } from '@/components/inline-notice';
@@ -20,12 +21,67 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useActor } from '@/lib/actor-context';
+import { compareText, type Comparator } from '@/lib/table-sort';
+import { useClientTable } from '@/lib/use-client-table';
 // Las 21 claves de módulo y sus etiquetas vienen de lib/navigation.ts (design
 // §8.5): claves únicas, sin advertencias de React.
 import { MODULE_LABELS, MODULE_ORDER, NAV_GROUPS } from '@/lib/navigation';
 import type { MyPermissions } from '@/lib/api-client';
 
 type Capability = MyPermissions['capabilities'][number];
+type GrantRow = MyPermissions['grants'][number];
+
+const GRANT_NOUN = { one: 'rol', other: 'roles' };
+// Sin orden elegido: se conserva el de la API; el comparador habilita la paginación.
+const GRANT_COMPARATORS: Record<'role', Comparator<GrantRow>> = {
+  role: (a, b, d) => compareText(a.roleName, b.roleName, d),
+};
+
+/** Roles y alcance de la persona: una línea por fila y paginación en cliente. */
+function GrantsTable({ grants }: { grants: readonly GrantRow[] }): React.ReactElement {
+  const table = useClientTable({
+    rows: grants,
+    comparators: GRANT_COMPARATORS,
+    defaultSort: null,
+    pageSize: 25,
+  });
+  return (
+    <>
+      <Table density="compact" scrollLabel="Tabla de roles y alcance">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Rol</TableHead>
+            <TableHead>Proceso</TableHead>
+            <TableHead className="hidden @4xl:table-cell">Código</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {table.pageRows.map((grant) => (
+            <TableRow key={`${grant.roleCode}-${grant.processId}`}>
+              <TableCell className="font-medium whitespace-nowrap">{grant.roleName}</TableCell>
+              <TableCell className="min-w-40">{grant.processName}</TableCell>
+              <TableCell className="hidden @4xl:table-cell whitespace-nowrap text-muted-foreground">
+                {grant.processCode}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <DataTablePagination
+        id="mp-roles-paginacion"
+        page={table.page}
+        pageCount={table.pageCount}
+        from={table.from}
+        to={table.to}
+        filtered={table.filtered}
+        pageSize={table.pageSize ?? 25}
+        onPageChange={table.setPage}
+        onPageSizeChange={table.setPageSize}
+        noun={GRANT_NOUN}
+      />
+    </>
+  );
+}
 
 /** Módulos que aparecen en el menú: los demás son detalle y no se listan. */
 const MENU_MODULES: ReadonlySet<string> = new Set(
@@ -177,32 +233,13 @@ export function MisPermisosView(): React.ReactElement {
                 description="Pide al jefe de área que te asigne un rol en un proceso."
               />
             ) : (
-              <Table scrollLabel="Tabla de roles y alcance">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Rol</TableHead>
-                    <TableHead>Proceso</TableHead>
-                    <TableHead>Código</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {permissions.grants.map((grant) => (
-                    <TableRow key={`${grant.roleCode}-${grant.processId}`}>
-                      <TableCell className="font-medium whitespace-nowrap">{grant.roleName}</TableCell>
-                      <TableCell className="min-w-40">{grant.processName}</TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {grant.processCode}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <GrantsTable grants={permissions.grants} />
             )}
           </div>
         </Section>
 
         <CapabilitiesSection permissions={permissions} />
-        <Section title="Módulos">
+        <Section title="Módulos" count={LISTED_MODULES.length} collapsible>
           <div className="overflow-hidden rounded-lg border bg-card">
             <Table density="compact" scrollLabel="Tabla de módulos">
               <TableHeader>

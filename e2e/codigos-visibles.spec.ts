@@ -71,8 +71,6 @@ async function axeSerious(page: Page): Promise<string[]> {
     // Insignia de notificaciones del encabezado (en oscuro con contador): componente
     // del shell que este PR no toca; queda anotado en la descripción del PR.
     .exclude('.-right-0\\.5.-top-0\\.5.min-w-4')
-    // Botón de notificaciones del encabezado: con contador, su nombre accesible no incluye el texto visible.
-    .exclude('button[aria-label^="Notificaciones"]')
     .analyze();
   return result.violations
     .filter((v) => v.impact === 'serious' || v.impact === 'critical')

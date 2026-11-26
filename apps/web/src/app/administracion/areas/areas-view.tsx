@@ -254,15 +254,15 @@ export function AreasView(): React.ReactElement {
           ) : (
             <>
             <div className="hidden md:block">
-            <Table scrollLabel="Tabla de áreas">
+            <Table density="compact" scrollLabel="Tabla de áreas">
               <TableHeader>
                 <TableRow>
                   <TableHead>Código</TableHead>
                   <TableHead>Nombre</TableHead>
-                  <TableHead className="text-right">Procesos activos</TableHead>
-                  <TableHead className="text-right">Solicitantes</TableHead>
+                  <TableHead className="hidden text-right @4xl:table-cell">Procesos activos</TableHead>
+                  <TableHead className="hidden text-right @4xl:table-cell">Solicitantes</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Orden</TableHead>
+                  <TableHead className="hidden text-right @[1100px]:table-cell">Orden</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -271,12 +271,12 @@ export function AreasView(): React.ReactElement {
                   <TableRow key={area.id}>
                     <TableCell className="whitespace-nowrap font-medium">{area.code}</TableCell>
                     <TableCell className="min-w-40">{area.name}</TableCell>
-                    <TableCell className="text-right tabular-nums">{area.processCount}</TableCell>
-                    <TableCell className="text-right tabular-nums">{area.requesterCount}</TableCell>
+                    <TableCell className="hidden text-right tabular-nums @4xl:table-cell">{area.processCount}</TableCell>
+                    <TableCell className="hidden text-right tabular-nums @4xl:table-cell">{area.requesterCount}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       <StatusBadge kind="active" value={String(area.active)} />
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{area.sortOrder}</TableCell>
+                    <TableCell className="hidden text-right tabular-nums @[1100px]:table-cell">{area.sortOrder}</TableCell>
                     <RowActionsCell>
                       <RowActions rowLabel={area.name} actions={rowActions(area)} />
                     </RowActionsCell>

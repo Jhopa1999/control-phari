@@ -26,7 +26,7 @@ export type MultiSelectOption = MultiFilterOption;
 export interface MultiSelectFilterProps {
   /** Id del disparador; el Label usa htmlFor={id}. */
   id: string;
-  /** Etiqueta visible encima del disparador. */
+  /** Etiqueta visible dentro del campo, antes del valor. */
   label: string;
   options: MultiSelectOption[];
   /** Valores seleccionados; vacío = sin restricción. */
@@ -37,7 +37,7 @@ export interface MultiSelectFilterProps {
   placeholder?: string;
   /** Género del «N seleccionados/seleccionadas». Por omisión 'm'. */
   gender?: 'm' | 'f';
-  /** Ancho del disparador, p. ej. 'sm:w-44' (el resto es w-full). */
+  /** Ancho del campo desde sm, p. ej. 'sm:w-44' (por omisión sm:w-52). */
   className?: string;
   /** Aviso de apertura/cierre del panel (p. ej. para aplicar la selección al cerrar). */
   onOpenChange?: (open: boolean) => void;
@@ -79,18 +79,24 @@ export function MultiSelectFilter({
   }
 
   return (
-    <div className="grid w-full gap-1.5 sm:w-auto">
-      <Label id={labelId} htmlFor={id}>
+    <div
+      className={cn(
+        'flex h-9 w-full min-w-0 items-center rounded-md border border-input bg-background transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring max-sm:h-11 sm:w-52',
+        className,
+      )}
+    >
+      <Label
+        id={labelId}
+        htmlFor={id}
+        className="shrink-0 pl-3 pr-1.5 font-normal whitespace-nowrap text-muted-foreground"
+      >
         {label}
       </Label>
       <DropdownMenu onOpenChange={onOpenChange}>
         <DropdownMenuTrigger
           id={id}
           aria-labelledby={`${labelId} ${valueId}`}
-          className={cn(
-            'flex h-9 w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap rounded-md border border-input bg-background px-3 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring focus-visible:border-ring data-[state=open]:border-ring disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground pointer-coarse:h-10',
-            className,
-          )}
+          className="flex h-full min-w-0 flex-1 items-center justify-between gap-2 rounded-r-md bg-transparent px-1.5 text-left text-sm whitespace-nowrap focus-visible:outline-0 disabled:cursor-not-allowed disabled:text-muted-foreground"
         >
           <span
             id={valueId}

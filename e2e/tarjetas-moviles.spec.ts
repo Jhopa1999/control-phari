@@ -188,6 +188,12 @@ test.describe('oleada 3 · móvil 375×800', () => {
     const box = await invite.boundingBox();
     expect(box?.width).toBeGreaterThanOrEqual(44);
     expect(box?.height).toBeGreaterThanOrEqual(44);
+    // «Roles asignados» es una sección secundaria plegada por defecto (design
+    // §3.6): se despliega con su botón de título y sus tarjetas deben verse.
+    const grantsToggle = page.getByRole('button', { name: 'Roles asignados' });
+    await expect(grantsToggle).toHaveAttribute('aria-expanded', 'false');
+    await grantsToggle.click();
+    await expect(grantsToggle).toHaveAttribute('aria-expanded', 'true');
     await expect(page.getByRole('list', { name: 'Roles asignados', exact: true })).toBeVisible({ timeout: 15_000 });
     await expectNoHorizontalScroll(page);
   });

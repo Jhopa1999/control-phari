@@ -241,6 +241,11 @@ test('abre ya filtrada por código desde un enlace; fechas, actor y chips funcio
   const chips = page.getByRole('list', { name: 'Filtros activos' });
   await expect(chips.getByText('ACT-0007')).toBeVisible();
   await expect(page.getByRole('row', { name: /E2E Contrato marco/ }).getByText('Ana E2E')).toBeVisible();
+  // Las fechas y el proceso están bajo «Más filtros» (design §6: más de cuatro filtros).
+  const more = page.getByRole('button', { name: 'Más filtros' });
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await more.click();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
   // Rango invertido: error junto a «Hasta» y ninguna consulta con ese rango.
   await page.getByLabel('Desde', { exact: true }).fill('2026-03-10');
   await page.getByLabel('Hasta', { exact: true }).fill('2026-03-01');

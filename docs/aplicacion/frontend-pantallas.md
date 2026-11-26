@@ -48,7 +48,7 @@ reagrupado por flujo de trabajo. Abajo se agrupa por área del árbol de rutas
 La barra superior (escritorio y móvil) muestra una campana con el contador de
 notificaciones no leídas. Al abrirla lista las últimas notificaciones del usuario, permite
 marcarlas como leídas (una o todas) y navegar al elemento relacionado. Se actualiza al
-abrir, cada minuto y al volver a la pestaña. La insignia del contador usa los tokens `bg-destructive`/`text-destructive-foreground` (texto de 11 px, anillo `ring-card`) para medir ≥ 4,5:1 en tema claro y oscuro (oleada 3, PR-C).
+abrir, cada minuto y al volver a la pestaña. La insignia del contador usa los tokens `bg-destructive`/`text-destructive-foreground` (texto de 11 px, anillo `ring-card`) para medir ≥ 4,5:1 en tema claro y oscuro (oleada 3, PR-C). El nombre accesible del botón contiene el texto visible de la insignia: «Notificaciones, 5 sin leer», «Notificaciones, 99+ sin leer» con más de 99 y «Notificaciones» sin pendientes.
 
 ## Tarjetas móviles (`DataCardList`)
 
@@ -300,3 +300,40 @@ Cambios compartidos que heredan todas las vistas (especificación en
 - **Maestro-detalle** (`MasterDetail`): lista de 320, 340 y 380 px según el
   ancho, fija con `lg:top-16`, ítems de 52 px con el título en una línea (el
   texto completo en `title`).
+
+## Tablas y filtros de escritorio (interfaz de escritorio, PR B)
+
+Piezas compartidas de listado (especificación en `docs/design/design-system-desktop.md`,
+secciones 3 y 6):
+
+- **Tabla** (`ui/table`): tres densidades, compacta (32 px), estándar (40 px, por
+  defecto) y dos líneas (`twoline`, 52 px, para título con segunda línea). Con
+  `scrollLabel`, la tabla se desplaza dentro de una región de alto
+  `calc(100dvh - 15rem)` y la cabecera queda fija con fondo opaco
+  (`bg-surface-subtle`). El contenedor es `@container`: las columnas P2 se ven desde
+  896 px de ancho de tabla (`hidden @4xl:table-cell`) y las P3 desde 1100 px
+  (`hidden @[1100px]:table-cell`). Lo que se oculta sigue en el detalle.
+- **Celda de título** (`CellTitle`): una línea en las tablas (texto completo en
+  `title`); dos líneas en tarjetas móviles y en `twoline` sin segunda línea propia.
+  La referencia a proceso (`ProcessRefCell`) va en una línea: nombre y código.
+- **Barra de filtros** (`Toolbar`): una fila desde `md`, alineada al centro. La
+  búsqueda lleva la etiqueta solo para lector de pantalla (lupa y marcador dicen qué
+  se busca). `FilterField` y `MultiSelectFilter` llevan la etiqueta visible
+  dentro del campo (36 px, 44 px en móvil); el foco se dibuja en el contenedor.
+  Con más de cuatro filtros, el resto va bajo **«Más filtros»** (botón con
+  `aria-expanded` y contador de filtros activos), que despliega un panel en línea
+  bajo la barra. La leyenda «P1–P4» de Solicitudes y Portafolio pasa a la derecha de
+  la barra y abre su panel flotante.
+- **Secciones plegables** (`Section collapsible`): el título es un botón con
+  `aria-expanded` y el conteo sigue visible. Se usan en «Roles asignados» (Equipo y
+  permisos) y «Módulos» (Mis permisos), plegadas por defecto.
+- **Paginación en cliente** (25 por página; 50 y 100 disponibles) en Capacidad
+  (resumen, disponibilidad y asignaciones), Equipo y permisos (usuarios y roles),
+  Mis permisos (roles), Solicitantes y Aprobaciones (compromisos por aprobar). La
+  API no cambia: se pagina lo que ya llega.
+- **Por vista**: Solicitudes (estándar; Proceso y Registro P2; Activo y Decisión de
+  triage P3), Documentos (dos líneas; Solicitud y Activo bajo «Más filtros»; Activo y
+  Versión P2, Proceso y Solicitud P3), Catálogo de activos (Proceso y Responsable P2,
+  Solicitud P3), Auditoría (fechas y proceso bajo «Más filtros»; Proceso P2; objeto
+  en una línea), Áreas, Solicitantes y Mis permisos en compacta, Maestras con
+  Actualizado P2 y Orden P3, y Aprobaciones con el código delante del título.

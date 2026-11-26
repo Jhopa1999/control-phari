@@ -15,10 +15,9 @@ import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { StatusBadge } from '@/components/status-badge';
-import { Toolbar } from '@/components/toolbar';
+import { FilterField, Toolbar } from '@/components/toolbar';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -296,25 +295,23 @@ export function CatalogsView(): React.ReactElement {
             ) : null
           }
         >
-          <div className="grid w-full gap-1.5 sm:w-auto">
-            <Label htmlFor="filter-catalog">Catálogo</Label>
+          <FilterField id="filter-catalog" label="Catálogo" className="sm:w-64">
             <Input
               id="filter-catalog"
               placeholder="Todos"
-              className="w-full sm:w-56"
+
               value={catalogInput}
               onChange={(e) => setCatalogInput(e.target.value)}
             />
-          </div>
-          <div className="grid w-full gap-1.5 sm:w-auto">
-            <Label htmlFor="filter-active">Estado</Label>
+          </FilterField>
+          <FilterField id="filter-active" label="Estado" className="sm:w-48">
             <Select
               value={activeFilter}
               onValueChange={(value) => {
                 if (isActiveFilter(value)) setActiveFilter(value);
               }}
             >
-              <SelectTrigger id="filter-active" className="w-full sm:w-40">
+              <SelectTrigger id="filter-active">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -323,7 +320,7 @@ export function CatalogsView(): React.ReactElement {
                 <SelectItem value="inactive">Inactivos</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </FilterField>
           <Button type="submit" variant="secondary">
             Aplicar
           </Button>
@@ -375,8 +372,9 @@ export function CatalogsView(): React.ReactElement {
                 sort={table.sort}
                 onSort={table.toggleSort}
                 align="right"
+                className="hidden @[1100px]:table-cell"
               />
-              <TableHead>Actualizado</TableHead>
+              <TableHead className="hidden @4xl:table-cell">Actualizado</TableHead>
               {readOnly ? null : <TableHead className="text-right">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
@@ -389,8 +387,8 @@ export function CatalogsView(): React.ReactElement {
                 <TableCell className="whitespace-nowrap">
                   <StatusBadge kind="active" value={String(item.active)} />
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{item.sortOrder}</TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
+                <TableCell className="hidden @[1100px]:table-cell text-right tabular-nums">{item.sortOrder}</TableCell>
+                <TableCell className="hidden @4xl:table-cell whitespace-nowrap tabular-nums text-muted-foreground">
                   {formatDateTime(item.updatedAt)}
                 </TableCell>
                 {readOnly ? null : (

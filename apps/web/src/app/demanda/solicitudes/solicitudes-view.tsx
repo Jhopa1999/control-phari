@@ -372,6 +372,7 @@ export function SolicitudesView(): React.ReactElement {
         collapseOnMobile
         end={
           <>
+            <PriorityLegend />
             {table.status !== 'error' ? (
               <ResultCount
                 loading={table.busy}
@@ -430,7 +431,6 @@ export function SolicitudesView(): React.ReactElement {
         />
       </Toolbar>
 
-      <PriorityLegend />
 
       <DataView
         state={viewState}
@@ -480,16 +480,17 @@ export function SolicitudesView(): React.ReactElement {
                 sortKey="title"
                 sort={table.sort}
                 onSort={table.toggleSort}
+                className="w-full"
               />
-              <TableHead>Proceso</TableHead>
-              <TableHead>Activo</TableHead>
+              <TableHead className="hidden @4xl:table-cell">Proceso</TableHead>
+              <TableHead className="hidden @[1100px]:table-cell">Activo</TableHead>
               <SortableTableHead
                 label="Estado"
                 sortKey="state"
                 sort={table.sort}
                 onSort={table.toggleSort}
               />
-              <TableHead>Decisión de triage</TableHead>
+              <TableHead className="hidden @[1100px]:table-cell">Decisión de triage</TableHead>
               <SortableTableHead
                 label="Prioridad"
                 sortKey="priority"
@@ -501,6 +502,7 @@ export function SolicitudesView(): React.ReactElement {
                 sortKey="registered"
                 sort={table.sort}
                 onSort={table.toggleSort}
+                className="hidden @4xl:table-cell"
               />
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -514,7 +516,7 @@ export function SolicitudesView(): React.ReactElement {
                 <TableCell className="min-w-56 max-w-[28rem]">
                   <CellTitle onOpen={() => openTitle(r)}>{r.title}</CellTitle>
                 </TableCell>
-                <TableCell className="min-w-32 max-w-[14rem]">
+                <TableCell className="hidden min-w-40 max-w-[18rem] @4xl:table-cell">
                   <ProcessRefCell
                     name={r.mainProcessName}
                     code={r.mainProcessCode}
@@ -522,7 +524,7 @@ export function SolicitudesView(): React.ReactElement {
                     missingVisible={r.mainProcessId === null}
                   />
                 </TableCell>
-                <TableCell className="min-w-32 max-w-[14rem]">
+                <TableCell className="hidden min-w-32 max-w-[14rem] @[1100px]:table-cell">
                   {r.assetName ? (
                     <span className="line-clamp-1" title={r.assetName}>
                       {r.assetName}
@@ -534,7 +536,7 @@ export function SolicitudesView(): React.ReactElement {
                 <TableCell className="whitespace-nowrap">
                   <StatusBadge kind="request" value={r.operationalState} />
                 </TableCell>
-                <TableCell className="whitespace-nowrap">
+                <TableCell className="hidden whitespace-nowrap @[1100px]:table-cell">
                   {r.currentTriageDecision ? (
                     <StatusBadge kind="triage" value={r.currentTriageDecision} />
                   ) : (
@@ -544,7 +546,7 @@ export function SolicitudesView(): React.ReactElement {
                 <TableCell>
                   <PriorityBadge variant="compact" score={r.currentScore} label={r.priorityLabel} />
                 </TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
+                <TableCell className="hidden whitespace-nowrap tabular-nums text-muted-foreground @4xl:table-cell">
                   {formatDate(r.registeredAt)}
                 </TableCell>
                 <RowActionsCell>

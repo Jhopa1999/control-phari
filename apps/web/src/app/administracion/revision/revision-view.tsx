@@ -5,7 +5,7 @@ import { BadgeCheck, Check, Info, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataCardList } from '@/components/data-card-list';
-import { CellTitle } from '@/components/data-table';
+import { CellTitle, DataTablePagination } from '@/components/data-table';
 import { DataView, type DataViewState } from '@/components/data-view';
 import { DescriptionList } from '@/components/description-list';
 import { IdChip } from '@/components/id-chip';
@@ -30,10 +30,17 @@ import type { BatchApprovalResult, Request } from '@/lib/api-client';
 import { useActor } from '@/lib/actor-context';
 import { ApprovalError, batchApprove, createApproval, listPendingApproval } from '@/lib/approval';
 import { formatDate } from '@/lib/format';
+import { compareDate, type Comparator } from '@/lib/table-sort';
+import { useClientTable } from '@/lib/use-client-table';
 import { DevolverDialog } from './devolver-dialog';
 import { PlanAuthorizationSection } from './plan-authorization-section';
 import { PendingReviewsSections } from './pending-reviews-sections';
 import { focusTargetAfterRemoval, visibleContainer } from './row-focus';
+
+const QUEUE_NOUN = { one: 'solicitud por aprobar', other: 'solicitudes por aprobar' };
+const QUEUE_COMPARATORS: Record<'registered', Comparator<Request>> = {
+  registered: (a, b, d) => compareDate(a.registeredAt, b.registeredAt, d),
+};
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
 
@@ -84,6 +91,13 @@ export function RevisionView(): React.ReactElement {
   const [batchOpen, setBatchOpen] = React.useState(false);
   const [batchBusy, setBatchBusy] = React.useState(false);
   const [batchResult, setBatchResult] = React.useState<BatchApprovalResult | null>(null);
+  // Orden de la API (el más antiguo primero); el comparador solo habilita la paginación.
+  const queueTable = useClientTable({
+    rows: queue,
+    comparators: QUEUE_COMPARATORS,
+    defaultSort: null,
+    pageSize: 25,
+  });
   const resultRef = React.useRef<HTMLDivElement>(null);
   const batchButtonRef = React.useRef<HTMLButtonElement>(null);
   const selectAllRef = React.useRef<HTMLInputElement>(null);
@@ -421,12 +435,13 @@ export function RevisionView(): React.ReactElement {
                 ) : null}
                 <TableHead>Título</TableHead>
                 <TableHead>Prioridad</TableHead>
-                <TableHead>Registro</TableHead>
+                <TableHead className="hidden @4xl:table-cell">Registro</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody ref={bodyRef}>
-              {queue.map((req, index) => {
+              {queueTable.pageRows.map((req) => {
+                const index = queue.indexOf(req);
                 const acting = actingId === req.id || batchBusy;
                 const isSelected = selected.has(req.id);
                 return (
@@ -445,14 +460,18 @@ export function RevisionView(): React.ReactElement {
                       </TableCell>
                     ) : null}
                     <TableCell className="min-w-56 max-w-[28rem]">
-                      <CellTitle href={allowedModules.has('requests') ? `/demanda/solicitudes/${encodeURIComponent(req.id)}` : undefined} meta={<IdChip code={req.code} />}>
-                        {req.title}
-                      </CellTitle>
+                      {/* Código delante del título, en la misma línea (design §3.1). */}
+                      <div className="flex items-center gap-2">
+                        <IdChip code={req.code} />
+                        <CellTitle href={allowedModules.has('requests') ? `/demanda/solicitudes/${encodeURIComponent(req.id)}` : undefined}>
+                          {req.title}
+                        </CellTitle>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <PriorityBadge variant="compact" score={req.currentScore} label={req.priorityLabel} />
                     </TableCell>
-                    <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
+                    <TableCell className="hidden @4xl:table-cell whitespace-nowrap tabular-nums text-muted-foreground">
                       {formatDate(req.registeredAt)}
                     </TableCell>
                     <RowActionsCell>
@@ -460,7 +479,6 @@ export function RevisionView(): React.ReactElement {
                         <RowActions
                           rowLabel={req.title}
                           actions={decisionActions(req, index, acting)}
-
                         />
                       ) : (
                         <span className="text-sm text-muted-foreground">Solo lectura</span>
@@ -475,7 +493,7 @@ export function RevisionView(): React.ReactElement {
           <DataCardList
             label="Compromisos por aprobar"
             listRef={cardsRef}
-            rows={queue}
+            rows={queueTable.pageRows}
             getKey={(req) => req.id}
             card={(req) => {
               const index = queue.indexOf(req);
@@ -529,6 +547,18 @@ export function RevisionView(): React.ReactElement {
                 ),
               };
             }}
+          />
+          <DataTablePagination
+            id="apr-paginacion"
+            page={queueTable.page}
+            pageCount={queueTable.pageCount}
+            from={queueTable.from}
+            to={queueTable.to}
+            filtered={queueTable.filtered}
+            pageSize={queueTable.pageSize ?? 25}
+            onPageChange={queueTable.setPage}
+            onPageSizeChange={queueTable.setPageSize}
+            noun={QUEUE_NOUN}
           />
         </DataView>
       </Section>

@@ -130,7 +130,7 @@ export function PendingReviewsSections(): React.ReactElement | null {
             description: 'Los documentos enviados a aprobación aparecerán aquí.',
           }}
         >
-          <Table scrollLabel="Tabla de documentación por aprobar">
+          <Table density="twoline" scrollLabel="Tabla de documentación por aprobar">
             <TableHeader>
               <TableRow>
                 <TableHead>Documento</TableHead>
@@ -207,7 +207,7 @@ export function PendingReviewsSections(): React.ReactElement | null {
             description: 'Las solicitudes de cierre de proyecto aparecerán aquí.',
           }}
         >
-          <Table scrollLabel="Tabla de cierres por aprobar">
+          <Table density="twoline" scrollLabel="Tabla de cierres por aprobar">
             <TableHeader>
               <TableRow>
                 <TableHead>Proyecto</TableHead>
@@ -222,9 +222,9 @@ export function PendingReviewsSections(): React.ReactElement | null {
                     <CellTitle
                       href={`/demanda/solicitudes/${encodeURIComponent(c.requestId)}`}
                       meta={
-                  <span className="flex flex-wrap items-center gap-1.5">
+                  <span className="flex h-5 items-center gap-1.5">
                     <IdChip code={c.requestCode} />
-                    {c.requestedByName ? `Solicitado por ${c.requestedByName}` : null}
+                    {c.requestedByName ? <span className="line-clamp-1">{`Solicitado por ${c.requestedByName}`}</span> : null}
                   </span>
                 }
                     >

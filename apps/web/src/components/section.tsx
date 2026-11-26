@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +21,14 @@ export interface SectionProps {
    * una acción retira el control enfocado y la tabla queda vacía (NIT 4).
    */
   headingRef?: React.Ref<HTMLHeadingElement>;
+  /**
+   * Sección secundaria plegable (design §3.6): el título pasa a ser un botón con
+   * aria-expanded y el contenido se oculta mientras está cerrada. El conteo
+   * (count) sigue visible junto al título.
+   */
+  collapsible?: boolean;
+  /** Con collapsible: abierta al inicio (por omisión, cerrada). */
+  defaultOpen?: boolean;
 }
 
 /**
@@ -36,9 +45,14 @@ export function Section({
   children,
   className,
   headingRef,
+  collapsible = false,
+  defaultOpen = false,
 }: SectionProps): React.ReactElement {
   const headingId = React.useId();
   const Heading = headingLevel === 3 ? 'h3' : 'h2';
+  const [open, setOpen] = React.useState(defaultOpen);
+  const bodyId = React.useId();
+  const expanded = !collapsible || open;
   return (
     <section aria-labelledby={headingId} className={cn('flex flex-col gap-3', className)}>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -50,7 +64,23 @@ export function Section({
               tabIndex={headingRef ? -1 : undefined}
               className="rounded-sm text-base font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              {title}
+              {collapsible ? (
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  aria-controls={bodyId}
+                  onClick={() => setOpen((value) => !value)}
+                  className="inline-flex min-h-8 items-center gap-1.5 rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn('size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none', !open && '-rotate-90')}
+                  />
+                  {title}
+                </button>
+              ) : (
+                title
+              )}
             </Heading>
             {count !== undefined ? (
               <Badge variant="neutral" className="tabular-nums">
@@ -64,7 +94,13 @@ export function Section({
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
-      {children}
+      {collapsible ? (
+        <div id={bodyId} hidden={!expanded} className="flex flex-col gap-3">
+          {children}
+        </div>
+      ) : (
+        children
+      )}
     </section>
   );
 }

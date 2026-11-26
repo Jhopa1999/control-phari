@@ -17,9 +17,8 @@ import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
 import { StatusBadge } from '@/components/status-badge';
-import { SearchInput, Toolbar } from '@/components/toolbar';
+import { FilterField, SearchInput, Toolbar } from '@/components/toolbar';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -480,10 +479,9 @@ export function ActivosView(): React.ReactElement {
             if (event.key === 'Escape' && query !== '') setQuery('');
           }}
         />
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="filtro-proceso">Proceso</Label>
+        <FilterField id="filtro-proceso" label="Proceso" className="sm:w-44">
           <Select value={processFilter} onValueChange={setProcessFilter}>
-            <SelectTrigger id="filtro-proceso" className="w-full sm:w-44">
+            <SelectTrigger id="filtro-proceso">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -495,11 +493,10 @@ export function ActivosView(): React.ReactElement {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="filtro-solicitud">Solicitud</Label>
+        </FilterField>
+        <FilterField id="filtro-solicitud" label="Solicitud" className="sm:w-52">
           <Select value={requestFilter} onValueChange={setRequestFilter}>
-            <SelectTrigger id="filtro-solicitud" className="w-full sm:w-56">
+            <SelectTrigger id="filtro-solicitud">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -511,11 +508,10 @@ export function ActivosView(): React.ReactElement {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="grid w-full gap-1.5 sm:w-auto">
-          <Label htmlFor="filtro-estado">Estado</Label>
+        </FilterField>
+        <FilterField id="filtro-estado" label="Estado" className="sm:w-40">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger id="filtro-estado" className="w-full sm:w-40">
+            <SelectTrigger id="filtro-estado">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -527,7 +523,7 @@ export function ActivosView(): React.ReactElement {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FilterField>
       </Toolbar>
 
       <DataView
@@ -573,9 +569,9 @@ export function ActivosView(): React.ReactElement {
                 sort={table.sort}
                 onSort={table.toggleSort}
               />
-              <TableHead>Proceso</TableHead>
-              <TableHead>Solicitud</TableHead>
-              <TableHead>Responsable</TableHead>
+              <TableHead className="hidden @4xl:table-cell">Proceso</TableHead>
+              <TableHead className="hidden @[1100px]:table-cell">Solicitud</TableHead>
+              <TableHead className="hidden @4xl:table-cell">Responsable</TableHead>
               <SortableTableHead
                 label="Estado"
                 sortKey="status"
@@ -594,14 +590,14 @@ export function ActivosView(): React.ReactElement {
                 <TableCell className="min-w-56 max-w-[28rem]">
                   <CellTitle href={`/activos/catalogo/${asset.id}`}>{asset.name}</CellTitle>
                 </TableCell>
-                <TableCell className="min-w-40 max-w-[18rem]">
+                <TableCell className="hidden @4xl:table-cell min-w-40 max-w-[18rem]">
                   <ProcessRefCell
                     name={asset.processName}
                     code={asset.processCode}
                     missingLabel="Sin proceso"
                   />
                 </TableCell>
-                <TableCell className="min-w-40 max-w-[18rem]">
+                <TableCell className="hidden @[1100px]:table-cell min-w-40 max-w-[18rem]">
                   <RequestRefCell
                     code={asset.requestCode}
                     title={asset.requestTitle}
@@ -609,7 +605,7 @@ export function ActivosView(): React.ReactElement {
                     missingLabel="Sin solicitud de origen"
                   />
                 </TableCell>
-                <TableCell className="min-w-32 max-w-[18rem]">
+                <TableCell className="hidden @4xl:table-cell min-w-32 max-w-[18rem]">
                   {asset.ownerName ? (
                     <span className="line-clamp-1" title={asset.ownerName}>
                       {asset.ownerName}
