@@ -56,7 +56,7 @@ export function FichaStep({
 }: FichaStepProps): React.ReactElement {
   const Icon = MARKER_ICON[state];
   return (
-    <li className="flex gap-4 lg:mb-4 lg:break-inside-avoid lg:gap-0 lg:rounded-xl lg:border lg:bg-card lg:p-4 lg:shadow-card">
+    <li className="flex gap-4 lg:mb-3 lg:break-inside-avoid lg:gap-0 lg:rounded-xl lg:border lg:bg-card lg:p-3 lg:shadow-card">
       <div className="flex flex-col items-center lg:hidden">
         <span
           className={cn(
@@ -72,7 +72,7 @@ export function FichaStep({
       </div>
       <section
         aria-labelledby={headingId}
-        className={cn('flex min-w-0 flex-1 flex-col gap-3', last ? 'pb-0' : 'pb-8 lg:pb-0')}
+        className={cn('flex min-w-0 flex-1 flex-col gap-3 lg:gap-2', last ? 'pb-0' : 'pb-8 lg:pb-0')}
       >
         <div className="flex flex-wrap items-center gap-2">
           <span
@@ -99,7 +99,7 @@ export function FichaStep({
           <span className="sr-only">{`Estado del paso: ${STEP_STATE_LABELS[state]}.`}</span>
           {stateBadge ? <span className="flex items-center gap-2">{stateBadge}</span> : null}
         </div>
-        <div className="flex flex-col gap-3">{children}</div>
+        <div className="flex flex-col gap-3 lg:gap-2">{children}</div>
         {actionSlot ? <div className="flex flex-col gap-2">{actionSlot}</div> : null}
       </section>
     </li>

@@ -290,9 +290,9 @@ export function GobiernoDetalle({
         </InlineNotice>
       ) : null}
 
-      <div className="flex flex-col gap-2">
+      <div className="@container flex flex-col gap-2">
         <h3 className="text-sm font-semibold">Controles GC1–GC5</h3>
-        <ul className="flex flex-col gap-2">
+        <ul className="grid grid-cols-1 gap-2 @md:grid-cols-2">
           {board.gates.map((gate) => (
             <li
               key={gate.gateCode}

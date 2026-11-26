@@ -700,11 +700,5 @@ Medidas objetivo a verificar con capturas antes y después, a 1366×768, 1440×9
 
 ## 16. Pendientes para el PR E
 
-- **Detalle de solicitud** (`/demanda/solicitudes/[id]`): tras el PR D mide
-  2,74 pantallas a 1366×768 (objetivo 1,5). El exceso viene de las secciones
-  *Ejecución* y *Cierre del proyecto*. Plegarlas por defecto o pasarlas a
-  pestañas oculta acciones (*Solicitar cierre*, *Aprobar cierre*, *Reabrir*)
-  y contenido que verifican cinco e2e (`controles-cierre`, `codigos-visibles`,
-  `mi-trabajo`, `portafolio-franja`, `busqueda-global`). Se decide en el PR E
-  con el `disenador`: qué queda abierto según el estado operativo y cómo se
-  ajustan esas pruebas sin debilitarlas.
+- **Detalle de solicitud** (/demanda/solicitudes/[id]): decisión aprobada en el PR D: no se pliega ni se oculta nada, porque el usuario quiere ver siempre el detalle de solo lectura de cada etapa registrada. *Ejecución* y *Cierre del proyecto* van en dos columnas desde lg, las tarjetas de etapa usan p-3 y los controles GC1–GC5 en dos columnas por contenedor. Mide 2,19 pantallas a 1366×768 (antes 2,74 en el PR D iteración 1 y 3,35 al inicio), 1,85 a 1440×900 y 1,45 a 1920×1080. El objetivo de esta vista pasa de 1,5 a ≤2,2 sin ocultar información.
+- **Alta de solicitud como página** (PageLayout width="form") y medición en navegador de los vacíos de Bitácora y Reporte semanal: se resuelven en el PR E.

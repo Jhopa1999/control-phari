@@ -394,12 +394,13 @@ export function FichaView({
         data={data}
         allowedModules={allowedModules}
       />
+      <div className="grid items-start gap-x-4 gap-y-6 lg:-mt-2 lg:grid-cols-2">
+        {allowedModules.has('portfolio') ? (
+          <EjecucionSection requestId={request.id} canOpenPlan={allowedModules.has('plan')} />
+        ) : null}
+        <ClosurePanel request={request} onChanged={() => void load()} />
+      </div>
 
-      {allowedModules.has('portfolio') ? (
-        <EjecucionSection requestId={request.id} canOpenPlan={allowedModules.has('plan')} />
-      ) : null}
-
-      <ClosurePanel request={request} onChanged={() => void load()} />
 
       <SolicitudFormDialog
         open={editOpen}
@@ -515,7 +516,7 @@ function Stepper({
     <FichaStrip steps={strip} />
     <ol
       aria-label="Recorrido de la solicitud por etapas"
-      className="flex flex-col lg:block lg:columns-2 lg:gap-4 min-[1800px]:columns-3"
+      className="flex flex-col lg:-mb-3 lg:block lg:columns-2 lg:gap-4 min-[1800px]:columns-3"
     >
       <FichaStep index={1} title="Solicitud" state={states.solicitud} headingId="paso-solicitud">
         <p className="text-sm text-muted-foreground">

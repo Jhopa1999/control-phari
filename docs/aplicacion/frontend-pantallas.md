@@ -385,8 +385,11 @@ secciones 3 y 6):
 - **Ficha de la solicitud**: datos en 4 columnas por contenedor, campos vacíos en una
   línea «Sin datos: …» (`DescriptionList collapseEmpty`), tira horizontal de etapas
   con enlaces (desde `lg`) y tarjetas de etapa en dos columnas (tres desde 1800 px).
-  Las valoraciones de prioridad pasan a filas cortas. Debajo de `lg` se conserva el
-  recorrido vertical.
+  Las valoraciones de prioridad pasan a filas cortas. *Ejecución* y *Cierre del proyecto*
+  van en dos columnas desde `lg`, los controles GC1–GC5 en dos columnas cuando la tarjeta
+  lo permite y las tarjetas de etapa son más compactas; no se oculta ningún dato. Mide 2,19
+  pantallas a 1366×768 (antes 3,35). Debajo de `lg` se conserva el recorrido vertical.
+- **Administración › IA**: el selector *Modo de credenciales* ocupa el ancho completo del formulario y deja de truncar el texto.
 - **`DescriptionList`**: `columns` admite 3 y 4 (siguen el ancho del contenedor) y
   `collapseEmpty` agrupa los vacíos. `RequestFacts` los usa.
 - **Tablas**: las columnas P3 pasan de 1100 a 1200 px de contenedor para que a
