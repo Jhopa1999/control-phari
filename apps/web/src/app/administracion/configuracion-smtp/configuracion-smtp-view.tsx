@@ -542,7 +542,8 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                 <Button type="submit" loading={saving}>
                   Guardar configuración
                 </Button>
-              </FormActionBar>            </form>
+              </FormActionBar>
+            </form>
           </div>
         </Section>
         </FormCard>

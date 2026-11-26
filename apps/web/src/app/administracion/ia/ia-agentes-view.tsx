@@ -614,7 +614,7 @@ function AgentCard({ agent, models, onSaved }: AgentCardProps): React.ReactEleme
       <FormError id={`${prefix}-form`} message={errors.form ?? null} />
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-        <Field id={`${prefix}-model`} label="Modelo" className="col-span-2">
+        <Field id={`${prefix}-model`} label="Modelo" className="col-span-2 sm:col-span-1">
           {(control) => (
             <Select value={model} onValueChange={setModel}>
               <SelectTrigger {...control}>
@@ -634,8 +634,7 @@ function AgentCard({ agent, models, onSaved }: AgentCardProps): React.ReactEleme
             </Select>
           )}
         </Field>
-        <Field id={`${prefix}-region`} label="Región de AWS" className="col-span-2">
-
+        <Field id={`${prefix}-region`} label="Región de AWS" className="col-span-2 sm:col-span-1">
           <Input
             value={region}
             onChange={(e) => setRegion(e.target.value)}
