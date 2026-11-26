@@ -697,3 +697,14 @@ Medidas objetivo a verificar con capturas antes y después, a 1366×768, 1440×9
 7. Menú lateral con al menos 4 de 5 grupos visibles sin desplazar a 1366×768.
 8. Contraste AA en los dos temas, foco visible y navegación por teclado
    comprobados; axe sin errores nuevos; sin regresión a 390×844.
+
+## 16. Pendientes para el PR E
+
+- **Detalle de solicitud** (`/demanda/solicitudes/[id]`): tras el PR D mide
+  2,74 pantallas a 1366×768 (objetivo 1,5). El exceso viene de las secciones
+  *Ejecución* y *Cierre del proyecto*. Plegarlas por defecto o pasarlas a
+  pestañas oculta acciones (*Solicitar cierre*, *Aprobar cierre*, *Reabrir*)
+  y contenido que verifican cinco e2e (`controles-cierre`, `codigos-visibles`,
+  `mi-trabajo`, `portafolio-franja`, `busqueda-global`). Se decide en el PR E
+  con el `disenador`: qué queda abierto según el estado operativo y cómo se
+  ajustan esas pruebas sin debilitarlas.
