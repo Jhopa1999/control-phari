@@ -42,10 +42,10 @@ export function ProcessRefCell({
   return (
     // Una línea: nombre y código en la misma fila, para no pasar de la altura de fila (design §3.1).
     <span className="flex min-w-0 items-baseline gap-1.5">
-      <span className="line-clamp-1" title={name}>
+      <span className="line-clamp-1 min-w-[8ch]" title={name}>
         {name}
       </span>
-      {code ? <span className="shrink-0 text-meta whitespace-nowrap text-muted-foreground">{code}</span> : null}
+      {code ? <span className="min-w-0 shrink-[4] truncate text-meta whitespace-nowrap text-muted-foreground" title={code}>{code}</span> : null}
     </span>
   );
 }

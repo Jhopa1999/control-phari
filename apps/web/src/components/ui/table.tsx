@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
   /**
    * Filas de 40 px (por defecto), 32 px en tablas de una sola línea por celda o
-   * 52 px (	woline) cuando la celda de título lleva una segunda línea.
+   * 52 px (twoline) cuando la celda de título lleva una segunda línea.
    */
   density?: 'default' | 'compact' | 'twoline';
   /**
@@ -84,8 +84,7 @@ TableHead.displayName = 'TableHead';
 
 // En compacta, py-1: 20 + 8 + 1 px de borde caben en los 32 px de la fila
 // (con py-1.5 la fila crecería a 33 px). En dos líneas, py-1: título (20) +
-// hueco (2) + segunda línea (18) + 8 + 1 de borde caben en los 52 px. En dos líneas, py-1: título (20) +
-// hueco (2) + segunda línea (18) + 8 + 1 caben en los 52 px.
+// hueco (2) + segunda línea (18) + 8 + 1 de borde caben en los 52 px.
 const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
     <td

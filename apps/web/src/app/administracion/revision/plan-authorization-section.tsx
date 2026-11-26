@@ -222,7 +222,7 @@ export function PlanAuthorizationSection(): React.ReactElement | null {
         }}
       >
         <div className="hidden md:block">
-        <Table scrollLabel="Tabla de planes por autorizar">
+        <Table density="twoline" scrollLabel="Tabla de planes por autorizar">
           <TableHeader>
             <TableRow>
               <TableHead>Solicitud</TableHead>

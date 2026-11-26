@@ -516,7 +516,7 @@ export function SolicitudesView(): React.ReactElement {
                 <TableCell className="min-w-56 max-w-[28rem]">
                   <CellTitle onOpen={() => openTitle(r)}>{r.title}</CellTitle>
                 </TableCell>
-                <TableCell className="hidden min-w-32 max-w-[14rem] @4xl:table-cell">
+                <TableCell className="hidden min-w-40 max-w-[18rem] @4xl:table-cell">
                   <ProcessRefCell
                     name={r.mainProcessName}
                     code={r.mainProcessCode}
