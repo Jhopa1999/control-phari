@@ -45,7 +45,8 @@ const Table = React.forwardRef<HTMLTableElement, TableProps>(
 );
 Table.displayName = 'Table';
 
-// [&_tr]:h-9 deja el encabezado en 36 px en las dos densidades (§5.3).
+// [&_tr]:h-9 deja el encabezado en 36 px en las dos densidades (§5.3); la fila de
+// 52 px de twoline solo aplica al cuerpo (tbody), no a la cabecera.
 const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
   ({ className, ...props }, ref) => (
     <thead ref={ref} className={cn('bg-surface-subtle [&_tr]:h-9 [&_tr]:border-b', className)} {...props} />
@@ -65,7 +66,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
     <tr
       ref={ref}
       className={cn(
-        'h-10 border-b transition-colors hover:bg-muted/40 data-[state=selected]:bg-primary-subtle [[data-density=compact]_&]:h-8 [[data-density=twoline]_&]:h-[52px]',
+        'h-10 border-b transition-colors hover:bg-muted/40 data-[state=selected]:bg-primary-subtle [[data-density=compact]_&]:h-8 [[data-density=twoline]_tbody_&]:h-[52px]',
         className,
       )}
       {...props}

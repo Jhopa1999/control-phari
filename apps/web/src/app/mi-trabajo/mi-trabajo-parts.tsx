@@ -8,15 +8,12 @@ import {
   CalendarDays,
   CalendarOff,
   CalendarRange,
-  Check,
   ChevronRight,
   CircleCheck,
-  CirclePlay,
   Clock,
   Flag,
   Hourglass,
   Lock,
-  OctagonAlert,
   type LucideIcon,
 } from 'lucide-react';
 import { BlockedReasonBox, BlockedReasonLine } from '@/components/blocked-reason';
@@ -74,60 +71,16 @@ interface CounterDef {
   key: CounterKey;
   label: string;
   hint: string;
-  icon: LucideIcon;
-  /** Filete superior cuando el valor es > 0. */
-  topBorder: string;
-  /** Color del valor cuando es > 0. */
-  valueClass: string;
+  /** Tono del StatTile (el valor 0 se atenúa solo). */
+  tone: 'default' | 'danger' | 'warning';
 }
 
 export const COUNTERS: readonly CounterDef[] = [
-  { key: 'overdue', label: 'Vencidas', hint: 'pasaron su fecha', icon: AlarmClock, topBorder: 'border-t-danger', valueClass: 'text-danger' },
-  { key: 'today', label: 'Para hoy', hint: 'vencen hoy', icon: CalendarClock, topBorder: 'border-t-warning', valueClass: 'text-warning' },
-  { key: 'inProgress', label: 'En curso', hint: 'en las que trabajas', icon: CirclePlay, topBorder: 'border-t-primary', valueClass: 'text-foreground' },
-  { key: 'blocked', label: 'Bloqueadas', hint: 'esperan algo', icon: OctagonAlert, topBorder: 'border-t-danger', valueClass: 'text-danger' },
+  { key: 'overdue', label: 'Vencidas', hint: 'pasaron su fecha', tone: 'danger' },
+  { key: 'today', label: 'Para hoy', hint: 'vencen hoy', tone: 'warning' },
+  { key: 'inProgress', label: 'En curso', hint: 'en las que trabajas', tone: 'default' },
+  { key: 'blocked', label: 'Bloqueadas', hint: 'esperan algo', tone: 'danger' },
 ];
-
-export interface CounterCardProps {
-  def: CounterDef;
-  value: number;
-  active: boolean;
-  onToggle: () => void;
-}
-
-/** Contador-interruptor de la cabecera (filtro de selección única). */
-export function CounterCard({ def, value, active, onToggle }: CounterCardProps): React.ReactElement {
-  const Icon = def.icon;
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      disabled={value === 0 && !active}
-      onClick={onToggle}
-      className={cn(
-        'flex min-h-20 flex-col gap-0.5 rounded-xl border-t-2 bg-card p-4 text-left shadow-card transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring disabled:cursor-default disabled:hover:bg-card',
-        value > 0 ? def.topBorder : 'border-t-border',
-        active && 'ring-2 ring-primary',
-      )}
-    >
-      <span className="flex items-center gap-1.5 text-meta text-muted-foreground">
-        <Icon className="size-4 shrink-0" aria-hidden="true" />
-        {def.label}
-        {active ? <Check className="size-4 shrink-0 text-foreground" aria-hidden="true" /> : null}
-        {active ? <span className="sr-only">Filtro activo</span> : null}
-      </span>
-      <span
-        className={cn(
-          'text-2xl font-semibold tabular-nums',
-          value > 0 ? def.valueClass : 'text-muted-foreground',
-        )}
-      >
-        {value}
-      </span>
-      <span className="text-meta text-muted-foreground">{def.hint}</span>
-    </button>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Piezas de fila
@@ -204,10 +157,12 @@ export function Subline({
   item,
   canOpenRequest,
   lines = 1,
+  className,
 }: {
   item: MyWorkItem;
   canOpenRequest: boolean;
   lines?: 1 | 2;
+  className?: string;
 }): React.ReactElement {
   const commitment =
     item.status !== 'TERMINADA' && item.requestCommitmentDate
@@ -226,7 +181,7 @@ export function Subline({
       item.requestTitle
     );
   return (
-    <div className="flex min-w-0 items-start gap-2">
+    <div className={cn('flex min-w-0 items-start gap-2', className)}>
       <IdChip code={item.code} />
       <p
         title={full}
@@ -261,7 +216,7 @@ function DueCell({
   const due = taskDueInfo(item, today);
   const label = groupKey === 'today' || closed ? null : dueLabel(due);
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
       {item.endDate ? (
         <span className="whitespace-nowrap text-sm tabular-nums">{formatDateOnly(item.endDate)}</span>
       ) : (
@@ -371,16 +326,16 @@ function MyWorkTableRow(props: RowCommon): React.ReactElement {
   const closed = isProjectClosed(item);
   return (
     <TableRow data-task-id={item.taskId} aria-busy={actions.busyId === item.taskId || undefined}>
-      <TableCell className={cn('py-3 align-top', overdue && 'shadow-[inset_3px_0_0_0_var(--color-danger)]')}>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <TableCell className={cn('[[data-density=twoline]_&]:py-0.5', overdue && 'shadow-[inset_3px_0_0_0_var(--color-danger)]')}>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2">
           <TitleLink item={item} onOpen={actions.onOpen} />
           {item.isMilestone ? <MilestoneBadge /> : null}
         </div>
-        <Subline item={item} canOpenRequest={canOpenRequest} />
+        <Subline item={item} canOpenRequest={canOpenRequest} className="-mt-0.5" />
       </TableCell>
-      <TableCell className="py-3 align-top">
+      <TableCell>
         {done ? (
-          <div className="flex flex-col items-start gap-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
               {item.endDate ? formatDateOnly(item.endDate) : 'Sin fecha'}
             </span>
@@ -390,10 +345,10 @@ function MyWorkTableRow(props: RowCommon): React.ReactElement {
           <DueCell item={item} today={today} groupKey={groupKey} idPrefix="row" />
         )}
       </TableCell>
-      <TableCell className="py-3 align-top">
+      <TableCell>
         <ProgressCell item={item} today={today} actions={actions} />
       </TableCell>
-      <TableCell className="py-3 align-top">
+      <TableCell>
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <StatusCell item={item} actions={actions} idPrefix="row" />
@@ -531,7 +486,7 @@ export function GroupSection({
     >
       <div
         className={cn(
-          'flex items-center gap-2 border-b px-4 py-3',
+          'flex items-center gap-2 border-b px-4 py-2',
           'sticky top-14 z-10 bg-background lg:static @[920px]:bg-card',
         )}
       >
@@ -560,7 +515,7 @@ export function GroupSection({
         {open ? (
           <>
             <div className="hidden @[920px]:block">
-              <Table className="table-fixed">
+              <Table density="twoline" className="table-fixed">
                 <caption className="sr-only">{meta.caption}</caption>
                 <colgroup>
                   <col />

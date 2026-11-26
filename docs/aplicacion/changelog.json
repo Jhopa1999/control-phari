@@ -1210,6 +1210,15 @@
           "docs/design/design-system-desktop.md"
         ],
         "summary": "PR D, iteración 2: en la ficha de la solicitud, Ejecución y Cierre del proyecto van en dos columnas desde lg, las tarjetas de etapa son más compactas y los controles GC1–GC5 se muestran en dos columnas por contenedor; no se oculta ningún dato (2,19 pantallas a 1366×768, antes 2,74). El selector Modo de credenciales de Administración › IA ocupa el ancho completo y ya no trunca el texto. Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio."
+      },
+      {
+        "timestamp": "2026-12-04T12:00:00Z",
+        "trigger_file": "apps/web/src/components/stat-tile.tsx",
+        "updated_docs": [
+          "docs/aplicacion/frontend-pantallas.md",
+          "docs/design/design-system-desktop.md"
+        ],
+        "summary": "Interfaz de escritorio, PR E (Seguimiento y Panel): StatTile único en todas las vistas, con modo interruptor (onToggle, aria-pressed) para los contadores de Mi trabajo y las alertas del Portafolio. Panel con «Requiere tu atención» en una franja de tiles con enlace y sin franja de ceros cuando no hay datos. Mi trabajo con contadores y vista en una fila, filas de 52 px y «Sin fecha» plegado por defecto. Portafolio con notas en icono Info, filtros en una fila y filas de 52 px (9 visibles a 1366×768, antes 2). Bitácora con Proceso y Clasificación en «Más filtros» y vacío de 144 px. Reuniones con pestañas y «Nueva acta» en una fila. Procesos en maestro-detalle por área (1,06 pantallas a 1366×768, antes 6,15). Cabecera de tablas twoline a 36 px. Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio."
       }
     ]
   }

@@ -620,7 +620,7 @@ export function BitacoraDetalle({
         <div className="flex flex-col gap-1 rounded-md border bg-muted/40 px-4 py-3">
           <p aria-live="polite" className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-sm font-medium">Dedicación del día:</span>
-            <span className="text-2xl font-semibold tabular-nums">{formatHours(detail.totalHours)}</span>
+            <span className="text-xl font-semibold tabular-nums">{formatHours(detail.totalHours)}</span>
           </p>
           <p className="text-meta text-muted-foreground">
             Es la suma de las horas de las actividades y no cambia el avance de las tareas.

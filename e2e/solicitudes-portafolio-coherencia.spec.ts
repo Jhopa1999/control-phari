@@ -210,7 +210,12 @@ test.describe('Portafolio: iniciativas comprometidas por defecto', () => {
 
     await expect(rows).toHaveCount(3);
     await expect(count).toHaveText('3 iniciativas');
+    // La aclaración del alcance vive tras el icono Info de la barra de filtros.
+    const alcance = page.locator('summary[aria-label="Qué incluye el portafolio"]');
+    await alcance.click();
     await expect(page.getByText(/Solo iniciativas comprometidas/)).toBeVisible();
+    // Se cierra la nota (flota sobre la barra) antes de seguir.
+    await alcance.click();
     expect([...queries[0].getAll('state')].sort()).toEqual([...COMMITTED].sort());
     const toggle = page.getByRole('switch', { name: 'Incluir pendientes de decisión' });
     await expect(toggle).not.toBeChecked();
@@ -222,7 +227,9 @@ test.describe('Portafolio: iniciativas comprometidas por defecto', () => {
     await toggle.click();
     await expect(rows).toHaveCount(5);
     await expect(count).toHaveText('5 solicitudes e iniciativas');
+    await alcance.click();
     await expect(page.getByText(/Se incluyen solicitudes pendientes de decisión/)).toBeVisible();
+    await alcance.click();
     expect(queries[queries.length - 1].getAll('state')).toEqual([]);
     await expect(page.locator('#portafolio-estado')).toContainText('Todos');
 

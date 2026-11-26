@@ -52,7 +52,7 @@ function NotApplicable({ status }: { status: IndicatorStatus }): React.ReactElem
   );
 }
 
-/** Valor de un indicador: número de 24 px, unidad y muestra. */
+/** Valor de un indicador: número de 20 px, unidad y muestra. */
 function IndicatorValue({
   value,
   unit,
@@ -65,7 +65,7 @@ function IndicatorValue({
   return (
     <div className="flex flex-col gap-0.5 sm:items-end sm:text-right">
       <p className="whitespace-nowrap">
-        <span className="text-2xl font-semibold tabular-nums">{value}</span>
+        <span className="text-xl font-semibold tabular-nums">{value}</span>
         {unit ? <span className="text-meta text-muted-foreground"> {unit}</span> : null}
       </p>
       {sample ? <p className="text-xs text-muted-foreground">{sample}</p> : null}

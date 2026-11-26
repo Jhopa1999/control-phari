@@ -68,6 +68,8 @@ function ReunionesViewContent(): React.ReactElement {
   const [myOverdue, setMyOverdue] = React.useState<number | null>(null);
   const [error, setError] = React.useState<unknown>(null);
   const tabsListRef = React.useRef<HTMLDivElement>(null);
+  // Hueco a la derecha de las pestañas donde «Actas» pone «Nueva acta».
+  const [actionSlot, setActionSlot] = React.useState<HTMLDivElement | null>(null);
   // Con scroll propio en la lista de pestañas, la activa se lleva a la vista (también si cambia por código).
   React.useEffect(() => {
     tabsListRef.current
@@ -129,6 +131,7 @@ function ReunionesViewContent(): React.ReactElement {
         description="Actas de reunión con sus participantes, agenda y decisiones, y el seguimiento de los compromisos acordados."
       />
       <Tabs value={tab} onValueChange={changeTab} className="min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-2">
         <TabsList
           ref={tabsListRef}
           aria-label="Vistas de reuniones y compromisos"
@@ -159,9 +162,12 @@ function ReunionesViewContent(): React.ReactElement {
             ) : null}
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="actas">
+        <div ref={setActionSlot} className="flex items-center gap-2" />
+        </div>
+        <TabsContent value="actas" className="mt-3">
           <ActasPanel
             data={data}
+            actionSlot={actionSlot}
             initialMeetingId={initialMeetingId}
             onOpenCommitment={(id) => {
               setInitialCommitmentId(id);

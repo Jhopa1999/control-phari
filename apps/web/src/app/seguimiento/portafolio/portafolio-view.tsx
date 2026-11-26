@@ -17,7 +17,7 @@ import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { PriorityBadge, PriorityLegend, StatusBadge } from '@/components/status-badge';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
-import { SearchInput, Toolbar } from '@/components/toolbar';
+import { FilterNote, SearchInput, Toolbar } from '@/components/toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -209,28 +209,38 @@ function DeliveryCell({
   const muted = compact ? 'text-muted-foreground' : 'text-meta text-muted-foreground';
   const gap = item.requestedGapDays ?? 0;
   const variance = item.scheduleVarianceDays ?? 0;
+  const hasSecondLine =
+    (fromPlan && Boolean(item.targetDate)) || (fromPlan && gap > 0) || (fromPlan && variance > 0) ||
+    (!fromPlan && Boolean(item.initialCommitmentDate));
+  // Primera línea: fecha y alerta de vencimiento; segunda: lo solicitado y las brechas.
   return (
     <span className="flex flex-col items-start gap-0.5">
-      <span className="tabular-nums">
-        {fromPlan ? `Compromiso: ${formatDateOnly(item.referenceDate)}` : formatDateOnly(item.targetDate)}
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        <span className="tabular-nums">
+          {fromPlan ? `Compromiso: ${formatDateOnly(item.referenceDate)}` : formatDateOnly(item.targetDate)}
+        </span>
+        <DueBadge status={item.dueStatus} days={item.daysToTarget} />
       </span>
-      <DueBadge status={item.dueStatus} days={item.daysToTarget} />
-      {fromPlan && item.targetDate ? (
-        <span className={cn('tabular-nums', muted)}>{`Solicitada: ${formatDateOnly(item.targetDate)}`}</span>
-      ) : null}
-      {fromPlan && gap > 0 ? (
-        <Badge variant="warning" title="El plan autorizado termina después de la fecha que pidió el solicitante.">
-          {`Plan ${signedDays(gap)} sobre lo solicitado`}
-        </Badge>
-      ) : null}
-      {fromPlan && variance > 0 ? (
-        <Badge variant="warning" title="Las tareas abiertas terminan después del compromiso del plan.">
-          {`Desviación ${signedDays(variance)}`}
-        </Badge>
-      ) : null}
-      {!fromPlan && item.initialCommitmentDate ? (
-        <span className={cn('tabular-nums', muted)}>
-          {`Compromiso: ${formatDateOnly(item.initialCommitmentDate)}`}
+      {hasSecondLine ? (
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          {fromPlan && item.targetDate ? (
+            <span className={cn('tabular-nums', muted)}>{`Solicitada: ${formatDateOnly(item.targetDate)}`}</span>
+          ) : null}
+          {fromPlan && gap > 0 ? (
+            <Badge variant="warning" title="El plan autorizado termina después de la fecha que pidió el solicitante.">
+              {`Plan ${signedDays(gap)} sobre lo solicitado`}
+            </Badge>
+          ) : null}
+          {fromPlan && variance > 0 ? (
+            <Badge variant="warning" title="Las tareas abiertas terminan después del compromiso del plan.">
+              {`Desviación ${signedDays(variance)}`}
+            </Badge>
+          ) : null}
+          {!fromPlan && item.initialCommitmentDate ? (
+            <span className={cn('tabular-nums', muted)}>
+              {`Compromiso: ${formatDateOnly(item.initialCommitmentDate)}`}
+            </span>
+          ) : null}
         </span>
       ) : null}
     </span>
@@ -410,6 +420,8 @@ export function PortafolioView(): React.ReactElement {
         }
       />
 
+      {/* Franja, filtros y tabla más juntos (gap-3): la tabla gana una fila a 1366×768. */}
+      <div className="flex flex-col gap-3">
       <AlertStrip
         summary={summaryResult.summary}
         loading={summaryLoading}
@@ -417,6 +429,18 @@ export function PortafolioView(): React.ReactElement {
         active={alert}
         onSelect={selectAlert}
         onRetry={() => setSummaryNonce((n) => n + 1)}
+        trailing={
+          <>
+            <FilterNote label="Qué incluye el portafolio">
+              <p className="max-w-sm">
+                {pendingIncluded
+                  ? 'Se incluyen solicitudes pendientes de decisión (registradas, en triage, devueltas, rechazadas, en backlog o retiradas), además de las iniciativas comprometidas.'
+                  : 'Solo iniciativas comprometidas, desde «Comprometida» hasta «Cerrada». Activa «Incluir pendientes de decisión» para ver también las solicitudes que aún no se comprometen.'}
+              </p>
+            </FilterNote>
+            <PriorityLegend />
+          </>
+        }
       />
 
       <Toolbar
@@ -424,7 +448,6 @@ export function PortafolioView(): React.ReactElement {
         collapseOnMobile
         end={
           <>
-            <PriorityLegend />
             {table.status !== 'error' ? (
               <ResultCount
                 loading={table.busy}
@@ -459,6 +482,7 @@ export function PortafolioView(): React.ReactElement {
           ref={searchRef}
           id="portafolio-buscar"
           placeholder="Código o título"
+          className="sm:w-52 xl:w-52"
           maxLength={100}
           autoComplete="off"
           enterKeyHint="search"
@@ -475,7 +499,7 @@ export function PortafolioView(): React.ReactElement {
           selected={draft.process}
           onChange={(next) => setDraft({ ...draft, process: next })}
           onOpenChange={(open) => commit('process', open)}
-          className="sm:w-44"
+          className="sm:w-40"
         />
         <MultiSelectFilter
           id="portafolio-estado"
@@ -484,7 +508,7 @@ export function PortafolioView(): React.ReactElement {
           selected={draft.state}
           onChange={(next) => setDraft({ ...draft, state: next })}
           onOpenChange={(open) => commit('state', open)}
-          className="sm:w-44"
+          className="sm:w-40"
         />
         <MultiSelectFilter
           id="portafolio-banda"
@@ -495,7 +519,7 @@ export function PortafolioView(): React.ReactElement {
           onOpenChange={(open) => commit('band', open)}
           placeholder="Todas"
           gender="f"
-          className="sm:w-40"
+          className="sm:w-36"
         />
         <div className="flex h-9 items-center gap-2">
           <Switch
@@ -508,12 +532,6 @@ export function PortafolioView(): React.ReactElement {
           </Label>
         </div>
       </Toolbar>
-
-      <p className="text-meta text-muted-foreground">
-        {pendingIncluded
-          ? 'Se incluyen solicitudes pendientes de decisión (registradas, en triage, devueltas, rechazadas, en backlog o retiradas), además de las iniciativas comprometidas.'
-          : 'Solo iniciativas comprometidas, desde «Comprometida» hasta «Cerrada». Activa «Incluir pendientes de decisión» para ver también las solicitudes que aún no se comprometen.'}
-      </p>
 
 
       <DataView
@@ -555,7 +573,7 @@ export function PortafolioView(): React.ReactElement {
           truncated={table.truncated}
         >
         <div className="hidden md:block">
-        <Table scrollLabel="Tabla del portafolio">
+        <Table density="twoline" scrollLabel="Tabla del portafolio">
           <TableCaption>
             Iniciativas del portafolio dentro de tu alcance. Bajo cada título se indican el proceso y la
             ruta de gobierno; el estado incluye el bloqueo, y la entrega muestra el compromiso del plan autorizado (o la fecha solicitada si aún no hay plan) con su alerta de vencimiento.
@@ -581,9 +599,9 @@ export function PortafolioView(): React.ReactElement {
           <TableBody>
             {table.rows.map((item) => (
               <TableRow key={item.id}>
-                <TableCell className="min-w-56 max-w-[30rem]">
-                  <div className="flex items-start gap-2">
-                    <IdChip code={item.code} className="mt-0.5" />
+                <TableCell className="min-w-72 max-w-[30rem]">
+                  <div className="flex items-center gap-2">
+                    <IdChip code={item.code} />
                     <CellTitle
                       href={`/seguimiento/portafolio/${encodeURIComponent(item.id)}`}
                       meta={rowMeta(item, routes)}
@@ -593,20 +611,18 @@ export function PortafolioView(): React.ReactElement {
                   </div>
                 </TableCell>
                 <TableCell className="min-w-36">
-                  <div className="flex flex-col items-start gap-1 py-0.5">
-                    <StatusBadge kind="request" value={item.operationalState} />
-                    {item.blocked ? (
-                      <>
-                        <StatusBadge kind="blocked" value="true" />
-                        {item.blockedReason ? (
-                          <span
-                            className="line-clamp-2 max-w-[16rem] text-meta wrap-break-word text-muted-foreground"
-                            title={item.blockedReason}
-                          >
-                            {item.blockedReason}
-                          </span>
-                        ) : null}
-                      </>
+                  <div className="flex flex-col items-start gap-0.5">
+                    <div className="flex flex-wrap items-center gap-1">
+                      <StatusBadge kind="request" value={item.operationalState} />
+                      {item.blocked ? <StatusBadge kind="blocked" value="true" /> : null}
+                    </div>
+                    {item.blocked && item.blockedReason ? (
+                      <span
+                        className="line-clamp-1 max-w-[16rem] text-meta wrap-break-word text-muted-foreground"
+                        title={item.blockedReason}
+                      >
+                        {item.blockedReason}
+                      </span>
                     ) : null}
                   </div>
                 </TableCell>
@@ -621,7 +637,7 @@ export function PortafolioView(): React.ReactElement {
                 </TableCell>
                 <TableCell className="min-w-36 max-w-[16rem]">
                   {item.responsibleName ? (
-                    <span className="line-clamp-2 wrap-break-word" title={item.responsibleName}>
+                    <span className="line-clamp-1 wrap-break-word" title={item.responsibleName}>
                       {item.responsibleName}
                     </span>
                   ) : (
@@ -701,6 +717,7 @@ export function PortafolioView(): React.ReactElement {
         />
         </ServerListBody>
       </DataView>
+      </div>
     </PageLayout>
   );
 }

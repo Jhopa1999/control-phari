@@ -144,6 +144,8 @@ test.describe('franja de alertas del Portafolio', () => {
     await expect(vencidas).toHaveAttribute('aria-pressed', 'false');
     // Un contador en 0 sin seleccionar queda deshabilitado.
     await expect(strip.getByRole('button', { name: /Próximas a vencer/ })).toBeDisabled();
+    // La aclaración de la franja vive tras el icono Info.
+    await page.locator('summary[aria-label="Cómo se cuentan las alertas"]').click();
     await expect(page.getByText('Una iniciativa puede aparecer en más de un grupo.')).toBeVisible();
     await expect(page.locator('table tbody tr')).toHaveCount(2);
 

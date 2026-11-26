@@ -5,7 +5,6 @@ import { ChevronDown, Info, Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LabelTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 export interface ToolbarProps {
@@ -203,18 +202,31 @@ export function FilterField({
 export interface FilterNoteProps {
   /** Nombre accesible del botón (p. ej. «Qué significan P1 a P4»). */
   label: string;
-  /** Texto de la nota; sale del flujo de la barra y se ve en un tooltip. */
+  /** Texto de la nota; sale del flujo de la barra y se ve en un panel flotante. */
   children: React.ReactNode;
+  className?: string;
 }
 
-/** Nota larga de una barra de filtros en un icono «Info» con tooltip (design §6). */
-export function FilterNote({ label, children }: FilterNoteProps): React.ReactElement {
+/**
+ * Nota larga de una barra de filtros tras un icono «Info» (design §6). Es un
+ * desplegable nativo (<details>): se abre con clic, Enter o Espacio, también en
+ * pantallas táctiles (un tooltip no abre sin puntero). El panel flota bajo el
+ * icono y no ocupa altura en la barra.
+ */
+export function FilterNote({ label, children, className }: FilterNoteProps): React.ReactElement {
   return (
-    <LabelTooltip label={children}>
-      <Button type="button" variant="ghost" size="icon-sm" aria-label={label}>
-        <Info aria-hidden="true" />
-      </Button>
-    </LabelTooltip>
+    <details className={cn('group relative', className)}>
+      <summary
+        aria-label={label}
+        title={label}
+        className="inline-flex size-8 cursor-pointer list-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring group-open:bg-muted/60 pointer-coarse:size-11 [&::-webkit-details-marker]:hidden"
+      >
+        <Info aria-hidden="true" className="size-4" />
+      </summary>
+      <div className="absolute right-0 top-full z-20 mt-1 w-max max-w-[min(24rem,calc(100vw-2rem))] rounded-lg border bg-popover p-3 text-meta text-popover-foreground shadow-md">
+        {children}
+      </div>
+    </details>
   );
 }
 

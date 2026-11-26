@@ -410,11 +410,59 @@ function BitacoraViewContent(): React.ReactElement {
         {mine ? 'Mis diarios' : 'Diarios del equipo'}
       </h2>
 
-      {state !== 'error' ? tiles : null}
+      {/* Sin ningún diario (y sin filtros) se omite la franja de ceros: el vacío lo explica (§10). */}
+      {state !== 'error' && viewState !== 'empty' ? tiles : null}
 
       <Toolbar
         label="Filtros de la bitácora"
         collapseOnMobile
+        moreActiveCount={(url.proceso ? 1 : 0) + (url.clase ? 1 : 0)}
+        more={
+          <>
+          {processes.length > 1 ? (
+            <FilterField id="bit-proceso" label="Proceso" className="sm:w-52">
+              {(control) => (
+                <Select
+                  value={url.proceso || ALL}
+                  onValueChange={(v) => setParams({ proceso: v === ALL ? null : v })}
+                >
+                  <SelectTrigger {...control}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>Todos</SelectItem>
+                    {processes.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </FilterField>
+          ) : null}
+          <FilterField id="bit-clase" label="Clasificación" className="sm:w-52">
+            {(control) => (
+              <Select
+                value={url.clase || ALL}
+                onValueChange={(v) => setParams({ clase: v === ALL ? null : v })}
+              >
+                <SelectTrigger {...control}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Todas</SelectItem>
+                  {Object.entries(CLASSIFICATION_META).map(([code, meta]) => (
+                    <SelectItem key={code} value={code}>
+                      {meta.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </FilterField>
+          </>
+        }
         end={
           <>
             {state !== 'error' ? (
@@ -434,7 +482,7 @@ function BitacoraViewContent(): React.ReactElement {
           value={qInput}
           onChange={(e) => setQInput(e.target.value)}
         />
-        <FilterField id="bit-rango" label="Fechas" className="sm:w-52">
+        <FilterField id="bit-rango" label="Fechas" className="sm:w-56">
           {(control) => (
             <Select value={url.preset} onValueChange={(v) => setParams({ rango: v, desde: null, hasta: null })}>
               <SelectTrigger {...control}>
@@ -498,28 +546,6 @@ function BitacoraViewContent(): React.ReactElement {
             )}
           </FilterField>
         ) : null}
-        {processes.length > 1 ? (
-          <FilterField id="bit-proceso" label="Proceso" className="sm:w-52">
-            {(control) => (
-              <Select
-                value={url.proceso || ALL}
-                onValueChange={(v) => setParams({ proceso: v === ALL ? null : v })}
-              >
-                <SelectTrigger {...control}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>Todos</SelectItem>
-                  {processes.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </FilterField>
-        ) : null}
         <FilterField id="bit-estado" label="Estado" className="sm:w-44">
           {(control) => (
             <Select
@@ -534,26 +560,6 @@ function BitacoraViewContent(): React.ReactElement {
                 {STATUS_OPTIONS.map((s) => (
                   <SelectItem key={s.value} value={s.value}>
                     {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </FilterField>
-        <FilterField id="bit-clase" label="Clasificación" className="sm:w-52">
-          {(control) => (
-            <Select
-              value={url.clase || ALL}
-              onValueChange={(v) => setParams({ clase: v === ALL ? null : v })}
-            >
-              <SelectTrigger {...control}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todas</SelectItem>
-                {Object.entries(CLASSIFICATION_META).map(([code, meta]) => (
-                  <SelectItem key={code} value={code}>
-                    {meta.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -578,7 +584,7 @@ function BitacoraViewContent(): React.ReactElement {
           icon: ClipboardList,
           title: mine ? 'Aún no hay diarios.' : 'Aún no hay diarios del equipo.',
           description: mine
-            ? 'Usa «Nuevo diario», arriba, para registrar las actividades de tu jornada.'
+            ? 'Registra tu jornada con «Nuevo diario», arriba.'
             : 'Cuando tu equipo registre su jornada, los diarios aparecerán aquí.',
         }}
         noResults={{

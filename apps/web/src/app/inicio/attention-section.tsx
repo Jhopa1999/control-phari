@@ -1,15 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
-import { ArrowRight, CircleCheck } from 'lucide-react';
+import { CircleCheck } from 'lucide-react';
 import { ErrorState } from '@/components/error-state';
 import { Section } from '@/components/section';
+import { StatStrip, StatTile } from '@/components/stat-tile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActor } from '@/lib/actor-context';
 import { getAttention, type Attention } from '@/lib/area-control';
 import type { ModuleKey } from '@/lib/navigation';
-import { cn } from '@/lib/utils';
 
 type LoadState = 'loading' | 'success' | 'error';
 
@@ -23,8 +22,8 @@ interface AttentionItem {
     | 'overdueTasks';
   moduleKey: ModuleKey;
   href: string;
-  one: string;
-  other: string;
+  /** Nombre del indicador (el número va aparte, en el valor del tile). */
+  label: string;
   /** Tono del número: lo vencido destaca más que lo pendiente. */
   danger?: boolean;
 }
@@ -35,44 +34,38 @@ const ITEMS: AttentionItem[] = [
     key: 'pendingTriage',
     moduleKey: 'triage',
     href: '/demanda/triage',
-    one: 'solicitud pendiente de triage',
-    other: 'solicitudes pendientes de triage',
+    label: 'Pendientes de triage',
   },
   {
     key: 'pendingNoProcess',
     moduleKey: 'triage',
     href: '/demanda/solicitudes?proceso=SIN_PROCESO',
-    one: 'solicitud sin proceso por triar',
-    other: 'solicitudes sin proceso por triar',
+    label: 'Sin proceso por triar',
   },
   {
     key: 'readyToPrioritize',
     moduleKey: 'priority',
     href: '/demanda/priorizacion',
-    one: 'solicitud lista para priorizar',
-    other: 'solicitudes listas para priorizar',
+    label: 'Listas para priorizar',
   },
   {
     key: 'pendingApproval',
     moduleKey: 'review',
     href: '/administracion/revision',
-    one: 'solicitud por aprobar',
-    other: 'solicitudes por aprobar',
+    label: 'Solicitudes por aprobar',
   },
   {
     // El servidor devuelve 0 a quien no puede aprobar: no hay lógica de rol aquí.
     key: 'pendingTaskReviews',
     moduleKey: 'assigned',
     href: '/mi-trabajo#por-aprobar',
-    one: 'tarea por aprobar',
-    other: 'tareas por aprobar',
+    label: 'Tareas por aprobar',
   },
   {
     key: 'overdueTasks',
     moduleKey: 'assigned',
     href: '/mi-trabajo',
-    one: 'tarea vencida',
-    other: 'tareas vencidas',
+    label: 'Tareas vencidas',
     danger: true,
   },
 ];
@@ -126,7 +119,7 @@ export function AttentionSection(): React.ReactElement {
     content = (
       <div aria-busy="true" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-20 w-full rounded-xl" />
+          <Skeleton key={i} className="h-16 w-full rounded-xl" />
         ))}
       </div>
     );
@@ -149,37 +142,17 @@ export function AttentionSection(): React.ReactElement {
     );
   } else {
     content = (
-      <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {visible.map((item) => {
-          const count = data[item.key];
-          return (
-            <li key={item.key}>
-              <Link
-                href={item.href}
-                className="group flex h-full items-center justify-between gap-2 rounded-xl bg-card p-3 shadow-card sm:gap-3 sm:p-4 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
-              >
-                <span className="flex min-w-0 flex-col gap-1">
-                  <span
-                    className={cn(
-                      'text-2xl font-semibold tabular-nums',
-                      item.danger && 'text-danger',
-                    )}
-                  >
-                    {NUMBER_FORMAT.format(count)}
-                  </span>
-                  <span className="text-meta text-muted-foreground">
-                    {count === 1 ? item.one : item.other}
-                  </span>
-                </span>
-                <ArrowRight
-                  aria-hidden="true"
-                  className="size-4 shrink-0 text-link transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
-                />
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      <StatStrip label="Pendientes de hoy en tu alcance">
+        {visible.map((item) => (
+          <StatTile
+            key={item.key}
+            label={item.label}
+            value={NUMBER_FORMAT.format(data[item.key])}
+            tone={item.danger ? 'danger' : 'default'}
+            href={item.href}
+          />
+        ))}
+      </StatStrip>
     );
   }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { useResetOnChange } from '@/lib/use-reset-on-change';
 import { Download, Eye, Lock, LockOpen, Plus, Printer, Trash2, UserCheck, Users } from 'lucide-react';
 import Link from 'next/link';
@@ -105,10 +106,17 @@ export function ActasPanel({
   data,
   initialMeetingId,
   onOpenCommitment,
+  actionSlot,
 }: {
   data: CoordinationData;
   initialMeetingId: string | null;
   onOpenCommitment: (commitmentId: string) => void;
+  /**
+   * Contenedor, en la fila de pestañas, donde va «Nueva acta» (una sola fila con
+   * las pestañas). `undefined`: el botón va en una fila propia; `null`: el
+   * contenedor aún no existe y el botón espera.
+   */
+  actionSlot?: HTMLElement | null;
 }): React.ReactElement {
   const { processes, people, totals } = data;
   const { permissions } = useActor();
@@ -913,7 +921,11 @@ export function ActasPanel({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <div className="flex justify-end">{newButton}</div>
+          {actionSlot === undefined ? (
+            <div className="flex justify-end">{newButton}</div>
+          ) : actionSlot ? (
+            createPortal(newButton, actionSlot)
+          ) : null}
           <MasterDetail
             listTitle="Actas"
             listHeadingRef={listHeadingRef}
