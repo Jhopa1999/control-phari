@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { toast } from 'sonner';
 import { Field, FormError } from '@/components/field';
+import { FormActionBar } from '@/components/form-sections';
 import { InlineNotice } from '@/components/inline-notice';
 import { Section } from '@/components/section';
 import { Button } from '@/components/ui/button';
@@ -58,13 +59,16 @@ export function PresupuestoIaForm({
     }
   }
 
+  const savedBudget = global.monthlyBudgetUsd === null ? '' : String(global.monthlyBudgetUsd);
+  const dirty = budget !== savedBudget || alertPct !== String(global.budgetAlertPct);
+
   return (
     <Section
       title="Presupuesto"
       description="Tope mensual de gasto de IA y porcentaje a partir del cual se avisa."
     >
       <form
-        className="flex flex-col gap-4 rounded-xl bg-card p-4 shadow-card"
+        className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-card"
         onSubmit={handleSubmit}
         noValidate
       >
@@ -137,11 +141,24 @@ export function PresupuestoIaForm({
             al umbral y al agotarse.
           </p>
         </InlineNotice>
-        <div className="flex flex-wrap gap-3">
+        <FormActionBar dirty={dirty}>
+          {dirty ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setBudget(savedBudget);
+                setAlertPct(String(global.budgetAlertPct));
+                setErrors({});
+              }}
+            >
+              Cancelar
+            </Button>
+          ) : null}
           <Button type="submit" loading={saving}>
             Guardar presupuesto
           </Button>
-        </div>
+        </FormActionBar>
       </form>
     </Section>
   );

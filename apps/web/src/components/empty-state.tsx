@@ -13,7 +13,7 @@ export interface EmptyStateProps {
   action?: React.ReactNode;
   secondaryAction?: React.ReactNode;
   /**
-   * py-10 (por defecto), py-6 (compact) o una sola línea (inline): para bloques
+   * py-6 (por defecto), py-4 (compact) o una sola línea (inline): para bloques
    * secundarios donde un vacío grande empuja el contenido útil hacia abajo.
    */
   size?: 'default' | 'compact' | 'inline';
@@ -50,23 +50,26 @@ export function EmptyState({
     <div
       className={cn(
         'flex flex-col items-center gap-2 px-4 text-center',
-        size === 'compact' ? 'py-6' : 'py-10',
+        size === 'compact' ? 'py-4' : 'py-6',
       )}
     >
       {Icon ? (
         <span
           aria-hidden="true"
-          className="flex size-10 items-center justify-center rounded-full bg-primary-subtle text-link"
+          className={cn(
+          'flex items-center justify-center rounded-full bg-primary-subtle text-link',
+          size === 'compact' ? 'size-8' : 'size-10',
+        )}
         >
-          <Icon className="size-5" />
+          <Icon className={size === 'compact' ? 'size-4' : 'size-5'} />
         </span>
       ) : null}
       <p className="text-sm font-semibold">{title}</p>
       {description ? (
-        <div className="max-w-sm text-sm text-muted-foreground">{description}</div>
+        <div className="max-w-md text-sm text-muted-foreground">{description}</div>
       ) : null}
       {action || secondaryAction ? (
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
           {action}
           {secondaryAction}
         </div>

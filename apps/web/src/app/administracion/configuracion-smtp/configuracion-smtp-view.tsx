@@ -2,7 +2,9 @@
 import * as React from 'react';
 import { Mail, Send } from 'lucide-react';
 import { toast } from 'sonner';
+import { DataTablePagination } from '@/components/data-table';
 import { Field, FormError } from '@/components/field';
+import { FormActionBar, FormCard, FormSectionsLayout } from '@/components/form-sections';
 import { InlineNotice } from '@/components/inline-notice';
 import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
@@ -33,6 +35,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useActor } from '@/lib/actor-context';
+import { useClientTable } from '@/lib/use-client-table';
 import type { AdminUser, SmtpConfig, SmtpTestResult, UpdateSmtpConfig } from '@/lib/api-client';
 import {
   ApiError,
@@ -48,6 +51,13 @@ const SOURCE_LABELS: Record<SmtpConfig['source'], string> = {
   env: 'Variables de entorno',
   none: 'Correo deshabilitado',
 };
+const SECTIONS = [
+  { id: 'smtp-servidor', label: 'Servidor SMTP' },
+  { id: 'smtp-administradores', label: 'Administradores' },
+] as const;
+
+const ADMIN_NOUN = { one: 'usuario', other: 'usuarios' };
+
 interface FormErrors {
   host?: string;
   port?: string;
@@ -107,6 +117,24 @@ export function ConfiguracionSmtpView(): React.ReactElement {
     setPasswordMode('keep');
     setPassword('');
   }, []);
+  // Cambios sin guardar: el formulario difiere de la configuración guardada.
+  const dirty =
+    config !== null &&
+    (host !== (config.host ?? '') ||
+      port !== (config.port !== null ? String(config.port) : '') ||
+      secure !== config.secure ||
+      username !== (config.username ?? '') ||
+      fromAddress !== (config.fromAddress ?? '') ||
+      fromName !== (config.fromName ?? '') ||
+      passwordMode !== 'keep');
+
+  const adminTable = useClientTable({
+    rows: adminUsers,
+    comparators: {},
+    defaultSort: null,
+    pageSize: 25,
+  });
+
   const fetchConfig = React.useCallback(() => {
     return Promise.all([getSmtpConfig(), listAdminUsers()])
       .then(([c, users]) => {
@@ -268,7 +296,8 @@ export function ConfiguracionSmtpView(): React.ReactElement {
     const warnDomainMismatch =
       fromDomain !== '' && userDomain !== '' && fromDomain !== userDomain;
     content = (
-      <>
+      <FormSectionsLayout sections={SECTIONS}>
+        <FormCard id="smtp-servidor">
         <Section
           title="Servidor SMTP"
           description="Se usa para enviar correos de restablecimiento de contraseña e invitaciones."
@@ -295,9 +324,32 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                 </p>
               </InlineNotice>
             ) : null}
-            <form className="flex flex-col gap-4" onSubmit={handleSave} noValidate>
-              <FormError id="smtp-form" message={errors.form ?? null} />
-              <div className="grid gap-4 sm:grid-cols-2">
+            {lastTest !== null ? (
+              <InlineNotice
+                tone={lastTest.ok ? 'success' : 'danger'}
+                role={lastTest.ok ? 'status' : 'alert'}
+                title={lastTest.ok ? 'Conexión verificada' : 'La prueba falló'}
+              >
+                <p>{lastTest.message}</p>
+                {lastTest.hint ? (
+                  <p className="text-muted-foreground">{lastTest.hint}</p>
+                ) : null}
+                {lastTest.code ? (
+                  <p className="text-meta text-muted-foreground">
+                    Codigo SMTP: {lastTest.code}
+                  </p>
+                ) : null}
+              </InlineNotice>
+            ) : null}
+            <form
+              className="grid gap-x-6 gap-y-3 lg:grid-cols-2"
+              onSubmit={handleSave}
+              noValidate
+            >
+              <div className="empty:hidden lg:col-span-2">
+                <FormError id="smtp-form" message={errors.form ?? null} />
+              </div>
+              <div className="contents">
                 <Field id="smtp-host" label="Host" required error={errors.host}>
                   <Input
                     value={host}
@@ -321,7 +373,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   />
                 </Field>
               </div>
-              <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
+              <label className="flex min-h-8 cursor-pointer items-center gap-2 text-sm lg:col-span-2">
                 <Checkbox
                   checked={secure}
                   onChange={(e) => setSecure(e.target.checked)}
@@ -334,6 +386,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   tone="warning"
                   role="status"
                   title="Revisa la conexión segura."
+                  className="lg:col-span-2"
                 >
                   <p className="text-muted-foreground">
                     El puerto 587 suele usar STARTTLS. Si la prueba falla, desmarca la casilla de
@@ -346,6 +399,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   tone="warning"
                   role="status"
                   title="Revisa la conexión segura."
+                  className="lg:col-span-2"
                 >
                   <p className="text-muted-foreground">
                     El puerto 465 suele requerir SSL directo. Si la prueba falla, marca la casilla de
@@ -353,7 +407,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   </p>
                 </InlineNotice>
               ) : null}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="contents">
                 <Field
                   id="smtp-username"
                   label="Usuario"
@@ -426,7 +480,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   )}
                 </Field>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="contents">
                 <Field id="smtp-from" label="Remitente (correo)" required error={errors.fromAddress}>
                   <Input
                     type="email"
@@ -451,6 +505,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   tone="warning"
                   role="status"
                   title="El remitente y el usuario tienen dominios distintos."
+                  className="lg:col-span-2"
                 >
                   <p className="text-muted-foreground">
                     El correo remitente y el usuario autenticado pertenecen a dominios diferentes.
@@ -459,10 +514,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   </p>
                 </InlineNotice>
               ) : null}
-              <div className="flex flex-wrap gap-3">
-                <Button type="submit" loading={saving}>
-                  Guardar configuración
-                </Button>
+              <FormActionBar dirty={dirty} className="lg:col-span-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -475,34 +527,33 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                   <Send aria-hidden="true" />
                   Probar envío
                 </Button>
-              </div>
-            </form>
-            {lastTest !== null ? (
-              <InlineNotice
-                tone={lastTest.ok ? 'success' : 'danger'}
-                role={lastTest.ok ? 'status' : 'alert'}
-                title={lastTest.ok ? 'Conexión verificada' : 'La prueba falló'}
-              >
-                <p>{lastTest.message}</p>
-                {lastTest.hint ? (
-                  <p className="text-muted-foreground">{lastTest.hint}</p>
+                {dirty ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (config) fillForm(config);
+                      setErrors({});
+                    }}
+                  >
+                    Cancelar
+                  </Button>
                 ) : null}
-                {lastTest.code ? (
-                  <p className="text-meta text-muted-foreground">
-                    Codigo SMTP: {lastTest.code}
-                  </p>
-                ) : null}
-              </InlineNotice>
-            ) : null}
+                <Button type="submit" loading={saving}>
+                  Guardar configuración
+                </Button>
+              </FormActionBar>            </form>
           </div>
         </Section>
+        </FormCard>
+        <FormCard id="smtp-administradores">
         <Section
           title="Administradores del sistema"
           description="Los administradores pueden configurar el sistema. No se puede degradar al último administrador activo."
           count={adminUsers.length}
         >
           <div className="overflow-hidden rounded-lg border bg-card">
-            <Table scrollLabel="Tabla de usuarios">
+            <Table density="compact" scrollLabel="Tabla de usuarios">
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
@@ -512,7 +563,7 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {adminUsers.map((user) => (
+                {adminTable.pageRows.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="min-w-40 font-medium">{user.name}</TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
@@ -535,8 +586,21 @@ export function ConfiguracionSmtpView(): React.ReactElement {
                 ))}
               </TableBody>
             </Table>
+            <DataTablePagination
+              id="smtp-admins-paginacion"
+              page={adminTable.page}
+              pageCount={adminTable.pageCount}
+              from={adminTable.from}
+              to={adminTable.to}
+              filtered={adminTable.filtered}
+              pageSize={adminTable.pageSize ?? 25}
+              onPageChange={adminTable.setPage}
+              onPageSizeChange={adminTable.setPageSize}
+              noun={ADMIN_NOUN}
+            />
           </div>
         </Section>
+        </FormCard>
         <ConfirmDialog
           open={adminChange !== null}
           onOpenChange={(open) => {
@@ -558,11 +622,11 @@ export function ConfiguracionSmtpView(): React.ReactElement {
             if (adminChange) await handleToggleAdmin(adminChange.user, adminChange.next);
           }}
         />
-      </>
+      </FormSectionsLayout>
     );
   }
   return (
-    <PageLayout>
+    <PageLayout width="form">
       <PageHeader
         title="Configuración del sistema"
         description="Servidor SMTP y administradores del sistema."

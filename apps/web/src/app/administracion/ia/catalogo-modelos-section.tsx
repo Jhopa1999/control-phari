@@ -176,7 +176,7 @@ export function CatalogoModelosSection({
     body = (
       <div className="rounded-xl bg-card shadow-card">
         <div className="hidden md:block">
-          <Table scrollLabel="Modelos de IA">
+          <Table density="compact" scrollLabel="Modelos de IA">
             <TableHeader>
               <TableRow>
                 <TableHead>Modelo</TableHead>
@@ -261,6 +261,7 @@ export function CatalogoModelosSection({
         title="Catálogo de modelos"
         description="Modelos que los agentes pueden usar y su precio por millón de tokens."
         count={state === 'success' ? models.length : undefined}
+        collapsible
         actions={
           <Button type="button" onClick={() => setDialog({ model: null })}>
             <Plus aria-hidden="true" />

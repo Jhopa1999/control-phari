@@ -337,3 +337,30 @@ secciones 3 y 6):
   Solicitud P3), Auditoría (fechas y proceso bajo «Más filtros»; Proceso P2; objeto
   en una línea), Áreas, Solicitantes y Mis permisos en compacta, Maestras con
   Actualizado P2 y Orden P3, y Aprobaciones con el código delante del título.
+
+## Formularios, diálogos y estados vacíos (interfaz de escritorio, PR C)
+
+- **Diálogos** (`ui/dialog.tsx`): `rounded-xl`, cabecera con `pt-4 pb-2`, cuerpo con
+  `pb-1` y pie con filete superior (`border-t px-5 py-3`). Los tamaños sm/md/lg/xl y el
+  foco inicial no cambian; a 1366×768 el pie queda visible y el cuerpo se desplaza.
+- **`Field`**: la propiedad opcional `helpInTooltip` muestra la ayuda larga en un
+  tooltip del icono `Info` desde `lg`; el texto sigue en el árbol (solo lector de
+  pantalla desde `lg`, visible debajo de `lg`) con el mismo id, así que
+  `aria-describedby` no cambia. La usan «Modo de credenciales» y «Prompt base».
+- **`EmptyState`**: `default` pasa a `py-6` (≤160 px sin acción, ≤200 px con acción) y
+  `compact` a `py-4` con icono de 32 px. Bitácora y Reporte semanal ya no repiten el
+  botón de la cabecera en el vacío: la descripción remite a «Nuevo diario» y «Nuevo
+  reporte semanal».
+- **Formularios de página** (`components/form-sections.tsx`): `FormSectionsLayout`
+  (navegación interna `nav aria-label="Secciones del formulario"` con anclas desde
+  `xl`, `sticky top-16`, `aria-current="location"`), `FormCard` (tarjeta de sección con
+  `scroll-mt-20`) y `FormActionBar` (barra `sticky bottom-0` al pie de cada formulario,
+  con «Cambios sin guardar» en `role="status"` y «Cancelar» que revierte).
+- **Configuración del sistema (SMTP)**: `PageLayout width="form"`, rejilla de dos
+  columnas desde `lg`, administradores con tabla compacta paginada (25). Mismos campos,
+  validaciones y permisos.
+- **Agentes de IA**: ancho fluido (contiene tablas de consumo y catálogo), cuatro
+  secciones con navegación interna, agentes en dos columnas desde `xl`, prompt con
+  altura máxima de 128 px, una barra de acciones por formulario (IA global, presupuesto
+  y cada agente), tablas de consumo y catálogo compactas; «Por modelo» y «Catálogo de
+  modelos» van plegados por defecto. A 1366×768 la página pasa de 4,6 a 2,9 pantallas.

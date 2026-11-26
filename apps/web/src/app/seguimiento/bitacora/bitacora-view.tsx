@@ -578,14 +578,8 @@ function BitacoraViewContent(): React.ReactElement {
           icon: ClipboardList,
           title: mine ? 'Aún no hay diarios.' : 'Aún no hay diarios del equipo.',
           description: mine
-            ? 'Crea un diario para registrar las actividades de tu jornada.'
+            ? 'Usa «Nuevo diario», arriba, para registrar las actividades de tu jornada.'
             : 'Cuando tu equipo registre su jornada, los diarios aparecerán aquí.',
-          action: mine ? (
-            <Button type="button" variant="outline" size="sm" onClick={() => setDiarioOpen(true)}>
-              <Plus aria-hidden="true" />
-              Nuevo diario
-            </Button>
-          ) : undefined,
         }}
         noResults={{
           title: 'Ningún diario coincide con los filtros.',

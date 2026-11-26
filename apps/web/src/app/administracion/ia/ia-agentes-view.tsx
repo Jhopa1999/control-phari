@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Plug } from 'lucide-react';
 import { toast } from 'sonner';
 import { Field, FormError } from '@/components/field';
+import { FormActionBar, FormCard, FormSectionsLayout } from '@/components/form-sections';
 import { InlineNotice } from '@/components/inline-notice';
 import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
@@ -44,6 +45,13 @@ import { ConsumoIaSection } from './consumo-ia-section';
 import { PresupuestoIaForm } from './presupuesto-ia-form';
 
 type LoadState = 'loading' | 'success' | 'error' | 'forbidden';
+
+const SECTIONS = [
+  { id: 'ia-global', label: 'IA global' },
+  { id: 'ia-consumo', label: 'Consumo y presupuesto' },
+  { id: 'ia-agentes', label: 'Agentes' },
+  { id: 'catalogo-modelos', label: 'Catálogo de modelos' },
+] as const;
 
 /** Secret write-only: 'keep' conserva, 'set' reemplaza, 'clear' limpia. */
 type SecretMode = 'keep' | 'set' | 'clear';
@@ -115,6 +123,13 @@ export function IaAgentesView(): React.ReactElement {
     setSecretMode('keep');
     setSecret('');
   }, []);
+
+  const globalDirty =
+    global !== null &&
+    (enabled !== global.enabled ||
+      credentialMode !== global.credentialMode ||
+      accessKeyId !== '' ||
+      secretMode !== 'keep');
 
   const loadData = React.useCallback(() => {
     return getAiConfig()
@@ -210,14 +225,21 @@ export function IaAgentesView(): React.ReactElement {
     );
   } else {
     content = (
-      <>
+      <FormSectionsLayout sections={SECTIONS}>
+        <FormCard id="ia-global">
         <Section
           title="IA global"
           description="Enciende o apaga la IA en toda la plataforma y define cómo se autentica con AWS Bedrock."
         >
-          <form className="flex flex-col gap-4" onSubmit={handleSaveGlobal} noValidate>
-            <FormError id="ai-global-form" message={globalFormError} />
-            <div className="flex items-center justify-between gap-3 rounded-lg border bg-card p-4">
+          <form
+            className="grid gap-x-6 gap-y-3 lg:grid-cols-2"
+            onSubmit={handleSaveGlobal}
+            noValidate
+          >
+            <div className="empty:hidden lg:col-span-2">
+              <FormError id="ai-global-form" message={globalFormError} />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-surface-subtle px-4 py-3 lg:col-span-2">
               <div className="flex min-w-0 flex-col gap-1">
                 <span className="font-medium">IA encendida</span>
                 <span className="text-meta text-muted-foreground">
@@ -236,6 +258,7 @@ export function IaAgentesView(): React.ReactElement {
               id="ai-credential-mode"
               label="Modo de credenciales"
               help="En producción se recomienda el rol IAM de la instancia; las claves solo se guardan en modo access-keys."
+              helpInTooltip
             >
               {(control) => (
                 <Select
@@ -258,7 +281,7 @@ export function IaAgentesView(): React.ReactElement {
             </Field>
 
             {credentialMode === 'access-keys' ? (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="contents">
                 <Field
                   id="ai-access-key-id"
                   label="AWS Access Key ID"
@@ -347,15 +370,31 @@ export function IaAgentesView(): React.ReactElement {
               </InlineNotice>
             )}
 
-            <div className="flex flex-wrap gap-3">
+            <FormActionBar dirty={globalDirty} className="lg:col-span-2">
+              {globalDirty ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (global) fillGlobal(global);
+                    setGlobalFormError(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+              ) : null}
               <Button type="submit" loading={savingGlobal}>
                 Guardar IA global
               </Button>
-            </div>
+            </FormActionBar>
           </form>
         </Section>
+        </FormCard>
 
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div
+          id="ia-consumo"
+          className="grid scroll-mt-20 items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+        >
           <ConsumoIaSection
             reloadKey={usageReloadKey}
             agentNames={agentNames}
@@ -372,12 +411,13 @@ export function IaAgentesView(): React.ReactElement {
           ) : null}
         </div>
 
+        <div id="ia-agentes" className="scroll-mt-20">
         <Section
           title="Agentes"
           description="Cada agente usa un modelo del catálogo permitido y su propio prompt base."
           count={agents.length}
         >
-          <div className="flex flex-col gap-6">
+          <div className="grid items-start gap-4 xl:grid-cols-2">
             {agents.length === 0 ? (
               <InlineNotice tone="neutral" title="No hay agentes configurados.">
                 <p className="text-muted-foreground">
@@ -400,6 +440,7 @@ export function IaAgentesView(): React.ReactElement {
             )}
           </div>
         </Section>
+        </div>
 
         <CatalogoModelosSection
           agents={agents}
@@ -408,7 +449,7 @@ export function IaAgentesView(): React.ReactElement {
             setModels(all.filter((m) => m.enabled));
           }}
         />
-      </>
+      </FormSectionsLayout>
     );
   }
 
@@ -527,11 +568,31 @@ function AgentCard({ agent, models, onSaved }: AgentCardProps): React.ReactEleme
     }
   }
 
+  const dirty =
+    enabled !== agent.enabled ||
+    model !== agent.model ||
+    region !== agent.region ||
+    basePrompt !== agent.basePrompt ||
+    temperature !== String(agent.temperature) ||
+    maxTokens !== String(agent.maxTokens) ||
+    timeoutMs !== String(agent.timeoutMs);
+
+  function handleCancel(): void {
+    setEnabled(agent.enabled);
+    setModel(agent.model);
+    setRegion(agent.region);
+    setBasePrompt(agent.basePrompt);
+    setTemperature(String(agent.temperature));
+    setMaxTokens(String(agent.maxTokens));
+    setTimeoutMs(String(agent.timeoutMs));
+    setErrors({});
+  }
+
   const prefix = `ai-agent-${agent.code}`;
 
   return (
     <form
-      className="flex flex-col gap-4 rounded-lg border bg-card p-4"
+      className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-card"
       onSubmit={handleSave}
       noValidate
     >
@@ -552,8 +613,8 @@ function AgentCard({ agent, models, onSaved }: AgentCardProps): React.ReactEleme
 
       <FormError id={`${prefix}-form`} message={errors.form ?? null} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field id={`${prefix}-model`} label="Modelo">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        <Field id={`${prefix}-model`} label="Modelo" className="col-span-2">
           {(control) => (
             <Select value={model} onValueChange={setModel}>
               <SelectTrigger {...control}>
@@ -573,7 +634,8 @@ function AgentCard({ agent, models, onSaved }: AgentCardProps): React.ReactEleme
             </Select>
           )}
         </Field>
-        <Field id={`${prefix}-region`} label="Región de AWS">
+        <Field id={`${prefix}-region`} label="Región de AWS" className="col-span-2">
+
           <Input
             value={region}
             onChange={(e) => setRegion(e.target.value)}
@@ -586,6 +648,7 @@ function AgentCard({ agent, models, onSaved }: AgentCardProps): React.ReactEleme
       <Field
         id={`${prefix}-prompt`}
         label="Prompt base"
+        helpInTooltip
         help={
           agent.code === 'ACTAS' || agent.code === 'TRIAGE'
             ? 'El formato de respuesta y las reglas de seguridad las añade el sistema y no hace falta escribirlas. Aquí se ajusta el rol, el tono y el criterio.'
@@ -595,11 +658,12 @@ function AgentCard({ agent, models, onSaved }: AgentCardProps): React.ReactEleme
         <Textarea
           value={basePrompt}
           onChange={(e) => setBasePrompt(e.target.value)}
-          rows={6}
+          rows={4}
+          className="max-h-32"
         />
       </Field>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-x-4 gap-y-3">
         <Field
           id={`${prefix}-temperature`}
           label="Temperatura"
@@ -648,16 +712,6 @@ function AgentCard({ agent, models, onSaved }: AgentCardProps): React.ReactEleme
         </Field>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Button type="submit" loading={saving}>
-          Guardar agente
-        </Button>
-        <Button type="button" variant="outline" loading={testing} onClick={() => void handleTest()}>
-          <Plug aria-hidden="true" />
-          Probar conexión
-        </Button>
-      </div>
-
       {lastTest !== null ? (
         <InlineNotice
           tone={lastTest.ok ? 'success' : 'danger'}
@@ -667,6 +721,21 @@ function AgentCard({ agent, models, onSaved }: AgentCardProps): React.ReactEleme
           <p>{lastTest.message}</p>
         </InlineNotice>
       ) : null}
+
+      <FormActionBar dirty={dirty}>
+        <Button type="button" variant="outline" loading={testing} onClick={() => void handleTest()}>
+          <Plug aria-hidden="true" />
+          Probar conexión
+        </Button>
+        {dirty ? (
+          <Button type="button" variant="outline" onClick={handleCancel}>
+            Cancelar
+          </Button>
+        ) : null}
+        <Button type="submit" loading={saving}>
+          Guardar agente
+        </Button>
+      </FormActionBar>
     </form>
   );
 }

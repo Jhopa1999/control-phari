@@ -1184,6 +1184,14 @@
           "docs/aplicacion/frontend-pantallas.md"
         ],
         "summary": "Interfaz de escritorio, PR B (tablas y filtros): Table con densidad twoline (52 px), cabecera fija opaca y región desplazable con scrollLabel, contenedor @container y columnas P2/P3 por ancho de tabla; CellTitle y ProcessRefCell de una línea; Toolbar de una fila con FilterField (etiqueta visible dentro del campo), «Más filtros» en línea con contador y búsqueda con etiqueta para lector de pantalla; Section plegable con conteo; paginación en cliente (25) en Capacidad, Equipo y permisos, Mis permisos, Solicitantes y Aprobaciones; adopción en Solicitudes, Documentos, Catálogo de activos, Auditoría, Áreas, Maestras y Aprobaciones. La campana de notificaciones usa «Notificaciones, 99+ sin leer» (el nombre accesible contiene el texto visible). Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio."
+      },
+      {
+        "timestamp": "2026-12-02T18:00:00Z",
+        "trigger_file": "apps/web/src/components/form-sections.tsx",
+        "updated_docs": [
+          "docs/aplicacion/frontend-pantallas.md"
+        ],
+        "summary": "Interfaz de escritorio, PR C (formularios, diálogos y estados vacíos): diálogos con rounded-xl, cabecera compacta y pie con filete; Field con ayuda larga opcional en tooltip (helpInTooltip); EmptyState más bajo y sin botón duplicado en Bitácora y Reporte semanal; nuevo form-sections.tsx (navegación interna por anclas, tarjeta de sección y barra de acciones fija con «Cambios sin guardar»); Configuración del sistema y Agentes de IA con rejilla de dos columnas, administradores paginados, agentes en dos columnas y secciones secundarias plegadas. Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio."
       }
     ]
   }
