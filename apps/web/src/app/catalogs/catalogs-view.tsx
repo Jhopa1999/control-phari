@@ -372,7 +372,7 @@ export function CatalogsView(): React.ReactElement {
                 sort={table.sort}
                 onSort={table.toggleSort}
                 align="right"
-                className="hidden @[1100px]:table-cell"
+                className="hidden @[1200px]:table-cell"
               />
               <TableHead className="hidden @4xl:table-cell">Actualizado</TableHead>
               {readOnly ? null : <TableHead className="text-right">Acciones</TableHead>}
@@ -387,7 +387,7 @@ export function CatalogsView(): React.ReactElement {
                 <TableCell className="whitespace-nowrap">
                   <StatusBadge kind="active" value={String(item.active)} />
                 </TableCell>
-                <TableCell className="hidden @[1100px]:table-cell text-right tabular-nums">{item.sortOrder}</TableCell>
+                <TableCell className="hidden @[1200px]:table-cell text-right tabular-nums">{item.sortOrder}</TableCell>
                 <TableCell className="hidden @4xl:table-cell whitespace-nowrap tabular-nums text-muted-foreground">
                   {formatDateTime(item.updatedAt)}
                 </TableCell>

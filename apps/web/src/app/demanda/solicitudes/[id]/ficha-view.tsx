@@ -62,7 +62,7 @@ import {
   TriageResumen,
   type TriageCatalogs,
 } from './ficha-detalles';
-import { FichaStep } from './ficha-step';
+import { FichaStep, FichaStrip } from './ficha-step';
 import { SolicitudFormDialog, type SolicitudFormValues } from '../solicitud-form-dialog';
 import { solicitudUpdatePayload } from '../solicitud-payload';
 import { ClosurePanel } from './closure-panel';
@@ -384,8 +384,8 @@ export function FichaView({
       ) : null}
 
       <Section title="Ficha de la solicitud">
-        <div className="rounded-lg border bg-card p-4">
-          <RequestFacts request={request} processName={processName} />
+        <div className="rounded-xl border bg-card p-4 shadow-card">
+          <RequestFacts request={request} processName={processName} columns={4} />
         </div>
       </Section>
 
@@ -500,10 +500,22 @@ function Stepper({
   const estabilizacionAplica =
     states.estabilizacion === 'en-curso' || states.estabilizacion === 'completado';
 
+  const strip: { title: string; headingId: string; state: StepState }[] = [
+    { title: 'Solicitud', headingId: 'paso-solicitud', state: states.solicitud },
+    { title: 'Triage', headingId: 'paso-triage', state: states.triage },
+    { title: 'Priorización', headingId: 'paso-prioridad', state: states.prioridad },
+    { title: 'Aprobación', headingId: 'paso-aprobacion', state: states.aprobacion },
+    { title: 'Planificación', headingId: 'paso-plan', state: states.plan },
+    { title: 'Gobierno', headingId: 'paso-gobierno', state: states.gobierno },
+    { title: 'Estabilización', headingId: 'paso-estabilizacion', state: states.estabilizacion },
+  ];
+
   return (
+    <>
+    <FichaStrip steps={strip} />
     <ol
       aria-label="Recorrido de la solicitud por etapas"
-      className="flex flex-col"
+      className="flex flex-col lg:block lg:columns-2 lg:gap-4 min-[1800px]:columns-3"
     >
       <FichaStep index={1} title="Solicitud" state={states.solicitud} headingId="paso-solicitud">
         <p className="text-sm text-muted-foreground">
@@ -658,6 +670,7 @@ function Stepper({
         )}
       </FichaStep>
     </ol>
+    </>
   );
 }
 

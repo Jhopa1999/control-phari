@@ -483,14 +483,14 @@ export function SolicitudesView(): React.ReactElement {
                 className="w-full"
               />
               <TableHead className="hidden @4xl:table-cell">Proceso</TableHead>
-              <TableHead className="hidden @[1100px]:table-cell">Activo</TableHead>
+              <TableHead className="hidden @[1200px]:table-cell">Activo</TableHead>
               <SortableTableHead
                 label="Estado"
                 sortKey="state"
                 sort={table.sort}
                 onSort={table.toggleSort}
               />
-              <TableHead className="hidden @[1100px]:table-cell">Decisión de triage</TableHead>
+              <TableHead className="hidden @[1200px]:table-cell">Decisión de triage</TableHead>
               <SortableTableHead
                 label="Prioridad"
                 sortKey="priority"
@@ -524,7 +524,7 @@ export function SolicitudesView(): React.ReactElement {
                     missingVisible={r.mainProcessId === null}
                   />
                 </TableCell>
-                <TableCell className="hidden min-w-32 max-w-[14rem] @[1100px]:table-cell">
+                <TableCell className="hidden min-w-32 max-w-[14rem] @[1200px]:table-cell">
                   {r.assetName ? (
                     <span className="line-clamp-1" title={r.assetName}>
                       {r.assetName}
@@ -536,7 +536,7 @@ export function SolicitudesView(): React.ReactElement {
                 <TableCell className="whitespace-nowrap">
                   <StatusBadge kind="request" value={r.operationalState} />
                 </TableCell>
-                <TableCell className="hidden whitespace-nowrap @[1100px]:table-cell">
+                <TableCell className="hidden whitespace-nowrap @[1200px]:table-cell">
                   {r.currentTriageDecision ? (
                     <StatusBadge kind="triage" value={r.currentTriageDecision} />
                   ) : (

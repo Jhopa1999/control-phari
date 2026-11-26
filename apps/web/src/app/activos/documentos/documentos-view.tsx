@@ -766,8 +766,8 @@ export function DocumentosView(): React.ReactElement {
                 onSort={table.toggleSort}
               />
               <TableHead className="hidden @4xl:table-cell">Activo</TableHead>
-              <TableHead className="hidden @[1100px]:table-cell">Proceso</TableHead>
-              <TableHead className="hidden @[1100px]:table-cell">Solicitud</TableHead>
+              <TableHead className="hidden @[1200px]:table-cell">Proceso</TableHead>
+              <TableHead className="hidden @[1200px]:table-cell">Solicitud</TableHead>
               <TableHead className="hidden @4xl:table-cell text-right">Versión</TableHead>
               <SortableTableHead
                 label="Estado"
@@ -807,14 +807,14 @@ export function DocumentosView(): React.ReactElement {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden @[1100px]:table-cell min-w-32 max-w-[18rem]">
+                  <TableCell className="hidden @[1200px]:table-cell min-w-32 max-w-[18rem]">
                     <ProcessRefCell
                       name={asset ? processName(asset.processId) : null}
                       code={null}
                       missingLabel="Proceso no disponible"
                     />
                   </TableCell>
-                  <TableCell className="hidden @[1100px]:table-cell min-w-40 max-w-[18rem]">
+                  <TableCell className="hidden @[1200px]:table-cell min-w-40 max-w-[18rem]">
                     <RequestRefCell
                       code={doc.requestCode}
                       title={doc.requestTitle}

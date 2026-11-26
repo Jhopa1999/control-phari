@@ -985,7 +985,7 @@ function CapacidadViewContent(): React.ReactElement {
                 <TableHead scope="col" className="text-right tabular-nums">
                   Horas
                 </TableHead>
-                <TableHead scope="col" className="hidden @[1100px]:table-cell">Descripción</TableHead>
+                <TableHead scope="col" className="hidden @[1200px]:table-cell">Descripción</TableHead>
                 <TableHead scope="col" className="text-right">
                   Acciones
                 </TableHead>
@@ -1007,7 +1007,7 @@ function CapacidadViewContent(): React.ReactElement {
                   <TableCell className="text-right whitespace-nowrap tabular-nums">
                     {formatHours(row.committedHours)}
                   </TableCell>
-                  <TableCell className="hidden @[1100px]:table-cell max-w-xs truncate text-muted-foreground">
+                  <TableCell className="hidden @[1200px]:table-cell max-w-xs truncate text-muted-foreground">
                     <span title={row.description ?? undefined}>{orDash(row.description)}</span>
                   </TableCell>
                   <RowActionsCell>

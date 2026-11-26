@@ -262,7 +262,7 @@ export function AreasView(): React.ReactElement {
                   <TableHead className="hidden text-right @4xl:table-cell">Procesos activos</TableHead>
                   <TableHead className="hidden text-right @4xl:table-cell">Solicitantes</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead className="hidden text-right @[1100px]:table-cell">Orden</TableHead>
+                  <TableHead className="hidden text-right @[1200px]:table-cell">Orden</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -276,7 +276,7 @@ export function AreasView(): React.ReactElement {
                     <TableCell className="whitespace-nowrap">
                       <StatusBadge kind="active" value={String(area.active)} />
                     </TableCell>
-                    <TableCell className="hidden text-right tabular-nums @[1100px]:table-cell">{area.sortOrder}</TableCell>
+                    <TableCell className="hidden text-right tabular-nums @[1200px]:table-cell">{area.sortOrder}</TableCell>
                     <RowActionsCell>
                       <RowActions rowLabel={area.name} actions={rowActions(area)} />
                     </RowActionsCell>

@@ -223,9 +223,12 @@ function isWebUrl(value: string): boolean {
 export function RequestFacts({
   request,
   processName,
+  columns = 2,
 }: {
   request: Request;
   processName?: string | null;
+  /** 2 sigue el ancho de la ventana; 3 y 4 el del contenedor (ficha de detalle). */
+  columns?: 2 | 3 | 4;
 }): React.ReactElement {
   const reference = request.referenceUrl;
   const referenceValue: React.ReactNode =
@@ -254,5 +257,5 @@ export function RequestFacts({
     { term: 'Enlace de referencia', value: referenceValue },
     { term: 'Resultado esperado', value: request.expectedResult, span: 2 },
   ];
-  return <DescriptionList items={items} columns={2} />;
+  return <DescriptionList items={items} columns={columns} collapseEmpty />;
 }
