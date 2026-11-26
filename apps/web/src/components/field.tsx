@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, Info } from 'lucide-react';
 import { InlineNotice } from '@/components/inline-notice';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { LabelTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /*
@@ -44,6 +46,12 @@ export interface FieldProps {
   required?: boolean;
   /** Ayuda bajo el control; id `${id}-help`. */
   help?: React.ReactNode;
+  /**
+   * Ayuda larga (design §7.1): desde lg se ve en un tooltip del icono Info junto a
+   * la etiqueta; el texto sigue en el árbol (sr-only) con id `${id}-help`, así
+   * que aria-describedby no cambia. Debajo de lg se muestra como siempre.
+   */
+  helpInTooltip?: boolean;
   /** Error de una regla de este campo; id `${id}-error`. */
   error?: string | null;
   /**
@@ -69,10 +77,12 @@ function FieldMessage({
   id,
   error,
   role,
+  sronlyLg,
   children,
 }: {
   id: string;
   error?: boolean;
+  sronlyLg?: boolean;
   role?: 'alert';
   children: React.ReactNode;
 }): React.ReactElement {
@@ -85,7 +95,7 @@ function FieldMessage({
     );
   }
   return (
-    <p id={id} className="text-meta text-muted-foreground">
+    <p id={id} className={cn('text-meta text-muted-foreground', sronlyLg && 'lg:sr-only')}>
       {children}
     </p>
   );
@@ -97,6 +107,7 @@ export function Field({
   label,
   required = false,
   help,
+  helpInTooltip = false,
   error,
   errorRole,
   labelHidden = false,
@@ -125,12 +136,36 @@ export function Field({
   }
   return (
     <div className={cn('grid gap-1.5', className)}>
-      <Label htmlFor={id} className={labelHidden ? 'sr-only' : undefined}>
-        {label}
-        {required ? <span aria-hidden="true"> *</span> : null}
-      </Label>
+      {helpInTooltip && help ? (
+        <div className="flex items-center gap-1">
+          <Label htmlFor={id} className={labelHidden ? 'sr-only' : undefined}>
+            {label}
+            {required ? <span aria-hidden="true"> *</span> : null}
+          </Label>
+          <LabelTooltip label={help}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Ayuda: ${typeof label === 'string' ? label : id}`}
+              className="hidden size-6 lg:inline-flex"
+            >
+              <Info aria-hidden="true" />
+            </Button>
+          </LabelTooltip>
+        </div>
+      ) : (
+        <Label htmlFor={id} className={labelHidden ? 'sr-only' : undefined}>
+          {label}
+          {required ? <span aria-hidden="true"> *</span> : null}
+        </Label>
+      )}
       {rendered}
-      {help ? <FieldMessage id={`${id}-help`}>{help}</FieldMessage> : null}
+      {help ? (
+        <FieldMessage id={`${id}-help`} sronlyLg={helpInTooltip}>
+          {help}
+        </FieldMessage>
+      ) : null}
       {error ? (
         <FieldMessage id={`${id}-error`} error role={errorRole}>
           {error}

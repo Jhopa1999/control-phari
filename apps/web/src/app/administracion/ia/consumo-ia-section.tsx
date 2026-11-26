@@ -231,6 +231,7 @@ function UsageBody({ data, agentNames, modelLabels }: UsageBodyProps): React.Rea
           />
           <BreakdownBlock
             title="Por modelo"
+            collapsible
             label="Consumo por modelo"
             rows={data.byModel}
             totalCost={data.costUsd}
@@ -251,6 +252,8 @@ interface BreakdownBlockProps {
   nameOf: (key: string) => string;
   /** El id del modelo cuando no hay nombre se muestra en monoespaciada. */
   mono?: boolean;
+  /** Bloque secundario plegado al inicio (design §3.6). */
+  collapsible?: boolean;
 }
 
 /** Desglose de consumo: tabla en escritorio y tarjetas en móvil (< 768 px). */
@@ -261,6 +264,7 @@ function BreakdownBlock({
   totalCost,
   nameOf,
   mono = false,
+  collapsible = false,
 }: BreakdownBlockProps): React.ReactElement {
   const sorted = React.useMemo(
     () => [...rows].sort((a, b) => b.costUsd - a.costUsd || b.calls - a.calls),
@@ -273,15 +277,15 @@ function BreakdownBlock({
     return name === key && mono ? (
       <span className="font-mono text-meta break-all">{name}</span>
     ) : (
-      <span className="font-medium">{name}</span>
+      <span className="whitespace-nowrap font-medium">{name}</span>
     );
   };
 
   return (
-    <Section title={title} headingLevel={3} count={sorted.length}>
+    <Section title={title} headingLevel={3} count={sorted.length} collapsible={collapsible}>
       <div className="rounded-xl bg-card shadow-card">
         <div className="hidden md:block">
-          <Table scrollLabel={label}>
+          <Table density="compact" scrollLabel={label}>
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>

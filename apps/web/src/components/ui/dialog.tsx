@@ -53,7 +53,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 flex w-[calc(100%-1rem)] max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border bg-popover shadow-lg duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+        'fixed left-1/2 top-1/2 z-50 flex w-[calc(100%-1rem)] max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border bg-popover shadow-lg duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
         DIALOG_SIZES[size],
         className,
       )}
@@ -74,18 +74,18 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 // pr-12 reserva el hueco del botón cerrar: un título largo pasa a la línea siguiente.
 function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('flex flex-col gap-1 px-5 pr-12 pt-5 pb-3 text-left', className)} {...props} />
+    <div className={cn('flex flex-col gap-1 px-5 pr-12 pt-4 pb-2 text-left', className)} {...props} />
   );
 }
 
 function DialogBody({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('min-h-0 flex-1 overflow-y-auto px-5 pb-2', className)} {...props} />;
+  return <div className={cn('min-h-0 flex-1 overflow-y-auto px-5 pb-1', className)} {...props} />;
 }
 
 function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('flex flex-col-reverse gap-2 px-5 pb-5 pt-3 sm:flex-row sm:justify-end', className)}
+      className={cn('flex flex-col-reverse gap-2 border-t px-5 py-3 sm:flex-row sm:justify-end', className)}
       {...props}
     />
   );

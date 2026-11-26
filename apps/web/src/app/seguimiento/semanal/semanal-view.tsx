@@ -802,18 +802,8 @@ export function SemanalView(): React.ReactElement {
               }))}
               empty={{
                 title: 'Aún no hay reportes semanales.',
-                description: 'Crea el reporte de la semana para consolidar tus bitácoras.',
-                action: (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCreateOpen(true)}
-                  >
-                    <Plus aria-hidden="true" />
-                    Nuevo reporte semanal
-                  </Button>
-                ),
+                description:
+                  'Usa «Nuevo reporte semanal», arriba, para consolidar tus bitácoras de la semana.',
               }}
             />
           }
