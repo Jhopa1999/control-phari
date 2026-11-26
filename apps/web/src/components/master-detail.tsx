@@ -53,10 +53,10 @@ export function MasterDetail({
 
   return (
     <UserSelectContext.Provider value={notifyUserSelect}>
-      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start xl:grid-cols-[340px_minmax(0,1fr)] min-[1600px]:grid-cols-[380px_minmax(0,1fr)]">
         <section
           aria-labelledby={listTitleId}
-          className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-6"
+          className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-16"
         >
           <h2
             id={listTitleId}
@@ -66,7 +66,7 @@ export function MasterDetail({
           >
             {listTitle}
           </h2>
-          <div className="overflow-y-auto rounded-lg border bg-card lg:max-h-[calc(100dvh-8rem)]">
+          <div className="overflow-y-auto rounded-lg border bg-card lg:max-h-[calc(100dvh-9rem)]">
             {list}
           </div>
         </section>
@@ -91,7 +91,7 @@ export interface SelectableListProps {
   onSelect: (id: string) => void;
   /** aria-label del <ul>. */
   label: string;
-  /** 4 esqueletos de 56 px. */
+  /** 4 esqueletos de 52 px. */
   loading?: boolean;
   /** Tamaño compacto. */
   empty?: EmptyStateProps;
@@ -114,7 +114,7 @@ export function SelectableList({
     return (
       <div aria-hidden="true" className="divide-y">
         {Array.from({ length: 4 }, (_, index) => (
-          <div key={index} className="flex h-14 flex-col justify-center gap-2 px-3">
+          <div key={index} className="flex h-[52px] flex-col justify-center gap-2 px-3">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-1/2" />
           </div>
@@ -139,7 +139,7 @@ export function SelectableList({
                 notifyUserSelect?.();
               }}
               className={cn(
-                'relative flex w-full items-start gap-3 px-3 py-2.5 text-left transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+                'relative flex min-h-[52px] w-full items-center gap-3 px-3 py-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
                 selected ? 'bg-primary-subtle' : 'hover:bg-muted/40',
               )}
             >
@@ -147,7 +147,7 @@ export function SelectableList({
                 <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 bg-primary" />
               ) : null}
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="line-clamp-2 text-sm font-medium wrap-break-word">{item.title}</span>
+                <span className="truncate text-sm font-medium" title={typeof item.title === 'string' ? item.title : undefined}>{item.title}</span>
                 {item.meta ? (
                   <span className="text-meta text-muted-foreground">{item.meta}</span>
                 ) : null}

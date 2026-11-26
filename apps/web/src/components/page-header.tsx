@@ -33,8 +33,8 @@ export function PageHeader({
   actions,
 }: PageHeaderProps): React.ReactElement {
   return (
-    <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-      <div className="flex min-w-0 flex-col gap-1">
+    <header className="relative flex flex-col gap-2 pb-2 md:flex-row md:items-start md:justify-between">
+      <div className="flex min-w-0 flex-col gap-0.5">
         {breadcrumbs && breadcrumbs.length > 0 ? (
           <nav aria-label="Ruta de navegación">
             <ol className="flex flex-wrap items-center gap-1 text-meta text-muted-foreground">
@@ -60,14 +60,14 @@ export function PageHeader({
         ) : null}
         <h1 className="text-xl font-bold tracking-tight wrap-break-word">{title}</h1>
         {description ? (
-          <div className="max-w-prose text-sm text-muted-foreground">{description}</div>
+          <div className="max-w-3xl text-meta text-muted-foreground">{description}</div>
         ) : null}
         {meta ? <div className="flex flex-wrap items-center gap-2 pt-1">{meta}</div> : null}
-        <span aria-hidden="true" className="mt-1 h-0.5 w-10 rounded-full bg-brand-gradient forced-colors:hidden" />
       </div>
       {actions ? (
         <div className="flex flex-wrap items-center gap-2 md:shrink-0">{actions}</div>
       ) : null}
+      <span aria-hidden="true" className="pointer-events-none absolute bottom-0 left-0 h-0.5 w-10 rounded-full bg-brand-gradient forced-colors:hidden" />
     </header>
   );
 }

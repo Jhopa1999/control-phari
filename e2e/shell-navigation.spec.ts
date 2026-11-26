@@ -59,8 +59,14 @@ test.describe('escritorio 1440×900', () => {
     const menu = mainNav(page);
 
     // Un grupo de entrada sin título y los 4 grupos de la app Demanda, en orden.
-    // La sección «Workspace» (Gobierno y Administración) llega plegada.
+    // «Activos y conocimiento» y la sección «Workspace» (Gobierno y Administración)
+    // llegan plegados: se despliega «Activos» para comprobar el orden completo.
     const lists = menu.getByRole('list');
+    await expect(lists).toHaveCount(APP_GROUP_LABELS.length);
+    const activos = menu.getByRole('button', { name: 'Activos y conocimiento', exact: true });
+    await expect(activos).toHaveAttribute('aria-expanded', 'false');
+    await activos.click();
+    await expect(activos).toHaveAttribute('aria-expanded', 'true');
     await expect(lists).toHaveCount(APP_GROUP_LABELS.length + 1);
     await expect(lists.first().getByRole('link')).toHaveText([
       'Panel del área',
