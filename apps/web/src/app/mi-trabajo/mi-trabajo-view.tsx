@@ -299,7 +299,11 @@ export function MiTrabajoView(): React.ReactElement {
   const doneOpen = doneForcedOpen || donePref === 'abierto';
   const closedForcedOpen = query.trim() !== '';
   const closedOpen = closedForcedOpen || closedPref === 'abierto';
-  const noDateForcedOpen = query.trim() !== '';
+  // Se abre con búsqueda, con un contador activo o si hay que mantener visible una tarea sin fecha.
+  const noDateForcedOpen =
+    query.trim() !== '' ||
+    counter !== null ||
+    (keepVisibleId !== null && (groups?.noDate.some((i) => i.taskId === keepVisibleId) ?? false));
   const noDateOpen = noDateForcedOpen || noDatePref === 'abierto';
 
   // --- Acciones en línea ---

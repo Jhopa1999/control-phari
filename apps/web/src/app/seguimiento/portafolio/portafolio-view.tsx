@@ -431,7 +431,7 @@ export function PortafolioView(): React.ReactElement {
         onRetry={() => setSummaryNonce((n) => n + 1)}
         trailing={
           <>
-            <FilterNote label="Qué incluye el portafolio">
+            <FilterNote label="Qué incluye el portafolio" text="Alcance">
               <p className="max-w-sm">
                 {pendingIncluded
                   ? 'Se incluyen solicitudes pendientes de decisión (registradas, en triage, devueltas, rechazadas, en backlog o retiradas), además de las iniciativas comprometidas.'
@@ -599,7 +599,7 @@ export function PortafolioView(): React.ReactElement {
           <TableBody>
             {table.rows.map((item) => (
               <TableRow key={item.id}>
-                <TableCell className="min-w-72 max-w-[30rem]">
+                <TableCell className="min-w-56 max-w-[30rem]">
                   <div className="flex items-center gap-2">
                     <IdChip code={item.code} />
                     <CellTitle
@@ -635,7 +635,7 @@ export function PortafolioView(): React.ReactElement {
                 <TableCell className="whitespace-nowrap">
                   <DeliveryCell item={item} />
                 </TableCell>
-                <TableCell className="min-w-36 max-w-[16rem]">
+                <TableCell className="min-w-28 max-w-[14rem]">
                   {item.responsibleName ? (
                     <span className="line-clamp-1 wrap-break-word" title={item.responsibleName}>
                       {item.responsibleName}

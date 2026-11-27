@@ -202,6 +202,8 @@ export function FilterField({
 export interface FilterNoteProps {
   /** Nombre accesible del botón (p. ej. «Qué significan P1 a P4»). */
   label: string;
+  /** Texto corto visible junto al icono, para distinguir varias notas seguidas. */
+  text?: string;
   /** Texto de la nota; sale del flujo de la barra y se ve en un panel flotante. */
   children: React.ReactNode;
   className?: string;
@@ -213,15 +215,16 @@ export interface FilterNoteProps {
  * pantallas táctiles (un tooltip no abre sin puntero). El panel flota bajo el
  * icono y no ocupa altura en la barra.
  */
-export function FilterNote({ label, children, className }: FilterNoteProps): React.ReactElement {
+export function FilterNote({ label, text, children, className }: FilterNoteProps): React.ReactElement {
   return (
     <details className={cn('group relative', className)}>
       <summary
         aria-label={label}
         title={label}
-        className="inline-flex size-8 cursor-pointer list-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring group-open:bg-muted/60 pointer-coarse:size-11 [&::-webkit-details-marker]:hidden"
+        className={cn('inline-flex size-8 cursor-pointer list-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring group-open:bg-muted/60 pointer-coarse:size-11 [&::-webkit-details-marker]:hidden', text && 'w-auto gap-1 px-2 text-meta')}
       >
         <Info aria-hidden="true" className="size-4" />
+        {text ? <span aria-hidden="true">{text}</span> : null}
       </summary>
       <div className="absolute right-0 top-full z-20 mt-1 w-max max-w-[min(24rem,calc(100vw-2rem))] rounded-lg border bg-popover p-3 text-meta text-popover-foreground shadow-md">
         {children}
