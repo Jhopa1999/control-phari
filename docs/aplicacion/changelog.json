@@ -1219,6 +1219,14 @@
           "docs/design/design-system-desktop.md"
         ],
         "summary": "Interfaz de escritorio, PR E (Seguimiento y Panel): StatTile único en todas las vistas, con modo interruptor (onToggle, aria-pressed) para los contadores de Mi trabajo y las alertas del Portafolio. Panel con «Requiere tu atención» en una franja de tiles con enlace y sin franja de ceros cuando no hay datos. Mi trabajo con contadores y vista en una fila, filas de 52 px y «Sin fecha» plegado por defecto. Portafolio con notas en icono Info, filtros en una fila y filas de 52 px (9 visibles a 1366×768, antes 2). Bitácora con Proceso y Clasificación en «Más filtros» y vacío de 144 px. Reuniones con pestañas y «Nueva acta» en una fila. Procesos en maestro-detalle por área (1,06 pantallas a 1366×768, antes 6,15). Cabecera de tablas twoline a 36 px. Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio."
+      },
+      {
+        "timestamp": "2026-12-05T12:00:00Z",
+        "trigger_file": "apps/web/src/components/master-detail.tsx",
+        "updated_docs": [
+          "docs/aplicacion/frontend-pantallas.md"
+        ],
+        "summary": "La lista de solicitudes de Triage, Priorización y Planificación se puede plegar y desplegar desde lg para dar todo el ancho al detalle (botones «Plegar/Desplegar la lista de solicitudes», con aria-expanded y el foco en el botón que aparece). La elección se recuerda por vista en localStorage. Debajo de lg la lista sigue apilada y no se pliega. MasterDetail admite la prop opcional collapsibleKey. Solo apps/web: sin cambios de API, contrato, MCP, permisos ni reglas de negocio."
       }
     ]
   }

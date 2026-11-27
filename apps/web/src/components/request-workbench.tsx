@@ -193,5 +193,12 @@ export function RequestWorkbench({
     </div>
   );
 
-  return <MasterDetail listTitle={listTitle} list={list} detail={detail} />;
+  return (
+    <MasterDetail
+      listTitle={listTitle}
+      list={list}
+      detail={detail}
+      collapsibleKey={`workbench.${id}`}
+    />
+  );
 }
