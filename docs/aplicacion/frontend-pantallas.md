@@ -378,6 +378,10 @@ secciones 3 y 6):
   resumen y la bandeja de siempre (la acción principal sigue al pie del formulario).
   Mismos datos, permisos y botones. El panel lateral (ficha, activo base, sugerencia
   de IA) pasa a segunda columna solo desde 1800 px; antes va debajo del formulario.
+  Desde lg la lista se puede plegar y desplegar («Plegar la lista de solicitudes» /
+  «Desplegar la lista de solicitudes», `MasterDetail` con `collapsibleKey`); plegada
+  deja un botón en el margen y el detalle ocupa todo el ancho. La elección se recuerda
+  por vista en `localStorage` (`masterDetail.workbench.<id>`). Debajo de lg no aplica.
 - **Aprobaciones**: el texto informativo y la leyenda P1–P4 comparten una línea; la
   barra de lote es una franja `bg-primary-subtle` fija bajo la barra superior
   (`role="region"` «Acciones sobre la selección», «N solicitudes seleccionadas» en
