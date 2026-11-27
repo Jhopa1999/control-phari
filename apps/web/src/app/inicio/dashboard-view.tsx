@@ -223,11 +223,11 @@ export function DashboardView(): React.ReactElement {
   if (state === 'loading') {
     content = (
       <div aria-busy="true" className="flex flex-col gap-6">
-        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex flex-col gap-2 bg-card p-4">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-7 w-12" />
+            <div key={i} className="flex h-16 flex-col justify-center gap-2 bg-card px-3 py-2">
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-5 w-12" />
             </div>
           ))}
         </div>
@@ -254,6 +254,7 @@ export function DashboardView(): React.ReactElement {
   } else {
     content = (
       <>
+        {hasData ? (
         <StatStrip label="Resumen general, estado actual a hoy">
           <StatTile
             label="Solicitudes en alcance"
@@ -267,6 +268,7 @@ export function DashboardView(): React.ReactElement {
           <StatTile label="Sin priorizar" value={NUMBER_FORMAT.format(unprioritized)} />
           <StatTile label="En ejecución" value={NUMBER_FORMAT.format(inExecution)} />
         </StatStrip>
+        ) : null}
         {!hasData ? (
           <div className="overflow-hidden rounded-lg border bg-card">
             <EmptyState

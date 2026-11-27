@@ -53,7 +53,7 @@ export function MasterDetail({
 
   return (
     <UserSelectContext.Provider value={notifyUserSelect}>
-      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start xl:grid-cols-[340px_minmax(0,1fr)] min-[1600px]:grid-cols-[380px_minmax(0,1fr)]">
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start xl:grid-cols-[340px_minmax(0,1fr)] min-[1600px]:grid-cols-[380px_minmax(0,1fr)]">
         <section
           aria-labelledby={listTitleId}
           className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-16"
@@ -66,7 +66,7 @@ export function MasterDetail({
           >
             {listTitle}
           </h2>
-          <div className="overflow-y-auto rounded-lg border bg-card lg:max-h-[calc(100dvh-9rem)]">
+          <div className="overflow-y-auto rounded-xl border bg-card shadow-card lg:max-h-[calc(100dvh-9rem)]">
             {list}
           </div>
         </section>
@@ -149,7 +149,7 @@ export function SelectableList({
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="truncate text-sm font-medium" title={typeof item.title === 'string' ? item.title : undefined}>{item.title}</span>
                 {item.meta ? (
-                  <span className="text-meta text-muted-foreground">{item.meta}</span>
+                  <span className="line-clamp-1 text-meta text-muted-foreground">{item.meta}</span>
                 ) : null}
               </span>
               {item.badge ? <span className="shrink-0">{item.badge}</span> : null}

@@ -837,7 +837,7 @@ test('el Panel muestra «Tareas por aprobar» y enlaza a la cola', async ({ page
     await route.fulfill({ response, json: { ...body, pendingTaskReviews: 3 } });
   });
   await page.goto('/inicio');
-  const link = page.getByRole('link', { name: /3\s*tareas por aprobar/ });
+  const link = page.getByRole('link', { name: /Tareas por aprobar\s*3/ });
   await expect(link).toBeVisible();
   await expect(link).toHaveAttribute('href', '/mi-trabajo#por-aprobar');
 });

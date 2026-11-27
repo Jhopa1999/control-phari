@@ -409,6 +409,8 @@ test.describe('Procesos (web)', () => {
     expect(req.status).toBe(201);
 
     await page.goto('/administracion/procesos');
+    // La lista de áreas es el maestro: se elige el área del proceso antes de buscar su fila.
+    await page.getByRole('list', { name: 'Áreas con procesos' }).getByRole('button', { name: areaName }).click();
     const row = page.getByRole('row').filter({ hasText: `${PREFIX}_W` });
     await row.getByRole('button', { name: 'Desactivar' }).click();
     const confirm = page.getByRole('alertdialog');
@@ -646,6 +648,7 @@ test.describe('Capturas (solo con E2E_CAPTURES_DIR)', () => {
           mainProcessId: capId,
         });
         await page.goto('/administracion/procesos');
+        await page.getByRole('list', { name: 'Áreas con procesos' }).getByRole('button', { name: areaName }).click();
         await page
           .getByRole('row')
           .filter({ hasText: capCode })

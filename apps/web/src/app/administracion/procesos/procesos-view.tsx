@@ -6,11 +6,11 @@ import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { InlineNotice } from '@/components/inline-notice';
+import { MasterDetail, SelectableList } from '@/components/master-detail';
 import { NoAccessNotice, NO_ACCESS_COPY } from '@/components/no-access-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { RowActions, RowActionsCell, type RowAction } from '@/components/row-actions';
-import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -79,6 +79,8 @@ export function ProcesosView(): React.ReactElement {
   const state: LoadState = permissionsLoaded && !processesAllowed ? 'forbidden' : loadedState;
   const [loadError, setLoadError] = React.useState<unknown>(null);
 
+  // Área elegida en la lista; sin elección (o si ya no existe) se toma la primera.
+  const [selectedAreaId, setSelectedAreaId] = React.useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Process | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -281,6 +283,7 @@ export function ProcesosView(): React.ReactElement {
     return actions;
   }
 
+  const selectedGroup = groups.find((g) => g.areaId === selectedAreaId) ?? groups[0] ?? null;
   // Crear requiere al menos un area activa donde ubicar el proceso.
   const canCreate = activeAreas.length > 0;
 
@@ -345,10 +348,31 @@ export function ProcesosView(): React.ReactElement {
             </p>
           </InlineNotice>
         ) : null}
-        {groups.map((group) => (
-          <Section key={group.areaId} title={group.areaLabel} count={group.processes.length}>
-            <div className="overflow-hidden rounded-lg border bg-card">
-              <Table scrollLabel={`Tabla de procesos de ${group.areaLabel}`}>
+        <MasterDetail
+          listTitle="Áreas"
+          list={
+            <SelectableList
+              label="Áreas con procesos"
+              selectedId={selectedGroup?.areaId ?? null}
+              onSelect={setSelectedAreaId}
+              items={groups.map((group) => ({
+                id: group.areaId,
+                title: group.areaLabel,
+                meta: `${group.processes.length} ${group.processes.length === 1 ? 'proceso' : 'procesos'}`,
+              }))}
+            />
+          }
+          detail={
+            selectedGroup ? (
+              <section aria-labelledby="procesos-area-titulo" className="flex flex-col gap-3">
+                <h2 id="procesos-area-titulo" className="font-heading text-base font-semibold">
+                  {selectedGroup.areaLabel}
+                  <span className="ml-2 rounded-md bg-muted px-1.5 text-xs font-normal tabular-nums text-muted-foreground">
+                    {selectedGroup.processes.length}
+                  </span>
+                </h2>
+            <div className="overflow-hidden rounded-xl border bg-card shadow-card">
+              <Table density="compact" scrollLabel={`Tabla de procesos de ${selectedGroup.areaLabel}`}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Código</TableHead>
@@ -360,7 +384,7 @@ export function ProcesosView(): React.ReactElement {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {group.processes.map((process) => (
+                  {selectedGroup.processes.map((process) => (
                     <TableRow key={process.id}>
                       <TableCell className="whitespace-nowrap font-medium">{process.code}</TableCell>
                       <TableCell className="min-w-40">{process.name}</TableCell>
@@ -379,8 +403,10 @@ export function ProcesosView(): React.ReactElement {
                 </TableBody>
               </Table>
             </div>
-          </Section>
-        ))}
+              </section>
+            ) : null
+          }
+        />
       </div>
     );
   }

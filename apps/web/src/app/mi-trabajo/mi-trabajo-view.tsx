@@ -10,6 +10,7 @@ import { InlineNotice } from '@/components/inline-notice';
 import { PageHeader } from '@/components/page-header';
 import { PageLayout } from '@/components/page-layout';
 import { ResultCount } from '@/components/data-table';
+import { StatStrip, StatTile } from '@/components/stat-tile';
 import { FilterField, SearchInput, Toolbar } from '@/components/toolbar';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,7 +50,6 @@ import { TaskDetail } from '../seguimiento/tareas/task-detail';
 import { CLOSED_PROJECT_REASON } from './mi-trabajo-chips';
 import {
   COUNTERS,
-  CounterCard,
   GROUP_META,
   GroupSection,
   type CounterKey,
@@ -127,6 +127,26 @@ const closedPrefStore = createLocalPrefStore<DonePref>(
   'cerrado',
 );
 
+// Pliegue de «Sin fecha»: plegado por defecto (suelen ser tareas sin planificar), se recuerda en localStorage.
+const NODATE_PREF_KEY = 'miTrabajoSinFechaAbierto';
+const noDatePrefStore = createLocalPrefStore<DonePref>(
+  () => {
+    try {
+      return window.localStorage.getItem(NODATE_PREF_KEY) === 'abierto' ? 'abierto' : 'cerrado';
+    } catch {
+      return 'cerrado';
+    }
+  },
+  (value) => {
+    try {
+      window.localStorage.setItem(NODATE_PREF_KEY, value);
+    } catch {
+      // Sin almacenamiento: la elección vive en memoria hasta recargar.
+    }
+  },
+  'cerrado',
+);
+
 /** Cómo queda un elemento de Mi trabajo tras cambiar estado o avance (incluye el motivo). */
 function mergeMyWork(item: MyWorkItem, updated: Task): MyWorkItem {
   return {
@@ -195,6 +215,11 @@ export function MiTrabajoView(): React.ReactElement {
     closedPrefStore.subscribe,
     closedPrefStore.getSnapshot,
     closedPrefStore.getServerSnapshot,
+  );
+  const noDatePref = React.useSyncExternalStore(
+    noDatePrefStore.subscribe,
+    noDatePrefStore.getSnapshot,
+    noDatePrefStore.getServerSnapshot,
   );
 
   const fetchItems = React.useCallback(() => {
@@ -274,6 +299,12 @@ export function MiTrabajoView(): React.ReactElement {
   const doneOpen = doneForcedOpen || donePref === 'abierto';
   const closedForcedOpen = query.trim() !== '';
   const closedOpen = closedForcedOpen || closedPref === 'abierto';
+  // Se abre con búsqueda, con un contador activo o si hay que mantener visible una tarea sin fecha.
+  const noDateForcedOpen =
+    query.trim() !== '' ||
+    counter !== null ||
+    (keepVisibleId !== null && (groups?.noDate.some((i) => i.taskId === keepVisibleId) ?? false));
+  const noDateOpen = noDateForcedOpen || noDatePref === 'abierto';
 
   // --- Acciones en línea ---
   const announce = React.useCallback((message: string) => setAnnouncement(message), []);
@@ -557,32 +588,38 @@ export function MiTrabajoView(): React.ReactElement {
   } else {
     body = (
       <>
-        <section aria-label="Resumen de tu trabajo" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {COUNTERS.map((def) => (
-            <CounterCard
-              key={def.key}
-              def={def}
-              value={counts[def.key]}
-              active={counter === def.key}
-              onToggle={() => setCounter((prev) => (prev === def.key ? null : def.key))}
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+          <div className="min-w-0 xl:flex-1">
+            <StatStrip label="Resumen de tu trabajo">
+              {COUNTERS.map((def) => (
+                <StatTile
+                  key={def.key}
+                  label={def.label}
+                  value={counts[def.key]}
+                  hint={def.hint}
+                  tone={def.tone}
+                  pressed={counter === def.key}
+                  disabled={counts[def.key] === 0}
+                  onToggle={() => setCounter((prev) => (prev === def.key ? null : def.key))}
+                />
+              ))}
+            </StatStrip>
+            <p className="sr-only">Los conteos pueden solaparse.</p>
+          </div>
+          <div className="flex items-center gap-2 sm:justify-end">
+            <span id="mt-vista-label" className="text-meta text-muted-foreground">
+              Vista
+            </span>
+            <SegmentedRadio
+              id="mt-vista"
+              name="mt-vista"
+              labelledBy="mt-vista-label"
+              options={VIEW_OPTIONS}
+              value={view}
+              onValueChange={(value) => changeView(value as MyWorkView)}
+              optionClassName="max-md:h-11 max-md:min-w-20 pointer-coarse:h-11 pointer-coarse:min-w-20"
             />
-          ))}
-          <p className="sr-only">Los conteos pueden solaparse.</p>
-        </section>
-
-        <div className="flex items-center gap-2 sm:justify-end">
-          <span id="mt-vista-label" className="text-meta text-muted-foreground">
-            Vista
-          </span>
-          <SegmentedRadio
-            id="mt-vista"
-            name="mt-vista"
-            labelledBy="mt-vista-label"
-            options={VIEW_OPTIONS}
-            value={view}
-            onValueChange={(value) => changeView(value as MyWorkView)}
-            optionClassName="max-md:h-11 max-md:min-w-20 pointer-coarse:h-11 pointer-coarse:min-w-20"
-          />
+          </div>
         </div>
 
         {refreshFailed ? (
@@ -686,6 +723,13 @@ export function MiTrabajoView(): React.ReactElement {
                   expanded={expandedGroups.has(key)}
                   keepVisibleId={keepVisibleId}
                   onExpand={expandGroup}
+                  {...(key === 'noDate'
+                    ? {
+                        open: noDateOpen,
+                        foldable: !noDateForcedOpen,
+                        onToggleOpen: () => noDatePrefStore.set(noDatePref === 'abierto' ? 'cerrado' : 'abierto'),
+                      }
+                    : {})}
                 />
               ) : null,
             )}
@@ -832,7 +876,7 @@ function MyWorkSkeleton(): React.ReactElement {
     <>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-24 rounded-xl" />
+          <Skeleton key={i} className="h-16 rounded-xl" />
         ))}
       </div>
       {[0, 1].map((g) => (

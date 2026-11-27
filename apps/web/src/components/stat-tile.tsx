@@ -67,6 +67,14 @@ export interface StatTileProps {
   tone?: keyof typeof VALUE_TONES;
   /** Si se indica, el tile entero es un enlace con chevron. */
   href?: string;
+  /**
+   * Si se indica (y no hay href), el tile es un botón interruptor que filtra la
+   * vista: lleva aria-pressed y, activo, un anillo y «Filtro activo» para lectores.
+   */
+  onToggle?: () => void;
+  pressed?: boolean;
+  /** Solo con onToggle: deshabilita el interruptor (p. ej. conteo en 0 sin filtro activo). */
+  disabled?: boolean;
 }
 
 function isZero(value: React.ReactNode): boolean {
@@ -78,12 +86,22 @@ function isZero(value: React.ReactNode): boolean {
  * pista opcional en la línea del valor. Un valor 0 se atenúa y pierde el tono:
  * el color solo marca lo que requiere atención.
  */
-export function StatTile({ label, value, hint, tone = 'default', href }: StatTileProps): React.ReactElement {
+export function StatTile({
+  label,
+  value,
+  hint,
+  tone = 'default',
+  href,
+  onToggle,
+  pressed = false,
+  disabled = false,
+}: StatTileProps): React.ReactElement {
   const zero = isZero(value);
   const body = (
     <>
       <p className="truncate text-meta text-muted-foreground" title={label}>
         {label}
+        {onToggle && pressed ? <span className="sr-only">Filtro activo</span> : null}
       </p>
       <div className="flex min-w-0 items-baseline gap-2">
         <p
@@ -116,6 +134,23 @@ export function StatTile({ label, value, hint, tone = 'default', href }: StatTil
       >
         {body}
       </Link>
+    );
+  }
+  if (onToggle) {
+    return (
+      <button
+        type="button"
+        aria-pressed={pressed}
+        disabled={disabled && !pressed}
+        onClick={onToggle}
+        className={cn(
+          classes,
+          'text-left transition-colors enabled:hover:bg-primary-subtle focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:cursor-default',
+          pressed && 'bg-primary-subtle ring-2 ring-inset ring-primary',
+        )}
+      >
+        {body}
+      </button>
     );
   }
   return <div className={classes}>{body}</div>;

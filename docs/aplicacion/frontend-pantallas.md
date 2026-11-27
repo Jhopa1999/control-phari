@@ -394,3 +394,34 @@ secciones 3 y 6):
   `collapseEmpty` agrupa los vacíos. `RequestFacts` los usa.
 - **Tablas**: las columnas P3 pasan de 1100 a 1200 px de contenedor para que a
   1440×900 la tabla de Solicitudes no desplace en horizontal.
+
+## Seguimiento y Panel (interfaz de escritorio, PR E)
+- **Indicadores**: todas las vistas usan `StatStrip` + `StatTile` (64 px, valor de
+  20 px). `StatTile` admite `onToggle`, `pressed` y `disabled`: el tile es un botón
+  interruptor con `aria-pressed`, anillo y «Filtro activo» para lectores. Lo usan los
+  contadores de Mi trabajo y la franja de alertas del Portafolio. Ya no quedan
+  rejillas de KPI propias ni valores en `text-2xl` (Indicadores y el detalle del
+  diario pasan a `text-xl`).
+- **Panel del área**: «Requiere tu atención» es una franja de hasta 6 tiles con enlace
+  (etiqueta, número y chevron; nombre accesible «Tareas por aprobar 3»). La franja del
+  resumen general se omite cuando no hay solicitudes en el alcance (el vacío lo explica).
+- **Mi trabajo**: la franja de contadores y el conmutador Lista/Tablero comparten fila
+  desde `xl`. Las filas de los grupos miden 52 px (fecha y alerta de vencimiento en una
+  línea). El grupo «Sin fecha» llega plegado y recuerda la elección
+  (`miTrabajoSinFechaAbierto`); con búsqueda se abre solo.
+- **Portafolio**: la franja de alertas lleva a su derecha las notas «Cómo se cuentan las
+  alertas» y «Qué incluye el portafolio» (icono Info, desplegable nativo que también abre
+  con el dedo o el teclado) y la leyenda P1–P4. Los filtros caben en una fila a 1366×768
+  y las filas de la tabla miden 52 px (estado y bloqueo en una línea, motivo en la segunda;
+  entrega en dos líneas como máximo). A 1366×768 se ven 9 filas (antes 2).
+- **Bitácora**: «Proceso» y «Clasificación» pasan a «Más filtros» (con contador de
+  activos); la barra queda en una fila. Sin diarios, se omite la franja de ceros y el
+  vacío mide 144 px (Reporte semanal: 100 px la lista y 96 px el detalle).
+- **Reuniones y compromisos**: las pestañas y «Nueva acta» van en una fila; los ítems de
+  la lista de actas miden 52 px con la segunda línea recortada a una (8 a 9 visibles a
+  1366×768).
+- **Procesos**: maestro-detalle. La lista son las áreas con su número de procesos y el
+  detalle, la tabla del área seleccionada (la primera por defecto), con las mismas
+  columnas, edición y desactivación. Mide 1,06 pantallas a 1366×768 (antes 6,15).
+- **Tablas `twoline`**: la altura de 52 px se aplica solo a las filas del cuerpo; la
+  cabecera vuelve a 36 px.
