@@ -104,6 +104,8 @@ test.describe('IDs visibles', () => {
   });
 
   test('Mi trabajo muestra la forma completa', async ({ page }) => {
+    // La tarea no tiene fecha y «Sin fecha» arranca plegada: se abre con la preferencia guardada.
+    await page.addInitScript(() => window.localStorage.setItem('miTrabajoSinFechaAbierto', 'abierto'));
     await page.goto('/mi-trabajo');
     await expect(
       page.getByRole('button', { name: `Código ${requestCode}-T01, copiar` }).first(),
